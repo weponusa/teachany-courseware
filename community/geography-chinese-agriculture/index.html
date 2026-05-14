@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中国农业 · 初中地理 · TeachAny</title>
+
+<!-- TeachAny 元信息 -->
+<meta name="course-id" content="geo-m-china-agriculture">
+<meta name="course-name" content="中国农业">
+<meta name="subject" content="geography">
+<meta name="stage" content="middle">
+<meta name="grade" content="8">
+<meta name="lesson-type" content="new-concept">
+<meta name="course-node" content="geo-m-china-agriculture">
+<meta name="prereqs" content="geo-m-china-resources,geo-m-china-population">
+<meta name="leads-to" content="geo-m-china-industry,geo-m-china-transportation">
+<meta name="version" content="v6">
+
+<!-- 核心库：同步加载（head 中 blocking，保证 D3/Leaflet 在主脚本前就绪）-->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="./ai-tutor.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+
+<style>
+/* ================================================================
+   初中地理 · 清新学术风
+   ================================================================ */
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text-dim: #64748b;
+  --text-light: #94a3b8;
+  --primary: #3b82f6;
+  --primary-light: #dbeafe;
+  --secondary: #06b6d4;
+  --secondary-light: #cffafe;
+  --accent: #f59e0b;
+  --accent-light: #fef3c7;
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --danger: #ef4444;
+  --danger-light: #fee2e2;
+  --purple: #8b5cf6;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,.1), 0 8px 32px rgba(0,0,0,.08);
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+/* ── 滚动条 ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── 顶部进度条 ── */
+#top-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; height: 4px; background: var(--border); }
+#progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width .4s ease; }
+
+/* ── 顶部导航 ── */
+#top-nav {
+  position: fixed; top: 4px; left: 0; right: 0; z-index: 999;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border); padding: 0 24px;
+  display: flex; align-items: center; gap: 16px; height: 48px;
+}
+.nav-brand { font-weight: 700; font-size: 15px; color: var(--primary); text-decoration: none; }
+.nav-brand span { color: var(--text-dim); font-weight: 400; }
+.nav-links { display: flex; gap: 4px; margin-left: auto; }
+.nav-links a { padding: 4px 12px; border-radius: 6px; color: var(--text-dim); text-decoration: none; font-size: 13px; transition: background .15s, color .15s; }
+.nav-links a:hover { background: var(--primary-light); color: var(--primary); }
+#streak-display { font-size: 13px; color: var(--accent); font-weight: 600; white-space: nowrap; }
+
+/* ── 恢复横幅 ── */
+#resume-banner {
+  display: none; position: fixed; top: 56px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--primary), var(--purple)); color: white;
+  padding: 10px 20px; border-radius: 999px; font-size: 13px; z-index: 998;
+  box-shadow: var(--shadow-lg); gap: 12px; align-items: center;
+}
+#resume-banner.show { display: flex; }
+#resume-banner button { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.4); color: white; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+
+/* ── Hero ── */
+#hero {
+  min-height: 100vh; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; text-align: center;
+  padding: 80px 24px 60px;
+  background: radial-gradient(ellipse at top, rgba(59,130,246,.08) 0%, transparent 60%),
+              radial-gradient(ellipse at bottom, rgba(6,182,212,.06) 0%, transparent 60%);
+}
+.hero-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--primary-light); color: var(--primary); padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-bottom: 24px; }
+#hero h1 { font-size: clamp(32px, 6vw, 56px); background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.25; margin-bottom: 16px; max-width: 800px; }
+.hero-question { font-size: clamp(16px, 2.5vw, 20px); color: var(--text-dim); max-width: 640px; margin: 0 auto 40px; line-height: 1.6; }
+.hero-tags { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 40px; }
+.tag { padding: 4px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); }
+.tag.blue { background: var(--primary-light); color: var(--primary); border-color: transparent; }
+.tag.teal { background: var(--secondary-light); color: var(--secondary); border-color: transparent; }
+.tag.amber { background: var(--accent-light); color: var(--accent); border-color: transparent; }
+.hero-meta { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; font-size: 13px; color: var(--text-light); margin-bottom: 40px; }
+.hero-meta span { display: flex; align-items: center; gap: 6px; }
+.start-btn { padding: 14px 36px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; border-radius: 999px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(59,130,246,.35); transition: transform .15s, box-shadow .15s; }
+.start-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(59,130,246,.45); }
+
+/* ── 通用章节 ── */
+.course-section { max-width: 940px; margin: 0 auto; padding: 56px 24px; border-bottom: 1px solid var(--border); }
+.section-title { font-size: 22px; font-weight: 800; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+.section-title .icon { font-size: 24px; }
+.section-title .line { flex: 1; height: 2px; background: linear-gradient(90deg, var(--border), transparent); border-radius: 1px; }
+
+/* ── 学习目标 ── */
+.objectives-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.obj-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.obj-card .bloom { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; margin-bottom: 8px; }
+.obj-card .bloom.l1 { background: var(--success-light); color: var(--success); }
+.obj-card .bloom.l2 { background: var(--primary-light); color: var(--primary); }
+.obj-card .bloom.l3 { background: var(--accent-light); color: var(--accent); }
+.obj-card p { font-size: 14px; color: var(--text-dim); margin: 0; }
+
+/* ── ABT ── */
+.abt-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; border-left: 5px solid var(--primary); }
+.abt-header { padding: 16px 24px; background: var(--primary-light); font-weight: 700; font-size: 14px; color: var(--primary); }
+.abt-body { padding: 24px; }
+.abt-item { padding: 12px 0; font-size: 15px; }
+.abt-item.and { border-bottom: 1px dashed var(--border); color: var(--text-dim); }
+.abt-item.but { border-bottom: 1px dashed var(--border); color: var(--danger); font-weight: 600; }
+.abt-item.then { color: var(--success); font-weight: 700; }
+.abt-item span.letter { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-weight: 800; font-size: 13px; margin-right: 10px; flex-shrink: 0; }
+.abt-item.and span.letter { background: var(--text-light); color: white; }
+.abt-item.but span.letter { background: var(--danger); color: white; }
+.abt-item.then span.letter { background: var(--success); color: white; }
+
+/* ── 知识卡片 ── */
+.knowledge-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.knowledge-card h3 { font-size: 16px; margin-bottom: 12px; color: var(--primary); }
+.knowledge-card p { font-size: 14px; color: var(--text-dim); line-height: 1.8; }
+.knowledge-card ul { padding-left: 20px; margin: 8px 0; }
+.knowledge-card li { font-size: 14px; color: var(--text-dim); margin-bottom: 4px; }
+.knowledge-card strong { color: var(--primary); }
+
+/* ── Leaflet 地图 ── */
+.map-wrap { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-lg); margin: 16px 0; }
+#agri-map { width: 100%; height: 520px; background: #c8e6f5; }
+.map-legend { padding: 12px 20px; background: var(--surface-2); border-top: 1px solid var(--border); display: flex; gap: 20px; flex-wrap: wrap; }
+.map-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); }
+.map-legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+.map-controls { padding: 8px 20px; background: var(--surface); border-top: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; }
+.map-btn { padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); font-size: 12px; cursor: pointer; transition: all .15s; }
+.map-btn:hover { background: var(--primary-light); border-color: var(--primary); }
+.map-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* ── 对比表格 ── */
+.compare-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin: 16px 0; font-size: 14px; }
+.compare-table th { background: var(--primary); color: white; padding: 14px 16px; text-align: left; font-weight: 700; }
+.compare-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table tr:nth-child(even) td { background: var(--surface-2); }
+.compare-table .region-name { font-weight: 700; white-space: nowrap; }
+
+/* ── 测验 ── */
+.quiz-container { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.quiz-q { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+.quiz-options { display: flex; flex-direction: column; gap: 8px; }
+.quiz-option { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all .15s; background: var(--surface); }
+.quiz-option:hover { border-color: var(--primary); background: var(--primary-light); }
+.quiz-option .opt-letter { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); font-size: 12px; font-weight: 700; color: var(--text-dim); flex-shrink: 0; }
+.quiz-option .opt-text { font-size: 14px; color: var(--text); flex: 1; padding-top: 2px; }
+.quiz-option.correct { border-color: var(--success); background: var(--success-light); }
+.quiz-option.incorrect { border-color: var(--danger); background: var(--danger-light); }
+.quiz-option.correct .opt-letter { background: var(--success); color: white; border-color: transparent; }
+.quiz-option.incorrect .opt-letter { background: var(--danger); color: white; border-color: transparent; }
+.quiz-feedback { margin-top: 10px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; display: none; }
+.quiz-feedback.show { display: block; }
+.quiz-feedback.correct { background: var(--success-light); color: var(--success); border: 1px solid var(--success); }
+.quiz-feedback.incorrect { background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger); }
+
+/* ── 拖拽 ── */
+.drag-container { margin: 20px 0; }
+.drag-container h4 { font-size: 14px; color: var(--text-dim); margin-bottom: 12px; }
+.drag-items { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.drag-item { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: var(--radius-sm); background: var(--surface); border: 2px solid var(--border); font-size: 13px; cursor: grab; user-select: none; box-shadow: var(--shadow); transition: all .15s; }
+.drag-item:hover { border-color: var(--primary); transform: translateY(-1px); }
+.drag-item.dragging { opacity: .5; cursor: grabbing; }
+.drag-item .num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: white; font-size: 11px; font-weight: 700; }
+#causal-chain { min-height: 60px; padding: 16px; border: 2px dashed var(--border); border-radius: var(--radius); background: var(--surface-2); display: flex; flex-wrap: wrap; gap: 8px; transition: all .2s; }
+#causal-chain.drag-over { border-color: var(--primary); background: var(--primary-light); }
+.chain-hint { font-size: 12px; color: var(--text-light); margin-top: 8px; }
+.check-btn { margin-top: 12px; padding: 10px 24px; background: var(--primary); color: white; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; }
+.check-btn:hover { background: #2563eb; }
+
+/* ── 分层练习 ── */
+.exercise-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow); }
+.exercise-header { padding: 12px 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+.exercise-header .level-badge { padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.level-badge.l1 { background: var(--success-light); color: var(--success); }
+.level-badge.l2 { background: var(--primary-light); color: var(--primary); }
+.level-badge.l3 { background: var(--accent-light); color: var(--accent); }
+.exercise-header .bloom-label { font-size: 12px; color: var(--text-light); margin-left: auto; }
+.exercise-body { padding: 20px; }
+
+/* ── 五镜头 ── */
+.five-lens-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 20px 0; }
+.lens-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 16px; box-shadow: var(--shadow); text-align: center; }
+.lens-card .lens-num { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; font-size: 14px; font-weight: 800; margin-bottom: 8px; }
+.lens-card.see .lens-num { background: #ede9fe; color: #7c3aed; }
+.lens-card.break .lens-num { background: #dbeafe; color: #2563eb; }
+.lens-card.explain .lens-num { background: #d1fae5; color: #059669; }
+.lens-card.compare .lens-num { background: #fef3c7; color: #d97706; }
+.lens-card.transfer .lens-num { background: #fce7f3; color: #db2777; }
+.lens-card h4 { font-size: 13px; margin-bottom: 4px; }
+.lens-card p { font-size: 12px; color: var(--text-dim); }
+
+/* ── 知识图谱 ── */
+.kg-section { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); margin: 16px 0; }
+.kg-header { padding: 16px 20px; background: var(--surface-2); border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text-dim); display: flex; align-items: center; gap: 8px; }
+#kg-graph { width: 100%; height: 380px; background: linear-gradient(180deg, #f8fafc, #f1f5f9); }
+#kg-graph svg { width: 100%; height: 100%; }
+
+/* ── 总结 ── */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.summary-item { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; box-shadow: var(--shadow); }
+.summary-item h4 { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em; }
+.summary-item p { font-size: 14px; color: var(--text); font-weight: 600; }
+
+/* ── 成就 ── */
+#achievementToast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: white; border-radius: var(--radius); padding: 16px 24px; box-shadow: var(--shadow-lg); z-index: 9999; display: flex; align-items: center; gap: 14px; opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; min-width: 280px; }
+#achievementToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toastIcon { font-size: 32px; }
+#toastName { font-weight: 800; font-size: 15px; }
+#toastDesc { font-size: 12px; color: var(--text-dim); }
+
+/* ── 响应式 ── */
+@media (max-width: 640px) {
+  .course-section { padding: 40px 16px; }
+  .compare-table { font-size: 12px; }
+  #agri-map { height: 340px; }
+  .five-lens-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .nav-links { display: none; }
+}
+
+/* ── 动画 ── */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.course-section { animation: fadeUp .5s ease both; }
+</style>
+</head>
+<body>
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://weponusa.github.io/teachany/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://weponusa.github.io/teachany/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://weponusa.github.io/teachany/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+
+<!-- 顶部进度条 -->
+<div id="top-bar"><div id="progress-bar"></div></div>
+
+<!-- 顶部导航 -->
+<nav id="top-nav">
+  <a class="nav-brand" href="#hero">🌾 中国农业 <span>/ 初中地理</span></a>
+  <div class="nav-links">
+    <a href="#objectives">🎯 目标</a>
+    <a href="#map-section">🗺️ 地图</a>
+    <a href="#modules">📖 内容</a>
+    <a href="#practice">🎮 练习</a>
+    <a href="#knowledge-graph">🗺️ 图谱</a>
+  </div>
+  <div id="streak-display">🔥 <span id="streak-count">0</span> 天连续</div>
+</nav>
+
+<!-- 恢复横幅 -->
+<div id="resume-banner">
+  <span>📖 继续上次学习（<span id="resume-pct">0</span>%）</span>
+  <button onclick="scrollToLast()">继续</button>
+  <button onclick="dismissResume()">从开头</button>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     1. HERO
+     ════════════════════════════════════════════════════ -->
+<section id="hero" data-tts="hero">
+  <div class="hero-badge">🎓 初中地理 · 八年级下册</div>
+  <h1>中国农业</h1>
+  <p class="hero-question">
+    为什么黑龙江能种水稻，新疆产长绒棉，青藏高原以放牧为主？<br>
+    同在中国，为什么南北农业差异如此之大？
+  </p>
+  <div class="hero-tags">
+    <span class="tag blue">空间分布</span>
+    <span class="tag teal">气候影响</span>
+    <span class="tag amber">区域差异</span>
+    <span class="tag">因地制宜</span>
+  </div>
+  <div class="hero-meta">
+    <span>⏱️ 约 25 分钟</span>
+    <span>📊 自适应学习</span>
+    <span>🤖 AI 学伴伴学</span>
+  </div>
+  <button class="start-btn" onclick="document.getElementById('objectives').scrollIntoView({behavior:'smooth'})">🚀 开始学习</button>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     2. 学习目标
+     ════════════════════════════════════════════════════ -->
+<section id="objectives" class="course-section" data-tts="objectives">
+  <h2 class="section-title"><span class="icon">🎯</span> 学习目标 <span class="line"></span></h2>
+  <div class="objectives-grid">
+    <div class="obj-card">
+      <span class="bloom l2">理解</span>
+      <p>能够<span style="color:var(--primary);font-weight:700">识别</span>中国三大农业区域的分布位置，并结合地图描述各区域的地理范围。</p>
+    </div>
+    <div class="obj-card">
+      <span class="bloom l2">应用</span>
+      <p>能够<span style="color:var(--primary);font-weight:700">分析</span>气候、地形、水源等自然因素如何共同决定农业分布格局。</p>
+    </div>
+    <div class="obj-card">
+      <span class="bloom l3">评价</span>
+      <p>能够<span style="color:var(--accent);font-weight:700">评价</span>"因地制宜"原则在中国农业发展中的重要意义，并解决实际问题。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     3. 前测
+     ════════════════════════════════════════════════════ -->
+<section id="pretest" class="course-section" data-tts="pretest">
+  <h2 class="section-title"><span class="icon">📋</span> 前测 · 了解起点 <span class="line"></span></h2>
+  <p style="font-size:14px;color:var(--text-dim);margin-bottom:20px">回答以下问题，帮助系统为你匹配合适的学习路径。</p>
+
+  <div class="quiz-container">
+    <div class="quiz-q">1. 小麦主要分布在中国哪个地区？</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkPreTest(this,1,false)"><span class="opt-letter">A</span><span class="opt-text">南方地区</span></div>
+      <div class="quiz-option" onclick="checkPreTest(this,1,true)"><span class="opt-letter">B</span><span class="opt-text">北方地区</span></div>
+      <div class="quiz-option" onclick="checkPreTest(this,1,false)"><span class="opt-letter">C</span><span class="opt-text">青藏高原</span></div>
+      <div class="quiz-option" onclick="checkPreTest(this,1,false)"><span class="opt-letter">D</span><span class="opt-text">西北内陆</span></div>
+    </div>
+    <div class="quiz-feedback" id="pretest-feedback-1"></div>
+
+    <div class="quiz-q" style="margin-top:20px">2. 划分中国南北方农业差异最重要的地理界线是？</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkPreTest(this,2,false)"><span class="opt-letter">A</span><span class="opt-text">长江</span></div>
+      <div class="quiz-option" onclick="checkPreTest(this,2,true)"><span class="opt-letter">B</span><span class="opt-text">秦岭—淮河一线</span></div>
+      <div class="quiz-option" onclick="checkPreTest(this,2,false)"><span class="opt-letter">C</span><span class="opt-text">黄河</span></div>
+      <div class="quiz-option" onclick="checkPreTest(this,2,false)"><span class="opt-letter">D</span><span class="opt-text">长城</span></div>
+    </div>
+    <div class="quiz-feedback" id="pretest-feedback-2"></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     4. ABT 导入
+     ════════════════════════════════════════════════════ -->
+<section id="intro-abt" class="course-section" data-tts="intro-abt">
+  <h2 class="section-title"><span class="icon">💡</span> 引入 · 核心问题 <span class="line"></span></h2>
+  <div class="abt-card">
+    <div class="abt-header">📖 ABT 叙事结构</div>
+    <div class="abt-body">
+      <div class="abt-item and">
+        <span class="letter">A</span>
+        <span><strong>And（已知）：</strong>我们都知道，中国地域辽阔，从南到北跨越了热带、亚热带和寒温带。</span>
+      </div>
+      <div class="abt-item but">
+        <span class="letter">B</span>
+        <span><strong>But（冲突）：</strong>但为什么黑龙江能种水稻，山东种小麦？同在北纬35°，为什么南北农业类型截然不同？</span>
+      </div>
+      <div class="abt-item then">
+        <span class="letter">T</span>
+        <span><strong>Therefore（答案）：</strong>这节课，我们通过分析中国农业的空间分布规律，找出隐藏在背后的"幕后推手"——自然条件与因地制宜的智慧。</span>
+      </div>
+    </div>
+  </div>
+  <div class="knowledge-card" style="margin-top:20px">
+    <h3>🔑 核心概念预告</h3>
+    <p>农业分布不是随机的，而是<span style="color:var(--primary);font-weight:700">自然条件与社会经济因素综合作用</span>的结果。理解这一点，你就能解释：</p>
+    <ul>
+      <li>为什么东北是中国的"北大仓"？</li>
+      <li>为什么新疆能产长绒棉、哈密瓜？</li>
+      <li>为什么青藏高寒区以放牧为主？</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     5. 交互地图（含底图 + 多边形覆盖层）
+     ════════════════════════════════════════════════════ -->
+<section id="map-section" class="course-section" data-tts="map-section">
+  <h2 class="section-title"><span class="icon">🗺️</span> 交互地图 · 中国农业三大区域 <span class="line"></span></h2>
+  <div class="knowledge-card">
+    <h3>📍 读图任务</h3>
+    <p>观察下方地图：①找出三大农业区各自的位置；②找到秦岭—淮河一线；③找出标注的代表性农业城市的分布规律。</p>
+  </div>
+
+  <div class="map-wrap">
+    <div id="agri-map"></div>
+    <div class="map-legend">
+      <div class="map-legend-item"><div class="map-legend-dot" style="background:#3b82f6;opacity:.5"></div>东部季风区</div>
+      <div class="map-legend-item"><div class="map-legend-dot" style="background:#f59e0b;opacity:.5"></div>西北内陆区</div>
+      <div class="map-legend-item"><div class="map-legend-dot" style="background:#8b5cf6;opacity:.5"></div>青藏高寒区</div>
+      <div class="map-legend-item"><div class="map-legend-dot" style="background:#10b981;height:3px;border-radius:0"></div>秦岭—淮河一线</div>
+    </div>
+    <div class="map-controls">
+      <button class="map-btn active" onclick="toggleZone('monsoon')">🌊 东部季风区</button>
+      <button class="map-btn active" onclick="toggleZone('inland')">🏜️ 西北内陆区</button>
+      <button class="map-btn active" onclick="toggleZone('plateau')">❄️ 青藏高寒区</button>
+      <button class="map-btn active" onclick="toggleZone('qinling')">🌿 秦岭—淮河</button>
+      <button class="map-btn" onclick="toggleCities()">🏙️ 显示城市</button>
+    </div>
+  </div>
+
+  <!-- 三区对比表 -->
+  <table class="compare-table">
+    <thead>
+      <tr><th>农业区</th><th>范围</th><th>主要作物</th><th>农业类型</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="region-name" style="color:#1d4ed8">东部季风区</td>
+        <td>大兴安岭以东、青藏高原东部、秦岭—淮河以南</td>
+        <td>水稻、油菜、茶叶、柑橘</td>
+        <td>水田农业为主</td>
+      </tr>
+      <tr>
+        <td class="region-name" style="color:#d97706">西北内陆区</td>
+        <td>秦岭—淮河以北、大兴安岭以西、青藏高原北部</td>
+        <td>小麦、棉花、瓜果、畜牧业</td>
+        <td>灌溉农业 + 绿洲农业</td>
+      </tr>
+      <tr>
+        <td class="region-name" style="color:#6d28d9">青藏高寒区</td>
+        <td>青藏高原全部（海拔3000m以上）</td>
+        <td>青稞、牦牛、绵羊</td>
+        <td>高寒畜牧业 + 河谷农业</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     6. 影响因素
+     ════════════════════════════════════════════════════ -->
+<section id="module-2" class="course-section" data-tts="module-2">
+  <h2 class="section-title"><span class="icon">🌦️</span> 模块二 · 农业分布的影响因素 <span class="line"></span></h2>
+
+  <div class="knowledge-card">
+    <h3>🔍 四大影响因素</h3>
+    <p>农业分布的形成，是<span style="color:var(--primary);font-weight:700">气候、地形、水源、社会经济</span>四大因素共同作用的结果。每个因素分别对应了哪种农业类型的形成？</p>
+  </div>
+
+  <div class="five-lens-grid">
+    <div class="lens-card see">
+      <div class="lens-num">1</div><h4>气候 ── 温度与降水</h4><p>热量带决定作物种类<br>年降水量决定农业类型</p>
+    </div>
+    <div class="lens-card break">
+      <div class="lens-num">2</div><h4>地形 ── 海拔与坡度</h4><p>平原适合种植业<br>高原适合畜牧业</p>
+    </div>
+    <div class="lens-card explain">
+      <div class="lens-num">3</div><h4>水源 ── 河流与地下水</h4><p>灌溉农业离不开水源<br>绿洲农业就是最好证明</p>
+    </div>
+    <div class="lens-card compare">
+      <div class="lens-num">4</div><h4>市场 ── 交通与人口</h4><p>城市附近发展蔬菜种植<br>交通沿线发展商品粮</p>
+    </div>
+  </div>
+
+  <!-- 拖拽因果链 -->
+  <div class="drag-container">
+    <h4>🧩 互动：排列因果链</h4>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px">将以下四个因素按正确的因果顺序排列，形成完整的农业分布因果链：</p>
+    <div class="drag-items" id="drag-source">
+      <div class="drag-item" draggable="true" data-order="3" onclick="startDrag(event,this)"><span class="num">3</span> 水源条件</div>
+      <div class="drag-item" draggable="true" data-order="1" onclick="startDrag(event,this)"><span class="num">1</span> 气候（热量+降水）</div>
+      <div class="drag-item" draggable="true" data-order="4" onclick="startDrag(event,this)"><span class="num">4</span> 农业产区</div>
+      <div class="drag-item" draggable="true" data-order="2" onclick="startDrag(event,this)"><span class="num">2</span> 作物类型</div>
+    </div>
+    <p class="chain-hint">💡 提示：从"源头"（气候）开始，到"结果"（产区）结束。拖动卡片到下方区域排列。</p>
+    <div id="causal-chain" ondragover="onDragOverChain(event)" ondrop="onDropChain(event)" ondragleave="onDragLeaveChain(event)">
+      <span style="font-size:12px;color:var(--text-light);align-self:center">把卡片拖到这里，按正确顺序排列 →</span>
+    </div>
+    <button class="check-btn" onclick="checkCausalChain()">✅ 检查答案</button>
+    <div class="quiz-feedback" id="chain-feedback"></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     7. 秦岭-淮河分界线
+     ════════════════════════════════════════════════════ -->
+<section id="module-3" class="course-section" data-tts="module-3">
+  <h2 class="section-title"><span class="icon">🔱</span> 模块三 · 秦岭—淮河一线 <span class="line"></span></h2>
+
+  <div class="knowledge-card">
+    <h3>📖 为什么秦岭—淮河是"神奇分界线"？</h3>
+    <p>秦岭—淮河一线，是中国最重要的<span style="color:var(--primary);font-weight:700">地理分界线</span>。它不仅是南北方气候的分水岭，也是农业类型的分界线。站在这条线的两侧，你能看到完全不同的农业景象。</p>
+  </div>
+
+  <table class="compare-table">
+    <thead>
+      <tr><th>对比项目</th><th>秦岭—淮河以北（北方）</th><th>秦岭—淮河以南（南方）</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>气候类型</strong></td><td>温带季风气候</td><td>亚热带季风气候</td></tr>
+      <tr><td><strong>年降水量</strong></td><td>400~800 mm</td><td>800~1600 mm</td></tr>
+      <tr><td><strong>一月均温</strong></td><td>&lt; 0°C（结冰）</td><td>&gt; 0°C（不结冰）</td></tr>
+      <tr><td><strong>主要粮食作物</strong></td><td>小麦、玉米</td><td>水稻</td></tr>
+      <tr><td><strong>作物熟制</strong></td><td>一年一熟 / 两年三熟</td><td>一年两熟 / 一年三熟</td></tr>
+      <tr><td><strong>典型农产品</strong></td><td>苹果、梨、花生</td><td>水稻、柑橘、甘蔗</td></tr>
+    </tbody>
+  </table>
+
+  <div class="knowledge-card" style="margin-top:16px;border-left:4px solid var(--success)">
+    <h3>💡 核心结论</h3>
+    <p><strong>秦岭—淮河分界线的本质</strong>是<span style="color:var(--success);font-weight:700">热量差异</span>和<span style="color:var(--success);font-weight:700">降水差异</span>的综合反映。这条线以南，水热条件充足，适合水稻种植；这条线以北，热量不足、降水偏少，形成了以旱作农业为主的格局。</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     8. 五镜头深度理解
+     ════════════════════════════════════════════════════ -->
+<section id="deep-understanding" class="course-section" data-tts="deep-understanding">
+  <h2 class="section-title"><span class="icon">🔍</span> 深度理解 · 五镜头法 <span class="line"></span></h2>
+
+  <div class="five-lens-grid">
+    <div class="lens-card see"><div class="lens-num">①</div><h4>观察 See It</h4><p>观察中国农业区分布图，找出三大农业区各自的地理位置和主要作物种类。</p></div>
+    <div class="lens-card break"><div class="lens-num">②</div><h4>分解 Break It</h4><p>将农业分布分解为四个影响因素：气候、地形、水源、市场，分别分析各自作用。</p></div>
+    <div class="lens-card explain"><div class="lens-num">③</div><h4>解释 Explain It</h4><p>用因果关系解释：为什么东北能成为"北大仓"？为什么新疆适合棉花？</p></div>
+    <div class="lens-card compare"><div class="lens-num">④</div><h4>对比 Compare It</h4><p>对比南北方农业：水稻 vs 小麦、一年两熟 vs 一年一熟的深层原因是什么？</p></div>
+    <div class="lens-card transfer"><div class="lens-num">⑤</div><h4>迁移 Transfer It</h4><p>如果气候变暖，秦岭—淮河分界线会北移吗？这对农业有什么影响？</p></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     9. 分层练习
+     ════════════════════════════════════════════════════ -->
+<section id="practice" class="course-section" data-tts="practice">
+  <h2 class="section-title"><span class="icon">🎮</span> 互动练习 <span class="line"></span></h2>
+
+  <!-- L1 -->
+  <div class="exercise-card">
+    <div class="exercise-header">
+      <span class="level-badge l1">Level 1 · 基础</span>
+      <span class="bloom-label">🌱 Bloom L1-L2 · 记忆 · 理解</span>
+    </div>
+    <div class="exercise-body">
+      <div class="quiz-q">1. 中国面积最大的农业区是？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="checkAnswer(this,'p1',false)"><span class="opt-letter">A</span><span class="opt-text">东部季风区</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p1',true)"><span class="opt-letter">B</span><span class="opt-text">西北内陆区</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p1',false)"><span class="opt-letter">C</span><span class="opt-text">青藏高寒区</span></div>
+      </div>
+      <div class="quiz-feedback" id="feedback-p1"></div>
+
+      <div class="quiz-q" style="margin-top:16px">2. 划分中国南北方农业差异最重要的地理界线是？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="checkAnswer(this,'p2',false)"><span class="opt-letter">A</span><span class="opt-text">长江</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p2',true)"><span class="opt-letter">B</span><span class="opt-text">秦岭—淮河一线</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p2',false)"><span class="opt-letter">C</span><span class="opt-text">黄河</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p2',false)"><span class="opt-letter">D</span><span class="opt-text">京杭大运河</span></div>
+      </div>
+      <div class="quiz-feedback" id="feedback-p2"></div>
+    </div>
+  </div>
+
+  <!-- L2 -->
+  <div class="exercise-card">
+    <div class="exercise-header">
+      <span class="level-badge l2">Level 2 · 应用</span>
+      <span class="bloom-label">🔧 Bloom L3 · 应用 · 分析</span>
+    </div>
+    <div class="exercise-body">
+      <div class="quiz-q">3. 新疆棉花品质优良、远销全国，主要得益于什么自然条件？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="checkAnswer(this,'p3',false)"><span class="opt-letter">A</span><span class="opt-text">降水充沛</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p3',true)"><span class="opt-letter">B</span><span class="opt-text">晴天多、热量足、灌溉便利</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p3',false)"><span class="opt-letter">C</span><span class="opt-text">土壤呈酸性</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p3',false)"><span class="opt-letter">D</span><span class="opt-text">海拔高、气温低</span></div>
+      </div>
+      <div class="quiz-feedback" id="feedback-p3"></div>
+
+      <div class="quiz-q" style="margin-top:16px">4. 为什么东北平原能成为中国的"北大仓"？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="checkAnswer(this,'p4',false)"><span class="opt-letter">A</span><span class="opt-text">全年高温多雨</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p4',false)"><span class="opt-letter">B</span><span class="opt-text">地形以山地为主</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p4',true)"><span class="opt-letter">C</span><span class="opt-text">平原广阔、土壤肥沃、夏季热量充足</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p4',false)"><span class="opt-letter">D</span><span class="opt-text">靠近海岸线，交通便利</span></div>
+      </div>
+      <div class="quiz-feedback" id="feedback-p4"></div>
+    </div>
+  </div>
+
+  <!-- L3 -->
+  <div class="exercise-card">
+    <div class="exercise-header">
+      <span class="level-badge l3">Level 3 · 迁移挑战</span>
+      <span class="bloom-label">🚀 Bloom L4-L5 · 分析 · 评价</span>
+    </div>
+    <div class="exercise-body">
+      <div class="quiz-q">5. 如果全球气候持续变暖，预计50年后秦岭—淮河分界线可能会：</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="checkAnswer(this,'p5',true)"><span class="opt-letter">A</span><span class="opt-text">北移，北方水稻种植面积扩大</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p5',false)"><span class="opt-letter">B</span><span class="opt-text">南移，北方变得更加干燥</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p5',false)"><span class="opt-letter">C</span><span class="opt-text">基本不变</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p5',false)"><span class="opt-letter">D</span><span class="opt-text">消失，分界线不再有意义</span></div>
+      </div>
+      <div class="quiz-feedback" id="feedback-p5"></div>
+
+      <div class="quiz-q" style="margin-top:16px">6. 青藏高原海拔高、气温低，却能种植青稞。这说明农业发展主要受什么因素影响？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="checkAnswer(this,'p6',false)"><span class="opt-letter">A</span><span class="opt-text">纬度（越靠近赤道越好）</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p6',false)"><span class="opt-letter">B</span><span class="opt-text">海拔（越低越好）</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p6',true)"><span class="opt-letter">C</span><span class="opt-text">综合自然条件 + 作物适应性（因地制宜）</span></div>
+        <div class="quiz-option" onclick="checkAnswer(this,'p6',false)"><span class="opt-letter">D</span><span class="opt-text">政策支持（最重要）</span></div>
+      </div>
+      <div class="quiz-feedback" id="feedback-p6"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     10. 总结
+     ════════════════════════════════════════════════════ -->
+<section id="summary" class="course-section" data-tts="summary">
+  <h2 class="section-title"><span class="icon">📌</span> 本节总结 <span class="line"></span></h2>
+  <div class="summary-grid">
+    <div class="summary-item">
+      <h4>🔑 核心概念</h4>
+      <p>三大农业区：东部季风区、西北内陆区、青藏高寒区</p>
+    </div>
+    <div class="summary-item">
+      <h4>🧭 重要分界线</h4>
+      <p>秦岭—淮河一线是南北方农业的分水岭</p>
+    </div>
+    <div class="summary-item">
+      <h4>🌦️ 四大影响因素</h4>
+      <p>气候 + 地形 + 水源 + 市场（社会经济）</p>
+    </div>
+    <div class="summary-item">
+      <h4>💡 核心原则</h4>
+      <p>因地制宜——农业布局必须顺应自然条件</p>
+    </div>
+  </div>
+  <div class="knowledge-card" style="margin-top:20px;border-left:4px solid var(--accent)">
+    <h3>🎯 迁移任务</h3>
+    <p>查阅资料，回答：你的家乡（或学校所在城市）属于哪个农业区？主要的农作物是什么？这些作物与当地的气候、地形条件有什么关系？</p>
+    <p style="margin-top:8px;font-size:13px;color:var(--text-dim)">💡 提示：用"因地制宜"的视角，分析自然条件如何影响农业生产。</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     11. 知识图谱（D3.js 可交互）
+     ════════════════════════════════════════════════════ -->
+<section id="knowledge-graph" class="course-section" data-tts="knowledge-graph">
+  <h2 class="section-title"><span class="icon">🗺️</span> 知识图谱 <span class="line"></span></h2>
+  <div class="knowledge-card">
+    <h3>📖 本节在知识树中的位置</h3>
+    <p>以下是中国地理知识树的一部分，点击节点可查看详情。了解前置知识有助于理解农业分布的成因。</p>
+  </div>
+
+  <div class="kg-section">
+    <div class="kg-header">🗺️ 初中地理 · 中国农业 · 知识图谱（八年级下册）</div>
+    <div id="kg-graph"></div>
+    <div style="padding:10px 20px;background:var(--surface-2);border-top:1px solid var(--border);font-size:12px;color:var(--text-dim);display:flex;gap:16px;flex-wrap:wrap">
+      <span>🟦 气候与资源前置</span>
+      <span>🟧 农业专题</span>
+      <span>🟪 区域地理后续</span>
+      <span>⬜ 未覆盖（gap）</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     12. 后测
+     ════════════════════════════════════════════════════ -->
+<section id="posttest" class="course-section" data-tts="posttest">
+  <h2 class="section-title"><span class="icon">📝</span> 后测 · 检测学习效果 <span class="line"></span></h2>
+  <p style="font-size:14px;color:var(--text-dim);margin-bottom:20px">与前测对比，看看你进步了多少！</p>
+
+  <div class="quiz-container">
+    <div class="quiz-q">1. 下列关于中国农业分布的说法，正确的是？</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkPostTest(this,1,false)"><span class="opt-letter">A</span><span class="opt-text">全国以水稻种植为主</span></div>
+      <div class="quiz-option" onclick="checkPostTest(this,1,false)"><span class="opt-letter">B</span><span class="opt-text">西北内陆区以水田农业为主</span></div>
+      <div class="quiz-option" onclick="checkPostTest(this,1,true)"><span class="opt-letter">C</span><span class="opt-text">青藏高寒区以畜牧业为主</span></div>
+      <div class="quiz-option" onclick="checkPostTest(this,1,false)"><span class="opt-letter">D</span><span class="opt-text">秦岭—淮河以南不适合种植任何作物</span></div>
+    </div>
+    <div class="quiz-feedback" id="post-feedback-1"></div>
+
+    <div class="quiz-q" style="margin-top:20px">2. "北大荒"变成"北大仓"，主要利用了东北平原的哪些条件？</div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="checkPostTest(this,2,false)"><span class="opt-letter">A</span><span class="opt-text">热带气候 + 高山冰雪融水</span></div>
+      <div class="quiz-option" onclick="checkPostTest(this,2,true)"><span class="opt-letter">B</span><span class="opt-text">平原广阔 + 土壤肥沃 + 夏季热量充足</span></div>
+      <div class="quiz-option" onclick="checkPostTest(this,2,false)"><span class="opt-letter">C</span><span class="opt-text">靠近海岸 + 全年降水均匀</span></div>
+      <div class="quiz-option" onclick="checkPostTest(this,2,false)"><span class="opt-letter">D</span><span class="opt-text">人口稀少 + 原始森林</span></div>
+    </div>
+    <div class="quiz-feedback" id="post-feedback-2"></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     AI 学伴配置
+     ════════════════════════════════════════════════════ -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  subject: 'geography',
+  stage: 'middle',
+  grade: 8,
+  courseId: 'geo-m-china-agriculture',
+  courseName: '中国农业',
+  currentSection: '',
+  nodeId: 'geo-m-china-agriculture',
+  nodeName: '中国农业',
+  prereqs: [
+    { nodeId: 'geo-m-china-resources', name: '中国自然资源' },
+    { nodeId: 'geo-m-china-population', name: '中国人口与民族' }
+  ],
+  leadsTo: [
+    { nodeId: 'geo-m-china-industry', name: '中国工业' },
+    { nodeId: 'geo-m-china-transportation', name: '中国交通运输' }
+  ]
+};
+</script>
+<script src="./ai-tutor.js"></script>
+
+<!-- 成就 Toast -->
+<div id="achievementToast">
+  <span id="toastIcon">🏆</span>
+  <div>
+    <div id="toastName">成就解锁！</div>
+    <div id="toastDesc" style="font-size:12px;color:var(--text-dim)"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// TeachAny 核心引擎（零依赖 · localStorage）
+// ═══════════════════════════════════════════════════════════════
+const COURSE_ID = 'geo-m-china-agriculture';
+
+// ── Adaptive ──
+const TeachAnyAdaptive = (() => {
+  const KEY = 'teachany_adaptive_v2';
+  function getData() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } }
+  function saveData(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
+  function updateMastery(nodeId, quality, bloomLevel) {
+    const d = getData();
+    if (!d[nodeId]) d[nodeId] = { attempts: 0, correct: 0, mastery: 0 };
+    const n = d[nodeId];
+    n.attempts++; if (quality) n.correct++;
+    n.mastery = n.correct / n.attempts;
+    saveData(d); return n.mastery;
+  }
+  function getMastery(nodeId) { return getData()[nodeId]?.mastery ?? 0; }
+  function decideBranch(nodeId) {
+    const m = getMastery(nodeId);
+    if (m >= 0.8) return 'challenge';
+    if (m >= 0.3) return 'normal';
+    return 'scaffold';
+  }
+  return { updateMastery, getMastery, decideBranch };
+})();
+
+// ── Progress ──
+const TeachAnyProgress = (() => {
+  const P = 'teachany_progress_';
+  function getProgress(id) { try { return JSON.parse(localStorage.getItem(P+id) || '{"modules":{},"completionPercent":0}'); } catch { return {modules:{},completionPercent:0}; } }
+  function saveProgress(id, d) { localStorage.setItem(P+id, JSON.stringify(d)); }
+  function completeModule(courseId, moduleId, result) {
+    const p = getProgress(courseId);
+    p.modules[moduleId] = { completed: true, at: Date.now() };
+    const total = document.querySelectorAll('[data-module-id]').length || 8;
+    const done = Object.values(p.modules).filter(m => m.completed).length;
+    p.completionPercent = Math.round((done / total) * 100);
+    saveProgress(courseId, p);
+    return p;
+  }
+  function updateGlobalStats() {
+    const KEY = 'teachany_global_stats';
+    let s = {}; try { s = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch {}
+    const today = new Date().toDateString();
+    if (s.lastDate !== today) {
+      const y = new Date(Date.now()-86400000).toDateString();
+      s.streak = (s.lastDate === y) ? (s.streak||0)+1 : 1;
+      s.lastDate = today;
+      localStorage.setItem(KEY, JSON.stringify(s));
+    }
+    return s;
+  }
+  function getGlobalStats() { try { return JSON.parse(localStorage.getItem('teachany_global_stats') || '{}'); } catch { return {}; } }
+  function saveScroll(id) { localStorage.setItem(P+id+'_scroll', window.scrollY); }
+  function restoreScroll(id) { const y = parseInt(localStorage.getItem(P+id+'_scroll') || '0'); if (y > 100) window.scrollTo(0, y); }
+  return { getProgress, completeModule, updateGlobalStats, getGlobalStats, saveScroll, restoreScroll };
+})();
+
+// ── SR ──
+const TeachAnySR = (() => {
+  const KEY = 'teachany_sr_v1';
+  function getData() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } }
+  function saveData(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
+  function addToReview(nodeId, name, url) {
+    const d = getData();
+    if (!d[nodeId]) { d[nodeId] = { name, url, interval:1, repetitions:0, nextReview: Date.now() }; saveData(d); }
+  }
+  function recordReview(nodeId, quality) {
+    const d = getData();
+    if (!d[nodeId]) return;
+    const i = d[nodeId];
+    i.repetitions++;
+    i.interval = quality >= 3 ? i.interval * (quality===5 ? 2.5 : 1.5) : Math.max(1, i.interval * 0.5);
+    i.nextReview = Date.now() + i.interval * 86400000;
+    saveData(d);
+  }
+  function getDueReviews() {
+    const now = Date.now();
+    return Object.entries(getData()).map(([id, item]) => ({ nodeId:id, name:item.name, due:item.nextReview, daysPast: Math.round((now-item.nextReview)/86400000) })).filter(x => x.due <= now + 86400000*3);
+  }
+  return { addToReview, recordReview, getDueReviews, getData };
+})();
+
+// ── Achievements ──
+const TeachAnyAchievements = (() => {
+  const DEFS = {
+    'first-lesson':  { name:'第一步',    icon:'🌱', desc:'完成第一个模块' },
+    'five-lessons':  { name:'学习达人',  icon:'📖', desc:'完成5个模块' },
+    'streak-3':      { name:'渐入佳境',  icon:'🔥', desc:'连续学习3天' },
+    'streak-7':      { name:'周冠军',    icon:'💪', desc:'连续学习7天' },
+  };
+  const KEY = 'teachany_achievements';
+  function award(badgeId) {
+    const d = getAch(); if (d[badgeId]) return; d[badgeId] = { earnedAt: Date.now() };
+    localStorage.setItem(KEY, JSON.stringify(d));
+    const def = DEFS[badgeId]; if (!def) return;
+    document.getElementById('toastIcon').textContent = def.icon;
+    document.getElementById('toastName').textContent = def.name + ' 🏆';
+    document.getElementById('toastDesc').textContent = def.desc;
+    const t = document.getElementById('achievementToast');
+    t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 4000);
+  }
+  function getAch() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } }
+  function checkAndAward(courseId) {
+    const stats = TeachAnyProgress.getGlobalStats();
+    if ((stats.streak||0) >= 3) award('streak-3');
+    if ((stats.streak||0) >= 7) award('streak-7');
+    const total = Object.values(TeachAnyProgress.getProgress(courseId).modules||{}).filter(m=>m.completed).length;
+    if (total >= 1) award('first-lesson');
+    if (total >= 5) award('five-lessons');
+  }
+  return { award, checkAndAward };
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// 测验函数
+// ═══════════════════════════════════════════════════════════════
+let posttestTotal = 0;
+
+function checkPreTest(el, qNum, isCorrect) {
+  const fb = document.getElementById('pretest-feedback-' + qNum);
+  el.parentElement.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('correct','incorrect'));
+  el.classList.add(isCorrect ? 'correct' : 'incorrect');
+  if (isCorrect) { fb.textContent = '✅ 正确！'; fb.className = 'quiz-feedback correct show'; }
+  else { fb.textContent = '❌ 不正确，看看解析吧。'; fb.className = 'quiz-feedback incorrect show'; }
+  TeachAnyAdaptive.updateMastery(COURSE_ID+'-pretest', isCorrect, 2);
+}
+
+function checkPostTest(el, qNum, isCorrect) {
+  const fb = document.getElementById('post-feedback-' + qNum);
+  el.parentElement.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('correct','incorrect'));
+  el.classList.add(isCorrect ? 'correct' : 'incorrect');
+  if (isCorrect) { fb.textContent = '✅ 正确！'; fb.className = 'quiz-feedback correct show'; posttestTotal++; }
+  else { fb.textContent = '❌ 不正确，看看解析吧。'; fb.className = 'quiz-feedback incorrect show'; posttestTotal++; }
+  TeachAnyAdaptive.updateMastery(COURSE_ID+'-posttest', isCorrect, 2);
+  if (posttestTotal >= 2) {
+    TeachAnySR.addToReview(COURSE_ID, '中国农业', window.location.href);
+    TeachAnyAchievements.checkAndAward(COURSE_ID);
+    TeachAnyProgress.completeModule(COURSE_ID, 'posttest', {score:1});
+  }
+}
+
+function checkAnswer(el, qId, isCorrect) {
+  const fb = document.getElementById('feedback-' + qId);
+  el.parentElement.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('correct','incorrect'));
+  el.classList.add(isCorrect ? 'correct' : 'incorrect');
+  if (isCorrect) { fb.textContent = '✅ 正确！'; fb.className = 'quiz-feedback correct show'; }
+  else { fb.textContent = '❌ 不正确，再想想。'; fb.className = 'quiz-feedback incorrect show'; }
+  TeachAnyAdaptive.updateMastery(COURSE_ID+'-'+qId, isCorrect, 2);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 拖拽排序
+// ═══════════════════════════════════════════════════════════════
+let draggingItem = null;
+
+function startDrag(e, el) { draggingItem = el; el.classList.add('dragging'); }
+function onDragOverChain(e) { e.preventDefault(); document.getElementById('causal-chain').classList.add('drag-over'); }
+function onDragLeaveChain(e) { document.getElementById('causal-chain').classList.remove('drag-over'); }
+function onDropChain(e) {
+  e.preventDefault();
+  const chain = document.getElementById('causal-chain');
+  chain.classList.remove('drag-over');
+  if (draggingItem) {
+    chain.querySelector('span')?.remove();
+    chain.appendChild(draggingItem);
+    draggingItem.classList.remove('dragging');
+    draggingItem = null;
+  }
+}
+
+function checkCausalChain() {
+  const chain = document.getElementById('causal-chain');
+  const items = chain.querySelectorAll('.drag-item');
+  const fb = document.getElementById('chain-feedback');
+  let correct = true;
+  items.forEach((item, i) => {
+    const expected = parseInt(item.getAttribute('data-order'));
+    if (expected !== i + 1) correct = false;
+    item.querySelector('.num').textContent = i + 1;
+  });
+  if (correct) {
+    fb.textContent = '✅ 完美！气候 → 水源 → 作物 → 产区，因果链完整！';
+    fb.className = 'quiz-feedback correct show';
+    TeachAnyProgress.completeModule(COURSE_ID, 'module-2', { score: 1 });
+  } else {
+    fb.textContent = '❌ 顺序有误。提示：想一想，哪里是"源头"？哪里是"结果"？';
+    fb.className = 'quiz-feedback incorrect show';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Leaflet 地图
+// ═══════════════════════════════════════════════════════════════
+// 三大农业区多边形坐标（近似地理边界，基于经纬度）
+// 中国范围：Lat 18-54°N, Lon 73-135°E
+const AGRICULTURE_ZONES = {
+  monsoon: {
+    name: '东部季风区',
+    color: '#3b82f6',
+    // 从东北到华南的东部季风区
+    latlngs: [
+      [52, 120], [50, 127], [45, 130], [40, 120], [35, 120],
+      [30, 121], [25, 118], [22, 115], [20, 110], [22, 105],
+      [25, 102], [28, 98], [30, 95], [35, 97], [40, 100],
+      [43, 100], [45, 115], [48, 120], [52, 120]
+    ]
+  },
+  inland: {
+    name: '西北内陆区',
+    color: '#f59e0b',
+    // 西北干旱区：新疆、甘肃、内蒙古西部
+    latlngs: [
+      [42, 74], [44, 80], [45, 88], [42, 95], [40, 100],
+      [38, 105], [35, 107], [33, 106], [35, 100], [38, 95],
+      [40, 88], [42, 82], [40, 78], [42, 74], [42, 74]
+    ]
+  },
+  plateau: {
+    name: '青藏高寒区',
+    color: '#8b5cf6',
+    // 青藏高原
+    latlngs: [
+      [36, 74], [35, 80], [33, 86], [32, 92], [30, 97],
+      [28, 100], [28, 103], [30, 106], [32, 105], [35, 100],
+      [37, 97], [38, 93], [37, 88], [38, 82], [36, 74]
+    ]
+  },
+  qinling: {
+    name: '秦岭—淮河',
+    color: '#10b981',
+    isLine: true,
+    // 秦岭—淮河一线：西起青藏边界，东至海边
+    latlngs: [
+      [34, 104], [33, 107], [33, 110], [33, 114], [33, 118], [32, 122]
+    ]
+  }
+};
+
+// 代表性农业城市
+const AGRI_CITIES = [
+  { name: '哈尔滨', lat: 45.8, lng: 126.5, crop: '大豆·玉米', region: 'monsoon' },
+  { name: '沈阳', lat: 41.8, lng: 123.4, crop: '玉米·高粱', region: 'monsoon' },
+  { name: '北京', lat: 39.9, lng: 116.4, crop: '小麦·蔬菜', region: 'monsoon' },
+  { name: '郑州', lat: 34.7, lng: 113.6, crop: '小麦·棉花', region: 'monsoon' },
+  { name: '武汉', lat: 30.6, lng: 114.3, crop: '水稻·油菜', region: 'monsoon' },
+  { name: '上海', lat: 31.2, lng: 121.5, crop: '水稻·蔬菜', region: 'monsoon' },
+  { name: '广州', lat: 23.1, lng: 113.3, crop: '水稻·甘蔗', region: 'monsoon' },
+  { name: '成都', lat: 30.6, lng: 104.0, crop: '水稻·小麦', region: 'monsoon' },
+  { name: '乌鲁木齐', lat: 43.8, lng: 87.6, crop: '棉花·瓜果', region: 'inland' },
+  { name: '喀什', lat: 39.5, lng: 76.0, crop: '长绒棉', region: 'inland' },
+  { name: '拉萨', lat: 29.6, lng: 91.1, crop: '青稞·牦牛', region: 'plateau' },
+  { name: '西宁', lat: 36.6, lng: 101.8, crop: '青稞·牧业', region: 'plateau' },
+];
+
+const CITY_ICONS = {
+  monsoon: L.divIcon({ className:'', html:'<div style="width:10px;height:10px;background:#3b82f6;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,.3)"></div>', iconSize:[10,10], iconAnchor:[5,5] }),
+  inland:  L.divIcon({ className:'', html:'<div style="width:10px;height:10px;background:#f59e0b;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,.3)"></div>', iconSize:[10,10], iconAnchor:[5,5] }),
+  plateau: L.divIcon({ className:'', html:'<div style="width:10px;height:10px;background:#8b5cf6;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,.3)"></div>', iconSize:[10,10], iconAnchor:[5,5] }),
+};
+
+let map, zoneLayers = {}, cityLayer = null, citiesVisible = false;
+
+function initMap() {
+  map = L.map('agri-map', {
+    center: [35, 105],
+    zoom: 4,
+    minZoom: 3,
+    maxZoom: 8,
+    zoomControl: true,
+    attributionControl: false
+  });
+
+  // 高德底图（卫星/影像）- China-accessible
+  L.tileLayer('https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
+    maxZoom: 18,
+    attribution: '© 高德地图'
+  }).addTo(map);
+
+  // 三大区域多边形
+  zoneLayers.monsoon = L.polygon(AGRICULTURE_ZONES.monsoon.latlngs, {
+    color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.25, weight: 2.5
+  }).addTo(map).bindPopup('<b style="color:#1d4ed8">东部季风区</b><br>以种植业为主，水田与旱作并存');
+
+  zoneLayers.inland = L.polygon(AGRICULTURE_ZONES.inland.latlngs, {
+    color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.25, weight: 2.5
+  }).addTo(map).bindPopup('<b style="color:#d97706">西北内陆区</b><br>灌溉农业与绿洲农业，畜牧业发达');
+
+  zoneLayers.plateau = L.polygon(AGRICULTURE_ZONES.plateau.latlngs, {
+    color: '#8b5cf6', fillColor: '#8b5cf6', fillOpacity: 0.25, weight: 2.5
+  }).addTo(map).bindPopup('<b style="color:#6d28d9">青藏高寒区</b><br>高寒畜牧业，河谷种植青稞');
+
+  // 秦岭-淮河线
+  zoneLayers.qinling = L.polyline(AGRICULTURE_ZONES.qinling.latlngs, {
+    color: '#10b981', weight: 3, dashArray: '8,6', opacity: 0.9
+  }).addTo(map).bindPopup('<b style="color:#059669">秦岭—淮河一线</b><br>中国南北方重要地理分界线<br>≈800mm年等降水量线<br>≈0°C一月等温线');
+
+  // 城市标注
+  cityLayer = L.layerGroup();
+  AGRI_CITIES.forEach(city => {
+    const marker = L.marker([city.lat, city.lng], { icon: CITY_ICONS[city.region] });
+    marker.bindPopup(`<b>${city.name}</b><br><span style="font-size:12px;color:#64748b">主要作物：${city.crop}</span>`);
+    marker.addTo(cityLayer);
+  });
+
+  map.on('zoomend', () => {
+    const z = map.getZoom();
+    zoneLayers.monsoon.setStyle({ weight: Math.max(1.5, 3 - (z-4)*0.5) });
+    zoneLayers.inland.setStyle({ weight: Math.max(1.5, 3 - (z-4)*0.5) });
+    zoneLayers.plateau.setStyle({ weight: Math.max(1.5, 3 - (z-4)*0.5) });
+  });
+}
+
+function toggleZone(zone) {
+  const btn = document.querySelector(`.map-btn[onclick="toggleZone('${zone}')"]`);
+  if (zoneLayers[zone]) {
+    if (map.hasLayer(zoneLayers[zone])) {
+      map.removeLayer(zoneLayers[zone]);
+      btn.classList.remove('active');
+    } else {
+      zoneLayers[zone].addTo(map);
+      btn.classList.add('active');
+    }
+  }
+}
+
+function toggleCities() {
+  const btn = document.querySelector(`.map-btn[onclick="toggleCities()"]`);
+  if (citiesVisible) {
+    map.removeLayer(cityLayer);
+    btn.classList.remove('active');
+    citiesVisible = false;
+  } else {
+    cityLayer.addTo(map);
+    btn.classList.add('active');
+    citiesVisible = true;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// D3.js 知识图谱
+// ═══════════════════════════════════════════════════════════════
+// 知识树数据：初中地理·中国经济地理（中国农业节点及其前后置）
+const KG_DATA = {
+  nodes: [
+    // 前置知识
+    { id: 'geo-m-china-location',     name: '中国的地理位置与疆域',        group: 'prereq',    fx: 80,  fy: 80  },
+    { id: 'geo-m-china-terrain',       name: '中国地形与地势',              group: 'prereq',    fx: 80,  fy: 160 },
+    { id: 'geo-m-climate-m',           name: '世界气候类型与分布',           group: 'prereq',    fx: 80,  fy: 240 },
+    { id: 'geo-m-china-climate',       name: '中国气候',                    group: 'prereq',    fx: 80,  fy: 320 },
+    { id: 'geo-m-china-rivers',        name: '中国河流湖泊',                group: 'prereq',    fx: 80,  fy: 400 },
+    { id: 'geo-m-china-resources',     name: '中国自然资源',                group: 'prereq',    fx: 240, fy: 380 },
+    { id: 'geo-m-china-population',    name: '中国人口与民族',              group: 'prereq',    fx: 240, fy: 440 },
+    // 当前节点
+    { id: 'geo-m-china-agriculture',   name: '中国农业 ★',                  group: 'current',   fx: 400, fy: 300 },
+    // 后续知识
+    { id: 'geo-m-china-industry',      name: '中国工业',                    group: 'future',    fx: 600, fy: 280 },
+    { id: 'geo-m-china-transportation',name: '中国交通运输',                 group: 'future',    fx: 600, fy: 360 },
+    { id: 'geo-m-four-regions',        name: '中国四大地理区域',             group: 'future',    fx: 600, fy: 440 },
+  ],
+  links: [
+    { source: 'geo-m-china-climate',     target: 'geo-m-china-agriculture' },
+    { source: 'geo-m-china-resources',    target: 'geo-m-china-agriculture' },
+    { source: 'geo-m-china-population',  target: 'geo-m-china-agriculture' },
+    { source: 'geo-m-china-terrain',     target: 'geo-m-china-climate'     },
+    { source: 'geo-m-climate-m',         target: 'geo-m-china-climate'     },
+    { source: 'geo-m-china-rivers',      target: 'geo-m-china-resources'   },
+    { source: 'geo-m-china-agriculture', target: 'geo-m-china-industry'    },
+    { source: 'geo-m-china-agriculture', target: 'geo-m-china-transportation'},
+    { source: 'geo-m-china-agriculture', target: 'geo-m-four-regions'      },
+  ]
+};
+
+function initKnowledgeGraph() {
+  const container = document.getElementById('kg-graph');
+  const W = container.clientWidth || 800;
+  const H = 380;
+
+  const svg = d3.select('#kg-graph')
+    .append('svg')
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const g = svg.append('g');
+
+  // Zoom
+  const zoom = d3.zoom()
+    .scaleExtent([0.5, 2])
+    .on('zoom', (e) => g.attr('transform', e.transform));
+  svg.call(zoom);
+
+  const colorMap = {
+    prereq:  '#3b82f6',
+    current: '#f59e0b',
+    future:  '#8b5cf6',
+    gap:     '#94a3b8'
+  };
+
+  const groupNames = { prereq: '前置知识', current: '当前', future: '后续' };
+
+  // Arrow marker
+  svg.append('defs').append('marker')
+    .attr('id', 'arrowhead').attr('viewBox', '0 -5 10 10')
+    .attr('refX', 18).attr('refY', 0).attr('markerWidth', 6).attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path').attr('d', 'M0,-5L10,0L0,5')
+    .attr('fill', '#94a3b8');
+
+  // Links
+  const link = g.append('g').selectAll('line')
+    .data(KG_DATA.links)
+    .enter().append('line')
+    .attr('stroke', '#cbd5e1').attr('stroke-width', 1.5)
+    .attr('marker-end', 'url(#arrowhead)');
+
+  // Nodes
+  const node = g.append('g').selectAll('g')
+    .data(KG_DATA.nodes)
+    .enter().append('g')
+    .attr('cursor', 'pointer')
+    .on('click', (e, d) => {
+      if (d.id !== KG_DATA.nodes.find(n=>n.group==='current')?.id) {
+        alert(`📖 ${d.name}\n（${groupNames[d.group] || ''}）`);
+      }
+    });
+
+  node.append('rect')
+    .attr('x', d => d.fx - 60).attr('y', d => d.fy - 16)
+    .attr('width', 120).attr('height', 32)
+    .attr('rx', 8)
+    .attr('fill', d => d.group === 'current' ? colorMap.current : (d.group === 'gap' ? '#f1f5f9' : colorMap[d.group]))
+    .attr('fill-opacity', d => d.group === 'current' ? 1 : 0.85)
+    .attr('stroke', d => d.group === 'current' ? '#d97706' : 'transparent')
+    .attr('stroke-width', 2);
+
+  node.append('text')
+    .attr('x', d => d.fx).attr('y', d => d.fy + 5)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', d => d.group === 'current' ? '12px' : '11px')
+    .attr('font-weight', d => d.group === 'current' ? '700' : '500')
+    .attr('fill', d => d.group === 'current' ? 'white' : (d.group === 'gap' ? '#94a3b8' : '#1e293b'))
+    .text(d => d.name.length > 8 ? d.name.substring(0,7) + '…' : d.name);
+
+  // Labels
+  svg.append('text').attr('x', 80).attr('y', 50).attr('fill', '#3b82f6').attr('font-size', 12).attr('font-weight', 700).text('← 前置知识（ prerequisite）');
+  svg.append('text').attr('x', 360).attr('y', 50).attr('fill', '#f59e0b').attr('font-size', 12).attr('font-weight', 700).text('★ 本节 · 中国农业');
+  svg.append('text').attr('x', 560).attr('y', 50).attr('fill', '#8b5cf6').attr('font-size', 12).attr('font-weight', 700).text('后续知识 →');
+
+  // Auto-fit
+  const bounds = g.node().getBBox();
+  const scale = Math.min(W / bounds.width, H / bounds.height) * 0.9;
+  svg.call(zoom.transform, d3.zoomIdentity.translate(W/2-bounds.x*scale-W/2*0.1, H/2-bounds.y*scale+H/2*0.1).scale(scale * 0.85));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 初始化
+// ═══════════════════════════════════════════════════════════════
+(function init() {
+  // 进度
+  const stats = TeachAnyProgress.updateGlobalStats();
+  const streakEl = document.getElementById('streak-count');
+  if (streakEl) streakEl.textContent = stats.streak || 0;
+
+  const prog = TeachAnyProgress.getProgress(COURSE_ID);
+  document.getElementById('progress-bar').style.width = (prog.completionPercent || 0) + '%';
+
+  if ((prog.completionPercent || 0) > 0 && (prog.completionPercent || 0) < 100) {
+    document.getElementById('resume-pct').textContent = prog.completionPercent;
+    document.getElementById('resume-banner').classList.add('show');
+  }
+
+    // 等所有库（D3、Leaflet）加载完毕后初始化地图和图谱
+  window.addEventListener('load', () => {
+    console.log('[Debug] window.load fired, L available:', typeof L !== 'undefined', 'd3 available:', typeof d3 !== 'undefined');
+    const agriMap = document.getElementById('agri-map');
+    console.log('[Debug] #agri-map exists:', !!agriMap, 'display:', agriMap ? getComputedStyle(agriMap).display : 'N/A');
+    const kgGraph = document.getElementById('kg-graph');
+    console.log('[Debug] #kg-graph exists:', !!kgGraph, 'display:', kgGraph ? getComputedStyle(kgGraph).display : 'N/A');
+    try {
+      if (agriMap) {
+        initMap();
+        console.log('[Debug] initMap() completed');
+      }
+      if (kgGraph) {
+        initKnowledgeGraph();
+        console.log('[Debug] initKnowledgeGraph() completed');
+      }
+    } catch(e) {
+      console.error('[Debug] Init error:', e.message, e.stack);
+    }
+  });
+
+  // 滚动保存
+  let t;
+  window.addEventListener('scroll', () => {
+    clearTimeout(t);
+    t = setTimeout(() => TeachAnyProgress.saveScroll(COURSE_ID), 500);
+  });
+
+  TeachAnyProgress.restoreScroll(COURSE_ID);
+})();
+
+function scrollToLast() {
+  const p = TeachAnyProgress.getProgress(COURSE_ID);
+  const last = Object.keys(p.modules || {}).pop();
+  if (last) {
+    const el = document.getElementById(last) || document.querySelector(`[data-module-id="${last}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  }
+  dismissResume();
+}
+function dismissResume() { document.getElementById('resume-banner').classList.remove('show'); }
+</script>
+
+
+</body>
+</html>

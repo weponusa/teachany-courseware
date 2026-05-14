@@ -1,0 +1,92 @@
+name: Review Community Submission
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'community/pending/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Validate pending packages
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          errors=0
+          report=/tmp/community-review.md
+          echo "## TeachAny 社区课件质检" > "$report"
+          echo >> "$report"
+
+          shopt -s nullglob
+          json_files=(community/pending/*.json)
+          if [ ${#json_files[@]} -eq 0 ]; then
+            echo "❌ 未找到 community/pending/*.json" | tee -a "$report"
+            exit 1
+          fi
+
+          for json_file in "${json_files[@]}"; do
+            base=$(basename "$json_file" .json)
+            pkg="community/pending/$base.teachany"
+            echo "### $base" >> "$report"
+
+            python3 -m json.tool "$json_file" >/dev/null || { echo "❌ JSON 不合法" | tee -a "$report"; errors=$((errors+1)); continue; }
+
+            python3 -c "import json,sys; m=json.load(open('$json_file')); missing=[k for k in ['id','node_id','name','subject','grade'] if not m.get(k)]; print(('❌ 缺少字段: '+', '.join(missing)) if missing else ('✅ 元数据字段完整: '+str(m.get('name')))); sys.exit(1 if missing else 0)" || errors=$((errors+1))
+
+            if [ ! -f "$pkg" ]; then
+              echo "❌ 缺少课件包：$pkg" | tee -a "$report"
+              errors=$((errors+1))
+              continue
+            fi
+
+            size=$(wc -c < "$pkg")
+            if [ "$size" -gt 52428800 ]; then
+              echo "❌ 包超过 50MB：$((size/1024/1024))MB" | tee -a "$report"
+              errors=$((errors+1))
+              continue
+            fi
+
+            tmp=$(mktemp -d)
+            unzip -q "$pkg" -d "$tmp" || { echo "❌ .teachany 不是合法 zip" | tee -a "$report"; errors=$((errors+1)); rm -rf "$tmp"; continue; }
+            [ -f "$tmp/index.html" ] || { echo "❌ 包内缺 index.html" | tee -a "$report"; errors=$((errors+1)); }
+            [ -f "$tmp/manifest.json" ] || { echo "❌ 包内缺 manifest.json" | tee -a "$report"; errors=$((errors+1)); }
+            if [ -f "$tmp/manifest.json" ]; then
+              python3 -m json.tool "$tmp/manifest.json" >/dev/null || { echo "❌ 包内 manifest.json 不合法" | tee -a "$report"; errors=$((errors+1)); }
+            fi
+            rm -rf "$tmp"
+            echo "✅ 包结构通过，大小 $((size/1024))KB" >> "$report"
+            echo >> "$report"
+          done
+
+          echo "errors=$errors" >> "$GITHUB_OUTPUT"
+          if [ "$errors" -gt 0 ]; then
+            echo "❌ 质检失败：$errors 个错误" | tee -a "$report"
+            exit 1
+          fi
+          echo "✅ 全部 pending 课件通过基础质检" | tee -a "$report"
+
+      - name: Comment review result
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '未生成质检报告';
+            try { body = fs.readFileSync('/tmp/community-review.md', 'utf8'); } catch {}
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body
+            });

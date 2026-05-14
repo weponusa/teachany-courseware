@@ -1,0 +1,119 @@
+name: Publish Community Submission
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'community/pending/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY_TOKEN: ${{ secrets.TEACHANY_REGISTRY_PAT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Unpack submitted .teachany packages
+        id: unpack
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p community
+          published_file=/tmp/published-courses.txt
+          : > "$published_file"
+
+          # Find pending JSON files. On normal push, handle all pending packages to avoid missed runs.
+          shopt -s nullglob
+          for json_file in community/pending/*.json; do
+            base=$(basename "$json_file" .json)
+            pkg="community/pending/$base.teachany"
+            if [ ! -f "$pkg" ]; then
+              echo "⚠️ $base: missing .teachany package, skip"
+              continue
+            fi
+
+            tmp=$(mktemp -d)
+            unzip -o -q "$pkg" -d "$tmp"
+            if [ ! -f "$tmp/index.html" ] || [ ! -f "$tmp/manifest.json" ]; then
+              echo "❌ $base: package must contain index.html + manifest.json"
+              rm -rf "$tmp"
+              exit 1
+            fi
+
+            course_id=$(python3 -c "import json,re; m=json.load(open('$tmp/manifest.json')); raw=str(m.get('node_id') or m.get('id') or '$base').strip().lower(); raw=re.sub(r'[^a-z0-9-]+','-',raw).strip('-'); print(raw or '$base')")
+            target="community/$course_id"
+            if [ -d "$target" ]; then
+              echo "⚠️ $course_id exists, replacing with new approved package"
+              rm -rf "$target"
+            fi
+            mkdir -p "$target"
+            cp -R "$tmp/"* "$target/"
+            rm -rf "$tmp"
+
+            # Keep runtime robust: if HTML references ../../scripts/, it will work via root scripts/.
+            # If the package already includes assets/scripts/, keep it as-is.
+            echo "$course_id" >> "$published_file"
+            echo "✅ Published $pkg → $target"
+
+            # Remove pending files after successful publish.
+            rm -f "$json_file" "$pkg"
+          done
+
+          if [ -s "$published_file" ]; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "courses=$(paste -sd, "$published_file")" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            echo "No pending packages to publish."
+          fi
+
+      - name: Commit published courseware
+        if: steps.unpack.outputs.published == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add community/
+          git commit -m "community: publish submitted courseware (${{ steps.unpack.outputs.courses }})"
+          git push origin main
+
+      - name: Deploy updated site to gh-pages
+        if: steps.unpack.outputs.published == 'true'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
+          keep_files: false
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'deploy: community publish (${{ steps.unpack.outputs.courses }})'
+          exclude_assets: '.github,node_modules,__pycache__,*.py,*.pyc,*.sh,*.cjs,*.txt,*.log'
+
+      - name: Notify registry repo
+        if: steps.unpack.outputs.published == 'true' && env.REGISTRY_TOKEN != ''
+        shell: bash
+        run: |
+          payload=$(python3 -c "import json; courses='${{ steps.unpack.outputs.courses }}'.split(','); print(json.dumps({'event_type':'courseware-published','client_payload':{'courses':courses}}))")
+          curl -fsSL -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $REGISTRY_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/weponusa/teachany/dispatches \
+            -d "$payload"
+          echo "✅ Registry sync dispatched: ${{ steps.unpack.outputs.courses }}"
+
+      - name: Explain registry secret requirement
+        if: steps.unpack.outputs.published == 'true' && env.REGISTRY_TOKEN == ''
+        run: |
+          echo "⚠️ Courseware published, but registry sync was not dispatched."
+          echo "Add repository secret TEACHANY_REGISTRY_PAT in weponusa/teachany-courseware."
+          echo "The token must have Contents: Read/Write and Actions: Read/Write for weponusa/teachany."

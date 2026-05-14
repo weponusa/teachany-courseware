@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<!-- TeachAny v6: 初中地理 · 地球的形状与大小 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>地球的形状与大小 - TeachAny 互动课件</title>
+<meta name="teachany-node" content="geo-m-earth-shape-size">
+<meta name="teachany-subject" content="geography">
+<meta name="teachany-domain" content="earth">
+<meta name="teachany-grade" content="7">
+<meta name="teachany-prerequisites" content="">
+<meta name="teachany-difficulty" content="2">
+<meta name="teachany-version" content="2.0">
+<meta name="teachany-author" content="teachany">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="./ai-tutor.css">
+<link rel="stylesheet" href="./teachany-tutor-card.css">
+<link rel="stylesheet" href="./teachany-tts-narrator.css">
+<link rel="stylesheet" href="./teachany-audio-player.css">
+<link rel="stylesheet" href="./teachany-knowledge-graph.css">
+<link rel="stylesheet" href="./teachany-section-hints.css">
+<style>
+/* ═══ 学段模板 CSS 变量（初中 dark 主题） ═══ */
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --border: #334155;
+  --text: #f8fafc;
+  --text-dim: #94a3b8;
+  --accent: #3b82f6;
+  --accent-2: #8b5cf6;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --orange: #f97316;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Source Han Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* ═══ Sticky 导航栏 ═══ */
+.nav-bar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 20px;
+  background: rgba(15,23,42,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto; white-space: nowrap;
+}
+.nav-bar .brand { font-weight: 700; font-size: 14px; margin-right: 12px; color: var(--accent); }
+.nav-bar a {
+  text-decoration: none; padding: 5px 12px; border-radius: 16px;
+  font-size: 13px; color: var(--text-dim); transition: all 0.2s;
+}
+.nav-bar a:hover, .nav-bar a.active { background: var(--accent); color: #fff; }
+
+/* ═══ Section 通用 ═══ */
+section.course-section {
+  min-height: 40vh;
+  padding: 60px 8% 80px;
+  border-bottom: 1px solid var(--border);
+  scroll-margin-top: 20px;
+}
+section.course-section h2 {
+  font-size: 28px; margin: 0 0 24px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+/* ═══ Hero ═══ */
+#hero {
+  min-height: 92vh;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center; padding: 40px 8%;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(59,130,246,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at center, rgba(16,185,129,0.06) 0%, transparent 60%);
+}
+#hero h1 {
+  font-size: clamp(34px, 6vw, 54px); margin: 0 0 20px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2), var(--success));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  line-height: 1.3;
+}
+#hero .subtitle {
+  font-size: 18px; color: var(--text-dim); max-width: 640px; margin: 0 auto 32px;
+}
+#hero .tags { display: flex; gap: 10px; margin-bottom: 36px; }
+#hero .tag {
+  padding: 4px 14px; border-radius: 999px; font-size: 13px; font-weight: 500;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+}
+#hero .start-btn {
+  padding: 14px 36px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border: none; border-radius: 999px;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 8px 28px rgba(59,130,246,0.4); transition: transform 0.2s;
+}
+#hero .start-btn:hover { transform: scale(1.05); }
+
+/* ═══ 学习目标 ═══ */
+.objectives { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.objective-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px; font-size: 15px;
+}
+.objective-card .verb { color: var(--accent); font-weight: 700; }
+.objective-card .bloom-tag {
+  font-size: 11px; color: var(--text-dim); background: rgba(59,130,246,0.1);
+  padding: 2px 8px; border-radius: 10px; margin-left: 8px;
+}
+
+/* ═══ 内容卡片 ═══ */
+.content-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px; margin: 20px 0;
+}
+.content-card h3 { margin: 0 0 14px; font-size: 20px; color: var(--accent); }
+.content-card p { color: var(--text-dim); font-size: 15px; margin: 0 0 12px; max-width: 560px; }
+
+/* ═══ 认知过程时间轴 ═══ */
+.timeline { position: relative; margin: 32px 0; padding-left: 32px; }
+.timeline::before {
+  content: ''; position: absolute; left: 12px; top: 8px; bottom: 8px;
+  width: 2px; background: linear-gradient(to bottom, var(--accent), var(--accent-2), var(--success));
+}
+.timeline-item { position: relative; margin-bottom: 28px; }
+.timeline-item::before {
+  content: ''; position: absolute; left: -26px; top: 8px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--bg);
+}
+.timeline-item .era {
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.timeline-item .title { font-size: 17px; font-weight: 700; margin: 4px 0; }
+.timeline-item .desc { font-size: 14px; color: var(--text-dim); max-width: 500px; }
+
+/* ═══ 证据展示卡片 ═══ */
+.evidence-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 24px 0; }
+.evidence-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px; transition: transform 0.2s, box-shadow 0.2s;
+}
+.evidence-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.evidence-card .icon { font-size: 32px; margin-bottom: 10px; }
+.evidence-card h4 { margin: 0 0 8px; font-size: 16px; }
+.evidence-card p { font-size: 14px; color: var(--text-dim); margin: 0; }
+
+/* ═══ 数据展示 ═══ */
+.data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 24px 0; }
+.data-card {
+  background: var(--surface); border: 2px solid var(--border);
+  border-radius: 14px; padding: 24px; text-align: center;
+}
+.data-card .value {
+  font-size: 32px; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.data-card .unit { font-size: 14px; color: var(--text-dim); }
+.data-card .label { font-size: 13px; color: var(--text-dim); margin-top: 6px; }
+.data-card .sub {
+  font-size: 12px; color: var(--text-dim); margin-top: 4px; opacity: 0.7;
+}
+
+/* ═══ 测验 ═══ */
+.quiz-block { margin: 24px 0; }
+.quiz-q {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px; margin-bottom: 14px;
+}
+.quiz-q .q-text { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.quiz-q .options { display: flex; flex-direction: column; gap: 6px; }
+.quiz-q .opt {
+  padding: 10px 16px; border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer; font-size: 14px; color: var(--text-dim);
+  transition: all 0.2s;
+}
+.quiz-q .opt:hover { border-color: var(--accent); background: rgba(59,130,246,0.08); }
+.quiz-q .opt.selected { border-color: var(--accent); background: rgba(59,130,246,0.15); color: var(--text); }
+.quiz-q .opt.correct { border-color: var(--success); background: rgba(16,185,129,0.15); color: var(--success); }
+.quiz-q .opt.wrong { border-color: var(--danger); background: rgba(239,68,68,0.1); color: var(--danger); }
+.quiz-q .feedback { font-size: 13px; margin-top: 10px; padding: 8px 12px; border-radius: 8px; display: none; }
+.quiz-q .feedback.show { display: block; }
+.quiz-q .feedback.correct-fb { background: rgba(16,185,129,0.12); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+.quiz-q .feedback.wrong-fb { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+.quiz-submit {
+  padding: 10px 24px; background: var(--accent); color: #fff;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background 0.2s;
+}
+.quiz-submit:hover { background: #2563eb; }
+.quiz-score { font-size: 16px; margin-top: 12px; font-weight: 600; }
+
+/* ═══ ConcepTest ═══ */
+.conceptest {
+  background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(59,130,246,0.06));
+  border: 2px solid var(--accent-2); border-radius: 16px;
+  padding: 28px; margin: 28px 0;
+}
+.conceptest .ct-label {
+  font-size: 12px; font-weight: 700; color: var(--accent-2);
+  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;
+}
+.conceptest .ct-question { font-size: 17px; font-weight: 600; margin-bottom: 16px; }
+.conceptest .ct-discuss { display: none; padding: 12px 16px; background: rgba(139,92,246,0.1); border-radius: 8px; font-size: 14px; margin-top: 12px; }
+.conceptest .ct-discuss.show { display: block; }
+.conceptest .ct-result { font-size: 14px; font-weight: 600; margin-top: 12px; }
+
+/* ═══ 分层练习 ═══ */
+.tier-label { font-size: 14px; font-weight: 700; margin: 16px 0 8px; }
+.tier-1 { color: var(--success); }
+.tier-2 { color: var(--warning); }
+.tier-3 { color: var(--danger); }
+
+/* ═══ 拖拽排序 ═══ */
+.drag-sort { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.drag-item {
+  padding: 10px 18px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; cursor: grab; font-size: 14px; user-select: none;
+  transition: all 0.2s;
+}
+.drag-item:active { cursor: grabbing; }
+.drag-item.placed { opacity: 0.5; border-style: dashed; }
+
+.drop-zone { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; min-height: 48px; }
+.drop-slot {
+  width: 48px; height: 48px; border: 2px dashed var(--border);
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--text-dim);
+}
+.drop-slot.filled { border-color: var(--accent); background: rgba(59,130,246,0.1); font-size: 14px; font-weight: 600; color: var(--text); }
+.drop-slot.correct-slot { border-color: var(--success); background: rgba(16,185,129,0.12); }
+.drop-slot.wrong-slot { border-color: var(--danger); background: rgba(239,68,68,0.1); }
+
+/* ═══ 知识图谱 ═══ */
+#knowledge-graph { background: linear-gradient(180deg, var(--bg), #0a0f1c); }
+.kg-container { width: 100%; height: 520px; background: #0a0f1c; border-radius: 14px; border: 1px solid var(--border); }
+.kg-links { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+.kg-node-link {
+  display: inline-block; padding: 10px 18px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--surface); color: var(--text);
+  text-decoration: none; font-size: 14px; font-weight: 500;
+  transition: all 0.2s;
+}
+.kg-node-link:hover { border-color: var(--accent); transform: translateY(-2px); }
+.kg-node-link.current {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border-color: transparent; font-weight: 700;
+}
+.kg-node-link.missing {
+  border-style: dashed; cursor: default; opacity: 0.6;
+}
+.kg-node-link.missing:hover { transform: none; border-color: var(--border); }
+
+/* ═══ 总结 ═══ */
+#summary {
+  padding: 80px 8%;
+  text-align: center;
+  background: linear-gradient(180deg, transparent, rgba(59,130,246,0.05));
+}
+#summary .check-icon { font-size: 48px; margin-bottom: 16px; }
+
+/* ═══ 导航按钮 ═══ */
+.nav-buttons { display: flex; justify-content: space-between; margin: 32px 0; }
+.nav-btn {
+  padding: 10px 20px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); cursor: pointer; font-size: 14px; font-weight: 500;
+  transition: all 0.2s;
+}
+.nav-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ═══ 响应式 ═══ */
+@media (max-width: 640px) {
+  section.course-section { padding: 40px 5%; }
+  #hero h1 { font-size: 28px; }
+  .data-grid { grid-template-columns: 1fr 1fr; }
+  .evidence-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://weponusa.github.io/teachany/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://weponusa.github.io/teachany/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://weponusa.github.io/teachany/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+
+<!-- ═══ Sticky 顶部导航 ═══ -->
+<nav class="nav-bar" id="topNav">
+  <span class="brand">🌍 TeachAny</span>
+  <a href="#hero">首页</a>
+  <a href="#objectives">学习目标</a>
+  <a href="#pretest">前测</a>
+  <a href="#mod1">认识过程</a>
+  <a href="#mod2">证据</a>
+  <a href="#conceptest">概念测试</a>
+  <a href="#mod3">地球大小</a>
+  <a href="#practice">综合练习</a>
+  <a href="#posttest">后测</a>
+  <a href="#knowledge-graph">知识图谱</a>
+</nav>
+
+<!-- ═══ Hero ═══ -->
+<section id="hero" class="course-section" data-tts="hero">
+  <div class="tags">
+    <span class="tag">📚 七年级上册</span>
+    <span class="tag">🌍 地理</span>
+    <span class="tag">📖 新授课</span>
+    <span class="tag">人教版</span>
+  </div>
+  <h1>地球的形状与大小</h1>
+  <p class="subtitle">
+    从古人的"天圆地方"到今天卫星拍下的蓝色弹珠——<br>
+    人类花了<strong>两千多年</strong>才真正认识我们脚下的这颗星球。<br>
+    它到底长什么样？大不大？
+  </p>
+  <button class="start-btn" onclick="document.getElementById('objectives').scrollIntoView({behavior:'smooth'})">
+    🚀 开始探索
+  </button>
+</section>
+
+<!-- ═══ 学习目标 ═══ -->
+<section id="objectives" class="course-section" data-tts="objectives">
+  <h2>🎯 学习目标</h2>
+  <div class="objectives">
+    <div class="objective-card">
+      <div>
+        <span class="verb">记住</span>
+        <span class="bloom-tag">L1 记忆</span>
+      </div>
+      <p style="margin:8px 0 0">准确说出地球的平均半径（6371千米）、赤道周长（约4万千米）和表面积（5.1亿平方千米）</p>
+    </div>
+    <div class="objective-card">
+      <div>
+        <span class="verb">理解</span>
+        <span class="bloom-tag">L2 理解</span>
+      </div>
+      <p style="margin:8px 0 0">说出人类认识地球形状的四个阶段，并能用生活中的实例证明地球是个球体</p>
+    </div>
+    <div class="objective-card">
+      <div>
+        <span class="verb">应用</span>
+        <span class="bloom-tag">L3 应用</span>
+      </div>
+      <p style="margin:8px 0 0">利用地球的大小数据解释日常现象，比较赤道半径与极半径的差异</p>
+    </div>
+    <div class="objective-card">
+      <div>
+        <span class="verb">分析</span>
+        <span class="bloom-tag">L4 分析</span>
+      </div>
+      <p style="margin:8px 0 0">区分地球（不规则球体）与地球仪（正球体）的差异，判断不同证据的说服力强弱</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 前测 ═══ -->
+<section id="pretest" class="course-section" data-scaffold="none">
+  <h2>📝 课前检测</h2>
+  <p style="color:var(--text-dim);margin-bottom:20px">先来测测你已经知道多少！答完点击"提交"查看结果。</p>
+
+  <div class="quiz-block" id="pretestQuiz">
+    <div class="quiz-q" data-bloom-level="remember">
+      <div class="q-text">1. 地球的实际形状最接近以下哪种描述？</div>
+      <div class="options">
+        <div class="opt" data-idx="0">A. 正圆球体</div>
+        <div class="opt" data-idx="0">B. 一个巨大的平面</div>
+        <div class="opt" data-idx="0">C. 两极稍扁、赤道略鼓的不规则球体</div>
+        <div class="opt" data-idx="0">D. 完美的椭圆形</div>
+      </div>
+      <div class="feedback correct-fb">✅ 正确！地球不是一个正球体，而是一个两极稍扁、赤道略鼓的不规则球体。</div>
+      <div class="feedback wrong-fb">❌ 不正确。地球不是正圆球体——它的赤道半径（6378km）比极半径（6357km）长约21km。</div>
+    </div>
+
+    <div class="quiz-q" data-bloom-level="understand">
+      <div class="q-text">2. 下面哪个现象<strong>不能</strong>证明地球是球体？</div>
+      <div class="options">
+        <div class="opt" data-idx="0">A. 海边看远方驶来的船，先见桅杆后见船身</div>
+        <div class="opt" data-idx="0">B. 日升日落</div>
+        <div class="opt" data-idx="0">C. 月食时地球的影子是弧形</div>
+        <div class="opt" data-idx="0">D. 登高望远</div>
+      </div>
+      <div class="feedback correct-fb">✅ 正确！日升日落由地球自转造成，如果地球是平的也可以用"太阳绕圈"来解释。而 A/C/D 只有在球面上才有合理解释。</div>
+      <div class="feedback wrong-fb">❌ 日升日落其实是地球自转的结果。再想想：如果大地是平的，太阳也可以"升起"啊——所以它不能单独证明地球是球体。</div>
+    </div>
+
+    <button class="quiz-submit" onclick="checkPretest()">提交前测</button>
+    <div class="quiz-score" id="pretestScore" style="display:none"></div>
+  </div>
+</section>
+
+<script>
+/* ═══ 前测逻辑 ═══ */
+function checkPretest() {
+  const answers = [2, 1]; // 0-indexed correct answers
+  const qs = document.querySelectorAll('#pretestQuiz .quiz-q');
+  let correct = 0;
+  qs.forEach((q, qi) => {
+    const opts = q.querySelectorAll('.opt');
+    let selected = -1;
+    opts.forEach((o, oi) => {
+      if (o.classList.contains('selected')) selected = oi;
+    });
+    opts.forEach((o, oi) => {
+      if (oi === answers[qi]) { o.classList.add('correct'); o.classList.remove('wrong'); }
+      else if (oi === selected && selected !== answers[qi]) { o.classList.add('wrong'); o.classList.remove('correct'); }
+    });
+    q.querySelectorAll('.feedback').forEach(f => f.classList.remove('show'));
+    if (selected === answers[qi]) {
+      q.querySelector('.correct-fb').classList.add('show');
+      correct++;
+    } else if (selected >= 0) {
+      q.querySelector('.wrong-fb').classList.add('show');
+    }
+  });
+  const scoreEl = document.getElementById('pretestScore');
+  scoreEl.style.display = 'block';
+  scoreEl.innerHTML = `🎯 前测成绩：${correct}/2（${correct===2?'👍 基础不错！':'没关系，这正是我们要学的！'}）`;
+}
+</script>
+
+<!-- ═══ 模块1：人类认识地球形状的过程 ═══ -->
+<section id="mod1" class="course-section" data-tts="mod1">
+  <h2>🧭 模块一：人类认识地球形状的过程</h2>
+
+  <div class="content-card">
+    <h3>📖 ABT 引入</h3>
+    <p>【And】你每天站在地面上，看到的"地"是平的，"天"像个盖子——古人自然也这么想。<br>
+    【But】但如果地球是平的，为什么海边的船"先见桅杆后见船身"？为什么月食的影子总是弧形？<br>
+    【Therefore】真相只有一个：大地是弯曲的——地球是一个球体！让我们看看人类是怎么一步步发现这个事实的。</p>
+  </div>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="era">📜 阶段一：臆想</div>
+      <div class="title">"天圆地方"（古代中国～周代）</div>
+      <div class="desc">"天圆如张盖，地方如棋局"——古人凭直觉认为天空是圆的穹顶，大地是方的棋盘。这是人类对地球形状最初的想象。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="era">🔭 阶段二：推测</div>
+      <div class="title">亚里士多德月食观察（公元前4世纪）</div>
+      <div class="desc">古希腊学者亚里士多德发现月食时地球投在月球上的影子是<strong>弧形</strong>的。如果地球是平的，影子应该是直线。这个推理首次科学地暗示了地球是球体。</div>
+    </div>
+    <div class="timeline-item">
+      <div class="era">⛵ 阶段三：证实</div>
+      <div class="title">麦哲伦船队环球航行（1519—1522）</div>
+      <div class="desc">葡萄牙航海家麦哲伦率船队从西班牙出发，一直向西航行，三年后返回西班牙。这是人类首次用<strong>行动</strong>证明地球是圆的——绕了一圈又回来了！</div>
+    </div>
+    <div class="timeline-item">
+      <div class="era">🛰️ 阶段四：确证</div>
+      <div class="title">人造卫星拍摄地球照片（20世纪）</div>
+      <div class="desc">1961年苏联宇航员加加林成为第一个亲眼看到地球全貌的人。后来的卫星照片——著名的"蓝色弹珠"——让全人类亲眼确认：地球真的是一个球体。</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:36px">✋ 互动：排序挑战</h3>
+  <p style="color:var(--text-dim);font-size:14px">把下面四个阶段按<strong>时间先后</strong>拖到正确的位置（最早→最晚）</p>
+
+  <div class="drag-sort" id="dragSource">
+    <div class="drag-item" draggable="true" data-order="3">🛰️ 卫星照片确认</div>
+    <div class="drag-item" draggable="true" data-order="1">📜 天圆地方臆想</div>
+    <div class="drag-item" draggable="true" data-order="4">🛰️ 卫星照片确认</div>
+    <div class="drag-item" draggable="true" data-order="2">⛵ 麦哲伦环球航行</div>
+  </div>
+  <p style="font-size:13px;color:var(--text-dim)">💡 提示：点击卡片选择，再点击下方空位放置</p>
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-slot" data-slot="0">1</div>
+    <div class="drop-slot" data-slot="1">2</div>
+    <div class="drop-slot" data-slot="2">3</div>
+    <div class="drop-slot" data-slot="3">4</div>
+  </div>
+  <div id="sortFeedback" style="font-size:14px;margin-top:12px"></div>
+  <script>
+  /* ═══ 拖拽排序 ═══ */
+  (function(){
+    const correctOrder = [1,2,3,4]; // stage indices
+    const placed = [null,null,null,null];
+    let usedItems = [];
+
+    document.getElementById('dragSource').addEventListener('click', function(e){
+      const item = e.target.closest('.drag-item');
+      if (!item || item.classList.contains('placed')) return;
+      // Remove previous selection
+      document.querySelectorAll('.drag-item.active').forEach(el => el.classList.remove('active'));
+      item.classList.add('active');
+    });
+
+    document.getElementById('dropZone').addEventListener('click', function(e){
+      const slot = e.target.closest('.drop-slot');
+      if (!slot) return;
+      const activeItem = document.querySelector('#dragSource .drag-item.active');
+      const slotIdx = parseInt(slot.dataset.slot);
+
+      // If slot already filled, return item to source
+      if (placed[slotIdx] !== null) {
+        const oldItem = placed[slotIdx];
+        oldItem.classList.remove('placed');
+        oldItem.style.display = '';
+        usedItems = usedItems.filter(x => x !== oldItem);
+        slot.classList.remove('filled','correct-slot','wrong-slot');
+        slot.innerHTML = slotIdx + 1;
+        placed[slotIdx] = null;
+        checkComplete();
+        return;
+      }
+
+      if (!activeItem) { document.getElementById('sortFeedback').textContent = '👆 请先在左侧点击一张卡片！'; return; }
+
+      const order = parseInt(activeItem.dataset.order);
+      activeItem.classList.add('placed');
+      activeItem.classList.remove('active');
+      activeItem.style.display = 'none';
+      placed[slotIdx] = activeItem;
+      usedItems.push(activeItem);
+      slot.classList.add('filled');
+      slot.innerHTML = activeItem.textContent.replace(/^[^\u4e00-\u9fa5]*/, '').substring(0,6);
+      document.getElementById('sortFeedback').textContent = '';
+      checkComplete();
+    });
+
+    function checkComplete() {
+      if (placed.includes(null)) return;
+      let allCorrect = true;
+      placed.forEach((item,i) => {
+        const slot = document.getElementById('dropZone').querySelector(`[data-slot="${i}"]`);
+        slot.classList.remove('correct-slot','wrong-slot');
+        if (parseInt(item.dataset.order) === correctOrder[i]) {
+          slot.classList.add('correct-slot');
+        } else {
+          slot.classList.add('wrong-slot');
+          allCorrect = false;
+        }
+      });
+      const fb = document.getElementById('sortFeedback');
+      if (allCorrect) {
+        fb.innerHTML = '✅ 太棒了！顺序完全正确：臆想→推测→证实→确证';
+        fb.style.color = 'var(--success)';
+      } else {
+        fb.innerHTML = '❌ 顺序有误。正确顺序：天圆地方 → 月食推测 → 麦哲伦航行 → 卫星照片';
+        fb.style.color = 'var(--danger)';
+      }
+    }
+  })();
+  </script>
+</section>
+
+<!-- ═══ 模块2：证明地球是球体的证据 ═══ -->
+<section id="mod2" class="course-section" data-tts="mod2">
+  <h2>🔍 模块二：凭什么说地球是球体？</h2>
+
+  <div class="content-card">
+    <h3>📖 ABT 引入</h3>
+    <p>【And】你已经知道了"地球是球体"这个结论。<br>
+    【But】如果有人问你"凭什么？"，你能给出几个<strong>生活中看得见的证据</strong>吗？<br>
+    【Therefore】这节课我们要学会——不用坐火箭，站在地球上也能推理出地球是圆的！</p>
+  </div>
+
+  <div class="evidence-grid">
+    <div class="evidence-card" data-evidence="ship">
+      <div class="icon">⛵</div>
+      <h4>证据一：海边看行船</h4>
+      <p>站在海边看远方驶来的帆船，总是<strong>先看到桅杆的顶端</strong>，再逐渐看到船身——因为海面是弯曲的！如果海面是平的，应该一眼就看到整艘船。</p>
+    </div>
+    <div class="evidence-card" data-evidence="eclipse">
+      <div class="icon">🌑</div>
+      <h4>证据二：月食的影子</h4>
+      <p>发生月食时，地球挡住阳光，投在月球上的阴影边缘总是<strong>弧形</strong>——只有球体的影子才会在任何方向上都是弧线。</p>
+    </div>
+    <div class="evidence-card" data-evidence="height">
+      <div class="icon">🏔️</div>
+      <h4>证据三：登高望远</h4>
+      <p>"欲穷千里目，更上一层楼"——站得越高，看得越远。如果大地是平的，视野范围应该和高度无关。这个现象只有在地球是球体时才能解释。</p>
+    </div>
+    <div class="evidence-card" data-evidence="magellan">
+      <div class="icon">🧭</div>
+      <h4>证据四：环球航行</h4>
+      <p>1519—1522年麦哲伦船队从西班牙向西航行，历时三年最终返回出发点。如果地球是平的，它会掉下去吗？不会——因为航行在一个球面上！</p>
+    </div>
+    <div class="evidence-card" data-evidence="satellite">
+      <div class="icon">🛰️</div>
+      <h4>证据五：卫星照片</h4>
+      <p>这是<strong>最直接的证据</strong>——人造卫星从太空中拍摄的地球照片。一张图胜过千言万语，地球的球形轮廓一目了然。</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:36px">🤔 随堂判断</h3>
+  <p style="font-size:14px;color:var(--text-dim)">以下哪个证据的说服力<strong>最强</strong>？</p>
+  <div class="quiz-q" data-bloom-level="analyze" id="evidenceQ" style="margin:12px 0">
+    <div class="options">
+      <div class="opt" data-idx="0">A. 海边看行船</div>
+      <div class="opt" data-idx="0">B. 月食影子</div>
+      <div class="opt" data-idx="0">C. 麦哲伦环球航行</div>
+      <div class="opt" data-idx="0">D. 人造卫星拍摄的地球照片</div>
+    </div>
+    <div class="feedback correct-fb">✅ 没错！卫星照片是最直观、最直接的证据——不用推理，亲眼所见。</div>
+    <div class="feedback wrong-fb">🤔 虽然 A/B/C 都是有效证据，但它们的共同问题是需要"推理"。D（卫星照片）是人类亲眼所见，说服力最强。</div>
+  </div>
+</section>
+
+<!-- ═══ ConcepTest ═══ -->
+<section id="conceptest" class="course-section" data-tts="conceptest">
+  <h2>💡 ConcepTest 概念检测</h2>
+  <div class="conceptest" data-conceptest="true">
+    <div class="ct-label">🧪 ConcepTest · 同伴教学法</div>
+    <div class="ct-question">
+      有人说："哥伦布是第一个证明地球是球体的人。" —— 这句话<strong>对吗</strong>？
+    </div>
+
+    <div class="quiz-q" id="ctQuiz" data-bloom-level="evaluate" style="margin:0;background:transparent;border:none;padding:0">
+      <div class="options">
+        <div class="opt" data-idx="0">A. 对，哥伦布发现了新大陆</div>
+        <div class="opt" data-idx="0">B. 不对，亚里士多德早就通过月食推测过</div>
+        <div class="opt" data-idx="0">C. 不对，第一个用行动证明的是麦哲伦</div>
+        <div class="opt" data-idx="0">D. 对，他也是第一个完成环球航行的人</div>
+      </div>
+    </div>
+    <button class="quiz-submit" onclick="conceptestCheck()" style="margin-top:14px">提交答案</button>
+    <div class="ct-result" id="ctResult" style="display:none"></div>
+    <div class="ct-discuss" id="ctDiscuss">
+      👥 <strong>请和同桌讨论</strong>：<br>
+      • 哥伦布做了什么？（1492年到达美洲——他只是"横渡了大西洋"）<br>
+      • 真正完成全球航行回到出发点的是谁？（麦哲伦船队，1522年）<br>
+      • 亚里士多德做了什么？（他在公元前4世纪就通过月食推测了地球是球体）<br><br>
+      💬 讨论后请<strong>再次投票</strong>！
+    </div>
+  </div>
+  <script>
+  let ctAttempts = 0;
+  function conceptestCheck() {
+    ctAttempts++;
+    const q = document.getElementById('ctQuiz');
+    const opts = q.querySelectorAll('.opt');
+    let selected = -1;
+    opts.forEach((o,i) => { if(o.classList.contains('selected')) selected = i; });
+    const resultEl = document.getElementById('ctResult');
+    const discussEl = document.getElementById('ctDiscuss');
+    resultEl.style.display = 'block';
+
+    if (selected === 2) { // C is correct
+      resultEl.textContent = '✅ 答对了！麦哲伦船队是第一个用航行证明地球是球体的，而哥伦布只是到了美洲。';
+      resultEl.style.color = 'var(--success)';
+      discussEl.classList.remove('show');
+    } else if (ctAttempts === 1) {
+      resultEl.textContent = '🤔 还不对哦。仔细想想：是"麦哲伦"还是"哥伦布"完成了环球航行？';
+      resultEl.style.color = 'var(--warning)';
+      discussEl.classList.add('show');
+    } else {
+      resultEl.textContent = '📌 正确答案是 C。提醒：麦哲伦船队完成环球航行（证明），哥伦布横渡大西洋（没有环球）。';
+      resultEl.style.color = 'var(--text-dim)';
+      discussEl.classList.add('show');
+    }
+  }
+  </script>
+</section>
+
+<!-- ═══ 模块3：地球的大小 ═══ -->
+<section id="mod3" class="course-section" data-tts="mod3">
+  <h2>📏 模块三：地球究竟有多大？</h2>
+
+  <div class="content-card">
+    <h3>📖 ABT 引入</h3>
+    <p>【And】你现在知道地球是个球体了。<br>
+    【But】那它到底<strong>多粗</strong>？绕一圈要走<strong>多远</strong>？表面积<strong>多少</strong>？——不知道这些数据，你对"地球"的认识还是模糊的。<br>
+    【Therefore】记住三个核心数字，再用数字来理解"两极稍扁、赤道略鼓"到底是什么意思。</p>
+  </div>
+
+  <h3>🌐 三个核心数据</h3>
+  <div class="data-grid">
+    <div class="data-card">
+      <div class="value">6371</div>
+      <div class="unit">千米</div>
+      <div class="label">📍 平均半径</div>
+      <div class="sub">"刘三起义"谐音助记</div>
+    </div>
+    <div class="data-card">
+      <div class="value">≈4万</div>
+      <div class="unit">千米</div>
+      <div class="label">🌐 赤道周长</div>
+      <div class="sub">地球"腰围"</div>
+    </div>
+    <div class="data-card">
+      <div class="value">5.1亿</div>
+      <div class="unit">平方千米</div>
+      <div class="label">📐 表面积</div>
+      <div class="sub">"3分陆地7分海洋"就发生在这张"皮"上</div>
+    </div>
+  </div>
+
+  <div class="content-card" style="margin-top:24px">
+    <h3>🔬 深层理解：赤道半径 vs 极半径</h3>
+    <p>赤道半径：<strong>6378</strong> 千米 &nbsp;|&nbsp; 极半径：<strong>6357</strong> 千米</p>
+    <p style="font-size:14px;color:var(--text-dim)">差了多少？6378 − 6357 = <strong style="color:var(--warning)">21千米</strong></p>
+    <p style="font-size:14px;color:var(--text-dim);margin-top:8px">这 21 千米的差距就是"两极稍扁、赤道略鼓"的<strong>数字体现</strong>。但注意：6378 ÷ 21 ≈ 300 —— 地球的"不圆"程度只占千分之三，肉眼完全看不出来！所以把地球画成"正圆球"在大比例图示上是可接受的近似。</p>
+  </div>
+
+  <h3>🧠 趣味换算</h3>
+  <div class="content-card">
+    <p style="font-size:15px;color:var(--text)">
+      💡 赤道周长 <strong>4 万千米</strong> = <strong>5亿个体委</strong>手拉手！<br>
+      （一个体委≈1.6m，8个人排一圈≈地球的百万分之一）
+    </p>
+    <p style="font-size:14px;color:var(--text-dim);margin-top:8px">
+      📐 表面积 5.1亿平方千米 ≈ <strong>中国陆地面积（960万km²）的 53 倍</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 综合练习 ═══ -->
+<section id="practice" class="course-section" data-tts="practice">
+  <h2>✏️ 综合练习</h2>
+  <p style="color:var(--text-dim);margin-bottom:20px">根据你的掌握程度选做：</p>
+
+  <!-- ⭐ Level 1 -->
+  <div class="tier-label tier-1">⭐ 基础巩固（必做）</div>
+
+  <div class="quiz-q" data-bloom-level="remember" data-scaffold="full">
+    <div class="q-text">1. 地球的平均半径约为（  ）</div>
+    <div class="options">
+      <div class="opt" data-idx="0">A. 6357千米</div>
+      <div class="opt" data-idx="0">B. 6371千米</div>
+      <div class="opt" data-idx="0">C. 6378千米</div>
+      <div class="opt" data-idx="0">D. 4万千米</div>
+    </div>
+    <div class="feedback correct-fb">✅ 6371千米（刘三起义！）。注意：A=6357是极半径，C=6378是赤道半径，D是赤道周长。</div>
+    <div class="feedback wrong-fb">❌ 易混淆：平均半径=6371，赤道半径=6378，极半径=6357，赤道周长≈4万。选的时候看清楚问的是哪一个！</div>
+  </div>
+
+  <div class="quiz-q" data-bloom-level="understand" data-scaffold="full">
+    <div class="q-text">2. 人类认识地球形状的正确过程是（  ）</div>
+    <div class="options">
+      <div class="opt" data-idx="0">A. 卫星照片→环球航行→月食→天圆地方</div>
+      <div class="opt" data-idx="0">B. 天圆地方→月食推测→环球航行→卫星照片</div>
+      <div class="opt" data-idx="0">C. 月食推测→天圆地方→卫星照片→环球航行</div>
+      <div class="opt" data-idx="0">D. 环球航行→月食推测→天圆地方→卫星照片</div>
+    </div>
+    <div class="feedback correct-fb">✅ 四个阶段按时间：臆想(天圆地方) → 推测(月食) → 证实(环球航行) → 确证(卫星照片)。</div>
+    <div class="feedback wrong-fb">❌ 注意：过程是"先猜测，再推理，再用行动验证，最后亲眼看到"。这样的认识路径是不是很科学？</div>
+  </div>
+
+  <!-- ⭐⭐ Level 2 -->
+  <div class="tier-label tier-2">⭐⭐ 进阶提升（选做）</div>
+
+  <div class="quiz-q" data-bloom-level="apply" data-scaffold="partial">
+    <div class="q-text">3. 赤道半径比极半径长约（  ）</div>
+    <div class="options">
+      <div class="opt" data-idx="0">A. 1千米</div>
+      <div class="opt" data-idx="0">B. 21千米</div>
+      <div class="opt" data-idx="0">C. 400千米</div>
+      <div class="opt" data-idx="0">D. 它们一样长</div>
+    </div>
+    <div class="feedback correct-fb">✅ 6378 − 6357 = 21千米。这就是"赤道略鼓"——地球像个稍微被压扁的橙子。</div>
+    <div class="feedback wrong-fb">❌ 试试算：赤道半径6378千米 − 极半径6357千米 = ?</div>
+  </div>
+
+  <div class="quiz-q" data-bloom-level="understand" data-scaffold="partial">
+    <div class="q-text">4. 地球表面积约为（  ）</div>
+    <div class="options">
+      <div class="opt" data-idx="0">A. 960万平方千米</div>
+      <div class="opt" data-idx="0">B. 5.1亿平方千米</div>
+      <div class="opt" data-idx="0">C. 4万平方千米</div>
+      <div class="opt" data-idx="0">D. 6371平方千米</div>
+    </div>
+    <div class="feedback correct-fb">✅ 地球表面积=5.1亿平方千米（约等于830万个通州区那么大）。A是中国陆地面积，C是赤道周长的单位错了。</div>
+    <div class="feedback wrong-fb">❌ A=960万是中国陆地面积，C≈赤道周长，D=平均半径。别把不同数据搞混了！</div>
+  </div>
+
+  <!-- ⭐⭐⭐ Level 3 -->
+  <div class="tier-label tier-3">⭐⭐⭐ 挑战思考（选做）</div>
+
+  <div class="quiz-q" data-bloom-level="evaluate" data-scaffold="none">
+    <div class="q-text">5. （开放题）有人说"地球和地球仪看起来差不多"，你认为这种说法有什么问题？用<strong>至少两点</strong>来说明。</div>
+    <div class="options">
+      <div class="opt" data-idx="0">A. 没区别，地球就是放大版的地球仪</div>
+      <div class="opt" data-idx="0">B. 地球仪是正球体，地球是不规则球体；地球仪有地轴/经纬网，地球本身没有</div>
+      <div class="opt" data-idx="0">C. 只有大小不同</div>
+      <div class="opt" data-idx="0">D. 地球仪更精确</div>
+    </div>
+    <div class="feedback correct-fb">✅ 关键两点：①地球是不规则球体（两极稍扁赤道略鼓），地球仪是完美的正球体；②地球仪上有地轴、经纬网等人为添加的东西，真实地球上这些并不存在——地球仪是"模型"，不是"复制品"。</div>
+    <div class="feedback wrong-fb">❌ 想想：地球仪是"模型"还是"复制品"？模型会为了教学方便添加什么？而真实的地球上没有这些。</div>
+  </div>
+</section>
+
+<!-- ═══ 后测 ═══ -->
+<section id="posttest" class="course-section" data-tts="posttest">
+  <h2>🏁 课后检测</h2>
+  <p style="color:var(--text-dim);margin-bottom:20px">学完了！再来测一下，看看进步了多少。</p>
+
+  <div class="quiz-block" id="posttestQuiz">
+    <div class="quiz-q" data-bloom-level="remember">
+      <div class="q-text">1. 地球的赤道周长约为（  ）</div>
+      <div class="options">
+        <div class="opt" data-idx="0">A. 6371千米</div>
+        <div class="opt" data-idx="0">B. 5.1亿千米</div>
+        <div class="opt" data-idx="0">C. 约4万千米</div>
+        <div class="opt" data-idx="0">D. 21千米</div>
+      </div>
+      <div class="feedback correct-fb">✅ 赤道周长≈4万千米。</div>
+      <div class="feedback wrong-fb">❌ A=平均半径，B=表面积（且单位错），D=赤道半径与极半径的差。</div>
+    </div>
+
+    <div class="quiz-q" data-bloom-level="understand">
+      <div class="q-text">2. 下列哪个说法<strong>正确</strong>？</div>
+      <div class="options">
+        <div class="opt" data-idx="0">A. "天圆地方"在中国从未有人相信过</div>
+        <div class="opt" data-idx="0">B. 亚里士多德通过观察月食推测地球是球体</div>
+        <div class="opt" data-idx="0">C. 哥伦布完成了首次环球航行</div>
+        <div class="opt" data-idx="0">D. 地球是一个正球体</div>
+      </div>
+      <div class="feedback correct-fb">✅ 亚里士多德是第一个用科学方法（月食影子）推测地球是球体的人。</div>
+      <div class="feedback wrong-fb">❌ A错（古人确实相信过），C错（是麦哲伦），D错（是不规则球体）。</div>
+    </div>
+
+    <div class="quiz-q" data-bloom-level="analyze">
+      <div class="q-text">3. 一个同学说"地球是个完美的正球体"。这句话错在哪里？（请选择最准确的解释）</div>
+      <div class="options">
+        <div class="opt" data-idx="0">A. 地球其实更像正方形</div>
+        <div class="opt" data-idx="0">B. 赤道半径比极半径长约21千米，所以是两极稍扁、赤道略鼓的不规则球体</div>
+        <div class="opt" data-idx="0">C. 地球的形状每时每刻都在变化</div>
+        <div class="opt" data-idx="0">D. 正球体只存在于想象中，真实地球数据无法测量</div>
+      </div>
+      <div class="feedback correct-fb">✅ 因为赤道半径(6378km) > 极半径(6357km)，差了21km，证明地球不是正球体。</div>
+      <div class="feedback wrong-fb">❌ A明显荒谬，C夸大了（人类认识在变化，但地球本身变化极小），D错误（我们已经精确测量了地球）。</div>
+    </div>
+
+    <button class="quiz-submit" onclick="checkPosttest()">提交后测</button>
+    <div class="quiz-score" id="posttestScore" style="display:none"></div>
+  </div>
+</section>
+
+<script>
+function checkPosttest() {
+  const answers = [2, 1, 1]; // 0-indexed
+  const qs = document.querySelectorAll('#posttestQuiz .quiz-q');
+  let correct = 0;
+  qs.forEach((q, qi) => {
+    const opts = q.querySelectorAll('.opt');
+    let selected = -1;
+    opts.forEach((o, oi) => { if(o.classList.contains('selected')) selected = oi; });
+    opts.forEach(o => { o.classList.remove('correct','wrong'); });
+    opts.forEach((o,oi) => {
+      if (oi === answers[qi]) o.classList.add('correct');
+      else if (oi === selected && selected !== answers[qi]) o.classList.add('wrong');
+    });
+    q.querySelectorAll('.feedback').forEach(f => f.classList.remove('show'));
+    if (selected === answers[qi]) {
+      q.querySelector('.correct-fb').classList.add('show');
+      correct++;
+    } else if (selected >= 0) {
+      q.querySelector('.wrong-fb').classList.add('show');
+    }
+  });
+  const scoreEl = document.getElementById('posttestScore');
+  scoreEl.style.display = 'block';
+  const pct = Math.round(correct/3*100);
+  scoreEl.innerHTML = `🎯 后测成绩：${correct}/3（${pct}%）${correct===3?' 🎉 全部正确，表现优异！':correct>=2?' 👍 继续巩固！':'💪 回顾一下前面的内容，你可以做得更好！'}`;
+}
+
+/* ═══ 全局选择逻辑 ═══ */
+document.addEventListener('click', function(e) {
+  const opt = e.target.closest('.quiz-q .opt');
+  if (!opt) return;
+  const qBlock = opt.closest('.quiz-q');
+  // Deselect all in this question
+  qBlock.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+  opt.classList.add('selected');
+  // Hide feedback
+  qBlock.querySelectorAll('.feedback').forEach(f => f.classList.remove('show'));
+});
+</script>
+
+<!-- ═══ 知识图谱 ═══ -->
+<section id="knowledge-graph" class="course-section" data-tts="knowledge-graph">
+  <h2>🧠 知识图谱</h2>
+  <p style="color:var(--text-dim);margin-bottom:20px;font-size:14px">看看「地球的形状与大小」在整个地理知识体系中的位置</p>
+
+  <div class="kg-container" id="kgCanvas"></div>
+  <div class="kg-links">
+    <span class="kg-node-link current">📍 地球的形状与大小</span>
+    <span class="kg-node-link missing" title="课件制作中">🌐 地球仪与经纬网</span>
+    <span class="kg-node-link missing" title="课件制作中">🌏 海陆分布</span>
+    <span class="kg-node-link missing" title="课件制作中">🔄 地球的运动</span>
+  </div>
+
+  <script>
+  /* ═══ D3 知识图谱 ═══ */
+  (function(){
+    if (typeof d3 === 'undefined') {
+      const s = document.createElement('script');
+      s.src = 'https://d3js.org/d3.v7.min.js';
+      s.onload = initKG;
+      document.head.appendChild(s);
+    } else { initKG(); }
+
+    function initKG() {
+      const container = document.getElementById('kgCanvas');
+      const W = container.clientWidth, H = container.clientHeight;
+
+      const nodes = [
+        {id:'earth-shape', label:'地球的形状\n与大小', group:'current', bloom:'记忆·理解'},
+        {id:'globe', label:'地球仪\n与经纬网', group:'next', bloom:'理解·应用'},
+        {id:'land-sea', label:'海陆分布', group:'next', bloom:'记忆·理解'},
+        {id:'earth-move', label:'地球的运动', group:'next', bloom:'理解·分析'},
+        {id:'solar', label:'太阳系与\n地球的位置', group:'context', bloom:'记忆'},
+        {id:'map-reading', label:'地图的阅读', group:'context', bloom:'应用'},
+      ];
+
+      const links = [
+        {source:'earth-shape', target:'globe', type:'leads_to'},
+        {source:'earth-shape', target:'land-sea', type:'related'},
+        {source:'earth-shape', target:'earth-move', type:'leads_to'},
+        {source:'earth-shape', target:'solar', type:'context'},
+        {source:'earth-shape', target:'map-reading', type:'context'},
+      ];
+
+      const svg = d3.select('#kgCanvas').append('svg')
+        .attr('width', W).attr('height', H);
+
+      const sim = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(150))
+        .force('charge', d3.forceManyBody().strength(-400))
+        .force('center', d3.forceCenter(W/2, H/2))
+        .force('collision', d3.forceCollide(60));
+
+      const defs = svg.append('defs');
+
+      const gLink = svg.append('g').selectAll('line')
+        .data(links).join('line')
+        .attr('stroke', '#334155').attr('stroke-width', 1.5)
+        .attr('stroke-dasharray', d => d.type==='context' ? '5,5' : 'none');
+
+      const gNode = svg.append('g').selectAll('g')
+        .data(nodes).join('g').call(d3.drag()
+          .on('start', (e,d) => { if(!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+          .on('drag', (e,d) => { d.fx = e.x; d.fy = e.y; })
+          .on('end', (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+      gNode.append('rect')
+        .attr('x', d => d.group==='current' ? -80 : -60)
+        .attr('y', -28)
+        .attr('width', d => d.group==='current' ? 160 : 120)
+        .attr('height', 56)
+        .attr('rx', 14)
+        .attr('fill', d => d.group==='current' ? 'url(#grad)' : d.group==='next' ? '#1e293b' : '#0f172a')
+        .attr('stroke', d => d.group==='current' ? '#8b5cf6' : d.group==='next' ? '#3b82f6' : '#334155')
+        .attr('stroke-width', d => d.group==='current' ? 3 : 1.5);
+
+      defs.append('linearGradient').attr('id','grad')
+        .attr('x1','0%').attr('y1','0%').attr('x2','100%').attr('y2','100%');
+      d3.select('#grad').append('stop').attr('offset','0%').attr('stop-color','#3b82f6');
+      d3.select('#grad').append('stop').attr('offset','100%').attr('stop-color','#8b5cf6');
+
+      gNode.append('text')
+        .attr('text-anchor','middle').attr('dy','-0.2em')
+        .attr('fill', d => d.group==='current' ? '#fff' : '#94a3b8')
+        .attr('font-size','13px').attr('font-weight','600')
+        .selectAll('tspan').data(d => d.label.split('\n')).join('tspan')
+        .attr('x',0).attr('dy', (d,i) => i===0?'0em':'1.2em').text(d=>d);
+
+      gNode.append('text')
+        .attr('text-anchor','middle').attr('dy','2.8em')
+        .attr('fill','#64748b').attr('font-size','10px')
+        .text(d => d.bloom);
+
+      sim.on('tick', () => {
+        gLink.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+             .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+        gNode.attr('transform', d => `translate(${d.x},${d.y})`);
+      });
+    }
+  })();
+  </script>
+</section>
+
+<!-- ═══ 总结 ═══ -->
+<section id="summary" class="course-section" data-tts="summary">
+  <div class="check-icon">✅</div>
+  <h2 style="margin-top:8px">恭喜你完成了「地球的形状与大小」的学习！</h2>
+
+  <div style="max-width:600px;margin:28px auto 0;text-align:left;font-size:15px;color:var(--text-dim);line-height:2">
+    <p>📋 <strong>今天你学会了：</strong></p>
+    <p>✅ 人类认识地球形状的四个阶段：臆想→推测→证实→确证</p>
+    <p>✅ 五大证据证明地球是球体：行船、月食、登高、环球、卫星</p>
+    <p>✅ 三个核心数据：6371km（平均半径）、≈4万km（赤道周长）、5.1亿km²（表面积）</p>
+    <p>✅ 地球是不规则球体：赤道半径6378km > 极半径6357km（差21km）</p>
+    <p style="margin-top:16px;font-weight:600;color:var(--accent)">
+      💡 记住这个口诀："刘三起义（6371），赤道四万绕一圈，表面积五亿一"。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 全局导航按钮 ═══ -->
+<footer style="padding:40px 8%;text-align:center">
+  <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
+    <button class="nav-btn" onclick="document.getElementById('hero').scrollIntoView({behavior:'smooth'})">⬆ 回到顶部</button>
+    <button class="nav-btn" onclick="document.getElementById('pretest').scrollIntoView({behavior:'smooth'})">📝 重做前测</button>
+    <button class="nav-btn" onclick="document.getElementById('posttest').scrollIntoView({behavior:'smooth'})">🏁 重做后测</button>
+  </div>
+  <p style="font-size:12px;color:var(--text-dim);margin-top:24px">
+    TeachAny v6 · 初中地理课件 · 人教版七年级上册
+  </p>
+</footer>
+
+<!-- ═══ 高亮当前导航 ═══ -->
+<script>
+(function(){
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-bar a[href^="#"]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id));
+      }
+    });
+  }, { threshold: 0.4 });
+  sections.forEach(s => observer.observe(s));
+})();
+</script>
+
+<!-- TeachAny AI 学伴 + TTS -->
+<script src="./ai-tutor.js"></script>
+<script>
+(function initCourse() {
+  /* 进度追踪 */
+  const COURSE_ID = 'geo-m-earth-shape-size';
+  const progressData = JSON.parse(localStorage.getItem('teachany-progress') || '{}');
+  const prog = progressData[COURSE_ID] || {};
+  if (prog.completionPercent > 0) {
+    document.getElementById('resume-pct').textContent = Math.round(prog.completionPercent);
+    document.getElementById('resume-banner').classList.add('show');
+  }
+  /* 滚动保存 */
+  let t;
+  window.addEventListener('scroll', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const scrolled = Math.round(window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100);
+      if (!progressData[COURSE_ID]) progressData[COURSE_ID] = {};
+      progressData[COURSE_ID].scrollPercent = scrolled;
+      localStorage.setItem('teachany-progress', JSON.stringify(progressData));
+    }, 500);
+  });
+  window.addEventListener('load', () => {
+    console.log('[TeachAny] window.load fired, TTS ready');
+    try { initKnowledgeGraph(); } catch(e) { console.error('[KG]', e); }
+  });
+})();
+function scrollToLast() {
+  const p = JSON.parse(localStorage.getItem('teachany-progress') || '{}');
+  const prog = p['geo-m-earth-shape-size'] || {};
+  if (prog.scrollPercent > 0) {
+    window.scrollTo(0, document.body.scrollHeight * prog.scrollPercent / 100);
+  }
+  dismissResume();
+}
+function dismissResume() { document.getElementById('resume-banner').classList.remove('show'); }
+</script>
+
+</body>
+</html>

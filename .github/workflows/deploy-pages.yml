@@ -1,0 +1,39 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'community/pending/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 大仓库使用 branch-source 增量部署：Pages 设置为 Deploy from a branch → gh-pages / root。
+      # 不走 actions/deploy-pages artifact 全量上传。
+      - name: Deploy incrementally to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
+          keep_files: false
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'deploy: ${{ github.event.head_commit.message }}'
+          # scripts/*.js/*.css 是前端运行时模块，必须发布。
+          # 只排除维护脚本和 CI/依赖目录。
+          # 注意：不要把 .git 放进 exclude_assets，peaceiris 需要保留 gh-pages 工作区的 .git 做提交。
+          exclude_assets: '.github,node_modules,__pycache__,*.py,*.pyc,*.sh,*.cjs,*.txt,*.log'
