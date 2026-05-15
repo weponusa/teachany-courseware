@@ -1,3 +1,10 @@
+> ⚠️ **此仓库已废弃（2026-05-15）**
+>
+> 课件已合并至 **[weponusa/teachany](https://github.com/weponusa/teachany)**，请前往新仓库查看和贡献。
+>
+> This repo is archived. All courseware has been merged into [weponusa/teachany](https://github.com/weponusa/teachany).
+
+
 # TeachAny Courseware
 
 TeachAny 官方课件资产仓库。这里存放社区课件、示范课件、Gallery 页面和图床资产。
