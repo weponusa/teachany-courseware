@@ -22,14 +22,16 @@ jobs:
         uses: actions/checkout@v4
 
       # 构建纯净的发布目录 _site/，只包含前端运行时需要的内容。
-      # 这样彻底绕过 exclude_assets 的 glob 递归问题。
       - name: Build publish directory
         run: |
           mkdir -p _site/scripts
 
           # 1. 复制运行时前端模块（JS/CSS/JSON）
-          cp scripts/*.js scripts/*.css scripts/*.json _site/scripts/ 2>/dev/null || true
-          echo "✅ scripts/ runtime files: $(ls _site/scripts/ | wc -l) files"
+          cp scripts/*.js _site/scripts/ 2>/dev/null || true
+          cp scripts/*.css _site/scripts/ 2>/dev/null || true
+          cp scripts/*.json _site/scripts/ 2>/dev/null || true
+          echo "✅ scripts/ runtime files:"
+          ls -la _site/scripts/
 
           # 2. 复制课件目录
           cp -r community _site/community
@@ -41,7 +43,7 @@ jobs:
           cp -r data _site/data
 
           # 5. 复制根级文件
-          cp .nojekyll _site/ 2>/dev/null || touch _site/.nojekyll
+          touch _site/.nojekyll
           cp 404.html _site/ 2>/dev/null || true
           cp courseware-registry.json _site/ 2>/dev/null || true
           cp commercial-license.html _site/ 2>/dev/null || true
@@ -49,19 +51,23 @@ jobs:
           # 6. 复制归档目录（如果存在）
           [ -d "_archive_20260508" ] && cp -r _archive_20260508 _site/_archive_20260508 || true
 
-          echo "✅ _site/ built. Top-level contents:"
+          echo "✅ _site/ built successfully"
+          echo "Top-level:"
           ls _site/
           echo "---"
-          echo "scripts/ files:"
+          echo "scripts/ ($(ls _site/scripts/ | wc -l) files):"
           ls _site/scripts/
 
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_site
-          publish_branch: gh-pages
-          force_orphan: true
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'deploy: ${{ github.event.head_commit.message }}'
+      # 直接使用 git 命令部署，绕过 peaceiris 的任何隐含行为
+      - name: Deploy to gh-pages via git
+        run: |
+          cd _site
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          echo "Staged files count: $(git status --short | wc -l)"
+          echo "scripts/ staged:"
+          git status --short | grep "scripts/" | head -5
+          git commit -m "deploy: ${{ github.event.head_commit.message }}"
+          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages
