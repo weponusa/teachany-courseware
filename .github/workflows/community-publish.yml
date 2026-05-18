@@ -48,7 +48,7 @@ jobs:
               exit 1
             fi
 
-            course_id=$(python3 -c "import json,re; m=json.load(open('$tmp/manifest.json')); raw=str(m.get('node_id') or m.get('id') or '$base').strip().lower(); raw=re.sub(r'[^a-z0-9-]+','-',raw).strip('-'); print(raw or '$base')")
+            course_id=$(python3 -c "import json,re; m=json.load(open('$tmp/manifest.json')); raw=str(m.get('id') or '$base').strip().lower(); raw=re.sub(r'[^a-z0-9-]+','-',raw).strip('-'); print(raw or '$base')")
             target="community/$course_id"
             if [ -d "$target" ]; then
               echo "⚠️ $course_id exists, replacing with new approved package"
@@ -75,13 +75,21 @@ jobs:
             echo "No pending packages to publish."
           fi
 
+      - name: Rebuild registry and link indexes
+        if: steps.unpack.outputs.published == 'true'
+        shell: bash
+        run: |
+          set -e
+          python3 scripts/rebuild-index.py
+          python3 scripts/check-courseware-links.py
+
       - name: Commit published courseware
         if: steps.unpack.outputs.published == 'true'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add community/
+          git add community/ registry.json registry-v2.json data/trees/ data/node-index.json data/nodes-metadata.json data/nodes-selector.json scripts/teachany-kg-manifest.json
           git commit -m "community: publish submitted courseware (${{ steps.unpack.outputs.courses }})"
           git push origin main
 
