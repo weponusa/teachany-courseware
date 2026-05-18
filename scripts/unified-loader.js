@@ -30,6 +30,7 @@
 
 /* ─── 常量 ───────────────────────────────────── */
 const REGISTRY_URL = './registry.json';
+const COMMUNITY_INDEX_URL = './community/index.json';
 const COURSEWARE_BASE_URL = 'https://weponusa.github.io/teachany-courseware'; // 真实课件实体统一在课件仓库
 const SELF_BASE_URL = 'https://weponusa.github.io/teachany';                  // 主站入口与 hero fallback
 const CACHE_KEY = 'teachany_registry_v3_14'; // v3.14: auto-publish registry refresh
@@ -193,22 +194,46 @@ window._toggleLike = function(button) {
 
 /* ─── 加载注册表 ─────────────────────────────── */
 async function loadRegistry() {
-  // 1. 尝试缓存
   const cached = getCachedRegistry();
   if (cached) {
     console.log('[TeachAny] 使用缓存的注册表:', cached.courses.length, '个课件');
     return cached;
   }
 
-  // 2. 从服务器加载
-  console.log('[TeachAny] 从服务器加载 registry.json...');
-  const response = await fetch(REGISTRY_URL + '?t=' + Date.now(), {
-    cache: 'no-store',
-    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+  async function fetchOptionalJson(url) {
+    try {
+      const response = await fetch(url + '?t=' + Date.now(), {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (e) {
+      console.warn('[TeachAny] 数据源加载失败:', url, e.message);
+      return { courses: [] };
+    }
+  }
+
+  console.log('[TeachAny] 从服务器加载 registry + community index...');
+  const [registryData, communityData] = await Promise.all([
+    fetchOptionalJson(REGISTRY_URL),
+    fetchOptionalJson(COMMUNITY_INDEX_URL),
+  ]);
+
+  const byId = new Map();
+  (registryData.courses || []).forEach(c => byId.set(c.id, c));
+  (communityData.courses || []).forEach(c => {
+    if (!c.id) return;
+    byId.set(c.id, {
+      ...byId.get(c.id),
+      ...c,
+      status: 'community',
+      path: c.path || `community/${c.id}`,
+      url: c.download_url || c.url,
+    });
   });
-  if (!response.ok) throw new Error(`Failed to load registry: ${response.status}`);
-  
-  const registry = await response.json();
+
+  const registry = { ...(registryData || {}), courses: Array.from(byId.values()) };
   console.log('[TeachAny] 加载成功:', registry.courses.length, '个课件');
   setCachedRegistry(registry);
   return registry;
