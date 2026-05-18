@@ -60,7 +60,7 @@ def main():
             "download_url": f"https://weponusa.github.io/teachany-courseware/{path}/",
             "approved_at": old_entry.get("approved_at") or c.get("created") or datetime.now(timezone.utc).isoformat(),
             "likes": old_entry.get("likes", 0),
-            "status": old_entry.get("status") or "active",
+            "status": c.get("status") or old_entry.get("status") or "community",
             "tags": c.get("tags", []) or old_entry.get("tags", []),
             "name_en": c.get("name_en", ""),
         })

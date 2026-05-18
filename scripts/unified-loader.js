@@ -33,7 +33,7 @@ const REGISTRY_URL = './registry.json';
 const COMMUNITY_INDEX_URL = './community/index.json';
 const COURSEWARE_BASE_URL = 'https://weponusa.github.io/teachany-courseware'; // 真实课件实体统一在课件仓库
 const SELF_BASE_URL = 'https://weponusa.github.io/teachany';                  // 主站入口与 hero fallback
-const CACHE_KEY = 'teachany_registry_v3_15'; // v3.15: fix community merge preserving official status
+const CACHE_KEY = 'teachany_registry_v3_16'; // v3.16: fix status override from community index (active→official|community)
 
 function resolveCoursewareUrl(path) {
   if (!path) return COURSEWARE_BASE_URL + '/';
@@ -232,7 +232,8 @@ async function loadRegistry() {
       path: c.path || `community/${c.id}`,
       url: c.download_url || c.url || (existing || {}).url,
     };
-    if (!existing) merged.status = 'community'; // 新课件默认 community
+    // status 优先用 registry 中的，其次 community 默认
+    merged.status = (existing && existing.status) ? existing.status : 'community';
     byId.set(c.id, merged);
   });
 
