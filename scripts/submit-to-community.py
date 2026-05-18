@@ -60,7 +60,7 @@ DEFAULT_WORKER_URL = "https://teachany-community.pages.dev/api/submit"
 # 旧 Worker URL（保留以便 fallback；但国内大部分用户无法访问）
 LEGACY_WORKER_URL = "https://teachany-submit.weponusa.workers.dev/api/submit"
 
-REPO = "weponusa/teachany-courseware"
+REPO = "weponusa/teachany"
 DISPATCH_URL_DIRECT = f"https://api.github.com/repos/{REPO}/dispatches"
 EVENT_TYPE = "community-submit"
 MAX_PACKAGE_MB = 5
@@ -108,6 +108,38 @@ def validate_courseware(course_dir: Path) -> dict:
         print(f"⛔ manifest.json 缺少必填字段：{missing}")
         print("   这些字段用于在社区仓的知识树上挂载课件，缺一不可。")
         sys.exit(2)
+
+    # ── 假资产检测（v7.13）──────────────────────────────────
+    # 拒绝提交占位图片（< 5KB PNG/JPG）和静音音频（< 5KB MP3）
+    # 正常教学图片通常 ≥ 20KB，正常 TTS 音频通常 ≥ 10KB
+    MIN_IMAGE_BYTES = 5 * 1024   # 5 KB
+    MIN_AUDIO_BYTES = 5 * 1024   # 5 KB
+    fake_assets = []
+
+    assets_dir = course_dir / "assets"
+    if assets_dir.exists():
+        for f in assets_dir.iterdir():
+            if f.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp"):
+                if f.stat().st_size < MIN_IMAGE_BYTES:
+                    fake_assets.append(f"图片 {f.name}（{f.stat().st_size} 字节，疑似占位图）")
+
+    tts_dir = course_dir / "tts"
+    if tts_dir.exists():
+        for f in tts_dir.iterdir():
+            if f.suffix.lower() in (".mp3", ".wav", ".ogg", ".m4a"):
+                if f.stat().st_size < MIN_AUDIO_BYTES:
+                    fake_assets.append(f"音频 {f.name}（{f.stat().st_size} 字节，疑似静音占位）")
+
+    if fake_assets:
+        print("⛔ 检测到假占位资产，拒绝提交：")
+        for a in fake_assets:
+            print(f"   - {a}")
+        print()
+        print("   图片要求：真实教学内容截图或示意图，≥ 5KB")
+        print("   音频要求：真实 TTS 语音，≥ 5KB（约 0.3 秒以上）")
+        print("   请用真实内容替换后重新提交。")
+        sys.exit(2)
+    # ─────────────────────────────────────────────────────────
 
     quality_script = Path(__file__).with_name("validate-teaching-quality.py")
     if quality_script.exists():
@@ -469,17 +501,27 @@ def main():
         "--from",
         dest="from_dir",
         default="auto",
-        choices=["auto", "drafts", "examples"],
-        help="课件所在根目录：auto=自动探测（默认），drafts=community/drafts，examples=examples",
+        choices=["auto", "drafts", "community", "examples", "path"],
+        help="课件所在根目录：auto=自动探测（默认），drafts=community/drafts，community=community/<id>，examples=examples，path=第一个参数就是目录路径",
     )
     args = parser.parse_args()
 
     # 1. 定位课件目录
     candidates = []
-    if args.from_dir in ("auto", "drafts"):
-        candidates.append(Path("community") / "drafts" / args.course_id)
-    if args.from_dir in ("auto", "examples"):
-        candidates.append(Path("examples") / args.course_id)
+    if args.from_dir == "path":
+        candidates.append(Path(args.course_id))
+    elif args.from_dir == "community":
+        candidates.append(Path("community") / args.course_id)
+    else:
+        if args.from_dir in ("auto", "drafts"):
+            candidates.append(Path("community") / "drafts" / args.course_id)
+        if args.from_dir in ("auto", "community"):
+            candidates.append(Path("community") / args.course_id)
+        if args.from_dir in ("auto", "examples"):
+            candidates.append(Path("examples") / args.course_id)
+        # 允许第一个参数直接传目录路径，降低普通用户心智负担
+        if args.from_dir == "auto":
+            candidates.append(Path(args.course_id))
     course_dir = next((p for p in candidates if p.is_dir()), None)
     if not course_dir:
         print(f"⛔ 在以下位置都找不到课件目录：")

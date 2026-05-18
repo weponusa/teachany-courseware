@@ -102,6 +102,7 @@ def detect_images(course_dir: Path):
     """自动检测课件的 hero 和 scene 图片（v6.2 统一命名规范）
 
     检测优先级：
+      0. assets/hero-infographic.svg  TeachAny 标准 SVG Hero（最高优先）
       1. *-hero.{png,jpg,webp}   后缀匹配（主流模式）
       2. hero-*.{png,jpg,webp}   前缀匹配（兼容旧命名）
       3. hero.{png,jpg,webp}     纯名称匹配
@@ -110,6 +111,11 @@ def detect_images(course_dir: Path):
     同理检测 *-scene / scene-* / scene。
     返回: (hero_image_rel, scene_image_rel)  相对于 course_dir 的路径字符串
     """
+    # 优先级 0：标准 SVG Hero
+    std_svg = course_dir / 'assets' / 'hero-infographic.svg'
+    if std_svg.exists():
+        return 'assets/hero-infographic.svg', ''
+
     # 搜索 assets/ 和 images/ 两个可能的目录
     img_dir = None
     for name in ('assets', 'images'):
@@ -550,7 +556,15 @@ def main():
 
         # 扫描所有有 manifest 的课件，找出应该放进"其他知识"的
         virtual_nodes = []
+        # 强制保留在"其他知识"的跨课标/探究课入口：这些内容即使挂了近似官方 node_id，
+        # 也需要在"其他知识"里保留一份发现入口，避免 rebuild-index 把该 Tab 清空。
+        OTHER_TREE_FORCE_COURSE_IDS = {
+            'math-m-linear-function-inquiry-phone-plan',  # 一次函数 PBL 探究课
+            'course-classical-poetry',                    # 古典诗词系统课程
+            'chn-pingze-grade1',                          # 古诗平仄启蒙
+        }
         orphan_reasons = {'free_mode': 0, 'node_not_found': 0, 'missing_node_id': 0,
+                          'forced_other': 0, 'inquiry_project': 0,
                           'ext_passed': 0, 'ext_rejected': 0}
 
         # v7.9.8 新增：学科前缀映射，用于"简写 node_id"自动探测
@@ -582,8 +596,17 @@ def main():
             grade = manifest.get('grade', 0)
 
             reason = None
-            if is_free:
+            lesson_type = (manifest.get('lesson_type') or '').strip()
+            if cid in OTHER_TREE_FORCE_COURSE_IDS:
+                reason = 'forced_other'
+            elif is_free:
+                # v7.10: free_mode 课件如果 node_id 已在正规课标树中，不重复放入"其他知识"
+                if nid and nid in all_official_node_ids:
+                    continue  # 已在正规树挂载，跳过
                 reason = 'free_mode'
+            elif lesson_type == 'inquiry-project':
+                # 探究课可同时挂正式知识树和"其他知识/探究课"入口，便于 PBL 场景发现。
+                reason = 'inquiry_project'
             elif not nid:
                 reason = 'missing_node_id'
             elif nid not in all_official_node_ids:
@@ -612,9 +635,13 @@ def main():
                 continue
 
             orphan_reasons[reason] += 1
-            # 虚拟节点 id：free_mode 用 node_id 或 cid；未找到则用 other-<cid>
-            vid = nid if nid else f'other-{cid}'
-            virtual_nodes.append({
+            # 强制保留 / 探究课统一使用 other-<course_id>，避免与正式树节点 id 冲突
+            if reason in ('forced_other', 'inquiry_project'):
+                vid = f'other-{cid}'
+            else:
+                vid = nid if nid else f'other-{cid}'
+
+            node_entry = {
                 'id': vid,
                 'name': name,
                 'name_en': manifest.get('title_en', ''),
@@ -628,7 +655,10 @@ def main():
                 'source': f'user-generated({reason})',
                 'curriculum_points': [manifest.get('description_zh', '') or manifest.get('description', '')],
                 'excerpt_ids': []
-            })
+            }
+
+            # v7.10: ext-* 课件也归入"其他知识"统一展示
+            virtual_nodes.append(node_entry)
 
         # v7.9.7 新增：扫描 ext-* 学习路径推荐课件（无 manifest，元信息在 HTML meta 里）
         # 质检门槛：
@@ -681,13 +711,13 @@ def main():
                     print(f'  ⚠️ ext 课件未通过质检，跳过: {d.name} ({", ".join(reasons_reject)})')
                     continue
 
-                # 通过质检：纳入虚拟树
+                # 通过质检：纳入"其他知识"虚拟树
                 orphan_reasons['ext_passed'] += 1
                 ext_subject = metas.get('course-subject', 'other')
                 ext_title = metas.get('course-title', d.name)
                 ext_node = metas.get('course-node', d.name)
-                # 虚拟节点 id：优先用 course-node（无学科前缀），否则用目录名
-                ext_vid = ext_node if ext_node and ext_node not in all_official_node_ids else f'other-{d.name}'
+                # 虚拟节点 id：优先用 course-node，否则用目录名
+                ext_vid = ext_node if ext_node and ext_node not in all_official_node_ids else d.name
                 virtual_nodes.append({
                     'id': ext_vid,
                     'name': ext_title,
@@ -700,7 +730,7 @@ def main():
                     'courses': [d.name],
                     'status': 'active',
                     'source': 'learning-path-ext',
-                    'curriculum_points': [f'学习路径推荐课件（ext-* 前缀，无 manifest.json，元信息来自 HTML meta）'],
+                    'curriculum_points': [f'学习路径推荐课件（ext-* 前缀，元信息来自 HTML meta）'],
                     'excerpt_ids': []
                 })
                 # 同时把课件加入 courses 集合，供步骤 4 写入 registry
@@ -728,7 +758,7 @@ def main():
                 merged[n['id']] = n
         virtual_nodes = sorted(merged.values(), key=lambda x: (x.get('subject', ''), x['id']))
 
-        # 回写虚拟树
+        # 回写虚拟树（"其他知识"）
         virtual_tree = json.loads(virtual_tree_path.read_text(encoding='utf-8'))
         virtual_tree['domains'][0]['nodes'] = virtual_nodes
         virtual_tree_path.write_text(
@@ -738,7 +768,10 @@ def main():
         print(f'  ✅ 已填充 {len(virtual_nodes)} 个虚拟节点到 {virtual_tree_path}')
         print(f'     free_mode: {orphan_reasons["free_mode"]}, '
               f'node 未找到: {orphan_reasons["node_not_found"]}, '
-              f'缺 node_id: {orphan_reasons["missing_node_id"]}')
+              f'缺 node_id: {orphan_reasons["missing_node_id"]}, '
+              f'强制保留: {orphan_reasons["forced_other"]}, '
+              f'探究课: {orphan_reasons["inquiry_project"]}')
+
         if ext_dirs_scanned:
             print(f'     ext-* 学习路径课件: 扫描 {ext_dirs_scanned} 个，'
                   f'质检通过 {orphan_reasons["ext_passed"]}，'
@@ -871,6 +904,10 @@ def main():
     }
 
     with open('registry.json', 'w', encoding='utf-8') as f:
+        json.dump(registry, f, ensure_ascii=False, indent=2)
+
+    # 同步 registry-v2.json（unified-loader.js Gallery 读取此文件）
+    with open('registry-v2.json', 'w', encoding='utf-8') as f:
         json.dump(registry, f, ensure_ascii=False, indent=2)
 
     print(f'   注册表已重建: {len(registry_courses)} 个课件 (官方={official_count}, 社区={community_count}, 课程={course_count})')
