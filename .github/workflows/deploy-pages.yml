@@ -21,30 +21,47 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 清理 scripts/ 目录：只保留运行时前端模块（.js/.css/.json），
-      # 删除构建脚本（.py/.sh/.cjs）和子目录，防止 exclude_assets glob 干扰。
-      - name: Clean scripts/ to runtime-only
+      # 构建纯净的发布目录 _site/，只包含前端运行时需要的内容。
+      # 这样彻底绕过 exclude_assets 的 glob 递归问题。
+      - name: Build publish directory
         run: |
-          cd scripts
-          # 删除所有非运行时文件
-          find . -maxdepth 1 -type f \( -name "*.py" -o -name "*.sh" -o -name "*.cjs" -o -name "*.txt" -o -name "*.log" \) -delete
-          # 删除子目录（如 content/）
-          find . -maxdepth 1 -type d ! -name "." -exec rm -rf {} +
-          echo "✅ scripts/ cleaned. Remaining files:"
-          ls -la
+          mkdir -p _site/scripts
 
-      # 大仓库使用 branch-source 增量部署：Pages 设置为 Deploy from a branch → gh-pages / root。
-      # 不走 actions/deploy-pages artifact 全量上传。
-      - name: Deploy incrementally to gh-pages
+          # 1. 复制运行时前端模块（JS/CSS/JSON）
+          cp scripts/*.js scripts/*.css scripts/*.json _site/scripts/ 2>/dev/null || true
+          echo "✅ scripts/ runtime files: $(ls _site/scripts/ | wc -l) files"
+
+          # 2. 复制课件目录
+          cp -r community _site/community
+
+          # 3. 复制静态资源
+          cp -r assets _site/assets
+
+          # 4. 复制数据目录
+          cp -r data _site/data
+
+          # 5. 复制根级文件
+          cp .nojekyll _site/ 2>/dev/null || touch _site/.nojekyll
+          cp 404.html _site/ 2>/dev/null || true
+          cp courseware-registry.json _site/ 2>/dev/null || true
+          cp commercial-license.html _site/ 2>/dev/null || true
+
+          # 6. 复制归档目录（如果存在）
+          [ -d "_archive_20260508" ] && cp -r _archive_20260508 _site/_archive_20260508 || true
+
+          echo "✅ _site/ built. Top-level contents:"
+          ls _site/
+          echo "---"
+          echo "scripts/ files:"
+          ls _site/scripts/
+
+      - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
+          publish_dir: ./_site
           publish_branch: gh-pages
           keep_files: false
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: 'deploy: ${{ github.event.head_commit.message }}'
-          # scripts/ 已在上一步清理为纯运行时文件，这里不再需要 *.py 等规则影响它。
-          # 只排除根目录级的维护文件和 CI/依赖目录。
-          exclude_assets: '.github,node_modules,__pycache__,*.py,*.pyc,*.sh,*.cjs,*.txt,*.log'
