@@ -33,7 +33,7 @@ const REGISTRY_URL = './registry.json';
 const COMMUNITY_INDEX_URL = './community/index.json';
 const COURSEWARE_BASE_URL = 'https://weponusa.github.io/teachany-courseware'; // 真实课件实体统一在课件仓库
 const SELF_BASE_URL = 'https://weponusa.github.io/teachany';                  // 主站入口与 hero fallback
-const CACHE_KEY = 'teachany_registry_v3_14'; // v3.14: auto-publish registry refresh
+const CACHE_KEY = 'teachany_registry_v3_15'; // v3.15: fix community merge preserving official status
 
 function resolveCoursewareUrl(path) {
   if (!path) return COURSEWARE_BASE_URL + '/';
@@ -224,13 +224,16 @@ async function loadRegistry() {
   (registryData.courses || []).forEach(c => byId.set(c.id, c));
   (communityData.courses || []).forEach(c => {
     if (!c.id) return;
-    byId.set(c.id, {
-      ...byId.get(c.id),
+    const existing = byId.get(c.id);
+    // 保留 registry.json 中的 original status，不从 community/index 覆盖
+    const merged = {
+      ...existing,
       ...c,
-      status: 'community',
       path: c.path || `community/${c.id}`,
-      url: c.download_url || c.url,
-    });
+      url: c.download_url || c.url || (existing || {}).url,
+    };
+    if (!existing) merged.status = 'community'; // 新课件默认 community
+    byId.set(c.id, merged);
   });
 
   const registry = { ...(registryData || {}), courses: Array.from(byId.values()) };
