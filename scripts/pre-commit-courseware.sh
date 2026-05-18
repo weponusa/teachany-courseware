@@ -30,6 +30,7 @@ fi
 # --- 收集 staged 区的课件目录 ---
 CHANGED_DIRS=$(git diff --cached --name-only \
   | grep -E '^(community|examples)/[^/]+/' \
+  | grep -vE '^community/(drafts|pending|archive)/' \
   | awk -F'/' '{print $1 "/" $2}' \
   | sort -u)
 
@@ -46,8 +47,23 @@ echo ""
 FAIL_DIRS=()
 
 for DIR in $CHANGED_DIRS; do
+  # pending/ 是提交队列，不是课件本体；里面只有 .json/.teachany/.gitkeep，不跑四项课件质检。
+  if [ "$DIR" = "community/pending" ]; then
+    echo "  ↪️  $DIR 是社区提交队列，跳过课件四项质检"
+    continue
+  fi
+
   # 跳过已被删除的目录
   if [ ! -d "$DIR" ]; then
+    continue
+  fi
+
+  # v7.10.4：旧课件迁移后的轻量 redirect stub 不是课件本体，不跑四项课件质检。
+  # 判定标准：跳转页 index.html 明确跳转到 teachany-courseware；manifest 可保留用于 registry 重建。
+  if [ -f "$DIR/index.html" ] \
+    && grep -q "TeachAny 课件已迁移" "$DIR/index.html" \
+    && grep -q "weponusa.github.io/teachany-courseware" "$DIR/index.html"; then
+    echo "  ↪️  $DIR 是旧 URL 轻量跳转页，跳过课件四项质检"
     continue
   fi
 

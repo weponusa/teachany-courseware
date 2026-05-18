@@ -24,8 +24,15 @@
 /* ─── 常量 ────────────────────────────────────── */
 const HUB_REGISTRY_URL = './registry.json';
 const HUB_COMMUNITY_URL = './community/index.json';
-const HUB_CACHE_KEY = 'teachany_hub_cache_v3'; // v3: 修复 name/title 字段 + 路径去重
+const HUB_COURSEWARE_BASE_URL = 'https://weponusa.github.io/teachany';
+const HUB_CACHE_KEY = 'teachany_hub_cache_v5'; // v5: migrated to teachany repo (teachany-courseware deprecated)
 const HUB_CACHE_TTL = 15 * 60 * 1000; // 15 分钟
+
+function resolveCoursewareUrl(path) {
+  if (!path) return HUB_COURSEWARE_BASE_URL + '/';
+  if (/^https?:\/\//i.test(path)) return path;
+  return HUB_COURSEWARE_BASE_URL + '/' + String(path).replace(/^\/+/, '').replace(/\/$/, '') + '/index.html';
+}
 
 /* ─── 内部状态 ────────────────────────────────── */
 let _registryCourses = [];  // { id, node_id, name, subject, grade, likes, source, url, ... }
@@ -109,11 +116,8 @@ async function _doInit() {
         fetchJSON(HUB_REGISTRY_URL),
         fetchJSON(HUB_COMMUNITY_URL),
       ]);
-
       registryData = regResult.status === 'fulfilled' ? regResult.value : { courses: [] };
       communityData = comResult.status === 'fulfilled' ? comResult.value : { courses: [] };
-
-      // 写入缓存
       setHubCache(registryData, communityData);
       console.log('[CoursewareHub] ✅ 从服务器加载数据');
     }
@@ -122,13 +126,13 @@ async function _doInit() {
     _registryCourses = (registryData.courses || []).map(c => ({
       id: c.id,
       node_id: c.node_id || '',
-      name: c.name || c.title || c.id,
+      name: c.name || c.id,
       subject: c.subject || '',
       grade: c.grade || 0,
       emoji: c.emoji || '📚',
-      likes: 0,  // registry 本身无 likes 字段，从 localStorage 或 community 合并
+      likes: 0,
       source: c.status === 'official' ? SOURCE.OFFICIAL : SOURCE.COMMUNITY_REG,
-      url: `./${c.path}/index.html`,
+      url: resolveCoursewareUrl(c.path || `community/${c.id}`),
       path: c.path || '',
       has_tts: c.has_tts || false,
       has_video: c.has_video || false,
@@ -146,8 +150,8 @@ async function _doInit() {
       emoji: '🌐',
       likes: c.likes || 0,
       source: SOURCE.COMMUNITY_SHARED,
-      url: c.download_url || '',
-      path: '',
+      url: c.download_url || resolveCoursewareUrl(c.path || `community/${c.id}`),
+      path: c.path || '',
       has_tts: false,
       has_video: false,
       author: c.author || '',
@@ -377,6 +381,32 @@ function getCourseById(courseId) {
   return null;
 }
 
+/**
+ * v7.15: 按关键词搜索课件（用于 PBL 外部节点匹配已有课件）
+ * @param {string} keyword - 搜索关键词（如"锂离子电池技术"）
+ * @param {number} [limit=5] - 最多返回条数
+ * @returns {Array<UnifiedCourse>}
+ */
+function searchByKeyword(keyword, limit) {
+  if (!keyword || typeof keyword !== 'string') return [];
+  limit = limit || 5;
+  const kw = keyword.toLowerCase().replace(/[·\s]+/g, '');
+  const results = [];
+  const seen = new Set();
+  // 遍历 registry + community 课件，按名称模糊匹配
+  for (const c of [..._registryCourses, ..._communityCourses]) {
+    if (seen.has(c.id)) continue;
+    const name = ((c.name || '') + (c.name_en || '') + (c.id || '')).toLowerCase().replace(/[·\s]+/g, '');
+    // 关键词包含在名称中，或名称包含关键词
+    if (name.includes(kw) || kw.includes(name.slice(0, Math.max(4, kw.length)))) {
+      seen.add(c.id);
+      results.push(c);
+      if (results.length >= limit) break;
+    }
+  }
+  return results;
+}
+
 window.TeachAnyHub = {
   init,
   getAllCoursesForNode,
@@ -384,6 +414,7 @@ window.TeachAnyHub = {
   getNodeCourseCount,
   hasAnyCourseware,
   getCourseById,  // v6.6: 新增
+  searchByKeyword,  // v7.15: 新增
   refreshIndex,
   getAllCoveredNodeIds,
   getStats,

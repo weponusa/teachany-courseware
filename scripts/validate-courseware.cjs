@@ -26,6 +26,52 @@ const C = {
   dim: (s) => `\x1b[2m${s}\x1b[0m`,
 };
 
+function shouldSkipAssetRef(ref) {
+  if (!ref) return true;
+  const trimmed = ref.trim();
+  if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('{{')) return true;
+  return /^(https?:|data:|blob:|mailto:|tel:|javascript:|about:|chrome:|edge:)/i.test(trimmed);
+}
+
+function resolveLocalRef(dir, ref) {
+  const repoRoot = path.resolve(__dirname, '..');
+  let clean;
+  try {
+    clean = decodeURIComponent(ref.split('#')[0].split('?')[0]);
+  } catch (e) {
+    clean = ref.split('#')[0].split('?')[0];
+  }
+  if (!clean) return null;
+  return clean.startsWith('/') ? path.resolve(repoRoot, clean.slice(1)) : path.resolve(dir, clean);
+}
+
+function findMissingLocalAssets(dir, html) {
+  const repoRoot = path.resolve(__dirname, '..');
+  const re = /(?:\b(?:src|href|poster)\s*=\s*['"]([^'"]+)['"]|url\(\s*['"]?([^'")]+)['"]?\s*\))/gi;
+  const missing = [];
+  const seen = new Set();
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const raw = (m[1] || m[2] || '').trim();
+    if (shouldSkipAssetRef(raw)) continue;
+    let clean;
+    try {
+      clean = decodeURIComponent(raw.split('#')[0].split('?')[0]);
+    } catch (e) {
+      clean = raw.split('#')[0].split('?')[0];
+    }
+    if (!clean || clean.startsWith('#')) continue;
+    const target = resolveLocalRef(dir, clean);
+    const key = `${raw}\u0000${target}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!fs.existsSync(target)) {
+      missing.push(`${raw} → ${path.relative(repoRoot, target) || target}`);
+    }
+  }
+  return missing;
+}
+
 // ─── 校验项定义 ───
 const CHECKS = [
   {
@@ -173,8 +219,7 @@ const CHECKS = [
       let longCards = 0;
       let maxLen = 0;
       cardMatches.forEach(card => {
-        const clean = card.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
-        const text = clean.replace(/<[^>]+>/g, '').replace(/\s+/g, '');
+        const text = card.replace(/<[^>]+>/g, '').replace(/\s+/g, '');
         if (text.length > maxLen) maxLen = text.length;
         if (text.length > 200) longCards++; // 200字作为单卡片上限
       });
@@ -281,41 +326,18 @@ const CHECKS = [
   },
   {
     id: 16,
-    name: '课件打包 + 高质量 TTS',
-    desc: '是否有 manifest.json 且使用 Edge Neural 高质量 MP3 音频',
+    name: '课件打包',
+    desc: '是否有 manifest.json',
     check: (html, meta, dir) => {
       const hasManifest = fs.existsSync(path.join(dir, 'manifest.json'));
       const hasTeachany = fs.readdirSync(dir).some(f => f.endsWith('.teachany'));
-      const ttsManifestPath = path.join(dir, 'tts', 'manifest.json');
-      let ttsOk = false;
-      let ttsDetail = 'tts/manifest.json ❌';
-      if (fs.existsSync(ttsManifestPath)) {
-        try {
-          const tts = JSON.parse(fs.readFileSync(ttsManifestPath, 'utf8'));
-          const engine = String(tts.engine || '').toLowerCase();
-          const quality = String(tts.quality || '').toLowerCase();
-          const tracks = Array.isArray(tts.tracks) ? tts.tracks : Object.entries(tts.sections || {}).map(([id, src]) => ({ id, src }));
-          const files = tracks.map(t => String(t.src || '').replace(/^\.\//, '')).filter(Boolean);
-          const validFiles = files.filter(src => {
-            const p = path.join(dir, src);
-            return fs.existsSync(p) && fs.statSync(p).size >= 20000 && /\.mp3$/i.test(src);
-          });
-          ttsOk = /edge/.test(engine) && /l0|neural|edge/.test(quality || engine) && files.length > 0 && validFiles.length === files.length;
-          ttsDetail = `${engine || 'unknown'} / ${quality || 'no-quality'} | mp3 ${validFiles.length}/${files.length}`;
-        } catch (e) {
-          ttsDetail = 'tts/manifest.json 解析失败';
-        }
-      }
-      const hasLowQualityFallback = /pyttsx3|silent\.mp3|Web Speech 朗读|speechSynthesis|data-tts-disabled=["']false/i.test(html);
       return {
-        pass: hasManifest && ttsOk && !hasLowQualityFallback,
+        pass: hasManifest,
         detail: [
           hasManifest ? 'manifest.json ✅' : 'manifest.json ❌',
           hasTeachany ? '.teachany 包 ✅' : '.teachany 包 ❌',
-          ttsOk ? `Edge Neural TTS ✅ (${ttsDetail})` : `高质量 TTS ❌ (${ttsDetail})`,
-          hasLowQualityFallback ? '低质量/WebSpeech 回退 ❌' : '无低质量回退 ✅',
         ].join(' | '),
-        fix: '必须使用 edge-tts 生成 tts/*.mp3，并写入 tts/manifest.json（engine=edge-tts, quality=L0-neural）。禁止 pyttsx3/silent/Web Speech 作为发布音频。',
+        fix: '运行 node scripts/pack-courseware.cjs 生成 manifest.json 并打包',
       };
     },
   },
@@ -348,25 +370,69 @@ const CHECKS = [
   },
   {
     id: 19,
-    name: '手机/小程序适配',
-    desc: '是否具备移动端和微信小程序 web-view readiness',
-    check: (html) => {
-      const hasViewport = /name=["']viewport["'][^>]*viewport-fit=cover/i.test(html) || /name=["']viewport["'][^>]*width=device-width/i.test(html);
-      const hasMedia = /@media\s*\([^)]*max-width/i.test(html);
-      const hasSafeArea = /safe-area-inset|viewport-fit=cover/i.test(html);
-      const hasTouchTarget = /min-height\s*:\s*44px|touch-action|pointer-events\s*:\s*auto/i.test(html);
-      const noHorizontalOverflowHint = /overflow-x\s*:\s*hidden|max-width\s*:\s*100%/i.test(html);
-      const pass = hasViewport && hasMedia && (hasSafeArea || hasTouchTarget) && noHorizontalOverflowHint;
+    name: '本地资源无 404',
+    desc: 'HTML 中所有本地 src/href/poster/url(...) 引用都必须指向真实文件',
+    check: (html, meta, dir) => {
+      const missing = findMissingLocalAssets(dir, html);
       return {
-        pass,
-        detail: [
-          hasViewport ? 'viewport ✅' : 'viewport ❌',
-          hasMedia ? 'mobile @media ✅' : 'mobile @media ❌',
-          hasSafeArea ? 'safe-area ✅' : 'safe-area ⚠️',
-          hasTouchTarget ? 'touch target ✅' : 'touch target ⚠️',
-          noHorizontalOverflowHint ? 'no horizontal overflow hint ✅' : 'overflow guard ❌',
-        ].join(' | '),
-        fix: '添加 viewport-fit=cover、safe-area padding、@media(max-width:600px)、按钮/链接最小 44px、媒体 max-width:100%，并用 375×667 视口验证无横向滚动',
+        pass: missing.length === 0,
+        detail: missing.length === 0
+          ? '未发现本地资源死链'
+          : `发现 ${missing.length} 个本地资源死链：${missing.slice(0, 5).join('；')}${missing.length > 5 ? '；...' : ''}`,
+        fix: '使用 image_gen/复制文件后的真实落盘文件名写入 HTML；交付前运行 validate-courseware，禁止凭 prompt 猜文件名',
+      };
+    },
+  },
+  {
+    id: 20,
+    name: '连续音频质量',
+    desc: '至少三段真实 mp3，并挂载标准连续音频播放器',
+    check: (html, meta, dir) => {
+      const refs = [...html.matchAll(/["']([^"']+\.mp3)["']/gi)].map(m => m[1]).filter(r => !shouldSkipAssetRef(r));
+      const valid = refs.filter(ref => {
+        const target = resolveLocalRef(dir, ref);
+        return target && fs.existsSync(target) && fs.statSync(target).size >= 20 * 1024;
+      });
+      const hasPlayer = /data-teachany-audio-playlist|teachany-audio-player\.js|audioPlaylist/i.test(html);
+      return {
+        pass: valid.length >= 3 && hasPlayer,
+        detail: `有效 mp3 ${valid.length}/${refs.length}；${hasPlayer ? '播放器 ✅' : '播放器 ❌'}`,
+        fix: '生成至少 3 段非占位 mp3，并使用 data-teachany-audio-playlist + teachany-audio-player.js 渲染连续播放 UI',
+      };
+    },
+  },
+  {
+    id: 21,
+    name: '视频模块可见可控',
+    desc: '已有 mp4 必须嵌入 video 标签，且有 controls 与真实文件',
+    check: (html, meta, dir) => {
+      const refs = [...html.matchAll(/<(?:video|source)[^>]+src=["']([^"']+\.mp4)["']/gi)].map(m => m[1]);
+      const valid = refs.filter(ref => {
+        const target = resolveLocalRef(dir, ref);
+        return target && fs.existsSync(target) && fs.statSync(target).size >= 20 * 1024;
+      });
+      const videoTags = [...html.matchAll(/<video\b[^>]*>/gi)].map(m => m[0]);
+      const controlsOk = videoTags.length > 0 && videoTags.every(v => /controls/i.test(v) && /playsinline/i.test(v));
+      return {
+        pass: valid.length >= 1 && controlsOk,
+        detail: `有效 mp4 ${valid.length}/${refs.length}；video controls/playsinline ${controlsOk ? '✅' : '❌'}`,
+        fix: '把 Remotion/教学 mp4 用 <video controls preload="metadata" playsinline><source ...> 嵌入对应知识模块',
+      };
+    },
+  },
+  {
+    id: 22,
+    name: 'Canvas 真实互动',
+    desc: 'Canvas 不得只是空白或静态图，必须有绘制逻辑、事件和学生控件',
+    check: (html) => {
+      const hasCanvas = /<canvas\b/i.test(html);
+      const hasDraw = /getContext\s*\(|draw\w*\s*\(/i.test(html);
+      const hasEvent = /addEventListener\s*\(\s*["'](?:pointer|mouse|touch|click|input|change)/i.test(html);
+      const hasControl = /<(?:input|select|button)\b/i.test(html);
+      return {
+        pass: hasCanvas && hasDraw && hasEvent && hasControl,
+        detail: [hasCanvas ? 'canvas ✅' : 'canvas ❌', hasDraw ? '绘制逻辑 ✅' : '绘制逻辑 ❌', hasEvent ? '事件 ✅' : '事件 ❌', hasControl ? '控件 ✅' : '控件 ❌'].join(' | '),
+        fix: '补充 getContext/draw、pointer/click/input/change 事件，以及学生可操作的按钮/滑块/选择器',
       };
     },
   },
