@@ -1,0 +1,629 @@
+<!doctype html>
+<!--
+================================================================
+TeachAny v7.12.1 标准化课件：PID 控制算法（完整模式）
+================================================================
+课件 ID：pid-control-algorithm
+知识点 ID：ext-242060f0
+学科：info-tech
+学段：high-11
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PID 控制算法</title>
+<meta name="description" content="高中信息科技与工程控制：PID 控制算法的比例、积分、微分思想与调参方法">
+
+<meta name="course-id" content="pid-control-algorithm">
+<meta name="course-title" content="PID 控制算法">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="high-11">
+<meta name="course-prereqs" content="函数图像, 误差, 反馈控制">
+<meta name="course-next" content="自动控制系统, 机器人控制">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.12.1">
+<meta name="teachany-node" content="ext-242060f0">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="11">
+<meta name="teachany-stage" content="high">
+<meta name="teachany-domain" content="control-systems">
+<meta name="teachany-prerequisites" content="函数图像, 误差, 反馈控制">
+<meta name="teachany-lesson-type" content="new-concept">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-difficulty" content="standard">
+<meta name="teachany-author" content="TeachAny">
+
+<link rel="stylesheet" href="../../scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../scripts/teachany-audio-player.css">
+
+<style>
+:root {
+  --bg: #07111f;
+  --panel: #101d32;
+  --card: #14233a;
+  --line: #28445f;
+  --text: #edf7ff;
+  --muted: #a9bed4;
+  --brand: #38bdf8;
+  --brand2: #a78bfa;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; scroll-behavior: smooth; }
+body {
+  padding-top: var(--safe-top);
+  padding-bottom: calc(18px + var(--safe-bottom));
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.65;
+  font-size: 16px;
+}
+a { color: #7dd3fc; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+.teachany-brand-bar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 10px 16px;
+  background: rgba(7,17,31,.92); backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(148,163,184,.18);
+}
+.brand-logo { display: flex; align-items: center; gap: 8px; color: #f8fafc; text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand2)); color: #07111f; font-weight: 900; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-version { color: #cbd5e1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgba(255,255,255,.08); padding: 4px 8px; border-radius: 999px; }
+.hero {
+  padding: 64px 20px 38px; text-align: center;
+  background: radial-gradient(circle at 18% 0%, rgba(56,189,248,.22), transparent 34%), radial-gradient(circle at 82% 10%, rgba(167,139,250,.18), transparent 36%);
+}
+h1 { font-size: clamp(30px,6vw,56px); line-height: 1.15; margin: 0 auto 16px; max-width: 960px; }
+.subtitle { color: var(--muted); font-size: clamp(16px,2.8vw,20px); max-width: 880px; margin: 0 auto; }
+.section { max-width: 1080px; margin: 0 auto; padding: 36px 20px; }
+.card { background: linear-gradient(180deg, rgba(20,35,58,.96), rgba(13,27,47,.96)); border: 1px solid rgba(148,163,184,.18); border-radius: 18px; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,.18); }
+.grid, .objectives { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 16px; }
+.choice { width: 100%; text-align: left; border: 1px solid rgba(56,189,248,.24); border-radius: 14px; background: rgba(56,189,248,.08); color: var(--text); padding: 14px 16px; cursor: pointer; transition: all .2s ease; }
+.choice:hover { background: rgba(56,189,248,.15); }
+.choice.selected { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(56,189,248,.18); }
+input[type="range"] { width: 100%; accent-color: var(--brand); }
+input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid var(--line); background: #0b1628; color: var(--text); padding: 12px 14px; font-size: 16px; }
+.phase-tag { display: inline-flex; align-items: center; gap: 6px; color: #bae6fd; background: rgba(56,189,248,.12); border: 1px solid rgba(56,189,248,.25); border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+.ta-standard-figure { margin: 24px auto 0; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 18px; border: 1px solid rgba(148,163,184,.18); background: #0b1628; }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+.result { padding: 14px; border-radius: 12px; background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.25); }
+.warn { padding: 14px; border-radius: 12px; background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.28); }
+.pitfall { margin: 18px 0; padding: 16px; border-radius: 14px; background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.3); }
+.pitfall strong:first-child { color: var(--warn); }
+.kpi { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 12px; margin-top: 14px; }
+.kpi div { padding: 12px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); }
+.sim-wrap { display: grid; grid-template-columns: minmax(280px, 1.4fr) minmax(260px, .9fr); gap: 18px; align-items: start; }
+canvas { width: 100%; background: #081426; border: 1px solid rgba(148,163,184,.18); border-radius: 14px; }
+.control-row { display: grid; grid-template-columns: 72px 1fr 48px; gap: 10px; align-items: center; margin: 12px 0; }
+.control-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 12px; border: 1px solid rgba(56,189,248,.28); background: rgba(56,189,248,.1); color: var(--text); cursor: pointer; }
+.control-btn:hover { background: rgba(56,189,248,.18); }
+.lens-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 14px; margin-top: 16px; }
+.lens-card { padding: 16px; background: rgba(56,189,248,.05); border: 1px solid rgba(56,189,248,.2); border-radius: 14px; }
+.lens-title { color: var(--brand); font-weight: 800; margin-bottom: 6px; }
+.lens-desc { color: var(--muted); font-size: 14px; }
+.tier { margin: 18px 0; padding: 18px; border-radius: 14px; }
+.tier-1 { background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.25); }
+.tier-2 { background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.25); }
+.tier-3 { background: rgba(167,139,250,.08); border: 1px solid rgba(167,139,250,.25); }
+.badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; margin-bottom: 12px; background: rgba(255,255,255,.1); }
+.feedback-detail { margin-top: 12px; padding: 14px; border-radius: 10px; font-size: 14px; line-height: 1.75; }
+.feedback-detail.correct { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.25); }
+.feedback-detail.wrong { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.28); }
+@media (max-width: 760px) {
+  .brand-right { gap: 8px; font-size: 12px; }
+  .hero { padding: 42px 16px 28px; }
+  .section { padding: 26px 16px; }
+  .grid, .objectives, .sim-wrap { grid-template-columns: 1fr !important; }
+  .card { padding: 18px; border-radius: 16px; }
+  .control-row { grid-template-columns: 64px 1fr 44px; }
+}
+</style>
+</head>
+<body>
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://weponusa.github.io/teachany/" aria-label="TeachAny Gallery">
+    <span class="brand-mark">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://weponusa.github.io/teachany/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span><span class="brand-skill-version"> · skill v<span id="skill-version-display">7.12.1</span></span></span>
+  </div>
+</div>
+
+<header class="hero" id="hero" data-tts="hero" data-tsh="开场 - 从失控到稳定">
+  <h1>PID 控制算法</h1>
+  <p class="subtitle">自动驾驶稳住车速、无人机保持高度、恒温箱控制温度，都离不开一个核心问题：系统偏离目标时，怎样又快又稳地拉回来？</p>
+</header>
+
+<section class="section" id="hero-infographic" data-tts="hero-map" data-tsh="知识结构主图">
+  <figure class="ta-standard-figure">
+    <img src="./assets/pid-control-algorithm-hero.svg" alt="PID 控制算法知识结构图">
+    <figcaption>PID 控制算法：用比例、积分、微分把误差变成控制量</figcaption>
+  </figure>
+</section>
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>[
+    {"id":"hero","title":"开场：PID 为什么有用","src":"./tts/hero.mp3"},
+    {"id":"core-1","title":"闭环控制与误差","src":"./tts/core-1.mp3"},
+    {"id":"core-2","title":"P、I、D 三项作用","src":"./tts/core-2.mp3"},
+    {"id":"simulator","title":"互动仿真调参提示","src":"./tts/simulator.mp3"}
+  ]</script>
+</div>
+
+<section id="problem-anchor" class="section" data-tts="problem-anchor" data-tsh="问题锚点">
+  <div class="card">
+    <span class="phase-tag">Problem Anchor</span>
+    <h2>为什么一个系统会“忽快忽慢、忽冷忽热”？</h2>
+    <p style="color:var(--muted)">你现在是一名调试温控箱的工程师。And：你已经会看目标值和实际值。But：只要加热器开大一点，温度就会冲过头；开小一点，又迟迟达不到目标。Therefore：我们需要一种能根据误差自动调节力度的算法。</p>
+    <div class="grid" id="problem-anchor-choices">
+      <button class="choice" data-anchor-choice="我想知道为什么只看当前误差会震荡">为什么只看当前误差会震荡？<br><small style="color:var(--muted);">关注比例 P</small></button>
+      <button class="choice" data-anchor-choice="我想知道为什么长期偏差消不掉">为什么长期偏差消不掉？<br><small style="color:var(--muted);">关注积分 I</small></button>
+      <button class="choice" data-anchor-choice="我想知道怎样提前刹车防止过冲">怎样提前刹车防止过冲？<br><small style="color:var(--muted);">关注微分 D</small></button>
+    </div>
+    <label style="display:block;margin-top:18px;color:var(--muted)">我自己的问题
+      <input id="learner-question-input" placeholder="例如：PID 参数怎么调才不抖？">
+    </label>
+    <p id="anchor-feedback" class="warn" style="margin-top:14px">选择或输入后，本课会围绕你的问题展开。</p>
+  </div>
+</section>
+
+<section id="objectives" class="section" data-tts="objectives" data-tsh="学习目标">
+  <div class="card">
+    <span class="phase-tag">Learning Objectives</span>
+    <h2>学习目标</h2>
+    <ul class="objectives">
+      <li>remember：说出 PID 中 P、I、D 三项分别代表什么</li>
+      <li>understand：解释误差、反馈、控制量之间的关系</li>
+      <li>analyze：分析超调、震荡、稳态误差出现的原因</li>
+      <li>evaluate：根据响应曲线判断参数是否合理</li>
+      <li>create：设计一组调参方案，让系统更快、更稳地接近目标</li>
+    </ul>
+  </div>
+</section>
+
+<section id="pre-test" class="section" data-tts="pre-test" data-tsh="前测">
+  <div class="card">
+    <span class="phase-tag">Pre-Test</span>
+    <h2>课前诊断：你已经知道多少？</h2>
+    <p style="color:var(--muted)">先判断你对反馈控制的直觉。答错没关系，错因会告诉你该重点补哪里。</p>
+    <div style="margin-top:22px">
+      <p><strong>1. 控制系统中的“误差”通常指什么？</strong></p>
+      <button class="choice" onclick="checkPreTest(1,'A',this)">A. 目标值与实际值的差</button>
+      <button class="choice" onclick="checkPreTest(1,'B',this)">B. 传感器的价格</button>
+      <button class="choice" onclick="checkPreTest(1,'C',this)">C. 控制器的名称</button>
+      <button class="choice" onclick="checkPreTest(1,'D',this)">D. 执行器的最大功率</button>
+      <div id="pre-test-feedback-1" style="display:none"></div>
+    </div>
+    <div style="margin-top:24px">
+      <p><strong>2. 如果只按当前误差大小用力，最像 PID 中哪一项？</strong></p>
+      <button class="choice" onclick="checkPreTest(2,'A',this)">A. 比例 P</button>
+      <button class="choice" onclick="checkPreTest(2,'B',this)">B. 积分 I</button>
+      <button class="choice" onclick="checkPreTest(2,'C',this)">C. 微分 D</button>
+      <button class="choice" onclick="checkPreTest(2,'D',this)">D. 随机项 R</button>
+      <div id="pre-test-feedback-2" style="display:none"></div>
+    </div>
+    <div style="margin-top:24px">
+      <p><strong>3. 系统一直差一点到不了目标，通常需要哪一项帮助消除长期偏差？</strong></p>
+      <button class="choice" onclick="checkPreTest(3,'A',this)">A. 只增大 D</button>
+      <button class="choice" onclick="checkPreTest(3,'B',this)">B. 积分 I</button>
+      <button class="choice" onclick="checkPreTest(3,'C',this)">C. 关闭反馈</button>
+      <button class="choice" onclick="checkPreTest(3,'D',this)">D. 降低目标值</button>
+      <div id="pre-test-feedback-3" style="display:none"></div>
+    </div>
+  </div>
+</section>
+
+<section id="core-1" class="section" data-tts="core-1" data-tsh="核心知识1 - 闭环控制">
+  <div class="card">
+    <span class="phase-tag">Core Knowledge</span>
+    <h2>一、PID 先解决“闭环控制”问题</h2>
+    <p>PID 不是神秘公式，而是一种把<strong>误差</strong>转换成<strong>控制量</strong>的方法。系统先测量实际值，再和目标值比较，得到误差，控制器根据误差决定执行器该用多大力。</p>
+    <div class="grid" style="margin-top:15px">
+      <div class="result"><strong>目标值</strong><br><span style="color:var(--muted)">希望系统达到的状态，如温度 60°C、车速 80 km/h。</span></div>
+      <div class="result"><strong>实际值</strong><br><span style="color:var(--muted)">传感器测到的当前状态，如当前温度 48°C。</span></div>
+      <div class="result"><strong>误差</strong><br><span style="color:var(--muted)">目标值减去实际值，是控制器判断“差多少”的依据。</span></div>
+      <div class="result"><strong>控制量</strong><br><span style="color:var(--muted)">执行器输出力度，如加热功率、油门开度、电机转速。</span></div>
+    </div>
+    <div class="pitfall"><p><strong>易错点1：</strong>误差不是“系统坏了”，而是“目标与实际的差”。如果把误差理解成故障，就会误以为误差越小控制器越没事做；实际上误差是控制器工作的输入。</p></div>
+  </div>
+</section>
+
+<section id="core-2" class="section" data-tts="core-2" data-tsh="核心知识2 - PID三项">
+  <div class="card">
+    <span class="phase-tag">Core Knowledge</span>
+    <h2>二、P、I、D 三项各管一件事</h2>
+    <div class="grid">
+      <div class="card" style="box-shadow:none"><h3>P：比例项</h3><p style="color:var(--muted)">看当前误差。误差越大，出力越大。优点是反应快；风险是 Kp 太大容易过冲和震荡。</p></div>
+      <div class="card" style="box-shadow:none"><h3>I：积分项</h3><p style="color:var(--muted)">看历史误差的累计。长期差一点到不了目标时，I 会继续“补力”。风险是 Ki 太大导致积分饱和。</p></div>
+      <div class="card" style="box-shadow:none"><h3>D：微分项</h3><p style="color:var(--muted)">看误差变化速度。系统冲得太快时，D 像提前刹车。风险是 Kd 太大容易放大传感器噪声。</p></div>
+    </div>
+    <div class="warn" style="margin-top:18px"><strong>核心公式：</strong>控制量 = Kp × 当前误差 + Ki × 误差累计 + Kd × 误差变化率。</div>
+    <div class="pitfall"><p><strong>易错点2：</strong>P、I、D 不是三种互相替代的算法，而是三种信息来源：现在、过去、趋势。把它们当成“谁最强”来比较，会搞混调参目标。</p></div>
+  </div>
+</section>
+
+<section id="interactive-simulator" class="section" data-tts="simulator" data-tsh="互动仿真 - 调一台温控箱">
+  <div class="card">
+    <span class="phase-tag">Interactive Lab</span>
+    <h2>互动实验：调一台温控箱</h2>
+    <p style="color:var(--muted)">真实场景应用：假设你在调试恒温箱。拖动 Kp、Ki、Kd，观察实际温度曲线如何接近目标。目标是“快、稳、少过冲”。</p>
+    <div class="sim-wrap">
+      <div>
+        <canvas id="pidCanvas" width="720" height="420" aria-label="PID响应曲线画布"></canvas>
+        <div class="kpi" id="simKpi">
+          <div><strong>上升速度</strong><br><span id="kRise">--</span></div>
+          <div><strong>最大过冲</strong><br><span id="kOver">--</span></div>
+          <div><strong>稳态误差</strong><br><span id="kError">--</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="control-row"><label>Kp</label><input id="kp" type="range" min="0" max="5" step="0.1" value="1.2"><span id="kpv">1.2</span></div>
+        <div class="control-row"><label>Ki</label><input id="ki" type="range" min="0" max="1" step="0.02" value="0.10"><span id="kiv">0.10</span></div>
+        <div class="control-row"><label>Kd</label><input id="kd" type="range" min="0" max="3" step="0.1" value="0.4"><span id="kdv">0.4</span></div>
+        <div class="control-row"><label>目标</label><input id="target" type="range" min="35" max="85" step="1" value="60"><span id="targetv">60</span></div>
+        <div class="control-row"><label>扰动</label><input id="disturb" type="range" min="0" max="20" step="1" value="8"><span id="disturbv">8</span></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
+          <button class="control-btn" onclick="runPID()">运行仿真</button>
+          <button class="control-btn" onclick="preset('pOnly')">只用 P</button>
+          <button class="control-btn" onclick="preset('balanced')">较稳参数</button>
+          <button class="control-btn" onclick="preset('aggressive')">激进参数</button>
+        </div>
+        <div id="simAdvice" class="warn" style="margin-top:16px">先点击“运行仿真”。如果曲线冲过目标很多，说明过冲明显；如果最后差一截，说明有稳态误差。</div>
+      </div>
+    </div>
+    <div class="pitfall"><p><strong>易错点3：</strong>调参不是把 Kp、Ki、Kd 全部拉满。参数越大通常越“猛”，但也越容易震荡、过冲或放大噪声。工程上追求的是稳定与响应速度的平衡。</p></div>
+  </div>
+</section>
+
+<section id="concept-check" class="section" data-tts="concept-check" data-tsh="概念练习">
+  <div class="card">
+    <span class="phase-tag">Concept Check</span>
+    <h2>马上练：看曲线诊断问题</h2>
+    <p><strong>如果温度曲线最后总是比目标低 2°C，主要应该考虑增加哪一项？</strong></p>
+    <button class="choice" onclick="checkConcept('A',this)">A. 适当增加 Ki</button>
+    <button class="choice" onclick="checkConcept('B',this)">B. 只增加 Kd</button>
+    <button class="choice" onclick="checkConcept('C',this)">C. 关闭反馈</button>
+    <button class="choice" onclick="checkConcept('D',this)">D. 把目标值改低</button>
+    <div id="concept-feedback" style="display:none"></div>
+  </div>
+</section>
+
+<section id="video-explainer" class="section" data-tts="video-explainer" data-tsh="视频讲解 - PID响应曲线">
+  <div class="card">
+    <span class="phase-tag">Video Explainer</span>
+    <h2>视频讲解：从响应曲线看调参</h2>
+    <p style="color:var(--muted)">这段短视频用于帮助你把响应曲线与调参目标联系起来：速度、稳定性、过冲和稳态误差需要同时观察。</p>
+    <video controls preload="metadata" playsinline style="width:100%;border-radius:16px;border:1px solid rgba(148,163,184,.18);background:#081426">
+      <source src="./assets/pid-response-explainer.mp4" type="video/mp4">
+      当前设备不支持视频播放，请继续使用互动仿真学习。
+    </video>
+  </div>
+</section>
+
+<section id="five-lens" class="section" data-tts="five-lens" data-tsh="五镜头深层理解">
+  <div class="card">
+    <span class="phase-tag">Deep Understanding</span>
+    <h2>五镜头：把 PID 真正想明白</h2>
+    <div class="lens-grid">
+      <div class="lens-card"><div class="lens-title">镜头1：类比理解</div><div class="lens-desc">开车追目标速度：P 像看现在差多少踩油门，I 像发现长期慢一点就多补油，D 像看到速度上升太快提前松油门。</div></div>
+      <div class="lens-card"><div class="lens-title">镜头2：逆向思维</div><div class="lens-desc">如果没有反馈，控制器不知道实际值，只能盲目输出；如果没有 D，系统可能冲过目标才反应过来。</div></div>
+      <div class="lens-card"><div class="lens-title">镜头3：图像建模</div><div class="lens-desc">响应曲线要看三件事：多久接近目标、是否冲过目标、最终是否还有偏差。它们分别对应速度、过冲、稳态误差。</div></div>
+      <div class="lens-card"><div class="lens-title">镜头4：联系实际</div><div class="lens-desc">无人机定高、机器人关节、电烤箱恒温、汽车定速巡航，都在用类似“测量-比较-修正”的反馈思想。</div></div>
+      <div class="lens-card"><div class="lens-title">镜头5：教给别人</div><div class="lens-desc">一句话解释 PID：P 看现在，I 记过去，D 猜趋势，三者合起来决定下一步该用多大力。</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="post-test" class="section" data-tts="post-test" data-tsh="后测">
+  <div class="card">
+    <span class="phase-tag">Post-Test</span>
+    <h2>课后测验：检验你的学习成果</h2>
+    <div style="margin-top:22px">
+      <p><strong>1. PID 中 D 项主要关注什么？</strong></p>
+      <button class="choice" onclick="checkPostTest(1,'A',this)">A. 误差变化速度</button>
+      <button class="choice" onclick="checkPostTest(1,'B',this)">B. 误差累计总和</button>
+      <button class="choice" onclick="checkPostTest(1,'C',this)">C. 当前误差大小</button>
+      <button class="choice" onclick="checkPostTest(1,'D',this)">D. 设备名称</button>
+      <div id="post-test-feedback-1" style="display:none"></div>
+    </div>
+    <div style="margin-top:24px">
+      <p><strong>2. 系统过冲很大且来回震荡，最可能的原因是什么？</strong></p>
+      <button class="choice" onclick="checkPostTest(2,'A',this)">A. Kp 太大或阻尼不足</button>
+      <button class="choice" onclick="checkPostTest(2,'B',this)">B. 没有目标值</button>
+      <button class="choice" onclick="checkPostTest(2,'C',this)">C. Ki 一定为 0</button>
+      <button class="choice" onclick="checkPostTest(2,'D',this)">D. 传感器越贵越震荡</button>
+      <div id="post-test-feedback-2" style="display:none"></div>
+    </div>
+    <div style="margin-top:24px">
+      <p><strong>3. 想消除长期稳态误差，通常需要哪一项？</strong></p>
+      <button class="choice" onclick="checkPostTest(3,'A',this)">A. I 项</button>
+      <button class="choice" onclick="checkPostTest(3,'B',this)">B. 只靠 D 项</button>
+      <button class="choice" onclick="checkPostTest(3,'C',this)">C. 取消测量</button>
+      <button class="choice" onclick="checkPostTest(3,'D',this)">D. 不再设目标</button>
+      <div id="post-test-feedback-3" style="display:none"></div>
+    </div>
+    <div style="margin-top:24px">
+      <p><strong>4. 下列哪句话最能概括 PID？</strong></p>
+      <button class="choice" onclick="checkPostTest(4,'A',this)">A. P 看现在，I 记过去，D 看趋势</button>
+      <button class="choice" onclick="checkPostTest(4,'B',this)">B. P、I、D 都只看当前误差</button>
+      <button class="choice" onclick="checkPostTest(4,'C',this)">C. 参数越大越好</button>
+      <button class="choice" onclick="checkPostTest(4,'D',this)">D. PID 不需要反馈</button>
+      <div id="post-test-feedback-4" style="display:none"></div>
+    </div>
+    <div id="final-score" class="result" style="display:none;margin-top:26px">
+      <h3>你的成绩</h3>
+      <p id="score-text"></p>
+      <p id="score-advice" style="color:var(--muted)"></p>
+    </div>
+  </div>
+</section>
+
+<section id="tiered-exercises" class="section" data-tts="tiered-exercises" data-tsh="三段式练习">
+  <div class="card">
+    <span class="phase-tag">Tiered Exercises</span>
+    <h2>三段式练习：从会判断到会设计</h2>
+    <div class="tier tier-1">
+      <span class="badge">基础巩固（必做）</span>
+      <p><strong>把 P、I、D 与作用配对：哪一项最像“提前刹车”？</strong></p>
+      <button class="choice" onclick="checkTierAnswer('t1','A',this)">A. D 项</button>
+      <button class="choice" onclick="checkTierAnswer('t1','B',this)">B. I 项</button>
+      <button class="choice" onclick="checkTierAnswer('t1','C',this)">C. P 项</button>
+      <div id="tier-feedback-t1" style="display:none"></div>
+    </div>
+    <div class="tier tier-2">
+      <span class="badge">拓展应用（选做）</span>
+      <p><strong>某恒温箱到达目标很慢，但几乎不过冲。你会先调整哪个参数？为什么？</strong></p>
+      <textarea id="tier2-answer" style="min-height:90px" placeholder="写下你的分析，例如先适度提高 Kp，再观察过冲..."></textarea>
+      <button class="control-btn" onclick="checkTier2()">提交分析</button>
+      <div id="tier-feedback-t2" style="display:none"></div>
+    </div>
+    <div class="tier tier-3">
+      <span class="badge">创新挑战（选做）</span>
+      <p><strong>设计一个无人机定高 PID 调参方案：怎样兼顾快速上升、少过冲、抗风扰？</strong></p>
+      <textarea id="tier3-answer" style="min-height:120px" placeholder="写下你的设计方案，包括调参顺序、观察指标和安全边界..."></textarea>
+      <button class="control-btn" onclick="checkTier3()">提交方案</button>
+      <div id="tier-feedback-t3" style="display:none"></div>
+    </div>
+  </div>
+</section>
+
+<section id="summary" class="section" data-tts="summary" data-tsh="小结">
+  <div class="card">
+    <span class="phase-tag">Summary</span>
+    <h2>课程小结</h2>
+    <ol style="color:var(--muted);line-height:2.1">
+      <li>PID 是闭环反馈控制算法，把误差转化为控制量。</li>
+      <li>P 看当前误差，负责快速响应；太大容易震荡。</li>
+      <li>I 看历史累计，负责消除长期稳态误差；太大可能积分饱和。</li>
+      <li>D 看变化趋势，负责提前刹车；太大可能放大噪声。</li>
+      <li>调参目标不是“越大越好”，而是在速度、稳定性、过冲之间做权衡。</li>
+    </ol>
+    <div class="result" style="margin-top:20px"><strong>迁移思考：</strong>如果你要给自动浇花系统设计 PID，传感器、目标值、执行器和误差分别是什么？</div>
+  </div>
+</section>
+
+<section class="section" id="knowledge-graph" data-tts="knowledge-graph" data-tsh="知识图谱">
+  <div class="card">
+    <span class="phase-tag">Knowledge Graph</span>
+    <h2>知识图谱</h2>
+    <p style="color:var(--muted)">本节点的前置、后续和同域知识由标准知识图谱模块自动渲染。</p>
+    <div data-teachany-kg="ext-242060f0">
+      <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱" style="display:block;width:100%;max-height:140px;border-radius:12px"></canvas>
+    </div>
+    <div class="warn" style="margin-top:18px">
+      <strong>本课易错点总结：</strong>
+      <ul>
+        <li>误差不是故障，而是目标值与实际值的差。</li>
+        <li>P、I、D 分别利用现在、过去、趋势三类信息。</li>
+        <li>参数不是越大越好，过大可能过冲、震荡、噪声放大。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="teachany-ai-tutor-card" data-tts="ai-tutor" data-tsh="AI 学伴">
+  <div data-teachany-tutor-card></div>
+</section>
+
+<script>
+window.__TEACHANY_LEARNER_QUESTION__ = '';
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseId: 'pid-control-algorithm',
+  courseTitle: 'PID 控制算法',
+  subject: 'info-tech',
+  grade: '11',
+  nodeId: 'ext-242060f0',
+  lessonType: 'new-concept',
+  getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+  getContext: () => { const current = document.querySelector('section.current-section') || (location.hash ? document.querySelector(location.hash) : null); return (current || document.body).innerText.slice(0,3000); }
+};
+function setTeachAnyLearnerQuestion(question) {
+  window.__TEACHANY_LEARNER_QUESTION__ = question || '';
+  const fb = document.getElementById('anchor-feedback');
+  if (fb) fb.textContent = question ? `你的问题：${question}` : '选择或输入后，本课会围绕你的问题展开。';
+}
+document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-anchor-choice]').forEach(i => i.classList.remove('selected'));
+    btn.classList.add('selected');
+    setTeachAnyLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+  });
+});
+document.getElementById('learner-question-input')?.addEventListener('input', e => setTeachAnyLearnerQuestion(e.target.value.trim()));
+
+function feedbackBox(text, ok) {
+  return `<div class="feedback-detail ${ok ? 'correct' : 'wrong'}">${text}</div>`;
+}
+const preAns = {1:'A',2:'A',3:'B'};
+const preDiag = {
+  1: {
+    A:'<strong>正确。</strong><p>误差就是目标值与实际值的差，这是控制器判断“还差多少”的输入。</p>',
+    B:'<strong>错因分析：</strong><p>你把“系统性能指标”和“成本”搞混了。传感器价格会影响工程方案，但不是控制误差。</p>',
+    C:'<strong>错因分析：</strong><p>控制器名称只是设备或算法的标签，不反映目标与实际之间的差距。</p>',
+    D:'<strong>错因分析：</strong><p>最大功率是执行器能力上限，不是当前偏离目标的程度。</p>'
+  },
+  2: {
+    A:'<strong>正确。</strong><p>比例 P 的核心就是“误差越大，出力越大”。</p>',
+    B:'<strong>错因分析：</strong><p>积分 I 看的是过去误差的累计，不是只看当前误差。</p>',
+    C:'<strong>错因分析：</strong><p>微分 D 看的是误差变化速度，像提前刹车，不是按当前误差直接用力。</p>',
+    D:'<strong>错因分析：</strong><p>PID 没有随机项 R。随机输出会让系统更不可控。</p>'
+  },
+  3: {
+    A:'<strong>错因分析：</strong><p>D 项主要抑制变化太快，不能单独消除长期偏差。</p>',
+    B:'<strong>正确。</strong><p>I 项累计长期误差，能把“总是差一点”的偏差逐渐补掉。</p>',
+    C:'<strong>错因分析：</strong><p>关闭反馈后控制器看不到实际值，反而无法修正长期偏差。</p>',
+    D:'<strong>错因分析：</strong><p>降低目标值是在改任务，不是让系统学会到达原目标。</p>'
+  }
+};
+function checkPreTest(q, a, btn) {
+  const fb = document.getElementById(`pre-test-feedback-${q}`);
+  const ok = preAns[q] === a;
+  fb.style.display = 'block';
+  fb.className = ok ? 'result' : 'warn';
+  fb.innerHTML = feedbackBox(preDiag[q][a], ok);
+  btn.classList.add('selected');
+}
+
+function simulatePID() {
+  const kp = +document.getElementById('kp').value;
+  const ki = +document.getElementById('ki').value;
+  const kd = +document.getElementById('kd').value;
+  const target = +document.getElementById('target').value;
+  const disturb = +document.getElementById('disturb').value;
+  let y = 25, v = 0, integral = 0, prevError = target - y;
+  const points = [];
+  let maxY = y, firstNear = null;
+  for (let i = 0; i < 180; i++) {
+    const envLoss = (y - 25) * 0.018;
+    const external = (i > 70 && i < 105) ? -disturb * 0.035 : 0;
+    const error = target - y;
+    integral += error * 0.08;
+    integral = Math.max(-80, Math.min(80, integral));
+    const derivative = (error - prevError) / 0.08;
+    const u = Math.max(0, Math.min(100, kp * error + ki * integral + kd * derivative));
+    v += (u * 0.020 - envLoss + external - v * 0.10) * 0.08;
+    y += v;
+    prevError = error;
+    maxY = Math.max(maxY, y);
+    if (firstNear === null && Math.abs(target - y) <= 1.5) firstNear = i;
+    points.push({x:i, y, target});
+  }
+  const finalError = target - points[points.length - 1].y;
+  const overshoot = Math.max(0, maxY - target);
+  return {points, target, overshoot, finalError, firstNear, kp, ki, kd};
+}
+function drawPID(result) {
+  const canvas = document.getElementById('pidCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = '#081426'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle = 'rgba(148,163,184,.18)'; ctx.lineWidth = 1;
+  for (let i=0;i<=6;i++){ const y=40+i*(h-80)/6; ctx.beginPath(); ctx.moveTo(50,y); ctx.lineTo(w-20,y); ctx.stroke(); }
+  for (let i=0;i<=6;i++){ const x=50+i*(w-80)/6; ctx.beginPath(); ctx.moveTo(x,30); ctx.lineTo(x,h-40); ctx.stroke(); }
+  const minT = 20, maxT = 90;
+  const px = i => 50 + i * (w-80) / (result.points.length-1);
+  const py = temp => h - 40 - (temp-minT) * (h-80) / (maxT-minT);
+  ctx.strokeStyle = '#f59e0b'; ctx.setLineDash([8,6]); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(50, py(result.target)); ctx.lineTo(w-20, py(result.target)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#f59e0b'; ctx.font = '14px system-ui'; ctx.fillText('目标值', w-82, py(result.target)-8);
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+  ctx.beginPath(); result.points.forEach((p,i)=>{ const x=px(i), y=py(p.y); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke();
+  ctx.fillStyle = '#edf7ff'; ctx.font = '14px system-ui'; ctx.fillText('时间', w-58, h-12); ctx.save(); ctx.translate(18,50); ctx.rotate(-Math.PI/2); ctx.fillText('实际温度',0,0); ctx.restore();
+}
+function updateSimLabels() {
+  ['kp','ki','kd','target','disturb'].forEach(id => {
+    const el = document.getElementById(id);
+    const out = document.getElementById(id+'v');
+    if(out) out.textContent = id === 'ki' ? (+el.value).toFixed(2) : el.value;
+  });
+}
+function runPID() {
+  updateSimLabels();
+  const r = simulatePID(); drawPID(r);
+  document.getElementById('kRise').textContent = r.firstNear === null ? '未接近' : `${(r.firstNear*0.08).toFixed(1)} 秒`;
+  document.getElementById('kOver').textContent = `${r.overshoot.toFixed(1)} °C`;
+  document.getElementById('kError').textContent = `${Math.abs(r.finalError).toFixed(1)} °C`;
+  let advice = '';
+  if (r.overshoot > 8) advice = '过冲偏大：尝试降低 Kp 或增加适量 Kd。注意不要把 Kd 拉太大，否则会放大噪声。';
+  else if (Math.abs(r.finalError) > 3) advice = '稳态误差偏大：可以适当增加 Ki，让长期偏差被累计并补偿。';
+  else if (r.firstNear !== null && r.firstNear < 55) advice = '响应较快且比较稳定。这组参数可以作为较稳方案继续微调。';
+  else advice = '响应偏慢：可以先适当提高 Kp，再观察是否过冲。';
+  document.getElementById('simAdvice').textContent = advice;
+}
+function preset(name) {
+  const values = { pOnly:[1.6,0,0,60,8], balanced:[1.4,0.12,0.7,60,8], aggressive:[3.6,0.30,0.2,60,8] }[name];
+  ['kp','ki','kd','target','disturb'].forEach((id,i)=>document.getElementById(id).value=values[i]);
+  runPID();
+}
+['kp','ki','kd','target','disturb'].forEach(id => document.getElementById(id)?.addEventListener('input', updateSimLabels));
+
+function checkConcept(a, btn) {
+  const fb = document.getElementById('concept-feedback');
+  const ok = a === 'A';
+  const diag = {
+    A:'<strong>正确。</strong><p>长期差一点到不了目标，是典型稳态误差。适当增加 Ki 可以累计误差并持续补偿。</p>',
+    B:'<strong>错因分析：</strong><p>D 项看趋势，像提前刹车；它不擅长消除长期偏差。你把“防过冲”和“消除稳态误差”搞混了。</p>',
+    C:'<strong>错因分析：</strong><p>关闭反馈后系统看不到误差，只会更难修正偏差。</p>',
+    D:'<strong>错因分析：</strong><p>把目标改低是在降低要求，不是解决控制器达不到原目标的问题。</p>'
+  };
+  fb.style.display = 'block'; fb.className = ok ? 'result' : 'warn'; fb.innerHTML = feedbackBox(diag[a], ok); btn.classList.add('selected');
+}
+let postScore = 0, postDone = {};
+const postAns = {1:'A',2:'A',3:'A',4:'A'};
+const postDiag = {
+  1:{A:'<strong>正确。</strong><p>D 项看误差变化速度，帮助系统提前减力，减少过冲。</p>',B:'<strong>错因分析：</strong><p>误差累计总和是 I 项，不是 D 项。你把“过去累计”和“变化趋势”搞混了。</p>',C:'<strong>错因分析：</strong><p>当前误差大小是 P 项。D 项关心误差变化得快不快。</p>',D:'<strong>错因分析：</strong><p>设备名称不是控制信息，无法用来提前判断趋势。</p>'},
+  2:{A:'<strong>正确。</strong><p>Kp 太大时系统用力过猛，容易冲过目标；阻尼不足也会让曲线来回摆动。</p>',B:'<strong>错因分析：</strong><p>没有目标值时无法定义误差，但题目说已经出现过冲和震荡，说明目标存在。</p>',C:'<strong>错因分析：</strong><p>Ki 为 0 不一定导致震荡；很多只用 P 的系统也可能稳定或震荡，关键看增益与对象特性。</p>',D:'<strong>错因分析：</strong><p>价格和震荡没有直接因果关系。震荡主要来自控制参数和系统动态特性。</p>'},
+  3:{A:'<strong>正确。</strong><p>I 项累计长期误差，可以把总是差一点的稳态误差逐渐补掉。</p>',B:'<strong>错因分析：</strong><p>D 项关注变化速度，不会持续补偿长期偏差。</p>',C:'<strong>错因分析：</strong><p>取消测量会破坏反馈闭环，无法知道偏差是否存在。</p>',D:'<strong>错因分析：</strong><p>不设目标就没有控制任务，也就谈不上消除误差。</p>'},
+  4:{A:'<strong>正确。</strong><p>这是 PID 的核心：P 看现在，I 记过去，D 看趋势。</p>',B:'<strong>错因分析：</strong><p>只有 P 只看当前误差；I 和 D 分别看累计与变化趋势。</p>',C:'<strong>错因分析：</strong><p>参数越大越容易过冲、震荡或噪声放大。工程上追求平衡。</p>',D:'<strong>错因分析：</strong><p>PID 是典型反馈控制算法，没有反馈就无法根据误差修正输出。</p>'}
+};
+function checkPostTest(q, a, btn) {
+  const fb = document.getElementById(`post-test-feedback-${q}`); const ok = postAns[q] === a;
+  fb.style.display = 'block'; fb.className = ok ? 'result' : 'warn'; fb.innerHTML = feedbackBox(postDiag[q][a], ok); btn.classList.add('selected');
+  if(!postDone[q]) { postDone[q]=true; if(ok) postScore++; }
+  if(Object.keys(postDone).length >= 4) {
+    document.getElementById('final-score').style.display = 'block';
+    document.getElementById('score-text').innerHTML = `你答对了 <strong>${postScore}/4</strong> 道题，得分 ${postScore*25} 分。`;
+    document.getElementById('score-advice').textContent = postScore===4 ? '掌握很好，可以尝试真实设备调参案例。' : postScore>=2 ? '基本理解了，建议回看曲线诊断和三项作用。' : '建议重新学习 P、I、D 三项分别看的信息来源。';
+  }
+}
+function checkTierAnswer(tier, answer, btn) {
+  const fb = document.getElementById(`tier-feedback-${tier}`); const ok = answer === 'A';
+  fb.style.display='block'; fb.className = ok ? 'result' : 'warn';
+  fb.innerHTML = ok ? feedbackBox('<strong>正确。</strong><p>D 项看趋势，能在系统冲得太快时提前减力，像提前刹车。</p>', true) : feedbackBox('<strong>错因分析：</strong><p>你把“累计过去误差”或“看当前误差”与“看变化趋势”搞混了。提前刹车对应 D 项。</p>', false);
+  btn.classList.add('selected');
+}
+function checkTier2() {
+  const fb = document.getElementById('tier-feedback-t2'); fb.style.display='block'; fb.className='result';
+  fb.innerHTML = feedbackBox('<strong>分析已提交。</strong><p>参考思路：到达目标很慢但不过冲，通常先适度提高 Kp 提升响应速度；如果出现过冲，再增加少量 Kd 或回调 Kp。不要一开始大幅增加 Ki，否则可能带来积分饱和。</p>', true);
+}
+function checkTier3() {
+  const fb = document.getElementById('tier-feedback-t3'); fb.style.display='block'; fb.className='result';
+  fb.innerHTML = feedbackBox('<strong>方案已提交。</strong><p>参考方案：先用较小 Ki，逐步提高 Kp 让无人机能快速靠近目标高度；再加入 D 抑制上升过快导致的过冲；最后只加少量 I 处理长期风扰导致的高度偏差，并设置输出限幅和积分限幅。</p>', true);
+}
+document.addEventListener('DOMContentLoaded', () => { updateSimLabels(); runPID(); });
+</script>
+
+<script src="../../scripts/ai-tutor.js"></script>
+<script src="../../scripts/teachany-tutor-card.js" defer></script>
+<script src="../../scripts/teachany-tts-narrator.js" data-tts-disabled="true" defer></script>
+<script src="../../scripts/teachany-section-hints.js" defer></script>
+<script src="../../scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../scripts/teachany-audio-player.js?v=bar-only-20260513" defer></script>
+</body>
+</html>
