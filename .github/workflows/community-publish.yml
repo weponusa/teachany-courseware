@@ -58,8 +58,9 @@ jobs:
             cp -R "$tmp/"* "$target/"
             rm -rf "$tmp"
 
-            # Keep runtime robust: if HTML references ../../scripts/, it will work via root scripts/.
-            # If the package already includes assets/scripts/, keep it as-is.
+            # 兼容旧模板/旧 skill：解包时统一修正 logo 与标准运行时路径。
+            python3 -c 'import sys; from pathlib import Path; p=Path(sys.argv[1]); html=p.read_text(encoding="utf-8", errors="ignore"); repl={"https://weponusa.github.io/teachany/assets/teachany-logo.png":"https://weponusa.github.io/teachany-courseware/assets/teachany-logo.png","https://weponusa.github.io/teachany/scripts/":"../../assets/scripts/","https://weponusa.github.io/teachany-courseware/scripts/":"../../assets/scripts/","../../scripts/":"../../assets/scripts/"}; [None for old,new in repl.items() if not (html:=html.replace(old,new))]; p.write_text(html, encoding="utf-8")' "$target/index.html"
+
             echo "$course_id" >> "$published_file"
             echo "✅ Published $pkg → $target"
 
@@ -93,18 +94,44 @@ jobs:
           git commit -m "community: publish submitted courseware (${{ steps.unpack.outputs.courses }})"
           git push origin main
 
+      - name: Build publish directory
+        if: steps.unpack.outputs.published == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site
+
+          # 课件目录：排除 Remotion 工程源码/中间产物，保留运行时 assets/video 等资源。
+          rsync -a --exclude='remotion/' community/ _site/community/
+
+          # 静态资源：根级 physical 大底图当前未被课件直接引用，排除以避免 GitHub Pages 超限。
+          rsync -a --exclude='maps/physical/' assets/ _site/assets/
+
+          # 数据目录：排除本地 venv 和断开的本地符号链接。
+          rsync -a --exclude='.venv/' --exclude='history' --exclude='geography' data/ _site/data/
+
+          touch _site/.nojekyll
+          cp 404.html _site/ 2>/dev/null || true
+          cp courseware-registry.json _site/ 2>/dev/null || true
+          cp commercial-license.html _site/ 2>/dev/null || true
+
+          echo "✅ _site built"
+          du -sh _site
+
       - name: Deploy updated site to gh-pages
         if: steps.unpack.outputs.published == 'true'
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
-          publish_branch: gh-pages
-          keep_files: false
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'deploy: community publish (${{ steps.unpack.outputs.courses }})'
-          exclude_assets: '.github,node_modules,__pycache__,*.py,*.pyc,*.sh,*.cjs,*.txt,*.log'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd _site
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          echo "Staged files count: $(git status --short | wc -l)"
+          git commit -m "deploy: community publish (${{ steps.unpack.outputs.courses }})"
+          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages
 
       - name: Notify registry repo
         if: steps.unpack.outputs.published == 'true' && env.REGISTRY_TOKEN != ''
