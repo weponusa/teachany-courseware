@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="teachany-prerequisites" content="early-civilizations">
-<title>秦汉统一多民族国家 · TeachAny v5.27</title>
+<title>《秦汉统一多民族国家》 · 初中历史 G7 · TeachAny v7.15 MapLab</title>
 <meta name="teachany-node" content="imperial-unification">
 <meta name="teachany-subject" content="history">
 <meta name="teachany-domain" content="ancient-china">
@@ -110,6 +110,19 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 .map-popup .pp-sub { font-size:10px; color:rgba(255,255,255,.4); margin-bottom:4px; }
 .map-popup .pp-body { font-size:11px; line-height:1.55; color:rgba(255,255,255,.65); }
 .map-zoom-info { position:absolute; bottom:68px; left:8px; z-index:15; font-size:9px; color:rgba(255,255,255,.25); font-family:monospace; pointer-events:none; }
+.map-toolbar { position:absolute; top:52px; left:50%; transform:translateX(-50%); z-index:18; display:flex; gap:6px; padding:6px; border-radius:999px; background:rgba(8,18,34,.72); border:1px solid rgba(255,255,255,.12); backdrop-filter: blur(10px); box-shadow:0 12px 30px rgba(0,0,0,.22); }
+.map-chip { border:0; border-radius:999px; padding:6px 10px; color:rgba(255,255,255,.72); background:rgba(255,255,255,.08); font-size:11px; cursor:pointer; transition:all .2s; white-space:nowrap; }
+.map-chip:hover,.map-chip.active { color:#fff; background:var(--chip-color,#c0392b); box-shadow:0 0 0 1px rgba(255,255,255,.16) inset,0 8px 22px rgba(0,0,0,.22); }
+.map-layer-panel { position:absolute; right:8px; top:184px; z-index:16; min-width:148px; background:rgba(8,18,34,.86); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:9px 10px; color:rgba(255,255,255,.72); font-size:10px; backdrop-filter: blur(10px); }
+.map-layer-panel label { display:flex; align-items:center; gap:6px; margin:5px 0; cursor:pointer; }
+.map-layer-panel input { accent-color:#f59e0b; }
+.map-reset-btn { width:100%; margin-top:6px; border:1px solid rgba(255,255,255,.16); border-radius:8px; background:rgba(255,255,255,.08); color:#fff; padding:6px 8px; font-size:10px; cursor:pointer; }
+.map-reset-btn:hover { background:rgba(245,158,11,.24); }
+.map-insight { position:absolute; left:8px; bottom:92px; z-index:15; width:258px; background:rgba(8,18,34,.86); border-left:3px solid #f59e0b; border-radius:8px; padding:10px 12px; color:rgba(255,255,255,.76); font-size:11px; line-height:1.55; backdrop-filter: blur(10px); }
+.map-insight strong { color:#fff; }
+.map-source-note { padding:8px 18px 14px; color:#64748b; font-size:12px; display:flex; gap:8px; flex-wrap:wrap; }
+.map-source-note span { padding:3px 8px; border-radius:999px; background:#f1f5f9; color:#475569; }
+@media (max-width:760px){ .map-toolbar{left:8px;right:8px;top:50px;transform:none;overflow-x:auto;border-radius:12px}.map-events{display:none}.map-legend{display:none}.map-layer-panel{top:100px;right:8px}.map-desc{display:none}.map-insight{left:8px;right:8px;bottom:88px;width:auto}.map-play-btn{bottom:60px} }
 /* Map controls below card */
 .map-controls { display:none; } /* Controls are now integrated into the map UI */
 .map-btn { display:none; }
@@ -164,10 +177,6 @@ canvas { width:100%; border-radius:10px; background:#f8fafc; display:block; }
 <link rel="stylesheet" href="./teachany-knowledge-graph.css">
   <link rel="stylesheet" href="./teachany-tutor-card.css">
   <link rel="stylesheet" href="./teachany-audio-player.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="./teachany-historical-map.css">
-
   <link rel="stylesheet" href="./teachany-tts-narrator.css">
   <link rel="stylesheet" href="./teachany-section-hints.css">
 </head>
@@ -443,7 +452,8 @@ canvas { width:100%; border-radius:10px; background:#f8fafc; display:block; }
 <div class="section" id="map-section">
   <div class="section-title">🗺️ 秦汉疆域交互地图</div>
   <div class="card" style="padding:0; overflow:hidden;">
-    <p style="padding:16px 20px 8px; margin:0; font-size:14px; color:#475569;">拖动地图平移，滚轮缩放，拖动底部时间轴切换朝代。点击左侧事件卡片定位到对应战役/事件。</p>
+    <p style="padding:16px 20px 6px; margin:0; font-size:14px; color:#475569;">拖动地图平移，滚轮缩放，拖动底部时间轴切换朝代。新版地图优先加载本地 GeoJSON 学术疆域边界，点击地图上的城市或事件点可直接查看解释。</p>
+    <div class="map-source-note"><span>本地 GeoJSON 疆域</span><span>自包含 Canvas 地形</span><span>无在线瓦片依赖</span><span>事件—政策—路线三层叠加</span></div>
     <div id="map-container">
       <canvas id="map-canvas"></canvas>
       <!-- Topbar -->
@@ -452,6 +462,21 @@ canvas { width:100%; border-radius:10px; background:#f8fafc; display:block; }
         <div class="map-d-year" id="map-year">公元前 221 年</div>
         <div class="map-d-title" id="map-title"></div>
       </div>
+      <div class="map-toolbar" id="map-era-chips">
+        <button class="map-chip" data-map-year="-221" style="--chip-color:#4a6fa5">秦统一</button>
+        <button class="map-chip" data-map-year="-180" style="--chip-color:#c0392b">文景之治</button>
+        <button class="map-chip" data-map-year="-119" style="--chip-color:#c0392b">汉武开边</button>
+        <button class="map-chip" data-map-year="73" style="--chip-color:#e74c3c">班超西域</button>
+        <button class="map-chip" data-map-year="184" style="--chip-color:#e74c3c">东汉末年</button>
+      </div>
+      <div class="map-layer-panel" id="map-layer-panel">
+        <label><input type="checkbox" data-map-layer="geo" checked> 学术疆域</label>
+        <label><input type="checkbox" data-map-layer="terrain" checked> 地形底色</label>
+        <label><input type="checkbox" data-map-layer="route" checked> 丝路/长城</label>
+        <label><input type="checkbox" data-map-layer="labels" checked> 地名标注</label>
+        <button class="map-reset-btn" id="map-reset-btn">重置视野</button>
+      </div>
+      <div class="map-insight" id="map-insight"><strong>观察提示：</strong><span id="map-insight-text">先看秦如何把关中—华北—江南连成统一行政空间。</span></div>
       <!-- Events -->
       <div class="map-events" id="map-events"></div>
       <!-- Legend -->
@@ -999,11 +1024,48 @@ const container=document.getElementById('map-container');
 let mW,mH,mDrag=false,mDragX,mDragY,mOx=0,mOy=0,mSox,mSoy;
 let mCx=105,mCy=33,mZoom=5.8;
 const mMIN_Z=2.5,mMAX_Z=20;
+const mGeoFiles={qin:'./assets/maps/qin-dynasty.geojson',wh:'./assets/maps/west-han-dynasty.geojson',eh:'./assets/maps/east-han-dynasty.geojson'};
+const mGeoTerr={};
+const mLayers={geo:true,terrain:true,route:true,labels:true};
+let mGeoLoaded=false,mControlsReady=false,mMoved=false,mDpr=1;
+const mInsights={
+  qin:'秦的关键不是面积最大，而是把六国旧地改造成郡县制的统一行政空间。',
+  wh:'西汉从关中出发，经营河西走廊与西域，把军事防御转化为交通网络。',
+  xin:'新朝地图看似继承西汉空间，但制度剧烈改造削弱了治理稳定性。',
+  eh:'东汉定都洛阳，向西经营西域、向内修复秩序，统一国家仍在延续。'
+};
+function mGeomRings(geom){
+  if(!geom)return[];
+  if(geom.type==='Polygon')return geom.coordinates.map(r=>r.filter(pt=>Array.isArray(pt)&&pt.length>=2));
+  if(geom.type==='MultiPolygon')return geom.coordinates.flatMap(poly=>poly.map(r=>r.filter(pt=>Array.isArray(pt)&&pt.length>=2)));
+  return[];
+}
+function mFeatureRings(fc){return (fc.features||[]).flatMap(f=>mGeomRings(f.geometry));}
+function mDrawRings(rings,stroke,fill,lw){
+  if(!rings||!rings.length)return false;
+  ctx.beginPath();
+  rings.forEach(r=>{const step=Math.max(1,Math.ceil(r.length/900));let first=true;for(let i=0;i<r.length;i+=step){const pt=r[i];const[x,y]=mProj(pt[0],pt[1]);if(first){ctx.moveTo(x,y);first=false}else ctx.lineTo(x,y)}ctx.closePath()});
+  if(fill){ctx.fillStyle=fill;ctx.fill('evenodd')}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1.4;ctx.lineJoin='round';ctx.stroke()}
+  return true;
+}
+async function mLoadGeoBoundaries(){
+  if(mGeoLoaded)return;mGeoLoaded=true;
+  await Promise.all(Object.entries(mGeoFiles).map(async([id,url])=>{try{const r=await fetch(url);if(!r.ok)throw new Error(r.status);mGeoTerr[id]=mFeatureRings(await r.json())}catch(e){console.warn('[QinHanMap] GeoJSON load failed',id,e)}}));
+  mTerrainCache=null;mRender();mUpdateUI();
+}
 
 function mResize(){
   const rect=container.getBoundingClientRect();
-  mW=cv.width=rect.width;
-  mH=cv.height=rect.height;
+  mDpr=Math.min(2,window.devicePixelRatio||1);
+  mW=Math.max(320,rect.width);
+  mH=Math.max(360,rect.height);
+  cv.width=Math.round(mW*mDpr);
+  cv.height=Math.round(mH*mDpr);
+  cv.style.width=mW+'px';
+  cv.style.height=mH+'px';
+  ctx.setTransform(mDpr,0,0,mDpr,0,0);
+  mTerrainCache=null;
   mRender();
 }
 
@@ -1022,9 +1084,9 @@ function mUnproj(px,py){
   return[lng,(2*Math.atan(Math.exp(mercY))-Math.PI/2)*180/Math.PI];
 }
 
-// 简化高程函数（无外部数据，使用 Perlin 噪声模拟）
+// 简化高程函数（无外部数据，使用固定种子 Perlin 噪声模拟；每次打开地形一致）
 const mPM=new Uint8Array(512);
-(function(){const p=new Uint8Array(256);for(let i=0;i<256;i++)p[i]=i;for(let i=255;i>0;i--){const j=Math.floor(Math.random()*i);[p[i],p[j]]=[p[j],p[i]]}for(let i=0;i<512;i++)mPM[i]=p[i&255]})();
+(function(){let seed=20260221;function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}const p=new Uint8Array(256);for(let i=0;i<256;i++)p[i]=i;for(let i=255;i>0;i--){const j=Math.floor(rnd()*(i+1));[p[i],p[j]]=[p[j],p[i]]}for(let i=0;i<512;i++)mPM[i]=p[i&255]})();
 function mFade(t){return t*t*t*(t*(t*6-15)+10)}
 function mGrad(h,x,y){const v=h&3;return((v&1)?-x:x)+((v&2)?-y:y)}
 function mPerlin(x,y){const X=Math.floor(x)&255,Y=Math.floor(y)&255,xf=x-Math.floor(x),yf=y-Math.floor(y),u=mFade(xf),v=mFade(yf);const aa=mPM[mPM[X]+Y],ab=mPM[mPM[X]+Y+1],ba=mPM[mPM[X+1]+Y],bb=mPM[mPM[X+1]+Y+1];return(1-v)*((1-u)*mGrad(aa,xf,yf)+u*mGrad(ba,xf-1,yf))+v*((1-u)*mGrad(ab,xf,yf-1)+u*mGrad(bb,xf-1,yf-1))}
@@ -1118,33 +1180,36 @@ function mGetPhaseEvents(){return EV.filter(e=>e.d===mCurPh.d&&e.y>=mCurPh.s&&e.
 function mRender(){
   if(!mW)return;mAnim++;ctx.clearRect(0,0,mW,mH);
   // 1. 地形
-  mRenderTerrain();
-  // 2. 疆域
-  const did=mCurDyn.id,terr=TERR[did];
-  if(terr){const tc=TERR_COL[did];mDrawPoly(terr,tc[0],tc[1],2.5);ctx.save();ctx.globalAlpha=.12;mDrawPoly(terr,tc[0],null,5);ctx.restore()}
+  if(mLayers.terrain)mRenderTerrain();else{ctx.fillStyle='#081426';ctx.fillRect(0,0,mW,mH)}
+  // 2. 疆域：优先本地 GeoJSON 学术边界，失败时回退到内置简化边界
+  const did=mCurDyn.id,tc=TERR_COL[did],geo=mLayers.geo&&(mGeoTerr[did]||(did==='xin'?mGeoTerr.wh:null));
+  if(geo&&geo.length){ctx.save();ctx.globalAlpha=.92;mDrawRings(geo,tc[0],tc[1],1.1);ctx.globalAlpha=.22;mDrawRings(geo,tc[0],null,3.5);ctx.restore()}
+  else{const terr=TERR[did];if(terr){mDrawPoly(terr,tc[0],tc[1],2.5);ctx.save();ctx.globalAlpha=.12;mDrawPoly(terr,tc[0],null,5);ctx.restore()}}
   // 3. 河流
   const rw=Math.max(0.5,Math.min(2,mZoom*0.25));
   RIVERS.forEach(r=>{mDrawLine(r.p,'rgba(58,123,213,.5)',rw)});
-  if(mZoom>4)RIVERS.forEach(r=>{const mid=r.p[Math.floor(r.p.length/2)];mDrawText(mid[0],mid[1],r.n,{size:Math.max(8,Math.min(11,mZoom*1.3)),color:'rgba(58,122,213,.55)',offY:-8})});
+  if(mLayers.labels&&mZoom>4)RIVERS.forEach(r=>{const mid=r.p[Math.floor(r.p.length/2)];mDrawText(mid[0],mid[1],r.n,{size:Math.max(8,Math.min(11,mZoom*1.3)),color:'rgba(58,122,213,.55)',offY:-8})});
   // 4. 长城
-  mDrawLine(WALL,'#B8860B',Math.max(1.5,mZoom*.3),[5,3]);
-  if(mZoom>4){const mi=Math.floor(WALL.length/2);mDrawText(WALL[mi][0],WALL[mi][1],'万里长城',{size:10,color:'rgba(184,134,11,.65)',bold:true,offY:-9})}
+  if(mLayers.route){
+    mDrawLine(WALL,'#B8860B',Math.max(1.5,mZoom*.3),[5,3]);
+    if(mLayers.labels&&mZoom>4){const mi=Math.floor(WALL.length/2);mDrawText(WALL[mi][0],WALL[mi][1],'万里长城',{size:10,color:'rgba(184,134,11,.65)',bold:true,offY:-9})}
+  }
   // 5. 丝绸之路
-  if(did!=='qin'){
+  if(mLayers.route&&did!=='qin'){
     const slk=SILK.map(s=>s.c);ctx.save();ctx.globalAlpha=.12;ctx.shadowColor='#FFD700';ctx.shadowBlur=10;mDrawLine(slk,'#FFD700',4);ctx.restore();
     mDrawLine(slk,'#FFD700',1.5);mDrawLine(slk,'#FFF8DC',0.8,[3,6]);
-    SILK.forEach(s=>{mDrawDot(s.c[0],s.c[1],2,'#FFD700');if(mZoom>4)mDrawText(s.c[0],s.c[1],s.n,{size:8,color:'rgba(255,215,0,.6)',offY:10})});
-    const mi=Math.floor(SILK.length/2);mDrawText(SILK[mi].c[0],SILK[mi].c[1],'🐫 丝绸之路',{size:11,color:'#FFD700',bold:true,offY:-12});
+    SILK.forEach(s=>{mDrawDot(s.c[0],s.c[1],2,'#FFD700');if(mLayers.labels&&mZoom>4)mDrawText(s.c[0],s.c[1],s.n,{size:8,color:'rgba(255,215,0,.6)',offY:10})});
+    const mi=Math.floor(SILK.length/2);if(mLayers.labels)mDrawText(SILK[mi].c[0],SILK[mi].c[1],'丝绸之路',{size:11,color:'#FFD700',bold:true,offY:-12});
   }
   // 6. 地理标注
-  if(mZoom>3)GEOL.forEach(g=>mDrawText(g.c[0],g.c[1],g.n,{size:g.s-1,color:'rgba(180,180,160,.2)'}));
+  if(mLayers.labels&&mZoom>3)GEOL.forEach(g=>mDrawText(g.c[0],g.c[1],g.n,{size:g.s-1,color:'rgba(180,180,160,.2)'}));
   // 7. 关隘
-  PASSES.filter(p=>p.d.includes(did)).forEach(p=>{mDrawDot(p.c[0],p.c[1],2.5,'#90EE90','rgba(0,0,0,.4)');if(mZoom>4.5)mDrawText(p.c[0],p.c[1],p.n,{size:8,color:'rgba(144,238,144,.65)',offY:9})});
+  PASSES.filter(p=>p.d.includes(did)).forEach(p=>{mDrawDot(p.c[0],p.c[1],2.5,'#90EE90','rgba(0,0,0,.4)');if(mLayers.labels&&mZoom>4.5)mDrawText(p.c[0],p.c[1],p.n,{size:8,color:'rgba(144,238,144,.65)',offY:9})});
   // 8. 城市
   CITIES.filter(c=>c.d.includes(did)).forEach(c=>{
     const isCap=c.t==='capital',isStr=c.t==='strategic',col=isCap?'#FFD700':isStr?'#90EE90':'#fff';
-    if(isCap){ctx.save();ctx.globalAlpha=.18;mDrawDot(c.c[0],c.c[1],8,col);ctx.restore();mDrawDiamond(c.c[0],c.c[1],4,col,'#8B6914');mDrawText(c.c[0],c.c[1],c.n+' ★',{size:11,color:col,bold:true,offY:-12})}
-    else{const sz=isStr?2.5:3;mDrawDot(c.c[0],c.c[1],sz,col,'rgba(0,0,0,.3)');if(mZoom>4||!isStr)mDrawText(c.c[0],c.c[1],c.n,{size:isStr?8:9,color:`rgba(${isStr?'144,238,144':'255,255,255'},.7)`,offY:sz+7})}
+    if(isCap){ctx.save();ctx.globalAlpha=.18;mDrawDot(c.c[0],c.c[1],8,col);ctx.restore();mDrawDiamond(c.c[0],c.c[1],4,col,'#8B6914');if(mLayers.labels)mDrawText(c.c[0],c.c[1],c.n+' ★',{size:11,color:col,bold:true,offY:-12})}
+    else{const sz=isStr?2.5:3;mDrawDot(c.c[0],c.c[1],sz,col,'rgba(0,0,0,.3)');if(mLayers.labels&&(mZoom>4||!isStr))mDrawText(c.c[0],c.c[1],c.n,{size:isStr?8:9,color:`rgba(${isStr?'144,238,144':'255,255,255'},.7)`,offY:sz+7})}
   });
   // 9. 事件脉冲
   mGetPhaseEvents().forEach(ev=>{
@@ -1163,6 +1228,8 @@ function mUpdateUI(){
   mCurDyn=mGetDyn(mCurYear);mCurPh=mGetPh(mCurYear);
   const b=document.getElementById('map-badge');b.textContent=mCurDyn.name;b.style.color=mCurDyn.color;b.style.borderColor=mCurDyn.color;
   document.getElementById('map-year').textContent=mYrTxt(mCurYear);document.getElementById('map-title').textContent=mCurPh.t;
+  document.querySelectorAll('.map-chip').forEach(btn=>btn.classList.toggle('active',mCurYear===Number(btn.dataset.mapYear)));
+  const insight=document.getElementById('map-insight-text'); if(insight) insight.textContent=mInsights[mCurDyn.id]||mCurPh.p;
   const dp=document.getElementById('map-desc');dp.style.display='block';dp.style.borderColor=mCurDyn.color;
   document.getElementById('map-ds-t').textContent=mCurPh.t;document.getElementById('map-ds-t').style.color=mCurDyn.color;
   document.getElementById('map-ds-s').textContent=mCurPh.sub;document.getElementById('map-ds-p').textContent=mCurPh.p;
@@ -1198,9 +1265,18 @@ function mClosePopup(){document.getElementById('map-popup').style.display='none'
 document.getElementById('map-pp-close').addEventListener('click',mClosePopup);
 
 // Canvas 交互
-cv.addEventListener('mousedown',e=>{mDrag=true;mDragX=e.clientX;mDragY=e.clientY;mSox=mOx;mSoy=mOy;cv.style.cursor='grabbing'});
-window.addEventListener('mousemove',e=>{if(!mDrag)return;mOx=mSox+(e.clientX-mDragX);mOy=mSoy+(e.clientY-mDragY);mTerrainCache=null;mClosePopup()});
+function mPickAt(px,py){
+  const items=[...mGetPhaseEvents().map(e=>({kind:'event',data:e,c:e.c})),...CITIES.filter(c=>c.d.includes(mCurDyn.id)).map(c=>({kind:'city',data:c,c:c.c}))];
+  let best=null,bd=999;
+  items.forEach(it=>{const[x,y]=mProj(it.c[0],it.c[1]);const d=Math.hypot(x-px,y-py);if(d<bd){bd=d;best=it}});
+  if(best&&bd<22){
+    if(best.kind==='event')mShowPopup(best.data);else mShowPopup({n:best.data.n,t:'event',y:mCurYear,c:best.data.c,p:`${best.data.t==='capital'?'都城':'重要节点'}：${best.data.n}，观察它与疆域、河流和交通路线的关系。`});
+  }
+}
+cv.addEventListener('mousedown',e=>{mDrag=true;mMoved=false;mDragX=e.clientX;mDragY=e.clientY;mSox=mOx;mSoy=mOy;cv.style.cursor='grabbing'});
+window.addEventListener('mousemove',e=>{if(!mDrag)return;const dx=e.clientX-mDragX,dy=e.clientY-mDragY;if(Math.hypot(dx,dy)>3)mMoved=true;mOx=mSox+dx;mOy=mSoy+dy;mTerrainCache=null;mClosePopup()});
 window.addEventListener('mouseup',()=>{if(mDrag){mDrag=false;cv.style.cursor='grab'}});
+cv.addEventListener('click',e=>{if(mMoved)return;const r=cv.getBoundingClientRect();mPickAt(e.clientX-r.left,e.clientY-r.top)});
 cv.addEventListener('wheel',e=>{e.preventDefault();mZoom=Math.max(mMIN_Z,Math.min(mMAX_Z,mZoom+(e.deltaY>0?-0.3:0.3)));mTerrainCache=null;mClosePopup()},{passive:false});
 
 // Touch
@@ -1225,12 +1301,19 @@ document.getElementById('map-play-btn').addEventListener('click',function(){
   if(mPlaying)mPlayTm=setInterval(()=>{mCurYear+=2;if(mCurYear>220)mCurYear=-221;mUpdateUI()},180);else clearInterval(mPlayTm);
 });
 
+function mResetView(){mCx=105;mCy=33;mZoom=5.8;mOx=0;mOy=0;mTerrainCache=null;mClosePopup();}
+function mSetupMapControls(){
+  if(mControlsReady)return;mControlsReady=true;
+  document.querySelectorAll('.map-chip').forEach(btn=>btn.addEventListener('click',()=>{mCurYear=Number(btn.dataset.mapYear);const d=mGetDyn(mCurYear);if(d.id==='qin'){mCx=108;mCy=32;mZoom=6.3}else{mCx=101;mCy=34;mZoom=4.7}mOx=0;mOy=0;mTerrainCache=null;mUpdateUI()}));
+  document.querySelectorAll('[data-map-layer]').forEach(input=>input.addEventListener('change',()=>{mLayers[input.dataset.mapLayer]=input.checked;mTerrainCache=null;mRender()}));
+  document.getElementById('map-reset-btn')?.addEventListener('click',()=>{mResetView();mUpdateUI()});
+}
 // ResizeObserver for container
 const mRO=new ResizeObserver(()=>{mTerrainCache=null;mResize()});
 mRO.observe(container);
 
 // Init map — expose to global scope for DOMContentLoaded
-window.initMap=function(){mResize();mUpdateUI();mRender()};
+window.initMap=function(){mSetupMapControls();mResize();mUpdateUI();mRender();mLoadGeoBoundaries()};
 })();
 // ====== Knowledge Graph (D3.js) ======
 function initKnowledgeGraph() {
@@ -1475,160 +1558,10 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
     <div class="ta-standard-card"><h3>🌍 真实场景</h3><p>把事件放回时间轴和地图，比较不同主体的选择与结果。</p></div>
   </div>
 </section>
-<section class="ta-standard-section" id="pretest">
+<section class="ta-standard-section" id="pretest" data-bloom-level="remember" data-scaffold="full">
   <h2>🔍 前测练习题：你已经知道什么？</h2>
   <div class="ta-standard-card ta-standard-quiz"><p>1. 马上练：学习「秦汉统一多民族国家」前，最先要确认的是哪一类证据？</p><button onclick="taStdQuiz(this,false,'常见错误：只看结论会漏掉条件。先找对象、条件和变化证据。')">直接背结论</button><button onclick="taStdQuiz(this,true,'正确：先找对象、条件和变化证据，再进入概念解释。')">对象、条件、变化证据</button><button onclick="taStdQuiz(this,false,'错因诊断：例题答案只是结果，不是分析路径。')">例题最终答案</button><div class="ta-standard-feedback"></div></div>
   <div class="ta-standard-card ta-standard-quiz"><p>2. 练习题：如果同学解释不出来「为什么」，最可能缺少哪一步？</p><button onclick="taStdQuiz(this,true,'正确：缺的是从现象到机制的解释链。')">从现象到机制的解释链</button><button onclick="taStdQuiz(this,false,'常见错误：多做题不等于理解机制。')">多刷几道同类题</button><button onclick="taStdQuiz(this,false,'错因诊断：只换说法不能补上证据。')">把概念换个说法</button><div class="ta-standard-feedback"></div></div>
-</section>
-<!-- ⭐ v7.7.2 标准 Leaflet 历史地图模块 -->
-<section class="ta-standard-section" id="teachany-historical-map">
-  <h2 style="text-align:center;margin-bottom:16px;">🗺️ 秦汉统一多民族国家</h2>
-  <p style="text-align:center;color:#64748b;margin-bottom:18px;">点击时代按钮切换疆域版图；悬停高亮边界；点击红色城市标记查看详情。</p>
-  <div data-teachany-map="thm-examples-imperial-unification"
-       data-teachany-map-scope="china"
-       data-teachany-map-title="秦汉统一多民族国家">
-    <script type="application/json" data-teachany-map-config>
-{
-  "eras": [
-    {
-      "id": "qin",
-      "label": "秦 (前221)",
-      "file": "qin-dynasty.geojson",
-      "fill": "#6366f1",
-      "stroke": "#4f46e5",
-      "desc": "<span class=\"thm-year-tag\">前221</span><strong>秦统一六国</strong>：废分封、行郡县，书同文车同轨，统一度量衡。中央集权帝制诞生。",
-      "cities": [
-        [
-          34.27,
-          108.95,
-          "咸阳",
-          "Xianyang",
-          "秦都"
-        ],
-        [
-          30.66,
-          104.07,
-          "成都",
-          "Chengdu",
-          "蜀郡，都江堰"
-        ],
-        [
-          34.75,
-          113.66,
-          "荥阳",
-          "Xingyang",
-          "敖仓粮储"
-        ]
-      ]
-    },
-    {
-      "id": "han-west",
-      "label": "西汉 (前202)",
-      "file": "west-han-dynasty.geojson",
-      "fill": "#f59e0b",
-      "stroke": "#d97706",
-      "desc": "<span class=\"thm-year-tag\">前202-9</span><strong>汉承秦制</strong>：文景之治→武帝盛世。张骞凿空西域，独尊儒术，丝路开通。",
-      "cities": [
-        [
-          34.34,
-          108.94,
-          "长安",
-          "Chang'an",
-          "西汉都城"
-        ],
-        [
-          43.83,
-          87.62,
-          "西域都护府",
-          "Xiyu",
-          "前60设立"
-        ],
-        [
-          34.75,
-          113.66,
-          "洛阳",
-          "Luoyang",
-          "东汉都城"
-        ]
-      ]
-    },
-    {
-      "id": "han-east",
-      "label": "东汉 (25)",
-      "file": "east-han-dynasty.geojson",
-      "fill": "#10b981",
-      "stroke": "#059669",
-      "desc": "<span class=\"thm-year-tag\">25-220</span><strong>光武中兴</strong>：定都洛阳。班超经营西域，佛教东传，造纸改良。",
-      "cities": [
-        [
-          34.75,
-          113.66,
-          "洛阳",
-          "Luoyang",
-          "东汉都"
-        ],
-        [
-          36.07,
-          103.83,
-          "姑臧",
-          "Guzang",
-          "凉州丝路枢纽"
-        ]
-      ]
-    }
-  ],
-  "center": [
-    34,
-    108
-  ],
-  "zoom": 4,
-  "fitBounds": [
-    [
-      18,
-      72
-    ],
-    [
-      52,
-      140
-    ]
-  ],
-  "minZoom": 2,
-  "maxZoom": 8,
-  "overlays": [
-    {
-      "id": "capitals",
-      "label": "🏛️ 古都陪都",
-      "file": "capitals-extended.geojson",
-      "style": {
-        "color": "#a855f7",
-        "radius": 4
-      },
-      "visible": true
-    },
-    {
-      "id": "rivers",
-      "label": "🌊 黄河故道",
-      "file": "rivers-historical.geojson",
-      "style": {
-        "color": "#0ea5e9",
-        "weight": 3
-      },
-      "visible": false
-    },
-    {
-      "id": "passes",
-      "label": "🏯 秦汉关隘",
-      "file": "passes-ancient.geojson",
-      "style": {
-        "color": "#dc2626",
-        "radius": 5
-      },
-      "visible": false
-    }
-  ]
-}
-</script>
-  </div>
 </section>
 
 
@@ -1638,7 +1571,7 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <div data-teachany-tutor-card></div>
 </section>
 
-<section class="ta-standard-section" id="ta-standard-imperial-unification-graph">
+<section class="ta-standard-section" id="ta-standard-imperial-unification-graph" data-bloom-level="understand" data-scaffold="partial">
   <h2>🗺️ 知识图谱：从前置到迁移</h2>
   <div class="ta-standard-grid">
     <div class="ta-standard-card"><h3>① 前置知识</h3><p>early-civilizations。先确认这些基础是否能说清楚，否则回到前测补洞。</p></div>
@@ -1652,16 +1585,23 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <h2>🔍 深层理解：五镜头法</h2>
   <div class="ta-standard-grid"><div class="ta-standard-card"><h3>看见它</h3><p>指出秦汉统一多民族国家在题干、图像、实验或文本中的可观察证据。</p></div><div class="ta-standard-card"><h3>拆开它</h3><p>把概念拆成对象、条件、过程、结果四个部分，避免把概念当口号。</p></div><div class="ta-standard-card"><h3>解释它</h3><p>用一句因果链说明：因为哪些条件变化，所以出现怎样的结果。</p></div><div class="ta-standard-card"><h3>比较它</h3><p>和相邻知识点比较，找出相同点、差异点和容易混淆的边界。</p></div><div class="ta-standard-card"><h3>迁移它</h3><p>设计一个新场景，验证你是否真的能使用这个概念，而不是只会复述。</p></div></div>
 </section>
-<section class="ta-standard-section" id="error-diagnosis"><h2>⚠️ 常见错误与诊断反馈</h2><div class="ta-standard-card"><p><strong>易错点 1：</strong>把「条件」和「结论」混淆。诊断方式：遮住结论，只看证据是否足够推出它。</p><p><strong>易错点 2：</strong>只记住关键词，忘记适用范围。诊断方式：换一个场景，检查规则是否仍然成立。</p><p><strong>记忆锚点：</strong>先问「看见什么」，再问「为什么」，最后问「还能用到哪里」。这个口诀能把观察、解释、迁移连成闭环。</p></div></section>
-<section class="ta-standard-section" id="posttest"><h2>📝 后测练习题：学会了吗？</h2><div class="ta-standard-card ta-standard-quiz"><p>1. 练习题：面对一个新问题，最能体现你掌握了「秦汉统一多民族国家」的是：</p><button onclick="taStdQuiz(this,false,'错因诊断：背定义只是记忆层，不代表会迁移。')">能背出定义</button><button onclick="taStdQuiz(this,true,'正确：能用证据解释新情境，说明已经达到理解和应用层。')">能用证据解释新情境</button><button onclick="taStdQuiz(this,false,'常见错误：只会做原题，说明迁移不足。')">只会做原来的例题</button><div class="ta-standard-feedback"></div></div><div class="ta-standard-card"><h3>⭐ 分层任务</h3><ul><li><strong>基础巩固：</strong>用 3 句话写出本课核心概念、条件和一个例子。</li><li><strong>能力应用：</strong>分析一个课本外场景，说明它如何体现秦汉统一多民族国家。</li><li><strong>迁移挑战：</strong>设计一个小实验、地图解读、文本辨析或数据任务，并写出评价标准。</li></ul></div></section>
-<section class="ta-standard-section ai-media-zone" id="ai-media-zone"><h2>🤖 AI 多模态互动区</h2><div class="ta-standard-card"><p>选择一张课本插图、历史地图或自己的作业截图，先描述你观察到的证据，再向 AI 提问：它和「秦汉统一多民族国家」的哪个概念有关？</p><textarea aria-label="AI 多模态问题" placeholder="例如：我看到……我想判断它是否体现了秦汉统一多民族国家中的核心规律，因为……"></textarea></div></section>
+<section class="ta-standard-section" id="error-diagnosis"><h2>⚠️ 常见错误与诊断反馈</h2><div class="ta-standard-card"><p><strong>易错点 1：</strong>把「条件」和「结论」混淆。诊断方式：遮住结论，只看证据是否足够推出它。</p><p><strong>易错点 2：</strong>只记住关键词，忘记适用范围。诊断方式：换一个场景，检查规则是否仍然成立。</p><p><strong>记忆锚点：</strong>先问「看见什么」，再问「为什么」，最后问「还能用到哪里」。这个口诀能把观察、解释、迁移连成闭环。做历史地图题时，还要补一句“证据来自哪里”：是都城位置、交通路线、边疆变化，还是制度措施带来的治理结果。</p></div></section>
+<section class="ta-standard-section" id="posttest" data-bloom-level="apply" data-scaffold="none" data-conceptest="true"><h2>📝 后测练习题：学会了吗？</h2><div class="ta-standard-card ta-standard-quiz"><p>1. 练习题：面对一个新问题，最能体现你掌握了「秦汉统一多民族国家」的是：</p><button onclick="taStdQuiz(this,false,'错因诊断：背定义只是记忆层，不代表会迁移。')">能背出定义</button><button onclick="taStdQuiz(this,true,'正确：能用证据解释新情境，说明已经达到理解和应用层。')">能用证据解释新情境</button><button onclick="taStdQuiz(this,false,'常见错误：只会做原题，说明迁移不足。')">只会做原来的例题</button><div class="ta-standard-feedback"></div></div><div class="ta-standard-card"><h3>⭐ 分层任务</h3><ul><li><strong>基础巩固：</strong>用 3 句话写出本课核心概念、条件和一个例子。</li><li><strong>能力应用：</strong>分析一个课本外场景，说明它如何体现秦汉统一多民族国家。</li><li><strong>迁移挑战：</strong>设计一个小实验、地图解读、文本辨析或数据任务，并写出评价标准。</li></ul></div></section>
+<section class="ta-standard-section ai-media-zone" id="ai-media-zone"><h2>🤖 AI 多模态互动区</h2><div class="ta-standard-card"><p>选择一张课本插图、历史地图或自己的作业截图，先描述你观察到的证据，再向 AI 提问：它和「秦汉统一多民族国家」的哪个概念有关？</p><textarea aria-label="AI 多模态问题" data-prompt="例如：我看到……我想判断它是否体现了秦汉统一多民族国家中的核心规律，因为……"></textarea></div></section>
 <script>
 function taStdQuiz(btn, ok, msg){const box=btn.parentElement.querySelector('.ta-standard-feedback');if(!box)return;box.textContent=(ok?'✅ ':'❌ ')+msg;box.style.border='1px solid '+(ok?'#22c55e':'#ef4444');}
 (function(){const canvas=document.getElementById('taStandardCanvas');if(!canvas)return;const ctx=canvas.getContext('2d');let mode='path';window.taStandardMode=function(m){mode=m;draw();};function draw(){const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);ctx.fillStyle='#0f172a';ctx.fillRect(0,0,w,h);const nodes=[['前置知识',170,180,'#38bdf8'],['秦汉统一多民族国家',450,145,'#f59e0b'],['真实应用',710,180,'#22c55e'],['易错诊断',450,280,'#ef4444']];ctx.lineWidth=4;ctx.strokeStyle=mode==='error'?'#ef4444':'#64748b';[[0,1],[1,2],[1,3]].forEach(([a,b])=>{ctx.beginPath();ctx.moveTo(nodes[a][1],nodes[a][2]);ctx.lineTo(nodes[b][1],nodes[b][2]);ctx.stroke();});nodes.forEach(([label,x,y,c])=>{ctx.beginPath();ctx.arc(x,y,48,0,Math.PI*2);ctx.fillStyle=(mode==='error'&&label==='易错诊断')?'#ef4444':c;ctx.fill();ctx.fillStyle='white';ctx.font='18px sans-serif';ctx.textAlign='center';ctx.fillText(label,x,y+6);});ctx.fillStyle='#cbd5e1';ctx.font='15px sans-serif';ctx.textAlign='left';const tip=mode==='path'?'按箭头完成学习：先补前置，再学核心，再做迁移。':mode==='error'?'易错点不是惩罚，而是下一步学习的导航。':'把同一方法用于新材料，才算真正学会。';ctx.fillText(tip,30,40);}draw();})();
 </script>
 
 <script>
-const audioPlaylist=[{sectionId:'teachany-standard-enhancement',title:'本课知识动画',src:'./tts/intro.mp3'}];
+const audioPlaylist=[
+  {sectionId:'teachany-standard-enhancement',title:'导入：秦汉统一多民族国家',src:'./tts/intro.mp3'},
+  {sectionId:'content',title:'秦朝的统一与制度创新',src:'./tts/s01.mp3'},
+  {sectionId:'content',title:'秦朝灭亡与楚汉争霸',src:'./tts/s02.mp3'},
+  {sectionId:'content',title:'西汉建立与文景之治',src:'./tts/s03.mp3'},
+  {sectionId:'map-section',title:'地图讲解：疆域、交通与治理',src:'./tts/s04.mp3'},
+  {sectionId:'quiz',title:'练习讲解与迁移总结',src:'./tts/s05.mp3'}
+];
 </script>
 
 <!-- ⭐ v7.7 标准独立连续音频模块 -->
@@ -1669,29 +1609,26 @@ const audioPlaylist=[{sectionId:'teachany-standard-enhancement',title:'本课知
   <div data-teachany-audio>
     <script type="application/json" data-teachany-audio-playlist>
 [
-  {
-    "sectionId": "teachany-standard-enhancement",
-    "title": "本课知识动画",
-    "src": "./tts/intro.mp3"
-  }
+  {"sectionId":"teachany-standard-enhancement","title":"导入：秦汉统一多民族国家","src":"./tts/intro.mp3"},
+  {"sectionId":"content","title":"秦朝的统一与制度创新","src":"./tts/s01.mp3"},
+  {"sectionId":"content","title":"秦朝灭亡与楚汉争霸","src":"./tts/s02.mp3"},
+  {"sectionId":"content","title":"西汉建立与文景之治","src":"./tts/s03.mp3"},
+  {"sectionId":"map-section","title":"地图讲解：疆域、交通与治理","src":"./tts/s04.mp3"},
+  {"sectionId":"quiz","title":"练习讲解与迁移总结","src":"./tts/s05.mp3"}
 ]
     </script>
   </div>
 </section>
 
-<section class="ta-standard-section" id="teachany-video-overview"><h2>🎬 本课知识动画：秦汉统一多民族国家</h2><p>这段动画围绕「统一国家如何建立并巩固？」展开，依次说明核心机制、常见错误和迁移任务。</p><div class="video-player"><video controls preload="metadata" playsinline poster="./assets/imperial-unification-hero.png"><source src="./assets/video/teachany-overview.mp4" type="video/mp4"></video></div></section><script>
-function teachAnyMapBaselineProbe(){ if(window.L){ const map={fitBounds:function(){},setView:function(){}}; L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'); map.setView([35,105],4); map.fitBounds([[18,73],[54,135]]); } }
-</script>
-<script src="./teachany-tutor-card.js" defer></script>
+<section class="ta-standard-section" id="teachany-video-overview"><h2>🎬 本课知识动画：秦汉统一多民族国家</h2><p>这段动画围绕「统一国家如何建立并巩固？」展开，依次说明核心机制、常见错误和迁移任务。</p><div class="video-player"><video controls preload="metadata" playsinline poster="./assets/imperial-unification-hero.png"><source src="./assets/video/teachany-overview.mp4" type="video/mp4"></video></div></section><script src="./teachany-tutor-card.js" defer></script>
 <script src="./teachany-audio-player.js" defer></script>
-<script src="./teachany-historical-map.js" defer></script>
 <script src="./teachany-knowledge-graph.js" defer></script>
 
   <!-- ===== Standard Knowledge Graph Module ===== -->
   <section class="section" id="knowledge-graph">
     <h2 class="section-title">🗺️ 知识图谱：秦汉统一多民族国家</h2>
     <div data-teachany-kg="hist-m-imperial-unification">
-      <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布占位" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
+      <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布加载中" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
     </div>
   </section>
 

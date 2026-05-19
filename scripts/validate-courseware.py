@@ -578,6 +578,15 @@ def validate_one(course_dir):
     if needs_map and html.exists() and full_html:
         has_tile_layer = bool(re.search(r'L\.tileLayer\s*\(', full_html))
         has_fit_bounds = bool(re.search(r'\.fitBounds\s*\(|\.setView\s*\(', full_html))
+        # v7.15: 允许自包含 Canvas + 本地 GeoJSON 地图。它不依赖在线瓦片，
+        # 但必须有 canvas、明确的本地 geojson 加载和中心/缩放控制。
+        has_canvas_geojson_map = (
+            'id="map-canvas"' in full_html
+            and 'mGeoFiles' in full_html
+            and 'assets/maps/' in full_html
+            and 'mLoadGeoBoundaries' in full_html
+            and re.search(r'let\s+mCx\s*=|const\s+mGeoFiles\s*=', full_html)
+        )
         has_image_overlay = bool(re.search(r'L\.imageOverlay\s*\(', full_html))
         has_echarts_graphic_image = bool(re.search(
             r'graphic\s*:\s*\[[^\]]*?type\s*:\s*[\'"]image[\'"]', full_html))
@@ -589,13 +598,13 @@ def validate_one(course_dir):
             issues.append(('error',
                 f'{course_dir.name}: 检测到 ECharts graphic type:"image" 铺底图'
                 f'（硬规则 #35 严禁 · DOM 绝对定位不跟随 geo 变换，必定错位）'))
-        if not has_tile_layer:
+        if not has_tile_layer and not has_canvas_geojson_map:
             issues.append(('error',
-                f'{course_dir.name}: 历史/地理课件 HTML 缺 L.tileLayer XYZ 瓦片底图调用'
-                f'（硬规则 #35 · 必须用 cartodb-basemaps + arcgisonline hillshade 双层）'))
-        if not has_fit_bounds:
+                f'{course_dir.name}: 历史/地理课件 HTML 缺 L.tileLayer XYZ 瓦片底图调用，且未检测到自包含 Canvas GeoJSON 地图'
+                f'（硬规则 #35 · 必须有可验证的地理参考底图或本地疆域地图）'))
+        if not has_fit_bounds and not has_canvas_geojson_map:
             issues.append(('error',
-                f'{course_dir.name}: 地图初始化未调用 fitBounds/setView 聚焦核心区域'
+                f'{course_dir.name}: 地图初始化未调用 fitBounds/setView 聚焦核心区域，且未检测到 Canvas 地图中心/缩放控制'
                 f'（硬规则 #36 · 禁止停留在 [0,0] 默认中心）'))
 
     # 14. 视频嵌入规范（v5.34.11 新增，硬规则 #25）
