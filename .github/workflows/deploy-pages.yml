@@ -28,13 +28,13 @@ jobs:
           mkdir -p _site
 
           # 1. 复制课件目录（官方课件已经内置运行时模块）
-          cp -r community _site/community
+          rsync -a --exclude='remotion/' community/ _site/community/
 
-          # 2. 复制静态资源
-          cp -r assets _site/assets
+          # 2. 复制静态资源。顶层 physical 大底图未被课件直接引用，排除以避免 Pages 超限。
+          rsync -a --exclude='maps/physical/' assets/ _site/assets/
 
-          # 3. 复制数据目录
-          cp -r data _site/data
+          # 3. 复制数据目录，并移除本地 Python 虚拟环境和断开的本地符号链接
+          rsync -a --exclude='.venv/' --exclude='history' --exclude='geography' data/ _site/data/
 
           # 4. 复制根级文件
           touch _site/.nojekyll
@@ -42,12 +42,11 @@ jobs:
           cp courseware-registry.json _site/ 2>/dev/null || true
           cp commercial-license.html _site/ 2>/dev/null || true
 
-          # 5. 复制归档目录（如果存在）
-          [ -d "_archive_20260508" ] && cp -r _archive_20260508 _site/_archive_20260508 || true
-
           echo "✅ _site/ built successfully"
           echo "Top-level:"
           ls _site/
+          echo "Approx publish size:"
+          du -sh _site
 
       # 直接使用 git 命令部署，绕过 peaceiris 的任何隐含行为
       - name: Deploy to gh-pages via git
