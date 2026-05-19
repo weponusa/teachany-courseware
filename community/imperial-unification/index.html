@@ -452,8 +452,8 @@ canvas { width:100%; border-radius:10px; background:#f8fafc; display:block; }
 <div class="section" id="map-section">
   <div class="section-title">🗺️ 秦汉疆域交互地图</div>
   <div class="card" style="padding:0; overflow:hidden;">
-    <p style="padding:16px 20px 6px; margin:0; font-size:14px; color:#475569;">拖动地图平移，滚轮缩放，拖动底部时间轴切换朝代。新版地图优先加载本地 GeoJSON 学术疆域边界，点击地图上的城市或事件点可直接查看解释。</p>
-    <div class="map-source-note"><span>本地 GeoJSON 疆域</span><span>自包含 Canvas 地形</span><span>无在线瓦片依赖</span><span>事件—政策—路线三层叠加</span></div>
+    <p style="padding:16px 20px 6px; margin:0; font-size:14px; color:#475569;">拖动地图平移，滚轮缩放，拖动底部时间轴切换朝代。新版地图使用本地 GeoJSON 学术疆域边界，并以本地 Hillshade 真实地形底图做经纬采样，边界与底图保持同一地理坐标。点击城市或事件点可查看解释。</p>
+    <div class="map-source-note"><span>本地 GeoJSON 疆域</span><span>真实 Hillshade 底图</span><span>经纬采样对齐</span><span>事件—政策—路线三层叠加</span></div>
     <div id="map-container">
       <canvas id="map-canvas"></canvas>
       <!-- Topbar -->
@@ -471,7 +471,7 @@ canvas { width:100%; border-radius:10px; background:#f8fafc; display:block; }
       </div>
       <div class="map-layer-panel" id="map-layer-panel">
         <label><input type="checkbox" data-map-layer="geo" checked> 学术疆域</label>
-        <label><input type="checkbox" data-map-layer="terrain" checked> 地形底色</label>
+        <label><input type="checkbox" data-map-layer="terrain" checked> 真实底图</label>
         <label><input type="checkbox" data-map-layer="route" checked> 丝路/长城</label>
         <label><input type="checkbox" data-map-layer="labels" checked> 地名标注</label>
         <button class="map-reset-btn" id="map-reset-btn">重置视野</button>
@@ -1025,7 +1025,9 @@ let mW,mH,mDrag=false,mDragX,mDragY,mOx=0,mOy=0,mSox,mSoy;
 let mCx=105,mCy=33,mZoom=5.8;
 const mMIN_Z=2.5,mMAX_Z=20;
 const mGeoFiles={qin:'./assets/maps/qin-dynasty.geojson',wh:'./assets/maps/west-han-dynasty.geojson',eh:'./assets/maps/east-han-dynasty.geojson'};
+const mBaseMapUrl='./assets/maps/hillshade.jpg';
 const mGeoTerr={};
+let mBaseMap=null,mBaseData=null,mBaseW=0,mBaseH=0;
 const mLayers={geo:true,terrain:true,route:true,labels:true};
 let mGeoLoaded=false,mControlsReady=false,mMoved=false,mDpr=1;
 const mInsights={
@@ -1053,6 +1055,23 @@ async function mLoadGeoBoundaries(){
   if(mGeoLoaded)return;mGeoLoaded=true;
   await Promise.all(Object.entries(mGeoFiles).map(async([id,url])=>{try{const r=await fetch(url);if(!r.ok)throw new Error(r.status);mGeoTerr[id]=mFeatureRings(await r.json())}catch(e){console.warn('[QinHanMap] GeoJSON load failed',id,e)}}));
   mTerrainCache=null;mRender();mUpdateUI();
+}
+function mLoadBaseMap(){
+  return new Promise(resolve=>{
+    if(mBaseData)return resolve();
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const oc=document.createElement('canvas');oc.width=img.naturalWidth;oc.height=img.naturalHeight;
+        const octx=oc.getContext('2d');octx.drawImage(img,0,0);
+        mBaseData=octx.getImageData(0,0,oc.width,oc.height).data;mBaseW=oc.width;mBaseH=oc.height;mBaseMap=img;
+        mTerrainCache=null;mRender();
+      }catch(e){console.warn('[QinHanMap] hillshade sample unavailable',e)}
+      resolve();
+    };
+    img.onerror=()=>{console.warn('[QinHanMap] hillshade load failed');resolve()};
+    img.src=mBaseMapUrl;
+  });
 }
 
 function mResize(){
@@ -1136,17 +1155,29 @@ let mTerrainCache=null,mTcW=0,mTcH=0,mTcZ=0,mTcOx=0,mTcOy=0;
 
 function mRenderTerrain(){
   if(mTerrainCache&&mTcW===mW&&mTcH===mH&&Math.abs(mTcZ-mZoom)<0.005&&Math.abs(mTcOx-mOx)<1&&Math.abs(mTcOy-mOy)<1){ctx.drawImage(mTerrainCache,0,0);return}
-  const T=mZoom>3?3:4;
+  const T=mZoom>3?2:3;
   const oc=document.createElement('canvas');oc.width=mW;oc.height=mH;
   const octx=oc.getContext('2d'),img=octx.createImageData(mW,mH),d=img.data;
   for(let py=0;py<mH;py+=T)for(let px=0;px<mW;px+=T){
     const[lng,lat]=mUnproj(px+T/2,py+T/2);
-    const h=mGetElev(lng,lat);
-    const hR=mGetElev(lng+0.3,lat),hU=mGetElev(lng,lat-0.3);
-    const shade=Math.max(0.25,Math.min(1.2,0.6+(h-hR)*4+(h-hU)*3.5));
-    const[r,g,b]=mElevColor(h);
-    const sr=Math.min(255,r*shade*1.25|0),sg=Math.min(255,g*shade*1.25|0),sb=Math.min(255,b*shade*1.25|0);
-    for(let ty=0;ty<T&&py+ty<mH;ty++)for(let tx=0;tx<T&&px+tx<mW;tx++){const i=((py+ty)*mW+(px+tx))*4;d[i]=sr;d[i+1]=sg;d[i+2]=sb;d[i+3]=255}
+    let sr,sg,sb;
+    if(mBaseData&&lng>=-180&&lng<=180&&lat>=-90&&lat<=90){
+      const sx=Math.max(0,Math.min(mBaseW-1,Math.floor((lng+180)/360*mBaseW)));
+      const sy=Math.max(0,Math.min(mBaseH-1,Math.floor((90-lat)/180*mBaseH)));
+      const si=(sy*mBaseW+sx)*4;
+      // 真实 hillshade 颜色较浅，压暗并加入冷色海洋罩，方便疆域边界阅读。
+      sr=Math.max(8,Math.min(210,mBaseData[si]*0.72));
+      sg=Math.max(16,Math.min(220,mBaseData[si+1]*0.78));
+      sb=Math.max(24,Math.min(230,mBaseData[si+2]*0.86));
+      if(lat<18||lng>122&&lat<36||lng>119&&lat<25){sr*=0.45;sg*=0.58;sb=Math.min(135,sb*0.92)}
+    }else{
+      const h=mGetElev(lng,lat);
+      const hR=mGetElev(lng+0.3,lat),hU=mGetElev(lng,lat-0.3);
+      const shade=Math.max(0.25,Math.min(1.2,0.6+(h-hR)*4+(h-hU)*3.5));
+      const[r,g,b]=mElevColor(h);
+      sr=Math.min(255,r*shade*1.25|0);sg=Math.min(255,g*shade*1.25|0);sb=Math.min(255,b*shade*1.25|0);
+    }
+    for(let ty=0;ty<T&&py+ty<mH;ty++)for(let tx=0;tx<T&&px+tx<mW;tx++){const i=((py+ty)*mW+(px+tx))*4;d[i]=sr|0;d[i+1]=sg|0;d[i+2]=sb|0;d[i+3]=255}
   }
   octx.putImageData(img,0,0);mTerrainCache=oc;mTcW=mW;mTcH=mH;mTcZ=mZoom;mTcOx=mOx;mTcOy=mOy;ctx.drawImage(oc,0,0);
 }
@@ -1313,7 +1344,7 @@ const mRO=new ResizeObserver(()=>{mTerrainCache=null;mResize()});
 mRO.observe(container);
 
 // Init map — expose to global scope for DOMContentLoaded
-window.initMap=function(){mSetupMapControls();mResize();mUpdateUI();mRender();mLoadGeoBoundaries()};
+window.initMap=function(){mSetupMapControls();mResize();mUpdateUI();mRender();mLoadBaseMap().then(mLoadGeoBoundaries)};
 })();
 // ====== Knowledge Graph (D3.js) ======
 function initKnowledgeGraph() {
