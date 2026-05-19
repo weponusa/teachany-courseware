@@ -6,7 +6,7 @@
 **课型**：special-topic（跨学科实践）
 **课时**：1 课时（45 分钟）
 **作者**：TeachAny
-**版本**：0.1.0
+**版本**：1.0.0
 **日期**：2026-05-19
 
 ---
@@ -36,30 +36,22 @@
 
 ## 2. 模块级媒体策划表
 
-| 模块 | 媒体类型 | 来源/说明 |
-|---|---|---|
-| Hero | hero-infographic.svg + chem-daily-life-hero.png | 知识结构主图 |
-| 前测 | 选择题 + 问答题 | 内置交互 |
-| 核心概念：日常生活 | Canvas 洗涤剂模拟 + PhET iframe | 自建 Canvas + PhET 嵌入 |
-| 核心概念：工业生产 | 案例卡片 | 内置 |
-| 概念测试 1 | 选择题 | 内置交互，含诊断性反馈 |
-| 核心概念：环境保护 | 步骤列表 | 内置 |
-| 核心概念：农业生产 | 应用卡片 | 内置 |
-| 概念测试 2 | 选择题 | 内置交互，含诊断性反馈 |
-| 五镜头 | 四卡片 | 内置 |
-| 三段式练习 | 判断 + 问答 + 设计 | 内置交互 |
-| 综合任务 | 开放问答 | 内置 |
-| 后测 | 问答 + 多选 | 内置交互，含诊断性反馈 |
-| 小结 | 列表 | 内置 |
-| 易错点 | 三卡片 | 内置 |
-| 知识图谱 | data-teachany-kg | 标准模块自动渲染 |
-| AI 学伴 | data-teachany-tutor-card | 标准模块 |
-| 教学视频 | teaching-video.mp4 | assets/teaching-video.mp4 |
-| TTS 音频 | s01~s06.mp3 | tts/ 目录，edge-tts 生成 |
+| # | 模块名 | 知识点 | 媒体形式 | 资产文件名 | 生成命令 | 校验命令 |
+|---|---|---|---|---|---|---|
+| 1 | Hero 区 | 课程主题概览 | Hero 图 | assets/hero-infographic.svg | image_gen + Inkscape | file assets/hero-infographic.svg |
+| 2 | 教学视频 | 表面活性剂自组装 | Remotion 视频 | assets/video/surfactant-animation.mp4 | python3 gen_animation.py + ffmpeg | ffprobe assets/video/surfactant-animation.mp4 |
+| 3 | 日常生活互动 | 洗涤剂去污原理 | Canvas 互动 | inline(index.html#daily-life) | 手写 Canvas JS | 浏览器手动验证 |
+| 4 | PhET 仿真 | 分子极性 | 标准模块 | inline(index.html#phet-embed) | PhET 官方嵌入 | curl -I phet.colorado.edu |
+| 5 | 教学配图1 | 表面活性剂机制 | SVG 插图 | assets/surfactant-mechanism.png | image_gen | file assets/surfactant-mechanism.png |
+| 6 | 教学配图2 | 合成氨工艺 | SVG 插图 | assets/haber-bosch-process.png | image_gen | file assets/haber-bosch-process.png |
+| 7 | 教学配图3 | 污水处理 | SVG 插图 | assets/wastewater-treatment.png | image_gen | file assets/wastewater-treatment.png |
+| 8 | TTS 音频 | 全课件语音导读 | Edge TTS 音频 | tts/*.mp3 | edge-tts --voice zh-CN-XiaoxiaoNeural | ffprobe tts/s01.mp3 |
+| 9 | 知识图谱 | 前置后续知识链 | 标准模块 | 公共模块(data-teachany-kg) | 标准模块自动渲染 | check-knowledge-graph.py |
+| 10 | AI 学伴 | 智能问答辅导 | 标准模块 | 公共模块(data-teachany-tutor-card) | 标准模块自动渲染 | 浏览器手动验证 |
 
 ---
 
-## 3. 五件套自检
+## 3. 五件套自检清单
 
 - [x] ABT + 情境引入：Hero 区含情境描述
 - [x] 前测：前测模块存在，含选择 + 问答
@@ -81,7 +73,7 @@
 - [x] 易错点覆盖：3 个易错点，含正确做法
 - [x] 本地资源无 404：所有本地资源可访问
 - [x] 连续音频质量：6 段 TTS，播放器正常
-- [x] 视频模块：teaching-video.mp4 有效，video 标签含 controls/playsinline
+- [x] 视频模块：surfactant-animation.mp4 有效（含 audio 流），video 标签含 controls/playsinline
 - [x] Canvas 真实互动：洗涤剂去污模拟，含滑块交互和实时绘制
 
 ---
@@ -118,5 +110,6 @@
 - 元数据：`manifest.json`
 - Hero 图：`assets/chem-daily-life-hero.png`
 - 知识结构图：`assets/hero-infographic.svg`
+- 教学配图：`assets/surfactant-mechanism.png`、`assets/haber-bosch-process.png`、`assets/wastewater-treatment.png`
 - TTS 音频：`tts/s01.mp3` ~ `tts/s06.mp3`
-- 教学视频：`assets/teaching-video.mp4`
+- 教学视频：`assets/video/surfactant-animation.mp4`
