@@ -21,42 +21,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 构建纯净的发布目录 _site/，只包含前端运行时需要的内容。
+      # 构建纯净的发布目录 _site/。
+      # 注意：不要发布顶层 scripts/，GitHub Pages 对该路径构建失败；官方课件改用本地 assets/scripts 或课件根目录脚本。
       - name: Build publish directory
         run: |
-          mkdir -p _site/scripts
+          mkdir -p _site
 
-          # 1. 复制运行时前端模块（JS/CSS/JSON）
-          cp scripts/*.js _site/scripts/ 2>/dev/null || true
-          cp scripts/*.css _site/scripts/ 2>/dev/null || true
-          cp scripts/*.json _site/scripts/ 2>/dev/null || true
-          echo "✅ scripts/ runtime files:"
-          ls -la _site/scripts/
-
-          # 2. 复制课件目录
+          # 1. 复制课件目录（官方课件已经内置运行时模块）
           cp -r community _site/community
 
-          # 3. 复制静态资源
+          # 2. 复制静态资源
           cp -r assets _site/assets
 
-          # 4. 复制数据目录
+          # 3. 复制数据目录
           cp -r data _site/data
 
-          # 5. 复制根级文件
+          # 4. 复制根级文件
           touch _site/.nojekyll
           cp 404.html _site/ 2>/dev/null || true
           cp courseware-registry.json _site/ 2>/dev/null || true
           cp commercial-license.html _site/ 2>/dev/null || true
 
-          # 6. 复制归档目录（如果存在）
+          # 5. 复制归档目录（如果存在）
           [ -d "_archive_20260508" ] && cp -r _archive_20260508 _site/_archive_20260508 || true
 
           echo "✅ _site/ built successfully"
           echo "Top-level:"
           ls _site/
-          echo "---"
-          echo "scripts/ ($(ls _site/scripts/ | wc -l) files):"
-          ls _site/scripts/
 
       # 直接使用 git 命令部署，绕过 peaceiris 的任何隐含行为
       - name: Deploy to gh-pages via git
@@ -67,7 +58,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           echo "Staged files count: $(git status --short | wc -l)"
-          echo "scripts/ staged:"
-          git status --short | grep "scripts/" | head -5
+          echo "Top-level staged entries:"
+          git status --short | head -20
           git commit -m "deploy: ${{ github.event.head_commit.message }}"
           git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages
