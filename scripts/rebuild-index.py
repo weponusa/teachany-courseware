@@ -691,6 +691,11 @@ def main():
                 except OSError:
                     continue
 
+                # 兼容入口/别名页：这类页面只负责把旧 node_id URL 跳到真实 course_id，
+                # 不应被当成 ext-* 课件参与"其他知识"质检。
+                if 'location.replace' in html or 'http-equiv="refresh"' in html or "http-equiv='refresh'" in html:
+                    continue
+
                 # 质检项 (b)(c)(d)
                 size = len(html.encode('utf-8'))
                 metas = dict(META_RE.findall(html))
