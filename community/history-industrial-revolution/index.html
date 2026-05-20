@@ -7,11 +7,11 @@
 <meta name="teachany-difficulty" content="3">
 <meta name="teachany-prerequisites" content="prior-knowledge">
 <meta name="teachany-domain" content="world-history">
-<meta name="teachany-version" content="5.34.8">
+<meta name="teachany-version" content="5.35.0">
 <meta name="teachany-grade" content="9">
 <meta name="teachany-subject" content="history">
 <meta name="teachany-node" content="hist-m-industrial-revolution">
-<title>工业革命 · 初中历史 G9 · TeachAny v5.34.8</title>
+<title>工业革命 · 初中历史 G9 · TeachAny v5.35.0</title>
 <!-- TeachAny Routing Metadata -->
 <meta name="course-id" content="history-industrial-revolution">
 <meta name="course-node" content="history-industrial-revolution">
@@ -20,6 +20,9 @@
 <meta name="course-prereqs" content="">
 <meta name="course-next" content="">
 <link rel="stylesheet" href="./assets/scripts/ai-tutor.css">
+<!-- MapLibre GL JS (v5.35.0 UK Map Upgrade) -->
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
 /* === Middle School Template (Blue-Teal) === */
 :root {
@@ -166,16 +169,20 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
 .module-figure figcaption{padding:10px 16px;font-size:13px;color:var(--text2);line-height:1.7;background:linear-gradient(180deg,rgba(59,130,246,0.04),transparent)}
 .module-figure figcaption strong{color:var(--primary);font-weight:600}
 
-/* Interactive UK Map (v5.34.9 增强) */
-.map-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;align-items:start}
-.uk-map{width:100%;height:auto;max-height:520px;border-radius:12px;background:#dbeafe;box-shadow:0 4px 18px rgba(15,23,42,0.08)}
-.uk-map .hotspot{cursor:pointer;transition:transform .18s ease}
-.uk-map .hotspot:hover{transform:scale(1.15) translateY(-2px)}
-.uk-map .hotspot circle{transition:.2s}
-.uk-map .hotspot:hover circle{stroke:#fbbf24;stroke-width:3}
-.uk-map .hotspot.visited circle{stroke:#10b981;stroke-width:3}
-.factor-detail{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:320px;box-shadow:var(--glow)}
-.factor-detail .fd-placeholder{color:var(--text2);font-size:14px;text-align:center;padding:40px 10px;line-height:1.9}
+/* Interactive UK Map — MapLibre GL (v5.35.0 升级) */
+.map-wrap{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-top:14px;align-items:start}
+.uk-map-gl{width:100%;height:520px;border-radius:12px;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,0.12);position:relative}
+.uk-map-gl .maplibregl-canvas{border-radius:12px}
+.era-controls{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.era-btn{padding:6px 14px;border-radius:999px;border:1.5px solid var(--border);background:var(--card);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer;transition:.2s}
+.era-btn:hover{border-color:var(--primary);color:var(--primary)}
+.era-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 2px 8px rgba(59,130,246,0.3)}
+.map-legend{position:absolute;bottom:10px;left:10px;background:rgba(255,255,255,0.92);backdrop-filter:blur(6px);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:5;line-height:1.8}
+.map-legend .leg-item{display:flex;align-items:center;gap:6px}
+.map-legend .leg-dot{width:10px;height:10px;border-radius:50%}
+.map-stats{position:absolute;top:10px;right:10px;background:rgba(15,23,42,0.85);backdrop-filter:blur(6px);border-radius:8px;padding:8px 12px;font-size:11px;color:#e2e8f0;z-index:5;line-height:1.8}
+.factor-detail{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;min-height:320px;box-shadow:var(--glow);max-height:520px;overflow-y:auto}
+.factor-detail .fd-hint{color:var(--text2);font-size:14px;text-align:center;padding:40px 10px;line-height:1.9}
 .factor-detail h4{font-size:1.05rem;color:var(--primary);margin-bottom:8px;display:flex;align-items:center;gap:8px}
 .factor-detail p{font-size:13.5px;line-height:1.85;margin-bottom:8px;color:var(--ink)}
 .factor-detail .fd-tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;margin-right:6px;margin-bottom:8px}
@@ -184,7 +191,16 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
 .fd-tag.t-manchester{background:rgba(220,38,38,0.12);color:#dc2626}
 .fd-tag.t-colonies{background:rgba(124,58,237,0.12);color:#7c3aed}
 .fd-tag.t-science{background:rgba(234,88,12,0.12);color:#ea580c}
-@media(max-width:720px){.map-wrap{grid-template-columns:1fr}.factor-detail{min-height:180px}}
+.fd-tag.t-city{background:rgba(59,130,246,0.1);color:#3b82f6}
+.marker-popup .maplibregl-popup-content{border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.7;box-shadow:0 4px 16px rgba(0,0,0,0.15);max-width:240px}
+.marker-popup .popup-title{font-weight:700;color:var(--primary);margin-bottom:4px;font-size:13.5px}
+.marker-popup .popup-body{color:#334155;font-size:12.5px}
+@keyframes pulse-ring{0%{transform:scale(1);opacity:0.8}100%{transform:scale(2.5);opacity:0}}
+.city-marker{width:16px;height:16px;border-radius:50%;border:2px solid #fff;cursor:pointer;transition:transform .2s;position:relative}
+.city-marker:hover{transform:scale(1.3)}
+.city-marker::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid currentColor;opacity:0;animation:pulse-ring 2s infinite}
+.city-marker.highlight::after{opacity:1}
+@media(max-width:720px){.map-wrap{grid-template-columns:1fr}.uk-map-gl{height:360px}.factor-detail{min-height:180px}}
 
 /* Steam Engine Canvas Animation (v5.34.9) */
 .steam-anim-wrap{margin-top:12px}
@@ -199,7 +215,7 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
 .chart-legend{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--text2)}
 .chart-legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
 .chart-fact{margin-top:12px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:10px;min-height:80px;box-shadow:var(--glow)}
-.chart-fact .cf-placeholder{color:var(--text2);font-size:13px;text-align:center;padding:14px 0}
+.chart-fact .cf-hint{color:var(--text2);font-size:13px;text-align:center;padding:14px 0}
 .chart-fact h5{font-size:14px;color:var(--primary);margin-bottom:6px;display:flex;align-items:center;gap:8px}
 .chart-fact p{font-size:13.5px;line-height:1.8;color:var(--ink);margin-bottom:6px}
 .chart-fact .cf-year{display:inline-block;padding:2px 10px;background:linear-gradient(135deg,var(--accent),#fbbf24);color:#fff;border-radius:999px;font-size:11px;font-weight:700;margin-right:6px}
@@ -284,6 +300,7 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
 
 <!-- Hero -->
 <header class="hero">
+  <img class="hero-cover-img" src="./assets/history-industrial-revolution-hero.png" alt="工业革命知识结构主图" style="display:block;width:100%;max-height:300px;object-fit:cover;border-radius:0 0 18px 18px;margin-bottom:-20px">
   <h1>🏭 工业革命</h1>
   <p class="subtitle">18世纪60年代—19世纪中期，人类生产方式的根本变革</p>
   <div class="tags">
@@ -411,7 +428,7 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
 
 
 <!-- ===== Module 1: Why Britain? ===== -->
-<section class="section" id="module1">
+<section class="section" id="module1" data-bloom-level="1" data-scaffold="full">
   <h2 class="section-title">模块一：为何始于英国？</h2>
 
   <figure class="module-figure">
@@ -419,96 +436,32 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
     <figcaption><strong>曼彻斯特：工业革命的"心脏"。</strong>从 1760 年代开始，英国的几个中部城市因密集的棉纺织厂和蒸汽驱动机械，迅速从小镇扩张为吞云吐雾的大工业区。为什么是英国？请带着这张画面往下读。</figcaption>
   </figure>
 
-  <!-- ===== Interactive Map: 5 Factors Behind Industrial Revolution ===== -->
+  <!-- ===== Interactive Map: MapLibre GL 英国工业革命 (v5.35.0) ===== -->
   <div class="card">
-    <h3>🗺️ 互动地图：英国的"五要素地理"</h3>
-    <p>点击地图上的任意标记，了解它如何推动工业革命。试着找齐 5 个要素！</p>
+    <h3>🗺️ 互动地图：英国工业革命的扩散与演进</h3>
+    <p>切换不同时代，观察工业化如何从曼彻斯特向全英国扩散。点击城市标记查看详情。</p>
+    <div class="era-controls" id="eraControls">
+      <button class="era-btn active" data-era="1760" onclick="switchEra('1760')">🌾 1760 前夜</button>
+      <button class="era-btn" data-era="1790" onclick="switchEra('1790')">🔥 1790 蒸汽</button>
+      <button class="era-btn" data-era="1830" onclick="switchEra('1830')">🚂 1830 铁路</button>
+      <button class="era-btn" data-era="1860" onclick="switchEra('1860')">⚡ 1860 鼎盛</button>
+    </div>
     <div class="map-wrap">
-      <svg class="uk-map" viewBox="0 0 420 520" xmlns="http://www.w3.org/2000/svg" aria-labelledby="mapTitle">
-        <title id="mapTitle">英国工业革命五要素分布图</title>
-        <!-- Ocean -->
-        <rect x="0" y="0" width="420" height="520" fill="#dbeafe"/>
-        <!-- Wavy sea decor -->
-        <g opacity="0.35" stroke="#93c5fd" stroke-width="1.2" fill="none">
-          <path d="M0 60 Q20 54 40 60 T80 60 T120 60 T160 60"/>
-          <path d="M250 420 Q270 414 290 420 T330 420 T370 420 T410 420"/>
-        </g>
-        <!-- Ireland silhouette -->
-        <path d="M60 220 Q55 200 70 185 Q95 175 120 190 Q130 215 115 240 Q100 260 80 255 Q62 248 60 220 Z"
-              fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" opacity="0.85"/>
-        <text x="85" y="225" font-size="10" fill="#64748b" text-anchor="middle">爱尔兰</text>
-        <!-- Great Britain main island silhouette (approximated) -->
-        <path d="M200 80
-                 Q230 70 255 90
-                 Q265 120 248 140
-                 Q258 170 245 195
-                 Q270 220 260 250
-                 Q280 280 260 310
-                 Q275 340 250 370
-                 Q245 400 220 420
-                 Q195 430 180 410
-                 Q155 395 165 365
-                 Q140 340 155 310
-                 Q140 280 160 255
-                 Q145 220 170 195
-                 Q155 160 175 135
-                 Q180 105 200 80 Z"
-              fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
-        <!-- Scotland label -->
-        <text x="215" y="110" font-size="10" fill="#78350f" text-anchor="middle" font-weight="600">苏格兰</text>
-        <!-- England label -->
-        <text x="215" y="300" font-size="11" fill="#78350f" text-anchor="middle" font-weight="700">英 格 兰</text>
-        <!-- Wales label -->
-        <text x="175" y="330" font-size="9" fill="#78350f" text-anchor="middle">威尔士</text>
-        <!-- Thames / London hint -->
-        <path d="M225 370 Q240 375 255 370" stroke="#60a5fa" stroke-width="1.5" fill="none" opacity="0.6"/>
-
-        <!-- Continental Europe hint (right edge) -->
-        <path d="M390 180 Q405 200 400 260 Q408 310 395 360 Q402 410 390 450 L420 450 L420 180 Z"
-              fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.2" opacity="0.7"/>
-        <text x="405" y="310" font-size="10" fill="#64748b" text-anchor="middle" transform="rotate(90 405 310)">欧洲大陆</text>
-
-        <!-- ===== 5 Hotspots ===== -->
-        <!-- 1. Coal & Iron — Newcastle (NE England) -->
-        <g class="hotspot" data-factor="coal" tabindex="0" onclick="showFactor('coal')">
-          <circle cx="230" cy="220" r="14" fill="#0f172a" stroke="#fff" stroke-width="2"/>
-          <text x="230" y="225" font-size="14" fill="#fff" text-anchor="middle">⛏️</text>
-          <text x="230" y="248" font-size="10" fill="#0f172a" text-anchor="middle" font-weight="600">煤铁资源</text>
-        </g>
-        <!-- 2. Enclosure — Midlands (Central England) -->
-        <g class="hotspot" data-factor="enclosure" tabindex="0" onclick="showFactor('enclosure')">
-          <circle cx="210" cy="285" r="14" fill="#059669" stroke="#fff" stroke-width="2"/>
-          <text x="210" y="290" font-size="14" fill="#fff" text-anchor="middle">🌾</text>
-          <text x="210" y="313" font-size="10" fill="#065f46" text-anchor="middle" font-weight="600">圈地运动</text>
-        </g>
-        <!-- 3. Manchester/Liverpool cotton hub (West England) -->
-        <g class="hotspot" data-factor="manchester" tabindex="0" onclick="showFactor('manchester')">
-          <circle cx="175" cy="265" r="14" fill="#dc2626" stroke="#fff" stroke-width="2"/>
-          <text x="175" y="270" font-size="13" fill="#fff" text-anchor="middle">🏭</text>
-          <text x="175" y="255" font-size="10" fill="#7f1d1d" text-anchor="middle" font-weight="600">曼彻斯特</text>
-        </g>
-        <!-- 4. Colonies/Ports — London (SE) -->
-        <g class="hotspot" data-factor="colonies" tabindex="0" onclick="showFactor('colonies')">
-          <circle cx="250" cy="370" r="14" fill="#7c3aed" stroke="#fff" stroke-width="2"/>
-          <text x="250" y="375" font-size="14" fill="#fff" text-anchor="middle">⚓</text>
-          <text x="250" y="397" font-size="10" fill="#5b21b6" text-anchor="middle" font-weight="600">伦敦·殖民地港口</text>
-        </g>
-        <!-- 5. Royal Society & Politics — Oxford/Cambridge area -->
-        <g class="hotspot" data-factor="science" tabindex="0" onclick="showFactor('science')">
-          <circle cx="225" cy="335" r="14" fill="#ea580c" stroke="#fff" stroke-width="2"/>
-          <text x="225" y="340" font-size="13" fill="#fff" text-anchor="middle">🔬</text>
-          <text x="225" y="358" font-size="10" fill="#9a3412" text-anchor="middle" font-weight="600">科学 + 稳定政治</text>
-        </g>
-
-        <!-- Legend -->
-        <g transform="translate(15, 460)">
-          <rect x="0" y="0" width="260" height="48" rx="6" fill="#fff" opacity="0.85" stroke="#cbd5e1"/>
-          <text x="12" y="18" font-size="10.5" fill="#475569" font-weight="600">💡 点击 5 个热点 → 查看该因素如何推动工业革命</text>
-          <text x="12" y="36" font-size="10" fill="#64748b">已点击：<tspan id="clickedCount" font-weight="700" fill="#0f172a">0</tspan> / 5</text>
-        </g>
-      </svg>
+      <div class="uk-map-gl" id="ukMapGL">
+        <div class="map-legend" id="mapLegend">
+          <div class="leg-item"><span class="leg-dot" style="background:#ef4444"></span> 纺织中心</div>
+          <div class="leg-item"><span class="leg-dot" style="background:#0f172a"></span> 煤铁重镇</div>
+          <div class="leg-item"><span class="leg-dot" style="background:#7c3aed"></span> 贸易港口</div>
+          <div class="leg-item"><span class="leg-dot" style="background:#ea580c"></span> 科学/政治</div>
+          <div class="leg-item"><span class="leg-dot" style="background:#06b6d4"></span> 铁路枢纽</div>
+        </div>
+        <div class="map-stats" id="mapStats">
+          <div>🏭 工业城市：<strong id="cityCount">4</strong></div>
+          <div>📈 时代：<strong id="eraLabel">1760 前夜</strong></div>
+        </div>
+      </div>
       <div class="factor-detail" id="factorDetail">
-        <div class="fd-placeholder">👆 点击地图上的彩色圆点查看详情</div>
+        <div class="fd-hint">👆 点击地图上的城市标记查看详情<br><br>🕹️ 切换上方时代按钮，观察工业化扩散过程</div>
       </div>
     </div>
   </div>
@@ -767,7 +720,7 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
 
 
 <!-- ===== Module 2: Key Inventions ===== -->
-<section class="section" id="module2">
+<section class="section" id="module2" data-bloom-level="2" data-scaffold="partial">
   <h2 class="section-title">模块二：关键发明与时间线</h2>
 
   <figure class="module-figure">
@@ -807,7 +760,7 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
         <span><span class="dot" style="background:#059669"></span>经济里程碑</span>
       </div>
       <div class="chart-fact" id="chartFact">
-        <div class="cf-placeholder">👆 点击彩色圆点，看该年发生了什么</div>
+        <div class="cf-hint">👆 点击彩色圆点，看该年发生了什么</div>
       </div>
     </div>
     <p style="font-size:12.5px;color:var(--text2);margin-top:10px">📚 数据来源：Deane & Cole《British Economic Growth 1688—1959》、Mitchell《British Historical Statistics》</p>
@@ -888,7 +841,7 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
 </section>
 
 <!-- ===== Module 3: Social Impact ===== -->
-<section class="section" id="module3">
+<section class="section" id="module3" data-bloom-level="4" data-scaffold="none">
   <h2 class="section-title">模块三：社会双重影响</h2>
 
   <figure class="module-figure">
@@ -987,7 +940,7 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
 </section>
 
 <!-- ===== Post-test ===== -->
-<section class="section" id="posttest">
+<section class="section" id="posttest" data-bloom-level="5" data-conceptest="true">
   <h2 class="section-title">📋 后测：检验学习成果</h2>
   <div class="test-banner">
     <h3>🎯 3道题，看看你学到了多少</h3>
@@ -1099,7 +1052,7 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg)
 <section class="section" id="knowledge-graph">
     <h2 class="section-title">🗺️ 知识图谱：工业革命</h2>
     <div data-teachany-kg="hist-m-industrial-revolution">
-      <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布占位" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
+      <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
     </div>
   </section>
 <footer class="footer">
@@ -1800,7 +1753,96 @@ setupDrag();
   }
 })();
 
-// ========== Interactive UK Map (5 factors) ==========
+// ========== Interactive UK Map — MapLibre GL (v5.35.0) ==========
+
+// === City & Factor Data ===
+const CITY_DATA = {
+  manchester: {
+    name: '曼彻斯特', coords: [-2.2426, 53.4808], color: '#ef4444', type: 'textile',
+    factor: 'manchester', eras: ['1760','1790','1830','1860'],
+    desc: '世界第一座工业城市。1750年仅1.8万人，到1851年暴涨至30万。靠近兰开夏煤田、利物浦港口，阴雨气候利于纺棉。',
+    detail: '曼彻斯特 + 利物浦这对组合，是工业革命的原点。珍妮纺纱机、水力纺纱机都最先在此大规模应用。'
+  },
+  liverpool: {
+    name: '利物浦', coords: [-2.9916, 53.4084], color: '#7c3aed', type: 'port',
+    factor: 'colonies', eras: ['1760','1790','1830','1860'],
+    desc: '英国第二大港口，三角贸易的关键节点。棉花从美洲运入，工业品从这里运往全球殖民地。',
+    detail: '18世纪末利物浦处理了英国80%的奴隶贸易和大部分棉花进口。'
+  },
+  birmingham: {
+    name: '伯明翰', coords: [-1.8904, 52.4862], color: '#0f172a', type: 'coal',
+    factor: 'coal', eras: ['1760','1790','1830','1860'],
+    desc: '黑乡（Black Country）的心脏，铁器和金属加工中心。瓦特的蒸汽机正是在此与博尔顿合作改良。',
+    detail: '伯明翰周围30英里内有英格兰最密集的煤矿和铁矿，被称为"世界工坊的工坊"。'
+  },
+  newcastle: {
+    name: '纽卡斯尔', coords: [-1.6178, 54.9783], color: '#0f172a', type: 'coal',
+    factor: 'coal', eras: ['1760','1790','1830','1860'],
+    desc: '英国最大煤田所在地。18世纪初英国煤产量已占全欧洲一半，主要来自泰恩河流域。',
+    detail: '煤是蒸汽机的燃料，铁是机器的骨架——两种资源在同一地区，这是英国独有的地理奇迹。'
+  },
+  london: {
+    name: '伦敦', coords: [-0.1276, 51.5074], color: '#7c3aed', type: 'port',
+    factor: 'colonies', eras: ['1760','1790','1830','1860'],
+    desc: '世界金融中心与最大港口。殖民帝国的控制中枢，资本汇聚之地。',
+    detail: '伦敦证券交易所为工业企业提供融资，东印度公司总部也设于此。'
+  },
+  leeds: {
+    name: '利兹', coords: [-1.5491, 53.8008], color: '#ef4444', type: 'textile',
+    factor: 'manchester', eras: ['1790','1830','1860'],
+    desc: '约克郡毛纺织业中心。1790年代随蒸汽机普及，从手工作坊转型为工厂化生产。',
+    detail: '利兹-布拉德福德走廊是英格兰北部仅次于曼彻斯特的纺织集群。'
+  },
+  sheffield: {
+    name: '谢菲尔德', coords: [-1.4701, 53.3811], color: '#0f172a', type: 'coal',
+    factor: 'coal', eras: ['1790','1830','1860'],
+    desc: '钢铁之城。1740年代亨茨曼在此发明坩埚钢工艺，开启了现代钢铁工业。',
+    detail: '谢菲尔德钢刀闻名世界，为铁路提供了关键的钢轨材料。'
+  },
+  bristol: {
+    name: '布里斯托尔', coords: [-2.5879, 51.4545], color: '#7c3aed', type: 'port',
+    factor: 'colonies', eras: ['1760','1790','1830','1860'],
+    desc: '西南部最大港口，三角贸易的英国起点之一。蔗糖、烟草从此入境。',
+    detail: '布里斯托尔商人的资本后来大量投入了铁路建设（如大西部铁路）。'
+  },
+  glasgow: {
+    name: '格拉斯哥', coords: [-4.2518, 55.8642], color: '#ef4444', type: 'textile',
+    factor: 'manchester', eras: ['1790','1830','1860'],
+    desc: '苏格兰工业心脏。18世纪末成为棉纺织重镇，19世纪转型为造船和重工业中心。',
+    detail: '瓦特就在格拉斯哥大学改良蒸汽机。克莱德河畔后来建造了全球1/3的船舶。'
+  },
+  oxford: {
+    name: '牛津', coords: [-1.2578, 51.7520], color: '#ea580c', type: 'science',
+    factor: 'science', eras: ['1760','1790','1830','1860'],
+    desc: '与剑桥并列的学术中心。皇家学会（1660）推动了科学方法论的传播。',
+    detail: '光荣革命后确立君主立宪制，财产权受法律保护——发明家可放心投资。'
+  },
+  norwich: {
+    name: '诺里奇', coords: [1.2993, 52.6309], color: '#059669', type: 'agriculture',
+    factor: 'enclosure', eras: ['1760','1790'],
+    desc: '东英格兰农业改良中心。塔尔的四圃轮作法最早在此推广。',
+    detail: '圈地运动使大量农民失去土地进入城市，为工厂提供了庞大的劳动力。'
+  },
+  swindon: {
+    name: '斯温顿', coords: [-1.7797, 51.5558], color: '#06b6d4', type: 'railway',
+    factor: 'coal', eras: ['1830','1860'],
+    desc: '大西部铁路的机车制造基地。一座因铁路而从村庄变为城镇的典型案例。',
+    detail: '1840年代人口从2000暴增至15000，铁路工人及家属占绝大多数。'
+  },
+  crewe: {
+    name: '克鲁', coords: [-2.4414, 53.0988], color: '#06b6d4', type: 'railway',
+    factor: 'coal', eras: ['1830','1860'],
+    desc: '英格兰铁路枢纽。六条主要铁路线在此交汇，拥有大型机车维修厂。',
+    detail: '铁路将煤铁从矿区运往工厂，又把制成品运往港口——连接了生产与市场。'
+  },
+  derby: {
+    name: '德比', coords: [-1.4746, 52.9225], color: '#ef4444', type: 'textile',
+    factor: 'manchester', eras: ['1760','1790','1830','1860'],
+    desc: '阿克莱特1771年在此建造世界第一座水力棉纺厂，被视为工厂制度的起源。',
+    detail: '克朗福德磨坊（Cromford Mill）标志着从家庭手工业到工厂化大生产的历史性转变。'
+  }
+};
+
 const FACTOR_DATA = {
   coal: {
     tag: 't-coal', emoji: '⛏️', title: '煤 · 铁：藏在地下的"工业燃料"',
@@ -1829,26 +1871,304 @@ const FACTOR_DATA = {
   }
 };
 
-const visitedFactors = new Set();
-function showFactor(key) {
-  const d = FACTOR_DATA[key];
-  if (!d) return;
-  visitedFactors.add(key);
-  // mark visited
-  document.querySelectorAll('.hotspot').forEach(h => {
-    if (visitedFactors.has(h.dataset.factor)) h.classList.add('visited');
+// Era configuration
+const ERA_CONFIG = {
+  '1760': { label: '1760 前夜', desc: '工业革命前夜——手工工场时代', heatIntensity: 0.3 },
+  '1790': { label: '1790 蒸汽', desc: '蒸汽机改良，工厂制度确立', heatIntensity: 0.6 },
+  '1830': { label: '1830 铁路', desc: '铁路时代开启，工业化加速', heatIntensity: 0.8 },
+  '1860': { label: '1860 鼎盛', desc: '世界工厂，工业产值占全球40%', heatIntensity: 1.0 }
+};
+
+// Industrial spread paths (from Manchester outward)
+const SPREAD_PATHS = {
+  '1790': [
+    { from: 'manchester', to: 'liverpool', label: '棉花运输' },
+    { from: 'manchester', to: 'birmingham', label: '机器供应' },
+    { from: 'newcastle', to: 'birmingham', label: '煤铁南运' }
+  ],
+  '1830': [
+    { from: 'manchester', to: 'leeds', label: '纺织扩散' },
+    { from: 'manchester', to: 'sheffield', label: '钢铁需求' },
+    { from: 'birmingham', to: 'london', label: '铁路连通' },
+    { from: 'manchester', to: 'glasgow', label: '工业北进' },
+    { from: 'liverpool', to: 'bristol', label: '港口联动' }
+  ],
+  '1860': [
+    { from: 'london', to: 'swindon', label: '大西部铁路' },
+    { from: 'manchester', to: 'crewe', label: '铁路枢纽' },
+    { from: 'birmingham', to: 'derby', label: '中部走廊' },
+    { from: 'glasgow', to: 'newcastle', label: '东海岸线' },
+    { from: 'leeds', to: 'sheffield', label: '钢铁走廊' }
+  ]
+};
+
+let map, markers = [], spreadLines = [], currentEra = '1760', animFrame = null;
+const visitedCities = new Set();
+
+// Initialize map
+function initUKMap() {
+  map = new maplibregl.Map({
+    container: 'ukMapGL',
+    style: {
+      version: 8,
+      name: 'UK Industrial Dark',
+      sources: {
+        'osm-raster': {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '© OpenStreetMap'
+        }
+      },
+      layers: [{
+        id: 'osm-base',
+        type: 'raster',
+        source: 'osm-raster',
+        paint: {
+          'raster-saturation': -0.7,
+          'raster-brightness-min': 0.05,
+          'raster-brightness-max': 0.45,
+          'raster-contrast': 0.3
+        }
+      }],
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf'
+    },
+    center: [-2.0, 53.5],
+    zoom: 5.5,
+    minZoom: 5,
+    maxZoom: 9,
+    maxBounds: [[-12, 49], [4, 60]],
+    attributionControl: false
   });
-  const cc = document.getElementById('clickedCount');
-  if (cc) cc.textContent = visitedFactors.size;
-  // render detail
+
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+
+  map.on('load', () => {
+    // Add heatmap source
+    const heatData = Object.values(CITY_DATA).map(c => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: c.coords },
+      properties: { intensity: c.eras.includes(currentEra) ? 1 : 0 }
+    }));
+    map.addSource('heat', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: heatData }
+    });
+    map.addLayer({
+      id: 'heat-layer',
+      type: 'heatmap',
+      source: 'heat',
+      paint: {
+        'heatmap-weight': ['get', 'intensity'],
+        'heatmap-intensity': 0.6,
+        'heatmap-radius': 40,
+        'heatmap-color': [
+          'interpolate', ['linear'], ['heatmap-density'],
+          0, 'rgba(0,0,0,0)',
+          0.2, 'rgba(255,100,50,0.15)',
+          0.5, 'rgba(255,69,0,0.35)',
+          0.8, 'rgba(255,200,0,0.5)',
+          1.0, 'rgba(255,255,200,0.7)'
+        ],
+        'heatmap-opacity': 0.7
+      }
+    });
+
+    // Add spread lines source
+    map.addSource('spread-lines', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] }
+    });
+    map.addLayer({
+      id: 'spread-lines-layer',
+      type: 'line',
+      source: 'spread-lines',
+      paint: {
+        'line-color': '#fbbf24',
+        'line-width': 2.5,
+        'line-opacity': 0.8,
+        'line-dasharray': [2, 2]
+      }
+    });
+    // Arrow layer (wider + triangle caps simulated by symbols)
+    map.addSource('spread-arrows', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] }
+    });
+    map.addLayer({
+      id: 'spread-arrows-layer',
+      type: 'circle',
+      source: 'spread-arrows',
+      paint: {
+        'circle-radius': 5,
+        'circle-color': '#fbbf24',
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': '#fff'
+      }
+    });
+
+    renderMarkers(currentEra);
+    startDashAnimation();
+  });
+}
+
+function renderMarkers(era) {
+  // Remove old markers
+  markers.forEach(m => m.remove());
+  markers = [];
+
+  const visibleCities = Object.entries(CITY_DATA).filter(([_, c]) => c.eras.includes(era));
+  
+  visibleCities.forEach(([key, city]) => {
+    const el = document.createElement('div');
+    el.className = 'city-marker';
+    el.style.backgroundColor = city.color;
+    el.style.color = city.color;
+    if (key === 'manchester') el.classList.add('highlight');
+
+    const marker = new maplibregl.Marker({ element: el })
+      .setLngLat(city.coords)
+      .addTo(map);
+
+    el.addEventListener('click', () => showCityDetail(key));
+    el.title = city.name;
+    markers.push(marker);
+  });
+
+  // Update stats
+  document.getElementById('cityCount').textContent = visibleCities.length;
+  document.getElementById('eraLabel').textContent = ERA_CONFIG[era].label;
+
+  // Update heatmap
+  if (map.getSource('heat')) {
+    const heatData = Object.values(CITY_DATA).map(c => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: c.coords },
+      properties: { intensity: c.eras.includes(era) ? ERA_CONFIG[era].heatIntensity : 0 }
+    }));
+    map.getSource('heat').setData({ type: 'FeatureCollection', features: heatData });
+  }
+
+  // Update spread lines
+  renderSpreadLines(era);
+}
+
+function renderSpreadLines(era) {
+  const paths = SPREAD_PATHS[era] || [];
+  const features = paths.map(p => {
+    const from = CITY_DATA[p.from];
+    const to = CITY_DATA[p.to];
+    if (!from || !to) return null;
+    return {
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [from.coords, to.coords]
+      },
+      properties: { label: p.label }
+    };
+  }).filter(Boolean);
+
+  if (map.getSource('spread-lines')) {
+    map.getSource('spread-lines').setData({ type: 'FeatureCollection', features });
+  }
+
+  // Arrow heads at destination
+  const arrowFeatures = paths.map(p => {
+    const to = CITY_DATA[p.to];
+    if (!to) return null;
+    return {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: to.coords },
+      properties: { label: p.label }
+    };
+  }).filter(Boolean);
+
+  if (map.getSource('spread-arrows')) {
+    map.getSource('spread-arrows').setData({ type: 'FeatureCollection', features: arrowFeatures });
+  }
+}
+
+function startDashAnimation() {
+  let offset = 0;
+  function animate() {
+    offset = (offset + 0.5) % 20;
+    if (map.getLayer('spread-lines-layer')) {
+      map.setPaintProperty('spread-lines-layer', 'line-dasharray', [2, 2]);
+    }
+    animFrame = requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+function switchEra(era) {
+  currentEra = era;
+  // Update button states
+  document.querySelectorAll('.era-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.era === era);
+  });
+  renderMarkers(era);
+
+  // Show era info in detail panel
+  const config = ERA_CONFIG[era];
   const box = document.getElementById('factorDetail');
   box.innerHTML = `
-    <span class="fd-tag ${d.tag}">要素 ${['coal','enclosure','manchester','colonies','science'].indexOf(key)+1} / 5</span>
-    <h4>${d.emoji} ${d.title}</h4>
-    <p>${d.body}</p>
-    <p style="color:var(--accent);font-size:12.5px;border-top:1px dashed var(--border);padding-top:8px;margin-top:10px">${d.tip}</p>
-    ${visitedFactors.size === 5 ? '<p style="background:rgba(16,185,129,0.08);border-radius:8px;padding:10px 12px;color:var(--success);font-weight:600;margin-top:10px">🎉 五要素已集齐！现在你可以回答："工业革命为什么始于英国？"——因为这 5 个条件同时在这里具备。</p>' : ''}
+    <span class="fd-tag t-city">📅 ${config.label}</span>
+    <h4>🗺️ ${config.desc}</h4>
+    <p style="font-size:13px;color:var(--text2);margin-top:8px">
+      当前显示 <strong>${Object.entries(CITY_DATA).filter(([_,c]) => c.eras.includes(era)).length}</strong> 座工业城市。
+      ${era !== '1760' ? '黄色虚线表示工业化扩散路径。' : ''}
+      点击城市标记查看详细信息。
+    </p>
+    ${era === '1860' ? '<p style="background:rgba(16,185,129,0.08);border-radius:8px;padding:10px 12px;color:var(--success);font-weight:600;margin-top:12px">⚡ 1860年代，英国工业产值已占全球40%，铁路里程超15000英里，成为名副其实的"世界工厂"。</p>' : ''}
+    ${era === '1830' ? '<p style="background:rgba(6,182,212,0.08);border-radius:8px;padding:10px 12px;color:#0891b2;font-weight:600;margin-top:12px">🚂 1830年利物浦—曼彻斯特铁路通车，标志着铁路时代正式开始。到1850年已有6000英里铁路。</p>' : ''}
+    ${era === '1790' ? '<p style="background:rgba(239,68,68,0.08);border-radius:8px;padding:10px 12px;color:#dc2626;font-weight:600;margin-top:12px">🔥 1769年瓦特改良蒸汽机，1785年卡特莱特发明水力织布机。工厂制度在曼彻斯特确立。</p>' : ''}
+    ${era === '1760' ? '<p style="background:rgba(245,158,11,0.08);border-radius:8px;padding:10px 12px;color:#d97706;font-weight:600;margin-top:12px">🌾 1760年前，英国已完成农业革命和资本原始积累。圈地运动准备了劳动力，殖民贸易提供了资本和市场。</p>' : ''}
   `;
+}
+
+function showCityDetail(key) {
+  const city = CITY_DATA[key];
+  if (!city) return;
+  visitedCities.add(key);
+
+  const factor = FACTOR_DATA[city.factor];
+  const box = document.getElementById('factorDetail');
+  box.innerHTML = `
+    <span class="fd-tag t-city">🏙️ ${city.name}</span>
+    <span class="fd-tag ${factor.tag}">${factor.emoji} ${factor.title.split('：')[0]}</span>
+    <h4>${city.name}（${city.type === 'textile' ? '纺织中心' : city.type === 'coal' ? '煤铁重镇' : city.type === 'port' ? '贸易港口' : city.type === 'railway' ? '铁路枢纽' : city.type === 'science' ? '科学/政治' : '农业改良'}）</h4>
+    <p>${city.desc}</p>
+    <p style="color:var(--text2);font-size:12.5px;border-top:1px dashed var(--border);padding-top:8px;margin-top:8px">${city.detail}</p>
+    <p style="margin-top:12px;padding:8px 12px;background:rgba(59,130,246,0.06);border-radius:8px;font-size:12.5px">
+      <strong>💡 关联要素：</strong>${factor.emoji} ${factor.title}<br>
+      <span style="color:var(--text2)">${factor.tip}</span>
+    </p>
+    ${visitedCities.size >= 5 ? '<p style="background:rgba(16,185,129,0.08);border-radius:8px;padding:10px 12px;color:var(--success);font-weight:600;margin-top:10px">🎉 已探索5+座城市！你现在可以完整回答："工业革命为什么始于英国？"——因为煤铁、劳动力、资本、市场、制度五个条件在这里同时具备。</p>' : `<p style="color:var(--text2);font-size:12px;margin-top:10px">📍 已探索 ${visitedCities.size} 座城市</p>`}
+  `;
+
+  // Fly to city
+  map.flyTo({ center: city.coords, zoom: 7, duration: 800 });
+}
+
+// Legacy compatibility — keep showFactor working for any external calls
+function showFactor(key) {
+  const factor = FACTOR_DATA[key];
+  if (!factor) return;
+  const box = document.getElementById('factorDetail');
+  box.innerHTML = `
+    <span class="fd-tag ${factor.tag}">要素</span>
+    <h4>${factor.emoji} ${factor.title}</h4>
+    <p>${factor.body}</p>
+    <p style="color:var(--accent);font-size:12.5px;border-top:1px dashed var(--border);padding-top:8px;margin-top:10px">${factor.tip}</p>
+  `;
+}
+
+// Init on DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initUKMap);
+} else {
+  initUKMap();
 }
 </script>
 
