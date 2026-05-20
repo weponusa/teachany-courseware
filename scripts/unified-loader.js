@@ -1,15 +1,17 @@
 /**
- * TeachAny 统一课件加载器 v3.4
+ * TeachAny 统一课件加载器 v3.5
  *
  * 功能：
  * 1. 从 registry.json 读取所有课件（官方+社区）
- * 2. 统一渲染到 Gallery，按 status 分组
- * 3. 支持筛选、搜索、点赞功能
- * 4. 本地缓存（localStorage + 过期机制）
+ * 2. 加载 other/user-generated.json 知识图谱，按图谱归属分组
+ * 3. 统一渲染到 Gallery，按 official/community/other 三组
+ * 4. 支持筛选、搜索、点赞功能
+ * 5. 本地缓存（localStorage + 过期机制）
  *
- * v3.4 修复：
- * - 启动时暴力清除所有 teachany_registry* 缓存，彻底解决浏览器缓存导致中文标题不显示的问题
- * - 每次从服务器加载 registry.json（带时间戳防 HTTP 缓存）
+ * v3.5 新增：
+ * - 加载 data/trees/other/user-generated.json 知识图谱
+ * - 按图谱课程ID将课件从 community 移入 other 组
+ * - "其他知识"区域显示所有图谱内的课件（不再依赖 status=course）
  */
 
 // ── 启动时立即清除所有 teachany 注册表缓存 ──
@@ -30,7 +32,7 @@
 
 /* ─── 常量 ───────────────────────────────────── */
 const REGISTRY_URL = './registry.json';
-const COMMUNITY_INDEX_URL = './community/index.json';
+const COMMUNITY_INDEX_URL = 'https://weponusa.github.io/teachany-courseware/community/index.json';
 const COURSEWARE_BASE_URL = 'https://weponusa.github.io/teachany-courseware'; // 真实课件实体统一在课件仓库
 const SELF_BASE_URL = 'https://weponusa.github.io/teachany';                  // 主站入口与 hero fallback
 const CACHE_KEY = 'teachany_registry_v3_16'; // v3.16: fix status override from community index (active→official|community)
@@ -194,6 +196,7 @@ window._toggleLike = function(button) {
 
 /* ─── 加载注册表 ─────────────────────────────── */
 async function loadRegistry() {
+  // 1. 尝试缓存
   const cached = getCachedRegistry();
   if (cached) {
     console.log('[TeachAny] 使用缓存的注册表:', cached.courses.length, '个课件');
@@ -214,7 +217,8 @@ async function loadRegistry() {
     }
   }
 
-  console.log('[TeachAny] 从服务器加载 registry + community index...');
+  // 2. 从主站 registry + courseware community/index 合并加载
+  console.log('[TeachAny] 从服务器加载 registry + courseware community index...');
   const [registryData, communityData] = await Promise.all([
     fetchOptionalJson(REGISTRY_URL),
     fetchOptionalJson(COMMUNITY_INDEX_URL),
@@ -225,12 +229,13 @@ async function loadRegistry() {
   (communityData.courses || []).forEach(c => {
     if (!c.id) return;
     const existing = byId.get(c.id);
-    // 保留 registry.json 中的 original status，不从 community/index 覆盖
     const merged = {
       ...existing,
       ...c,
       path: c.path || `community/${c.id}`,
       url: c.download_url || c.url || (existing || {}).url,
+      has_tts: existing?.has_tts || c.has_tts || false,
+      has_video: existing?.has_video || c.has_video || false,
     };
     // status 优先用 registry 中的，其次 community 默认
     merged.status = (existing && existing.status) ? existing.status : 'community';
@@ -389,17 +394,54 @@ function renderCourses(grid, courses, addCard = null) {
   });
 }
 
+/* ─── 加载"其他知识"图谱，提取课程ID ─── */
+async function loadOtherTreeCourseIds() {
+  try {
+    const resp = await fetch('./data/trees/other/user-generated.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!resp.ok) return new Set();
+    const tree = await resp.json();
+    const ids = new Set();
+    (tree.domains || []).forEach(domain => {
+      (domain.nodes || []).forEach(node => {
+        (node.courses || []).forEach(cid => ids.add(cid));
+      });
+    });
+    console.log(`[TeachAny] 其他知识图谱包含 ${ids.size} 个课程ID`);
+    return ids;
+  } catch (e) {
+    console.warn('[TeachAny] 加载 other/user-generated.json 失败:', e.message);
+    return new Set();
+  }
+}
+
 /* ─── 初始化 Gallery ────────────────────────── */
 async function initGallery() {
   try {
-    const registry = await loadRegistry();
+    const [registry, otherCourseIds] = await Promise.all([
+      loadRegistry(),
+      loadOtherTreeCourseIds()
+    ]);
     
-    // 按 status 分组
-    const official = registry.courses.filter(c => c.status === 'official');
-    const community = registry.courses.filter(c => c.status === 'community');
-    const courses = registry.courses.filter(c => c.status === 'course');
+    // 按 status + 知识图谱归属分组
+    const official = [];
+    const community = [];
+    const other = [];
 
-    console.log(`[TeachAny] 官方: ${official.length}, 社区: ${community.length}, 课程: ${courses.length}`);
+    registry.courses.forEach(c => {
+      if (c.status === 'official') {
+        official.push(c);
+      } else if (otherCourseIds.has(c.id)) {
+        // 属于"其他知识"图谱的课件，无论 status 是什么都归入 other
+        other.push(c);
+      } else if (c.status === 'course') {
+        // status=course 但不在图谱中的也归入 other（兼容旧数据）
+        other.push(c);
+      } else {
+        community.push(c);
+      }
+    });
+
+    console.log(`[TeachAny] 官方: ${official.length}, 社区: ${community.length}, 其他知识: ${other.length}`);
 
     // 渲染官方课件
     const officialGrid = document.getElementById('officialGrid');
@@ -416,16 +458,16 @@ async function initGallery() {
       console.log(`[TeachAny] ✓ 渲染 ${community.length} 个社区课件`);
     }
 
-    // 渲染其他课程（多章节系统课程）
+    // 渲染其他知识课件（来自 other/user-generated.json 图谱）
     const otherCoursesGrid = document.getElementById('otherCoursesGrid');
     if (otherCoursesGrid) {
-      renderCourses(otherCoursesGrid, courses);
-      console.log(`[TeachAny] ✓ 渲染 ${courses.length} 个其他课程`);
+      renderCourses(otherCoursesGrid, other);
+      console.log(`[TeachAny] ✓ 渲染 ${other.length} 个其他知识课件`);
     }
     const otherCoursesCount = document.getElementById('otherCoursesCount');
-    if (otherCoursesCount) otherCoursesCount.textContent = `${courses.length} 个课程`;
+    if (otherCoursesCount) otherCoursesCount.textContent = `${other.length} 个课件`;
     const otherCoursesEmpty = document.getElementById('otherCoursesEmpty');
-    if (otherCoursesEmpty) otherCoursesEmpty.style.display = courses.length ? 'none' : 'block';
+    if (otherCoursesEmpty) otherCoursesEmpty.style.display = other.length ? 'none' : 'block';
 
     // 更新统计数字
     updateStats({
