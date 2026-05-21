@@ -181,13 +181,20 @@ def main():
     # 清理冗余字段
     for node in all_nodes.values():
         node.pop("courses_ids", None)
-    OUT.write_text(json.dumps({
+    payload = json.dumps({
         "version": "1.0",
         "generated_by": "build-teachany-kg-manifest.py",
         "node_count": len(all_nodes),
         "nodes": all_nodes,
-    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    }, ensure_ascii=False, indent=2)
+    OUT.write_text(payload, encoding="utf-8")
     print(f"✅ 生成 {OUT} （{len(all_nodes)} 个节点）")
+
+    # 自动同步到 assets/scripts/（线上 courseware Pages 部署的实际路径）
+    assets_out = ROOT / "assets" / "scripts" / "teachany-kg-manifest.json"
+    if assets_out.parent.is_dir():
+        assets_out.write_text(payload, encoding="utf-8")
+        print(f"  ↪ 同步到 {assets_out.relative_to(ROOT)}")
 
 if __name__ == "__main__":
     main()
