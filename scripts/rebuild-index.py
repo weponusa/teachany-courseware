@@ -1048,6 +1048,8 @@ def main():
                 print(f'  ✅ 所有课件已有重定向入口，无需新建')
             if result['skipped_full']:
                 print(f'  ⚠️  跳过完整课件（非重定向）: {len(result["skipped_full"])} 个')
+            if result.get('manifest_synced'):
+                print(f'  📦 kg-manifest 已同步到主仓库')
             if result['errors']:
                 for e in result['errors']:
                     print(f'  ❌ {e}')

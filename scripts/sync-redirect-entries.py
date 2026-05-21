@@ -245,6 +245,18 @@ def sync(
             except Exception as e:
                 result["errors"].append(f"{cid}: {e}")
 
+    # ── 同步 kg-manifest 到主仓库（确保知识图谱数据一致） ──
+    manifest_src = courseware_root / "assets" / "scripts" / "teachany-kg-manifest.json"
+    if not manifest_src.exists():
+        manifest_src = courseware_root / "scripts" / "teachany-kg-manifest.json"
+    manifest_dst = main_repo / "scripts" / "teachany-kg-manifest.json"
+    if manifest_src.exists() and manifest_dst.parent.is_dir():
+        if not dry_run:
+            shutil.copy2(manifest_src, manifest_dst)
+        result["manifest_synced"] = True
+    else:
+        result["manifest_synced"] = False
+
     return result
 
 
@@ -311,6 +323,12 @@ def main():
           f"迁移={len(result['migrated'])}, "
           f"跳过={len(result['skipped_full'])}, "
           f"错误={len(result['errors'])}")
+
+    # manifest 同步状态
+    if result.get("manifest_synced"):
+        print(f"  📦 kg-manifest 已同步到主仓库")
+    elif result.get("manifest_synced") is False:
+        print(f"  ⚠️  kg-manifest 同步失败（源文件或目标目录不存在）")
 
     return result
 
