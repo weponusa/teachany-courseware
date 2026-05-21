@@ -1021,6 +1021,49 @@ def main():
     else:
         print('  ⚠️  scripts/check-hero.py 不存在，跳过 hero 校验')
 
+    # 7. 同步主仓库重定向入口（v7.10：上传必须同步注册重定向）
+    print('\n🔗 步骤7: 同步主仓库重定向入口...')
+    sync_redirect_path = Path('scripts') / 'sync-redirect-entries.py'
+    if sync_redirect_path.exists():
+        try:
+            # 连字符模块名需要用 importlib.util 加载
+            import importlib.util
+            spec_obj = importlib.util.spec_from_file_location(
+                "sync_redirect_entries",
+                str(sync_redirect_path.resolve())
+            )
+            mod = importlib.util.module_from_spec(spec_obj)
+            spec_obj.loader.exec_module(mod)
+            courseware_root = Path(__file__).resolve().parents[1]
+            result = mod.sync(courseware_root)
+            if result['created']:
+                print(f'  🆕 新建重定向入口: {len(result["created"])} 个')
+                for cid in result['created'][:20]:
+                    print(f'     + {cid}')
+                if len(result['created']) > 20:
+                    print(f'     ... 及另外 {len(result["created"]) - 20} 个')
+                # 提示用户需要在主仓库 commit + push
+                print(f'  💡 请在主仓库执行 git add/commit/push 以发布重定向入口')
+            else:
+                print(f'  ✅ 所有课件已有重定向入口，无需新建')
+            if result['skipped_full']:
+                print(f'  ⚠️  跳过完整课件（非重定向）: {len(result["skipped_full"])} 个')
+            if result['errors']:
+                for e in result['errors']:
+                    print(f'  ❌ {e}')
+        except Exception as e:
+            # 回退方案：用子进程调用
+            print(f'  ⚠️  模块导入失败（{e}），改用子进程调用...')
+            r = subprocess.run(
+                [sys.executable, str(sync_redirect_path)],
+                text=True, capture_output=True
+            )
+            print(r.stdout)
+            if r.stderr:
+                print(r.stderr)
+    else:
+        print('  ⚠️  scripts/sync-redirect-entries.py 不存在，跳过重定向同步')
+
     print('\n✅ 重建完成！')
 
 
