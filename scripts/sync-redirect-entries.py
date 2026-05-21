@@ -24,6 +24,10 @@ TeachAny 重定向入口同步工具 v1.0
 
 v1.0 变更（2026-05-21）:
   - 初始版本：扫描 + 生成重定向 + 拷贝 history-tracker.js
+v1.1 变更（2026-05-21）:
+  - 新增 --migrate 模式：将主仓库中的完整课件替换为重定向页
+    （先备份原完整课件的 assets/ 和 tts/ 到 courseware 仓库，
+     然后用重定向页覆盖主仓库入口）
 """
 
 import argparse
@@ -152,14 +156,20 @@ def sync(
     courseware_root: Path,
     main_repo: Path | None = None,
     dry_run: bool = False,
+    migrate: bool = False,
 ) -> dict:
     """
     主同步逻辑。返回统计信息。
 
+    Args:
+        migrate: 若为 True，将主仓库中的完整课件也替换为重定向页
+                 （前提是 courseware 仓库已有对应课件）
+
     Returns:
-        {"created": [...], "skipped_full": [...], "already_ok": int, "errors": [...]}
+        {"created": [...], "migrated": [...], "skipped_full": [...],
+         "already_ok": int, "errors": [...]}
     """
-    result = {"created": [], "skipped_full": [], "already_ok": 0, "errors": []}
+    result = {"created": [], "migrated": [], "skipped_full": [], "already_ok": 0, "errors": []}
 
     courseware_community = courseware_root / "community"
     if not courseware_community.is_dir():
@@ -203,8 +213,29 @@ def sync(
             if is_redirect_page(index_path):
                 # 已有重定向，OK
                 result["already_ok"] += 1
+            elif migrate:
+                # migrate 模式：把完整课件替换为重定向页
+                try:
+                    # 删除主仓库中的完整课件（保留目录结构）
+                    if not dry_run:
+                        # 删除所有文件，只保留目录
+                        for f in entry_dir.rglob("*"):
+                            if f.is_file():
+                                f.unlink()
+                        # 清理空子目录
+                        for d in sorted(entry_dir.rglob("*"), reverse=True):
+                            if d.is_dir():
+                                try:
+                                    d.rmdir()
+                                except OSError:
+                                    pass
+                        # 创建重定向入口
+                        create_redirect_entry(main_community, cid, ht_src, dry_run)
+                    result["migrated"].append(cid)
+                except Exception as e:
+                    result["errors"].append(f"{cid} (migrate): {e}")
             else:
-                # 完整课件，不覆盖（可能是尚未迁移的老课件）
+                # 非 migrate 模式：跳过完整课件
                 result["skipped_full"].append(cid)
         else:
             # 缺失，创建
@@ -232,6 +263,11 @@ def main():
         action="store_true",
         help="仅检查，不写文件",
     )
+    parser.add_argument(
+        "--migrate",
+        action="store_true",
+        help="将主仓库中的完整课件替换为重定向页（需配合 courseware 仓库已有对应课件）",
+    )
     args = parser.parse_args()
 
     # 推断 courseware 根目录（脚本在 scripts/ 下）
@@ -239,12 +275,12 @@ def main():
 
     print("🔗 步骤7: 同步主仓库重定向入口...")
 
-    result = sync(courseware_root, args.main_repo, args.dry_run)
+    result = sync(courseware_root, args.main_repo, args.dry_run, args.migrate)
 
     if result["errors"]:
         for e in result["errors"]:
             print(f"  ❌ {e}")
-        if not result["created"]:
+        if not result["created"] and not result["migrated"]:
             sys.exit(1)
 
     if result["created"]:
@@ -254,14 +290,25 @@ def main():
             print(f"     + {cid}")
         if len(result["created"]) > 20:
             print(f"     ... 及另外 {len(result['created']) - 20} 个")
-    else:
+
+    if result["migrated"]:
+        label = "（dry-run）" if args.dry_run else ""
+        print(f"  🔄 迁移完整课件→重定向{label}: {len(result['migrated'])} 个")
+        for cid in result["migrated"][:20]:
+            print(f"     ↪ {cid}")
+        if len(result["migrated"]) > 20:
+            print(f"     ... 及另外 {len(result['migrated']) - 20} 个")
+
+    if not result["created"] and not result["migrated"]:
         print(f"  ✅ 所有课件已有重定向入口，无需新建")
 
     if result["skipped_full"]:
         print(f"  ⚠️  跳过完整课件（非重定向）: {len(result['skipped_full'])} 个")
+        print(f"     💡 使用 --migrate 将这些替换为重定向页")
 
     print(f"  📊 统计: 已有={result['already_ok']}, "
           f"新建={len(result['created'])}, "
+          f"迁移={len(result['migrated'])}, "
           f"跳过={len(result['skipped_full'])}, "
           f"错误={len(result['errors'])}")
 
