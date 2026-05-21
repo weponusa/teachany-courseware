@@ -213,6 +213,7 @@
 
   <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
   <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
 
   <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
   <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
@@ -840,6 +841,15 @@ Bloom taxonomy: remember understand apply analyze evaluate create
 </div>
 
 
+<!-- 音频播放列表 -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>[
+  {"id":"s01","label":"课程导入","src":"./tts/s01.mp3"},
+  {"id":"s02","label":"动词变形规则","src":"./tts/s02.mp3"},
+  {"id":"s03","label":"否定句与疑问句","src":"./tts/s03.mp3"}
+  ]</script>
+</div>
+
 <!-- TTS 音频 #TeachAny Edge-TTS -->
 <div class="teachany-audio-intro" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
   <button onclick="document.getElementById('ta-audio').play()" 
@@ -873,13 +883,75 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
 <script src="../../assets/scripts/teachany-section-hints.js" defer></script>
 <script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=bar-only-20260513" defer></script>
+
+<!-- Canvas 知识图谱绘制逻辑 -->
+<script>
+(function(){
+  var canvas = document.getElementById('kg-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  var nodes = [
+    {x:360,y:50,r:28,label:'一般现在时',color:'#ff6b6b'},
+    {x:160,y:130,r:22,label:'肯定句',color:'#4ecdc4'},
+    {x:360,y:130,r:22,label:'否定句',color:'#9b59b6'},
+    {x:560,y:130,r:22,label:'疑问句',color:'#f39c12'},
+    {x:80,y:180,r:16,label:'动词+s/es',color:'#3498db'},
+    {x:240,y:180,r:16,label:"don't/doesn't",color:'#e74c3c'},
+    {x:480,y:180,r:16,label:'Do/Does',color:'#2ecc71'}
+  ];
+  var edges = [[0,1],[0,2],[0,3],[1,4],[2,5],[3,6]];
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#0b1628';
+    ctx.fillRect(0,0,W,H);
+    edges.forEach(function(e){
+      var a=nodes[e[0]], b=nodes[e[1]];
+      ctx.beginPath();
+      ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.strokeStyle='rgba(255,255,255,0.25)'; ctx.lineWidth=2; ctx.stroke();
+    });
+    nodes.forEach(function(n){
+      ctx.beginPath();
+      ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fillStyle=n.color; ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.font=(n.r>20?'bold 11px':'10px')+' "PingFang SC",sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(n.label,n.x,n.y);
+    });
+  }
+  draw();
+
+  canvas.addEventListener('click', function(ev){
+    var rect=canvas.getBoundingClientRect();
+    var mx=(ev.clientX-rect.left)*(W/rect.width), my=(ev.clientY-rect.top)*(H/rect.height);
+    nodes.forEach(function(n){
+      var dx=mx-n.x, dy=my-n.y;
+      if(dx*dx+dy*dy < n.r*n.r){ n.r+=3; setTimeout(function(){n.r-=3;draw();},300); draw(); }
+    });
+  });
+})();
+</script>
 
 <!-- v7.7.4 标准知识图谱模块 -->
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;">
   <h2 class="section-title">🗺️ 知识图谱：一般现在时 | Present Simple</h2>
   <div data-teachany-kg="eng-e-present-simple">
-    <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布占位" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
+    <canvas class="tkg-fallback-canvas" id="kg-canvas" width="720" height="200" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:220px;background:#0b1628;border-radius:12px;"></canvas>
   </div>
+</section>
+
+<!-- 教学视频与资源 -->
+<section class="section" id="teaching-video" style="max-width:1080px;margin:24px auto;padding:0 20px;">
+  <h2 class="section-title">🎬 教学视频</h2>
+  <p style="color:#666;font-size:14px;margin-bottom:16px;text-align:center;">观看动画讲解一般现在时的核心规则</p>
+  <video controls playsinline preload="metadata" style="width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);" poster="assets/present-simple-hero.png">
+    <source src="assets/video/present-simple-animation.mp4" type="video/mp4">
+    <p>您的浏览器不支持视频播放。</p>
+  </video>
 </section>
 
 <!-- ═══ PPT 播放控件（v6.1 轻量注入） ═══ -->
