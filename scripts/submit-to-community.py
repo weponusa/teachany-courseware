@@ -572,15 +572,41 @@ def main():
         print(json.dumps(preview, ensure_ascii=False, indent=2))
         return
 
-    # 5. 选择提交路径
+    # 5. 选择提交路径（Worker first, auto-fallback to direct token）
     direct_token = get_direct_token()
+    worker_url = get_worker_url()
+    status, data = 0, {}
+
     if direct_token:
         print("🔑 检测到 TEACHANY_DIRECT_TOKEN，直连 GitHub（绕过 Worker）...")
         status, data = submit_via_direct_token(direct_token, payload)
     else:
-        worker_url = get_worker_url()
-        print(f"🚀 通过 TeachAny 官方 API 提交（{worker_url}）...")
-        status, data = submit_via_worker(worker_url, payload)
+        print(f"🚀 尝试 TeachAny 官方 API（{worker_url}）...")
+        try:
+            status, data = submit_via_worker(worker_url, payload)
+        except SystemExit:
+            # Worker 超时/不可达，自动 fallback
+            print()
+            print("⚠️  官方 API 不可达，尝试回退到 GitHub Direct Token 方案...")
+            direct_token = get_direct_token()
+            if not direct_token:
+                print()
+                print("═══════════════════════════════════════════════")
+                print("  需要 GitHub Token 才能继续提交")
+                print("═══════════════════════════════════════════════")
+                print()
+                print("请按以下步骤操作：")
+                print("  1. 打开 https://github.com/settings/tokens?type=beta")
+                print("  2. 点击 'Generate new token'")
+                print(f"  3. Repository access 选 'Only select repositories' → 选 {REPO}")
+                print("  4. Permissions → Repository permissions → Contents: Read and write")
+                print("  5. Permissions → Repository permissions → Pull requests: Read and write")
+                print("  6. 生成 token，复制")
+                print(f"  7. 重新运行：TEACHANY_DIRECT_TOKEN=ghp_xxx python3 scripts/submit-to-community.py {args.course_id}")
+                print()
+                sys.exit(4)
+            print("🔑 使用回退的 TEACHANY_DIRECT_TOKEN...")
+            status, data = submit_via_direct_token(direct_token, payload)
 
     # 6. 处理响应
     ok = data.get("ok", status in (200, 202, 204))
