@@ -607,6 +607,9 @@ def main():
                     continue
                 reason = 'inquiry_project'
             elif not nid:
+                # 课件 ID 本身就是正式课标 node_id 时，视为已挂载，不进入"其他知识"。
+                if cid in all_official_node_ids:
+                    continue
                 reason = 'missing_node_id'
             elif nid not in all_official_node_ids:
                 # v7.9.8 智能探测：尝试补全 <subject_prefix>-<level>- 前缀

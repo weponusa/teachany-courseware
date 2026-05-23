@@ -138,8 +138,9 @@ def attach_courses(all_nodes):
             for x in obj:
                 walk(x)
         elif isinstance(obj, dict):
-            if obj.get("node_id") and obj.get("id"):
-                node_courses.setdefault(obj["node_id"], []).append({
+            nid = obj.get("node_id") or obj.get("id", "")
+            if nid and obj.get("id"):
+                node_courses.setdefault(nid, []).append({
                     "id": obj["id"],
                     "name": obj.get("name") or obj.get("name_zh") or obj["id"],
                     "path": obj.get("path"),
