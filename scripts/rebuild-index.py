@@ -558,11 +558,7 @@ def main():
         virtual_nodes = []
         # 强制保留在"其他知识"的跨课标/探究课入口：这些内容即使挂了近似官方 node_id，
         # 也需要在"其他知识"里保留一份发现入口，避免 rebuild-index 把该 Tab 清空。
-        OTHER_TREE_FORCE_COURSE_IDS = {
-            'math-m-linear-function-inquiry-phone-plan',  # 一次函数 PBL 探究课
-            'course-classical-poetry',                    # 古典诗词系统课程
-            'chn-pingze-grade1',                          # 古诗平仄启蒙
-        }
+        OTHER_TREE_FORCE_COURSE_IDS = set()
         orphan_reasons = {'free_mode': 0, 'node_not_found': 0, 'missing_node_id': 0,
                           'forced_other': 0, 'inquiry_project': 0,
                           'ext_passed': 0, 'ext_rejected': 0}
@@ -605,7 +601,10 @@ def main():
                     continue  # 已在正规树挂载，跳过
                 reason = 'free_mode'
             elif lesson_type == 'inquiry-project':
-                # 探究课可同时挂正式知识树和"其他知识/探究课"入口，便于 PBL 场景发现。
+                # v7.10.1: 探究课如果 node_id 已在正规课标树中，不重复放入"其他知识"。
+                # 只有未挂载或课标树不存在的 PBL 入口，才进入"其他知识"。
+                if nid and nid in all_official_node_ids:
+                    continue
                 reason = 'inquiry_project'
             elif not nid:
                 reason = 'missing_node_id'
