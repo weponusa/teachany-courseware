@@ -396,22 +396,30 @@ function renderCourses(grid, courses, addCard = null) {
 
 /* ─── 加载"其他知识"图谱，提取课程ID ─── */
 async function loadOtherTreeCourseIds() {
-  try {
-    const resp = await fetch('./data/trees/other/user-generated.json?t=' + Date.now(), { cache: 'no-store' });
-    if (!resp.ok) return new Set();
-    const tree = await resp.json();
-    const ids = new Set();
-    (tree.domains || []).forEach(domain => {
-      (domain.nodes || []).forEach(node => {
-        (node.courses || []).forEach(cid => ids.add(cid));
+  const urls = [
+    // 本地开发优先读本地；线上如果 Pages CDN 未刷新，再用 raw main 兜底。
+    './data/trees/other/user-generated.json',
+    'https://raw.githubusercontent.com/weponusa/teachany-courseware/main/data/trees/other/user-generated.json',
+    'https://weponusa.github.io/teachany-courseware/data/trees/other/user-generated.json'
+  ];
+  for (const url of urls) {
+    try {
+      const resp = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!resp.ok) continue;
+      const tree = await resp.json();
+      const ids = new Set();
+      (tree.domains || []).forEach(domain => {
+        (domain.nodes || []).forEach(node => {
+          (node.courses || []).forEach(cid => ids.add(cid));
+        });
       });
-    });
-    console.log(`[TeachAny] 其他知识图谱包含 ${ids.size} 个课程ID`);
-    return ids;
-  } catch (e) {
-    console.warn('[TeachAny] 加载 other/user-generated.json 失败:', e.message);
-    return new Set();
+      console.log(`[TeachAny] 其他知识图谱包含 ${ids.size} 个课程ID (${url})`);
+      return ids;
+    } catch (e) {
+      console.warn('[TeachAny] 加载 other/user-generated.json 失败:', url, e.message);
+    }
   }
+  return new Set();
 }
 
 /* ─── 初始化 Gallery ────────────────────────── */
