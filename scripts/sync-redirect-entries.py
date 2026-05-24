@@ -47,18 +47,21 @@ REDIRECT_TEMPLATE = """\
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
   <meta http-equiv="refresh" content="0; url={target_url}">
   <link rel="canonical" href="{target_url}">
-  <title>TeachAny 课件已迁移</title>
-  <script>location.replace('{target_url}');</script>
+  <title>正在打开 TeachAny 课件</title>
+  <script>window.location.replace('{target_url}');</script>
 
   <meta name="teachany-courseware-id" content="{course_id}">
 
   <script src="./history-tracker.js" defer></script>
 </head>
-<body>
-  <h1>TeachAny 课件已迁移</h1>
-  <p><a href="{target_url}">打开 TeachAny Courseware</a></p>
+<body style="margin:0;background:#07111f;color:#e5f2ff;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;display:grid;min-height:100vh;place-items:center;text-align:center">
+  <main>
+    <p>正在打开课件，请稍候…</p>
+    <p><a style="color:#7dd3fc" href="{target_url}">如果没有自动打开，点这里</a></p>
+  </main>
 </body>
 </html>
 """
