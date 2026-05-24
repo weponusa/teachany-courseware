@@ -91,14 +91,39 @@ jobs:
               body
             });
 
-      - name: Label passed validation
+      - name: Label passed validation and merge
         if: steps.validate.outcome == 'success'
         uses: actions/github-script@v7
         with:
           script: |
             const issue_number = context.payload.pull_request.number;
+            const pr = context.payload.pull_request;
             await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number, labels: ['passed-validation'] });
             await github.rest.issues.removeLabel({ owner: context.repo.owner, repo: context.repo.repo, issue_number, name: 'needs-revision' }).catch(() => {});
+
+            const labels = (pr.labels || []).map(l => l.name);
+            if (!labels.includes('community-courseware')) {
+              console.log('Skip auto-merge: not a community-courseware PR');
+              return;
+            }
+            if (labels.includes('do-not-merge')) {
+              console.log('Skip auto-merge: do-not-merge label present');
+              return;
+            }
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: issue_number,
+              merge_method: 'squash',
+              commit_title: `${pr.title} (auto-merge)`,
+              commit_message: `自动合并：社区课件质检通过。\n\nPR #${issue_number}\n作者：${pr.user.login}`,
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body: '🎉 **已自动合并**\n\n接下来 `community-publish.yml` 会解包、运行 `rebuild-index.py` 注册课件，并部署到 `https://weponusa.github.io/teachany-courseware/`。',
+            });
 
       - name: Label needs revision
         if: steps.validate.outcome != 'success'
