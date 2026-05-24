@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: community-publish
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -49,6 +53,8 @@ jobs:
             fi
 
             course_id=$(python3 -c "import json,re; m=json.load(open('$tmp/manifest.json')); raw=str(m.get('id') or '$base').strip().lower(); raw=re.sub(r'[^a-z0-9-]+','-',raw).strip('-'); print(raw or '$base')")
+            submitted_id=$(python3 -c "import json,re; m=json.load(open('$json_file')); raw=str(m.get('id') or '$base').strip().lower(); raw=re.sub(r'[^a-z0-9-]+','-',raw).strip('-'); print(raw or '$base')")
+            node_id=$(python3 -c "import json,re; m=json.load(open('$json_file')); raw=str(m.get('node_id') or '').strip().lower(); raw=re.sub(r'[^a-z0-9-]+','-',raw).strip('-'); print(raw)")
             target="community/$course_id"
             if [ -d "$target" ]; then
               echo "⚠️ $course_id exists, replacing with new approved package"
@@ -60,6 +66,44 @@ jobs:
 
             # 兼容旧模板/旧 skill：解包时统一修正 logo 与标准运行时路径。
             python3 -c 'import sys; from pathlib import Path; p=Path(sys.argv[1]); html=p.read_text(encoding="utf-8", errors="ignore"); repl={"https://weponusa.github.io/teachany/assets/teachany-logo.png":"https://weponusa.github.io/teachany-courseware/assets/teachany-logo.png","https://weponusa.github.io/teachany/scripts/":"../../assets/scripts/","https://weponusa.github.io/teachany-courseware/scripts/":"../../assets/scripts/","../../scripts/":"../../assets/scripts/"}; [None for old,new in repl.items() if not (html:=html.replace(old,new))]; p.write_text(html, encoding="utf-8")' "$target/index.html"
+
+            # 为用户可能拿到的提交 ID / node_id 生成兼容入口，避免 PR 合并后因 manifest.id 与提交 ID 不一致而 404。
+            python3 - "$course_id" "$submitted_id" "$node_id" <<'PY'
+import sys
+from pathlib import Path
+course_id, submitted_id, node_id = sys.argv[1:4]
+base = Path('community')
+target_url = f'https://weponusa.github.io/teachany-courseware/community/{course_id}/index.html'
+html = f'''<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="refresh" content="0; url={target_url}">
+  <link rel="canonical" href="{target_url}">
+  <title>正在打开 TeachAny 课件</title>
+  <script>window.location.replace('{target_url}');</script>
+</head>
+<body style="margin:0;background:#07111f;color:#e5f2ff;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;display:grid;min-height:100vh;place-items:center;text-align:center">
+  <main>
+    <p>正在打开课件，请稍候…</p>
+    <p><a style="color:#7dd3fc" href="{target_url}">如果没有自动打开，点这里</a></p>
+  </main>
+</body>
+</html>
+'''
+for alias in {submitted_id, node_id}:
+    if not alias or alias == course_id:
+        continue
+    d = base / alias
+    if (d / 'manifest.json').exists():
+        print(f'↪️ alias {alias}: real course exists, skip')
+        continue
+    d.mkdir(parents=True, exist_ok=True)
+    (d / 'index.html').write_text(html, encoding='utf-8')
+    print(f'🔁 alias {alias} -> {course_id}')
+PY
 
             echo "$course_id" >> "$published_file"
             echo "✅ Published $pkg → $target"
