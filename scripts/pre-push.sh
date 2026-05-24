@@ -73,12 +73,27 @@ while read -r local_ref local_sha remote_ref remote_sha; do
         continue
     fi
 
+    validate_ids=""
+    for id in $changed_community; do
+        index="community/$id/index.html"
+        if [ -f "$index" ] \
+            && grep -q "weponusa.github.io/teachany-courseware" "$index" \
+            && grep -Eq "http-equiv=\"refresh\"|location\.replace" "$index"; then
+            echo "  ↪️  community/$id 是轻量跳转入口，跳过课件质检"
+            continue
+        fi
+        validate_ids="$validate_ids $id"
+    done
+
+    if [ -z "$validate_ids" ]; then
+        continue
+    fi
+
     echo ""
     echo "🔍 检测到以下社区课件变更，开始质检："
-    echo "$changed_community" | sed 's/^/   - community\//'
+    echo "$validate_ids" | tr ' ' '\n' | grep -v '^$' | sed 's/^/   - community\//'
 
-    ids=$(echo "$changed_community" | tr '\n' ' ')
-    if ! python3 scripts/validate-courseware.py $ids 2>&1; then
+    if ! python3 scripts/validate-courseware.py $validate_ids 2>&1; then
         echo ""
         echo "❌ validate-courseware.py 校验失败，push 被拒绝"
         echo ""
