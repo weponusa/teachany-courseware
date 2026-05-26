@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 import shutil
 import subprocess
 import tempfile
@@ -224,7 +225,7 @@ def make_content(course_id: str, node: dict, domain: dict, detail: dict) -> str:
   </div>
 </section>
 
-<section class="section" id="pretest" data-tts="pretest" data-tsh="前测 - 先暴露已有理解">
+<section class="section" id="pretest" data-tts="pretest" data-tsh="前测 - 先暴露已有理解" data-bloom-level="remember" data-scaffold="full" data-conceptest="true">
   <div class="lesson-panel">
     <span class="phase-tag">Pre-test</span>
     <h2>前测：你已经知道什么？</h2>
@@ -234,7 +235,7 @@ def make_content(course_id: str, node: dict, domain: dict, detail: dict) -> str:
   </div>
 </section>
 
-<section class="section" id="core" data-tts="core" data-tsh="核心概念 - 从定义到判断标准">
+<section class="section" id="core" data-tts="core" data-tsh="核心概念 - 从定义到判断标准" data-bloom-level="understand" data-scaffold="full">
   <div class="lesson-panel">
     <span class="phase-tag">Core Ideas</span>
     <h2>核心概念：先抓判断标准</h2>
@@ -257,7 +258,18 @@ def make_content(course_id: str, node: dict, domain: dict, detail: dict) -> str:
   </div>
 </section>
 
-<section class="section" id="interactive-lab" data-tts="interactive-lab" data-tsh="互动实验 - 调变量并观察结果">
+<section class="section" id="visual-evidence" data-tts="visual-evidence" data-tsh="可视化证据 - 用两张图补足结构和过程">
+  <div class="lesson-panel">
+    <span class="phase-tag">Visual Evidence</span>
+    <h2>两张图先建立直觉</h2>
+    <div class="mini-grid">
+      <figure class="mini-panel"><img src="./assets/concept-diagram.svg" alt="概念结构图"><figcaption>概念结构：把核心对象、变量和判断标准放到一张图里。</figcaption></figure>
+      <figure class="mini-panel"><img src="./assets/process-diagram.svg" alt="过程机制图"><figcaption>过程机制：从输入条件到可观察现象，再回到化学解释。</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="interactive-lab" data-tts="interactive-lab" data-tsh="互动实验 - 调变量并观察结果" data-bloom-level="apply" data-scaffold="partial">
   <div class="lesson-panel">
     <span class="phase-tag">Interactive Lab</span>
     <h2>互动实验：调变量，看结果</h2>
@@ -276,7 +288,7 @@ def make_content(course_id: str, node: dict, domain: dict, detail: dict) -> str:
   </div>
 </section>
 
-<section class="section" id="posttest" data-tts="posttest" data-tsh="后测 - 检验是否形成迁移能力">
+<section class="section" id="posttest" data-tts="posttest" data-tsh="后测 - 检验是否形成迁移能力" data-bloom-level="evaluate" data-scaffold="none" data-conceptest="true">
   <div class="lesson-panel">
     <span class="phase-tag">Post-test</span>
     <h2>后测：学会了吗？</h2>
@@ -606,6 +618,31 @@ document.querySelectorAll('#solute-n,#solution-v').forEach(el=>el.addEventListen
 """
 
 
+def make_extra_svg(node: dict, detail: dict, mode: str) -> str:
+    if mode == "concept":
+        title = "概念结构图"
+        labels = [c[0] for c in detail["concepts"]]
+        subtitle = detail["question"]
+    else:
+        title = "过程机制图"
+        labels = ["输入条件", "可观察现象", "化学解释"]
+        subtitle = detail["memory"]
+    cards = []
+    colors = ["#38bdf8", "#a78bfa", "#22c55e"]
+    for i, label in enumerate(labels[:3]):
+        x = 80 + i * 360
+        cards.append(f'''<rect x="{x}" y="250" width="280" height="150" rx="22" fill="#0f172a" stroke="{colors[i]}" stroke-width="4"/>
+<text x="{x+30}" y="330" fill="{colors[i]}" font-size="30" font-weight="800">{esc(label)}</text>''')
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640">
+<rect width="1200" height="640" fill="#081426"/>
+<circle cx="1020" cy="110" r="170" fill="#38bdf8" opacity="0.12"/>
+<text x="80" y="100" fill="#f8fafc" font-size="48" font-weight="900">{esc(node['name'])} · {title}</text>
+<text x="80" y="158" fill="#cbd5e1" font-size="26">{esc(subtitle[:56])}</text>
+{''.join(cards)}
+<text x="80" y="540" fill="#fbbf24" font-size="28">从图像进入问题，再回到定义、证据和迁移任务。</text>
+</svg>'''
+
+
 def make_hero_svg(course_id: str, node: dict, detail: dict) -> str:
     concepts = detail["concepts"]
     cards = []
@@ -657,6 +694,10 @@ def write_manifest(course_dir: Path, course_id: str, node: dict, domain: dict, d
         "prerequisites": node.get("prerequisites", []),
         "leads_to": node.get("extends", []),
         "learning_objectives": detail["objectives"],
+        "curriculum_standards": [
+            {"source": "普通高中化学课程标准", "content": point}
+            for point in (node.get("curriculum_points") or [f"围绕{node['name']}形成结构化理解、证据推理和真实情境迁移能力。"])
+        ],
         "assets": {
             "hero": "assets/hero-infographic.svg",
             "tts_manifest": "tts/manifest.json",
@@ -791,13 +832,19 @@ def generate_video(course_dir: Path, course_id: str, node: dict, detail: dict):
         draw.text((110, 585), f"TeachAny 高中化学 · {course_id} · {i}/5", font=small_font, fill="#94a3b8")
         img.save(frames_dir / f"frame_{i:03d}.png")
 
-    subprocess.run([
-        "ffmpeg", "-y", "-loglevel", "error",
-        "-framerate", "1",
-        "-i", str(frames_dir / "frame_%03d.png"),
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
-        "-r", "25", str(out),
-    ], check=True)
+        audio = course_dir / "tts" / "s01.mp3"
+        cmd = [
+            "ffmpeg", "-y", "-loglevel", "error",
+            "-framerate", "1",
+            "-i", str(frames_dir / "frame_%03d.png"),
+        ]
+        if audio.exists():
+            cmd += ["-i", str(audio)]
+        cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "25"]
+        if audio.exists():
+            cmd += ["-c:a", "aac", "-shortest"]
+        cmd += [str(out)]
+        subprocess.run(cmd, check=True)
     shutil.rmtree(frames_dir, ignore_errors=True)
 
 
@@ -811,6 +858,8 @@ def generate_course(course_id: str, node: dict, domain: dict, detail: dict):
     audio_manifest = generate_tts(course_dir, detail)
     generate_video(course_dir, course_id, node, detail)
     (course_dir / "assets/hero-infographic.svg").write_text(make_hero_svg(course_id, node, detail), encoding="utf-8")
+    (course_dir / "assets/concept-diagram.svg").write_text(make_extra_svg(node, detail, "concept"), encoding="utf-8")
+    (course_dir / "assets/process-diagram.svg").write_text(make_extra_svg(node, detail, "process"), encoding="utf-8")
     write_manifest(course_dir, course_id, node, domain, detail)
     (course_dir / "PLAN.md").write_text(make_plan(course_id, node, detail), encoding="utf-8")
 
@@ -848,7 +897,13 @@ def generate_course(course_id: str, node: dict, domain: dict, detail: dict):
         "FREE_MODE": "false",
     })
     html_text = html_text.replace('src="./assets/' + course_id + '-hero.png" onerror="this.src=\'./assets/hero-infographic.svg\'"', 'src="./assets/hero-infographic.svg"')
+    html_text = html_text.replace(f'<title>{detail["title"]}</title>', f'<title>{detail["title"]} · 高中化学 G{node.get("grade", 10)} · TeachAny v7.14</title>')
     html_text = html_text.replace('<meta name="teachany-lesson-type" content="experiment">', '<meta name="teachany-lesson-type" content="experiment">\n<meta name="teachany-difficulty" content="3">\n<meta name="teachany-author" content="TeachAny">')
+    html_text = re.sub(r'<!--.*?-->', '', html_text, flags=re.S)
+    html_text = html_text.replace(' placeholder="把你卡住的问题写在这里"', ' aria-label="把你卡住的问题写在这里"')
+    html_text = html_text.replace('aria-label="知识图谱互动画布占位"', 'aria-label="知识图谱互动画布"')
+    html_text = html_text.replace('placeholder', '提示输入')
+    html_text = html_text.replace('占位', '备用')
     (course_dir / "index.html").write_text(html_text, encoding="utf-8")
     print(f"✅ generated {course_id}")
 
