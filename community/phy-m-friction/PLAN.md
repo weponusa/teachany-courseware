@@ -1,64 +1,30 @@
-# 摩擦力课件教学计划
+# PLAN.md — 摩擦力：从实验现象到变量关系
 
-## 基本信息
-- **course_id**: phy-m-friction
-- **node_id**: phy-m-friction
-- **学科**: 物理
-- **年级**: 八年级
-- **课型**: new-concept（新概念课）
+- course_id: `phy-m-friction`
+- node_id: `phy-m-friction`
+- 模式：TeachAny v7.14 完整模式
+- 课型：experiment / new-concept
 
-## 学习者画像
-- 已学前置：力的概念、二力平衡
-- 常见卡点：混淆滑动摩擦力与静摩擦力、误以为摩擦力总是阻力、不知道摩擦力与速度无关
-- 默认难度：标准
+## Phase 0 定义与检索
+- 学段：初中 8 年级
+- 学科：物理
+- 课标节点：摩擦力
+- 课标摘录：通过常见事例或实验，了解重力、弹力和摩擦力，认识力的作用效果。探究并了解滑动摩擦力的大小与哪些因素有关。；探究并了解滑动摩擦力的大小与哪些因素有关。
 
-## ABT 叙事
-- **And**：学生已经知道推箱子要用力，松手箱子会停下来
-- **But**：但为什么冰面上比水泥地上滑？为什么推箱子推不动？为什么刹车能停？
-- **Therefore**：本课学习摩擦力的定义、分类、影响因素和增减方法
+## Phase 1 教学骨架
+- 问题锚点：怎样用实验现象和变量关系解释摩擦力？
+- ABT：
+  - And：你已经在生活中见过摩擦力相关现象，也能说出一些直观经验。
+  - But：物理学习不能停在经验判断，因为经验常被条件影响；换一个材料、尺度或装置，结论可能改变。
+  - Therefore：所以本课要用“观察现象—控制变量—建立关系—解释应用”的路径，理解摩擦力。
+- 真实互动：Canvas 变量实验 + PhET 成熟仿真 + 前后测反馈
+- 评估闭环：前测 → 实验检查表 → 概念拆解 → 互动实验 → 后测 → 迁移任务
 
-## 问题锚点
-1. 为什么冰面上走路容易滑倒？
-2. 为什么汽车刹车能停下来？
-3. 怎样增大或减小摩擦力？
+## Phase 2 标准模块
+- 已挂载 AI 学伴、导师卡片、TTS narrator、section hints、知识图谱、连续音频播放器。
+- 物理仿真：Canvas 自定义变量互动 + PhET 中文仿真。
 
-## 核心交互
-- **类型**: Canvas 参数滑块 + PhET iframe 仿真
-- **学生操作**: 调节压力和摩擦系数滑块，拖动PhET仿真中的书本
-- **系统反馈**: 实时显示摩擦力计算结果和力的箭头
-- **学到什么**: 滑动摩擦力只与压力和粗糙程度有关
-
-## Section 顺序
-1. hero
-2. hero-infographic
-3. problem-anchor
-4. objectives
-5. pretest（前测）
-6. module-1（认识摩擦力）
-7. module-2（滑动摩擦力与静摩擦力）
-8. interaction（PhET仿真 + Canvas实验）
-9. module-3（增大与减小摩擦）
-10. posttest（后测）
-11. summary（小结）
-12. knowledge-graph
-13. teachany-ai-tutor-card
-
-## Bloom 覆盖
-- 记忆：摩擦力定义和产生条件
-- 理解：区分滑动/静摩擦力
-- 应用：判断增大/减小摩擦的方法
-- 分析：探究影响摩擦力的因素
-
-## ConcepTest 位置
-- module-1 末尾：书在桌面上静止是否受摩擦力
-- module-2 末尾：推箱子没推动时静摩擦力大小
-- module-3 末尾：辨析增大摩擦的做法
-
-## 自适应分支
-- review-prereq：前测全错 → 回顾力的概念
-- scaffold：部分前测正确 → 增加引导提示
-- normal：前测1-2题正确 → 标准路径
-- challenge：前测全对 → 跳至拓展题（滚动摩擦力、摩擦角）
-
-## 版本
-- v1.0.0 · 2026-05-22 · 首次创建
+## Phase 3 验证计划
+- `node scripts/validate-courseware.cjs community/phy-m-friction`
+- `python3 scripts/validate-courseware.py phy-m-friction`
+- `python3 scripts/rebuild-index.py`
