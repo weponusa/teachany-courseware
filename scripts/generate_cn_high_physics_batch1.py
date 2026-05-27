@@ -177,6 +177,16 @@ def interaction_controls(kind: str) -> str:
         return '''<label>初速度 m/s<input id="ua-v0" type="range" min="0" max="30" value="10"></label><label>加速度 m/s²<input id="ua-a" type="range" min="-8" max="8" value="2"></label><label>时间 s<input id="ua-t" type="range" min="1" max="10" value="4"></label>'''
     if kind == "free_fall":
         return '''<label>下落时间 s<input id="fall-t" type="range" min="0.5" max="5" step="0.5" value="2"></label><label>空气阻力<select id="drag"><option value="0">忽略</option><option value="0.35">较小</option><option value="0.7">较大</option></select></label>'''
+    if kind == "forces":
+        return '''<label>质量 kg<input id="mass" type="range" min="1" max="20" value="5"></label><label>摩擦因数<input id="mu" type="range" min="0" max="0.8" step="0.05" value="0.3"></label><label>弹簧伸长 m<input id="stretch" type="range" min="0" max="0.5" step="0.05" value="0.2"></label>'''
+    if kind == "decomposition":
+        return '''<label>力 F/N<input id="force" type="range" min="10" max="200" value="100"></label><label>角度 θ<input id="angle" type="range" min="0" max="90" value="30"></label>'''
+    if kind == "newton":
+        return '''<label>合力 N<input id="netf" type="range" min="0" max="100" value="40"></label><label>质量 kg<input id="newton-m" type="range" min="1" max="20" value="5"></label>'''
+    if kind == "projectile":
+        return '''<label>初速度 m/s<input id="proj-v" type="range" min="5" max="50" value="25"></label><label>抛射角 °<input id="proj-a" type="range" min="0" max="80" value="35"></label>'''
+    if kind == "gravitation":
+        return '''<label>中心天体质量倍数<input id="grav-m" type="range" min="1" max="20" value="5"></label><label>距离倍数<input id="grav-r" type="range" min="1" max="10" value="3"></label>'''
     return '''<label>半径 m<input id="radius" type="range" min="1" max="10" value="4"></label><label>速率 m/s<input id="speed" type="range" min="1" max="30" value="12"></label>'''
 
 
@@ -207,6 +217,31 @@ document.querySelectorAll('#ua-v0,#ua-a,#ua-t').forEach(el=>el.addEventListener(
         return common + """
 function drawFall(){clearCanvas();const t=+document.getElementById('fall-t').value,drag=+document.getElementById('drag').value;const g=9.8*(1-drag);const h=0.5*g*t*t;ctx.strokeStyle='#94a3b8';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(500,70);ctx.lineTo(500,370);ctx.stroke();ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(500,80+Math.min(280,h*6),24,0,Math.PI*2);ctx.fill();text(`有效加速度≈${g.toFixed(1)} m/s²`,90,100,32,'#fbbf24');text(`下落位移≈${h.toFixed(1)} m`,90,160,32,'#dbeafe');text(drag===0?'理想自由落体：只受重力。':'空气阻力使实际下落偏离自由落体模型。',90,390,24,'#cbd5e1');document.getElementById('lab-feedback').textContent=`下落 ${t}s，位移约 ${h.toFixed(1)}m。`;}
 document.querySelectorAll('#fall-t,#drag').forEach(el=>el.addEventListener('input',drawFall));drawFall();
+"""
+    if kind == "forces":
+        return common + """
+function drawForces(){clearCanvas();const m=+document.getElementById('mass').value,mu=+document.getElementById('mu').value,x=+document.getElementById('stretch').value;const g=9.8,N=m*g,f=mu*N,k=100,F=k*x;axis();text(`重力 G=mg=${N.toFixed(1)}N`,80,90,30,'#fbbf24');text(`滑动摩擦 f=μN=${f.toFixed(1)}N`,80,145,30,'#dbeafe');text(`弹力 F=kx=${F.toFixed(1)}N`,80,200,30,'#bae6fd');ctx.fillStyle='#38bdf8';ctx.fillRect(420,230,120,70);ctx.strokeStyle='#f97316';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(480,230);ctx.lineTo(480,140);ctx.stroke();ctx.strokeStyle='#22c55e';ctx.beginPath();ctx.moveTo(540,265);ctx.lineTo(650,265);ctx.stroke();document.getElementById('lab-feedback').textContent=`先画受力图，再分别计算重力、弹力、摩擦力。`;}
+document.querySelectorAll('#mass,#mu,#stretch').forEach(el=>el.addEventListener('input',drawForces));drawForces();
+"""
+    if kind == "decomposition":
+        return common + """
+function drawDecomposition(){clearCanvas();const F=+document.getElementById('force').value,ang=+document.getElementById('angle').value*Math.PI/180;const fx=F*Math.cos(ang),fy=F*Math.sin(ang);axis();const x0=160,y0=300,scale=2;ctx.strokeStyle='#fbbf24';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0+fx*scale,y0-fy*scale);ctx.stroke();ctx.strokeStyle='#38bdf8';ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0+fx*scale,y0);ctx.stroke();ctx.strokeStyle='#a78bfa';ctx.beginPath();ctx.moveTo(x0+fx*scale,y0);ctx.lineTo(x0+fx*scale,y0-fy*scale);ctx.stroke();text(`Fx=Fcosθ=${fx.toFixed(1)}N`,90,90,30,'#38bdf8');text(`Fy=Fsinθ=${fy.toFixed(1)}N`,90,145,30,'#a78bfa');document.getElementById('lab-feedback').textContent=`分解不是把力变少，而是换成等效的两个方向分量。`;}
+document.querySelectorAll('#force,#angle').forEach(el=>el.addEventListener('input',drawDecomposition));drawDecomposition();
+"""
+    if kind == "newton":
+        return common + """
+function drawNewton(){clearCanvas();const F=+document.getElementById('netf').value,m=+document.getElementById('newton-m').value;const a=F/m;axis();ctx.fillStyle='#38bdf8';ctx.fillRect(260,230,130,70);ctx.strokeStyle='#fbbf24';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(390,265);ctx.lineTo(390+F*4,265);ctx.stroke();text(`a=F合/m=${a.toFixed(2)} m/s²`,90,95,34,'#fbbf24');text(`合力 ${F}N，质量 ${m}kg`,90,155,28,'#dbeafe');document.getElementById('lab-feedback').textContent=`合力决定加速度：同样合力下，质量越大加速度越小。`;}
+document.querySelectorAll('#netf,#newton-m').forEach(el=>el.addEventListener('input',drawNewton));drawNewton();
+"""
+    if kind == "projectile":
+        return common + """
+function drawProjectile(){clearCanvas();const v=+document.getElementById('proj-v').value,a=+document.getElementById('proj-a').value*Math.PI/180;const vx=v*Math.cos(a),vy=v*Math.sin(a),g=9.8;axis();ctx.strokeStyle='#fbbf24';ctx.lineWidth=4;ctx.beginPath();for(let t=0;t<=2*vy/g;t+=0.05){const x=90+vx*t*10,y=330-(vy*t-0.5*g*t*t)*10;if(t===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();text(`vx=${vx.toFixed(1)} m/s（水平匀速）`,90,80,28,'#38bdf8');text(`vy0=${vy.toFixed(1)} m/s（竖直匀变速）`,90,130,28,'#a78bfa');document.getElementById('lab-feedback').textContent=`抛体运动可分解为水平匀速和竖直匀变速。`;}
+document.querySelectorAll('#proj-v,#proj-a').forEach(el=>el.addEventListener('input',drawProjectile));drawProjectile();
+"""
+    if kind == "gravitation":
+        return common + """
+function drawGravitation(){clearCanvas();const M=+document.getElementById('grav-m').value,r=+document.getElementById('grav-r').value;const F=M/(r*r);const cx=450,cy=220,R=40+18*r;ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(cx,cy,35+M,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#38bdf8';ctx.lineWidth=4;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#bae6fd';ctx.beginPath();ctx.arc(cx+R,cy,14,0,Math.PI*2);ctx.fill();text(`F∝M/r²=${F.toFixed(2)}（相对值）`,90,90,32,'#fbbf24');text('距离变为 2 倍，引力变为 1/4；质量变大，引力等比例增大。',90,380,24,'#dbeafe');document.getElementById('lab-feedback').textContent=`中心质量倍数 ${M}，距离倍数 ${r}，相对引力 ${F.toFixed(2)}。`;}
+document.querySelectorAll('#grav-m,#grav-r').forEach(el=>el.addEventListener('input',drawGravitation));drawGravitation();
 """
     return common + """
 function drawCircular(){clearCanvas();const r=+document.getElementById('radius').value,v=+document.getElementById('speed').value;const a=v*v/r;const cx=470,cy=220,R=r*23;ctx.strokeStyle='#38bdf8';ctx.lineWidth=4;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(cx+R/Math.sqrt(2),cy-R/Math.sqrt(2),18,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#22c55e';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(cx+R/Math.sqrt(2),cy-R/Math.sqrt(2));ctx.lineTo(cx,cy);ctx.stroke();text(`a=v²/r=${a.toFixed(1)} m/s²`,90,90,32,'#fbbf24');text('绿色箭头指向圆心：速度方向改变产生向心加速度。',90,380,24,'#dbeafe');document.getElementById('lab-feedback').textContent=`半径 ${r}m、速率 ${v}m/s，向心加速度 ${a.toFixed(1)}m/s²。`;}
