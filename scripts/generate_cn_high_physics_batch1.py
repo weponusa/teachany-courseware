@@ -187,6 +187,22 @@ def interaction_controls(kind: str) -> str:
         return '''<label>初速度 m/s<input id="proj-v" type="range" min="5" max="50" value="25"></label><label>抛射角 °<input id="proj-a" type="range" min="0" max="80" value="35"></label>'''
     if kind == "gravitation":
         return '''<label>中心天体质量倍数<input id="grav-m" type="range" min="1" max="20" value="5"></label><label>距离倍数<input id="grav-r" type="range" min="1" max="10" value="3"></label>'''
+    if kind == "energy":
+        return '''<label>质量 kg<input id="en-m" type="range" min="1" max="20" value="5"></label><label>高度 m<input id="en-h" type="range" min="0" max="20" value="8"></label><label>速度 m/s<input id="en-v" type="range" min="0" max="30" value="10"></label>'''
+    if kind == "momentum":
+        return '''<label>质量 kg<input id="mo-m" type="range" min="1" max="20" value="4"></label><label>速度 m/s<input id="mo-v" type="range" min="-20" max="20" value="8"></label><label>作用时间 s<input id="mo-t" type="range" min="0.1" max="5" step="0.1" value="1"></label>'''
+    if kind == "electric":
+        return '''<label>电荷量倍数<input id="q1" type="range" min="-5" max="5" value="3"></label><label>距离倍数<input id="er" type="range" min="1" max="10" value="4"></label>'''
+    if kind == "circuit":
+        return '''<label>电压 V<input id="voltage" type="range" min="1" max="24" value="6"></label><label>电阻 Ω<input id="resistance" type="range" min="1" max="50" value="12"></label>'''
+    if kind == "magnetic":
+        return '''<label>电流 A<input id="mag-i" type="range" min="1" max="10" value="4"></label><label>磁场 T<input id="mag-b" type="range" min="0" max="5" step="0.1" value="1.5"></label><label>夹角 °<input id="mag-a" type="range" min="0" max="90" value="90"></label>'''
+    if kind == "wave":
+        return '''<label>频率 Hz<input id="wave-f" type="range" min="1" max="10" value="3"></label><label>波速 m/s<input id="wave-v" type="range" min="1" max="30" value="12"></label>'''
+    if kind == "gas_laws":
+        return '''<label>温度 K<input id="gas-t" type="range" min="200" max="600" value="300"></label><label>体积 L<input id="gas-v" type="range" min="1" max="20" value="8"></label>'''
+    if kind == "modern":
+        return '''<label>光频率倍数<input id="nu" type="range" min="1" max="10" value="5"></label><label>逸出功倍数<input id="work" type="range" min="1" max="8" value="3"></label>'''
     return '''<label>半径 m<input id="radius" type="range" min="1" max="10" value="4"></label><label>速率 m/s<input id="speed" type="range" min="1" max="30" value="12"></label>'''
 
 
@@ -242,6 +258,46 @@ document.querySelectorAll('#proj-v,#proj-a').forEach(el=>el.addEventListener('in
         return common + """
 function drawGravitation(){clearCanvas();const M=+document.getElementById('grav-m').value,r=+document.getElementById('grav-r').value;const F=M/(r*r);const cx=450,cy=220,R=40+18*r;ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(cx,cy,35+M,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#38bdf8';ctx.lineWidth=4;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#bae6fd';ctx.beginPath();ctx.arc(cx+R,cy,14,0,Math.PI*2);ctx.fill();text(`F∝M/r²=${F.toFixed(2)}（相对值）`,90,90,32,'#fbbf24');text('距离变为 2 倍，引力变为 1/4；质量变大，引力等比例增大。',90,380,24,'#dbeafe');document.getElementById('lab-feedback').textContent=`中心质量倍数 ${M}，距离倍数 ${r}，相对引力 ${F.toFixed(2)}。`;}
 document.querySelectorAll('#grav-m,#grav-r').forEach(el=>el.addEventListener('input',drawGravitation));drawGravitation();
+"""
+    if kind == "energy":
+        return common + """
+function drawEnergy(){clearCanvas();const m=+document.getElementById('en-m').value,h=+document.getElementById('en-h').value,v=+document.getElementById('en-v').value;const Ep=m*9.8*h,Ek=.5*m*v*v,E=Ep+Ek;text(`重力势能 Ep=mgh=${Ep.toFixed(1)}J`,80,90,30,'#fbbf24');text(`动能 Ek=1/2mv²=${Ek.toFixed(1)}J`,80,145,30,'#38bdf8');text(`机械能 E=${E.toFixed(1)}J`,80,200,30,'#22c55e');ctx.fillStyle='#a78bfa';ctx.fillRect(520,320-h*10,70,h*10);ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(555,300-h*10,20,0,Math.PI*2);ctx.fill();document.getElementById('lab-feedback').textContent=`能量分析先确定系统和是否只有保守力做功。当前机械能 ${E.toFixed(1)}J。`;}
+document.querySelectorAll('#en-m,#en-h,#en-v').forEach(el=>el.addEventListener('input',drawEnergy));drawEnergy();
+"""
+    if kind == "momentum":
+        return common + """
+function drawMomentum(){clearCanvas();const m=+document.getElementById('mo-m').value,v=+document.getElementById('mo-v').value,t=+document.getElementById('mo-t').value;const p=m*v,F=p/t;ctx.fillStyle='#38bdf8';ctx.fillRect(340+v*8,235,110,60);ctx.strokeStyle='#fbbf24';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(395,235);ctx.lineTo(395+v*10,235);ctx.stroke();text(`动量 p=mv=${p.toFixed(1)} kg·m/s`,90,90,32,'#fbbf24');text(`平均力≈Δp/Δt=${F.toFixed(1)}N`,90,145,30,'#dbeafe');document.getElementById('lab-feedback').textContent=`碰撞时间越长，同样动量变化对应的平均力越小。`;}
+document.querySelectorAll('#mo-m,#mo-v,#mo-t').forEach(el=>el.addEventListener('input',drawMomentum));drawMomentum();
+"""
+    if kind == "electric":
+        return common + """
+function drawElectric(){clearCanvas();const q=+document.getElementById('q1').value,r=+document.getElementById('er').value;const E=q/(r*r);const cx=450,cy=220;ctx.fillStyle=q>=0?'#f97316':'#38bdf8';ctx.beginPath();ctx.arc(cx,cy,35,0,Math.PI*2);ctx.fill();for(let i=0;i<12;i++){const a=i*Math.PI/6;ctx.strokeStyle=q>=0?'#fbbf24':'#bae6fd';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*r*30,cy+Math.sin(a)*r*30);ctx.stroke();}text(`场强相对值 E∝q/r²=${E.toFixed(2)}`,90,90,32,'#fbbf24');text('电场是电荷周围对其他电荷施力的空间性质。',90,380,24,'#dbeafe');document.getElementById('lab-feedback').textContent=`电荷量越大场越强，距离越远按平方减弱。`;}
+document.querySelectorAll('#q1,#er').forEach(el=>el.addEventListener('input',drawElectric));drawElectric();
+"""
+    if kind == "circuit":
+        return common + """
+function drawCircuit(){clearCanvas();const U=+document.getElementById('voltage').value,R=+document.getElementById('resistance').value;const I=U/R,P=U*I;ctx.strokeStyle='#38bdf8';ctx.lineWidth=5;ctx.strokeRect(220,130,380,190);ctx.fillStyle='#fbbf24';ctx.fillRect(250,200,60,30);ctx.strokeStyle='#f97316';ctx.beginPath();ctx.arc(500,225,35,0,Math.PI*2);ctx.stroke();text(`I=U/R=${I.toFixed(2)}A`,90,90,32,'#fbbf24');text(`P=UI=${P.toFixed(1)}W`,90,145,30,'#dbeafe');document.getElementById('lab-feedback').textContent=`电压推动电荷定向移动，电阻限制电流。`;}
+document.querySelectorAll('#voltage,#resistance').forEach(el=>el.addEventListener('input',drawCircuit));drawCircuit();
+"""
+    if kind == "magnetic":
+        return common + """
+function drawMagnetic(){clearCanvas();const I=+document.getElementById('mag-i').value,B=+document.getElementById('mag-b').value,a=+document.getElementById('mag-a').value*Math.PI/180;const F=B*I*Math.sin(a);text(`F=BILsinθ=${F.toFixed(2)}（相对）`,90,90,32,'#fbbf24');ctx.strokeStyle='#38bdf8';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(160,260);ctx.lineTo(720,260);ctx.stroke();ctx.strokeStyle='#f97316';ctx.lineWidth=4;for(let x=180;x<720;x+=60){ctx.beginPath();ctx.moveTo(x,110);ctx.lineTo(x,390);ctx.stroke();}text('磁场方向、电流方向和受力方向共同决定带电粒子或通电导线运动。',90,410,24,'#dbeafe');document.getElementById('lab-feedback').textContent=`夹角越接近 90°，安培力或洛伦兹力越明显。`;}
+document.querySelectorAll('#mag-i,#mag-b,#mag-a').forEach(el=>el.addEventListener('input',drawMagnetic));drawMagnetic();
+"""
+    if kind == "wave":
+        return common + """
+function drawWave(){clearCanvas();const f=+document.getElementById('wave-f').value,v=+document.getElementById('wave-v').value;const lam=v/f;ctx.strokeStyle='#38bdf8';ctx.lineWidth=4;ctx.beginPath();for(let x=80;x<820;x+=4){const y=230+60*Math.sin((x-80)/lam/12*Math.PI*2);if(x===80)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();text(`λ=v/f=${lam.toFixed(2)}m`,90,90,32,'#fbbf24');text('频率越高，在同一波速下波长越短。',90,380,24,'#dbeafe');document.getElementById('lab-feedback').textContent=`波速 ${v}m/s，频率 ${f}Hz，波长 ${lam.toFixed(2)}m。`;}
+document.querySelectorAll('#wave-f,#wave-v').forEach(el=>el.addEventListener('input',drawWave));drawWave();
+"""
+    if kind == "gas_laws":
+        return common + """
+function drawGasLaw(){clearCanvas();const T=+document.getElementById('gas-t').value,V=+document.getElementById('gas-v').value;const P=T/V;ctx.strokeStyle='#38bdf8';ctx.lineWidth=4;ctx.strokeRect(360,120,180,V*12);for(let i=0;i<40;i++){ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(370+Math.random()*160,130+Math.random()*Math.max(40,V*12-20),4,0,Math.PI*2);ctx.fill();}text(`P∝T/V=${P.toFixed(1)}（相对）`,90,90,32,'#fbbf24');document.getElementById('lab-feedback').textContent=`温度升高压强增大，体积增大压强降低（定量模型需看控制变量）。`;}
+document.querySelectorAll('#gas-t,#gas-v').forEach(el=>el.addEventListener('input',drawGasLaw));drawGasLaw();
+"""
+    if kind == "modern":
+        return common + """
+function drawModern(){clearCanvas();const nu=+document.getElementById('nu').value,W=+document.getElementById('work').value;const Ek=Math.max(0,nu-W);text(`光子能量 E=hν：频率倍数 ${nu}`,90,90,32,'#fbbf24');text(`逸出功倍数 ${W}，最大动能≈${Ek}`,90,150,30,'#dbeafe');ctx.fillStyle=Ek>0?'#22c55e':'#64748b';ctx.fillRect(420,260,260,60);text(Ek>0?'有光电子逸出':'频率不足，无光电子',420,240,26,'#f8fafc');document.getElementById('lab-feedback').textContent=Ek>0?'频率超过阈值，发生光电效应。':'强度再大也不够，频率未超过阈值。';}
+document.querySelectorAll('#nu,#work').forEach(el=>el.addEventListener('input',drawModern));drawModern();
 """
     return common + """
 function drawCircular(){clearCanvas();const r=+document.getElementById('radius').value,v=+document.getElementById('speed').value;const a=v*v/r;const cx=470,cy=220,R=r*23;ctx.strokeStyle='#38bdf8';ctx.lineWidth=4;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(cx+R/Math.sqrt(2),cy-R/Math.sqrt(2),18,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#22c55e';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(cx+R/Math.sqrt(2),cy-R/Math.sqrt(2));ctx.lineTo(cx,cy);ctx.stroke();text(`a=v²/r=${a.toFixed(1)} m/s²`,90,90,32,'#fbbf24');text('绿色箭头指向圆心：速度方向改变产生向心加速度。',90,380,24,'#dbeafe');document.getElementById('lab-feedback').textContent=`半径 ${r}m、速率 ${v}m/s，向心加速度 ${a.toFixed(1)}m/s²。`;}
