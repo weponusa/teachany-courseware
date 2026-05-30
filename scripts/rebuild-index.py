@@ -317,9 +317,21 @@ def main():
 
     # 按 (subject, node_id) 分组
     node_courses = defaultdict(list)  # (subject, node_id) -> [course_id]
+    other_only_courses = set()  # PBL/跨课标探究入口：只进入"其他知识"，不反向挂 K12 正式树
     for course_id, (manifest, _src) in courses.items():
         subject = manifest.get('subject', '')
         node_id = manifest.get('node_id', '')
+        lesson_type = (manifest.get('lesson_type') or '').strip()
+        is_inquiry_course = (
+            lesson_type == 'inquiry-project'
+            or subject == 'inquiry'
+            or str(course_id).startswith('inquiry-')
+            or str(node_id).startswith('inquiry-')
+        )
+        if is_inquiry_course:
+            other_only_courses.add(course_id)
+            print(f'  🧩 {course_id}: PBL/探究课只收纳到"其他知识"，不挂正式 K12 树')
+            continue
         if subject and node_id:
             node_courses[(subject, node_id)].append(course_id)
         else:
@@ -448,8 +460,11 @@ def main():
                     normalized_current.append(c)
             current_courses = normalized_current
 
-            # 过滤掉不存在的课件引用（legacy 也算"存在"）
-            valid_current = [c for c in current_courses if c in courses or c in legacy_ids]
+            # 过滤掉不存在的课件引用（legacy 也算"存在"）；PBL/探究课不保留在正式 K12 树
+            valid_current = [
+                c for c in current_courses
+                if (c in courses or c in legacy_ids) and c not in other_only_courses
+            ]
             invalid_current = [c for c in current_courses if c not in courses and c not in legacy_ids]
 
             if invalid_current:
@@ -596,15 +611,14 @@ def main():
             if cid in OTHER_TREE_FORCE_COURSE_IDS:
                 reason = 'forced_other'
             elif is_free:
-                # v7.10: free_mode 课件如果 node_id 已在正规课标树中，不重复放入"其他知识"
-                if nid and nid in all_official_node_ids:
-                    continue  # 已在正规树挂载，跳过
-                reason = 'free_mode'
-            elif lesson_type == 'inquiry-project':
-                # v7.10.1: 探究课如果 node_id 已在正规课标树中，不重复放入"其他知识"。
-                # 只有未挂载或课标树不存在的 PBL 入口，才进入"其他知识"。
-                if nid and nid in all_official_node_ids:
+                # free_mode 只有在确属扩展入口时进入"其他知识"。
+                # 已有正式课标 node_id 的普通 K12 课件不重复进入"其他知识"，避免污染其他知识列表。
+                if nid and nid in all_official_node_ids and not (cid.startswith('ext-') or nid.startswith('ext-')):
                     continue
+                reason = 'free_mode'
+            elif lesson_type == 'inquiry-project' or subject == 'inquiry' or cid.startswith('inquiry-') or nid.startswith('inquiry-'):
+                # PBL/探究课是跨课标项目入口，即使引用了某个正式 node_id，也必须保留在"其他知识"。
+                # 正式 K12 树只保留常规课程；探究课通过 other-<course_id> 发现，避免污染课标覆盖率。
                 reason = 'inquiry_project'
             elif not nid:
                 # 课件 ID 本身就是正式课标 node_id 时，视为已挂载，不进入"其他知识"。
