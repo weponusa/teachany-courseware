@@ -37,11 +37,19 @@ const REGISTRY_URL = SITE_BASE_URL + '/registry.json';
 const COMMUNITY_INDEX_URL = SITE_BASE_URL + '/community/index.json';
 const COURSEWARE_BASE_URL = SITE_BASE_URL; // 课件实体跟随当前站点域名，兼容 Cloudflare Pages / GitHub Pages
 const SELF_BASE_URL = SITE_BASE_URL;       // hero fallback 跟随当前站点域名
-const CACHE_KEY = 'teachany_registry_v3_19'; // v3.19: dynamic base URL for custom domains
+const CACHE_KEY = 'teachany_registry_v3_20'; // v3.20: normalize GitHub course links to current domain
+
+function normalizeCoursewareUrl(url) {
+  if (!url) return '';
+  let value = String(url).trim();
+  value = value.replace(/^https:\/\/weponusa\.github\.io\/teachany-courseware\/?/i, COURSEWARE_BASE_URL + '/');
+  value = value.replace(/\/index\.html([?#].*)?$/i, '/$1');
+  return value;
+}
 
 function resolveCoursewareUrl(path) {
   if (!path) return COURSEWARE_BASE_URL + '/';
-  if (/^https?:\/\//i.test(path)) return path;
+  if (/^https?:\/\//i.test(path)) return normalizeCoursewareUrl(path);
   return COURSEWARE_BASE_URL + '/' + String(path).replace(/^\/+/, '');
 }
 
@@ -60,7 +68,8 @@ function resolveHeroUrl(course, heroImage) {
 
 // 课件点击链接：统一直指 teachany-courseware 实体仓库，主仓库只做轻量入口/索引
 function resolveCourseUrl(course) {
-  if (course && course.url) return course.url;
+  if (course && course.url) return normalizeCoursewareUrl(course.url);
+  if (course && course.download_url) return normalizeCoursewareUrl(course.download_url);
   if (course && course.path) {
     const path = course.path.replace(/\/$/, '') + '/';
     return COURSEWARE_BASE_URL + '/' + path.replace(/^\/+/, '');
