@@ -31,11 +31,13 @@
 })();
 
 /* ─── 常量 ───────────────────────────────────── */
-const REGISTRY_URL = './registry.json';
-const COMMUNITY_INDEX_URL = 'https://weponusa.github.io/teachany-courseware/community/index.json';
-const COURSEWARE_BASE_URL = 'https://weponusa.github.io/teachany-courseware'; // 真实课件实体统一在课件仓库
-const SELF_BASE_URL = 'https://weponusa.github.io/teachany';                  // 主站入口与 hero fallback
-const CACHE_KEY = 'teachany_registry_v3_18'; // v3.18: Other Knowledge only follows canonical other tree
+const SITE_BASE_PATH = location.hostname.endsWith('github.io') ? '/teachany-courseware' : '';
+const SITE_BASE_URL = location.origin + SITE_BASE_PATH;
+const REGISTRY_URL = SITE_BASE_URL + '/registry.json';
+const COMMUNITY_INDEX_URL = SITE_BASE_URL + '/community/index.json';
+const COURSEWARE_BASE_URL = SITE_BASE_URL; // 课件实体跟随当前站点域名，兼容 Cloudflare Pages / GitHub Pages
+const SELF_BASE_URL = SITE_BASE_URL;       // hero fallback 跟随当前站点域名
+const CACHE_KEY = 'teachany_registry_v3_19'; // v3.19: dynamic base URL for custom domains
 
 function resolveCoursewareUrl(path) {
   if (!path) return COURSEWARE_BASE_URL + '/';
@@ -60,7 +62,7 @@ function resolveHeroUrl(course, heroImage) {
 function resolveCourseUrl(course) {
   if (course && course.url) return course.url;
   if (course && course.path) {
-    const path = course.path.replace(/\/$/, '') + '/index.html';
+    const path = course.path.replace(/\/$/, '') + '/';
     return COURSEWARE_BASE_URL + '/' + path.replace(/^\/+/, '');
   }
   return COURSEWARE_BASE_URL + '/';
