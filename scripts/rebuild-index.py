@@ -40,6 +40,35 @@ from pathlib import Path
 from collections import defaultdict
 import copy
 
+# PBL 路径拆解生成的外部知识点 ID（仅此类节点进入 data/trees/other/user-generated.json）
+EXT_NODE_RE = re.compile(r'^ext-[a-f0-9]{6,12}$', re.I)
+
+
+def collect_official_node_ids():
+    """收集所有正式课标树中的节点 id（不含 other/ 虚拟树）。"""
+    ids = set()
+
+    def walk(obj):
+        if isinstance(obj, dict):
+            if 'id' in obj and 'name' in obj:
+                ids.add(obj['id'])
+            for key in ('domains', 'nodes', 'children'):
+                if key in obj:
+                    for child in obj[key]:
+                        walk(child)
+        elif isinstance(obj, list):
+            for item in obj:
+                walk(item)
+
+    for tree_file in Path('data/trees').rglob('*.json'):
+        if 'other' in tree_file.parts:
+            continue
+        try:
+            walk(json.loads(tree_file.read_text(encoding='utf-8')))
+        except (OSError, json.JSONDecodeError):
+            continue
+    return ids
+
 # 需要扫描的课件目录；每个项是 (目录, 是否 official 候选)
 # v6.1: examples/ 仍是官方通道，community/ 加入扫描（skip drafts/ 和 pending/）
 COURSE_DIRS = [
@@ -315,12 +344,14 @@ def main():
     if legacy_ids:
         print(f'   🧰 遗留兼容：{len(legacy_ids)} 个旧课件无 manifest.json 但 index.html 存在，视为存在')
 
+    all_official_node_ids = collect_official_node_ids()
+
     # 按 (subject, node_id) 分组
     node_courses = defaultdict(list)  # (subject, node_id) -> [course_id]
-    other_only_courses = set()  # PBL/跨课标探究入口：只进入"其他知识"，不反向挂 K12 正式树
+    other_only_courses = set()  # ext-* PBL 外部知识点：只进「其他知识」，不挂正式 K12 树
     for course_id, (manifest, _src) in courses.items():
         subject = manifest.get('subject', '')
-        node_id = manifest.get('node_id', '')
+        node_id = (manifest.get('node_id', '') or '').strip()
         lesson_type = (manifest.get('lesson_type') or '').strip()
         is_inquiry_course = (
             lesson_type == 'inquiry-project'
@@ -328,9 +359,16 @@ def main():
             or str(course_id).startswith('inquiry-')
             or str(node_id).startswith('inquiry-')
         )
-        if is_inquiry_course:
+        if EXT_NODE_RE.match(node_id):
             other_only_courses.add(course_id)
-            print(f'  🧩 {course_id}: PBL/探究课只收纳到"其他知识"，不挂正式 K12 树')
+            print(f'  💡 {course_id}: PBL 外部知识点 {node_id} → 仅「其他知识」')
+            continue
+        if is_inquiry_course:
+            if node_id and node_id in all_official_node_ids:
+                node_courses[(subject, node_id)].append(course_id)
+                print(f'  📎 {course_id}: 探究课挂正式课标节点 {node_id}')
+            else:
+                print(f'  ⚠️  {course_id}: 探究课无有效课标节点，仅 Gallery 社区展示')
             continue
         if subject and node_id:
             node_courses[(subject, node_id)].append(course_id)
@@ -420,12 +458,24 @@ def main():
         tree_data = load_tree(tree_file)
         tree_subject = tree_data.get('subject', '')
         tree_name = tree_file.stem
+        is_other_tree = 'other' in tree_file.parts
         modified = False
 
         # 递归处理所有 domain 和 node
         def fix_domain(domain):
             nonlocal modified
             if 'nodes' in domain:
+                # 正式课标树禁止残留 ext-* 占位节点（应只在 other/user-generated.json）
+                if not is_other_tree:
+                    before = len(domain['nodes'])
+                    domain['nodes'] = [
+                        n for n in domain['nodes']
+                        if not EXT_NODE_RE.match(n.get('id', ''))
+                    ]
+                    removed_ext = before - len(domain['nodes'])
+                    if removed_ext:
+                        print(f'  🧹 {tree_name}/{domain.get("id", "?")}: 移除 {removed_ext} 个 ext-* 占位节点')
+                        modified = True
                 # 去重节点
                 original_count = len(domain['nodes'])
                 domain['nodes'] = deduplicate_nodes(domain['nodes'])
@@ -537,146 +587,42 @@ def main():
         else:
             print(f'  ✓ {tree_name}.json: 无需修改')
 
-    # 3.5 (v7.9.6 新增，v7.9.7 扩展 ext-* 学习路径推荐课件)
-    #     填充"其他知识"虚拟树，收纳 4 类课件：
-    #       (a) manifest.free_mode = true
-    #       (b) manifest.node_id 不在任何官方课标树中
-    #       (c) manifest 缺 node_id
-    #       (d) 无 manifest 但属于 ext-* 学习路径推荐课件（从 HTML meta 提取元信息）
-    print('\n✨ 步骤3.5: 填充"其他知识"虚拟树（收纳 free_mode / 未挂载 / ext-* 学习路径推荐课件）...')
+    # 3.5 填充「其他知识」虚拟树：仅收纳 PBL 路径拆解生成的 ext-{hash} 外部知识点
+    print('\n✨ 步骤3.5: 填充「其他知识」虚拟树（仅 ext-* PBL 外部知识点）...')
     virtual_tree_path = Path('data/trees/other/user-generated.json')
     if virtual_tree_path.exists():
-        # 收集所有官方树中存在的 node_id
-        all_official_node_ids = set()
-        for tree_file in tree_files:
-            if tree_file == virtual_tree_path:
-                continue
-            try:
-                td = json.loads(tree_file.read_text(encoding='utf-8'))
-            except (OSError, json.JSONDecodeError):
-                continue
-
-            def _collect_ids(obj):
-                if isinstance(obj, dict):
-                    if 'id' in obj and 'name' in obj:
-                        all_official_node_ids.add(obj['id'])
-                    for k in ('domains', 'nodes', 'children'):
-                        if k in obj:
-                            for child in obj[k]:
-                                _collect_ids(child)
-                elif isinstance(obj, list):
-                    for item in obj:
-                        _collect_ids(item)
-            _collect_ids(td)
-
-        # 扫描所有有 manifest 的课件，找出应该放进"其他知识"的
         virtual_nodes = []
-        # 强制保留在"其他知识"的跨课标/探究课入口：这些内容即使挂了近似官方 node_id，
-        # 也需要在"其他知识"里保留一份发现入口，避免 rebuild-index 把该 Tab 清空。
-        OTHER_TREE_FORCE_COURSE_IDS = set()
-        orphan_reasons = {'free_mode': 0, 'node_not_found': 0, 'missing_node_id': 0,
-                          'forced_other': 0, 'inquiry_project': 0,
-                          'ext_passed': 0, 'ext_rejected': 0}
+        orphan_reasons = {'ext_manifest': 0, 'ext_passed': 0, 'ext_rejected': 0, 'ext_skipped_non_hash': 0}
 
-        # v7.9.8 新增：学科前缀映射，用于"简写 node_id"自动探测
-        SUBJECT_PREFIX = {
-            'math': 'math', 'mathematics': 'math',
-            'chinese': 'chn', 'chn': 'chn',
-            'english': 'eng', 'eng': 'eng',
-            'physics': 'phy', 'phy': 'phy',
-            'chemistry': 'chem', 'chem': 'chem',
-            'biology': 'bio', 'bio': 'bio',
-            'history': 'hist', 'hist': 'hist',
-            'geography': 'geo', 'geo': 'geo',
-            'science': 'sci', 'sci': 'sci',
-            'info-tech': 'it', 'it': 'it',
-        }
-        def _level_from_grade(g):
-            try: g = int(g)
-            except (TypeError, ValueError): return None
-            if 1 <= g <= 6: return 'e'
-            if 7 <= g <= 9: return 'm'
-            if 10 <= g <= 12: return 'h'
-            return None
-
-        for cid, (manifest, src) in sorted(courses.items()):
-            nid = manifest.get('node_id', '').strip()
-            is_free = bool(manifest.get('free_mode'))
+        for cid, (manifest, _src) in sorted(courses.items()):
+            nid = (manifest.get('node_id', '') or '').strip()
+            if not EXT_NODE_RE.match(nid):
+                continue
             subject = manifest.get('subject', 'other')
             name = manifest.get('title') or manifest.get('name') or cid
             grade = manifest.get('grade', 0)
-
-            reason = None
-            lesson_type = (manifest.get('lesson_type') or '').strip()
-            if cid in OTHER_TREE_FORCE_COURSE_IDS:
-                reason = 'forced_other'
-            elif is_free:
-                # free_mode 只有在确属扩展入口时进入"其他知识"。
-                # 已有正式课标 node_id 的普通 K12 课件不重复进入"其他知识"，避免污染其他知识列表。
-                if nid and nid in all_official_node_ids and not (cid.startswith('ext-') or nid.startswith('ext-')):
-                    continue
-                reason = 'free_mode'
-            elif lesson_type == 'inquiry-project' or subject == 'inquiry' or cid.startswith('inquiry-') or nid.startswith('inquiry-'):
-                # PBL/探究课是跨课标项目入口，即使引用了某个正式 node_id，也必须保留在"其他知识"。
-                # 正式 K12 树只保留常规课程；探究课通过 other-<course_id> 发现，避免污染课标覆盖率。
-                reason = 'inquiry_project'
-            elif not nid:
-                # 课件 ID 本身就是正式课标 node_id 时，视为已挂载，不进入"其他知识"。
-                if cid in all_official_node_ids:
-                    continue
-                reason = 'missing_node_id'
-            elif nid not in all_official_node_ids:
-                # v7.9.8 智能探测：尝试补全 <subject_prefix>-<level>- 前缀
-                sp = SUBJECT_PREFIX.get(subject)
-                lv = _level_from_grade(grade)
-                candidate = None
-                if sp and lv:
-                    full = f'{sp}-{lv}-{nid}'
-                    if full in all_official_node_ids:
-                        candidate = full
-                # 也尝试去掉已有前缀（如果 nid 已经是完整格式但拼错）
-                if not candidate and sp:
-                    for lv2 in ('e', 'm', 'h'):
-                        full = f'{sp}-{lv2}-{nid}'
-                        if full in all_official_node_ids:
-                            candidate = full
-                            break
-
-                if candidate:
-                    print(f'  ⚠️ 检测到简写 node_id：{cid} "{nid}" 应为 "{candidate}"')
-                    print(f'     → 请修正 manifest.node_id 为 "{candidate}"（课件暂挂"其他知识"）')
-                reason = 'node_not_found'
-
-            if not reason:
-                continue
-
-            orphan_reasons[reason] += 1
-            # 强制保留 / 探究课统一使用 other-<course_id>，避免与正式树节点 id 冲突
-            if reason in ('forced_other', 'inquiry_project'):
-                vid = f'other-{cid}'
-            else:
-                vid = nid if nid else f'other-{cid}'
-
-            node_entry = {
-                'id': vid,
+            try:
+                grade = int(grade)
+            except (TypeError, ValueError):
+                grade = 0
+            orphan_reasons['ext_manifest'] += 1
+            virtual_nodes.append({
+                'id': nid,
                 'name': name,
-                'name_en': manifest.get('title_en', ''),
-                'grade': grade if isinstance(grade, int) else 0,
+                'name_en': manifest.get('title_en', '') or manifest.get('name_en', ''),
+                'grade': grade,
                 'subject': subject,
                 'prerequisites': [],
                 'extends': [],
                 'parallel': [],
                 'courses': [cid],
                 'status': 'active',
-                'source': f'user-generated({reason})',
+                'source': 'pbl-external',
                 'curriculum_points': [manifest.get('description_zh', '') or manifest.get('description', '')],
                 'excerpt_ids': []
-            }
+            })
 
-            # v7.10: ext-* 课件也归入"其他知识"统一展示
-            virtual_nodes.append(node_entry)
-
-        # v7.9.7 新增：扫描 ext-* 学习路径推荐课件（无 manifest，元信息在 HTML meta 里）
+        # 扫描无 manifest 的 ext-* 目录（元信息在 HTML meta 里）
         # 质检门槛：
         #   (a) course-id 以 ext- 开头
         #   (b) HTML ≥ 10 KB（避免空壳占位）
@@ -736,9 +682,18 @@ def main():
                 orphan_reasons['ext_passed'] += 1
                 ext_subject = metas.get('course-subject', 'other')
                 ext_title = metas.get('course-title', d.name)
-                ext_node = metas.get('course-node', d.name)
-                # 虚拟节点 id：优先用 course-node，否则用目录名
-                ext_vid = ext_node if ext_node and ext_node not in all_official_node_ids else d.name
+                ext_node = (metas.get('course-node') or '').strip()
+                teachany_node_m = re.search(
+                    r'<meta\s+name=["\']teachany-node["\']\s+content=["\']([^"\']+)["\']',
+                    html, re.I
+                )
+                if teachany_node_m:
+                    ext_node = teachany_node_m.group(1).strip()
+                if not EXT_NODE_RE.match(ext_node):
+                    orphan_reasons['ext_skipped_non_hash'] += 1
+                    print(f'  ⚠️ ext 课件跳过（非 PBL ext-{{hash}} 节点）: {d.name} node={ext_node!r}')
+                    continue
+                ext_vid = ext_node
                 virtual_nodes.append({
                     'id': ext_vid,
                     'name': ext_title,
@@ -779,24 +734,30 @@ def main():
                 merged[n['id']] = n
         virtual_nodes = sorted(merged.values(), key=lambda x: (x.get('subject', ''), x['id']))
 
-        # 回写虚拟树（"其他知识"）
+        # 回写虚拟树（「其他知识」）
         virtual_tree = json.loads(virtual_tree_path.read_text(encoding='utf-8'))
-        virtual_tree['domains'][0]['nodes'] = virtual_nodes
+        virtual_tree['_comment'] = (
+            '由 scripts/rebuild-index.py 自动填充。仅收纳 PBL 路径拆解生成的 ext-{hash} 外部知识点课件。'
+            'K12/探究课不得写入此文件。手工编辑将被下次 rebuild 覆盖。'
+        )
+        if virtual_tree.get('domains'):
+            virtual_tree['domains'][0]['description'] = (
+                'PBL 学习路径拆解出的课标外知识点（node_id 形如 ext-47db7bcd）。'
+                '常规 K12 与探究课请见各学科课标树。'
+            )
+            virtual_tree['domains'][0]['nodes'] = virtual_nodes
         virtual_tree_path.write_text(
             json.dumps(virtual_tree, ensure_ascii=False, indent=2) + '\n',
             encoding='utf-8'
         )
         print(f'  ✅ 已填充 {len(virtual_nodes)} 个虚拟节点到 {virtual_tree_path}')
-        print(f'     free_mode: {orphan_reasons["free_mode"]}, '
-              f'node 未找到: {orphan_reasons["node_not_found"]}, '
-              f'缺 node_id: {orphan_reasons["missing_node_id"]}, '
-              f'强制保留: {orphan_reasons["forced_other"]}, '
-              f'探究课: {orphan_reasons["inquiry_project"]}')
+        print(f'     ext manifest: {orphan_reasons["ext_manifest"]}, '
+              f'ext HTML 质检通过: {orphan_reasons["ext_passed"]}, '
+              f'拒绝: {orphan_reasons["ext_rejected"]}, '
+              f'非 hash 节点跳过: {orphan_reasons["ext_skipped_non_hash"]}')
 
         if ext_dirs_scanned:
-            print(f'     ext-* 学习路径课件: 扫描 {ext_dirs_scanned} 个，'
-                  f'质检通过 {orphan_reasons["ext_passed"]}，'
-                  f'拒绝 {orphan_reasons["ext_rejected"]}')
+            print(f'     ext-* 目录扫描: {ext_dirs_scanned} 个')
     else:
         print(f'  ⏭️ {virtual_tree_path} 不存在，跳过（可用 git pull 拉取）')
 
