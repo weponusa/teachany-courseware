@@ -21,7 +21,7 @@ Open this page with a course id:
 It renders:
 
 ```text
-https://weponusa.github.io/teachany-courseware/community/hist-m-renaissance/index.html#wechat_redirect
+https://www.teachany.cn/community/hist-m-renaissance/index.html#wechat_redirect
 ```
 
 If you pass a full URL, encode it first:
@@ -30,4 +30,4 @@ If you pass a full URL, encode it first:
 /pages/courseware/courseware?url=<encodeURIComponent(url)>
 ```
 
-Only `https://weponusa.github.io/teachany-courseware/` URLs are accepted by the template.
+Only `https://www.teachany.cn/` URLs are accepted by the template.

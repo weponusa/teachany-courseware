@@ -412,7 +412,7 @@ async function loadOtherTreeCourseIds() {
     // 本地开发优先读本地；线上如果 Pages CDN 未刷新，再用 raw main 兜底。
     './data/trees/other/user-generated.json',
     'https://raw.githubusercontent.com/weponusa/teachany-courseware/main/data/trees/other/user-generated.json',
-    'https://weponusa.github.io/teachany-courseware/data/trees/other/user-generated.json'
+    'https://www.teachany.cn/data/trees/other/user-generated.json'
   ];
   for (const url of urls) {
     try {

@@ -38,7 +38,7 @@ from pathlib import Path
 
 # ── 常量 ──────────────────────────────────────────────────
 
-COURSEWARE_BASE_URL = "https://weponusa.github.io/teachany-courseware"
+COURSEWARE_BASE_URL = "https://www.teachany.cn"
 COMMUNITY_SKIP = {"drafts", "pending", "README.md", ".DS_Store"}
 
 REDIRECT_TEMPLATE = """\

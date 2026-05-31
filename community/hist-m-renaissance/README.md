@@ -75,8 +75,8 @@ python3 -m http.server 8000
 见 `/Users/wepon/.codebuddy/skills/teachany/skill/references/packaging.md`
 
 URL（发布后）：
-- 课件仓 GitHub Pages：https://weponusa.github.io/teachany-courseware/community/hist-m-renaissance/
-- Gallery 跳转入口：https://weponusa.github.io/teachany/community/hist-m-renaissance/
+- 课件仓 GitHub Pages：https://www.teachany.cn/community/hist-m-renaissance/
+- Gallery 跳转入口：https://www.teachany.cn/community/hist-m-renaissance/
 
 ---
 
