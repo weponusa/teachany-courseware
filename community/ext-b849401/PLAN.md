@@ -46,4 +46,4 @@
 2. 同步到 `teachany-opensource/community/ext-b849401/`
 3. 两个仓库分别提交到当前 Git 用户身份
 4. `git push origin main`
-5. 尝试 `git push gitee main`
+5. 尝试 `git push origin main`

@@ -92,7 +92,7 @@ cd /Users/wepon/CodeBuddy/一次函数/teachany-opensource
 git add scripts/submit-to-community.py
 git commit -m "chore: 更新 DEFAULT_WORKER_URL 为生产地址"
 git push origin main
-git push gitee main
+git push origin main
 ```
 
 ---

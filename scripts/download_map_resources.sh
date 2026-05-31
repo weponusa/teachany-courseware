@@ -72,7 +72,7 @@ echo -e "${YELLOW}📥 克隆历史地图仓库...${NC}"
 if [ ! -d "$TEMP_DIR/chinese_historical_map" ]; then
     git clone --depth 1 https://github.com/imbian/chinese_historical_map.git \
         "$TEMP_DIR/chinese_historical_map" 2>/dev/null || \
-        echo -e "${YELLOW}⚠️  GitHub 克隆失败，尝试 Gitee 镜像...${NC}"
+        echo -e "${YELLOW}⚠️  GitHub 克隆失败，尝试 teachany.cn 正式站点...${NC}"
 fi
 
 # 检查是否有数据
