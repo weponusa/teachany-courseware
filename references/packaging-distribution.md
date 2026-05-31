@@ -132,7 +132,7 @@ Step 3️⃣ 课件落地 + 用户身份上传
   git add -A
   git commit -m "feat: 新增课件 <course-id>"
   git push origin main
-  git push gitee main
+  git push origin main
   ```
 
   **3.3 注册规则**
@@ -205,7 +205,7 @@ Step 4️⃣ 提交成功后告知用户后续流程
    done
    
    # 镜像远程（失败不阻断，但必须明确告知用户）
-   git push gitee main || echo "⚠️ gitee 镜像推送失败，课件仅在 GitHub 可见，请稍后手动重推"
+   git push origin main || echo "⚠️ Cloudflare 自动部署尚未完成，请稍后刷新 www.teachany.cn 验证"
    ```
    
    ⛔ 禁止仅推其中一个远程就声称"已发布"。
@@ -236,7 +236,7 @@ Step 4️⃣ 提交成功后告知用户后续流程
 > - 不跑 rebuild-index.py 就 git push = **发布失败**（硬规则 #37）
 > - manifest.json `node_id` 不在 `data/trees/*.json` 中 = **发布失败**（硬规则 #38，v5.20 修订）
 > - rebuild-index 输出 "⚠️ 未被知识树引用" 还强推 = **发布失败**（v5.20：这不是假报警，是真信号）
-> - 仅推 origin 没推 gitee 就声称"已发布" = **发布不完整**（见 Phase 3.6 Step ③ 双推规则）
+> - 仅推送但未等待 Cloudflare 部署完成就声称"已发布" = **发布不完整**（见 Phase 3.6 Step ③ 发布验证规则）
 > 
 > 这四条任何一条中招，AI 必须在输出给用户的汇报里把具体失败项标红，而非糊弄过去。
 
@@ -581,7 +581,7 @@ curl -sI -m 5 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded
    git add -A
    git commit -m "feat: 新增课件 <course-id>"
    git push origin main
-   git push gitee main
+   git push origin main
    ```
 
    规则：
@@ -855,7 +855,7 @@ curl -sI -m 5 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded
 - v5.16：**⭐ Remotion 基线从"可降级"升级为"真强制"**——(1) Section 0 表格②行降级底线由"Canvas/SVG 等效替代"改为 **⛔ 无降级**：Canvas/SVG/CSS 时间线动画**不得替代** Remotion 基线，真实 mp4 渲染才是唯一合规交付；(2) 硬规则 #32 同步改为必须含真实 Remotion 渲染的 mp4，Canvas/SVG 只能作为附加增强；(3) 0.3 违反示例新增"用 SVG+CSS 动画等效替代 Remotion"为明确禁用；(4) L2 层级从"🔶 显式触发"升级为"✅ 默认必选"，与 L3 同级，Phase 0.5 阶段自动安装 Node/ffmpeg 不等待确认；(5) Phase 3 强制分发 Agent R（Remotion 渲染），与 Agent C/D 并行；(6) Completeness Gate 新增"检查 `assets/*.mp4` 真实存在且被 HTML `<video>` 嵌入"；(7) 唯一豁免路径：Node 环境彻底不可用 + 自动安装失败 + 用户书面豁免，三条件缺一不可。
 - v5.17：**⭐ Remotion mp4 必须三轨合一（画面 + 音效/配乐 + 语音）+ 视频必须配专属 poster 封面**——(1) Section 0 表格②行强制要求 Remotion 渲染的 mp4 **必须含音频轨**（氛围音效/背景配乐 + TTS 语音朗读），画面无声的哑片 mp4 视为不合规；(2) 实现路径规范化：音频放 `remotion/public/audio/`，通过 `<Audio src={staticFile('audio/xxx.mp3')} volume={...}/>` 叠加，配乐用 ffmpeg 合成（`sine`+`anoisesrc`+`aecho` 滤镜组合），语音用 edge-tts 生成，可按 `<Sequence>` 时间点叠加对应幕次；(3) 0.3 违反示例新增"哑片 mp4" + "视频 poster 用错图（张冠李戴）"两条；(4) Completeness Gate 校验项升级：`ffprobe -show_entries stream=codec_type` 必须同时看到 `video` + `audio` 两流，且 `<video poster="...">` 必须指向与该视频主题匹配的专属封面图（不得复用其他主题的 hero 图）；(5) 同步示例落地：古典诗词课件春晓 mp4 重新渲染，集成四幕配乐（起·古琴低音 / 承·竖笛鸟鸣 / 转·雨雷 / 合·余韵风声）+ 四句 TTS 朗读，poster 换为 `image_gen` 专属生成的 `chunxiao-cover.png`（工笔淡彩春晓意境图）。
 - v5.18：**⭐ 地图底图必须与缩放同步 + 初始视图必须聚焦教学核心区域**——(1) 技术选型翻盘：Section 18.2 从"方案 A ECharts（推荐）"改为"方案 A Leaflet ⭐（默认首选）"，ECharts 降级为"仅限纯行政区划填色图，不得叠加 hillshade"；(2) 诊断根因：ECharts `graphic: [{type:'image'}]` 是 DOM 绝对定位覆盖层，**不参与 `geo` 组件的缩放/平移变换**，用户交互时底图必定与国界/城市点错位（真实案例：hist-classical-civilization 课件踩坑）；(3) Section 18.4.1 第四级降级规则修正："ECharts 课件用 `graphic` 铺底" 改为 **⛔ 严禁 ECharts `graphic` 铺底**，强制推荐 Leaflet `L.imageOverlay`；(4) Section 18.5.1 升级为 "⭐ Leaflet + Hillshade + GeoJSON 叠加（历史/地理课件默认模板）"，含完整四件套代码（CRS.EPSG4326 容器 + imageOverlay 底图 + geoJSON 国界 + fitBounds 聚焦核心）；(5) Section 18.5.4 "朝代疆域展示 + 数据联动" 从 ECharts 版本重写为 Leaflet 版本（秦朝疆域示例 + 核心区 fitBounds）；(6) 0.3 违反示例新增两条：① 用 ECharts graphic 铺底图（必错位）；② 初始视图未聚焦核心区域（停在 `[0,0]` 默认中心 / 大片无关海洋）；(7) 硬规则从 34 条扩充至 36 条：#35 地图底图必须与缩放同步（Leaflet imageOverlay 强制）+ #36 初始视图必须 fitBounds/setView 聚焦教学核心区域；(8) Section 十三标题同步改为 "36 条硬规则"。
-- v5.19：**⭐ 发布成功率保障（rebuild-index 三件套必跑 + node_id 必须真实校验 + 双推降级策略）**——(1) 诊断根因：用户反映"推了但 Gallery/知识地图看不到课件"的高频痛点，定位到四个失败路径——① 只 `git push` 没跑 `rebuild-index.py`；② manifest.json 的 `node_id` 拼写错或不存在；③ 只推 origin 没推 gitee；④ 对新 schema `_graph.json` 误判为"假报警"（⚠️ **v5.20 已推翻**：根本不是假报警，是真的发布失败信号）；(2) Section 17.2 升级 `node_id` 字段从"可选但推荐"为 **⛔ 必选 + 必须校验**（⚠️ **v5.20 修订**：校验目标从 `_graph.json` 改为 `data/trees/*.json`）；(3) Phase 3.5 Step 4 之后新增 **Phase 3.6 发布成功率保障四件套**；(4) 硬规则从 36 条扩充至 38 条：**#37 发布基线 · 必须跑 rebuild-index.py 三件套** + **#38 发布基线 · manifest.json 的 node_id 必须真实存在**；(5) Section 十三标题同步改为 "38 条硬规则"。⚠️ v5.19 原文中提到的"假报警识别""Python 检查新 schema 代替"等章节**已在 v5.20 全部推翻**，请以 v5.20 为准。
+- v5.19：**⭐ 发布成功率保障（rebuild-index 三件套必跑 + node_id 必须真实校验 + 双推降级策略）**——(1) 诊断根因：用户反映"推了但 Gallery/知识地图看不到课件"的高频痛点，定位到四个失败路径——① 只 `git push` 没跑 `rebuild-index.py`；② manifest.json 的 `node_id` 拼写错或不存在；③ 只推送但未验证 Cloudflare 部署；④ 对新 schema `_graph.json` 误判为"假报警"（⚠️ **v5.20 已推翻**：根本不是假报警，是真的发布失败信号）；(2) Section 17.2 升级 `node_id` 字段从"可选但推荐"为 **⛔ 必选 + 必须校验**（⚠️ **v5.20 修订**：校验目标从 `_graph.json` 改为 `data/trees/*.json`）；(3) Phase 3.5 Step 4 之后新增 **Phase 3.6 发布成功率保障四件套**；(4) 硬规则从 36 条扩充至 38 条：**#37 发布基线 · 必须跑 rebuild-index.py 三件套** + **#38 发布基线 · manifest.json 的 node_id 必须真实存在**；(5) Section 十三标题同步改为 "38 条硬规则"。⚠️ v5.19 原文中提到的"假报警识别""Python 检查新 schema 代替"等章节**已在 v5.20 全部推翻**，请以 v5.20 为准。
 - v5.20：**⭐ 纠正 v5.19 错误结论——`tree.html` 只读 `data/trees/*.json`，不读 `_graph.json`**——(1) 用户实测反馈"Gallery 里有，但地图里没有"，v5.19 "假报警"结论当场翻车；(2) 真相实测验证：`tree.html:414-435` 硬编码 `TREE_FILES` 数组只加载 18 个 `data/trees/*.json` 旧 schema 文件，完全不扫 `data/<subject>/<branch>/_graph.json` 新 schema，两套 schema 节点 ID 体系完全不同（旧 schema 如 `hist-h-classical-civ` 带学科前缀，新 schema 如 `classical-greece-rome` 语义名）；(3) 翻车案例：hist-classical-civilization 按 v5.19 流程挂在 `_graph.json` 的 `classical-greece-rome` 节点上，rebuild-index.py 报警告、v5.19 错误解读为"假报警"，推上线后 Gallery ✅ 但知识地图 ❌，被用户戳穿；(4) Section 17.2 的 `node_id` 校验命令从 `grep data/<subject>/*/_graph.json` 改为 `grep data/trees/<subject>-*.json`，附 `jq '.. | objects | select(.id?) | .id'` 列出真实节点 ID 的查询命令；(5) Phase 3.6 发布四件套 Step 1/Step 2 修订：① `⚠️ 文件存在但知识树未引用` 明确标注为**真发布失败信号**（不再允许以"假报警"放行）；② 产出文件列表加入 `data/trees/<subject>-<level>.json`（标记为"⭐ 最关键"）；③ 新增 Python 脚本把课件 ID 原子注入对应节点 `courses[]` 数组的修复流程（替代无法处理字符串/数组类型冲突的 jq 方案）；(6) 新增整节"v5.20 重大纠正：知识地图只读 `data/trees/*.json`"，推翻 v5.19 "假报警识别 + Python 检查新 schema" 错误方案，给出 4 条强制执行硬规则；(7) 硬规则 #37 #38 文案强化 ⚠️ v5.20 纠正标签（警告不得以任何理由放行 + 严禁用 `_graph.json` 节点 ID 代替旧 schema 节点 ID）；(8) 长期修复计划：方案 A 升级 `tree.html` 同时加载 `_graph.json` / 方案 B 升级 `rebuild-index.py` 从 `_graph.json` 自动反向生成 `data/trees/*.json` 节点；(9) 地图底图问题说明：用户反馈"地图没有底图"实为 `tree.html` 是纯节点图、全文无 leaflet/hillshade/imageOverlay 渲染代码，该页面**本身不带地理底图**，所有 hillshade + GeoJSON 叠加方案（Section 18.5.1）应在课件自身 `index.html` 内实现，不应期望知识地图页面自带底图；(10) 真实挂载动作：`data/trees/history-high.json` 的 `hist-h-classical-civ` 节点 `courses[]` 新增 `hist-classical-civilization`，manifest.json `node_id` 改为 `hist-h-classical-civ`，rebuild-index 树引用 137→138、警告从 2 条降到 1 条。
 - v5.21：**⭐ 再次纠正——GitHub Pages 不部署 `data/geography/` 下的大型二进制**——(1) 用户实测反馈"课件自己那张 Leaflet 地图也没有底图、没有行政边界"，直接跑 curl 验证，定位到**新根因**：即便 `.nojekyll` 存在、文件已 tracked push、raw.githubusercontent.com 能返回 200，`<user>.github.io/<repo>/data/geography/hillshade/*.jpg` 和 `/data/geography/world/countries.geojson` 全部 404，而同目录 `README.md` 却 200——证明 GitHub Pages 对该目录下的大型 `.jpg` / `.geojson` 存在**跳过部署**现象；(2) 新增 **Section 18.5.2 · Leaflet 资源必须用"本地路径 + jsDelivr CDN 回退"双路径**：提供 `addSmartImageOverlay()` / `geoFetchJson()` 工具函数模板（本地优先 → `cdn.jsdelivr.net/gh/<user>/<repo>@main/...` 失败回退），替代所有硬编码单路径；(3) 新增**硬规则 #39 地图资源基线**：强制使用双路径加载，发布前必须用 `curl -I` 验证线上 hillshade/geojson 200 才可声称"地图底图已上线"，Pages 404 且未用回退 → Gate 不通过；(4) 硬规则从 38 条扩到 39 条，Section 十三标题同步改为 "39 条硬规则"；(5) jsDelivr vs raw.githubusercontent 选型说明表（jsDelivr 胜在 CORS 友好 + 积极缓存 + 全球节点）；(6) 真实修复动作：`examples/hist-classical-civilization/index.html` 两处地图初始化函数已改用 `addSmartImageOverlay` + `geoFetchJson`，`L.imageOverlay` + `fetch` 硬编码路径全部下线。
 - v5.22：**⭐⭐ 根治地图对不齐——弃用 `L.imageOverlay` 全球底图，改用 XYZ 瓦片**——(1) 用户实测反馈"还是对不齐底图，换个方式？切片也行啊"，直接定位到**本质根因**：v5.21 的 `L.imageOverlay('../../data/geography/hillshade/*.jpg', [[-90,-180],[90,180]])` 用的是 equirectangular 投影源图，而 Leaflet 默认 Web Mercator 投影，两者在高纬度差异极大（纬度 60° 处 Mercator 拉伸约 2 倍），底图和 WGS84 GeoJSON 在地中海以北必然错位——v5.21 的 CDN 兜底方案**只解决了加载，没解决投影对齐**；(2) **硬规则 #35 重大修订**：从"必须用 `L.imageOverlay(hillshade)` + `L.geoJSON`"改为"必须用 `L.tileLayer(XYZ 瓦片)` + `L.geoJSON`"，明令严禁 `L.imageOverlay` 全球铺底图（ECharts graphic 的禁令保留）；(3) **新增 Section 18.5.3 · XYZ 瓦片底图方案**：推荐双层叠加——CartoDB Dark（深色底图 + 国界 + 地名）+ Esri World_Shaded_Relief（半透明地形浮雕），全部免费、无 API key、`maxZoom` 配置+URL 模板+subdomain 规则齐全；(4) 投影对齐对比表 + `imageOverlay` vs `tileLayer` 全维度对比表（投影对齐/Pages 部署/缩放清晰度/加载速度/运维负担，五项 tileLayer 全胜）；(5) 硬规则 #39 修订为"GeoJSON 双路径回退"范围（hillshade `.jpg` 不再作底图，规则收窄但保留，用于 GeoJSON 防 Pages 跳过部署）；(6) 保留 `data/geography/hillshade/*.jpg` 文件但标记为"仓库保留·课件不再引用"，如确有全球静态底图需求需用 `gdal2tiles.py --profile=mercator` 切成 Mercator 瓦片；(7) 境内网络备选源说明（天地图、高德、腾讯、Mapbox）；(8) 真实修复动作：`examples/hist-classical-civilization/index.html` 两处 `addSmartImageOverlay` 全部替换为 `addBaseTiles(map, {...})`，`L.rectangle` 海洋背景移除（瓦片自带海色），UI 文案"DEM底图"改为"深色地图 + 地形浮雕"；(9) `addSmartImageOverlay` 辅助函数从课件代码下线（函数库只保留 `geoAssetUrl / geoAssetCdn / geoFetchJson`）。

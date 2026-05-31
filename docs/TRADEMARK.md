@@ -37,7 +37,7 @@
 
 - 🏫 **学校官网**：公立学校、非营利教育机构在自己网站注明"本校使用 TeachAny 作为教学工具"。
 - 👩‍🏫 **个人简介**：教师在个人主页写"熟悉 TeachAny 课件工具"。
-- 🔬 **开源社区**：在 GitHub/Gitee 其他项目的 README 提及"本项目受 TeachAny 启发"。
+- 🔬 **开源社区**：在 GitHub/teachany.cn 其他项目的 README 提及"本项目受 TeachAny 启发"。
 
 这些场景无需授权，但**必须保留项目来源链接**（`https://github.com/weponusa/teachany`）。
 

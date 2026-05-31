@@ -25,7 +25,7 @@ python3 scripts/rebuild-index.py
 git add -A
 git commit -m "feat: 新增课件 <course-id>"
 git push origin main
-git push gitee main
+git push origin main
 ```
 
 ## 提交规范
