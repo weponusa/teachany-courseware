@@ -55,7 +55,7 @@ def main():
             "subject": c.get("subject", ""),
             "grade": c.get("grade", 0),
             "author": c.get("author") or old_entry.get("author") or "TeachAny Community",
-            "download_url": f"https://weponusa.github.io/teachany-courseware/{path}/",
+            "download_url": f"https://www.teachany.cn/{path}/",
             "approved_at": old_entry.get("approved_at") or c.get("created") or datetime.now(timezone.utc).isoformat(),
             "likes": old_entry.get("likes", 0),
             "status": old_entry.get("status") or "active",
@@ -72,7 +72,7 @@ def main():
     }
 
     # v7.15: URL 合法性校验——拦截非法 download_url
-    VALID_PREFIX = "https://weponusa.github.io/teachany-courseware/"
+    VALID_PREFIX = "https://www.teachany.cn/"
     ILLEGAL_PATTERNS = ["community/drafts/", "/courses/", "pages.dev/courses/"]
     bad_urls = []
     for c in courses:

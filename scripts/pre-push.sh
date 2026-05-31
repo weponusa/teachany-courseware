@@ -73,13 +73,45 @@ while read -r local_ref local_sha remote_ref remote_sha; do
         continue
     fi
 
+    is_canonical_url_only_change() {
+        local id="$1"
+        local diff_text
+        diff_text=$(git diff -U0 "$base" "$local_sha" -- "community/$id/" 2>/dev/null || true)
+        if [ -z "$diff_text" ]; then
+            return 1
+        fi
+        while IFS= read -r line; do
+            case "$line" in
+                "diff --git"*|"index "*|"--- "*|"+++ "*|"@@ "*)
+                    continue
+                    ;;
+                +*|-*)
+                    if echo "$line" | grep -Eq 'weponusa\.github\.io/teachany|www\.teachany\.cn'; then
+                        continue
+                    fi
+                    return 1
+                    ;;
+                *)
+                    continue
+                    ;;
+            esac
+        done <<EOF
+$diff_text
+EOF
+        return 0
+    }
+
     validate_ids=""
     for id in $changed_community; do
         index="community/$id/index.html"
         if [ -f "$index" ] \
-            && grep -q "weponusa.github.io/teachany-courseware" "$index" \
+            && grep -q "www.teachany.cn" "$index" \
             && grep -Eq "http-equiv=\"refresh\"|location\.replace" "$index"; then
             echo "  ↪️  community/$id 是轻量跳转入口，跳过课件质检"
+            continue
+        fi
+        if is_canonical_url_only_change "$id"; then
+            echo "  ↪️  community/$id 仅修改 canonical URL，跳过课件质检"
             continue
         fi
         validate_ids="$validate_ids $id"

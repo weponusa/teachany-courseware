@@ -959,7 +959,7 @@ if (isMobile || lowPower) {
 - 3D 地形集成规范：`skill/terrain-3d-integration.md`
 
 **示范课件**：
-- TeachAny Gallery: https://weponusa.github.io/teachany/
+- TeachAny Gallery: https://www.teachany.cn/
 - 中国地图交互模板: `data/geography/templates/china-base-map.html`
 
 **外部参考**：

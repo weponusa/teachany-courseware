@@ -143,7 +143,7 @@ Step 3️⃣ 课件落地 + 用户身份上传
 
 Step 4️⃣ 提交成功后告知用户后续流程
   - 输出本地文件路径：`community/<course-id>/index.html`
-  - 输出在线地址：`https://weponusa.github.io/teachany/community/<course-id>/`
+  - 输出在线地址：`https://www.teachany.cn/community/<course-id>/`
   - 说明 GitHub Pages 可能有 5-10 分钟缓存延迟
 ```
 
@@ -218,15 +218,15 @@ Step 4️⃣ 提交成功后告知用户后续流程
    ✅ 已完成 commit 和推送，但 GitHub Pages 部署需要 5–10 分钟才会生效。
    
    稍后可用以下命令验证课件是否已上线：
-   curl -I "https://weponusa.github.io/teachany/community/<course-id>/"
+   curl -I "https://www.teachany.cn/community/<course-id>/"
    # 返回 HTTP/2 200 = 已生效
    # 返回 HTTP/2 404 = 仍在部署，再等 2 分钟
    
    Gallery 页面入口：
-   https://weponusa.github.io/teachany/
+   https://www.teachany.cn/
    
    知识地图节点入口：
-   https://weponusa.github.io/teachany/knowledge-tree.html?subject=<subject>&node=<node_id>
+   https://www.teachany.cn/knowledge-tree.html?subject=<subject>&node=<node_id>
    ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -594,7 +594,7 @@ curl -sI -m 5 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded
    - 质检通过率 + 未通过项列表
    - .teachany 文件路径（如已打包）
    - 本地路径：`community/<course-id>/index.html`
-   - 在线地址：`https://weponusa.github.io/teachany/community/<course-id>/`
+   - 在线地址：`https://www.teachany.cn/community/<course-id>/`
 
 #### 质检项清单（内置，无需外部脚本）
 
@@ -871,7 +871,7 @@ curl -sI -m 5 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded
 
 - v5.34.6：**⭐ 注入课标基本要求 · 新增小学科学 · SKILL 课标速查表**——(1) 用户反馈"现在小学没有科学课和图谱，要根据新课标补上"→"同时在 skill 知识库中注入课标内容，尤其是新加入的小学科学"。(2) **数据层**：新建 `data/trees/science-elementary.json`（48 节点、4 领域、`#3b82f6/#10b981/#f59e0b/#8b5cf6` 配色、覆盖 1-6 年级），严格对齐《义务教育科学课程标准（2022 年版）》4 领域 × 13 核心概念结构；在 `data/curricula.json` v1.3 的 cn-national.trees 注册为第 21 棵树（🔬 label_zh "小学科学"）；tree.html 中文课标下新增"🔬 小学科学"按钮并能正确渲染 48 circle + 192 text（Playwright 实测通过）。(3) **SKILL 知识库注入**：新增 Section 17.7「各学科课标速查表」——① 17.7.1 总览表列出 21 棵国内课标树各自的《标准全名》《核心素养（一级）》《年级范围》《颁布机构》《修订版本》，AI 生成课件时可直接定位；② 17.7.2《小学科学课标详细要求》展开该学科的学段划分（第一/二/三学段 3 条目标）、4 大领域对应 13 核心概念、学科前缀约定（`sci-e-*` ⭐ 新增）、探究实践 6 步、探究深度分层（L1→L3）、4 件必做事项、4 种禁用模板；③ 17.7.3 `manifest.curriculum_standards` 字段 7 种 category 引用范式；④ 17.7.4 每棵树的 `metadata.curriculum` / `domain.curriculum_goal` / `node.curriculum_points` 三层 schema 与注入工具说明。(4) **硬规则 #42 扩充**：学科前缀清单从 9 个扩为 10 个，新增 `sci` 小学科学前缀；`manifest.subject: "science"` 被正式纳入合法值；v5.34.6 增量标注"补 `sci`"。(5) **8.3.1 小学科学专属节奏（新小节）**：明确 1-2 / 3-4 / 5-6 年级三学段的设计重点、典型互动、探究深度上限；列出 4 件必做事项（观察入手 / 记录单可填 / 生活联想 / 技术工程收尾）；列出 4 种禁用模板（公式推导 / 题海 / 纯抽象 / 应试导向），防止 AI 把"小学数学模板"套到科学上。(6) **rebuild-index.py 映射扩充**：`subject_to_tree_prefix()` 的 mapping 新增 `'science': ['science-elementary']` 和 `'info_tech': ['info-tech-high']`，让小学科学课件和信息技术课件能被 rebuild-index 正确关联到对应知识树（之前 rebuild-index 漏配就会卡在"文件存在但知识树未引用"警告）。(7) **设计哲学**：课标不只是数据层属性，还应该是 AI 生成课件时的"宪法"——SKILL 知识库里有完整的课标速查表，AI 在 Phase 0.5 知识查询时就能优先引用课标条款而非编造，Phase 3 生成的 HTML 课件也能在 manifest in 准确标注课标依据，形成"课标 → 知识树 → 课件"的完整可追溯链路。
 
-- v5.34.9.2：**⭐ 封堵"直推 examples/ 绕过质检"漏洞 · validator 严格化 · pre-push hook 双重护栏**——(1) 用户发现 2026-04-20 早上 `https://weponusa.github.io/teachany/examples/science-genetics-variation-intro/` 是一份**质量很差、没走社区流水线**的课件，追查发现：commit 记录 `wepon <weponusa@gmail.com>` 直接 `git push origin main` 推的（没走 PR），课件目录只有裸 `index.html`（34KB，0 张图、0 段 mp3、0 canvas、0 svg、0 AI 学伴配置、0 manifest.json），但 registry.json 里 status=official，放到 Gallery 的"官方课件"区。用户质问"质检失效了？"。(2) **根因**：`scripts/validate-courseware.py` 的 `validate_one()` 函数第一行遇到"无 manifest.json"就 `return [('warn', ...)]`——只给个警告然后直接返回，**跳过了后续 47 条硬规则的全部检查**。结果任何人（甚至包括 owner 自己图省事）往 `examples/` 塞一个裸 HTML 都能绕过整个发布闸门。v5.34.9 建的"零配置自动提交 + 自动质检 + 自动合并"流水线再漂亮也挡不住 owner 本地的 `git push`。(3) **修复（validator 严格化）**：`validate_one()` 改为：① 无 manifest.json → `error`（发布阻断）而非 warn；② 即使无 manifest，也继续检查 index.html 是否存在（一次性反馈所有错误）；③ `issues = list(errors)` 把早期致命错误带进主返回列表，供 exit code 判定。(4) **修复（pre-push hook 双重护栏）**：新增 `scripts/pre-push.sh`——每次 `git push` 时自动：① 找出本次 push 涉及的 `examples/<course-id>/` 课件；② 对每个课件跑 `validate-courseware.py`；③ 任何一个 error → 立即拒绝 push。用户需要 `ln -sf ../../scripts/pre-push.sh .git/hooks/pre-push` 一次性安装。紧急绕过：`TEACHANY_SKIP_VALIDATE=1 git push`（仅非课件 push 时用）。(5) **处置已有劣质课件**：删除 `examples/science-genetics-variation-intro/` 目录，从 `registry.json` 移除该条目（140 → 139），从 `data/trees/science-elementary.json` 的 courses[] 引用中清除（实际为 0 处引用，说明当时 rebuild-index 也没跑）。(6) **硬规则 #48 补丁**：在原有"AI 禁止未经用户同意就 push"之上，追加"**任何人（包括 owner）**向 examples/ 推新课件前都必须跑过 validate-courseware.py 0 错误，否则 pre-push hook 会拒绝；owner 紧急修复 README 等非课件文件时才能用 `TEACHANY_SKIP_VALIDATE=1` 绕过"。(7) **防御纵深**：validator 严格化（代码层）+ pre-push hook（本地 git 层）+ GitHub Actions validate.yml（远端 CI 层）三层守护，任何一层都能独立拦住劣质课件；owner 再想"临时图省事 push 一份"都必须要跑一次 validator 才行。(8) **设计哲学**："质检通过 = 发布成功"这条 v5.34.9 定下的规则，必须对**所有提交路径**（社区 PR / owner 直推 / CI 自动化）一视同仁执行，任何一条路径留后门，整个质量体系就崩塌。**Owner 不是免检特权用户，owner 是最应该以身作则的守门人**。
+- v5.34.9.2：**⭐ 封堵"直推 examples/ 绕过质检"漏洞 · validator 严格化 · pre-push hook 双重护栏**——(1) 用户发现 2026-04-20 早上 `https://www.teachany.cn/examples/science-genetics-variation-intro/` 是一份**质量很差、没走社区流水线**的课件，追查发现：commit 记录 `wepon <weponusa@gmail.com>` 直接 `git push origin main` 推的（没走 PR），课件目录只有裸 `index.html`（34KB，0 张图、0 段 mp3、0 canvas、0 svg、0 AI 学伴配置、0 manifest.json），但 registry.json 里 status=official，放到 Gallery 的"官方课件"区。用户质问"质检失效了？"。(2) **根因**：`scripts/validate-courseware.py` 的 `validate_one()` 函数第一行遇到"无 manifest.json"就 `return [('warn', ...)]`——只给个警告然后直接返回，**跳过了后续 47 条硬规则的全部检查**。结果任何人（甚至包括 owner 自己图省事）往 `examples/` 塞一个裸 HTML 都能绕过整个发布闸门。v5.34.9 建的"零配置自动提交 + 自动质检 + 自动合并"流水线再漂亮也挡不住 owner 本地的 `git push`。(3) **修复（validator 严格化）**：`validate_one()` 改为：① 无 manifest.json → `error`（发布阻断）而非 warn；② 即使无 manifest，也继续检查 index.html 是否存在（一次性反馈所有错误）；③ `issues = list(errors)` 把早期致命错误带进主返回列表，供 exit code 判定。(4) **修复（pre-push hook 双重护栏）**：新增 `scripts/pre-push.sh`——每次 `git push` 时自动：① 找出本次 push 涉及的 `examples/<course-id>/` 课件；② 对每个课件跑 `validate-courseware.py`；③ 任何一个 error → 立即拒绝 push。用户需要 `ln -sf ../../scripts/pre-push.sh .git/hooks/pre-push` 一次性安装。紧急绕过：`TEACHANY_SKIP_VALIDATE=1 git push`（仅非课件 push 时用）。(5) **处置已有劣质课件**：删除 `examples/science-genetics-variation-intro/` 目录，从 `registry.json` 移除该条目（140 → 139），从 `data/trees/science-elementary.json` 的 courses[] 引用中清除（实际为 0 处引用，说明当时 rebuild-index 也没跑）。(6) **硬规则 #48 补丁**：在原有"AI 禁止未经用户同意就 push"之上，追加"**任何人（包括 owner）**向 examples/ 推新课件前都必须跑过 validate-courseware.py 0 错误，否则 pre-push hook 会拒绝；owner 紧急修复 README 等非课件文件时才能用 `TEACHANY_SKIP_VALIDATE=1` 绕过"。(7) **防御纵深**：validator 严格化（代码层）+ pre-push hook（本地 git 层）+ GitHub Actions validate.yml（远端 CI 层）三层守护，任何一层都能独立拦住劣质课件；owner 再想"临时图省事 push 一份"都必须要跑一次 validator 才行。(8) **设计哲学**："质检通过 = 发布成功"这条 v5.34.9 定下的规则，必须对**所有提交路径**（社区 PR / owner 直推 / CI 自动化）一视同仁执行，任何一条路径留后门，整个质量体系就崩塌。**Owner 不是免检特权用户，owner 是最应该以身作则的守门人**。
 
 - v5.35：**用户身份上传与自动注册**——课件制作完成后统一写入 `community/<course-id>/`，运行 `scripts/rebuild-index.py` 自动更新 Registry 与知识树，再以当前 Git 用户身份提交并推送到远端；移除旧的多身份发布分支、额外权限标记和审批路径说明。
 

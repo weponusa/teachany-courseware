@@ -11,7 +11,7 @@ TeachAny 官方课件资产仓库。这里存放社区课件、示范课件、Ga
 
 - Skill 安装仓库：<https://github.com/weponusa/teachany>
 - 课件资产仓库：<https://github.com/weponusa/teachany-courseware>
-- Gallery（GitHub Pages）：<https://weponusa.github.io/teachany-courseware/>
+- Gallery（GitHub Pages）：<https://www.teachany.cn/>
 
 ## 目录
 

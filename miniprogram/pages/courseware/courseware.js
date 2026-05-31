@@ -1,4 +1,4 @@
-const COURSEWARE_BASE = 'https://weponusa.github.io/teachany-courseware/community/'
+const COURSEWARE_BASE = 'https://www.teachany.cn/community/'
 
 function sanitizeId(id) {
   return String(id || '').trim().replace(/[^a-zA-Z0-9_-]/g, '')

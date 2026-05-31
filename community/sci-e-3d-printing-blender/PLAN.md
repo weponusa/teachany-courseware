@@ -46,4 +46,4 @@ node scripts/validate-courseware.cjs community/sci-e-3d-printing-blender
 
 ## 6. 发布说明
 
-该课件为 `free_mode=true` 的 STEM 拓展课件，应显示在“其他知识”入口，同时通过 Gallery 社区索引展示。实体课件位于 `community/sci-e-3d-printing-blender/`，线上地址由 `community/index.json.download_url` 指向 `https://weponusa.github.io/teachany-courseware/community/sci-e-3d-printing-blender/`。
+该课件为 `free_mode=true` 的 STEM 拓展课件，应显示在“其他知识”入口，同时通过 Gallery 社区索引展示。实体课件位于 `community/sci-e-3d-printing-blender/`，线上地址由 `community/index.json.download_url` 指向 `https://www.teachany.cn/community/sci-e-3d-printing-blender/`。

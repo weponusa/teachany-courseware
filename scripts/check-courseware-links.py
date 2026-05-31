@@ -9,7 +9,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-BASE_URL = "https://weponusa.github.io/teachany-courseware"
+BASE_URL = "https://www.teachany.cn"
 BAD_BASE_URL = "https://weponusa.github.io/teachany"
 SKIP_DIRS = {"pending", "archive", "drafts", "approved", "rejected"}
 

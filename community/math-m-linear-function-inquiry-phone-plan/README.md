@@ -10,5 +10,5 @@ TeachAny v7.12 探究课试制课件。
 打开：
 
 ```text
-https://weponusa.github.io/teachany-courseware/community/math-m-linear-function-inquiry-phone-plan/
+https://www.teachany.cn/community/math-m-linear-function-inquiry-phone-plan/
 ```
