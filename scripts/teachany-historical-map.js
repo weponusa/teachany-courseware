@@ -57,20 +57,32 @@
     return;
   }
 
+  // 双平台远程地图源：teachany.cn 优先（国内外均可访问，Cloudflare），
+  // GitHub（jsDelivr / raw）作为备份。任一可用即可，互为冗余。
+  var REMOTE_MAP_BASES = [
+    "https://www.teachany.cn/assets/maps/",
+    "https://cdn.jsdelivr.net/gh/weponusa/teachany@main/assets/maps/",
+    "https://raw.githubusercontent.com/weponusa/teachany/main/assets/maps/"
+  ];
+
   var GEOJSON_SEARCH_PATHS = function (scope, file) {
-    // file 可能是 'qin-dynasty.geojson' 或 '009-ce-500.geojson' 或完整路径
+    // file 可能是 'qin-dynasty.geojson'、'chrono-cn/010-tang-dynasty.geojson' 或完整 URL
     if (file.startsWith("http") || file.startsWith("/") || file.startsWith("./") || file.startsWith("../")) {
       return [file];
     }
     var bases = [];
-    // 优先课件本地 assets/maps/
+    // 1) 优先课件本地 assets/maps/（裸名或相对分类路径都支持）
     bases.push("./assets/maps/" + file);
     bases.push("assets/maps/" + file);
-    // 回退到 skill 仓库（相对路径）
+    // 2) 回退到 skill 仓库（相对路径，历史兼容）
     var scopeDir = scope === "world" ? "historical-world" : scope === "china" ? "historical-china" : "historical-" + scope;
     bases.push("../../skill/assets/" + scopeDir + "/" + file);
     bases.push("../skill/assets/" + scopeDir + "/" + file);
     bases.push("/teachany/skill/assets/" + scopeDir + "/" + file);
+    // 3) 双平台远程回退（teachany.cn 优先，再 GitHub）。
+    //    仅当 file 为相对分类路径（如 chrono-cn/010-xxx.geojson）时才能命中远端；
+    //    裸名命中失败会被自动跳过，无副作用。
+    REMOTE_MAP_BASES.forEach(function (b) { bases.push(b + file); });
     return bases;
   };
 
@@ -199,20 +211,38 @@
     ).addTo(map);
 
     // hillshade 叠加层（可选，默认关闭，cfg.hillshade=true 时开启）
+    // 多源回退：本地 → teachany.cn → GitHub，任一成功即叠加，全部失败则静默降级。
     if (cfg.hillshade === true || cfg.hillshade) {
-      var hillsrc = typeof cfg.hillshade === "string" ? cfg.hillshade : "./assets/maps/hillshade.jpg";
-      var img = new Image();
-      img.onload = function () {
-        L.imageOverlay(hillsrc, [[-90, -180], [90, 180]], {
-          opacity: 0.35,
-          interactive: false,
-          zIndex: 200
-        }).addTo(map);
-      };
-      img.onerror = function () {
-        // 静默降级
-      };
-      img.src = hillsrc;
+      var hillCandidates = [];
+      if (typeof cfg.hillshade === "string") {
+        var hs = cfg.hillshade;
+        if (hs.startsWith("http") || hs.startsWith("./") || hs.startsWith("../") || hs.startsWith("/")) {
+          hillCandidates.push(hs);
+        } else {
+          // 相对 manifest 路径，如 physical/hillshade/global-color-hillshade-2k.jpg
+          hillCandidates.push("./assets/maps/" + hs);
+          REMOTE_MAP_BASES.forEach(function (b) { hillCandidates.push(b + hs); });
+        }
+      } else {
+        hillCandidates.push("./assets/maps/hillshade.jpg");
+        REMOTE_MAP_BASES.forEach(function (b) {
+          hillCandidates.push(b + "physical/hillshade/global-color-hillshade-2k.jpg");
+        });
+      }
+      (function tryHill(list) {
+        if (!list.length) return; // 静默降级
+        var src = list[0];
+        var img = new Image();
+        img.onload = function () {
+          L.imageOverlay(src, [[-90, -180], [90, 180]], {
+            opacity: 0.35,
+            interactive: false,
+            zIndex: 200
+          }).addTo(map);
+        };
+        img.onerror = function () { tryHill(list.slice(1)); };
+        img.src = src;
+      })(hillCandidates);
     }
 
     // attribution 自定义
@@ -424,5 +454,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  window.TeachAnyHistoricalMap = { __version: "2.4-fix-crs", mount: mount };
+  window.TeachAnyHistoricalMap = { __version: "2.5-dual-platform", mount: mount };
 })();

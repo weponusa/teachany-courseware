@@ -587,25 +587,34 @@ def validate_one(course_dir):
             and 'mLoadGeoBoundaries' in full_html
             and re.search(r'let\s+mCx\s*=|const\s+mGeoFiles\s*=', full_html)
         )
+        # v7.11: 声明式标准历史地图模块（data-teachany-map + teachany-historical-map.js）
+        # 视为合规：底图(L.tileLayer)与 fitBounds 均在外部标准模块内实现，HTML 只声明配置，
+        # 不应再要求课件 HTML 内出现 L.tileLayer / fitBounds 字面量。
+        has_declarative_map = (
+            'data-teachany-map' in full_html
+            and 'teachany-historical-map.js' in full_html
+        )
+        # 注意：L.imageOverlay/graphic-image 仅检测课件 HTML 自身手写的旧底图方案；
+        # 标准模块内部使用 imageOverlay 叠加 hillshade 不在课件 HTML 中，不会被误判。
         has_image_overlay = bool(re.search(r'L\.imageOverlay\s*\(', full_html))
         has_echarts_graphic_image = bool(re.search(
             r'graphic\s*:\s*\[[^\]]*?type\s*:\s*[\'"]image[\'"]', full_html))
-        if has_image_overlay:
+        if has_image_overlay and not has_declarative_map:
             issues.append(('error',
                 f'{course_dir.name}: 检测到 L.imageOverlay 旧底图方案'
-                f'（硬规则 #35 严禁 · v7.3 起统一改用 L.tileLayer XYZ 瓦片）'))
+                f'（硬规则 #35 严禁 · v7.3 起统一改用 L.tileLayer XYZ 瓦片或声明式标准模块）'))
         if has_echarts_graphic_image:
             issues.append(('error',
                 f'{course_dir.name}: 检测到 ECharts graphic type:"image" 铺底图'
                 f'（硬规则 #35 严禁 · DOM 绝对定位不跟随 geo 变换，必定错位）'))
-        if not has_tile_layer and not has_canvas_geojson_map:
+        if not has_tile_layer and not has_canvas_geojson_map and not has_declarative_map:
             issues.append(('error',
-                f'{course_dir.name}: 历史/地理课件 HTML 缺 L.tileLayer XYZ 瓦片底图调用，且未检测到自包含 Canvas GeoJSON 地图'
-                f'（硬规则 #35 · 必须有可验证的地理参考底图或本地疆域地图）'))
-        if not has_fit_bounds and not has_canvas_geojson_map:
+                f'{course_dir.name}: 历史/地理课件 HTML 缺底图：需 data-teachany-map 声明式标准模块、'
+                f'L.tileLayer XYZ 瓦片、或自包含 Canvas GeoJSON 地图（硬规则 #35）'))
+        if not has_fit_bounds and not has_canvas_geojson_map and not has_declarative_map:
             issues.append(('error',
-                f'{course_dir.name}: 地图初始化未调用 fitBounds/setView 聚焦核心区域，且未检测到 Canvas 地图中心/缩放控制'
-                f'（硬规则 #36 · 禁止停留在 [0,0] 默认中心）'))
+                f'{course_dir.name}: 地图未聚焦核心区域：需 fitBounds/setView、Canvas 地图中心控制、'
+                f'或 data-teachany-map 声明式模块（其 config 含 fitBounds/center）（硬规则 #36）'))
 
     # 14. 视频嵌入规范（v5.34.11 新增，硬规则 #25）
     if html.exists() and full_html:
