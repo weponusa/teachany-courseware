@@ -2,6 +2,10 @@
 
 > 本目录存放所有课件用到的地图 GeoJSON / 底图 / 3D 瓦片，按「时空维度」统一整理。
 > 总大小 ~104MB · 207 个文件 · v1.0 (2026-04-26)
+>
+> **课件运行时对齐**：历史/地理互动地图使用 `assets/scripts/teachany-historical-map.js`（Web Mercator XYZ + GeoJSON）。
+> `physical/hillshade/*.jpg` 为等距圆柱静态图，**不得** 作为 Leaflet `imageOverlay` 底图（会错位）。
+> 制作规范见 teachany-opensource skill：`topics/historical-maps-projection.md`。
 
 ## 目录结构
 

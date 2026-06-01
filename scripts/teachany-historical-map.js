@@ -1,4 +1,4 @@
-/*! TeachAny Standard Historical Map · v2.0 (Leaflet based)
+/*! TeachAny Standard Historical Map · v2.7 (Leaflet · Web Mercator)
  * ─────────────────────────────────────────────────────────
  * 参考稳定实现：community/history-medieval-europe
  * 特点：真 Leaflet 地图引擎 + 本地 geojson + 朝代切换 + 城市标注 + 暗色主题
@@ -42,10 +42,12 @@
  *     </script>
  *   </div>
  *
- * 注意：
- *   - geojson 文件路径相对于课件目录的 `assets/maps/<file>` 或全局 `/skill/assets/historical-{scope}/<file>`
- *   - scope 可选：china / world / custom
- *   - hillshade 可选：`assets/maps/hillshade.jpg`（有则自动叠加）
+ * 投影与对齐（强制，详见 skill topics/historical-maps-projection.md）：
+ *   - CRS：Leaflet 默认 EPSG:3857（Web Mercator）
+ *   - 底图：仅 L.tileLayer XYZ；禁止 L.imageOverlay 全球等距圆柱 JPG（cfg.hillshade 已废弃）
+ *   - 疆域 GeoJSON：WGS84，坐标 [lng, lat]；城市 cities：[lat, lng, …]
+ *   - fitBounds：[[南纬, 西经], [北纬, 东经]]，如中国 [[18,72],[52,140]]
+ *   - 地形：cfg.terrain !== false 时叠加 Esri World_Shaded_Relief（同为 Web Mercator）
  */
 (function () {
   "use strict";
@@ -193,7 +195,13 @@
       attributionControl: false
     });
 
-    var hasHillshade = !!(cfg.hillshade === true || cfg.hillshade);
+    if (cfg.hillshade) {
+      console.warn(
+        "[TeachAny Map] cfg.hillshade 已废弃（等距圆柱 JPG 与 Web Mercator 错位，疆域会对不齐）。" +
+        "请从 data-teachany-map-config 删除 hillshade。见 topics/historical-maps-projection.md"
+      );
+    }
+
     var refitTimer = null;
 
     function refitMap() {
@@ -217,54 +225,30 @@
       refitTimer = setTimeout(refitMap, 160);
     }
 
-    // v2.3: 瓦片底图 + hillshade 叠加层（有 hillshade 时降低瓦片透明度，减少与疆域层视觉错位）
-    var tileLayer = L.tileLayer(
+    // v2.7: Web Mercator XYZ 底图（与 WGS84 GeoJSON 同 CRS 链，Leaflet 自动对齐）
+    L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
       {
         subdomains: "abcd",
         maxZoom: 19,
-        opacity: hasHillshade ? 0.22 : 0.7,
+        opacity: 0.72,
         attribution: "© CARTO © OSM contributors"
       }
     ).addTo(map);
 
-    if (cfg.fitBounds) {
-      try { map.fitBounds(L.latLngBounds(cfg.fitBounds), { padding: [24, 24] }); } catch (e) {}
+    if (cfg.terrain !== false) {
+      var terrainOpacity = 0.42;
+      if (cfg.terrain && typeof cfg.terrain === "object" && cfg.terrain.opacity != null) {
+        terrainOpacity = cfg.terrain.opacity;
+      }
+      L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}",
+        { maxZoom: 13, opacity: terrainOpacity, attribution: "© Esri" }
+      ).addTo(map);
     }
 
-    // hillshade 叠加层（可选，默认关闭，cfg.hillshade=true 时开启）
-    // 多源回退：本地 → teachany.cn → GitHub，任一成功即叠加，全部失败则静默降级。
-    if (cfg.hillshade === true || cfg.hillshade) {
-      var hillCandidates = [];
-      if (typeof cfg.hillshade === "string") {
-        var hs = cfg.hillshade;
-        if (hs.startsWith("http") || hs.startsWith("./") || hs.startsWith("../") || hs.startsWith("/")) {
-          hillCandidates.push(hs);
-        } else {
-          // 相对 manifest 路径，如 physical/hillshade/global-color-hillshade-2k.jpg
-          hillCandidates.push("./assets/maps/" + hs);
-          REMOTE_MAP_BASES.forEach(function (b) { hillCandidates.push(b + hs); });
-        }
-      } else {
-        hillCandidates.push("./assets/maps/hillshade.jpg");
-        REMOTE_MAP_BASES.forEach(function (b) {
-          hillCandidates.push(b + "physical/hillshade/global-color-hillshade-2k.jpg");
-        });
-      }
-      (function tryHill(list) {
-        if (!list.length) return; // 静默降级
-        var src = list[0];
-        var img = new Image();
-        img.onload = function () {
-          L.imageOverlay(src, [[-90, -180], [90, 180]], {
-            opacity: 0.35,
-            interactive: false,
-            zIndex: 200
-          }).addTo(map);
-        };
-        img.onerror = function () { tryHill(list.slice(1)); };
-        img.src = src;
-      })(hillCandidates);
+    if (cfg.fitBounds) {
+      try { map.fitBounds(L.latLngBounds(cfg.fitBounds), { padding: [24, 24] }); } catch (e) {}
     }
 
     // attribution 自定义

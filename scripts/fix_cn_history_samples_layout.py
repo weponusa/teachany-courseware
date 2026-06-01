@@ -151,7 +151,7 @@ def patch_ancient_civ_map(html: str) -> str:
             "style": {"color": "#0ea5e9", "weight": 3},
             "visible": False,
         }],
-        "hillshade": "physical/hillshade/global-color-hillshade-2k.jpg",
+        "terrain": True,
     }
     new_json = json.dumps(cfg, ensure_ascii=False, indent=2)
     return re.sub(

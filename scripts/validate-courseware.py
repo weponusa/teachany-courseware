@@ -594,9 +594,12 @@ def validate_one(course_dir):
             'data-teachany-map' in full_html
             and 'teachany-historical-map.js' in full_html
         )
-        # 注意：L.imageOverlay/graphic-image 仅检测课件 HTML 自身手写的旧底图方案；
-        # 标准模块内部使用 imageOverlay 叠加 hillshade 不在课件 HTML 中，不会被误判。
+        # 注意：L.imageOverlay 仅检测课件 HTML 自身手写的旧底图方案。
         has_image_overlay = bool(re.search(r'L\.imageOverlay\s*\(', full_html))
+        if has_declarative_map and re.search(r'"hillshade"\s*:', full_html):
+            issues.append(('error',
+                f'{course_dir.name}: data-teachany-map-config 含已废弃 hillshade'
+                f'（等距圆柱 JPG 与 Web Mercator 错位 · 见 historical-maps-projection.md）'))
         has_echarts_graphic_image = bool(re.search(
             r'graphic\s*:\s*\[[^\]]*?type\s*:\s*[\'"]image[\'"]', full_html))
         if has_image_overlay and not has_declarative_map:
