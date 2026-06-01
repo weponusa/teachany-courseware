@@ -1525,7 +1525,7 @@ function showTooltip(event, d) {
       const isBest = idx === 0 && hubCount > 1 ? ' <span style="color:var(--accent);">👑</span>' : '';
       const courseUrl = c.url || (c.path ? `./${c.path}/index.html` : '');
       if (courseUrl) {
-        html += `<a href="${courseUrl}" target="_blank" onclick="event.preventDefault();safeOpenCourseUrl('${courseUrl.replace(/'/g, "\\'")}')"
+        html += `<a ${courseLinkAttrs(courseUrl)}
           style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin:3px 0;border-radius:6px;font-size:13px;color:var(--text);text-decoration:none;background:rgba(148,163,184,0.08);transition:all 0.2s;pointer-events:auto;border:1px solid transparent;"
           onmouseover="this.style.background='rgba(59,130,246,0.15)';this.style.borderColor='rgba(59,130,246,0.3)'"
           onmouseout="this.style.background='rgba(148,163,184,0.08)';this.style.borderColor='transparent'"
@@ -1556,7 +1556,7 @@ function showTooltip(event, d) {
       }
       const likesCount = window.TeachAnyRegistry ? TeachAnyRegistry.getRegistryLikeCount(courseId) : 0;
       const likeBadge = likesCount > 0 ? ` <span style="color:#f87171;">❤️${likesCount}</span>` : ' <span style="color:var(--dimmer);">❤️0</span>';
-      html += `<a href="${courseUrl}" target="_blank" onclick="event.preventDefault();safeOpenCourseUrl('${courseUrl}')"
+      html += `<a ${courseLinkAttrs(courseUrl)}
         style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin:3px 0;border-radius:6px;font-size:13px;color:var(--text);text-decoration:none;background:rgba(148,163,184,0.08);transition:all 0.2s;pointer-events:auto;border:1px solid transparent;"
         onmouseover="this.style.background='rgba(59,130,246,0.15)';this.style.borderColor='rgba(59,130,246,0.3)'"
         onmouseout="this.style.background='rgba(148,163,184,0.08)';this.style.borderColor='transparent'"
@@ -1656,6 +1656,7 @@ const TEACHANY_NAV_WHITELIST = [
   /^\.\.?\//,                                          // 相对路径
   /^#/,                                                // 锚点
   /^imported-course\.html/,                            // 用户课件查看器
+  /^https?:\/\/(www\.)?teachany\.cn\//,                // 生产站点（Hub 默认 URL）
   /^https?:\/\/weponusa\.github\.io\/teachany\//,      // TeachAny Pages
   /^https?:\/\/weponusa\.github\.io\/teachany-courseware\//, // TeachAny Courseware Pages
   /^https?:\/\/github\.com\/weponusa\/teachany\//,     // TeachAny GitHub
@@ -1669,13 +1670,15 @@ function isTeachAnyUrl(url) {
   return TEACHANY_NAV_WHITELIST.some(re => re.test(url));
 }
 
-function safeOpenCourseUrl(url) {
-  if (!url || url === '#') return;
-  if (isTeachAnyUrl(url)) {
-    window.open(url, '_blank', 'noopener');
-  } else {
-    console.warn('[TeachAny] 已拦截非课件链接:', url);
+/** 生成课件链接属性：白名单内用原生 <a>，避免 preventDefault + window.open 被拦或误杀 teachany.cn */
+function courseLinkAttrs(url) {
+  if (!url || url === '#') return 'href="#"';
+  const safe = isTeachAnyUrl(url);
+  const esc = url.replace(/"/g, '&quot;');
+  if (safe) {
+    return `href="${esc}" target="_blank" rel="noopener noreferrer"`;
   }
+  return `href="#" title="链接未通过安全校验" onclick="console.warn('[TeachAny] 已拦截非课件链接:', '${url.replace(/'/g, "\\'")}');return false;"`;
 }
 
 function onNodeClick(event, d) {
