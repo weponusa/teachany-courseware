@@ -109,7 +109,7 @@ git sparse-checkout add assets/maps/chrono-cn/
 git checkout
 
 # 或从 CDN 直接下
-curl -O https://raw.githubusercontent.com/weponusa/teachany/main/assets/maps/chrono-cn/010-tang-dynasty.geojson
+curl -O https://raw.githubusercontent.com/weponusa/teachany-courseware/main/assets/maps/chrono-cn/010-tang-dynasty.geojson
 ```
 
 ## 历史版本兼容

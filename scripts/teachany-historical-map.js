@@ -61,8 +61,8 @@
   // GitHub（jsDelivr / raw）作为备份。任一可用即可，互为冗余。
   var REMOTE_MAP_BASES = [
     "https://www.teachany.cn/assets/maps/",
-    "https://cdn.jsdelivr.net/gh/weponusa/teachany@main/assets/maps/",
-    "https://raw.githubusercontent.com/weponusa/teachany/main/assets/maps/"
+    "https://cdn.jsdelivr.net/gh/weponusa/teachany-courseware@main/assets/maps/",
+    "https://raw.githubusercontent.com/weponusa/teachany-courseware/main/assets/maps/"
   ];
 
   var GEOJSON_SEARCH_PATHS = function (scope, file) {
