@@ -193,22 +193,44 @@
       attributionControl: false
     });
 
-    if (cfg.fitBounds) {
-      try { map.fitBounds(cfg.fitBounds); } catch (e) {}
+    var hasHillshade = !!(cfg.hillshade === true || cfg.hillshade);
+    var refitTimer = null;
+
+    function refitMap() {
+      try { map.invalidateSize(true); } catch (e) { map.invalidateSize(); }
+      if (currentEraLayer) {
+        try {
+          var b = currentEraLayer.getBounds();
+          if (b && b.isValid && b.isValid()) {
+            map.fitBounds(b.pad(0.08));
+            return;
+          }
+        } catch (e) {}
+      }
+      if (cfg.fitBounds) {
+        try { map.fitBounds(L.latLngBounds(cfg.fitBounds), { padding: [24, 24] }); } catch (e) {}
+      }
     }
 
-    // v2.3: 瓦片底图 + hillshade 叠加层
-    // 默认使用 CartoDB DarkMatter 瓦片作为地理参考底图
-    // 可选叠加 hillshade 影像增强地形感
+    function scheduleRefit() {
+      clearTimeout(refitTimer);
+      refitTimer = setTimeout(refitMap, 160);
+    }
+
+    // v2.3: 瓦片底图 + hillshade 叠加层（有 hillshade 时降低瓦片透明度，减少与疆域层视觉错位）
     var tileLayer = L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
       {
         subdomains: "abcd",
         maxZoom: 19,
-        opacity: 0.7,
+        opacity: hasHillshade ? 0.22 : 0.7,
         attribution: "© CARTO © OSM contributors"
       }
     ).addTo(map);
+
+    if (cfg.fitBounds) {
+      try { map.fitBounds(L.latLngBounds(cfg.fitBounds), { padding: [24, 24] }); } catch (e) {}
+    }
 
     // hillshade 叠加层（可选，默认关闭，cfg.hillshade=true 时开启）
     // 多源回退：本地 → teachany.cn → GitHub，任一成功即叠加，全部失败则静默降级。
@@ -394,6 +416,7 @@
                 });
               }
             }).addTo(map);
+            scheduleRefit();
           })
           .catch(function (err) {
             console.error("[TeachAnyMap] geojson 加载失败：", era.file, err);
@@ -432,6 +455,7 @@
         cityGroup.addTo(map);
         currentCityLayer = cityGroup;
       }
+      scheduleRefit();
     }
 
     // 初始加载
@@ -439,13 +463,19 @@
     // v2.2: 一次性渲染 CHGIS 细节叠加层（与朝代独立）
     renderOverlays();
 
-    // 响应容器 resize
+    // 响应容器 resize / 分页切换后重算尺寸（修复 slide-v2 播放模式底图错位）
     if ("ResizeObserver" in window) {
-      var ro = new ResizeObserver(function () {
-        setTimeout(function () { map.invalidateSize(); }, 150);
-      });
+      var ro = new ResizeObserver(function () { scheduleRefit(); });
       ro.observe(mapEl);
     }
+    if ("IntersectionObserver" in window) {
+      var io = new IntersectionObserver(function (entries) {
+        if (entries[0] && entries[0].isIntersecting) scheduleRefit();
+      }, { threshold: 0.15 });
+      io.observe(mapEl);
+    }
+    document.addEventListener("teachany-slide-change", scheduleRefit);
+    map.whenReady(scheduleRefit);
   }
 
   function init() {
@@ -454,5 +484,5 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  window.TeachAnyHistoricalMap = { __version: "2.5-dual-platform", mount: mount };
+  window.TeachAnyHistoricalMap = { __version: "2.6-slide-refit", mount: mount };
 })();

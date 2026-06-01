@@ -63,6 +63,7 @@
     currentPage = i;
     pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
     updateUI();
+    document.dispatchEvent(new CustomEvent('teachany-slide-change', { detail: { index: currentPage } }));
   }
 
   function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
@@ -98,6 +99,9 @@
       container.style.overflowY = 'auto';
       container.style.scrollSnapType = 'y mandatory';
       goToPage(currentPage);
+      setTimeout(function () {
+        document.dispatchEvent(new CustomEvent('teachany-slide-change', { detail: { index: currentPage } }));
+      }, 280);
     } else {
       container.style.height = '';
       container.style.overflowY = '';
