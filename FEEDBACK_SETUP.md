@@ -75,3 +75,4 @@ https://www.teachany.cn/teacher/feedback.html
 - 这是 V1 试点版，暂时没有教师登录保护。
 - 不要收集身份证、家庭住址、手机号等敏感信息。
 - 后续可以加教师口令、课程级任务、AI 分析报告。
+<!-- deploy-trigger: 2026-06-01T14:48:21Z -->
