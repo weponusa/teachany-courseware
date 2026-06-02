@@ -624,23 +624,24 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
 <section class="section" id="interactive-lab" data-tts="interactive-lab" data-bloom-level="apply" data-scaffold="partial">
   <div class="lesson-panel">
     <span class="phase-tag">Annotation Lab</span>
-    <h2>文本批注实验：圈证据，组赏析</h2>
-    <div class="control-row">
-      <label>批注文本（可改写）
-        <textarea id="sample-text" rows="4" aria-label="批注文本">花谢花飞飞满天，红消香断有谁怜？</textarea>
-      </label>
-      <label>分析维度
-        <select id="analysis-mode">
-          <option value="keyword">关键词句</option>
-          <option value="method">写法手法</option>
-          <option value="emotion">情感主题</option>
-          <option value="struct">结构作用</option>
-        </select>
-      </label>
-      <label>批注强度 <input id="mark-level" type="range" min="1" max="5" value="3" aria-label="批注强度"></label>
+    <h2>批注训练：选证据，自动组一段赏析</h2>
+    <p style="color:var(--muted)">这个模块的任务很直接：先选一处原文，再依次点选“证据—写法—效果—主旨”，系统会把你的选择组合成一段可用于课堂发言的赏析。</p>
+    <label style="display:block;margin:12px 0;color:#d6d3d1">选择原文片段
+      <select id="annotation-source" aria-label="选择要赏析的原文片段">
+        <option value="daiyu">黛玉葬花：花谢花飞飞满天，红消香断有谁怜？</option>
+        <option value="gongdu">共读西厢：我就是个多愁多病身，你就是那倾城倾国貌。</option>
+        <option value="qingwen">晴雯撕扇：撕得好，再撕响些！</option>
+        <option value="haole">好了歌：陋室空堂，当年笏满床。</option>
+      </select>
+    </label>
+    <div class="mini-grid" id="annotation-steps">
+      <div class="mini-panel"><h3>① 圈证据</h3><div class="annotation-choice-group" data-step="evidence"></div></div>
+      <div class="mini-panel"><h3>② 判写法</h3><div class="annotation-choice-group" data-step="method"></div></div>
+      <div class="mini-panel"><h3>③ 说效果</h3><div class="annotation-choice-group" data-step="effect"></div></div>
+      <div class="mini-panel"><h3>④ 扣主旨</h3><div class="annotation-choice-group" data-step="theme"></div></div>
     </div>
-    <div class="canvas-wrap"><canvas id="chinese-canvas" class="wide-canvas" width="900" height="400"></canvas></div>
-    <div id="lab-feedback" class="feedback">在画布上查看批注链：证据 → 方法 → 效果 → 主题。</div>
+    <button class="quiz-option" type="button" id="build-annotation" style="margin-top:14px">生成一段赏析</button>
+    <div id="annotation-output" class="feedback">先选择上面四步，再生成赏析。</div>
   </div>
 </section>
 </section>
@@ -1088,33 +1089,68 @@ document.querySelectorAll('[data-archive]').forEach(cb => {
   });
 });
 
-const canvas = document.getElementById('chinese-canvas');
-const ctx = canvas.getContext('2d');
-function clearCanvas() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle='#120a0d'; ctx.fillRect(0,0,canvas.width,canvas.height); }
-function wrap(t,x,y,w,lineH,size,color) {
-  let line=''; ctx.font=size+'px PingFang SC,sans-serif'; ctx.fillStyle=color;
-  for (const ch of t) { const trial=line+ch; if (ctx.measureText(trial).width>w) { ctx.fillText(line,x,y); y+=lineH; line=ch; } else line=trial; }
-  if (line) ctx.fillText(line,x,y); return y;
-}
-function drawAnnotation() {
-  clearCanvas();
-  const raw = document.getElementById('sample-text').value.trim();
-  const mode = document.getElementById('analysis-mode').value;
-  const level = +document.getElementById('mark-level').value;
-  ctx.strokeStyle='#c9a227'; ctx.lineWidth=3; ctx.strokeRect(50,50,800,120);
-  wrap(raw,70,95,760,32,22,'#fde68a');
-  const labels = { keyword:'圈关键词句', method:'判写法手法', emotion:'析情感主题', struct:'看结构照应' };
-  ctx.fillStyle='#fbbf24'; ctx.font='22px sans-serif'; ctx.fillText('维度：'+labels[mode],60,220);
-  for (let i=0;i<level;i++) {
-    ctx.fillStyle=['#c9a227','#f472b6','#38bdf8','#22c55e','#b91c3c'][i%5];
-    ctx.fillRect(80+i*130,250,100,36);
-    ctx.fillStyle='#120a0d'; ctx.font='18px sans-serif';
-    ctx.fillText(['证据','写法','效果','人物','主旨'][i],95+i*130,275);
+const ANNOTATION_BANK = {
+  daiyu: {
+    text: '“花谢花飞飞满天，红消香断有谁怜？”',
+    evidence: ['花谢花飞', '红消香断', '有谁怜'],
+    method: ['以花喻人', '叠词与色彩意象', '反问强化孤独感'],
+    effect: ['把抽象愁绪变成可见画面', '凸显黛玉敏感孤高', '预示人物悲剧命运'],
+    theme: ['美好生命在封建秩序下的凋零', '“千红一哭”的悲剧主旨']
+  },
+  gongdu: {
+    text: '“我就是个多愁多病身，你就是那倾城倾国貌。”',
+    evidence: ['多愁多病身', '倾城倾国貌', '借《西厢记》台词表白'],
+    method: ['互文引用', '人物对话', '含蓄表白'],
+    effect: ['让宝黛关系从朦胧走向明朗', '表现两人的精神契合', '把“情”写得大胆又诗意'],
+    theme: ['真情与礼教的张力', '个体情感对封建秩序的冲撞']
+  },
+  qingwen: {
+    text: '“撕得好，再撕响些！”',
+    evidence: ['撕扇动作', '宝玉纵容一笑', '主仆对话的松动'],
+    method: ['动作描写', '口语化对话', '反常规情节'],
+    effect: ['写出晴雯的真率与骄傲', '表现宝玉对人的平等尊重', '为晴雯悲剧埋下反差'],
+    theme: ['底层人物的尊严闪光', '自由人性与等级秩序的冲突']
+  },
+  haole: {
+    text: '“陋室空堂，当年笏满床。”',
+    evidence: ['陋室空堂', '笏满床', '今昔强烈对照'],
+    method: ['对比', '白话入诗', '象征与总括'],
+    effect: ['浓缩贾府由盛转衰的命运', '把个体故事提升为人生哲思', '形成全书主旨提示'],
+    theme: ['盛衰无常', '富贵如梦', '对功名幻象的反思']
   }
-  document.getElementById('lab-feedback').textContent = '批注链：原文证据 → '+labels[mode]+' → 表达效果 → 主旨意蕴';
+};
+let annotationState = { evidence: '', method: '', effect: '', theme: '' };
+function renderAnnotationChoices() {
+  const key = document.getElementById('annotation-source').value;
+  const data = ANNOTATION_BANK[key];
+  annotationState = { evidence: data.evidence[0], method: data.method[0], effect: data.effect[0], theme: data.theme[0] };
+  ['evidence','method','effect','theme'].forEach(step => {
+    const host = document.querySelector('[data-step="' + step + '"]');
+    host.innerHTML = '';
+    data[step].forEach((item, idx) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'game-btn' + (idx === 0 ? ' ok' : '');
+      btn.textContent = item;
+      btn.addEventListener('click', () => {
+        host.querySelectorAll('.game-btn').forEach(b => b.classList.remove('ok'));
+        btn.classList.add('ok');
+        annotationState[step] = item;
+      });
+      host.appendChild(btn);
+    });
+  });
+  document.getElementById('annotation-output').textContent = '已载入：' + data.text + '。选择四步后点击生成。';
 }
-document.querySelectorAll('#sample-text,#analysis-mode,#mark-level').forEach(el => el.addEventListener('input', drawAnnotation));
-drawAnnotation();
+function buildAnnotation() {
+  const key = document.getElementById('annotation-source').value;
+  const data = ANNOTATION_BANK[key];
+  const sentence = data.text + ' 这一处可以抓住“' + annotationState.evidence + '”来读。它使用了“' + annotationState.method + '”的写法，效果是“' + annotationState.effect + '”，最后指向“' + annotationState.theme + '”。这样写就不是复述情节，而是从原文证据走向艺术赏析。';
+  document.getElementById('annotation-output').textContent = sentence;
+}
+document.getElementById('annotation-source')?.addEventListener('change', renderAnnotationChoices);
+document.getElementById('build-annotation')?.addEventListener('click', buildAnnotation);
+renderAnnotationChoices();
 
 const charCanvas = document.getElementById('char-canvas');
 const cctx = charCanvas.getContext('2d');
