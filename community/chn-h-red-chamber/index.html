@@ -107,6 +107,25 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
 .char-node:hover { transform: scale(1.05); }
 .archive-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(87,83,78,.4); }
 .archive-item input { width: auto; min-height: 24px; margin-top: 4px; }
+.resource-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.resource-list li { display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; border-radius: 14px; background: rgba(18,10,13,.85); border: 1px solid rgba(201,162,39,.2); }
+.resource-list .res-icon { font-size: 22px; line-height: 1.2; }
+.resource-list .res-info { flex: 1; min-width: 0; }
+.resource-list .res-title { font-weight: 600; color: #fef3c7; margin-bottom: 4px; }
+.resource-list .res-desc { font-size: 14px; color: var(--muted); line-height: 1.6; }
+.resource-list .res-tag { font-size: 12px; color: #fde68a; background: rgba(201,162,39,.15); border: 1px solid rgba(201,162,39,.35); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+.game-panel { background: rgba(18,10,13,.9); border: 1px solid rgba(201,162,39,.25); border-radius: 16px; padding: 18px; margin-top: 14px; }
+.game-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
+.game-btn { border: 1px solid rgba(201,162,39,.35); background: #120a0d; color: #faf5f0; border-radius: 12px; padding: 12px; cursor: pointer; text-align: left; min-height: 44px; }
+.game-btn.ok { border-color: #22c55e; background: rgba(34,197,94,.14); }
+.game-btn.bad { border-color: #f97316; background: rgba(249,115,22,.14); }
+.relation-map-host { width: 100%; border-radius: 14px; overflow: hidden; border: 1px solid rgba(201,162,39,.25); background: #120a0d; }
+.relation-map-host svg { display: block; width: 100%; height: auto; }
+.relation-map-host [data-person] { cursor: pointer; }
+.relation-map-host [data-person]:hover rect,
+.relation-map-host [data-person]:hover ellipse { stroke-width: 3; filter: brightness(1.15); }
+.relation-map-host [data-person].active rect,
+.relation-map-host [data-person].active ellipse { stroke: #f472b6; stroke-width: 3; }
 @media (max-width: 600px) {
   .hero { padding: 42px 16px 28px; }
   .section { padding: 26px 16px; }
@@ -151,10 +170,10 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
   <h1>《红楼梦》整本书阅读：从感动细节到艺术探究</h1>
   <p class="subtitle">怎样从「最使自己感动」的故事、人物、场景、语言入手，深入探究全书的思想内容与艺术特点？</p>
   <p style="margin-top:20px;font-size:15px">
-    <a href="#visual-maps">视觉图谱</a> ·
+    <a href="#visual-maps">人物关系图</a> ·
+    <a href="#mini-games">互动小游戏</a> ·
     <a href="#scene-appreciation">名场面赏析</a> ·
-    <a href="#interactive-lab">批注实验</a> ·
-    <a href="#reading-archive">阅读档案</a>
+    <a href="#reading-resources">推荐阅读</a>
   </p>
 </header>
 </section>
@@ -241,6 +260,10 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
       <div class="mini-panel"><h3>精读</h3><p>在名场面停留，圈画诗词、对话、细节描写，完成批注卡片。</p></div>
       <div class="mini-panel"><h3>研读</h3><p>比较人物命运，探究悲剧根源与艺术手法（伏笔、对照、象征）。</p></div>
     </div>
+    <figure class="ta-standard-figure" style="margin-top:18px">
+      <img src="./assets/illustration-baoyu-and-garden.png" alt="大观园与宝玉情境插图" loading="lazy" style="width:100%;max-height:360px;object-fit:cover;border-radius:12px">
+      <figcaption>情境插图：大观园 — 通读阶段建立空间与人物印象。</figcaption>
+    </figure>
   </div>
 </section>
 </section>
@@ -250,10 +273,57 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
   <div class="lesson-panel">
     <span class="phase-tag">Visual Maps</span>
     <h2>视觉资源：人物关系与情节时间轴</h2>
+    <figure class="ta-standard-figure" style="margin:0 0 18px">
+      <img src="./assets/illustration-daiyu-burying-flowers.png" alt="黛玉葬花情境插图" loading="lazy" style="width:100%;max-height:420px;object-fit:cover;border-radius:12px">
+      <figcaption>意境插图：黛玉葬花 — 课标「感动细节」典型入口（Image2 生成）。</figcaption>
+    </figure>
+    <figure class="ta-standard-figure" style="margin:0 0 18px">
+      <div id="relation-map" class="relation-map-host" role="img" aria-label="可点击贾府人物关系图">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640">
+          <rect width="960" height="640" fill="#120a0d"/>
+          <text x="40" y="48" fill="#fef3c7" font-size="24" font-weight="800" font-family="PingFang SC, sans-serif">点击人物查看研讨提示与推荐回目</text>
+          <g data-person="muzhu" role="button" tabindex="0" aria-label="贾母">
+            <ellipse cx="480" cy="120" rx="120" ry="44" fill="#3f1d24" stroke="#c9a227" stroke-width="2"/>
+            <text x="480" y="128" text-anchor="middle" fill="#fde68a" font-size="20" font-weight="700" font-family="PingFang SC, sans-serif">贾母</text>
+          </g>
+          <g data-person="jiaozheng" role="button" tabindex="0" aria-label="贾政">
+            <rect x="200" y="200" width="140" height="56" rx="14" fill="#1e3a5f" stroke="#38bdf8"/>
+            <text x="270" y="235" text-anchor="middle" fill="#bae6fd" font-size="18" font-family="PingFang SC, sans-serif">贾政</text>
+          </g>
+          <g data-person="wangfuren" role="button" tabindex="0" aria-label="王夫人">
+            <rect x="620" y="200" width="140" height="56" rx="14" fill="#1e3a5f" stroke="#38bdf8"/>
+            <text x="690" y="235" text-anchor="middle" fill="#bae6fd" font-size="18" font-family="PingFang SC, sans-serif">王夫人</text>
+          </g>
+          <line x1="480" y1="164" x2="270" y2="200" stroke="#78716c" stroke-width="2"/>
+          <line x1="480" y1="164" x2="690" y2="200" stroke="#78716c" stroke-width="2"/>
+          <g data-person="baoyu" role="button" tabindex="0" aria-label="贾宝玉">
+            <rect x="120" y="320" width="160" height="64" rx="16" fill="#4c0519" stroke="#fb7185"/>
+            <text x="200" y="358" text-anchor="middle" fill="#fecdd3" font-size="20" font-weight="700" font-family="PingFang SC, sans-serif">贾宝玉</text>
+          </g>
+          <g data-person="daiyu" role="button" tabindex="0" aria-label="林黛玉">
+            <rect x="380" y="320" width="160" height="64" rx="16" fill="#4c0519" stroke="#fb7185"/>
+            <text x="460" y="358" text-anchor="middle" fill="#fecdd3" font-size="20" font-weight="700" font-family="PingFang SC, sans-serif">林黛玉</text>
+          </g>
+          <g data-person="baochai" role="button" tabindex="0" aria-label="薛宝钗">
+            <rect x="640" y="320" width="160" height="64" rx="16" fill="#422006" stroke="#fbbf24"/>
+            <text x="720" y="358" text-anchor="middle" fill="#fde68a" font-size="20" font-weight="700" font-family="PingFang SC, sans-serif">薛宝钗</text>
+          </g>
+          <line x1="270" y1="256" x2="200" y2="320" stroke="#78716c" stroke-width="2"/>
+          <line x1="690" y1="256" x2="720" y2="320" stroke="#78716c" stroke-width="2"/>
+          <g data-person="fengjie" role="button" tabindex="0" aria-label="王熙凤">
+            <rect x="380" y="440" width="200" height="56" rx="14" fill="#312e81" stroke="#a78bfa"/>
+            <text x="480" y="475" text-anchor="middle" fill="#ddd6fe" font-size="18" font-family="PingFang SC, sans-serif">王熙凤</text>
+          </g>
+          <line x1="480" y1="164" x2="480" y2="440" stroke="#57534e" stroke-dasharray="6 4"/>
+        </svg>
+      </div>
+      <figcaption id="relation-map-caption">人物关系：贾母—贾政、王夫人—宝玉、黛玉、宝钗；凤姐掌管家事。</figcaption>
+    </figure>
+    <p id="relation-detail" class="feedback">点击上方人物，查看推荐精读回目与研讨角度。</p>
     <div class="mini-grid">
       <figure class="mini-panel">
-        <img src="./assets/character-relations.svg" alt="贾府主要人物关系简图">
-        <figcaption>人物关系：贾母—贾政王夫人—宝玉、黛玉、宝钗、凤姐。</figcaption>
+        <img src="./assets/character-relations.svg" alt="贾府主要人物关系简图（静态导出用）" loading="lazy">
+        <figcaption>静态关系图（可打印/PPT 导出）。</figcaption>
       </figure>
       <figure class="mini-panel">
         <img src="./assets/plot-timeline.svg" alt="情节脉络时间轴">
@@ -296,6 +366,10 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
       <div class="mini-panel"><h3>艺术特点</h3><p>现实主义细节、诗词象征、人物群像、网状结构与草蛇灰线。</p></div>
       <div class="mini-panel"><h3>阅读方法</h3><p>感动点切入 → 文本证据 → 四层赏析 → 档案积累 → 研讨评介。</p></div>
     </div>
+    <figure class="ta-standard-figure" style="margin-top:18px">
+      <img src="./assets/illustration-red-chamber-themes.png" alt="红楼梦主旨意象图" loading="lazy" style="width:100%;max-height:360px;object-fit:contain;border-radius:12px">
+      <figcaption>主旨意象：盛衰、情缘、哲思的视觉提炼。</figcaption>
+    </figure>
   </div>
 </section>
 </section>
@@ -326,6 +400,10 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
     </div>
     <div class="excerpt-box" id="scene-excerpt"></div>
     <p id="scene-hint" class="feedback"></p>
+    <figure class="ta-standard-figure" style="margin-top:16px">
+      <img id="scene-illustration" src="./assets/illustration-daiyu-burying-flowers.png" alt="名场面情境插图" loading="lazy" style="width:100%;max-height:400px;object-fit:cover;border-radius:12px">
+      <figcaption id="scene-illustration-caption">情境插图随名场面切换。</figcaption>
+    </figure>
     <figure class="ta-standard-figure" style="margin-top:16px">
       <img src="./assets/appreciation-lens.svg" alt="四层赏析透镜图">
     </figure>
@@ -388,7 +466,47 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
 </section>
 </section>
 
-<section class="slide-page" data-page-index="13" data-page-type="content" data-tsh="阅读档案">
+<section class="slide-page" data-page-index="13" data-page-type="content" data-tsh="互动小游戏">
+<section class="section" id="mini-games" data-tts="mini-games">
+  <div class="lesson-panel">
+    <span class="phase-tag">Mini Games</span>
+    <h2>互动小游戏：巩固人物与情节</h2>
+    <p style="color:var(--muted)">用短练习检验你是否能把「感动细节」与人物、结构联系起来（可小组抢答）。</p>
+    <div class="game-panel">
+      <h3 style="margin:0 0 8px;color:#fde68a">① 名场面配对：这一情节最贴近哪位人物？</h3>
+      <p id="game1-prompt" style="margin:0;color:var(--muted)">「花谢花飞飞满天，红消香断有谁怜？」</p>
+      <div class="game-options" id="game1-options">
+        <button type="button" class="game-btn" data-game1="wrong">王熙凤</button>
+        <button type="button" class="game-btn" data-game1="ok">林黛玉</button>
+        <button type="button" class="game-btn" data-game1="wrong">薛宝钗</button>
+        <button type="button" class="game-btn" data-game1="wrong">贾探春</button>
+      </div>
+      <p id="game1-feedback" class="feedback">选一项查看解析。</p>
+      <button type="button" class="quiz-option" id="game1-next" style="margin-top:12px">换一题</button>
+    </div>
+    <div class="game-panel">
+      <h3 style="margin:0 0 8px;color:#fde68a">② 情节排序：哪件事发生在「抄检大观园」之前？</h3>
+      <div class="game-options" id="game2-options">
+        <button type="button" class="game-btn" data-game2="ok">黛玉葬花</button>
+        <button type="button" class="game-btn" data-game2="wrong">贾府抄家收场</button>
+        <button type="button" class="game-btn" data-game2="wrong">宝玉出家（后四十回常见情节）</button>
+      </div>
+      <p id="game2-feedback" class="feedback">提示：前八十回主线为繁华 → 冲突 → 转折 → 败落。</p>
+    </div>
+    <div class="game-panel">
+      <h3 style="margin:0 0 8px;color:#fde68a">③ 艺术手法快问：「好了歌」主要承担什么功能？</h3>
+      <div class="game-options" id="game3-options">
+        <button type="button" class="game-btn" data-game3="wrong">推动宝黛初次见面</button>
+        <button type="button" class="game-btn" data-game3="ok">哲思主旨与盛衰互文</button>
+        <button type="button" class="game-btn" data-game3="wrong">交代大观园建筑布局</button>
+      </div>
+      <p id="game3-feedback" class="feedback"></p>
+    </div>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="14" data-page-type="content" data-tsh="阅读档案">
 <section class="section" id="reading-archive" data-tts="reading-archive">
   <div class="lesson-panel">
     <span class="phase-tag">Reading Portfolio</span>
@@ -490,15 +608,75 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
 </section>
 </section>
 
-<section class="slide-page" data-page-index="20" data-page-type="content" data-tsh="总结">
+<section class="slide-page" data-page-index="20" data-page-type="content" data-tsh="推荐阅读">
+<section class="section" id="reading-resources" data-tts="reading-resources">
+  <div class="lesson-panel">
+    <span class="phase-tag">Further Reading</span>
+    <h2>推荐阅读与拓展资源</h2>
+    <p style="color:var(--muted)">配合整本书阅读与研讨，可按兴趣选读（非考试范围，重在审美与探究）。</p>
+    <ul class="resource-list">
+      <li>
+        <span class="res-icon">📚</span>
+        <div class="res-info">
+          <div class="res-title">《红楼梦》程高本 / 人民文学出版社校注本</div>
+          <div class="res-desc">高中整本书阅读主文本；建议前八十回精读，后四十回可比较阅读并讨论续书问题。</div>
+        </div>
+        <span class="res-tag">原著</span>
+      </li>
+      <li>
+        <span class="res-icon">📖</span>
+        <div class="res-info">
+          <div class="res-title">《红楼梦脂评汇校本》— 曹雪芹著，刘旦宅等</div>
+          <div class="res-desc">借助脂评理解早期读者如何读伏笔、诗词与人物命运，适合学有余力者。</div>
+        </div>
+        <span class="res-tag">书目</span>
+      </li>
+      <li>
+        <span class="res-icon">📖</span>
+        <div class="res-info">
+          <div class="res-title">《蒋勋说红楼梦》— 蒋勋</div>
+          <div class="res-desc">从青春、情感与美学角度切入，适合建立「感动细节」阅读入口（注意与课堂论证区分）。</div>
+        </div>
+        <span class="res-tag">书目</span>
+      </li>
+      <li>
+        <span class="res-icon">🎬</span>
+        <div class="res-info">
+          <div class="res-title">87 版电视剧《红楼梦》（央视）</div>
+          <div class="res-desc">可对照名场面理解人物语气与场景，但研讨须回到原著原文证据，避免以影视代替阅读。</div>
+        </div>
+        <span class="res-tag">影像</span>
+      </li>
+      <li>
+        <span class="res-icon">📝</span>
+        <div class="res-info">
+          <div class="res-title">统编《普通高中语文课程标准（2017年版2020年修订）》· 整本书阅读任务群</div>
+          <div class="res-desc">明确自主阅读、笔记、讨论为主；从最使自己感动的故事、人物、场景、语言入手深入探究。</div>
+        </div>
+        <span class="res-tag">课标</span>
+      </li>
+      <li>
+        <span class="res-icon">🔗</span>
+        <div class="res-info">
+          <div class="res-title">国家中小学智慧教育平台 · 高中语文名著阅读专题</div>
+          <div class="res-desc">可检索「红楼梦」相关微课与导读，作为通读后的补充（链接以学校平台为准）。</div>
+        </div>
+        <span class="res-tag">平台</span>
+      </li>
+    </ul>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="21" data-page-type="content" data-tsh="总结">
 <section class="section" id="summary" data-tts="summary">
   <div class="lesson-panel">
     <span class="phase-tag">Summary</span>
     <h2>一句话带走</h2>
     <ul>
       <li>感动细节是整本书阅读的入口，不是终点。</li>
-      <li>人物关系图与时间轴帮你建立「局部—整体」视野。</li>
-      <li>四层赏析 + 研讨追问 + 阅读档案，落实课标自主研读要求。</li>
+      <li>可点击人物关系图、情节时间轴与互动小游戏，建立「局部—整体」视野。</li>
+      <li>四层赏析 + 研讨追问 + 阅读档案 + 推荐阅读，落实课标自主研读要求。</li>
     </ul>
     <p class="feedback">若能回答「你的感动如何用文本证据通向艺术探究？」——本课达成。</p>
   </div>
@@ -557,11 +735,23 @@ const SCENES = {
   }
 };
 const LENS_LABEL = { lang: "语言品味", char: "人物形象", struct: "结构照应", theme: "主题意蕴" };
+const SCENE_IMAGES = {
+  daiyu: { src: './assets/illustration-daiyu-burying-flowers.png', cap: '黛玉葬花 — 诗词意象与悲剧心境' },
+  baoyu: { src: './assets/illustration-baoyu-and-garden.png', cap: '大观园 — 礼教与真情冲突的背景' },
+  search: { src: './assets/illustration-red-chamber-themes.png', cap: '盛衰转折 — 家族内里蛀空的隐喻' },
+  haole: { src: './assets/illustration-red-chamber-themes.png', cap: '好了歌 — 人生如梦的哲思主旨' }
+};
 function updateScene() {
-  const s = SCENES[document.getElementById('scene-select').value];
+  const key = document.getElementById('scene-select').value;
+  const s = SCENES[key];
   const lens = document.getElementById('lens-select').value;
   document.getElementById('scene-excerpt').textContent = s.text;
   document.getElementById('scene-hint').innerHTML = '<strong>' + LENS_LABEL[lens] + '：</strong>' + s.hints[lens];
+  const art = SCENE_IMAGES[key];
+  const img = document.getElementById('scene-illustration');
+  const cap = document.getElementById('scene-illustration-caption');
+  if (art && img) img.src = art.src;
+  if (art && cap) cap.textContent = art.cap;
 }
 document.getElementById('scene-select').addEventListener('change', updateScene);
 document.getElementById('lens-select').addEventListener('change', updateScene);
@@ -628,13 +818,84 @@ drawAnnotation();
 
 const charCanvas = document.getElementById('char-canvas');
 const cctx = charCanvas.getContext('2d');
+const RELATION_PEOPLE = {
+  muzhu: { name:'贾母', tip:'家族最高权威，温情与规矩并存。', chapter:'推荐回目：第22回（贾母赏戏）、第54回（元宵夜宴）' },
+  jiaozheng: { name:'贾政', tip:'严父与礼教代表，与宝玉冲突集中。', chapter:'推荐回目：第33回（宝玉挨打）' },
+  wangfuren: { name:'王夫人', tip:'礼教维护者，金钏、晴雯等情节的关键。', chapter:'推荐回目：第74回前后（抄检相关）' },
+  baoyu: { name:'贾宝玉', tip:'叛逆与真情；对照「禄鬼」「情僧」。', chapter:'推荐回目：第23回（入园）、第32回（题对额）' },
+  daiyu: { name:'林黛玉', tip:'孤高敏感；诗词是精神自传。', chapter:'推荐回目：第27回（葬花）、第34回（题帕）' },
+  baochai: { name:'薛宝钗', tip:'冷香、随分从时；与黛玉对照。', chapter:'推荐回目：第27回（滴翠亭）、第42回（行酒令）' },
+  fengjie: { name:'王熙凤', tip:'管家才干与机关算尽，盛衰转折枢纽。', chapter:'推荐回目：第15回（协理宁府）、第74回（抄检）' }
+};
+function showRelationPerson(id) {
+  const p = RELATION_PEOPLE[id];
+  if (!p) return;
+  document.querySelectorAll('#relation-map [data-person]').forEach(g => g.classList.toggle('active', g.getAttribute('data-person') === id));
+  const det = document.getElementById('relation-detail');
+  if (det) det.innerHTML = '<strong>' + p.name + '：</strong>' + p.tip + '<br><span style="color:#d6d3d1">' + p.chapter + '</span>';
+  const fb = document.getElementById('char-feedback');
+  if (fb) fb.innerHTML = '<strong>' + p.name + '：</strong>' + p.tip + ' — ' + p.chapter;
+  drawChars(id === 'jiaozheng' || id === 'wangfuren' ? null : (id === 'baochai' ? 'baochai' : id));
+}
+document.querySelectorAll('#relation-map [data-person]').forEach(g => {
+  const id = g.getAttribute('data-person');
+  const go = () => showRelationPerson(id);
+  g.addEventListener('click', go);
+  g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+});
+
+const GAME1_POOL = [
+  { prompt:'「花谢花飞飞满天，红消香断有谁怜？」', answer:'林黛玉', explain:'黛玉葬花名场面，以花喻人，写悲剧预感。' },
+  { prompt:'「女儿是水做的骨肉，男子是泥做的骨肉」', answer:'贾宝玉', explain:'宝玉「女儿是水」之论，体现其价值观念。' },
+  { prompt:'「凡鸟偏从末世来，都知爱慕此生才」', answer:'王熙凤', explain:'判词指向凤姐才干与末世命运。' },
+  { prompt:'「珍重芳姿昼掩门，自携手瓮灌苔盆」', answer:'薛宝钗', explain:'宝钗咏白海棠，显其含蓄随分。' }
+];
+let game1Idx = 0;
+function renderGame1() {
+  const q = GAME1_POOL[game1Idx % GAME1_POOL.length];
+  document.getElementById('game1-prompt').textContent = q.prompt;
+  document.getElementById('game1-feedback').textContent = '选一项查看解析。';
+  document.querySelectorAll('[data-game1]').forEach(btn => {
+    btn.classList.remove('ok','bad');
+    const label = btn.textContent.trim();
+    btn.onclick = () => {
+      document.querySelectorAll('[data-game1]').forEach(b => b.classList.remove('ok','bad'));
+      const ok = label === q.answer;
+      btn.classList.add(ok ? 'ok' : 'bad');
+      document.getElementById('game1-feedback').textContent = (ok ? '✓ ' : '再想想：') + q.explain;
+    };
+  });
+}
+document.getElementById('game1-next')?.addEventListener('click', () => { game1Idx++; renderGame1(); });
+renderGame1();
+document.querySelectorAll('[data-game2]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-game2]').forEach(b => b.classList.remove('ok','bad'));
+    const ok = btn.getAttribute('data-game2') === 'ok';
+    btn.classList.add(ok ? 'ok' : 'bad');
+    document.getElementById('game2-feedback').textContent = ok
+      ? '✓ 葬花、挨打等都在抄检之前，抄检是盛衰转折关。'
+      : '提示：按本课时间轴，抄检前应先经历繁华期的名场面。';
+  });
+});
+document.querySelectorAll('[data-game3]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-game3]').forEach(b => b.classList.remove('ok','bad'));
+    const ok = btn.getAttribute('data-game3') === 'ok';
+    btn.classList.add(ok ? 'ok' : 'bad');
+    document.getElementById('game3-feedback').textContent = ok
+      ? '✓ 好了歌以白话诗点破盛衰如梦，与全书主旨互文。'
+      : '再想想：好了歌出现在开篇与结尾附近，承担哲思提示功能。';
+  });
+});
+
 const CHARS = [
-  { id:'baoyu', x:80, y:80, w:150, h:56, name:'贾宝玉', tip:'叛逆与真情；对照「禄鬼」「情僧」' },
-  { id:'daiyu', x:280, y:80, w:150, h:56, name:'林黛玉', tip:'孤高敏感；诗词是精神自传' },
-  { id:'baochai', x:480, y:80, w:150, h:56, name:'薛宝钗', tip:'冷香、随分从时；与黛玉对照' },
-  { id:'fengjie', x:180, y:180, w:150, h:56, name:'王熙凤', tip:'管家才干与机关算尽' },
-  { id:'tanchun', x:380, y:180, w:150, h:56, name:'探春', tip:'理家才志；抄检时的清醒' },
-  { id:'muzhu', x:580, y:40, w:150, h:56, name:'贾母', tip:'家族权威与温情' }
+  { id:'baoyu', x:80, y:80, w:150, h:56, name:'贾宝玉', tip:'叛逆与真情；对照「禄鬼」「情僧」', chapter:'第23、32、33回' },
+  { id:'daiyu', x:280, y:80, w:150, h:56, name:'林黛玉', tip:'孤高敏感；诗词是精神自传', chapter:'第27、34回' },
+  { id:'baochai', x:480, y:80, w:150, h:56, name:'薛宝钗', tip:'冷香、随分从时；与黛玉对照', chapter:'第27、42回' },
+  { id:'fengjie', x:180, y:180, w:150, h:56, name:'王熙凤', tip:'管家才干与机关算尽', chapter:'第15、74回' },
+  { id:'tanchun', x:380, y:180, w:150, h:56, name:'探春', tip:'理家才志；抄检时的清醒', chapter:'第55、74回' },
+  { id:'muzhu', x:580, y:40, w:150, h:56, name:'贾母', tip:'家族权威与温情', chapter:'第22、54回' }
 ];
 function drawChars(highlight) {
   cctx.fillStyle='#120a0d'; cctx.fillRect(0,0,charCanvas.width,charCanvas.height);
@@ -656,7 +917,8 @@ charCanvas.addEventListener('click', e => {
   const hit = CHARS.find(c => x>=c.x && x<=c.x+c.w && y>=c.y && y<=c.y+c.h);
   if (hit) {
     drawChars(hit.id);
-    document.getElementById('char-feedback').innerHTML = '<strong>'+hit.name+'：</strong>'+hit.tip+' — 建议结合名场面赏析与阅读档案记录。';
+    document.getElementById('char-feedback').innerHTML = '<strong>'+hit.name+'：</strong>'+hit.tip+' — 推荐回目：'+hit.chapter+'；可结合名场面赏析与阅读档案。';
+    showRelationPerson(hit.id);
   }
 });
 
