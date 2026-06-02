@@ -110,6 +110,16 @@ def excerpts_from_satellite(sat: Dict[str, Any], max_items: int = 8) -> List[Dic
     for i, pt in enumerate(sat.get("curriculum_points") or []):
         add(f"cp-{i + 1}", str(pt), "kp-json#curriculum_points")
 
+    tc = sat.get("textbook_content") or {}
+    if isinstance(tc, dict) and tc.get("cn_injected_at"):
+        sec = _clean_text(str(tc.get("section_excerpt") or ""), 900)
+        if sec and "万史" not in sec[:80]:
+            add("cn-section", sec, "cn-curriculum#义教专题")
+        for i, g in enumerate(tc.get("teaching_guidance") or []):
+            add(f"cn-tg-{i + 1}", str(g), "cn-curriculum#教学提示")
+        for i, ar in enumerate(tc.get("academic_requirements") or []):
+            add(f"cn-ar-{i + 1}", str(ar), "cn-curriculum#学业要求")
+
     for i, ex in enumerate(sat.get("excerpts") or []):
         if isinstance(ex, dict):
             text = ex.get("text") or ""
@@ -119,6 +129,8 @@ def excerpts_from_satellite(sat: Dict[str, Any], max_items: int = 8) -> List[Dic
             text = str(ex)
             src = "kp-json#excerpts"
             eid = f"ex-{i + 1}"
+        if "万史" in text[:60] or text.strip().startswith("## 第"):
+            continue
         add(str(eid), text, src)
 
     supplements = sat.get("supplements") or {}
@@ -180,9 +192,51 @@ def errors_from_satellite(sat: Dict[str, Any], max_items: int = 3) -> List[Dict[
     return out
 
 
+def deep_textbook_snippets_from_satellite(
+    sat: Dict[str, Any], max_items: int = 4
+) -> List[Dict[str, str]]:
+    """Return curated/deep textbook snippets for KCP use."""
+    supplements = sat.get("supplements") or {}
+    candidates = supplements.get("deep_textbook_snippets") or []
+    if not candidates:
+        tc = sat.get("textbook_content") or {}
+        if isinstance(tc, dict):
+            candidates = tc.get("deep_snippets") or []
+    out: List[Dict[str, str]] = []
+    for i, item in enumerate(candidates):
+        if not isinstance(item, dict):
+            continue
+        text = _clean_text(str(item.get("text") or ""), 1800)
+        if not text:
+            continue
+        out.append(
+            {
+                "id": str(item.get("id") or f"deep-{i + 1}"),
+                "text": text,
+                "source": str(item.get("source") or "kp-json#supplements.deep_textbook_snippets"),
+                "source_type": str(item.get("source_type") or "deep_textbook"),
+                "score": str(item.get("score") or ""),
+                "match_terms": ", ".join(str(x) for x in (item.get("match_terms") or [])[:8]),
+            }
+        )
+        if len(out) >= max_items:
+            break
+    return out
+
+
 def textbook_refs_from_satellite(sat: Dict[str, Any]) -> List[Dict[str, str]]:
     supplements = sat.get("supplements") or {}
     refs: List[Dict[str, str]] = []
+    for item in deep_textbook_snippets_from_satellite(sat, 4):
+        refs.append(
+            {
+                "book": "deep_textbook_snippet",
+                "chapter": "",
+                "path": item.get("source", ""),
+                "note": item.get("text", "")[:600],
+                "source": "kp-json#supplements.deep_textbook_snippets",
+            }
+        )
     summary = supplements.get("textbook_summary") or sat.get("textbook_content")
     if isinstance(summary, str) and summary.strip():
         refs.append(
@@ -196,7 +250,7 @@ def textbook_refs_from_satellite(sat: Dict[str, Any]) -> List[Dict[str, str]]:
         )
     elif isinstance(summary, dict):
         for key, val in list(summary.items())[:3]:
-            if val:
+            if val and key not in {"deep_snippets"}:
                 refs.append(
                     {
                         "book": key,
@@ -479,6 +533,7 @@ def build_kcp(
         "common_errors": common_errors[:max_errors],
         "prerequisites": prerequisites,
         "extends": extends,
+        "deep_textbook_snippets": deep_textbook_snippets_from_satellite(satellite or {}),
         "textbook_refs": textbook_refs_from_satellite(satellite or {}),
         "md_path": str(md_path.relative_to(ROOT)) if md_path else None,
         "kp_json_path": load_kp_index().get(node_id),
@@ -506,6 +561,10 @@ def print_kcp_human(kcp: Dict[str, Any]) -> None:
     print("## 课标摘录")
     for item in kcp.get("curriculum_excerpts") or []:
         print(f"- [{item['id']}] {item['text'][:200]}{'…' if len(item['text']) > 200 else ''}")
+    print()
+    print("## 深度教材片段")
+    for item in kcp.get("deep_textbook_snippets") or []:
+        print(f"- [{item['id']}] {item.get('source', '')}: {item['text'][:180]}…")
     print()
     print("## 例题")
     for item in kcp.get("exercises") or []:

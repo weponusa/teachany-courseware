@@ -47,6 +47,9 @@ def _clean_snippets(data: dict) -> bool:
 
 
 def fill_node(data: dict) -> bool:
+    if data.get("subject") == "history" and (data.get("curriculum") or "cn") == "cn":
+        if (data.get("_meta") or {}).get("cn_curriculum_inject_at"):
+            return _clean_snippets(data)
     changed = _clean_snippets(data)
     name = data.get("name") or data.get("kp_id") or "本知识点"
     cps = [str(x).strip() for x in (data.get("curriculum_points") or []) if str(x).strip()]
