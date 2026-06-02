@@ -344,13 +344,11 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
 <section class="section" id="pretest" data-tts="pretest" data-bloom-level="remember" data-scaffold="full" data-conceptest="true">
   <div class="lesson-panel">
     <span class="phase-tag">Pre-test</span>
-    <h2>前测：整本书阅读的第一步？</h2>
-    <p><strong>按普高课标，开展《红楼梦》整本书阅读时，教师最应避免的是？</strong></p>
-    <button class="quiz-option" onclick="checkAnswer(this,false,'pretest')">A. 组织学生交流讨论</button>
-    <button class="quiz-option" onclick="checkAnswer(this,true,'pretest')">B. 用讲解代替学生的阅读与思考</button>
-    <button class="quiz-option" onclick="checkAnswer(this,false,'pretest')">C. 指导学生撰写读书笔记</button>
-    <button class="quiz-option" onclick="checkAnswer(this,false,'pretest')">D. 从感动的细节入手探究</button>
+    <h2 id="pretest-q">前测加载中...</h2>
+    <div id="pretest-opts"></div>
     <div id="pretest-feedback" class="feedback">先选一项，查看反馈。</div>
+    <button type="button" id="pretest-next" class="quiz-next-btn" style="display:none;margin-top:12px">下一题 →</button>
+    <p id="pretest-done" style="display:none;color:var(--accent);font-weight:600">✓ 前测完成！进入正式学习。</p>
   </div>
 </section>
 </section>
@@ -492,21 +490,17 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
     </div>
     <div class="game-panel">
       <h3 style="margin:0 0 8px;color:#fde68a">② 情节排序：哪件事发生在「抄检大观园」之前？</h3>
-      <div class="game-options" id="game2-options">
-        <button type="button" class="game-btn" data-game2="ok">黛玉葬花</button>
-        <button type="button" class="game-btn" data-game2="wrong">贾府抄家收场</button>
-        <button type="button" class="game-btn" data-game2="wrong">宝玉出家（后四十回常见情节）</button>
-      </div>
+      <div class="game-options" id="game2-options"></div>
       <p id="game2-feedback" class="feedback">提示：前八十回主线为繁华 → 冲突 → 转折 → 败落。</p>
+      <button type="button" id="game2-next" class="quiz-next-btn" style="display:none;margin-top:12px">下一题 →</button>
+      <p id="game2-done" style="display:none;color:var(--accent);font-weight:600">✓ Game2 完成！</p>
     </div>
     <div class="game-panel">
       <h3 style="margin:0 0 8px;color:#fde68a">③ 艺术手法快问：「好了歌」主要承担什么功能？</h3>
-      <div class="game-options" id="game3-options">
-        <button type="button" class="game-btn" data-game3="wrong">推动宝黛初次见面</button>
-        <button type="button" class="game-btn" data-game3="ok">哲思主旨与盛衰互文</button>
-        <button type="button" class="game-btn" data-game3="wrong">交代大观园建筑布局</button>
-      </div>
+      <div class="game-options" id="game3-options"></div>
       <p id="game3-feedback" class="feedback"></p>
+      <button type="button" id="game3-next" class="quiz-next-btn" style="display:none;margin-top:12px">下一题 →</button>
+      <p id="game3-done" style="display:none;color:var(--accent);font-weight:600">✓ Game3 完成！</p>
     </div>
   </div>
 </section>
@@ -589,13 +583,11 @@ input, textarea, select { width: 100%; border-radius: 12px; border: 1px solid va
 <section class="section" id="posttest" data-tts="posttest" data-bloom-level="evaluate" data-scaffold="none" data-conceptest="true">
   <div class="lesson-panel">
     <span class="phase-tag">Post-test</span>
-    <h2>后测：高质量研读的标志？</h2>
-    <p><strong>下列哪一项最符合课标对《红楼梦》整本书阅读的要求？</strong></p>
-    <button class="quiz-option" onclick="checkAnswer(this,false,'posttest')">A. 背诵全书情节梗概</button>
-    <button class="quiz-option" onclick="checkAnswer(this,true,'posttest')">B. 从感动细节出发，用文本证据完成深入探究与交流</button>
-    <button class="quiz-option" onclick="checkAnswer(this,false,'posttest')">C. 只比较影视与原著差异</button>
-    <button class="quiz-option" onclick="checkAnswer(this,false,'posttest')">D. 由教师统一讲解代替阅读</button>
+    <h2 id="posttest-q">后测加载中...</h2>
+    <div id="posttest-opts"></div>
     <div id="posttest-feedback" class="feedback"></div>
+    <button type="button" id="posttest-next" class="quiz-next-btn" style="display:none;margin-top:12px">下一题 →</button>
+    <p id="posttest-done" style="display:none;color:var(--accent);font-weight:600">✓ 后测完成！查看你的研读档案。</p>
   </div>
 </section>
 </section>
@@ -965,6 +957,292 @@ document.querySelectorAll('[data-game3]').forEach(btn => {
       ? '✓ 好了歌以白话诗点破盛衰如梦，与全书主旨互文。'
       : '再想想：好了歌出现在开篇与结尾附近，承担哲思提示功能。';
   });
+});
+
+// ========== 前测轮播 ==========
+const PRETEST_POOL = [
+  {
+    q: '按普高课标，开展《红楼梦》整本书阅读时，教师最应避免的是？',
+    opts: ['A. 组织学生交流讨论', 'B. 用讲解代替学生的阅读与思考', 'C. 指导学生撰写读书笔记', 'D. 从感动的细节入手探究'],
+    ans: 1,
+    exp: '课标强调学生自主阅读、讨论与探究，教师不应代替学生的阅读与思考过程。'
+  },
+  {
+    q: '《红楼梦》前八十回的作者是？',
+    opts: ['A. 高鹗', 'B. 程伟元', 'C. 曹雪芹', 'D. 脂砚斋'],
+    ans: 2,
+    exp: '前八十回作者为曹雪芹，后四十回一般认为是高鹗/程伟元整理补写。'
+  },
+  {
+    q: '下列属于《红楼梦》「名场面」的是？',
+    opts: ['A. 黛玉葬花', 'B. 刘备三顾茅庐', 'C. 武松打虎', 'D. 孙悟空大闹天宫'],
+    ans: 0,
+    exp: '黛玉葬花是第27回经典场面，体现黛玉的悲剧气质与诗词意象。'
+  },
+  {
+    q: '《红楼梦》的核心主旨之一是？',
+    opts: ['A. 歌颂功名利禄', 'B. 封建家族盛衰与人生无常', 'C. 宣扬神仙道术', 'D. 记录宫廷政治斗争'],
+    ans: 1,
+    exp: '小说以贾府盛衰为主线，贯穿「好了歌」的哲思主旨——盛极必衰、人生如梦。'
+  },
+  {
+    q: '整本书阅读《红楼梦》时，最适合的入门切入点是？',
+    opts: ['A. 直接背诵全书情节', 'B. 从自己感动的细节入手', 'C. 只看电视剧情节', 'D. 先读所有红学论文'],
+    ans: 1,
+    exp: '课标倡导从感动细节入手，建立个人阅读体验，再逐步深入探究。'
+  },
+  {
+    q: '「宝玉挨打」一回主要反映的矛盾是？',
+    opts: ['A. 贾政与王夫人的夫妻矛盾', 'B. 宝玉叛逆与封建仕途伦理的冲突', 'C. 贾府经济困难', 'D. 宝黛爱情公开化'],
+    ans: 1,
+    exp: '宝玉挨打是礼教（仕途经济）与真情（反叛精神）的集中冲突。'
+  }
+];
+
+let pretestIdx = 0;
+function renderPretest() {
+  const q = PRETEST_POOL[pretestIdx];
+  const container = document.getElementById('pretest-opts');
+  container.innerHTML = '';
+  document.getElementById('pretest-q').textContent = '前测：' + q.q;
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.textContent = opt;
+    btn.onclick = () => {
+      container.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('ok','bad'));
+      const ok = (i === q.ans);
+      btn.classList.add(ok ? 'ok' : 'bad');
+      document.getElementById('pretest-feedback').textContent = ok ? '✓ ' + q.exp : '再想想：' + q.exp;
+      if (pretestIdx < PRETEST_POOL.length - 1) {
+        document.getElementById('pretest-next').style.display = 'inline-block';
+      } else {
+        document.getElementById('pretest-done').style.display = 'block';
+        document.getElementById('pretest-next').style.display = 'none';
+      }
+    };
+    container.appendChild(btn);
+  });
+  document.getElementById('pretest-feedback').textContent = '先选一项，查看反馈。';
+  document.getElementById('pretest-next').style.display = 'none';
+}
+renderPretest();
+document.getElementById('pretest-next').addEventListener('click', () => {
+  pretestIdx = (pretestIdx + 1) % PRETEST_POOL.length;
+  renderPretest();
+});
+
+// ========== 后测轮播 ==========
+const POSTTEST_POOL = [
+  {
+    q: '下列哪一项最符合课标对《红楼梦》整本书阅读的要求？',
+    opts: ['A. 背诵全书情节梗概', 'B. 从感动细节出发，用文本证据完成深入探究与交流', 'C. 只比较影视与原著差异', 'D. 由教师统一讲解代替阅读'],
+    ans: 1,
+    exp: '课标强调自主阅读、文本证据、深入探究与同伴交流，而非被动接受。'
+  },
+  {
+    q: '「抄检大观园」在全书结构上的作用是？',
+    opts: ['A. 喜庆场面的铺垫', 'B. 盛衰转折的关键节点', 'C. 宝黛爱情的高潮', 'D. 介绍新人物出场'],
+    ans: 1,
+    exp: '抄检大观园标志着贾府内部矛盾激化，是全书由盛转衰的结构性转折点。'
+  },
+  {
+    q: '《红楼梦》中「好了歌」的作用是？',
+    opts: ['A. 描写园林景色', 'B. 点破盛衰如梦的哲思主旨', 'C. 介绍贾府族谱', 'D. 记录日常饮食细节'],
+    ans: 1,
+    exp: '好了歌以通俗白话点出「好即是了，了即是好」的哲思，与全书盛衰主线互文。'
+  },
+  {
+    q: '高质量的研读档案应该包含？',
+    opts: ['A. 仅抄录他人点评', 'B. 原文摘录 + 个人批注 + 文本证据', 'C. 仅记录情节概要', 'D. 仅收集网络段子'],
+    ans: 1,
+    exp: '研读档案的核心是原文证据 + 个人探究痕迹，这是深度阅读的基础。'
+  },
+  {
+    q: '下列关于前八十回与后四十回的说法，正确的是？',
+    opts: ['A. 前后文笔完全一致', 'B. 后四十回曹雪芹原稿保存完整', 'C. 前八十回为曹雪芹，后四十回一般认为是高鹗等续写', 'D. 后四十回质量优于前八十回'],
+    ans: 2,
+    exp: '学术共识：前八十回曹雪芹著，后四十回高鹗/程伟元整理补写，风格有差异。'
+  },
+  {
+    q: '「名场面赏析」四层分析法不包括？',
+    opts: ['A. 语言特色', 'B. 人物塑造', 'C. 结构功能', 'D. 票房收入'],
+    ans: 3,
+    exp: '四层分析法为：语言特色、人物塑造、结构功能、主题意蕴。票房收入显然无关。'
+  }
+];
+
+let posttestIdx = 0;
+function renderPosttest() {
+  const q = POSTTEST_POOL[posttestIdx];
+  const container = document.getElementById('posttest-opts');
+  container.innerHTML = '';
+  document.getElementById('posttest-q').textContent = '后测：' + q.q;
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.textContent = opt;
+    btn.onclick = () => {
+      container.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('ok','bad'));
+      const ok = (i === q.ans);
+      btn.classList.add(ok ? 'ok' : 'bad');
+      document.getElementById('posttest-feedback').textContent = ok ? '✓ ' + q.exp : '再想想：' + q.exp;
+      if (posttestIdx < POSTTEST_POOL.length - 1) {
+        document.getElementById('posttest-next').style.display = 'inline-block';
+      } else {
+        document.getElementById('posttest-done').style.display = 'block';
+        document.getElementById('posttest-next').style.display = 'none';
+      }
+    };
+    container.appendChild(btn);
+  });
+  document.getElementById('posttest-feedback').textContent = '';
+  document.getElementById('posttest-next').style.display = 'none';
+}
+renderPosttest();
+document.getElementById('posttest-next').addEventListener('click', () => {
+  posttestIdx = (posttestIdx + 1) % POSTTEST_POOL.length;
+  renderPosttest();
+});
+
+// ========== Game2 轮播 ==========
+const GAME2_POOL = [
+  {
+    q: '请将下列事件按前八十回时间顺序排列（最早→最晚）：',
+    opts: [
+      { label: '黛玉进贾府', ok: false },
+      { label: '宝黛共读西厢', ok: false },
+      { label: '黛玉葬花', ok: false },
+      { label: '宝玉挨打', ok: false },
+      { label: '抄检大观园', ok: true }
+    ],
+    exp: '正确顺序：黛玉进贾府 → 共读西厢 → 黛玉葬花 → 宝玉挨打 → 抄检大观园（盛衰转折）。'
+  },
+  {
+    q: '下列哪些场面属于前八十回「繁华期」？（选最早发生的）',
+    opts: [
+      { label: '元春省亲（大观园建成）', ok: true },
+      { label: '抄检大观园', ok: false },
+      { label: '黛玉葬花', ok: false },
+      { label: '宝玉出家', ok: false }
+    ],
+    exp: '元春省亲是大观园最繁华的时刻，抄检是盛衰转折点，宝玉出家是结局。'
+  },
+  {
+    q: '「共读西厢」一回的核心意义是？',
+    ops: [
+      { label: '推进宝黛情感明朗化', ok: true },
+      { label: '交代贾府经济来源', ok: false },
+      { label: '描写大观园建筑', ok: false },
+      { label: '记录农事活动', ok: false }
+    ],
+    exp: '共读西厢是宝黛精神契合的高光时刻，情感由朦胧走向明朗。'
+  }
+];
+
+let game2Idx = 0;
+function renderGame2() {
+  const q = GAME2_POOL[game2Idx];
+  const container = document.getElementById('game2-options');
+  container.innerHTML = '';
+  const promptP = document.createElement('p');
+  promptP.innerHTML = '<strong>' + q.q + '</strong>';
+  promptP.style.marginBottom = '10px';
+  container.appendChild(promptP);
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'game-btn';
+    btn.textContent = opt.label;
+    btn.onclick = () => {
+      container.querySelectorAll('.game-btn').forEach(b => b.classList.remove('ok','bad'));
+      const ok = opt.ok;
+      btn.classList.add(ok ? 'ok' : 'bad');
+      document.getElementById('game2-feedback').textContent = ok ? '✓ ' + q.exp : '提示：' + q.exp;
+      if (game2Idx < GAME2_POOL.length - 1) {
+        document.getElementById('game2-next').style.display = 'inline-block';
+      } else {
+        document.getElementById('game2-done').style.display = 'block';
+        document.getElementById('game2-next').style.display = 'none';
+      }
+    };
+    container.appendChild(btn);
+  });
+  document.getElementById('game2-feedback').textContent = '提示：前八十回主线为繁华 → 冲突 → 转折 → 败落。';
+  document.getElementById('game2-next').style.display = 'none';
+}
+renderGame2();
+document.getElementById('game2-next').addEventListener('click', () => {
+  game2Idx = (game2Idx + 1) % GAME2_POOL.length;
+  renderGame2();
+});
+
+// ========== Game3 轮播 ==========
+const GAME3_POOL = [
+  {
+    prompt: '「好了歌」在全书中的核心作用是？',
+    opts: [
+      { label: '推动宝黛初次见面', ok: false },
+      { label: '哲思主旨与盛衰互文', ok: true },
+      { label: '交代大观园建筑布局', ok: false }
+    ],
+    exp: '好了歌以白话诗点破盛衰如梦，出现在开篇与结尾附近，是全书哲思主旨的锚点。'
+  },
+  {
+    prompt: '「黛玉葬花」这段情节的主要意象是？',
+    opts: [
+      { label: '以花喻人，暗示美好生命的凋零', ok: true },
+      { label: '记录贾府 gardening 活动', ok: false },
+      { label: '描写宝玉与丫鬟的游戏', ok: false }
+    ],
+    exp: '葬花词「花谢花飞飞满天」以花喻人，是黛玉悲剧命运与孤高洁净性格的意象化表达。'
+  },
+  {
+    prompt: '「抄检大观园」一回的叙事基调是？',
+    opts: [
+      { label: '欢乐喜庆', ok: false },
+      { label: '冷峻悲凉，标志盛极而衰', ok: true },
+      { label: '幽默讽刺', ok: false }
+    ],
+    exp: '抄检大观园以冷峻笔调写家族内部矛盾爆发，是全书由盛转衰的结构性转折。'
+  }
+];
+
+let game3Idx = 0;
+function renderGame3() {
+  const q = GAME3_POOL[game3Idx];
+  const container = document.getElementById('game3-options');
+  container.innerHTML = '';
+  const promptP = document.createElement('p');
+  promptP.innerHTML = '<strong>' + q.prompt + '</strong>';
+  promptP.style.marginBottom = '10px';
+  container.appendChild(promptP);
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'game-btn';
+    btn.textContent = opt.label;
+    btn.onclick = () => {
+      container.querySelectorAll('.game-btn').forEach(b => b.classList.remove('ok','bad'));
+      const ok = opt.ok;
+      btn.classList.add(ok ? 'ok' : 'bad');
+      document.getElementById('game3-feedback').textContent = ok ? '✓ ' + q.exp : '再想想：' + q.exp;
+      if (game3Idx < GAME3_POOL.length - 1) {
+        document.getElementById('game3-next').style.display = 'inline-block';
+      } else {
+        document.getElementById('game3-done').style.display = 'block';
+        document.getElementById('game3-next').style.display = 'none';
+      }
+    };
+    container.appendChild(btn);
+  });
+  document.getElementById('game3-feedback').textContent = '';
+  document.getElementById('game3-next').style.display = 'none';
+}
+renderGame3();
+document.getElementById('game3-next').addEventListener('click', () => {
+  game3Idx = (game3Idx + 1) % GAME3_POOL.length;
+  renderGame3();
 });
 
 const CHARS = [
