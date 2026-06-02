@@ -43,6 +43,15 @@ python3 scripts/inject-cn-history-curriculum.py --re-emit-kcp
 - **modern** — 近代史节点：反帝反封建、民族独立、中国共产党领导革命
 - **world** — `domain_id` 含 `world`：文明多元、区域互动，避免西方中心论
 
+## 全学科统一灌注
+
+```bash
+python3 scripts/inject-cn-curriculum.py --force          # 866 中国课标树节点
+python3 scripts/batch-emit-knowledge-context.py --all-with-kp  # 有卫星的 community 课件
+```
+
+数理化生等使用 `cn_curriculum_common.py`（`cn_schema_version` + `values_framework`），保留 `deep_snippets` 学科包内容。
+
 ## 与 Stage7 关系
 
-`kp-md-pipeline/stage7_textbook_inject.py` 对 **history/cn** 仅作关键词兜底；**正式灌注请用本脚本**。
+`kp-md-pipeline/stage7_textbook_inject.py` 对 **history/cn** 仅作关键词兜底；**正式灌注请用 `inject-cn-curriculum.py`**。

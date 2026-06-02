@@ -297,39 +297,95 @@ def section_for_node(node_id: str, stage: str | None, domain_id: str = "") -> st
     return "overview_ancient"
 
 
-def build_cn_exercises(name: str, cps: list[str]) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
+def build_cn_exercises(name: str, cps: list[str], track: str = "ancient") -> list[dict[str, Any]]:
     if not cps:
-        return out
-    out.append(
-        {
-            "id": "q-1",
-            "stem": (
-                f"【课标探究】围绕「{name}」：{cps[0][:72]}… "
-                "请各举一类证据（考古遗存/文献记载/制度史实），说明其如何支撑你的认识。"
-            ),
-            "answer": (
-                "应答须扣课标动词「了解—认识」或「理解—解释」；"
-                "区分史料类型与证据强度；体现统一多民族国家或中华文明连续性的叙事线索。"
-            ),
-            "type": "short_answer",
-            "source": "cn-curriculum-pedagogy",
-        }
-    )
-    if len(cps) > 1:
-        out.append(
+        return []
+    cp0 = _clean_text(cps[0], 200)
+    if track == "modern":
+        return [
             {
-                "id": "q-2",
-                "stem": (
-                    f"【时空+因果】在时空坐标中定位「{name}」相关史事，"
-                    f"并解释：{cps[1][:60]}… 与前后阶段的关系。"
-                ),
-                "answer": "须写出时间、空间、前因后果；避免仅罗列朝代；可联系唯物史观分析生产力与制度变迁。",
+                "id": "q-cp-1",
+                "stem": f"围绕「{name}」：{cp0} 请用 1—2 个史实例说明其历史意义与局限。",
+                "answer": "须置于半殖民地半封建社会条件下分析，体现民族独立与人民解放主线。",
                 "type": "short_answer",
-                "source": "cn-curriculum-pedagogy",
+                "source": "cn-curriculum#modern",
+            },
+            {
+                "id": "q-cp-2",
+                "stem": "绘制简要时间轴，标出本课核心事件，并说明其与前后阶段的关系。",
+                "answer": "时间轴应准确、有因果说明，避免孤立罗列年份。",
+                "type": "short_answer",
+                "source": "cn-curriculum#modern",
+            },
+        ]
+    if track == "world":
+        return [
+            {
+                "id": "q-cp-1",
+                "stem": f"说明「{name}」在文明多元格局中的位置：{cp0}",
+                "answer": "须体现区域文明特征与交流，避免西方中心论或简单优劣评判。",
+                "type": "short_answer",
+                "source": "cn-curriculum#world",
+            },
+        ]
+    # ancient
+    q2 = []
+    if len(cps) > 1:
+        q2.append(
+            {
+                "id": "q-cp-2",
+                "stem": f"用「证据链」说明：{_clean_text(cps[1], 120)}",
+                "answer": "至少列出考古、文献、制度三类证据中的两类并互证。",
+                "type": "short_answer",
+                "source": "cn-curriculum#ancient",
             }
         )
-    return out
+    return [
+        {
+            "id": "q-cp-1",
+            "stem": f"课标要求：{cp0} 请各举一条考古与一条文献（或制度）证据加以说明。",
+            "answer": "区分史料类型；传说需标注文献/传说属性；体现统一多民族国家形成与发展线索。",
+            "type": "short_answer",
+            "source": "cn-curriculum#ancient",
+        },
+        *q2,
+    ]
+
+
+def _clean_text(text: str, max_len: int) -> str:
+    return re.sub(r"\s+", " ", (text or "").strip())[:max_len]
+
+
+def normalize_history_excerpts(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """课标点 + 少量短摘录，剔除 OCR 与超长 legacy。"""
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for i, cp in enumerate(data.get("curriculum_points") or []):
+        t = str(cp).strip()
+        if t and not _is_bad_excerpt(t) and t not in seen:
+            seen.add(t)
+            out.append(
+                {
+                    "id": f"cp-{i + 1}",
+                    "text": t[:500],
+                    "source": "国家课标·内容要求",
+                    "type": "curriculum_point",
+                }
+            )
+    legacy_slots = 4 - len(out)
+    for ex in data.get("excerpts") or []:
+        if legacy_slots <= 0:
+            break
+        t = str(ex.get("text", "")) if isinstance(ex, dict) else str(ex)
+        if _is_bad_excerpt(t) or t in seen or len(t) > 600:
+            continue
+        seen.add(t)
+        item = dict(ex) if isinstance(ex, dict) else {"text": t}
+        item["text"] = t[:500]
+        item.setdefault("source", "课标摘录")
+        out.append(item)
+        legacy_slots -= 1
+    return out[:6]
 
 
 def build_cn_errors(name: str, track: str = "ancient") -> list[dict[str, Any]]:
@@ -406,28 +462,9 @@ def enrich_kp_satellite(
     cps = [str(x).strip() for x in (data.get("curriculum_points") or []) if str(x).strip()]
     name = data.get("name") or node_id
 
-    # 课标摘录：以 curriculum_points 为准
-    excerpts = []
-    for i, cp in enumerate(cps[:6]):
-        if _is_bad_excerpt(cp):
-            continue
-        excerpts.append(
-            {
-                "text": cp,
-                "source": "国家课标·内容要求",
-                "type": "curriculum_point",
-                "id": f"cp-{i + 1}",
-            }
-        )
-    # 清理 legacy excerpts 中的 OCR 页
-    for ex in data.get("excerpts") or []:
-        t = str(ex.get("text", ""))
-        if not _is_bad_excerpt(t) and t not in {e["text"] for e in excerpts}:
-            ex_copy = dict(ex)
-            ex_copy["source"] = ex_copy.get("source") or "课标摘录"
-            excerpts.append(ex_copy)
+    excerpts = normalize_history_excerpts(data)
     if excerpts != data.get("excerpts"):
-        data["excerpts"] = excerpts[:8]
+        data["excerpts"] = excerpts
         changed = True
 
     domain_id = data.get("domain_id") or ""
@@ -461,6 +498,7 @@ def enrich_kp_satellite(
         teaching_g = junior.teaching_prompts_world[:5]
 
     tc = {
+        "cn_schema_version": "1.0",
         "curriculum_standard": curr_label,
         "values_framework": values,
         "history_track": track,
@@ -479,13 +517,13 @@ def enrich_kp_satellite(
     sup["cn_curriculum"] = {
         "standard": curr_label,
         "section": sec_key,
-        "core_literacy": CN_HISTORY_VALUES["core_competencies"],
+        "core_literacy": values.get("core_competencies", []),
     }
     if "openstax_or_curriculum" in sup:
         del sup["openstax_or_curriculum"]
         changed = True
 
-    ex_new = build_cn_exercises(name, cps)
+    ex_new = build_cn_exercises(name, cps, track)
     err_new = build_cn_errors(name, track)
     if ex_new != data.get("exercises"):
         data["exercises"] = ex_new
