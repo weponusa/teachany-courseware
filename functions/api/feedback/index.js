@@ -26,12 +26,92 @@ function getDb(env) {
   return env.TEACHANY_DB || env.DB || env.FEEDBACK_DB || null;
 }
 
+async function sha256Hex(text) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(String(text || ""));
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function hashIp(ip) {
   if (!ip || !crypto?.subtle) return "";
-  const encoder = new TextEncoder();
-  const data = encoder.encode(ip);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest)).slice(0, 12).map(b => b.toString(16).padStart(2, "0")).join("");
+  return (await sha256Hex(ip)).slice(0, 24);
+}
+
+function getFeedbackConfigFromManifest(manifest) {
+  const cfg = manifest?.feedback || {};
+  return {
+    passwordSha256: String(cfg.password_sha256 || manifest?.feedback_password_sha256 || "").trim().toLowerCase(),
+    passwordHint: String(cfg.password_hint || manifest?.feedback_password_hint || "").trim(),
+    requirePassword: Boolean(cfg.require_password || cfg.password_sha256 || manifest?.feedback_password_sha256)
+  };
+}
+
+async function loadCourseManifest(request, courseId) {
+  if (!courseId) return null;
+  const origin = new URL(request.url).origin;
+  let path = `community/${courseId}`;
+  try {
+    const regRes = await fetch(`${origin}/registry.json`, { cf: { cacheTtl: 60 } });
+    if (regRes.ok) {
+      const registry = await regRes.json();
+      const course = (registry.courses || []).find(item => item.id === courseId || item.course_id === courseId);
+      if (course && course.path) path = String(course.path).replace(/^\/+|\/+$/g, "");
+    }
+  } catch (error) {
+    // registry 不可用时回退到 community/<courseId>
+  }
+  try {
+    const res = await fetch(`${origin}/${path}/manifest.json`, { cf: { cacheTtl: 60 } });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    return null;
+  }
+}
+
+async function assertFeedbackPassword(request, courseId, body) {
+  const manifest = await loadCourseManifest(request, courseId);
+  const cfg = getFeedbackConfigFromManifest(manifest);
+  if (!cfg.requirePassword || !cfg.passwordSha256) {
+    return { ok: true, passwordProtected: false };
+  }
+  const provided = String(body.feedback_password || body.feedbackPassword || "").trim();
+  if (!provided) {
+    return {
+      ok: false,
+      status: 403,
+      body: {
+        ok: false,
+        error: "FEEDBACK_PASSWORD_REQUIRED",
+        message: cfg.passwordHint ? `本课件需要反馈密码。提示：${cfg.passwordHint}` : "本课件需要反馈密码，请向老师获取。",
+        password_required: true,
+        password_hint: cfg.passwordHint
+      }
+    };
+  }
+  const actual = await sha256Hex(provided);
+  if (actual !== cfg.passwordSha256) {
+    return {
+      ok: false,
+      status: 403,
+      body: {
+        ok: false,
+        error: "INVALID_FEEDBACK_PASSWORD",
+        message: "反馈密码不正确，请向老师确认后再提交。",
+        password_required: true,
+        password_hint: cfg.passwordHint
+      }
+    };
+  }
+  return { ok: true, passwordProtected: true };
+}
+
+function sanitizeRawBody(body) {
+  const copy = { ...body };
+  delete copy.feedback_password;
+  delete copy.feedbackPassword;
+  return copy;
 }
 
 async function handlePost(request, env) {
@@ -56,9 +136,12 @@ async function handlePost(request, env) {
     return jsonResponse({ ok: false, error: "MISSING_COURSE_ID", message: "缺少 course_id。" }, 400);
   }
 
+  const passwordCheck = await assertFeedbackPassword(request, courseId, body);
+  if (!passwordCheck.ok) return jsonResponse(passwordCheck.body, passwordCheck.status);
+
   const understood = body.understood === true || body.understood === "true" || body.understood === "yes" ? 1 : 0;
   const ipHash = await hashIp(request.headers.get("CF-Connecting-IP") || "");
-  const rawJson = JSON.stringify(body).slice(0, 12000);
+  const rawJson = JSON.stringify(sanitizeRawBody(body)).slice(0, 12000);
 
   const stmt = db.prepare(`
     INSERT INTO feedback_entries (
@@ -88,7 +171,7 @@ async function handlePost(request, env) {
   );
 
   const result = await stmt.run();
-  return jsonResponse({ ok: true, id: result.meta?.last_row_id || null });
+  return jsonResponse({ ok: true, id: result.meta?.last_row_id || null, password_protected: passwordCheck.passwordProtected });
 }
 
 async function handleGet(request, env) {

@@ -70,9 +70,32 @@ https://www.teachany.cn/teacher/feedback.html
 
 能看到记录就说明成功。
 
+## 反馈密码
+
+做课老师可以在课件的 `manifest.json` 中设置反馈口令。学生提交反馈时必须填写正确口令，数据才会写入 D1。
+
+示例：
+
+```json
+"feedback": {
+  "require_password": true,
+  "password_sha256": "5c898ffd138d7e070107d14bc77b71ffa131478c00a6399055f476f6ad0795a4",
+  "password_hint": "试点密码 ta-demo"
+}
+```
+
+其中 `password_sha256` 是反馈密码的 SHA-256 十六进制。比如试点密码 `ta-demo` 的哈希就是上面这一串。
+
+本仓库的试点课件 `/community/math-linear-function/` 已设置反馈密码：
+
+```text
+ta-demo
+```
+
 ## 注意
 
 - 这是 V1 试点版，暂时没有教师登录保护。
+- 反馈密码只是课堂口令，不是高安全账号系统。
 - 不要收集身份证、家庭住址、手机号等敏感信息。
 - 后续可以加教师口令、课程级任务、AI 分析报告。
 <!-- deploy-trigger: 2026-06-01T14:48:21Z -->
