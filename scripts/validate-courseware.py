@@ -288,7 +288,33 @@ def has_audio_stream(mp4_path):
     return any(line.strip() == 'audio' for line in result.stdout.splitlines())
 
 
-def validate_one(course_dir):
+def check_feedback_manifest(m, course_name, strict=False):
+    """Phase 3.5a：学生反馈密码。单课校验 strict=True 时缺失为 error；全量扫描为 warn。"""
+    level = 'error' if strict else 'warn'
+    issues = []
+    fb = m.get('feedback')
+    if not isinstance(fb, dict):
+        issues.append((level,
+            f'{course_name}: manifest 缺少 feedback（Phase 3.5a · 须询问教师并用 set-feedback-password.py 写入）'))
+        return issues
+    if fb.get('teacher_declined') is True:
+        if fb.get('require_password') not in (False, None):
+            issues.append(('warn',
+                f'{course_name}: teacher_declined 时建议 feedback.require_password: false'))
+        return issues
+    sha = str(fb.get('password_sha256', '')).strip().lower()
+    if not re.fullmatch(r'[a-f0-9]{64}', sha or ''):
+        issues.append((level,
+            f'{course_name}: feedback.password_sha256 无效或未设置（用 scripts/set-feedback-password.py）'))
+    elif not fb.get('require_password'):
+        issues.append(('error',
+            f'{course_name}: 已设密码哈希但 feedback.require_password 应为 true'))
+    if not str(fb.get('password_hint', '')).strip():
+        issues.append(('warn', f'{course_name}: 建议设置 feedback.password_hint 便于学生回忆'))
+    return issues
+
+
+def validate_one(course_dir, strict_feedback=False):
     mf = course_dir / 'manifest.json'
     html = course_dir / 'index.html'
     errors = []
@@ -316,6 +342,9 @@ def validate_one(course_dir):
     mc = m.get('curriculum', 'cn-national')
 
     issues = list(errors)  # v5.34.9.2: 把早期错误（如 html 缺失）合并进主返回列表
+
+    if 'community' in str(course_dir):
+        issues.extend(check_feedback_manifest(m, course_dir.name, strict=strict_feedback))
 
     # v5.30：国际课标体系走独立校验路径（ID 前缀、年级范围、HTML 线索关键词都不同）
     if mc != 'cn-national':
@@ -672,7 +701,7 @@ def main():
             continue
         if only and d.name != only:
             continue
-        issues = validate_one(d)
+        issues = validate_one(d, strict_feedback=bool(only))
         all_issues.extend(issues)
         scanned += 1
 
