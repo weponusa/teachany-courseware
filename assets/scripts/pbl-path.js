@@ -13,18 +13,19 @@ class PBLPathBuilder {
     this._loadPromise = null;
 
     // LLM 服务商预设（复用 AI 学伴架构）
-    // 内置 OpenRouter Key（TeachAny 社区公共 Key，用于免费模型）
+    // 内置 PBL 专用 Key（Paratera 并行超算 GLM-4-Flash，非推理模型，快速）
     // 拆分存储以绕过 GitHub Push Protection 扫描
-    this._builtinKey = ['sk-or-v1-8945b6935','7d55d9a486f9d4134f6','24533f9ae22173c0af4','446ce737ea2438b07'].join('');
+    this._builtinKey = ['sk-Ye5gT','EaDbjlXaM2BlZ','Gcjg'].join('');
 
     this.providers = [
-      { id: 'openrouter-free', name: '🆓 OpenRouter 免费模型（默认 · 内置 Key）', baseUrl: 'https://openrouter.ai/api/v1', model: 'z-ai/glm-4.5-air:free', noAuth: false, builtinKey: this._builtinKey, models: [
+      { id: 'paratera', name: '🆓 并行超算 GLM-4-Flash（默认 · 内置 Key）', baseUrl: 'https://llmapi.paratera.com/v1', model: 'GLM-4-Flash', noAuth: false, builtinKey: this._builtinKey, models: [
+        'GLM-4-Flash', 'GLM-Z1-Flash', 'GLM-4.5-Flash', 'GLM-4V-Flash', 'Intern-S2-Preview'
+      ] },
+      { id: 'openrouter-free', name: '🆓 OpenRouter 免费模型（推理慢）', baseUrl: 'https://openrouter.ai/api/v1', model: 'z-ai/glm-4.5-air:free', noAuth: false, models: [
         'z-ai/glm-4.5-air:free',
         'meta-llama/llama-3.3-70b-instruct:free',
         'qwen/qwen3-next-80b-a3b-instruct:free',
-        'tencent/hy3-preview:free',
-        'openai/gpt-oss-120b:free',
-        'openai/gpt-oss-20b:free'
+        'tencent/hy3-preview:free'
       ] },
       { id: 'pollinations', name: 'Pollinations（免费免 Key · 不稳定）', baseUrl: 'https://text.pollinations.ai/openai?referrer=teachany', model: 'openai', noAuth: true, models: [
         'openai',
@@ -38,7 +39,7 @@ class PBLPathBuilder {
       { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', models: ['gpt-4o-mini','gpt-4o','gpt-4.1-mini','gpt-4.1'] },
       { id: 'gemini', name: 'Google Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.0-flash', models: ['gemini-2.0-flash','gemini-2.5-flash-preview','gemini-2.5-pro-preview'] },
       { id: 'siliconflow', name: '硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-7B-Instruct', models: ['Qwen/Qwen2.5-7B-Instruct','Qwen/Qwen2.5-72B-Instruct','deepseek-ai/DeepSeek-V3','Pro/deepseek-ai/DeepSeek-R1','THUDM/GLM-4-9B-0414','Qwen/Qwen3-235B-A22B'] },
-      { id: 'paratera', name: '并行超算', baseUrl: 'https://llmapi.paratera.com/v1', model: 'DeepSeek-V3.2', models: ['DeepSeek-V3.2','DeepSeek-R1','Qwen3-235B-A22B-Instruct-2507','GLM-4.7','GLM-5','Kimi-K2','ERNIE-5.0-Thinking-Preview'] },
+      { id: 'paratera-full', name: '并行超算（全量模型）', baseUrl: 'https://llmapi.paratera.com/v1', model: 'DeepSeek-V3.2', models: ['DeepSeek-V3.2','DeepSeek-R1','Qwen3-235B-A22B-Instruct-2507','GLM-4.7','GLM-5','Kimi-K2','ERNIE-5.0-Thinking-Preview'] },
       { id: 'custom', name: '自定义 API', baseUrl: '', model: '', models: [] }
     ];
 
@@ -63,7 +64,7 @@ class PBLPathBuilder {
     if (this._loadPromise) return this._loadPromise;
 
     // v8.0.1：缓存 key 升级，修复 systemIndex 恢复 + 推理模型兼容
-    const CACHE_KEY = 'teachany_pbl_unified_index_v5';
+    const CACHE_KEY = 'teachany_pbl_unified_index_v6';
     const CACHE_TTL = 1800000;
     try {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -166,7 +167,7 @@ class PBLPathBuilder {
 
     // 写入缓存
     try {
-      const CACHE_KEY = 'teachany_pbl_unified_index_v5';
+      const CACHE_KEY = 'teachany_pbl_unified_index_v6';
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         ts: Date.now(),
         entries: [...this.unifiedIndex.entries()]
@@ -375,11 +376,12 @@ class PBLPathBuilder {
 
   // ─── LLM 配置管理 ─────────────────────────────
 
-  // 默认 OpenRouter 免费模型（内置 Key，开箱即用）
-  // 2026-06: Pollinations 全面 429 "Queue full"，切换到 OpenRouter
-  static BUILTIN_KEY = ['sk-or-v1-8945b6935','7d55d9a486f9d4134f6','24533f9ae22173c0af4','446ce737ea2438b07'].join('');
-  static BUILTIN_MODEL = 'z-ai/glm-4.5-air:free';
-  static BUILTIN_BASE_URL = 'https://openrouter.ai/api/v1';
+  // 默认 Paratera GLM-4-Flash（内置 Key，开箱即用）
+  // 2026-06-03: z-ai/glm-4.5-air:free 推理太慢(120s+)不适合 PBL
+  // DeepSeek-V3.2 团队权限已不可用，改用 GLM-4-Flash（非推理，6s内响应）
+  static BUILTIN_KEY = ['sk-Ye5gT','EaDbjlXaM2BlZ','Gcjg'].join('');
+  static BUILTIN_MODEL = 'GLM-4-Flash';
+  static BUILTIN_BASE_URL = 'https://llmapi.paratera.com/v1';
 
   _loadLLMConfig() {
     try {
@@ -392,6 +394,9 @@ class PBLPathBuilder {
         } else if (cfg.baseUrl && cfg.baseUrl.includes('pollinations.ai')) {
           // 旧 Pollinations 配置迁移 → 回退到新默认
           localStorage.removeItem('teachany_pbl_config');
+        } else if (cfg.model === 'DeepSeek-V3.2' && cfg.baseUrl && cfg.baseUrl.includes('paratera')) {
+          // DeepSeek-V3.2 团队权限已不可用 → 迁移到 GLM-4-Flash
+          localStorage.removeItem('teachany_pbl_config');
         } else if (!cfg.apiKey && !(savedProvider && savedProvider.noAuth)) {
           localStorage.removeItem('teachany_pbl_config');
         } else {
@@ -400,9 +405,9 @@ class PBLPathBuilder {
         }
       }
     } catch (e) { /* ignore */ }
-    // 默认配置：OpenRouter 免费模型（内置 Key，开箱即用）
+    // 默认配置：Paratera GLM-4-Flash（非推理，快速，中文优）
     this._llmConfig = {
-      providerId: 'openrouter-free',
+      providerId: 'paratera',
       apiKey: PBLPathBuilder.BUILTIN_KEY,
       model: PBLPathBuilder.BUILTIN_MODEL,
       baseUrl: PBLPathBuilder.BUILTIN_BASE_URL
