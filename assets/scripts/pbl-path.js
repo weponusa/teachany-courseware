@@ -564,6 +564,7 @@ class PBLPathBuilder {
       systems: activeSystems,
       matched: stage2.matched,
       external: stage2.external,
+      techRoute: stage2.techRoute,
       graphData,
       stats: {
         totalCandidates: candidates.length,
@@ -667,7 +668,7 @@ ${summaryList}
     const messages = [
       {
         role: 'system',
-        content: `你是一个教育知识图谱专家。你需要从给定的知识点候选列表中，找出完成PBL项目所需掌握的知识点。只返回JSON，不要其他内容。`
+        content: `你是一个教育知识图谱专家。你需要从给定的知识点候选列表中，找出完成PBL项目所需掌握的知识点，并给出技术路线分析。只返回JSON，不要其他内容。`
       },
       {
         role: 'user',
@@ -676,7 +677,7 @@ ${summaryList}
 候选知识点列表：
 ${candidateList}
 
-请找出完成该项目需要掌握的知识点，返回JSON格式：
+请找出完成该项目需要掌握的知识点，并给出技术路线分析，返回JSON格式：
 {
   "matched": [
     {"index": 0, "confidence": 0.9, "reason": "核心概念"},
@@ -684,7 +685,8 @@ ${candidateList}
   ],
   "external": [
     {"name": "PID控制算法", "reason": "温控系统核心算法", "prerequisites": ["数学微积分基础", "反馈控制概念"]}
-  ]
+  ],
+  "techRoute": "基于上述知识点，本项目的实施路线为：首先掌握XXX基础概念，然后学习YYY核心原理，最后通过ZZZ技术实现项目目标。关键技术点包括……整体建议采用……的方法论，分阶段推进。"
 }
 
 要求：
@@ -692,7 +694,8 @@ ${candidateList}
 - confidence 范围 0-1，0.8以上为核心必需，0.5-0.8为相关参考
 - 只选 confidence >= 0.5 的知识点
 - external 为候选列表中没有但对项目有用的外部知识点，最多3个
-- 每个外部知识点需给出 name、reason、prerequisites（前置知识名称列表）`
+- 每个外部知识点需给出 name、reason、prerequisites（前置知识名称列表）
+- techRoute 为结合匹配知识点的技术路线分析，500字以内，需具体到知识点名称，说明学习顺序和实施路径`
       }
     ];
 
@@ -733,7 +736,7 @@ ${candidateList}
       matchReason: ext.reason
     }));
 
-    return { matched, external };
+    return { matched, external, techRoute: result.techRoute || '' };
   }
 
   // ─── 路径图构建 ─────────────────────────────────
