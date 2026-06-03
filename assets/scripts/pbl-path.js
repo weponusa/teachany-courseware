@@ -70,9 +70,16 @@ class PBLPathBuilder {
       if (cached) {
         const { ts, entries } = JSON.parse(cached);
         if (Date.now() - ts < CACHE_TTL) {
-          entries.forEach(([k, v]) => this.unifiedIndex.set(k, v));
+          entries.forEach(([k, v]) => {
+            this.unifiedIndex.set(k, v);
+            // 同步恢复 systemIndex（修复缓存命中时 systemIndex 为空导致 candidates=0 的 bug）
+            if (v.system) {
+              if (!this.systemIndex.has(v.system)) this.systemIndex.set(v.system, new Set());
+              this.systemIndex.get(v.system).add(k);
+            }
+          });
           this.loaded = true;
-          console.log(`[PBL] ✅ 从缓存恢复: ${this.unifiedIndex.size} 节点`);
+          console.log(`[PBL] ✅ 从缓存恢复: ${this.unifiedIndex.size} 节点, ${this.systemIndex.size} 课标体系`);
           return this.unifiedIndex;
         }
       }
