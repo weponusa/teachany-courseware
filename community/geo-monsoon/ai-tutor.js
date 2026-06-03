@@ -883,9 +883,8 @@
           messages,
           stream: true,
           temperature: 0.7,
-          max_tokens: 600
-          // 注：不传 reasoning 参数。推理模型（Hy3、DeepSeek-R1）会在 delta.reasoning 里输出思考；
-          // 客户端只显示 delta.content，推理过程静默丢弃。
+          max_tokens: 2000
+          // 推理模型（如 z-ai/glm-4.5-air:free）需要更多 token，否则 content 会被截断
         })
       });
     } catch (fetchErr) {

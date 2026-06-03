@@ -462,11 +462,12 @@ class PBLPathBuilder {
       messages,
       stream: false,
       temperature: options.temperature || 0.3,
-      max_tokens: options.maxTokens || 4000
+      // 推理模型（reasoning）需要更多 token，否则 content 会被截断
+      max_tokens: options.maxTokens || 16000
     };
 
     const ac = new AbortController();
-    const timeout = setTimeout(() => ac.abort(), 60000); // 60s 超时
+    const timeout = setTimeout(() => ac.abort(), 120000); // 120s 超时（推理模型较慢）
 
     try {
       const resp = await fetch(endpoint, {
