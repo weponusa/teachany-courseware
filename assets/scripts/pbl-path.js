@@ -62,8 +62,8 @@ class PBLPathBuilder {
     if (this.loaded) return this.unifiedIndex;
     if (this._loadPromise) return this._loadPromise;
 
-    // v7.11.3：缓存 key 升级，补全 curriculumLabel/stageLabel/gradeLabel，修复课标与学段显示混乱
-    const CACHE_KEY = 'teachany_pbl_unified_index_v4';
+    // v8.0.1：缓存 key 升级，修复 systemIndex 恢复 + 推理模型兼容
+    const CACHE_KEY = 'teachany_pbl_unified_index_v5';
     const CACHE_TTL = 1800000;
     try {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -166,7 +166,7 @@ class PBLPathBuilder {
 
     // 写入缓存
     try {
-      const CACHE_KEY = 'teachany_pbl_unified_index_v4';
+      const CACHE_KEY = 'teachany_pbl_unified_index_v5';
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         ts: Date.now(),
         entries: [...this.unifiedIndex.entries()]
