@@ -64,7 +64,7 @@ class PBLPathBuilder {
     if (this._loadPromise) return this._loadPromise;
 
     // v8.0.1：缓存 key 升级，修复 systemIndex 恢复 + 推理模型兼容
-    const CACHE_KEY = 'teachany_pbl_unified_index_v6';
+    const CACHE_KEY = 'teachany_pbl_unified_index_v7';
     const CACHE_TTL = 1800000;
     try {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -167,7 +167,7 @@ class PBLPathBuilder {
 
     // 写入缓存
     try {
-      const CACHE_KEY = 'teachany_pbl_unified_index_v6';
+      const CACHE_KEY = 'teachany_pbl_unified_index_v7';
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         ts: Date.now(),
         entries: [...this.unifiedIndex.entries()]
@@ -474,12 +474,12 @@ class PBLPathBuilder {
       messages,
       stream: false,
       temperature: options.temperature || 0.3,
-      // 推理模型（reasoning）需要更多 token，否则 content 会被截断
-      max_tokens: options.maxTokens || 16000
+      // 非推理模型 4000 token 足够，推理模型会被 thinking 占满
+      max_tokens: options.maxTokens || 4000
     };
 
     const ac = new AbortController();
-    const timeout = setTimeout(() => ac.abort(), 120000); // 120s 超时（推理模型较慢）
+    const timeout = setTimeout(() => ac.abort(), 90000); // 90s 超时
 
     try {
       const resp = await fetch(endpoint, {
@@ -632,17 +632,36 @@ ${summaryList}
       return subjectMatch && systemMatch && gradeMatch;
     });
 
-    return { filter, filteredCandidates: filteredCandidates.length > 0 ? filteredCandidates : candidates.slice(0, 120) };
+    // 限制候选数量：免费模型处理 30+ 候选会超时
+    // 用关键词匹配预排序，只发最相关的 20 个给 LLM
+    const MAX_STAGE2_CANDIDATES = 20;
+    const pool = filteredCandidates.length > 0 ? filteredCandidates : candidates;
+    const goalTerms = goal.toLowerCase().replace(/[，。、！？：；""''（）\[\]{}]/g, ' ').split(/\s+/).filter(w => w.length >= 2);
+    const scored = pool.map(n => {
+      let score = 0;
+      const nameLower = (n.name || '').toLowerCase();
+      const defLower = (n.definition || n.description || '').toLowerCase();
+      const concepts = (n.key_concepts || []).join(' ').toLowerCase();
+      goalTerms.forEach(term => {
+        if (nameLower.includes(term)) score += 3;
+        if (defLower.includes(term)) score += 1;
+        if (concepts.includes(term)) score += 2;
+      });
+      // 同学科加分
+      if (filter.subjects && filter.subjects.includes(n.subject)) score += 1;
+      return { ...n, _score: score };
+    });
+    scored.sort((a, b) => b._score - a._score);
+    const topCandidates = scored.slice(0, MAX_STAGE2_CANDIDATES);
+    return { filter, filteredCandidates: topCandidates };
   }
 
   async _llmMatchStage(goal, candidates) {
-    // 构建知识点候选列表文本（压缩表示）
+    // 构建知识点候选列表文本（极简表示，减少 token 消耗避免超时）
     const candidateList = candidates.map((n, i) => {
       const prefix = n.systemTag;
       const gradeStr = n.gradeLabel || (n.grade ? `G${n.grade}` : '');
-      const curriculum = n.curriculumLabel || n.systemLabel || prefix;
-      const stage = n.stageLabel || '';
-      return `[${i}] ${n.id} | ${n.name} | ${gradeStr} | ${prefix}/${curriculum}${stage ? '/' + stage : ''}`;
+      return `[${i}] ${n.name} | ${gradeStr} | ${prefix}`;
     }).join('\n');
 
     const messages = [
@@ -677,7 +696,7 @@ ${candidateList}
       }
     ];
 
-    const response = await this.callLLM(messages, { maxTokens: 16000, temperature: 0.2 });
+    const response = await this.callLLM(messages, { maxTokens: 4000, temperature: 0.2 });
     const jsonStr = this._extractJsonObject(response);
     const result = JSON.parse(jsonStr);
 
