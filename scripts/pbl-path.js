@@ -672,7 +672,7 @@ ${candidateList}
       }
     ];
 
-    const response = await this.callLLM(messages, { maxTokens: 4000, temperature: 0.2 });
+    const response = await this.callLLM(messages, { maxTokens: 16000, temperature: 0.2 });
     const jsonStr = this._extractJsonObject(response);
     const result = JSON.parse(jsonStr);
 
