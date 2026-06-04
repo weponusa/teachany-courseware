@@ -18,8 +18,11 @@ import json, os, sys, time, argparse, re, base64, requests
 from pathlib import Path
 from datetime import datetime
 
-# ─── 配置 ────────────────────────────────────────────────
-API_KEY = "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"
+# ─── 配置（项目免费额度，与 openrouter-image2.py 的付费 Key 勿混用）───
+API_KEY = os.environ.get(
+    "OPENROUTER_FREE_API_KEY",
+    "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",
+)
 MODEL = "google/gemini-3.1-flash-image-preview"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
