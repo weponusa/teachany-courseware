@@ -619,18 +619,59 @@ class PBLPathBuilder {
   }
 
   _pblSystemPromptMatch(complex) {
-    return `你是 K12「项目式学习（PBL）」课程设计师，擅长把项目目标转化为可执行的学习路径图谱。
+    const base = `你是资深 PBL（项目式学习）导师兼工程师。任务：把一个项目目标，转化成"一个真正能动手做出来的项目实施路线"，而不是罗列课标知识点。
 
-你的输出必须能指导真实项目实施，而不是罗列课标目录。
+判断每个知识点是否入选，只问一个问题：
+「不学它，这个项目的某个具体环节就做不出来吗？」——是，才选；只是"打基础/有帮助"，一律不选。`;
 
-核心原则：
-1. 每个入选知识点都要能回答：「掌握它，如何推进本项目的交付物？」答不出则不要选。
-2. ${complex ? '本项目判定为复杂/综合项目：严禁选择小学学段（约 1-6 年级）数学、科学、物理、化学入门节点（如认识图形、四则运算、简单电路、力与运动启蒙、数据统计入门等）。优先 7-12 年级、与建模/实验/编程/系统实现直接相关的知识。' : '可包含必要的前置，但避免无关泛基础。'}
-3. matched 按项目实施顺序排列；pathOrder 给出推荐学习先后（填候选列表 index）。
-4. techRoute 按阶段写清：每阶段的项目任务、使用的知识点名称、阶段产出物（原型/数据/报告等），禁止空话套话。
-5. external 仅限候选列表外、项目真正实现所缺的专业概念，最多 2 个，不要写「XX基础」这类泛称。
+    if (!complex) {
+      return `${base}
 
-只返回 JSON，不要 markdown 包裹。`;
+要求：
+- matched 选 8-14 个与项目动手环节直接相关的知识点。
+- techRoute 按"准备→探究→实现→验证"写，每段点明用到哪个知识点、产出什么。
+- 只返回 JSON，不要 markdown 包裹，不要解释。`;
+    }
+
+    return `${base}
+
+【这是一个复杂/工程类项目】请像带学生做毕业设计一样思考，给出"工程师视角"的路线，而不是"小学补课清单"。
+
+绝对禁止（出现即视为错误回答）：
+- 严禁出现小学学段（1-6 年级）内容：分数/小数/百分数互化、四则运算、认识图形、周长面积、简单统计、认识钟表人民币、简单电路、磁铁、植物动物常识等。
+- 严禁写"首先掌握数学基础概念""为后续计算提供基础"这类空话套话。
+- techRoute 里出现的每一个知识点名称，必须是 matched 里真实选中的那些；不准临时编造或塞入基础概念。
+
+正面示范（以"设计并发射一枚模型火箭"为例，体会颗粒度）：
+- 该选：牛顿运动定律、动量与冲量、受力分析、二次函数/抛物运动、燃烧与氧化反应、空气阻力与流体、传感器与数据采集、基础电路与控制。
+- 不该选：分数小数百分数互化、圆的周长和面积、认识图形——这些是小学内容，工程项目默认已具备，不进路线。
+
+要求：
+1. matched：6-${PBLPathBuilder.PBL_MAX_MATCHED_COMPLEX} 个，全部 7-12 年级、直接服务于建模/实验/搭建/编程/测试环节。
+2. pathOrder：按"先理解原理→再建模计算→后搭建测试"的真实施工顺序排列 matched 的 index。
+3. projectPhases：3-4 个真实工程阶段（如：原理与受力分析 / 结构与弹道建模 / 动力与控制系统 / 制作与发射测试）。每阶段写：steps（具体动手任务）、knowledgeNames（只能用 matched 里的名称）、deliverable（该阶段交付物，如计算表/CAD图/原型/测试报告）。
+4. external：最多 2 个候选列表里没有、但工程实现确实要用的专业概念（如"齐奥尔科夫斯基火箭方程""PID控制"），禁止写"XX基础"。
+5. techRoute：把 projectPhases 串成一段可执行说明，具体到知识点与产出物，禁止任何小学基础内容与套话。
+
+只返回 JSON，不要 markdown 包裹，不要任何解释文字。`;
+  }
+
+  _basicMentionRegex() {
+    return /分数[、，]?小数|百分数互化|四则运算|认识图形|图形的认识|周长(和|与)?面积|圆的周长|简单统计|认识(钟表|人民币|时间)|个位十位|加减乘除|口算|笔算|小学(数学|科学|阶段)/;
+  }
+
+  /** 清洗 techRoute：删掉提及小学基础内容的句子，避免出现"先学分数小数"这类内容 */
+  _sanitizeTechRoute(text) {
+    if (!text) return '';
+    const re = this._basicMentionRegex();
+    const kept = String(text)
+      .split(/\n+/)
+      .map(line => line
+        .split(/(?<=[。；;])/)
+        .filter(seg => !re.test(seg))
+        .join(''))
+      .filter(line => line.replace(/[【】①②③④⑤\s]/g, '').length > 0);
+    return kept.join('\n').trim();
   }
 
   _capGraphNodes(graphData, maxNodes = PBLPathBuilder.PBL_MAX_GRAPH_NODES) {
@@ -697,29 +738,41 @@ class PBLPathBuilder {
   }
 
   _buildTechRouteFromGraph(goal, matched = [], external = [], projectPhases = []) {
-    const nameList = (arr) => arr.map(n => `「${n.name}」`).join('、') || '（见图谱核心节点）';
+    const allNames = [...matched, ...external].map(n => String(n.name || ''));
+    const basicRe = this._basicMentionRegex();
+    // 只允许引用图谱中真实存在、且非小学基础的节点名
+    const validName = (name) => {
+      const s = String(name || '').replace(/[「」]/g, '').trim();
+      if (!s || basicRe.test(s)) return null;
+      const hit = allNames.find(n => n === s || n.includes(s) || s.includes(n));
+      return hit ? `「${hit}」` : null;
+    };
+    const nameList = (arr) => arr.map(n => `「${n.name}」`).filter(x => !basicRe.test(x)).join('、');
+
     if (Array.isArray(projectPhases) && projectPhases.length) {
-      let text = `围绕「${String(goal || '').slice(0, 100)}」，建议按以下项目阶段推进：\n\n`;
+      let text = `围绕「${String(goal || '').slice(0, 100)}」的项目实施路线：\n\n`;
       projectPhases.slice(0, 4).forEach((p, i) => {
-        const steps = Array.isArray(p.steps) ? p.steps.join('；') : (p.task || p.desc || '');
-        const kn = Array.isArray(p.knowledgeNames) && p.knowledgeNames.length
-          ? p.knowledgeNames.join('、')
-          : nameList(matched.slice(i * 2, i * 2 + 3));
+        const steps = (Array.isArray(p.steps) ? p.steps : [p.task || p.desc || ''])
+          .filter(s => s && !basicRe.test(s)).join('；');
+        let kn = (Array.isArray(p.knowledgeNames) ? p.knowledgeNames : [])
+          .map(validName).filter(Boolean).join('、');
+        if (!kn) kn = nameList(matched.slice(i * 2, i * 2 + 3)) || '（见图谱核心节点）';
         text += `【阶段${i + 1}】${p.phase || p.name || '实施阶段'}\n`;
-        text += `任务：${steps || '完成本阶段目标拆解与实验/实现'}\n`;
+        text += `任务：${steps || '完成本阶段拆解、建模与实现'}\n`;
         text += `知识支撑：${kn}\n`;
-        text += `产出：${p.deliverable || p.output || '阶段小结与可演示成果'}\n\n`;
+        text += `产出：${p.deliverable || p.output || '阶段原型/数据/报告'}\n\n`;
       });
-      return text.trim().slice(0, 500);
+      return this._sanitizeTechRoute(text).slice(0, 600);
     }
+
     const ordered = [...matched].sort((a, b) => (a.pathStep || 99) - (b.pathStep || 99));
-    let text = `围绕「${String(goal || '').slice(0, 100)}」，按项目实施链路推进：\n\n`;
-    text += `① 问题界定与方案：明确指标与约束，关联 ${nameList(ordered.slice(0, 2))}。\n`;
-    text += `② 原理与建模：用 ${nameList(ordered.slice(2, 5))} 建立模型或实验方案。\n`;
-    text += `③ 实现与验证：完成原型/程序/实验，迭代测试。\n`;
-    if (external.length) text += `④ 拓展：结合 ${nameList(external)} 优化方案。\n`;
-    text += `\n图谱红色节点为推荐学习顺序（箭头为实施先后），请按 pathStep 序号逐段完成课件与实验。`;
-    return text.slice(0, 500);
+    let text = `围绕「${String(goal || '').slice(0, 100)}」，按真实施工顺序推进：\n\n`;
+    text += `① 原理理解：${nameList(ordered.slice(0, 2)) || '核心原理节点'}——搞清项目背后的科学/工程原理。\n`;
+    text += `② 建模与计算：${nameList(ordered.slice(2, 4)) || '建模相关节点'}——用模型/公式量化关键指标。\n`;
+    text += `③ 搭建与实现：${nameList(ordered.slice(4, 7)) || '实现相关节点'}——完成原型、程序或实验装置。\n`;
+    text += `④ 测试与迭代：依据指标做对比测试并优化${external.length ? '，可引入 ' + nameList(external) : ''}。\n`;
+    text += `\n红色节点上的序号即推荐实施先后，按 pathStep 逐段完成课件与动手任务。`;
+    return this._sanitizeTechRoute(text).slice(0, 600);
   }
 
   async analyzePBLGoal(goal, selectedSystems = ['all']) {
@@ -751,9 +804,16 @@ class PBLPathBuilder {
     const finalized = this._finalizePBLGraph(goal, stage2.matched, stage2.external, activeSystems, {
       pathOrderIds: stage2.pathOrderIds
     });
-    let techRoute = (stage2.techRoute || '').trim();
-    if (!techRoute || finalized.complex) {
-      techRoute = this._buildTechRouteFromGraph(goal, finalized.matched, finalized.external, stage2.projectPhases) || techRoute;
+    // 复杂项目一律由图谱重建技术路线（不信任 LLM 自由文本，避免混入小学基础与套话）；
+    // 简单项目先清洗 LLM 文本，若清洗后过短再重建。
+    let techRoute;
+    if (finalized.complex) {
+      techRoute = this._buildTechRouteFromGraph(goal, finalized.matched, finalized.external, stage2.projectPhases);
+    } else {
+      techRoute = this._sanitizeTechRoute((stage2.techRoute || '').trim());
+      if (techRoute.replace(/\s/g, '').length < 40) {
+        techRoute = this._buildTechRouteFromGraph(goal, finalized.matched, finalized.external, stage2.projectPhases);
+      }
     }
     techRoute = techRoute || this._buildFallbackTechRoute(goal, finalized.matched, finalized.external);
 
@@ -992,12 +1052,13 @@ ${candidateList}
     if (complex) {
       return this._buildTechRouteFromGraph(goal, matched, external, []);
     }
+    const basicRe = this._basicMentionRegex();
     const ordered = [...matched].sort((a, b) => (a.pathStep || 99) - (b.pathStep || 99));
-    const label = (arr) => arr.map(n => `「${n.name}」`).join('、') || '相关课标节点';
+    const label = (arr) => arr.map(n => `「${n.name}」`).filter(x => !basicRe.test(x)).join('、') || '相关课标节点';
     let text = `围绕「${String(goal || '').slice(0, 100)}」：\n\n`;
     text += `① 准备：${label(ordered.slice(0, 3))}\n② 探究与实现：${label(ordered.slice(3, 7))}\n`;
     if (external.length) text += `③ 拓展：${label(external)}\n`;
-    return text.slice(0, 500);
+    return this._sanitizeTechRoute(text).slice(0, 500);
   }
 
   // ─── 路径图构建 ─────────────────────────────────
