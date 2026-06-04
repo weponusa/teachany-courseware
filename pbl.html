@@ -299,22 +299,15 @@ body {
   margin-top: 4px;
 }
 
-/* ─── PBL Graph Container ─────────────────────── */
-#pbl-graph-container {
-  min-height: 420px;
-  border-radius: 12px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  overflow: hidden;
-}
-
 /* PBL 技术路线分析 */
+.pbl-tech-route-panel,
 #pblTechRoute {
-  margin: 16px 0;
+  margin: 16px 0 0;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
-  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(59,130,246,0.14), rgba(139,92,246,0.12));
+  border: 1px solid rgba(59,130,246,0.35);
   overflow: hidden;
+  box-shadow: 0 4px 24px rgba(59,130,246,0.12);
 }
 .pbl-tech-route-header {
   display: flex;
@@ -338,14 +331,21 @@ body {
   padding: 0 20px 18px;
   font-size: 14px;
   line-height: 1.8;
-  color: var(--dim);
+  color: var(--text);
+  min-height: 48px;
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ─── PBL Graph Container ─────────────────────── */
+#pbl-graph-container {
   min-height: 600px;
   max-height: 85vh;
   position: relative;
   overflow: hidden;
+  border-radius: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
 }
 
 /* ─── Node Detail Panel ───────────────────────── */
@@ -611,7 +611,7 @@ body {
       <div class="step-icon">🤖</div>
       <div class="step-num">Step 2</div>
       <div class="step-title">AI 拆解知识网络</div>
-      <div class="step-desc">AI 从五大课标体系中匹配所需知识点，分析前置/核心/扩展关系</div>
+      <div class="step-desc">AI 从五大课标体系中匹配所需知识点，并生成「技术路线分析」（约 500 字实施路径）</div>
     </div>
     <div class="how-step">
       <div class="step-icon">🗺️</div>
@@ -648,7 +648,7 @@ body {
       <span class="ex-chip" onclick="fillPBLExample(this)" data-key="solar-system" data-goal="构建一个太阳系模拟器，用物理引擎模拟行星轨道运动，展示开普勒定律和万有引力">🪐 太阳系模拟器</span>
     </div>
     <div class="pbl-actions">
-      <button class="pbl-analyze-btn" id="pblAnalyzeBtn" onclick="analyzePBLGoal()">🔍 分析学习路径</button>
+      <button class="pbl-analyze-btn" id="pblAnalyzeBtn" onclick="analyzePBLGoal()">🔍 拆解项目路径</button>
       <div class="pbl-system-tags">
         <span class="tag-label">课标体系：</span>
         <span class="pbl-sys-tag active" data-system="all" onclick="toggleSystemTag(this)">全部</span>
@@ -667,18 +667,16 @@ body {
     <span class="status-text" id="pblStatusText">正在分析项目目标...</span>
   </div>
 
-  <!-- PBL 统计卡片 -->
+  <!-- PBL 统计 + 技术路线 -->
   <div id="pblStatsContainer" style="display:none">
     <div class="pbl-stats" id="pblStats"></div>
-  </div>
-
-  <!-- PBL 技术路线分析 -->
-  <div id="pblTechRoute" style="display:none">
-    <div class="pbl-tech-route-header" onclick="this.parentElement.classList.toggle('collapsed')">
-      <span>🛠️ 技术路线分析</span>
-      <span class="pbl-tech-route-toggle">收起 ▲</span>
+    <div id="pblTechRoute" class="pbl-tech-route-panel" style="display:none" aria-live="polite">
+      <div class="pbl-tech-route-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <span>🛠️ 技术路线分析</span>
+        <span class="pbl-tech-route-toggle">收起 ▲</span>
+      </div>
+      <div class="pbl-tech-route-body" id="pblTechRouteBody"></div>
     </div>
-    <div class="pbl-tech-route-body" id="pblTechRouteBody"></div>
   </div>
 
   <!-- PBL 知识图谱容器 -->
@@ -712,7 +710,7 @@ body {
 </div>
 
 <script src="./assets/scripts/courseware-hub.js"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260604-tech-route-fix"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260604-path-tech-route"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script>
 // ─── 全局状态 ──────────────────────────────────
@@ -745,7 +743,7 @@ function getSelectedSystems() {
 
 function markPBLGoalDirty() {
   const btn = document.getElementById('pblAnalyzeBtn');
-  if (btn) btn.textContent = '🔍 分析学习路径';
+  if (btn) btn.textContent = '🔍 拆解项目路径';
 }
 
 async function fillPBLExample(el) {
@@ -774,9 +772,7 @@ async function fillPBLExample(el) {
       renderPBLGraph(result);
       statusEl.style.display = 'none';
 
-      // 滚动到图谱
-      const graph = document.getElementById('pbl-graph-container');
-      if (graph) graph.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      scrollToPBLOutput();
       return;
     }
   } catch (_e) {
@@ -828,6 +824,7 @@ async function analyzePBLGoal() {
 
     renderPBLStats(result);
     renderPBLGraph(result);
+    scrollToPBLOutput();
 
     // ── TeachAny 历史上报 ──
     try {
@@ -915,9 +912,50 @@ async function restorePBLRunFromHistory(id) {
   const statusEl = document.getElementById('pblStatus');
   if (statusEl) statusEl.style.display = 'none';
   renderPBLResult(result);
+  scrollToPBLOutput();
+  return true;
+}
+
+function resolvePBLTechRouteText(result) {
+  let routeText = (result.techRoute || '').trim();
+  if (!routeText && window.PBLPathBuilder && typeof window.PBLPathBuilder._buildFallbackTechRoute === 'function') {
+    const nodes = result.graphData && result.graphData.nodes ? result.graphData.nodes : [];
+    routeText = window.PBLPathBuilder._buildFallbackTechRoute(
+      result.goal || '',
+      result.matched || nodes.filter(n => n.layer === 'matched'),
+      result.external || nodes.filter(n => n.layer === 'external')
+    );
+  }
+  return routeText;
+}
+
+function showPBLTechRoute(result) {
+  const techRouteEl = document.getElementById('pblTechRoute');
+  const techRouteBody = document.getElementById('pblTechRouteBody');
+  if (!techRouteEl || !techRouteBody) return;
+  const routeText = resolvePBLTechRouteText(result);
+  if (routeText) {
+    techRouteBody.textContent = routeText;
+    techRouteEl.style.display = 'block';
+    techRouteEl.classList.remove('collapsed');
+  } else {
+    techRouteEl.style.display = 'none';
+  }
+}
+
+function scrollToPBLOutput() {
+  const tech = document.getElementById('pblTechRoute');
+  if (tech && tech.style.display !== 'none') {
+    tech.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  const stats = document.getElementById('pblStatsContainer');
+  if (stats && stats.style.display !== 'none') {
+    stats.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
   const graph = document.getElementById('pbl-graph-container');
   if (graph) graph.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  return true;
 }
 
 function renderPBLStats(result) {
@@ -937,27 +975,7 @@ function renderPBLStats(result) {
     <div class="pbl-stat-card"><div class="val">${result.graphData.links.length}</div><div class="lbl">关联路径</div></div>
   `;
 
-  // 渲染技术路线分析
-  const techRouteEl = document.getElementById('pblTechRoute');
-  const techRouteBody = document.getElementById('pblTechRouteBody');
-  let routeText = (result.techRoute || '').trim();
-  if (!routeText && window.PBLPathBuilder) {
-    try {
-      const b = new window.PBLPathBuilder();
-      routeText = b._buildFallbackTechRoute(
-        result.goal || '',
-        result.matched || (result.graphData && result.graphData.nodes ? result.graphData.nodes.filter(n => n.layer === 'matched') : []),
-        result.external || (result.graphData && result.graphData.nodes ? result.graphData.nodes.filter(n => n.layer === 'external') : [])
-      );
-    } catch (_e) { /* ignore */ }
-  }
-  if (routeText) {
-    techRouteBody.textContent = routeText;
-    techRouteEl.style.display = 'block';
-    techRouteEl.classList.remove('collapsed');
-  } else {
-    techRouteEl.style.display = 'none';
-  }
+  showPBLTechRoute(result);
 }
 
 function renderPBLGraph(result) {
@@ -1279,7 +1297,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const statusEl = document.getElementById('pblStatus');
       if (statusEl && statusText) {
         statusEl.style.display = 'block';
-        statusText.textContent = '未找到这条 PBL 历史图谱，请重新点击"分析学习路径"。';
+        statusText.textContent = '未找到这条 PBL 历史图谱，请重新点击「拆解项目路径」。';
       }
     }
   }
