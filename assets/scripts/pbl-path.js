@@ -806,9 +806,16 @@ ${candidateList}
       }
     });
 
+    // 过滤掉引用不存在节点的 link（防止 d3.forceLink 报 node not found）
+    const validLinks = this._deduplicateLinks(links).filter(l => {
+      const srcId = typeof l.source === 'object' ? l.source.id : l.source;
+      const tgtId = typeof l.target === 'object' ? l.target.id : l.target;
+      return nodes.has(srcId) && nodes.has(tgtId);
+    });
+
     return {
       nodes: Array.from(nodes.values()),
-      links: this._deduplicateLinks(links)
+      links: validLinks
     };
   }
 
