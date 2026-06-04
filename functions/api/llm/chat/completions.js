@@ -74,7 +74,7 @@ export async function onRequestPost(context) {
   const endpoint = `${backend.baseUrl}/chat/completions`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
+  const timeout = setTimeout(() => controller.abort(), 60000);
 
   try {
     const resp = await fetch(endpoint, {
