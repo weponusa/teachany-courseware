@@ -99,7 +99,15 @@ input, textarea { width: 100%; border-radius: 12px; border: 1px solid var(--line
 
 /* ===== 课件级样式 ===== */
 .lesson-panel{background:linear-gradient(180deg,rgba(16,35,61,.96),rgba(12,26,46,.96));border:1px solid rgba(148,163,184,.18);border-radius:18px;padding:22px;box-shadow:0 16px 40px rgba(0,0,0,.18)}
-.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+/* lightbox 点击放大 */
+.ta-lightbox{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);align-items:center;justify-content:center;cursor:zoom-out}
+.ta-lightbox.open{display:flex}
+.ta-lightbox img{max-width:94vw;max-height:92vh;border-radius:12px;box-shadow:0 0 60px rgba(56,189,248,.15)}
+.ta-lightbox .lb-close{position:absolute;top:16px;right:20px;color:#fff;font-size:28px;cursor:pointer;opacity:.7}
+.ta-lightbox .lb-close:hover{opacity:1}
+figure img[src$=".svg"],.mini-panel img[src$=".svg"]{cursor:zoom-in;transition:transform .2s}
+figure img[src$=".svg"]:hover,.mini-panel img[src$=".svg"]:hover{transform:scale(1.02)}
 .mini-panel{background:rgba(10,20,38,.75);border:1px solid rgba(148,163,184,.22);border-radius:16px;padding:16px}
 .mini-panel h3{margin:0 0 8px;color:#bae6fd}
 .mini-panel p,.mini-panel li{color:#dbeafe}
@@ -907,5 +915,25 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="../../assets/scripts/teachany-audio-player.js?v=bar-only-20260513" defer></script>
 <script defer src="../../assets/teachany-slide-v2.js"></script>
 <script src="/assets/scripts/feedback-widget.js" defer></script>
+<!-- Lightbox for zoomable images -->
+<div class="ta-lightbox" id="taLightbox">
+  <span class="lb-close" id="lbClose">&times;</span>
+  <img id="lbImg" src="" alt="">
+</div>
+<script>
+(function(){
+  const lb=document.getElementById('taLightbox'),lbImg=document.getElementById('lbImg');
+  function open(src){lbImg.src=src;lb.classList.add('open');document.body.style.overflow='hidden';}
+  function close(){lb.classList.remove('open');lbImg.src='';document.body.style.overflow='';}
+  document.addEventListener('click',function(e){
+    var img=e.target;
+    if(img.tagName==='IMG'&&img.src&&img.src.endsWith('.svg')&&!img.closest('.ta-lightbox')){
+      e.preventDefault();open(img.src);
+    }
+    if(e.target.closest('.ta-lightbox')&&e.target!==lbImg){close();}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+})();
+</script>
 </body>
 </html>
