@@ -376,9 +376,11 @@ class PBLPathBuilder {
 
   // ─── LLM 配置管理 ─────────────────────────────
 
-  // Cloudflare Worker 代理（API Key 存在 Worker Secrets，前端不暴露）
-  // 2026-06-04: 从硬编码 Key 改为 Cloudflare Worker 代理，解决免费 Key 不稳定问题
-  static PROXY_URL = 'https://llm-proxy.weponusa.workers.dev/v1';
+  // Cloudflare Pages Function 代理（API Key 存在环境变量，前端不暴露）
+  // 2026-06-04: 从硬编码 Key 改为 CF Pages Function 代理，解决免费 Key 不稳定问题
+  // 优先用 teachany.cn 域名（CDN 缓存+SSL 正常），回退到 workers.dev
+  static PROXY_URL = 'https://www.teachany.cn/api/llm';
+  static PROXY_URL_FALLBACK = 'https://llm-proxy.weponusa.workers.dev/v1';
   static BUILTIN_KEY = 'proxy';  // 代理模式不需要真实 Key
   static BUILTIN_MODEL = 'GLM-4-Flash';
   static BUILTIN_BASE_URL = PBLPathBuilder.PROXY_URL;
@@ -449,7 +451,7 @@ class PBLPathBuilder {
 
   async callLLM(messages, options = {}, retried = false) {
     const cfg = this.getLLMConfig();
-    const isProxy = cfg.baseUrl && cfg.baseUrl.includes('llm-proxy');
+    const isProxy = cfg.baseUrl && (cfg.baseUrl.includes('llm-proxy') || cfg.baseUrl.includes('/api/llm'));
     // 代理模式不需要前端传 Key
     if (!isProxy && !cfg.noAuth && !cfg.apiKey) throw new Error('请先配置 API Key（点击右上角 ⚙️ 设置）');
 
