@@ -288,6 +288,7 @@
     /* ── 4. PBL 路径分析 ─────────────────────────────── */
     recordPBL(goal, graphData, providers) {
       if (!goal || !graphData) return false;
+      const techRoute = graphData.techRoute ? safeText(graphData.techRoute, 2000) : '';
       const nodes = (graphData.nodes || []).map(n => ({
         id: n.id,
         name: n.name,
@@ -305,6 +306,7 @@
       const item = {
         id: shortId(),
         goal: safeText(goal, 1000),
+        techRoute,
         systems: graphData.systems || [],
         nodeCount: nodes.length,
         linkCount: links.length,

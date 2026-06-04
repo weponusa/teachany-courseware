@@ -712,7 +712,7 @@ body {
 </div>
 
 <script src="./assets/scripts/courseware-hub.js"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260604-cf-proxy"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260604-tech-route-fix"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script>
 // ─── 全局状态 ──────────────────────────────────
@@ -834,7 +834,7 @@ async function analyzePBLGoal() {
       if (window.TeachAnyHistory && typeof window.TeachAnyHistory.recordPBL === 'function') {
         const cfg = (builder && typeof builder.getLLMConfig === 'function') ? builder.getLLMConfig() : {};
         const providers = { providerName: cfg.providerName || cfg.providerId || '', model: cfg.model || '' };
-        window.TeachAnyHistory.recordPBL(goal, { ...result.graphData, systems: result.systems }, providers);
+        window.TeachAnyHistory.recordPBL(goal, { ...result.graphData, systems: result.systems, techRoute: result.techRoute || '' }, providers);
       }
     } catch (_e) { /* ignore */ }
 
@@ -898,6 +898,7 @@ async function restorePBLRunFromHistory(id) {
   const result = {
     goal: run.goal || '',
     systems: run.systems || [],
+    techRoute: run.techRoute || '',
     graphData,
     matched: graphData.nodes.filter(n => n.layer === 'matched'),
     external: graphData.nodes.filter(n => n.layer === 'external'),
@@ -939,8 +940,19 @@ function renderPBLStats(result) {
   // 渲染技术路线分析
   const techRouteEl = document.getElementById('pblTechRoute');
   const techRouteBody = document.getElementById('pblTechRouteBody');
-  if (result.techRoute && result.techRoute.trim()) {
-    techRouteBody.textContent = result.techRoute;
+  let routeText = (result.techRoute || '').trim();
+  if (!routeText && window.PBLPathBuilder) {
+    try {
+      const b = new window.PBLPathBuilder();
+      routeText = b._buildFallbackTechRoute(
+        result.goal || '',
+        result.matched || (result.graphData && result.graphData.nodes ? result.graphData.nodes.filter(n => n.layer === 'matched') : []),
+        result.external || (result.graphData && result.graphData.nodes ? result.graphData.nodes.filter(n => n.layer === 'external') : [])
+      );
+    } catch (_e) { /* ignore */ }
+  }
+  if (routeText) {
+    techRouteBody.textContent = routeText;
     techRouteEl.style.display = 'block';
     techRouteEl.classList.remove('collapsed');
   } else {

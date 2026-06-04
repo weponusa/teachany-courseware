@@ -576,13 +576,15 @@ class PBLPathBuilder {
 
     // 6. 构建路径图
     const graphData = this._buildPathGraph(stage2.matched, stage2.external, activeSystems);
+    const techRoute = (stage2.techRoute || '').trim()
+      || this._buildFallbackTechRoute(goal, stage2.matched, stage2.external);
 
     return {
       goal,
       systems: activeSystems,
       matched: stage2.matched,
       external: stage2.external,
-      techRoute: stage2.techRoute,
+      techRoute,
       graphData,
       stats: {
         totalCandidates: candidates.length,
@@ -754,7 +756,28 @@ ${candidateList}
       matchReason: ext.reason
     }));
 
-    return { matched, external, techRoute: result.techRoute || '' };
+    const techRoute = (result.techRoute || '').trim()
+      || this._buildFallbackTechRoute(goal, matched, external);
+    return { matched, external, techRoute };
+  }
+
+  _buildFallbackTechRoute(goal, matched = [], external = []) {
+    const core = matched.filter(m => (m.confidence || 0) >= 0.75).slice(0, 6);
+    const related = matched.filter(m => (m.confidence || 0) < 0.75).slice(0, 5);
+    const label = (arr) => arr.map(n => `「${n.name}」`).join('、') || '相关课标节点';
+    const extLabel = external.map(n => `「${n.name}」`).join('、');
+    let text = `围绕项目目标「${String(goal || '').slice(0, 120)}」，建议按「基础前置 → 核心匹配 → 拓展应用」三阶段推进。\n\n`;
+    if (core.length) {
+      text += `第一阶段（核心必需，约 ${core.length} 项）：重点掌握 ${label(core)}，建立与项目直接对应的概念、方法与操作能力。\n`;
+    }
+    if (related.length) {
+      text += `第二阶段（相关支撑）：衔接学习 ${label(related)}，补全知识链条，避免「只会做项目、不懂原理」。\n`;
+    }
+    if (extLabel) {
+      text += `第三阶段（课标外补充）：引入 ${extLabel}，用于拓展方案或高阶实现。\n`;
+    }
+    text += `\n实施路径：每阶段配合 TeachAny 对应课件与练习，完成阶段小结后再进入下一层；图谱中绿色为前置、红色为核心、紫色为拓展、黄色为外部补充。`;
+    return text.slice(0, 500);
   }
 
   // ─── 路径图构建 ─────────────────────────────────
@@ -969,6 +992,7 @@ ${candidateList}
       systems: activeSystems,
       matched: topMatched,
       external: [],
+      techRoute: this._buildFallbackTechRoute(goal, topMatched, []),
       graphData,
       stats: {
         totalCandidates: this.unifiedIndex.size,
