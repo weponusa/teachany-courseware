@@ -28,7 +28,8 @@
     floating.setAttribute('data-teachany-feedback-float','true');
     floating.href = url;
     floating.textContent = '学习反馈';
-    floating.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:2147483000;display:inline-flex;align-items:center;justify-content:center;min-width:96px;height:44px;padding:0 16px;border-radius:999px;background:#2563eb;color:#fff;text-decoration:none;font-weight:900;font-size:14px;box-shadow:0 12px 30px rgba(37,99,235,.35);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;';
+    floating.className = 'ta-feedback-float';
+    floating.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;min-width:96px;height:44px;padding:0 16px;border-radius:999px;background:#2563eb;color:#fff;text-decoration:none;font-weight:900;font-size:14px;box-shadow:0 12px 30px rgba(37,99,235,.35);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;position:fixed;';
     floating.setAttribute('aria-label','提交 TeachAny 学习反馈');
     document.body.appendChild(floating);
     ensureViewportRoom();
