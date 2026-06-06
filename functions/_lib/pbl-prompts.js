@@ -55,6 +55,15 @@ function systemPromptMatch(complex) {
 
 **关键检查**：选完后审视你的 pathOrder，相邻两个知识点之间是否存在认知跳跃？如果有，回到候选列表中补选 bridge 节点。
 
+## 跨学科要求
+- matched 必须覆盖 **至少 2 个学科**（如 math + physics，或 physics + chemistry）
+- 每个 projectPhases 阶段应点明涉及的学科交叉点
+
+## 素养指引（每阶段必填 literacy 六维）
+每个 projectPhases 条目必须包含 literacy 对象，分别写清：
+- knowledge（知识）method（方法）ability（能力）attitude（态度）emotion（情感）values（价值观）
+- 各维度 1 句话，与当阶段任务和知识点对应，不要空话
+
 ## 输出要求
 - matched 选 10-${PBL_MAX_MATCHED_NORMAL} 个知识点，三层角色都必须有代表
 - 每个 matched 节点必须声明 dependsOn（它依赖哪些其他 matched 节点的 index），构成 DAG
@@ -90,13 +99,28 @@ core 层（直接的工程实践知识）：
 
 ❌ 错误示范：只选"二次函数"和"发射测试"，中间缺少运动学、动力学、流体力学等桥梁知识
 
+## 跨学科要求（强制）
+- matched 必须来自 **至少 2 个学科**（如 physics + math，或 physics + chemistry + info-tech）
+- 禁止 matched 全部来自同一学科
+- knowledgeChain 摘要中应体现跨学科链条（如：数学建模 → 物理原理 → 化学材料 → 工程实现）
+
+## 素养指引（每阶段必填 literacy 六维）
+每个 projectPhases 必须包含 literacy 对象：
+- knowledge（知识）：本阶段要掌握的核心概念
+- method（方法）：探究/建模/实验/工程方法
+- ability（能力）：可观察的能力表现
+- attitude（态度）：科学态度、合作、严谨等
+- emotion（情感）：兴趣、成就感、挫折应对等
+- values（价值观）：安全、环保、社会责任等
+各维度 1 句，与当阶段任务绑定，禁止套话。
+
 ## 输出要求
-1. matched：8-${PBL_MAX_MATCHED_COMPLEX} 个，全部 7-12 年级，三层角色都必须有
+1. matched：8-${PBL_MAX_MATCHED_COMPLEX} 个，全部 7-12 年级，foundation≥2、bridge≥3、core≥3
 2. 每个 matched 必须有 dependsOn 字段（DAG 依赖），foundation 层的 dependsOn 为空数组
 3. pathOrder：按知识学习的真实先后顺序排列，确保依赖关系正确
-4. projectPhases：4-5 个阶段，体现从"理解原理"到"工程实现"的递进
+4. projectPhases：4-5 个阶段，体现从"理解原理"到"工程实现"的递进，每阶段含 literacy
 5. external：最多 2 个候选列表中没有、但项目确实需要的专业概念
-6. techRoute：串联所有阶段，体现知识递进关系
+6. techRoute：串联所有阶段，体现知识递进与跨学科融合
 
 只返回 JSON，不要 markdown 包裹，不要任何解释文字。`;
 }
@@ -122,6 +146,7 @@ ${summaryList}
 - subjects：math/physics/chemistry/biology/chinese/english/history/geography/info-tech
 - systems：cn/ap/cambridge/ib/us
 - grades：与项目难度匹配的年级数组（如温控系统多用 8-11，不要泛填全学段）
+- 综合 PBL 项目 subjects **至少 2 个学科**，体现跨学科特征
 - 最多 3 个学科、3 个课标体系${gradeHint}`;
 }
 
@@ -151,7 +176,15 @@ ${candidateList}
       "phase": "数学建模准备",
       "steps": ["理解温度-时间的函数关系", "用一次函数描述线性变化规律"],
       "knowledgeNames": ["一次函数"],
-      "deliverable": "温度变化的数学模型草图"
+      "deliverable": "温度变化的数学模型草图",
+      "literacy": {
+        "knowledge": "理解变量之间的函数关系与图像特征",
+        "method": "用控制变量法收集数据并建立数学模型",
+        "ability": "能将实际问题抽象为函数表达式并解释参数意义",
+        "attitude": "养成用数学语言描述现象的严谨态度",
+        "emotion": "体验从生活现象中发现规律的成就感",
+        "values": "尊重数据真实性，反对随意编造实验数据"
+      }
     },
     {
       "phase": "物理原理探究",
@@ -204,6 +237,10 @@ ${candidateList}
 - ${complex ? '4-5' : '3-5'} 个阶段，覆盖从"概念理解"到"项目交付"的完整过程
 - 每阶段的 knowledgeNames 只能用候选列表中的名称
 - 每阶段必须有明确的 deliverable（交付物）
+- 每阶段必须有 literacy 六维（知识/方法/能力/态度/情感/价值观），各 1 句
+
+### 5b. 跨学科
+- matched 至少覆盖 2 个学科；complex 项目禁止只选 math 或只选 physics
 
 ### 6. external
 - 最多 ${externalMax} 个，必须是候选列表中确实没有、项目又真正需要的专业概念
