@@ -55,6 +55,15 @@ function inferProjectDomains(goal) {
       { id: 'control', label: '控制算法', keywords: ['控制', '反馈', '编程', '算法'], subjects: ['info-tech', 'math'] },
     ];
   }
+  if (/新能源|光伏|太阳能|风电|风力|储能|电池|锂电|充电|发电|电能|清洁能源|碳中和|电动|能源车|并网|逆变/.test(g)) {
+    return [
+      { id: 'energy', label: '能量转换与守恒', keywords: ['能量转化', '能量转换', '机械能', '内能', '电能', '化学能', '热值', '效率', '做功'], subjects: ['physics', 'chemistry'] },
+      { id: 'electrochem', label: '电化学与电池', keywords: ['电池', '原电池', '电解', '电解池', '氧化还原', '电极', '电化学', '充放电', '储能', '燃料电池'], subjects: ['chemistry', 'physics'] },
+      { id: 'circuit', label: '电路与电磁', keywords: ['电路', '电流', '电压', '电阻', '电磁', '感应', '串联', '并联', '电磁感应', '发电机'], subjects: ['physics'] },
+      { id: 'renewable', label: '新能源装置', keywords: ['光伏', '太阳能', '风能', '风电', '发电', '新能源', '光能', '光电', '太阳能电池'], subjects: ['physics', 'chemistry'] },
+      { id: 'system', label: '系统测试与控制', keywords: ['控制', '传感', '传感器', '采集', '实验', '测试', '反馈', '调试', '数据采集', '误差'], subjects: ['info-tech', 'physics'] },
+    ];
+  }
   return [];
 }
 
@@ -104,9 +113,11 @@ function systemPromptMatch(complex) {
 
 常见错误（绝对禁止）：
 ❌ 选「弧长与扇形面积」「世界地形类型」「任务驱动型作文」「有机合成路线」做火箭项目
+❌ 新能源/光伏/电池项目选「细胞结构」「细胞呼吸」「细胞膜」等生物课节点（除非项目明确是生物能源）
 ❌ 只选 PID、函数应用等泛知识，却没有燃料、气动、抛体、牛顿定律等核心知识
 ❌ 为了凑数量选与交付物八竿子打不着的课标
-❌ 候选里有「抛体运动」「内能与热量」「流体压强」却不选`;
+❌ 候选里有「抛体运动」「内能与热量」「流体压强」却不选
+❌ STEM 项目只堆「XX计算」「XX守恒定律」——必须覆盖原理/装置/实验/电化学/传感控制，定量计算节点不超过 20%`;
 
   if (!complex) {
     return `${base}
@@ -162,6 +173,12 @@ function systemPromptFilter(complex) {
 ## 火箭/发射类项目
 - subjects 只允许：physics, chemistry, math, info-tech（**不要** geography/chinese/biology）
 - 必须含 physics；含 chemistry（推进/燃烧）
+
+## 新能源/光伏/储能/电池类项目
+- subjects 只允许：physics, chemistry, math, info-tech（**禁止 biology**）
+- 优先：能量转化原理、原电池/电化学、电路与电磁感应、光伏/风电装置、传感采集与系统测试
+- **严禁**选细胞、细胞呼吸、细胞膜等生物学节点
+- **禁止** matched 全是「守恒定律/综合计算」；必须含 chemistry（如原电池/电化学）与装置/实验类节点
 
 ${gradeHint}
 
@@ -311,6 +328,11 @@ ${rocketExample}
 - **5-8 个精准节点**即可；不要为了跨学科凑满 10 个
 - **严禁**选：作文、地形图、有机合成、弧长扇形等与项目制作无关的 index
 - 候选中有「抛体」「内能」「流体」「氧化」「牛顿」必须优先选
+
+### 0b. STEM 知识广度（工程类必守）
+- matched 须覆盖：**原理概念 + 装置/现象 + 实验/测试 + 少量必要定量**，不要全是「XX计算」「XX守恒定律」
+- 新能源/火箭类：physics + chemistry 都要有；含至少 1 个实验/装置/传感类 index
+- 数学 index 不超过 matched 总数的 25%；名称含「计算」「求解」「方程式」的 index 不超过 20%
 
 ### 1. 数量与角色
 - matched：${matchedRange} 个，confidence≥${minConf}
