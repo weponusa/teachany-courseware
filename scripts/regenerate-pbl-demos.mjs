@@ -123,13 +123,16 @@ function slimNode(n) {
 }
 
 function slimResult(result) {
+  const pathPlan = result.pathPlan || null;
   return {
     goal: result.goal,
     systems: result.systems,
     matched: (result.matched || []).map(slimNode),
     external: (result.external || []).map(slimNode),
     techRoute: result.techRoute,
-    projectPhases: result.projectPhases || [],
+    knowledgeChain: result.knowledgeChain || pathPlan?.knowledgeChain || '',
+    projectPhases: pathPlan?.phases || result.projectPhases || [],
+    pathPlan,
     graphData: {
       nodes: (result.graphData?.nodes || []).map(slimNode),
       links: result.graphData?.links || []
@@ -204,6 +207,12 @@ async function main() {
         console.warn(`  ⚠️ LLM 失败 (${e.message})，降级关键词匹配...`);
         result = await builder.searchByKeywords(demo.goal, ['all']);
         result.fallback = true;
+      }
+      if (!result.pathPlan && typeof builder.buildPathPlanFromResult === 'function') {
+        result.pathPlan = builder.buildPathPlanFromResult(result);
+        result.projectPhases = result.pathPlan?.phases || result.projectPhases;
+        result.knowledgeChain = result.pathPlan?.knowledgeChain || result.knowledgeChain;
+        result.techRoute = builder._buildTechRouteFromPathPlan?.(result.pathPlan) || result.techRoute;
       }
       const slim = slimResult(result);
       fs.writeFileSync(outFile, JSON.stringify(slim, null, 2), 'utf8');
