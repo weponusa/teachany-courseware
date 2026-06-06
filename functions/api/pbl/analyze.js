@@ -60,6 +60,7 @@ export async function onRequestPost(context) {
       complex: !!body.complex,
       maxMatched: body.maxMatched || (body.complex ? 12 : 18),
       minConf: body.minConf ?? (body.complex ? 0.68 : 0.52),
+      domainHints: body.domainHints || null,
     });
   } catch (e) {
     return jsonResponse({ error: e.message }, 400);
