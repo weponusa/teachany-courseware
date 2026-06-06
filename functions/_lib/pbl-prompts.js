@@ -1,11 +1,10 @@
 /**
- * @internal PBL 拆解核心提示词 v3.0 — 仅服务端，勿复制到前端静态资源
+ * @internal PBL 拆解核心提示词 v3.1 — 仅服务端，勿复制到前端静态资源
  *
- * v3.0 核心升级（针对「火箭等项目匹配跑偏」）：
- * - 强制「工程子系统拆解」：推进/气动/结构/控制等能力域必须先于选点
- * - 每个 matched 必须映射到具体子系统，禁止选与交付物无关的泛数学/泛控制
- * - 示例 JSON 改为模型火箭（不再用温控，避免模型照抄错误领域）
- * - 引入能力域覆盖硬性约束 + 相关性自检
+ * v3.1：主线优先 — 图谱只展示能「把东西做出来」的核心知识链
+ * - 宁缺毋滥：5-8 个精准节点 > 10 个跨学科沾边节点
+ * - 禁止用语文/地理/有机合成等无关课标凑跨学科
+ * - 工程子系统拆解：推进/气动/动力学/测试，每个子系统 1 个 matched 即可
  */
 
 const PBL_MAX_MATCHED_COMPLEX = 12;
@@ -96,11 +95,18 @@ function systemPromptMatch(complex) {
 - **bridge**：连接 foundation 与工程实现（如：抛体运动分析、流体压强与升力阻力）
 - **core**：直接用于动手环节（如：燃料热值计算、发射实验设计、结构强度估算）
 
+## 最高优先级：主线清晰 > 跨学科
+
+图谱**只展示核心 matched 节点**（学生按顺序学完就能动手做出来）。
+- **宁可只选 5 个精准节点**，也不要为了跨学科塞入语文作文、地理地形、有机合成等无关内容
+- 跨学科仅在**物理+化学+数学+信息技术**之间自然发生即可，**不强制**凑够多个学科
+- 每个 matched 必须是「删掉它就没法完成项目某一步」的知识
+
 常见错误（绝对禁止）：
-❌ 只选 PID、一次函数等「泛控制/泛数学」，却没有燃料、气动、推进、抛体等本项目核心知识
-❌ 选与项目八竿子打不着的课标节点（如：遗传、古诗词、世界史）凑数量
-❌ 候选里有「抛体运动」「内能与热量」「流体压强」却不选，反而选无关内容
-❌ reason 写空话「建立基础」「培养能力」，不写对应哪个子系统`;
+❌ 选「弧长与扇形面积」「世界地形类型」「任务驱动型作文」「有机合成路线」做火箭项目
+❌ 只选 PID、函数应用等泛知识，却没有燃料、气动、抛体、牛顿定律等核心知识
+❌ 为了凑数量选与交付物八竿子打不着的课标
+❌ 候选里有「抛体运动」「内能与热量」「流体压强」却不选`;
 
   if (!complex) {
     return `${base}
@@ -119,13 +125,13 @@ function systemPromptMatch(complex) {
 
 ## 复杂/工程类项目（火箭、机器人、温控系统等）
 
-### 能力域硬性覆盖（matched 必须满足）
-- 至少覆盖 **3 个不同工程子系统**（用户提示中会列出）
-- **每个列出的子系统至少 1 个 matched**；不得全部挤在同一子系统
-- matched 来自 **至少 2 个学科**（如 physics + chemistry，或 physics + info-tech）
-- foundation≥2、bridge≥3、core≥3
+### 主线选点（matched 5-10 个即可）
+- 覆盖 **推进/气动/动力学/测试** 中至少 3 个子系统，每个 1 个节点就够
+- **总数 5-8 个优先**；节点不够时宁可少选，不要凑无关课标
+- 学科以 physics、chemistry、math、info-tech 为主；**禁止** chinese/geography/history
+- foundation 1-2、bridge 2-3、core 2-3
 
-### 火箭类项目选点清单（候选中有近似名称时优先选）
+### 火箭类项目选点清单（候选中有近似名称时必须优先选）
 | 子系统 | 应优先在候选中找的课标词 |
 | 推进与燃料 | 氧化还原、燃烧、内能、热值、化学能、能量转化 |
 | 空气动力与弹道 | 抛体运动、流体压强、流速、大气压、飞行 |
@@ -134,9 +140,8 @@ function systemPromptMatch(complex) {
 | 控制与测试 | 实验设计、数据采集、算法、传感器、电路（勿凭空写 PID 除非候选中有） |
 
 ### 绝对禁止
-- 小学 1-6 年级内容
-- matched 全部来自同一学科
-- 用无关知识点凑满 8 个
+- 小学 1-6 年级、语文作文、地理地形、有机化学合成等与火箭制作无关的 index
+- 用无关知识点凑数量
 - techRoute / knowledgeNames 出现候选列表中不存在的名称
 
 只返回 JSON，不要 markdown，不要任何解释文字。`;
@@ -155,8 +160,8 @@ function systemPromptFilter(complex) {
 4. 确定适用 grades 与 systems
 
 ## 火箭/发射类项目
-- subjects 必须包含 physics，并包含 chemistry（推进/燃烧）或 info-tech（控制/采集）至少其一
-- 不要只筛 math
+- subjects 只允许：physics, chemistry, math, info-tech（**不要** geography/chinese/biology）
+- 必须含 physics；含 chemistry（推进/燃烧）
 
 ${gradeHint}
 
@@ -189,12 +194,12 @@ ${summaryList}
 - subjects：math/physics/chemistry/biology/chinese/english/history/geography/info-tech/science
 - systems：cn/ap/cambridge/ib/us
 - projectDomains：从项目交付物拆出的 3-5 个子系统名称
-- 工程/制作类 subjects **至少 2 个学科**，火箭类必须含 physics
+- 火箭/工程类 subjects 仅限 physics/chemistry/math/info-tech，不要 geography/chinese
 - 最多 4 个学科${gradeHint}`;
 }
 
 function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints) {
-  const matchedRange = complex ? `8-${maxMatched}` : `10-${maxMatched}`;
+  const matchedRange = complex ? `5-${Math.min(maxMatched, 8)}` : `8-${maxMatched}`;
   const externalMax = complex ? 2 : 3;
   const domains = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
   const domainSection = domains.length
@@ -210,13 +215,11 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
     {"index": 5, "confidence": 0.91, "role": "foundation", "reason": "子系统：推进与燃料。理解燃烧与氧化还原，解释化学能转化为推进动能", "dependsOn": []},
     {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "子系统：空气动力与弹道。将运动分解为水平和竖直分量，分析飞行轨迹", "dependsOn": [2]},
     {"index": 11, "confidence": 0.89, "role": "bridge", "reason": "子系统：空气动力与弹道。理解气流与压强差，解释箭体所受升力与阻力", "dependsOn": [8]},
-    {"index": 14, "confidence": 0.88, "role": "bridge", "reason": "子系统：推进与燃料。用热值与内能估算燃料释放能量与推进效率", "dependsOn": [5]},
     {"index": 17, "confidence": 0.92, "role": "core", "reason": "子系统：运动学与动力学。用牛顿定律分析发射瞬间推力与加速度", "dependsOn": [2, 8]},
-    {"index": 20, "confidence": 0.87, "role": "core", "reason": "子系统：结构与材料。分析箭体压强与结构强度，确保飞行稳定", "dependsOn": [11]},
-    {"index": 23, "confidence": 0.86, "role": "core", "reason": "子系统：控制与测试。设计发射实验、测量飞行高度与落点，完成测试方案", "dependsOn": [17, 20]}
+    {"index": 23, "confidence": 0.86, "role": "core", "reason": "子系统：控制与测试。设计发射实验、测量飞行高度与落点", "dependsOn": [17]}
   ],
-  "pathOrder": [2, 5, 8, 11, 14, 17, 20, 23],
-  "knowledgeChain": "氧化还原与燃烧 → 内能/热值 → 牛顿定律与抛体运动 → 流体压强与阻力 → 结构强度 → 发射实验与数据采集",
+  "pathOrder": [5, 2, 8, 11, 17, 23],
+  "knowledgeChain": "氧化还原与燃烧 → 牛顿定律 → 抛体运动 → 流体压强与阻力 → 发射实验测试",
   "projectPhases": [
     {
       "phase": "推进原理与燃料选型",
@@ -303,15 +306,15 @@ ${rocketExample}
 
 ## 硬性要求
 
-### 0. 相关性（最高优先级）
-- 每个 matched 的 reason **必须以「子系统：」开头**，写明支撑哪个工程子系统
-- 选完后自检：推进/燃料、气动/弹道、控制/测试 是否都有代表？若候选中有「抛体」「内能」「流体」「氧化」「牛顿」等词却未选，必须重新审视
-- **禁止**选与项目子系统无关的节点凑数
+### 0. 主线优先（最高优先级）
+- 每个 matched 的 reason **必须以「子系统：」开头**
+- **5-8 个精准节点**即可；不要为了跨学科凑满 10 个
+- **严禁**选：作文、地形图、有机合成、弧长扇形等与项目制作无关的 index
+- 候选中有「抛体」「内能」「流体」「氧化」「牛顿」必须优先选
 
 ### 1. 数量与角色
 - matched：${matchedRange} 个，confidence≥${minConf}
-- foundation≥2、bridge≥3、core≥3（complex 项目）
-- ${complex ? '禁止 1-6 年级小学 index' : ''}
+- ${complex ? 'foundation 1-2、bridge 2-3、core 2-3；禁止 1-6 年级与语文/地理 index' : ''}
 
 ### 2. 知识链
 - dependsOn 构成 DAG；pathOrder 满足依赖
@@ -322,8 +325,8 @@ ${rocketExample}
 - knowledgeNames **只能**使用候选列表中出现的名称（字面匹配或明显子串）
 - 每阶段 literacy 六维各 1 句，禁止套话
 
-### 4. 跨学科
-- matched 至少 2 个学科；火箭类须有 physics + (chemistry 或 info-tech)
+### 4. 跨学科（可选，不强制）
+- 物理+化学自然交叉即可；**禁止**为跨学科引入语文/地理
 
 ### 5. external
 - 最多 ${externalMax} 个，候选中确实没有、项目又必需的专业概念
