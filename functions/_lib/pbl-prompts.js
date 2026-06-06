@@ -1,6 +1,7 @@
 /**
- * @internal PBL 拆解核心提示词 v3.1 — 仅服务端，勿复制到前端静态资源
+ * @internal PBL 拆解核心提示词 v4.0 — 仅服务端，勿复制到前端静态资源
  *
+ * v4.0：先全链路拆解可行方案，再匹配课标（decompose → filter → match）
  * v3.1：主线优先 — 图谱只展示能「把东西做出来」的核心知识链
  * - 宁缺毋滥：5-8 个精准节点 > 10 个跨学科沾边节点
  * - 禁止用语文/地理/有机合成等无关课标凑跨学科
@@ -158,6 +159,96 @@ function systemPromptMatch(complex) {
 只返回 JSON，不要 markdown，不要任何解释文字。`;
 }
 
+function systemPromptDecompose(complex) {
+  const depth = complex
+    ? '复杂/工程类项目必须给出 2-3 套**不同技术路线**的可行方案（如不同能源组合、不同控制架构），并推荐 1 套。'
+    : '至少给出 2 套可行实施思路，并推荐 1 套。';
+  return `你是资深 PBL 与 STEM 工程教育顾问。
+
+## 任务（本阶段**不选课标知识点**）
+
+对用户项目目标做**全链路结构化拆解**：
+1. 澄清交付物、约束、适用学段
+2. 拆出 3-5 个**工程/探究子系统**（可并行或递进）
+3. 给出 ${depth}
+4. 为推荐方案列出 4-5 个**实施阶段**（每阶段：任务步骤、产出、知识检索提示词）
+
+## 原则
+- 先想清楚「怎么做出来」，再考虑学什么；本阶段禁止编造课标节点名称
+- knowledgeHints 是**检索关键词**（如「原电池」「抛体运动」「传感采集」），不是最终 matched 名称
+- 方案须贴合用户目标，禁止跑题到无关学科（如新能源项目不要写细胞、语文作文）
+- 每套方案的 phases 应能对应子系统递进
+
+只返回 JSON，不要 markdown。`;
+}
+
+function userPromptDecompose(goal, complex) {
+  const domains = inferProjectDomains(goal);
+  const domainBlock = domains.length
+    ? `\n【可参考的工程子系统】\n${formatDomainHints(domains)}\n`
+    : '';
+  return `【项目目标】
+${goal}
+${domainBlock}
+返回 JSON（严格遵循字段名）：
+{
+  "projectSummary": "一句话概括项目",
+  "deliverable": "最终交付物",
+  "constraints": ["时间/安全/器材等约束"],
+  "subsystems": [
+    {"id": "energy", "name": "子系统名", "description": "该子系统要解决的问题"}
+  ],
+  "schemes": [
+    {
+      "id": "A",
+      "name": "方案名称",
+      "summary": "技术路线概述",
+      "pros": ["优点"],
+      "cons": ["局限"],
+      "phases": [
+        {
+          "phase": "阶段名",
+          "steps": ["任务1", "任务2"],
+          "deliverable": "阶段产出",
+          "subsystemIds": ["energy"],
+          "knowledgeHints": ["检索关键词1", "检索关键词2"]
+        }
+      ]
+    }
+  ],
+  "recommendedSchemeId": "A",
+  "knowledgeChain": "子系统1 → 子系统2 → 测试迭代"
+}
+
+要求：
+- schemes 至少 2 套，recommendedSchemeId 必须是其中一套的 id
+- 推荐方案 phases 4-5 个
+- knowledgeHints 每阶段 2-5 个，用于下一步课标检索，勿写课标原文节点名`;
+}
+
+function formatBlueprintForMatch(blueprint) {
+  if (!blueprint) return '';
+  const scheme = (blueprint.schemes || []).find(s => s.id === blueprint.recommendedSchemeId)
+    || (blueprint.schemes || [])[0];
+  if (!scheme) return '';
+  const subs = (blueprint.subsystems || []).map(s => `${s.id}:${s.name}`).join('；');
+  const phases = (scheme.phases || []).map((p, i) => {
+    const hints = (p.knowledgeHints || []).join('、');
+    const steps = (p.steps || []).join('；');
+    return `  ${i + 1}. 【${p.phase}】任务：${steps}；产出：${p.deliverable || '阶段成果'}；知识检索提示：${hints}`;
+  }).join('\n');
+  return `
+【项目实施蓝图 — matched 必须对齐此结构，禁止跑题】
+项目摘要：${blueprint.projectSummary || ''}
+交付物：${blueprint.deliverable || ''}
+推荐方案：${scheme.name}（${scheme.summary || ''}）
+子系统：${subs}
+实施阶段：
+${phases}
+知识链：${blueprint.knowledgeChain || ''}
+`;
+}
+
 function systemPromptFilter(complex) {
   const gradeHint = complex
     ? 'grades 必须 7-12，不含小学。复杂工程类项目 subjects 必须含 physics，且至少再加 chemistry 或 info-tech 之一。'
@@ -185,8 +276,9 @@ ${gradeHint}
 只返回 JSON。`;
 }
 
-function userPromptFilter(goal, summaryList, complex) {
+function userPromptFilter(goal, summaryList, complex, projectBlueprint) {
   const domains = inferProjectDomains(goal);
+  const blueprintBlock = formatBlueprintForMatch(projectBlueprint);
   const domainBlock = domains.length
     ? `\n【本项目工程子系统参考（filter 的 subjects 须能覆盖这些）】\n${formatDomainHints(domains)}\n`
     : '';
@@ -194,7 +286,7 @@ function userPromptFilter(goal, summaryList, complex) {
     ? `\n- grades 必须落在 7-12（初中、高中）`
     : '';
   return `PBL项目目标：${goal}
-${domainBlock}
+${blueprintBlock}${domainBlock}
 可用的知识体系：
 ${summaryList}
 
@@ -215,10 +307,11 @@ ${summaryList}
 - 最多 4 个学科${gradeHint}`;
 }
 
-function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints) {
+function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint) {
   const matchedRange = complex ? `5-${Math.min(maxMatched, 8)}` : `8-${maxMatched}`;
   const externalMax = complex ? 2 : 3;
   const domains = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
+  const blueprintSection = formatBlueprintForMatch(projectBlueprint);
   const domainSection = domains.length
     ? `\n【工程子系统 — 每个至少 1 个 matched，reason 必须以「子系统：XXX」开头】\n${formatDomainHints(domains)}\n`
     : '';
@@ -315,8 +408,8 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
 
   return `【项目目标】
 ${goal}
-${domainSection}
-【候选知识点】（matched 只能选下列 index；先通读全文，按子系统检索关键词再选）
+${blueprintSection}${domainSection}
+【候选知识点】（matched 只能选下列 index；**先对齐上方蓝图阶段与 knowledgeHints**，再按子系统检索选 index）
 ${candidateList}
 
 ${rocketExample}
@@ -364,7 +457,7 @@ const SUBJECT_ZH = {
 };
 
 /**
- * @param {'filter'|'match'} stage
+ * @param {'decompose'|'filter'|'match'} stage
  * @param {object} payload
  * @returns {{ role: string, content: string }[]}
  */
@@ -377,12 +470,20 @@ export function buildPBMessages(stage, payload) {
     maxMatched = complex ? PBL_MAX_MATCHED_COMPLEX : PBL_MAX_MATCHED_NORMAL,
     minConf = 0.68,
     domainHints = null,
+    projectBlueprint = null,
   } = payload;
+
+  if (stage === 'decompose') {
+    return [
+      { role: 'system', content: systemPromptDecompose(complex) },
+      { role: 'user', content: userPromptDecompose(goal, complex) },
+    ];
+  }
 
   if (stage === 'filter') {
     return [
       { role: 'system', content: systemPromptFilter(complex) },
-      { role: 'user', content: userPromptFilter(goal, summaryList, complex) },
+      { role: 'user', content: userPromptFilter(goal, summaryList, complex, projectBlueprint) },
     ];
   }
 
@@ -399,7 +500,7 @@ export function buildPBMessages(stage, payload) {
       { role: 'system', content: systemPromptMatch(complex) },
       {
         role: 'user',
-        content: userPromptMatch(goal, candidateList, complex, maxMatched, minConf, hints),
+        content: userPromptMatch(goal, candidateList, complex, maxMatched, minConf, hints, projectBlueprint),
       },
     ];
   }

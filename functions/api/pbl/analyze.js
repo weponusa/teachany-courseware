@@ -3,7 +3,7 @@
  * POST /api/pbl/analyze
  *
  * Body: {
- *   stage: 'filter' | 'match',
+ *   stage: 'decompose' | 'filter' | 'match',
  *   goal: string,
  *   summaryList?: string,      // filter 阶段
  *   candidates?: object[],     // match 阶段（精简字段即可）
@@ -34,7 +34,7 @@ export async function onRequestPost(context) {
   }
 
   const stage = body.stage;
-  if (stage !== 'filter' && stage !== 'match') {
+  if (stage !== 'decompose' && stage !== 'filter' && stage !== 'match') {
     return jsonResponse({ error: 'Invalid stage' }, 400);
   }
 
@@ -69,8 +69,8 @@ export async function onRequestPost(context) {
   const llmOpts = {
     // v2.0 提示词要求更大的结构化输出（matched+dependsOn+knowledgeChain+projectPhases+techRoute），
     // 提高 match 的 token 上限，避免 JSON 尾部被截断导致解析失败、知识图谱为空。
-    maxTokens: stage === 'match' ? 8000 : 1200,
-    temperature: stage === 'match' ? 0.15 : 0.25,
+    maxTokens: stage === 'match' ? 8000 : (stage === 'decompose' ? 4500 : 1200),
+    temperature: stage === 'match' ? 0.15 : (stage === 'decompose' ? 0.35 : 0.25),
     clientLlm: body.clientLlm,
   };
 
