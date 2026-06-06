@@ -11,9 +11,35 @@
 const PBL_MAX_MATCHED_COMPLEX = 12;
 const PBL_MAX_MATCHED_NORMAL = 18;
 
+function isConsumerDecisionGoal(goal) {
+  const g = String(goal || '');
+  if (/购车|买车|选车|用车方案|消费决策|方案比选|比选|选型|性价比|家用.*车|家庭.*(购车|买车|选车|用车)/.test(g)) return true;
+  if (/对比|比较/.test(g) && /购|买|选|家用|家庭/.test(g) && /新能源|燃油|电动|混动|汽油|柴油/.test(g)) return true;
+  return false;
+}
+
+function isEnergyEngineeringGoal(goal) {
+  const g = String(goal || '');
+  if (isConsumerDecisionGoal(g)) return false;
+  if (/对比|比较|选购|购车|买车|选车|家用|家庭/.test(g) && !/设计|制作|研发|装置|系统开发|搭建|发电|储能/.test(g)) {
+    if (/新能源|电动|燃油|混动|光伏|储能/.test(g)) return false;
+  }
+  return /新能源|光伏|太阳能|风电|风力|储能|电池|锂电|充电|发电|电能|清洁能源|碳中和|能源车|并网|逆变/.test(g)
+    && /设计|制作|研发|装置|系统|搭建|工程|发电|储能|模型|实验|探究/.test(g);
+}
+
 /** 根据项目目标推断工程子系统（服务端兜底，与前端 domain 逻辑对齐） */
 function inferProjectDomains(goal) {
   const g = String(goal || '');
+  if (isConsumerDecisionGoal(g)) {
+    return [
+      { id: 'needs', label: '需求与场景调研', keywords: ['调查', '数据', '统计', '问卷', '需求', '分析', '收集', '整理', '图表'], subjects: ['math', 'chinese'] },
+      { id: 'cost', label: '成本与数据建模', keywords: ['函数', '一次函数', '计算', '统计', '数据', '平均数', '费用', '成本', '百分比'], subjects: ['math'] },
+      { id: 'energy_compare', label: '动力与能耗差异（科普）', keywords: ['内燃机', '热机', '效率', '电能', '化学能', '能量', '热值', '做功'], subjects: ['physics', 'chemistry'] },
+      { id: 'environment', label: '环保与可持续', keywords: ['环境', '污染', '排放', '碳', '气候', '资源', '可持续', '温室'], subjects: ['geography', 'chemistry'] },
+      { id: 'decision', label: '决策论证与报告', keywords: ['说明', '报告', '论证', '写作', '分析', '比较', '调查'], subjects: ['chinese', 'math'] },
+    ];
+  }
   if (/火箭|导弹|发射|弹道|模型火箭|航天/.test(g)) {
     return [
       {
@@ -56,7 +82,7 @@ function inferProjectDomains(goal) {
       { id: 'control', label: '控制算法', keywords: ['控制', '反馈', '编程', '算法'], subjects: ['info-tech', 'math'] },
     ];
   }
-  if (/新能源|光伏|太阳能|风电|风力|储能|电池|锂电|充电|发电|电能|清洁能源|碳中和|电动|能源车|并网|逆变/.test(g)) {
+  if (isEnergyEngineeringGoal(g)) {
     return [
       { id: 'energy', label: '能量转换与守恒', keywords: ['能量转化', '能量转换', '机械能', '内能', '电能', '化学能', '热值', '效率', '做功'], subjects: ['physics', 'chemistry'] },
       { id: 'electrochem', label: '电化学与电池', keywords: ['电池', '原电池', '电解', '电解池', '氧化还原', '电极', '电化学', '充放电', '储能', '燃料电池'], subjects: ['chemistry', 'physics'] },
@@ -118,7 +144,8 @@ function systemPromptMatch(complex) {
 ❌ 只选 PID、函数应用等泛知识，却没有燃料、气动、抛体、牛顿定律等核心知识
 ❌ 为了凑数量选与交付物八竿子打不着的课标
 ❌ 候选里有「抛体运动」「内能与热量」「流体压强」却不选
-❌ STEM 项目只堆「XX计算」「XX守恒定律」——必须覆盖原理/装置/实验/电化学/传感控制，定量计算节点不超过 20%`;
+❌ STEM 项目只堆「XX计算」「XX守恒定律」——必须覆盖原理/装置/实验/电化学/传感控制，定量计算节点不超过 20%
+❌ 「家庭购车/新能源 vs 燃油对比」写成研发方案——应选统计/函数/内燃机效率/环境排放/说明文，**禁止**电解池、原电池、程序设计、电池温度控制`;
 
   if (!complex) {
     return `${base}
@@ -161,23 +188,25 @@ function systemPromptMatch(complex) {
 
 function systemPromptDecompose(complex) {
   const depth = complex
-    ? '复杂/工程类项目必须给出 2-3 套**不同技术路线**的可行方案（如不同能源组合、不同控制架构），并推荐 1 套。'
+    ? '复杂项目必须给出 2-3 套**不同实施路线**并推荐 1 套。'
     : '至少给出 2 套可行实施思路，并推荐 1 套。';
-  return `你是资深 PBL 与 STEM 工程教育顾问。
+  return `你是资深 PBL 与跨学科课程设计顾问。
 
 ## 任务（本阶段**不选课标知识点**）
 
 对用户项目目标做**全链路结构化拆解**：
-1. 澄清交付物、约束、适用学段
-2. 拆出 3-5 个**工程/探究子系统**（可并行或递进）
-3. 给出 ${depth}
-4. 为推荐方案列出 4-5 个**实施阶段**（每阶段：任务步骤、产出、知识检索提示词）
+1. 先判断项目类型：**消费决策/调查对比**（如家庭购车选型） vs **工程研发/制作**（如设计储能装置）
+2. 澄清交付物、约束、适用学段
+3. 拆出 3-5 个子系统（决策类：需求调研/对比维度/成本测算/决策报告；工程类：子系统研发）
+4. 给出 ${depth}
+5. 为推荐方案列出 4-5 个**实施阶段**（任务步骤、产出、knowledgeHints 检索词）
 
 ## 原则
-- 先想清楚「怎么做出来」，再考虑学什么；本阶段禁止编造课标节点名称
-- knowledgeHints 是**检索关键词**（如「原电池」「抛体运动」「传感采集」），不是最终 matched 名称
-- 方案须贴合用户目标，禁止跑题到无关学科（如新能源项目不要写细胞、语文作文）
-- 每套方案的 phases 应能对应子系统递进
+- **严格贴合用户题目**，禁止把「购车对比」写成「新能源汽车研发」
+- 消费决策类：交付物是**决策报告/对比表/答辩**，不是原型、电池装置、数据采集系统
+- 消费决策类 knowledgeHints 用：统计、函数、内燃机效率、排放环境、说明文报告——**禁止**电解池、原电池、程序控制、电池温度控制
+- 工程研发类 knowledgeHints 才用：原电池、传感、电路等
+- 本阶段禁止编造课标节点名称
 
 只返回 JSON，不要 markdown。`;
 }
@@ -421,6 +450,11 @@ ${rocketExample}
 - **5-8 个精准节点**即可；不要为了跨学科凑满 10 个
 - **严禁**选：作文、地形图、有机合成、弧长扇形等与项目制作无关的 index
 - 候选中有「抛体」「内能」「流体」「氧化」「牛顿」必须优先选
+
+### 0a. 消费决策类（购车选型、方案对比）
+- 交付物是**决策报告/对比测算表**，不是研发原型
+- 优先：统计与数据、一次函数/百分比计算、内燃机与热机效率（科普）、环境排放、说明文/论证写作
+- **禁止** matched：电解池、原电池、程序控制、电磁感应、电池温度、传感器、数据采集算法
 
 ### 0b. STEM 知识广度（工程类必守）
 - matched 须覆盖：**原理概念 + 装置/现象 + 实验/测试 + 少量必要定量**，不要全是「XX计算」「XX守恒定律」
