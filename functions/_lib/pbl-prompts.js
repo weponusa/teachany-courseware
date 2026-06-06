@@ -1,43 +1,102 @@
 /**
- * @internal PBL 拆解核心提示词 — 仅服务端，勿复制到前端静态资源
+ * @internal PBL 拆解核心提示词 v2.0 — 仅服务端，勿复制到前端静态资源
+ * 
+ * v2.0 核心升级：
+ * - 引入三层知识角色（core/bridge/foundation），解决"只有基础和终点、缺失中间环节"的问题
+ * - 要求 LLM 输出知识点间的依赖关系（dependsOn），构建完整学习链条
+ * - 强制识别"概念理解→原理推导→方法应用→工程实践"的递进层次
  */
 
-const PBL_MAX_MATCHED_COMPLEX = 10;
+const PBL_MAX_MATCHED_COMPLEX = 12;
+const PBL_MAX_MATCHED_NORMAL = 18;
 
 function systemPromptMatch(complex) {
-  const base = `你是资深 PBL（项目式学习）导师兼工程师。任务：把一个项目目标，转化成"一个真正能动手做出来的项目实施路线"，而不是罗列课标知识点。
+  const base = `你是资深 PBL（项目式学习）导师，同时精通学科教学法和认知科学。
 
-判断每个知识点是否入选，只问一个问题：
-「不学它，这个项目的某个具体环节就做不出来吗？」——是，才选；只是"打基础/有帮助"，一律不选。`;
+你的核心任务：把一个项目目标拆解成一条**完整的知识学习链**——从学生当前水平出发，经过必要的中间知识环节，最终达到能独立完成项目的能力。
+
+## 核心原则：知识链必须完整，不能跳跃
+
+常见错误（你绝对不能犯）：
+❌ 只选"最基础的数学"和"最终的操作技能"，中间全部跳过
+❌ 假设学生已经掌握了中间所有概念，直接给最终应用
+❌ 只罗列项目动手环节直接用到的知识，忽略理解这些知识所需的前置概念
+
+正确做法：
+✅ 像一位优秀教师规划教学序列一样，识别学生从"不会"到"会做"之间的每一个必经知识台阶
+✅ 每两个相邻知识点之间的认知跨度不应超过1个学期的学习量
+✅ 如果 A 知识点需要 B 才能理解，而 B 又需要 C，那么 C→B→A 三个都要选
+
+## 三层知识角色（每层都必须有节点）
+
+1. **foundation**（必要基础层）：项目所需的数学工具、基本原理、基础概念
+   - 不是"小学基础"，而是本项目特定需要但学生可能还没学过的前置知识
+   - 例：做温控系统需要"一次函数"和"不等式"作为建模基础
+
+2. **bridge**（桥梁/中间层）：连接基础概念和最终应用的中间环节
+   - 这是最容易被遗漏的层次！必须认真识别
+   - 包括：概念深化、原理推导、方法论、建模思想、跨学科连接
+   - 例：从"一次函数"到"PID控制"中间需要"函数图像分析""变量关系建模""反馈与调节"
+
+3. **core**（项目核心层）：直接用于项目实施的关键知识和技能
+   - 这是项目动手环节直接涉及的知识
+   - 例："传感器数据采集""电路搭建""编程控制"`;
 
   if (!complex) {
     return `${base}
 
-要求：
-- matched 选 8-14 个与项目动手环节直接相关的知识点。
-- techRoute 按"准备→探究→实现→验证"写，每段点明用到哪个知识点、产出什么。
-- 只返回 JSON，不要 markdown 包裹，不要解释。`;
+## 选点策略
+
+对候选列表中的每个知识点，按以下逻辑判断：
+1. 它是项目某环节直接要用的？ → 标记为 core
+2. 它是理解某个 core 知识点的必要前置？ → 标记为 foundation
+3. 它是连接 foundation 和 core 之间的桥梁概念？ → 标记为 bridge
+4. 以上都不是 → 不选
+
+**关键检查**：选完后审视你的 pathOrder，相邻两个知识点之间是否存在认知跳跃？如果有，回到候选列表中补选 bridge 节点。
+
+## 输出要求
+- matched 选 10-${PBL_MAX_MATCHED_NORMAL} 个知识点，三层角色都必须有代表
+- 每个 matched 节点必须声明 dependsOn（它依赖哪些其他 matched 节点的 index），构成 DAG
+- pathOrder 按学习先后排列（先学的在前），确保每个节点的 dependsOn 都排在它前面
+- projectPhases 按"概念准备→原理探究→方法建模→工程实现→测试验证"展开
+- techRoute 必须体现知识的递进关系，不能只是"用XX做XX"的扁平描述
+
+只返回 JSON，不要 markdown 包裹，不要解释。`;
   }
 
   return `${base}
 
-【这是一个复杂/工程类项目】请像带学生做毕业设计一样思考，给出"工程师视角"的路线，而不是"小学补课清单"。
+## 复杂/工程类项目特殊要求
 
-绝对禁止（出现即视为错误回答）：
-- 严禁出现小学学段（1-6 年级）内容：分数/小数/百分数互化、四则运算、认识图形、周长面积、简单统计、认识钟表人民币、简单电路、磁铁、植物动物常识等。
-- 严禁写"首先掌握数学基础概念""为后续计算提供基础"这类空话套话。
-- techRoute 里出现的每一个知识点名称，必须是 matched 里真实选中的那些；不准临时编造或塞入基础概念。
+请像带学生做毕业设计一样思考：学生不是天才，从课本知识到工程实现之间有大量中间台阶。
 
-正面示范（以"设计并发射一枚模型火箭"为例，体会颗粒度）：
-- 该选：牛顿运动定律、动量与冲量、受力分析、二次函数/抛物运动、燃烧与氧化反应、空气阻力与流体、传感器与数据采集、基础电路与控制。
-- 不该选：分数小数百分数互化、圆的周长和面积、认识图形——这些是小学内容，工程项目默认已具备，不进路线。
+**绝对禁止**（出现即视为错误回答）：
+- 严禁出现小学学段（1-6 年级）内容：分数/小数/百分数互化、四则运算、认识图形、周长面积、简单统计等
+- 严禁写"首先掌握基础概念""夯实数学基础"这类空话套话
+- 严禁只选"高中数学基础"和"最终的工程操作"两头，跳过所有中间环节
+- techRoute 里每个知识点名称必须是 matched 里选中的
 
-要求：
-1. matched：6-${PBL_MAX_MATCHED_COMPLEX} 个，全部 7-12 年级、直接服务于建模/实验/搭建/编程/测试环节。
-2. pathOrder：按"先理解原理→再建模计算→后搭建测试"的真实施工顺序排列 matched 的 index。
-3. projectPhases：3-4 个真实工程阶段（如：原理与受力分析 / 结构与弹道建模 / 动力与控制系统 / 制作与发射测试）。每阶段写：steps（具体动手任务）、knowledgeNames（只能用 matched 里的名称）、deliverable（该阶段交付物，如计算表/CAD图/原型/测试报告）。
-4. external：最多 2 个候选列表里没有、但工程实现确实要用的专业概念（如"齐奥尔科夫斯基火箭方程""PID控制"），禁止写"XX基础"。
-5. techRoute：把 projectPhases 串成一段可执行说明，具体到知识点与产出物，禁止任何小学基础内容与套话。
+**正面示范**（以"设计并发射一枚模型火箭"为例）：
+
+foundation 层（必要数学/物理基础）：
+- 二次函数与抛物运动、矢量与力的合成、三角函数
+
+bridge 层（连接原理与工程的中间环节）——这一层最容易被忽略！：
+- 牛顿运动定律应用、动量守恒与冲量、微积分初步（速度-位移关系）、误差分析与实验设计
+
+core 层（直接的工程实践知识）：
+- 受力分析与弹道计算、燃烧与推进剂化学、空气动力学基础、传感器与数据采集、结构设计与材料选择
+
+❌ 错误示范：只选"二次函数"和"发射测试"，中间缺少运动学、动力学、流体力学等桥梁知识
+
+## 输出要求
+1. matched：8-${PBL_MAX_MATCHED_COMPLEX} 个，全部 7-12 年级，三层角色都必须有
+2. 每个 matched 必须有 dependsOn 字段（DAG 依赖），foundation 层的 dependsOn 为空数组
+3. pathOrder：按知识学习的真实先后顺序排列，确保依赖关系正确
+4. projectPhases：4-5 个阶段，体现从"理解原理"到"工程实现"的递进
+5. external：最多 2 个候选列表中没有、但项目确实需要的专业概念
+6. techRoute：串联所有阶段，体现知识递进关系
 
 只返回 JSON，不要 markdown 包裹，不要任何解释文字。`;
 }
@@ -67,40 +126,93 @@ ${summaryList}
 }
 
 function userPromptMatch(goal, candidateList, complex, maxMatched, minConf) {
+  const matchedRange = complex ? `8-${maxMatched}` : `10-${maxMatched}`;
+  const externalMax = complex ? 2 : 3;
+
   return `【项目目标】
 ${goal}
 
 【候选知识点】（只能从中选择 matched，index 为序号）
 ${candidateList}
 
-返回 JSON 示例结构：
+返回 JSON 格式（严格遵循）：
 {
   "matched": [
-    {"index": 2, "confidence": 0.92, "role": "core", "reason": "用于建立温控数学模型"},
-    {"index": 7, "confidence": 0.85, "role": "support", "reason": "用于传感器数据处理"}
+    {"index": 3, "confidence": 0.95, "role": "foundation", "reason": "建立函数建模的数学基础", "dependsOn": []},
+    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "连接函数概念与物理量关系，理解变量间的因果建模", "dependsOn": [3]},
+    {"index": 12, "confidence": 0.88, "role": "bridge", "reason": "将数学模型转化为可测量的物理实验方案", "dependsOn": [3, 8]},
+    {"index": 15, "confidence": 0.92, "role": "core", "reason": "直接用于搭建温控电路并采集数据", "dependsOn": [12]},
+    {"index": 20, "confidence": 0.85, "role": "core", "reason": "编写控制程序实现自动调节", "dependsOn": [8, 15]}
   ],
-  "pathOrder": [2, 7, 4],
+  "pathOrder": [3, 8, 12, 15, 20],
+  "knowledgeChain": "一次函数 → 变量关系与函数建模 → 实验设计与数据分析 → 传感器与电路 → 编程控制",
   "projectPhases": [
     {
-      "phase": "需求与方案",
-      "steps": ["明确控制指标", "选型传感器与执行器"],
-      "knowledgeNames": ["一次函数", "传感器原理"],
-      "deliverable": "需求说明与方案草图"
+      "phase": "数学建模准备",
+      "steps": ["理解温度-时间的函数关系", "用一次函数描述线性变化规律"],
+      "knowledgeNames": ["一次函数"],
+      "deliverable": "温度变化的数学模型草图"
+    },
+    {
+      "phase": "物理原理探究",
+      "steps": ["探究热传导规律", "设计实验验证模型"],
+      "knowledgeNames": ["变量关系建模", "实验设计"],
+      "deliverable": "实验方案与预期数据表"
+    },
+    {
+      "phase": "硬件搭建与数据采集",
+      "steps": ["搭建温度传感器电路", "编写数据读取程序"],
+      "knowledgeNames": ["传感器与电路", "编程基础"],
+      "deliverable": "能实时读取温度的硬件原型"
+    },
+    {
+      "phase": "控制系统实现与测试",
+      "steps": ["实现简单控温算法", "对比实测数据与模型预测"],
+      "knowledgeNames": ["编程控制", "数据分析"],
+      "deliverable": "可工作的温控系统 + 测试报告"
     }
   ],
   "external": [
-    {"name": "PID控制", "reason": "闭环调温核心算法", "prerequisites": []}
+    {"name": "PID控制算法", "reason": "闭环调温核心算法，候选列表中无此专项", "prerequisites": ["编程控制", "函数建模"]}
   ],
-  "techRoute": "分阶段、写清任务与知识点、写清每阶段产出物的实施路线，500字内"
+  "techRoute": "阶段一：通过一次函数建立温度-时间线性模型，产出数学模型草图；阶段二：基于变量关系建模探究热传导物理规律，设计验证实验；阶段三：利用传感器与电路知识搭建硬件，编程读取实时温度数据；阶段四：综合编程控制实现PID调节算法，对比实测与模型预测，输出完整测试报告。"
 }
 
-硬性要求：
-- matched：${complex ? `6-${maxMatched} 个` : '8-14 个'}，confidence≥${minConf}，且必须能对应到项目实施环节
-- ${complex ? '禁止选小学数学/小学科学/小学物理启蒙类 index；不要选「认识图形、统计表、简单电路、四则运算」等' : ''}
-- pathOrder：按项目实施先后顺序排列 matched 的 index，长度与 matched 一致或更短
-- projectPhases：3-4 个阶段，每阶段写 steps、knowledgeNames（用候选中的名称）、deliverable
-- external：最多 ${complex ? 2 : 3} 个，且必须是候选列表中没有、项目又确实需要的专业概念
-- techRoute：与 projectPhases 一致，用中文，具体到知识点名称，禁止「首先学习基础知识」等空话`;
+## 硬性要求
+
+### 1. 数量与质量
+- matched：${matchedRange} 个，confidence≥${minConf}
+- 三层角色都必须有节点：foundation≥2、bridge≥3、core≥3
+- ${complex ? '禁止选小学数学/小学科学类 index（1-6年级内容）' : ''}
+
+### 2. 知识链完整性（最重要！）
+- 每个 matched 必须有 dependsOn 字段（数组，包含它依赖的其他 matched 的 index）
+- foundation 层节点的 dependsOn 为空数组 []
+- bridge 层节点必须依赖至少 1 个 foundation 节点
+- core 层节点必须依赖至少 1 个 bridge 或 foundation 节点
+- **自检**：从任意 core 节点沿 dependsOn 回溯，必须能到达某个 foundation 节点（链条不断）
+
+### 3. knowledgeChain（知识链摘要）
+- 用 → 符号串联关键知识点，展示从基础到应用的完整递进路径
+- 这是对 pathOrder 的人类可读摘要
+
+### 4. pathOrder
+- 按学习先后排列所有 matched 的 index
+- 保证：如果 A dependsOn B，则 B 在 pathOrder 中排在 A 前面
+
+### 5. projectPhases
+- ${complex ? '4-5' : '3-5'} 个阶段，覆盖从"概念理解"到"项目交付"的完整过程
+- 每阶段的 knowledgeNames 只能用候选列表中的名称
+- 每阶段必须有明确的 deliverable（交付物）
+
+### 6. external
+- 最多 ${externalMax} 个，必须是候选列表中确实没有、项目又真正需要的专业概念
+- 不准写"XX基础""XX入门"
+
+### 7. techRoute
+- 用中文，500字内
+- 必须体现知识的递进关系（"先学A理解B，再用B指导C"）
+- 禁止"首先学习基础知识"等空话`;
 }
 
 const SUBJECT_ZH = {
@@ -120,7 +232,7 @@ export function buildPBMessages(stage, payload) {
     summaryList = '',
     candidates = [],
     complex = false,
-    maxMatched = PBL_MAX_MATCHED_COMPLEX,
+    maxMatched = complex ? PBL_MAX_MATCHED_COMPLEX : PBL_MAX_MATCHED_NORMAL,
     minConf = 0.68,
   } = payload;
 

@@ -47,7 +47,7 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: 'candidates required' }, 400);
   }
 
-  if (stage === 'match' && body.candidates.length > 30) {
+  if (stage === 'match' && body.candidates.length > 50) {
     return jsonResponse({ error: 'Too many candidates' }, 400);
   }
 
@@ -58,7 +58,7 @@ export async function onRequestPost(context) {
       summaryList: body.summaryList || '',
       candidates: body.candidates || [],
       complex: !!body.complex,
-      maxMatched: body.maxMatched || 10,
+      maxMatched: body.maxMatched || (body.complex ? 12 : 18),
       minConf: body.minConf ?? (body.complex ? 0.68 : 0.52),
     });
   } catch (e) {
@@ -66,7 +66,9 @@ export async function onRequestPost(context) {
   }
 
   const llmOpts = {
-    maxTokens: stage === 'match' ? 4500 : 1200,
+    // v2.0 提示词要求更大的结构化输出（matched+dependsOn+knowledgeChain+projectPhases+techRoute），
+    // 提高 match 的 token 上限，避免 JSON 尾部被截断导致解析失败、知识图谱为空。
+    maxTokens: stage === 'match' ? 8000 : 1200,
     temperature: stage === 'match' ? 0.15 : 0.25,
     clientLlm: body.clientLlm,
   };
