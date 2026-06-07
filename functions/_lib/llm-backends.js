@@ -11,7 +11,7 @@ export const BACKENDS = {
   openrouter: {
     name: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'z-ai/glm-4.5-air:free',
+    defaultModel: 'qwen/qwen3-next-80b-a3b-instruct:free',
     envKey: 'OPENROUTER_KEY',
     extraHeaders: {
       'HTTP-Referer': 'https://www.teachany.cn',
@@ -19,6 +19,18 @@ export const BACKENDS = {
     },
   },
 };
+
+/**
+ * PBL 专用模型链（服务端预设，前端不可改）
+ * 1. Qwen3 Next 80B — 中文课标 + 结构化 JSON 最佳免费档
+ * 2. Llama 3.3 70B — 国外模型，指令跟随稳
+ * 3. GLM-4-Flash — 国内快备，429 时兜底
+ */
+export const PBL_MODEL_CHAIN = [
+  { backendId: 'openrouter', model: 'qwen/qwen3-next-80b-a3b-instruct:free' },
+  { backendId: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free' },
+  { backendId: 'paratera', model: 'GLM-4-Flash' },
+];
 
 export const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -34,34 +46,22 @@ export function jsonResponse(data, status = 200, extra = {}) {
   });
 }
 
-/**
- * @param {Record<string,string>} env
- * @param {object[]} messages
- * @param {{ maxTokens?: number, temperature?: number, clientLlm?: object }} opts
- */
-export async function callBackendLLM(env, messages, opts = {}) {
-  const client = opts.clientLlm;
-  let baseUrl;
-  let apiKey;
-  let model;
-  let extraHeaders = {};
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
 
-  if (client && client.apiKey && !client.noAuth) {
-    baseUrl = String(client.baseUrl || '').replace(/\/$/, '');
-    apiKey = client.apiKey;
-    model = client.model || BACKENDS.paratera.defaultModel;
-    if (baseUrl.includes('openrouter.ai')) {
-      extraHeaders = { 'HTTP-Referer': 'https://www.teachany.cn', 'X-Title': 'TeachAny-PBL' };
-    }
-  } else {
-    const backend = BACKENDS.paratera;
-    apiKey = env[backend.envKey];
-    if (!apiKey) throw new Error('LLM backend not configured');
-    baseUrl = backend.baseUrl;
-    model = backend.defaultModel;
-    extraHeaders = backend.extraHeaders || {};
+async function callSingleModel(env, backendId, model, messages, opts) {
+  const backend = BACKENDS[backendId];
+  if (!backend) throw new Error(`Unknown backend: ${backendId}`);
+
+  const apiKey = env[backend.envKey];
+  if (!apiKey) {
+    const err = new Error(`Backend "${backendId}" not configured`);
+    err.status = 503;
+    throw err;
   }
 
+  const baseUrl = backend.baseUrl.replace(/\/$/, '');
   const endpoint = /\/chat\/completions/.test(baseUrl)
     ? baseUrl
     : `${baseUrl}/chat/completions`;
@@ -75,29 +75,64 @@ export async function callBackendLLM(env, messages, opts = {}) {
   };
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000);
+  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 90000);
   try {
     const resp = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
-        ...extraHeaders,
+        ...(backend.extraHeaders || {}),
       },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
     const text = await resp.text();
     if (!resp.ok) {
-      const err = new Error(`LLM ${resp.status}`);
+      const err = new Error(`LLM ${resp.status} (${backendId}/${model})`);
       err.status = resp.status;
       err.body = text.slice(0, 400);
       throw err;
     }
     const data = JSON.parse(text);
     const message = data.choices?.[0]?.message || {};
-    return message.content || message.reasoning || message.reasoning_content || '';
+    const content = message.content || message.reasoning || message.reasoning_content || '';
+    if (!content) {
+      const err = new Error(`LLM empty response (${backendId}/${model})`);
+      err.status = 502;
+      throw err;
+    }
+    return content;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/**
+ * @param {Record<string,string>} env
+ * @param {object[]} messages
+ * @param {{ maxTokens?: number, temperature?: number, modelChain?: {backendId:string,model:string}[], timeoutMs?: number }} opts
+ * @returns {Promise<{ content: string, model: string, backendId: string }>}
+ */
+export async function callBackendLLM(env, messages, opts = {}) {
+  const chain = opts.modelChain || PBL_MODEL_CHAIN;
+  let lastError;
+
+  for (let i = 0; i < chain.length; i++) {
+    const { backendId, model } = chain[i];
+    try {
+      const content = await callSingleModel(env, backendId, model, messages, opts);
+      return { content, model, backendId };
+    } catch (e) {
+      lastError = e;
+      const retryable = e.status === 429 || e.status === 503 || e.status === 502 || e.name === 'AbortError';
+      if (retryable && i < chain.length - 1) {
+        await sleep(Math.min(4000 + i * 2000, 12000));
+        continue;
+      }
+      if (!retryable) throw e;
+    }
+  }
+
+  throw lastError || new Error('LLM failed');
 }

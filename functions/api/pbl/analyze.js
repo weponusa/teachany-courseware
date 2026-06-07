@@ -1,23 +1,25 @@
 /**
- * PBL 拆解 LLM 网关 — 提示词仅存在于服务端
+ * PBL 拆解 LLM 网关 — 提示词与模型仅存在于服务端
  * POST /api/pbl/analyze
  *
  * Body: {
  *   stage: 'decompose' | 'filter' | 'match',
  *   goal: string,
- *   summaryList?: string,      // filter 阶段
- *   candidates?: object[],     // match 阶段（精简字段即可）
+ *   summaryList?: string,
+ *   candidates?: object[],
  *   complex?: boolean,
  *   maxMatched?: number,
  *   minConf?: number,
- *   clientLlm?: { baseUrl, apiKey, model, noAuth }  // 可选：用户自带 Key，仍走服务端提示词
+ *   domainHints?: object[],
+ *   projectBlueprint?: object
  * }
  *
- * Response: { content: string }  // LLM 原始文本（JSON）
+ * Response: { content: string, model: string, backend: string }
  */
 
 import { buildPBMessages } from '../../_lib/pbl-prompts.js';
 import { callBackendLLM, jsonResponse, CORS } from '../../_lib/llm-backends.js';
+import { logPBLCall } from '../../_lib/pbl-logger.js';
 
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: CORS });
@@ -61,23 +63,51 @@ export async function onRequestPost(context) {
       maxMatched: body.maxMatched || (body.complex ? 12 : 18),
       minConf: body.minConf ?? (body.complex ? 0.68 : 0.52),
       domainHints: body.domainHints || null,
+      projectBlueprint: body.projectBlueprint || null,
     });
   } catch (e) {
     return jsonResponse({ error: e.message }, 400);
   }
 
   const llmOpts = {
-    // v2.0 提示词要求更大的结构化输出（matched+dependsOn+knowledgeChain+projectPhases+techRoute），
-    // 提高 match 的 token 上限，避免 JSON 尾部被截断导致解析失败、知识图谱为空。
     maxTokens: stage === 'match' ? 8000 : (stage === 'decompose' ? 4500 : 1200),
     temperature: stage === 'match' ? 0.15 : (stage === 'decompose' ? 0.35 : 0.25),
-    clientLlm: body.clientLlm,
   };
 
+  const t0 = Date.now();
   try {
-    const content = await callBackendLLM(env, messages, llmOpts);
-    return jsonResponse({ content });
+    const { content, model, backendId } = await callBackendLLM(env, messages, llmOpts);
+    const latencyMs = Date.now() - t0;
+
+    await logPBLCall(env, {
+      stage,
+      goal,
+      model,
+      backend: backendId,
+      complex: !!body.complex,
+      latencyMs,
+      error: '',
+      messages,
+      responseText: content,
+      request,
+    });
+
+    return jsonResponse({ content, model, backend: backendId });
   } catch (e) {
+    const latencyMs = Date.now() - t0;
+    await logPBLCall(env, {
+      stage,
+      goal,
+      model: '',
+      backend: '',
+      complex: !!body.complex,
+      latencyMs,
+      error: e.message || 'LLM failed',
+      messages,
+      responseText: e.body || '',
+      request,
+    });
+
     const status = e.status && e.status >= 400 && e.status < 600 ? e.status : 502;
     return jsonResponse({ error: e.message || 'LLM failed', detail: e.body || '' }, status);
   }
