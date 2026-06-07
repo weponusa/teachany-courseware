@@ -22,15 +22,29 @@ export const BACKENDS = {
 
 /**
  * PBL 专用模型链（服务端预设，前端不可改）
- * 1. GLM-4-Flash — 稳定快速，适合 Pages 限时环境
- * 2. Qwen3 Next 80B — 中文课标 + JSON 质量更高（免费但慢）
- * 3. Llama 3.3 70B — 国外免费备选
+ * 可通过环境变量 PBL_MODEL_OVERRIDE 临时锁定单模型做 A/B（如 deepseek/deepseek-v4-flash）
+ *
+ * 默认顺序：
+ * 1. DeepSeek V4 Flash — 中文 + 结构化 JSON 强，速度/成本均衡（OpenRouter 付费）
+ * 2. GLM-4-Flash — 稳定快速兜底
+ * 3. Qwen3 Next 80B / Llama 3.3 70B — 免费备选
  */
 export const PBL_MODEL_CHAIN = [
+  { backendId: 'openrouter', model: 'deepseek/deepseek-v4-flash' },
   { backendId: 'paratera', model: 'GLM-4-Flash' },
   { backendId: 'openrouter', model: 'qwen/qwen3-next-80b-a3b-instruct:free' },
   { backendId: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free' },
 ];
+
+/** @param {Record<string,string>} env */
+export function resolvePBLModelChain(env = {}) {
+  const override = String(env.PBL_MODEL_OVERRIDE || '').trim();
+  if (override) {
+    const backendId = override.includes('/') ? 'openrouter' : 'paratera';
+    return [{ backendId, model: override }];
+  }
+  return PBL_MODEL_CHAIN;
+}
 
 export const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -115,7 +129,7 @@ async function callSingleModel(env, backendId, model, messages, opts) {
  * @returns {Promise<{ content: string, model: string, backendId: string }>}
  */
 export async function callBackendLLM(env, messages, opts = {}) {
-  const chain = opts.modelChain || PBL_MODEL_CHAIN;
+  const chain = opts.modelChain || resolvePBLModelChain(env);
   let lastError;
 
   for (let i = 0; i < chain.length; i++) {

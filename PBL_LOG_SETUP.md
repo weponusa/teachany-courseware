@@ -4,9 +4,11 @@ PBL 拆解**不再提供前端模型选择**，统一走服务端预设的免费
 
 ## 服务端模型链（自动降级）
 
-1. `GLM-4-Flash`（并行超算）— 默认首选，稳定快速
-2. `qwen/qwen3-next-80b-a3b-instruct:free`（OpenRouter）— 中文课标 + JSON 质量更高
-3. `meta-llama/llama-3.3-70b-instruct:free`（OpenRouter）— 国外免费备选
+1. `deepseek/deepseek-v4-flash`（OpenRouter）— 默认首选，中文 + 结构化 JSON
+2. `GLM-4-Flash`（并行超算）— 快速兜底
+3. `qwen/qwen3-next-80b-a3b-instruct:free` / `meta-llama/llama-3.3-70b-instruct:free` — 免费备选
+
+临时 A/B：Pages 环境变量 `PBL_MODEL_OVERRIDE=deepseek/deepseek-v4-pro` 可锁定单模型测试。
 
 需配置环境变量：`OPENROUTER_KEY`、`PARATERA_KEY`（与现有 LLM 代理相同）。
 
