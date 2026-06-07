@@ -60,17 +60,32 @@ export function resolvePBLModelChain(env = {}) {
   return PBL_MODEL_CHAIN;
 }
 
+/** 前端服务商 id → 服务端 backendId（preset/custom 走模型推断） */
+const PROVIDER_BACKEND = {
+  siliconflow: 'siliconflow',
+  paratera: 'paratera',
+  openrouter: 'openrouter',
+};
+
 /**
  * 用户自选模型优先，再拼接默认兜底链（去重）
  * @param {Record<string,string>} env
  * @param {string} userModel
+ * @param {string} [providerId] 用户选择的服务商（非 preset 时优先于模型名推断）
  */
-export function buildUserModelChain(env, userModel) {
+export function buildUserModelChain(env, userModel, providerId = '') {
   const m = String(userModel || '').trim();
-  if (!m) return resolvePBLModelChain(env);
-  const chain = [{ backendId: inferBackendIdForModel(m), model: m }];
+  const pid = String(providerId || '').trim();
+  if (!m && !pid) return resolvePBLModelChain(env);
+
+  const forcedBackend = PROVIDER_BACKEND[pid];
+  const model = m || BACKENDS[forcedBackend]?.defaultModel || '';
+  if (!model) return resolvePBLModelChain(env);
+
+  const backendId = forcedBackend || inferBackendIdForModel(model);
+  const chain = [{ backendId, model }];
   for (const item of resolvePBLModelChain(env)) {
-    if (item.model !== m) chain.push(item);
+    if (item.model !== model) chain.push(item);
   }
   return chain;
 }

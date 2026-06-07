@@ -5,6 +5,7 @@
  * Body: {
  *   stage: 'decompose' | 'filter' | 'match' | 'verify-deps',
  *   model?: string,          // 可选：用户自选模型（服务端 Key 调用）
+ *   providerId?: string,     // 可选：siliconflow | paratera | openrouter（与 model 配合）
  *   messagesOnly?: boolean,  // 可选：仅返回 messages，供自定义 API 客户端直连
  *   goal: string,
  *   summaryList?: string,
@@ -106,8 +107,9 @@ export async function onRequestPost(context) {
   };
 
   const userModel = String(body.model || '').trim();
-  if (userModel) {
-    llmOpts.modelChain = buildUserModelChain(env, userModel);
+  const providerId = String(body.providerId || '').trim();
+  if (userModel || providerId) {
+    llmOpts.modelChain = buildUserModelChain(env, userModel, providerId);
   }
 
   const t0 = Date.now();

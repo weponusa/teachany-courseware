@@ -28,7 +28,7 @@ class PBLPathBuilder {
         name: 'TeachAny 默认（DeepSeek-V4-Flash）',
         serverPreset: true,
         model: '',
-        models: ['', 'deepseek-ai/DeepSeek-V4-Flash', 'GLM-4-Flash', 'qwen/qwen3-next-80b-a3b-instruct:free'],
+        models: ['', 'deepseek-ai/DeepSeek-V4-Flash', 'GLM-4-Flash', 'qwen/qwen3-next-80b-a3b-instruct:free', '__custom__'],
       },
       {
         id: 'siliconflow',
@@ -3640,6 +3640,9 @@ class PBLPathBuilder {
 
     const body = { stage, ...payload };
     if (cfg.model) body.model = cfg.model;
+    if (cfg.providerId && cfg.providerId !== 'preset' && cfg.providerId !== 'custom') {
+      body.providerId = cfg.providerId;
+    }
 
     const ac = new AbortController();
     const timeout = setTimeout(() => ac.abort(), 90000);
