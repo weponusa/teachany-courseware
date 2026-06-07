@@ -39,7 +39,7 @@ export function inferBackendIdForModel(model) {
 }
 
 /**
- * PBL 专用模型链（服务端预设，前端不可改）
+ * PBL 专用模型链（默认链；前端可选模型时用户指定模型优先）
  * 可通过环境变量 PBL_MODEL_OVERRIDE 临时锁定单模型做 A/B
  *
  * 默认顺序：
@@ -58,6 +58,21 @@ export function resolvePBLModelChain(env = {}) {
     return [{ backendId: inferBackendIdForModel(override), model: override }];
   }
   return PBL_MODEL_CHAIN;
+}
+
+/**
+ * 用户自选模型优先，再拼接默认兜底链（去重）
+ * @param {Record<string,string>} env
+ * @param {string} userModel
+ */
+export function buildUserModelChain(env, userModel) {
+  const m = String(userModel || '').trim();
+  if (!m) return resolvePBLModelChain(env);
+  const chain = [{ backendId: inferBackendIdForModel(m), model: m }];
+  for (const item of resolvePBLModelChain(env)) {
+    if (item.model !== m) chain.push(item);
+  }
+  return chain;
 }
 
 export const CORS = {

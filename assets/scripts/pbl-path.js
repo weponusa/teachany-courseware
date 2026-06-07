@@ -21,9 +21,179 @@ class PBLPathBuilder {
     this._tooltipHideTimer = null;
     this._tooltipHovered = false;
 
-    try { localStorage.removeItem('teachany_pbl_config'); } catch (e) { /* ignore */ }
+    // LLM 服务商：服务端预设 + 可选模型；custom 走客户端自带 Key
+    this.providers = [
+      {
+        id: 'preset',
+        name: 'TeachAny 默认（DeepSeek-V4-Flash）',
+        serverPreset: true,
+        model: '',
+        models: ['', 'deepseek-ai/DeepSeek-V4-Flash', 'GLM-4-Flash', 'qwen/qwen3-next-80b-a3b-instruct:free'],
+      },
+      {
+        id: 'siliconflow',
+        name: '硅基流动',
+        serverBacked: true,
+        model: 'deepseek-ai/DeepSeek-V4-Flash',
+        models: ['deepseek-ai/DeepSeek-V4-Flash', 'deepseek-ai/DeepSeek-V3', 'Qwen/Qwen3-235B-A22B', 'THUDM/GLM-4-9B-0414', '__custom__'],
+      },
+      {
+        id: 'paratera',
+        name: '并行超算',
+        serverBacked: true,
+        model: 'GLM-4-Flash',
+        models: ['GLM-4-Flash', 'DeepSeek-V3.2', 'DeepSeek-R1', 'GLM-4.7', 'GLM-5', '__custom__'],
+      },
+      {
+        id: 'openrouter',
+        name: 'OpenRouter',
+        serverBacked: true,
+        model: 'qwen/qwen3-next-80b-a3b-instruct:free',
+        models: ['qwen/qwen3-next-80b-a3b-instruct:free', 'meta-llama/llama-3.3-70b-instruct:free', 'anthropic/claude-3.5-sonnet', '__custom__'],
+      },
+      {
+        id: 'custom',
+        name: '自定义 API（自带 Key）',
+        clientLlm: true,
+        baseUrl: '',
+        model: '',
+        models: [],
+      },
+    ];
+    this._loadLLMConfig();
+
     this._archetypeEngine = null;
     this._resolvedArchetype = null;
+  }
+
+  _loadLLMConfig() {
+    try {
+      const saved = localStorage.getItem('teachany_pbl_config');
+      if (saved) {
+        const cfg = JSON.parse(saved);
+        if (this.providers.some(p => p.id === cfg.providerId)) {
+          this._llmConfig = cfg;
+          return;
+        }
+      }
+    } catch (e) { /* ignore */ }
+    this._llmConfig = {
+      providerId: 'preset',
+      model: '',
+      apiKey: '',
+      baseUrl: '',
+      customModel: '',
+    };
+  }
+
+  _saveLLMConfig() {
+    try {
+      localStorage.setItem('teachany_pbl_config', JSON.stringify(this._llmConfig));
+    } catch (e) { /* ignore */ }
+  }
+
+  getLLMConfig() {
+    const provider = this.providers.find(p => p.id === this._llmConfig.providerId) || this.providers[0];
+    let model = this._llmConfig.model ?? provider.model ?? '';
+    if (model === '__custom__') {
+      model = String(this._llmConfig.customModel || '').trim();
+    }
+    return {
+      providerId: provider.id,
+      providerName: provider.name,
+      model,
+      apiKey: this._llmConfig.apiKey || '',
+      baseUrl: this._llmConfig.baseUrl || provider.baseUrl || '',
+      serverBacked: !!provider.serverBacked,
+      serverPreset: !!provider.serverPreset,
+      clientLlm: !!provider.clientLlm,
+    };
+  }
+
+  setLLMConfig(cfg) {
+    Object.assign(this._llmConfig, cfg);
+    this._saveLLMConfig();
+  }
+
+  _llmStageOptions(stage) {
+    const map = {
+      decompose: { maxTokens: 4500, temperature: 0.35 },
+      filter: { maxTokens: 1200, temperature: 0.25 },
+      match: { maxTokens: 8000, temperature: 0.15 },
+      'verify-deps': { maxTokens: 2500, temperature: 0.08 },
+    };
+    return map[stage] || { maxTokens: 4000, temperature: 0.2 };
+  }
+
+  async callLLM(messages, options = {}) {
+    const cfg = this.getLLMConfig();
+    if (!cfg.baseUrl) throw new Error('请先配置 Base URL（点击右上角 ⚙️ 设置）');
+    if (!cfg.apiKey) throw new Error('请先配置 API Key（点击右上角 ⚙️ 设置）');
+    if (!cfg.model) throw new Error('请先配置模型名称');
+
+    const cleanBaseUrl = String(cfg.baseUrl).replace(/\/$/, '');
+    const endpoint = /\/chat\/completions/i.test(cleanBaseUrl)
+      ? cleanBaseUrl
+      : `${cleanBaseUrl}/chat/completions`;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${cfg.apiKey}`,
+    };
+    if (cleanBaseUrl.includes('openrouter.ai')) {
+      headers['HTTP-Referer'] = location.origin || 'https://www.teachany.cn';
+      headers['X-Title'] = 'TeachAny PBL';
+    }
+
+    const body = {
+      model: cfg.model,
+      messages,
+      stream: false,
+      temperature: options.temperature ?? 0.2,
+      max_tokens: options.maxTokens ?? 4000,
+    };
+
+    const ac = new AbortController();
+    const timeout = setTimeout(() => ac.abort(), 90000);
+    try {
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        signal: ac.signal,
+        body: JSON.stringify(body),
+      });
+      const text = await resp.text();
+      if (!resp.ok) {
+        let errMsg = text.slice(0, 300);
+        try { errMsg = JSON.parse(text)?.error?.message || errMsg; } catch (_e) { /* ignore */ }
+        throw new Error(`API ${resp.status}: ${errMsg}`);
+      }
+      const data = JSON.parse(text);
+      const message = data.choices?.[0]?.message || {};
+      return message.content || message.reasoning || message.reasoning_content || '';
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async _fetchPBLMessages(stage, payload) {
+    const body = { stage, ...payload, messagesOnly: true };
+    const ac = new AbortController();
+    const timeout = setTimeout(() => ac.abort(), 60000);
+    try {
+      const resp = await fetch(this._getPBLAnalyzeUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: ac.signal,
+        body: JSON.stringify(body),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.error || `PBL API ${resp.status}`);
+      if (!Array.isArray(data.messages)) throw new Error('PBL API 未返回 messages');
+      return data.messages;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   async _ensureArchetypeData() {
@@ -3293,7 +3463,17 @@ class PBLPathBuilder {
   }
 
   async _callPBLAnalyzeStage(stage, payload) {
+    const cfg = this.getLLMConfig();
+    const llmOpts = this._llmStageOptions(stage);
+
+    if (cfg.clientLlm) {
+      const messages = await this._fetchPBLMessages(stage, payload);
+      return this.callLLM(messages, llmOpts);
+    }
+
     const body = { stage, ...payload };
+    if (cfg.model) body.model = cfg.model;
+
     const ac = new AbortController();
     const timeout = setTimeout(() => ac.abort(), 90000);
     try {
@@ -3301,7 +3481,7 @@ class PBLPathBuilder {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: ac.signal,
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {

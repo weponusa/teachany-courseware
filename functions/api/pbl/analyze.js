@@ -4,6 +4,8 @@
  *
  * Body: {
  *   stage: 'decompose' | 'filter' | 'match' | 'verify-deps',
+ *   model?: string,          // 可选：用户自选模型（服务端 Key 调用）
+ *   messagesOnly?: boolean,  // 可选：仅返回 messages，供自定义 API 客户端直连
  *   goal: string,
  *   summaryList?: string,
  *   candidates?: object[],
@@ -22,7 +24,7 @@
 
 import { buildPBMessages } from '../../_lib/pbl-prompts.js';
 import { buildVerifyDepsMessages } from '../../_lib/pbl-verify-prompts.js';
-import { callBackendLLM, jsonResponse, CORS } from '../../_lib/llm-backends.js';
+import { buildUserModelChain, callBackendLLM, jsonResponse, CORS } from '../../_lib/llm-backends.js';
 import { logPBLCall } from '../../_lib/pbl-logger.js';
 
 export async function onRequestOptions() {
@@ -87,6 +89,13 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: e.message }, 400);
   }
 
+  if (body.messagesOnly) {
+    return jsonResponse({
+      messages,
+      model: String(body.model || '').trim(),
+    });
+  }
+
   const llmOpts = {
     maxTokens: stage === 'match' ? 8000
       : (stage === 'decompose' ? 4500
@@ -95,6 +104,11 @@ export async function onRequestPost(context) {
       : (stage === 'decompose' ? 0.35
         : (stage === 'verify-deps' ? 0.08 : 0.25)),
   };
+
+  const userModel = String(body.model || '').trim();
+  if (userModel) {
+    llmOpts.modelChain = buildUserModelChain(env, userModel);
+  }
 
   const t0 = Date.now();
   try {
