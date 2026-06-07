@@ -658,6 +658,7 @@ body {
   <div class="nav-links">
     <a href="index.html">📋 Gallery / 课件库</a>
     <a href="tree.html">🗺️ Knowledge Map / 知识地图</a>
+    <a href="knowledge-map.html">🧬 全科图谱</a>
     <a href="path.html">🛤️ Learning Path / 学习路径</a>
     <a href="pbl.html" class="active">🧩 PBL 项目拆解</a>
     <a href="my.html">👤 我的</a>
@@ -1405,10 +1406,10 @@ function onPBLNodeClick(node) {
   const content = document.getElementById('nodeDetailContent');
 
   const layerColors = {
-    prerequisite: '#10b981', matched: '#ef4444', advanced: '#8b5cf6', parallel: '#3b82f6', external: '#eab308'
+    prerequisite: '#10b981', matched: '#ef4444', advanced: '#8b5cf6', parallel: '#3b82f6', external: '#eab308', university: '#6366f1'
   };
   const layerLabels = {
-    prerequisite: '基础前置', matched: '核心必需', advanced: '扩展高级', parallel: '平行关联', external: '外部补充'
+    prerequisite: '基础前置', matched: '核心必需', advanced: '扩展高级', parallel: '平行关联', external: '外部补充', university: '大学延伸'
   };
 
   const gradeLabel = (nodeOrGrade) => {
@@ -1417,7 +1418,7 @@ function onPBLNodeClick(node) {
       nodeOrGrade = nodeOrGrade.grade;
     }
     const g = parseInt(nodeOrGrade) || 0;
-    if (!g || g === 0) return '通识';
+    if (!g || g === 0) return '大学';
     if (g <= 6) return `小学${g}年级`;
     if (g <= 9) return `初中${g-6}年级`;
     if (g <= 12) return `高中${g-9}年级`;
@@ -1515,6 +1516,31 @@ function onPBLNodeClick(node) {
         }).join('')}
       </div>
     ` : ''}
+    ${(() => {
+      // 全科图谱增强：跨学科关系与大学延伸
+      if (!window.PBLPathBuilder || !window.PBLPathBuilder.graphLoaded) return '';
+      const nb = window.PBLPathBuilder.getGraphNeighbors(node.id, 1);
+      let crossHtml = '';
+      if (nb.crossSubject.length > 0) {
+        const crossItems = nb.crossSubject.slice(0, 6).map(id => {
+          const cn = window.PBLPathBuilder.unifiedIndex.get(id);
+          if (!cn) return '';
+          return `<div class="prereq-item" style="border-left:3px solid #f59e0b;padding-left:8px;">${cn.name} <span style="font-size:11px;color:#f59e0b;">(${cn.subject})</span></div>`;
+        }).join('');
+        if (crossItems) crossHtml = `<div class="prereq-list"><h4>🔗 跨学科关联</h4>${crossItems}</div>`;
+      }
+      const bridges = window.PBLPathBuilder.getUniversityBridges(node.id);
+      let uniHtml = '';
+      if (bridges.length > 0) {
+        const uniItems = bridges.slice(0, 4).map(id => {
+          const un = window.PBLPathBuilder.unifiedIndex.get(id);
+          if (!un) return '';
+          return `<div class="prereq-item" style="border-left:3px solid #6366f1;padding-left:8px;">🎓 ${un.name} <span style="font-size:11px;color:#6366f1;">(${un.subject})</span></div>`;
+        }).join('');
+        if (uniItems) uniHtml = `<div class="prereq-list"><h4>🎓 大学延伸方向</h4>${uniItems}</div>`;
+      }
+      return crossHtml + uniHtml;
+    })()}
     ${coursewareHtml}
     <button class="generate-cw-btn" onclick="event.stopPropagation();event.preventDefault();generateCourseware('${node.id}', '${node.name.replace(/'/g, "\\'")}')">
       ✨ 制作新课件
