@@ -347,9 +347,19 @@ let dpr = window.devicePixelRatio || 1;
 // INIT
 // ═══════════════════════════════════════════════════════════════
 
-async function init() {
+async function loadDomainLabels() {
   try {
-    const resp = await fetch('./data/knowledge-map-data.json');
+    const resp = await fetch('./data/knowledge-map-domain-labels.json?v=20260608');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    Object.assign(DOMAIN_LABELS, data.labels || {});
+  } catch (e) { /* 使用内置 DOMAIN_LABELS 回退 */ }
+}
+
+async function init() {
+  await loadDomainLabels();
+  try {
+    const resp = await fetch('./data/knowledge-map-data.json?v=20260608');
     graphData = await resp.json();
   } catch (e) {
     document.getElementById('loading').innerHTML = '<div style="color:#ef4444">加载失败: ' + e.message + '</div>';
@@ -644,8 +654,9 @@ function showDetail(node) {
   const cfg = SUBJECT_CONFIG[node.subject] || { label: node.subject, emoji: '📌', color: '#666' };
 
   document.getElementById('detailTitle').textContent = node.name;
+  const enLine = node.name_en ? `<div style="font-size:11px;color:var(--dimmer);margin-top:4px">${node.name_en}</div>` : '';
   document.getElementById('detailSubtitle').innerHTML =
-    `<span style="color:${cfg.color}">${cfg.emoji} ${cfg.label}</span> · ${node.grade === 0 ? '大学' : node.grade + '年级'} · ${getDomainLabel(node.domain)}`;
+    `<span style="color:${cfg.color}">${cfg.emoji} ${cfg.label}</span> · ${node.grade === 0 ? '大学' : node.grade + '年级'} · ${getDomainLabel(node.domain)}${enLine}`;
   document.getElementById('detailDef').textContent = node.definition || '暂无定义';
 
   // Skills
