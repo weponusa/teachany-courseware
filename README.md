@@ -1,25 +1,21 @@
-> ⚠️ **此仓库已废弃（2026-05-15）**
->
-> 课件已合并至 **[weponusa/teachany](https://github.com/weponusa/teachany)**，请前往新仓库查看和贡献。
->
-> This repo is archived. All courseware has been merged into [weponusa/teachany](https://github.com/weponusa/teachany).
-
-
 # TeachAny Courseware
 
-TeachAny 官方课件资产仓库。这里存放社区课件、示范课件、Gallery 页面和图床资产。
+TeachAny **官方网站与课件资产**仓库，部署到 [www.teachany.cn](https://www.teachany.cn/)（Cloudflare Pages，`main` 分支）。
 
-- Skill 安装仓库：<https://github.com/weponusa/teachany>
-- 课件资产仓库：<https://github.com/weponusa/teachany-courseware>
-- Gallery（GitHub Pages）：<https://www.teachany.cn/>
+| 仓库 | 用途 |
+|------|------|
+| [weponusa/teachany-courseware](https://github.com/weponusa/teachany-courseware)（本仓） | Gallery、社区课件、`data/` 课标树、PBL API、知识地图 |
+| [weponusa/teachany](https://github.com/weponusa/teachany) | 轻量 **Skill** 安装包（`teachany/` 目录），供 AI 工具本地制作课件 |
 
 ## 目录
 
 - `community/`：社区课件
-- `examples/`：官方示范课件
-- `teachany-images/`：Hero/配图资产
-- `scripts/`：Gallery 与课件运行所需标准模块
-- `data/`：知识树与课程数据
-- `assets/`：地图、地理、历史底图等资源
+- `data/`：知识树、课标索引、PBL 数据、全科图谱
+- `assets/`：地图、脚本、站点资源
+- `functions/`：Cloudflare Pages Functions（如 PBL API）
+- `scripts/`：构建、校验、发布工具
 
-> 该仓库不作为 `/install-skill` 安装源。用户安装 TeachAny Skill 时只需要安装 `weponusa/teachany`。
+## 部署
+
+- **生产**：Cloudflare Pages 关联 `main` 分支，自定义域 `www.teachany.cn`
+- **Skill 安装**：请使用 [weponusa/teachany](https://github.com/weponusa/teachany)，不要从本仓安装 Skill
