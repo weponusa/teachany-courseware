@@ -104,6 +104,11 @@ function moduleNodeOk(archetype, mod, node) {
   if (archetype.id === 'water-rocket' && mod.id === 'test' && node.subject === 'info-tech') return false;
   if (archetype.id === 'application-writing' && /诗词|文言|小说|人物描写/.test(node.name)) return false;
   if (archetype.id === 'labor-practice' && /朝花夕拾|整本书阅读|文言|外国文学|机械玩具|机器人|电学实验|线性规划|三角函数/.test(node.name)) return false;
+  if (archetype.id === 'planting-cultivation') {
+    if (/朝花夕拾|文言|外国文学|机械玩具|机器人|程序设计|牛顿|化学方程式|电解池/.test(node.name)) return false;
+    if (mod.id === 'taxonomy' && !/植物|绿色|分类|种子|动物|生物/.test(t)) return false;
+    if (mod.id === 'growth' && !/光合|萌发|生长|种子|根|蒸腾|绿色|植物|呼吸/.test(t)) return false;
+  }
   return true;
 }
 
