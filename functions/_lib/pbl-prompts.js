@@ -80,6 +80,132 @@ function directSolutionChemistryDomains() {
   ];
 }
 
+/** 从目标句提取核心对象（动词后的名词短语） */
+function parseGoalSubject(goal) {
+  const g = String(goal || '').trim();
+  let subject = g;
+  const m = g.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新|整治)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
+  if (m) subject = m[1].trim();
+  subject = subject.replace(/^(?:关于|围绕|有关)\s*/, '').replace(/[，。；].*$/, '').slice(0, 36);
+  return subject || g.slice(0, 36);
+}
+
+function buildTopicKeywords(goal, subject, kind) {
+  const g = String(goal || '');
+  const base = [subject];
+  if (/太空|天文|航天|行星|月球|宇宙/.test(g + subject)) base.push('太阳系', '天文', '太空', '月球', '科学');
+  if (/馆|展厅|展览|展陈/.test(g + subject)) base.push('展览', '展陈', '科普', '布局', '设计');
+  if (/低空|空域|通航|无人机/.test(g + subject)) base.push('低空经济', '空域', '无人机', '飞行');
+  if (kind === 'exhibition-redesign') base.push('调查', '方案', '说明', '统计', '设计', '展示');
+  if (kind === 'industry-innovation') base.push('产业', '创新', '调研', '政策', '可行性');
+  for (let i = 0; i < subject.length - 1; i++) {
+    const w = subject.slice(i, i + 2);
+    if (w.length === 2 && !/[的与及了在]$/.test(w)) base.push(w);
+  }
+  return [...new Set(base)].slice(0, 12);
+}
+
+function inferDeliverableHint(goal, subject, kind) {
+  if (kind === 'exhibition-redesign') {
+    return `「${subject}」改造方案册（现状诊断表+展陈设计图+整改实施清单+开放验收表）`;
+  }
+  if (kind === 'industry-innovation') {
+    return `「${subject}」创新方案报告（场景调研+政策要点+可行性论证）`;
+  }
+  if (/报告|调查|论文|倡议|方案/.test(goal)) return `「${subject}」专题报告（含调研数据与可检查结论）`;
+  if (/设计|制作|开发|建造/.test(goal)) return `可展示的「${subject}」作品+过程记录+说明文档`;
+  return `「${subject}」项目成果包（可展示交付物+过程记录+说明）`;
+}
+
+function inferTopicKind(goal, subject) {
+  const g = String(goal || '');
+  if (/低空经济|低空飞行|低空空域|空域管理|通航产业|城市空中交通|eVTOL|低空物流|通用航空/.test(g)) return 'industry-innovation';
+  if (/太空馆|天文馆|航天馆|科技馆|博物馆|展厅|展陈|太空.*馆|天文.*馆/.test(g) || (/馆|展厅|展览/.test(g + subject) && /重塑|改造|整治|升级|策展|布展|失控|翻新|重建|优化/.test(g))) return 'exhibition-redesign';
+  if (/探寻|探索|研究|调研/.test(g) && /创新|产业|经济|行业/.test(g)) return 'industry-innovation';
+  return 'subject-anchored';
+}
+
+/** 从用户目标提取核心主题 — 任何题目都必须锚定，禁止落入通用工程模板 */
+function extractTopicProfile(goal) {
+  const g = String(goal || '').trim();
+  const presets = [
+    {
+      test: /低空经济|低空飞行|低空空域|空域管理|通航产业|城市空中交通|UAM|eVTOL|低空物流|通用航空/,
+      coreTopic: '低空经济',
+      definition: '指在约1000–3000米低空空域内，以无人机物流配送、低空出行、应急救援、农业植保、巡检等飞行活动带动的新兴产业（含政策、空域、安全、应用场景）',
+      keywords: ['低空经济', '低空', '空域', '通航', '无人机', '低空物流', '飞行', '航空', '交通', '应急救援', '植保', '政策', '法规', '安全', '产业'],
+      banInSteps: ['现代物流管理', '智慧城市', '工程设计思维', '环境搭建', '硬件组件', '编写控制逻辑', '一般物流', '通用创新大赛', '原型驱动迭代', 'MVP', '快速原型'],
+      deliverableHint: '低空经济创新方案报告（场景调研+政策/空域要点+技术可行性+试点建议）',
+      kind: 'industry-innovation',
+    },
+  ];
+  for (const p of presets) {
+    if (p.test.test(g)) {
+      return { ...p, rawGoal: g, matched: true };
+    }
+  }
+  const subject = parseGoalSubject(g);
+  const kind = inferTopicKind(g, subject);
+  const banCommon = ['原型驱动迭代', 'MVP', '快速原型', '递进式实施', '环境搭建', '工程设计思维', '招生简章', '现代物流管理', '智慧城市'];
+  if (kind === 'industry-innovation') {
+    const core = /低空经济/.test(g) ? '低空经济' : (g.match(/(?:.+?经济|.+?产业|.+?行业)/)?.[0]?.slice(0, 24) || subject);
+    return {
+      rawGoal: g,
+      matched: true,
+      coreTopic: core,
+      definition: `围绕「${core}」开展创新探究，须结合真实产业场景、政策或技术应用`,
+      keywords: buildTopicKeywords(g, core, kind),
+      banInSteps: [...banCommon, '硬件组件', '一般物流'],
+      deliverableHint: inferDeliverableHint(g, core, kind),
+      kind,
+    };
+  }
+  if (kind === 'exhibition-redesign') {
+    return {
+      rawGoal: g,
+      matched: true,
+      coreTopic: subject,
+      definition: `对「${subject}」进行现状诊断、主题策划、展陈设计与整改实施，交付可验收的改造方案（非软件工程或装置研发）`,
+      keywords: buildTopicKeywords(g, subject, kind),
+      banInSteps: [...banCommon, '程序设计', '电解池', '搭建原型'],
+      deliverableHint: inferDeliverableHint(g, subject, kind),
+      kind,
+    };
+  }
+  return {
+    rawGoal: g,
+    matched: true,
+    coreTopic: subject,
+    definition: `本项目必须围绕用户指定的「${subject}」展开，不得替换为其他主题或套用无关模板`,
+    keywords: buildTopicKeywords(g, subject, kind),
+    banInSteps: banCommon,
+    deliverableHint: inferDeliverableHint(g, subject, kind),
+    kind: 'subject-anchored',
+  };
+}
+
+function formatTopicAnchorBlock(goal) {
+  const t = extractTopicProfile(goal);
+  return `\n## 本题核心主题（硬性锚点 — 不可替换、不可泛化）\n- 用户目标原文：「${t.rawGoal}」\n- **核心主题：${t.coreTopic}**\n- 主题定义：${t.definition}\n- projectSummary、deliverable、scheme 名称、每个 phase 的 phase名/steps/deliverable/knowledgeHints **必须直接出现「${t.coreTopic}」或其关键词，禁止换成其他项目**\n- knowledgeHints 检索词须含：${t.keywords.join('、')}\n- 建议交付物：${t.deliverableHint}\n- **禁止** scheme 名使用「递进式实施」「原型驱动迭代」等通用模板名；禁止交付物写「项目原型」「MVP」「系统演示」等与题目无关的表述\n- **禁止** steps 中出现：${(t.banInSteps || []).join('、')}\n`;
+}
+
+function isIndustryInnovationGoal(goal) {
+  const t = extractTopicProfile(goal);
+  return t.kind === 'industry-innovation' || t.matched;
+}
+
+function industryInnovationDomains(goal) {
+  const t = extractTopicProfile(goal);
+  const topic = t.coreTopic || '产业创新';
+  return [
+    { id: 'background', label: `${topic}背景与政策`, keywords: [topic, '产业', '政策', '法规', '空域', '发展', '规划', '经济'], subjects: ['geography', 'history', 'chinese'] },
+    { id: 'scenarios', label: '应用场景调研', keywords: [topic, '物流', '出行', '应急', '植保', '巡检', '配送', '应用', '场景', '需求'], subjects: ['geography', 'chinese', 'math'] },
+    { id: 'tech', label: '技术原理支撑', keywords: ['飞行', '航空', '无人机', '导航', '通信', '动力', '电池', '抛体', '牛顿', '安全'], subjects: ['physics', 'info-tech', 'science'] },
+    { id: 'analysis', label: '数据与可行性分析', keywords: ['统计', '数据', '调查', '成本', '效益', '比较', '分析', '图表', '百分比'], subjects: ['math', 'chinese'] },
+    { id: 'proposal', label: '创新方案与报告', keywords: ['方案', '创新', '建议', '报告', '论证', '说明', '可行性', '试点'], subjects: ['chinese', 'geography'] },
+  ];
+}
+
 function isEnergyEngineeringGoal(goal) {
   const g = String(goal || '');
   if (isConsumerDecisionGoal(g)) return false;
@@ -99,6 +225,7 @@ function isEnergyEngineeringGoal(goal) {
 function classifyProjectType(goal) {
   const g = String(goal || '');
   if (isConsumerDecisionGoal(g)) return 'consumer-decision';
+  if (/太空馆|天文馆|航天馆|科技馆|博物馆|展厅|展陈|太空.*馆|天文.*馆/.test(g) || (/馆|展厅|展览/.test(g) && /重塑|改造|整治|升级|策展|布展|失控|翻新|重建|优化/.test(g))) return 'exhibition-redesign';
   if (/海报|短视频|微电影|动画|漫画|插画|绘画|展览|策展|广告|品牌|视觉|游戏设计|作曲|音乐创作|手工艺|表演|舞台|摄影|logo|标志设计|文创|周边设计/.test(g)) return 'creative-media';
   if (/诗歌|诗集|现代诗|诗词|写诗|小说|剧本|散文|绘本|故事集|演讲|辩论|文学|翻译|双语|新闻稿|采访稿|写一[篇组]|作文|征文|朗诵|文集|杂志|读后感|书评|话剧|文章/.test(g)) return 'humanities-literary';
   if (/创业|商业计划|营销|市场推广|运营|理财|零花钱|压岁钱|市场调研|义卖|跳蚤市场|店铺|定价|商业模式|经济效益|盈利|众筹|招商|品牌策划/.test(g)) return 'business-economics';
@@ -106,8 +233,10 @@ function classifyProjectType(goal) {
   if (/种植|种菜|盆栽|养护|养殖|养蚕|园艺|烹饪|烘焙|美食|菜谱|料理|手工|编织|缝纫|收纳|整理|维修|清洁|打扫|劳动/.test(g)) return 'labor-practice';
   if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|研学|游学|路线规划|时间管理|班级布置|布置教室|嘉年华|游园/.test(g)) return 'life-planning';
   if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|公众.{0,4}认知|居民|乡土|口述史/.test(g)) return 'social-inquiry';
+  if (isIndustryInnovationGoal(g)) return 'industry-innovation';
   if (/工坊|鲁班|榫卯|古典.*风格|木结构|建筑模型|微缩|传统建筑|斗拱|飞檐/.test(g)) return 'maker-workshop';
-  if (/火箭|导弹|发射|机器人|无人机|物流机器人|医院.*机器人|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现|原型/.test(g)) return 'engineering';
+  if (/火箭|导弹|发射|机器人|物流机器人|医院.*机器人|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现/.test(g)) return 'engineering';
+  if (/无人机|原型/.test(g) && /设计|制作|研发|装置|系统|搭建|开发/.test(g)) return 'engineering';
   if (isChemistryInquiryGoal(g)) return 'scientific-inquiry';
   if (/探究|实验|观察|测量|验证|影响因素|变量|检测|成分|对照实验|科学问题|浓度|溶液|溶解/.test(g)) return 'scientific-inquiry';
   return 'general';
@@ -125,7 +254,9 @@ const TYPE_PROFILES = {
   'health-life': { label: '健康生活/运动安全', moduleWord: '健康环节（现状了解 / 知识学习 / 计划制定 / 实践评估）', subjectsHint: 'biology、science（健康原理）、math（统计监测）、chinese（宣传倡议）', redlines: '围绕健康知识、数据监测与行为改进；不要堆与健康无关的工程/纯计算节点' },
   'labor-practice': { label: '劳动实践/制作', moduleWord: '实践环节（认识准备 / 操作实践 / 观察记录 / 成果分享）', subjectsHint: 'biology、science、chinese、math 按需', redlines: '围绕动手操作、观察记录与成果分享；不要拔高成科研论文或工程系统' },
   'maker-workshop': { label: '工坊/木作/建筑模型', moduleWord: '工序（现场调研 / 风格方案 / 材料BOM / 搭建装饰 / 验收展示）', subjectsHint: 'science、physics、math、history、chinese、art 按需', redlines: '交付物是实体模型+图册+BOM；steps 须有尺寸、工具、照片、检查表，禁止「环境搭建」「选择组件」空话' },
-  'general': { label: '综合实践', moduleWord: '项目模块（调研定义 / 方案设计 / 实施制作 / 测试展示）', subjectsHint: '按交付物自然选取所需学科', redlines: '每个节点都要服务于交付物某一步，不为凑学科塞无关内容' },
+  'industry-innovation': { label: '产业创新/新兴经济探究', moduleWord: '环节（产业背景与政策 / 应用场景调研 / 技术原理支撑 / 数据可行性 / 创新方案报告）', subjectsHint: 'geography、chinese、math、physics、history、info-tech 按需；围绕主题产业而非通用物流或工程', redlines: '交付物是主题产业创新方案/调研报告；禁止现代物流管理、智慧城市、工程设计思维、装置制作等与主题无关的模块' },
+  'exhibition-redesign': { label: '展陈空间/场馆改造', moduleWord: '环节（现状诊断 / 主题策划 / 展陈设计 / 实施整改 / 开放验收）', subjectsHint: 'science（天文科普）、chinese（说明/讲解）、math（预算/统计）、info-tech（展板）按需', redlines: '交付物是场馆改造方案册+展陈设计图；禁止程序设计、工程原型、招生简章等与展陈无关节点' },
+  'general': { label: '综合实践', moduleWord: '项目模块（须按题目自定义，禁止套用通用四套模块名）', subjectsHint: '按交付物自然选取所需学科', redlines: '每个节点都要服务于题目交付物；禁止「递进式实施」「原型驱动迭代」等模板 scheme 名' },
 };
 
 function projectTypeProfile(goal) {
@@ -257,6 +388,19 @@ function inferProjectDomains(goal) {
       { id: 'control', label: '控制算法', keywords: ['控制', '反馈', '编程', '算法'], subjects: ['info-tech', 'math'] },
     ];
   }
+  if (isIndustryInnovationGoal(g)) {
+    return industryInnovationDomains(g);
+  }
+  if (classifyProjectType(g) === 'exhibition-redesign') {
+    const subject = parseGoalSubject(g);
+    return [
+      { id: 'diagnose', label: '现状诊断', keywords: [subject, '问题', '调查', '记录', '失控', '隐患', '现状'], subjects: ['chinese', 'math'] },
+      { id: 'theme', label: '主题策划', keywords: [subject, '主题', '天文', '太阳系', '月球', '太空', '科普', '内容'], subjects: ['science', 'chinese'] },
+      { id: 'design', label: '展陈设计', keywords: [subject, '布局', '动线', '展板', '设计', '模型', '互动', '展陈'], subjects: ['info-tech', 'chinese', 'math'] },
+      { id: 'implement', label: '实施整改', keywords: [subject, '整改', '布置', '预算', '分工', '安全', '清单', '实施'], subjects: ['math', 'chinese'] },
+      { id: 'launch', label: '开放验收', keywords: [subject, '验收', '讲解', '宣传', '说明', '展示', '反馈', '开放'], subjects: ['chinese', 'science'] },
+    ];
+  }
   if (isEnergyEngineeringGoal(g)) {
     return [
       { id: 'energy', label: '能量转换与守恒', keywords: ['能量转化', '能量转换', '机械能', '内能', '电能', '化学能', '热值', '效率', '做功'], subjects: ['physics', 'chemistry'] },
@@ -283,7 +427,8 @@ const ANTI_VACUUM_BLOCK = `
 - reason 除「模块：」外须写明**本阶段怎么用**（例：「模块：数据整理。用条形图对比两方案 5 年成本，附数据来源」）`;
 
 function systemPromptMatch(complex, goal) {
-  const base = `你是资深 PBL（项目式学习）导师，精通 K12 各学科课标，能为工程制作、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策等多类项目设计学习路径。
+  const base = `你是资深 PBL（项目式学习）导师，精通 K12 各学科课标，能为工程制作、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策、产业创新等多类项目设计学习路径。
+${formatTopicAnchorBlock(goal)}
 ${typeGuardrailBlock(goal)}
 ## 第一步（必做）：把项目拆成「子任务 / 模块」
 
@@ -354,8 +499,8 @@ function systemPromptDecompose(complex, goal) {
   const depth = complex
     ? '给出 2-3 套**不同实施路线**并推荐 1 套。'
     : '至少给出 2 套可行思路并推荐 1 套。';
-  return `你是资深 PBL 与跨学科课程设计顾问，覆盖工程、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策等各类项目。
-
+  return `你是资深 PBL 与跨学科课程设计顾问，覆盖工程、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策、产业创新等各类项目。
+${formatTopicAnchorBlock(goal)}
 ## 任务（本阶段**不选课标知识点**）
 
 对用户项目目标做**全链路结构化拆解**：
@@ -370,6 +515,7 @@ function systemPromptDecompose(complex, goal) {
    - 生活规划/活动策划：班级活动、出游研学、时间/预算安排
    - 健康生活：营养饮食、运动锻炼、近视/睡眠、安全急救
    - 劳动实践：种植养殖、烹饪手工、收纳维修等动手任务
+   - 产业创新/新兴经济：调研产业场景、政策与技术，提出创新方案报告（非装置制作）
 2. 澄清交付物、约束、适用学段
 3. 拆出 3-5 个模块（${p.moduleWord}）
 4. ${depth}
@@ -408,9 +554,10 @@ function userPromptDecompose(goal, complex) {
     ? `\n【可参考的项目模块】\n${formatDomainHints(domains)}\n`
     : '';
   const chemHint = chemistryDecomposeHint(goal);
+  const topicBlock = formatTopicAnchorBlock(goal);
   return `【项目目标】
 ${goal}
-${domainBlock}${chemHint}
+${topicBlock}${domainBlock}${chemHint}
 返回 JSON（严格遵循字段名）：
 {
   "projectSummary": "一句话概括项目",
@@ -477,7 +624,8 @@ function systemPromptFilter(complex, goal) {
   const gradeHint = complex
     ? 'grades 一般落在 7-12；若项目明显面向小学，可含 1-6。'
     : '';
-  return `你是 PBL 项目与课标对齐专家，能把工程、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策等各类项目拆解为可检索的学科与模块。
+  return `你是 PBL 项目与课标对齐专家，能把工程、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策、产业创新等各类项目拆解为可检索的学科与模块。
+${formatTopicAnchorBlock(goal)}
 ${typeGuardrailBlock(goal)}
 ## 工作流程
 1. 判断项目类型（已识别：${p.label}）
@@ -510,7 +658,7 @@ function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomPro
     ? `\n- grades 一般落在 7-12（初中、高中），除非项目面向小学`
     : '';
   return `PBL项目目标：${goal}
-${blueprintBlock}${domainBlock}${bloomBlock}
+${formatTopicAnchorBlock(goal)}${blueprintBlock}${domainBlock}${bloomBlock}
 可用的知识体系：
 ${summaryList}
 
@@ -561,6 +709,16 @@ function typeMatchHints(goal) {
       return `\n### 类型要求：健康生活\n- 围绕健康知识、现状监测统计、行为计划与评估（生物/科学/数学/语文）；不要堆与健康无关的工程或纯计算节点`;
     case 'labor-practice':
       return `\n### 类型要求：劳动实践\n- 围绕动手操作、观察记录、成果分享（科学/生物/语文/数学）；贴近真实操作，不要拔高成科研论文或工程系统`;
+    case 'industry-innovation': {
+      const t = extractTopicProfile(goal);
+      const topic = t.coreTopic || '主题产业';
+      return `\n### 类型要求：产业创新/新兴经济（${topic}）\n- 交付物是**${topic}创新方案/调研报告**，不是装置制作或软件工程\n- matched 须能支撑：产业背景政策、应用场景、技术原理（如飞行/导航）、数据统计、方案论证\n- 优先：交通运输布局、交通与区域发展、抛体/牛顿（飞行原理）、统计调查、说明文/报告写作、中国经济地理\n- **禁止** matched：现代物流管理（除非 reason 明确写「${topic}低空物流配送」）、智慧城市、程序设计、电解池、小学数学\n- reason 必须写明该知识点如何用于「${topic}」的具体环节，禁止泛泛「了解产业发展」`;
+    }
+    case 'exhibition-redesign': {
+      const t = extractTopicProfile(goal);
+      const topic = t.coreTopic || '场馆';
+      return `\n### 类型要求：展陈空间/场馆改造（${topic}）\n- 交付物是**${topic}改造方案册**（现状诊断+展陈设计+整改清单），不是软件工程或装置研发\n- matched 须支撑：现状调查、天文/太空科普内容、展板设计、预算统计、说明文写作\n- 优先：太阳系、地球与宇宙、说明文写作、统计图表、简单设计/信息技术\n- **禁止** matched：招生简章、程序设计、电解池、牛顿定律（除非用于科普讲解）、外国文学、小学数学\n- reason 必须写明如何用于「${topic}」改造的具体环节`;
+    }
     default:
       return `\n### 类型要求：综合实践\n- 每个节点服务交付物某一步，学科按需自然选取\n- 若题目抽象，先落地为 1 个可检查交付物，再选课标；禁止泛素养凑数${ANTI_VACUUM_BLOCK}`;
   }
@@ -628,6 +786,84 @@ const GENERIC_COMPLEX_EXAMPLE = `
   "techRoute": "阶段一：明确调查问题并设计问卷与抽样；阶段二：整理回收数据并用统计图表分析；阶段三：归纳结论、撰写报告并答辩。"
 }`;
 
+const LOW_ALTITUDE_ECONOMY_EXAMPLE = `
+返回 JSON 格式（严格遵循；下列 index 仅为**格式示范**，你必须在【候选知识点】中重新检索并填写真实 index，禁止照抄示例数字）：
+{
+  "matched": [
+    {"index": 2, "confidence": 0.94, "role": "foundation", "reason": "模块：低空经济背景与政策。用区域发展与交通布局理解低空产业与空域资源的空间约束", "dependsOn": []},
+    {"index": 5, "confidence": 0.91, "role": "foundation", "reason": "模块：低空经济背景与政策。从中国经济地理把握产业政策与试点城市分布", "dependsOn": []},
+    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "模块：应用场景调研。用统计调查方法整理无人机配送/应急/植保等场景需求数据", "dependsOn": [2]},
+    {"index": 11, "confidence": 0.89, "role": "bridge", "reason": "模块：技术原理支撑。用抛体运动分析低空飞行器起降与航线高度约束", "dependsOn": [8]},
+    {"index": 17, "confidence": 0.92, "role": "core", "reason": "模块：数据与可行性分析。用图表比较不同低空应用场景的成本效益", "dependsOn": [8]},
+    {"index": 23, "confidence": 0.88, "role": "core", "reason": "模块：创新方案与报告。用说明文结构撰写低空经济创新方案与试点建议", "dependsOn": [17]}
+  ],
+  "pathOrder": [2, 5, 8, 11, 17, 23],
+  "knowledgeChain": "产业政策与区域交通 → 场景调研与统计 → 飞行原理支撑 → 可行性分析 → 创新方案报告",
+  "projectPhases": [
+    {
+      "phase": "低空经济背景与政策梳理",
+      "steps": ["检索国家及本地低空经济试点政策≥3条并摘录要点", "用思维导图归纳空域、产业、安全三类关键词"],
+      "knowledgeNames": ["交通运输布局", "中国的经济发展"],
+      "deliverable": "政策与产业背景对照表",
+      "literacy": {
+        "knowledge": "理解低空经济是低空空域飞行活动带动的新兴产业",
+        "method": "用权威来源摘录并标注政策要点",
+        "ability": "能说明政策与本地场景的关系",
+        "attitude": "尊重法规、不夸大政策红利",
+        "emotion": "对新兴产业机遇保持理性好奇",
+        "values": "关注公共安全与合规发展"
+      }
+    },
+    {
+      "phase": "应用场景调研",
+      "steps": ["选定1个低空场景（配送/应急/植保/出行）并设计10题问卷", "回收≥20份有效问卷并制成统计图表"],
+      "knowledgeNames": ["数据的收集", "统计图表"],
+      "deliverable": "场景需求调研表与图表",
+      "literacy": {
+        "knowledge": "掌握调查设计与数据整理方法",
+        "method": "用问卷与图表呈现场景需求",
+        "ability": "能从数据提炼1条场景痛点",
+        "attitude": "如实记录、不篡改数据",
+        "emotion": "在实地调研中增强社会观察力",
+        "values": "尊重受访者隐私与知情同意"
+      }
+    },
+    {
+      "phase": "技术原理与安全要点",
+      "steps": ["查阅无人机飞行高度、载重、续航三类参数并制对比表", "用抛体运动示意图说明起降安全距离估算思路"],
+      "knowledgeNames": ["抛体运动", "牛顿运动定律"],
+      "deliverable": "技术参数与安全要点笔记",
+      "literacy": {
+        "knowledge": "理解飞行高度与运动学基本关系",
+        "method": "用示意图辅助解释技术约束",
+        "ability": "能指出方案中的1项安全风险",
+        "attitude": "把安全合规放在首位",
+        "emotion": "体验跨学科理解技术的成就感",
+        "values": "树立空域安全与公众利益意识"
+      }
+    },
+    {
+      "phase": "创新方案与可行性论证",
+      "steps": ["提出1个低空经济创新点子并写200字场景描述", "用成本效益简表论证可行性并列出2条落地障碍"],
+      "knowledgeNames": ["说明文写作"],
+      "deliverable": "低空经济创新方案报告",
+      "literacy": {
+        "knowledge": "掌握创新方案报告的结构与论证方式",
+        "method": "用数据与政策依据支撑建议",
+        "ability": "能提出可操作的试点建议",
+        "attitude": "论证务实、承认局限",
+        "emotion": "在方案打磨中获得表达自信",
+        "values": "平衡创新与公共安全"
+      }
+    }
+  ],
+  "external": [
+    {"name": "低空空域分类与管理要点", "reason": "空域划设与飞行审批是低空经济落地关键，课标无专项条目", "prerequisites": ["交通运输布局"]},
+    {"name": "无人机飞行安全操作规范", "reason": "场景调研后须理解禁飞区与操作红线，课本较少系统讲授", "prerequisites": ["抛体运动"]}
+  ],
+  "techRoute": "阶段一：梳理低空经济政策与产业背景；阶段二：调研典型应用场景并统计需求；阶段三：补足飞行原理与安全要点；阶段四：撰写创新方案并完成可行性论证。"
+}`;
+
 function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint, bloomProfile = null, archetypeId = null) {
   const matchedRange = complex ? `5-${Math.min(maxMatched, 8)}` : `8-${maxMatched}`;
   const externalMax = complex ? 2 : 3;
@@ -636,9 +872,11 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
   const domainSection = domains.length
     ? `\n【项目模块 — 每个至少 1 个 matched，reason 必须以「模块：XXX」开头】\n${formatDomainHints(domains)}\n`
     : '';
-  const stemType = ['engineering', 'scientific-inquiry'].includes(classifyProjectType(goal));
+  const projectType = classifyProjectType(goal);
+  const topic = extractTopicProfile(goal);
+  const stemType = ['engineering', 'scientific-inquiry'].includes(projectType);
 
-  // 工程类用模型火箭示范；非 STEM 复杂项目用社会调查示范，避免照抄跑偏
+  // 工程类用模型火箭示范；产业创新用低空经济示范；非 STEM 复杂项目用社会调查示范
   const rocketExample = complex ? `
 返回 JSON 格式（严格遵循；下列 index 仅为**格式示范**，你必须在【候选知识点】中重新检索并填写真实 index，禁止照抄示例数字）：
 {
@@ -730,7 +968,12 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
   "techRoute": "按模块递进实施"
 }`;
 
-  const example = (complex && !stemType) ? GENERIC_COMPLEX_EXAMPLE : rocketExample;
+  let example = rocketExample;
+  if (topic.coreTopic === '低空经济' || projectType === 'industry-innovation') {
+    example = LOW_ALTITUDE_ECONOMY_EXAMPLE;
+  } else if (complex && !stemType) {
+    example = GENERIC_COMPLEX_EXAMPLE;
+  }
 
   const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
   const bloomBlock = formatBloomHintForMatch(bloom);
@@ -742,7 +985,7 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
 
   return `【项目目标】
 ${goal}
-${blueprintSection}${domainSection}${archetypeBlock}${bloomBlock}${registryBlock}
+${formatTopicAnchorBlock(goal)}${blueprintSection}${domainSection}${archetypeBlock}${bloomBlock}${registryBlock}
 【候选知识点】（matched 只能选下列 index；**先对齐上方蓝图阶段与 knowledgeHints**，再按模块检索选 index）
 ${candidateList}
 
@@ -786,6 +1029,7 @@ const SUBJECT_ZH = {
   math: '数学', physics: '物理', chemistry: '化学', biology: '生物',
   science: '科学', 'info-tech': '信息技术', chinese: '语文', english: '英语',
   history: '历史', geography: '地理',
+  engineering: '工程', 'computer-science': '计算机科学',
 };
 
 /**
