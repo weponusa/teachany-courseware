@@ -2957,7 +2957,7 @@ class PBLPathBuilder {
         phases: (s.phases || []).map(p => ({
           ...p,
           steps: (p.steps || []).filter(st => !badRe.test(String(st))),
-          knowledgeHints: [...new Set([...(p.knowledgeHints || []), '植物', '分类', '光合', '种子', '萌发', '栽培', '生长', topic.crop || '月季'].filter(Boolean)])].slice(0, 6),
+          knowledgeHints: [...new Set([...(p.knowledgeHints || []), '植物', '分类', '光合', '种子', '萌发', '栽培', '生长', topic.crop || '月季'].filter(Boolean))].slice(0, 6),
         })).filter(p => (p.steps || []).length > 0),
       }));
       return this._concretizeBlueprint(goal, pbp, this._resolvedArchetype);
