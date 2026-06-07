@@ -50,14 +50,37 @@ function buildCnIndex() {
   return nodes;
 }
 
-function resolveArchetype(goal, archetypeData, tagsData) {
-  const g = goal.trim();
-  const list = archetypeData.archetypes || [];
-  for (const a of list) {
-    if (a.id === 'general-practice') continue;
-    if ((a.matchPatterns || []).some(p => new RegExp(p, 'i').test(g))) return a;
+function blueprintFixture(c, archetypeData) {
+  if (c.blueprint) return c.blueprint;
+  const a = (archetypeData.archetypes || []).find(x => x.id === c.archetypeId);
+  if (!a?.modules?.length) return { subsystems: [], knowledgeChain: '' };
+  return {
+    knowledgeChain: a.modules.map(m => m.label).join(' → '),
+    subsystems: a.modules.map(m => ({ id: m.id, name: m.label, keywords: m.hints || [] })),
+    schemes: [{
+      id: 'A',
+      phases: a.modules.map(m => ({
+        phase: m.label,
+        subsystemIds: [m.id],
+        knowledgeHints: m.hints || [],
+      })),
+    }],
+    recommendedSchemeId: 'A',
+  };
+}
+
+function blueprintModules(blueprint) {
+  const subs = blueprint?.subsystems || [];
+  if (subs.length) {
+    return subs.map((s, i) => ({
+      id: s.id || `sub-${i}`,
+      label: s.name || s.id,
+      hints: [...(s.keywords || []), s.name].filter(Boolean),
+      subjects: s.subjects || [],
+      topK: 2,
+    }));
   }
-  return list.find(x => x.id === 'general-practice') || null;
+  return [];
 }
 
 function isGloballyBanned(node, tagsData) {
@@ -67,6 +90,7 @@ function isGloballyBanned(node, tagsData) {
 
 function isBanned(node, archetype, tagsData) {
   if (isGloballyBanned(node, tagsData)) return true;
+  if (!archetype) return false;
   const minG = archetype?.minGrade || 4;
   const t = `${node.name} ${node.definition || ''}`;
   if (minG >= 4) {
@@ -96,12 +120,15 @@ function isBanned(node, archetype, tagsData) {
 }
 
 function moduleNodeOk(archetype, mod, node) {
+  if (!archetype) return true;
   const t = `${node.name} ${node.definition || ''}`;
   if (archetype.id === 'mixed-solution-chemistry') {
     if (mod.id === 'conductivity' && node.subject === 'physics') return false;
     if (mod.id === 'titration' && node.subject === 'chemistry' && !/滴定|硝酸银|沉淀|物质的量|离子|摩尔/.test(t)) return false;
   }
   if (archetype.id === 'water-rocket' && mod.id === 'test' && node.subject === 'info-tech') return false;
+  if (archetype.id === 'environmental-filtration' && /火箭|反冲|抛体|弹道|发射/.test(node.name)) return false;
+  if (archetype.id === 'environmental-filtration' && mod.id === 'filtration' && !/过滤|沉淀|吸附|溶液|颗粒|环境|污染|实验/.test(t)) return false;
   if (archetype.id === 'application-writing' && /诗词|文言|小说|人物描写/.test(node.name)) return false;
   if (archetype.id === 'labor-practice' && /朝花夕拾|整本书阅读|文言|外国文学|机械玩具|机器人|电学实验|线性规划|三角函数/.test(node.name)) return false;
   if (archetype.id === 'planting-cultivation') {
@@ -123,20 +150,21 @@ function scoreModule(node, mod, goal, archetype) {
   }
   if ((mod.subjects || []).includes(node.subject)) s += 3;
   if (goal.includes('成本') && /成本|费用|统计|百分|函数/.test(t)) s += 3;
-  for (const p of archetype.preferNamePatterns || []) {
+  for (const p of archetype?.preferNamePatterns || []) {
     if (node.name.includes(p)) s += 6;
   }
   return s;
 }
 
-function pickByArchetype(pool, archetype, goal, tagsData, max = 24) {
+function pickByBlueprint(pool, blueprint, goal, tagsData, archetype = null, max = 24) {
+  const modules = blueprintModules(blueprint);
   const picked = [];
   const seen = new Set();
-  for (const mod of archetype.modules || []) {
+  for (const mod of modules) {
     const ranked = pool
       .filter(n => !seen.has(n.id))
       .filter(n => !isBanned(n, archetype, tagsData))
-      .filter(n => (parseInt(n.grade, 10) || 0) >= (archetype.minGrade || 1) || !n.grade)
+      .filter(n => (parseInt(n.grade, 10) || 0) >= (archetype?.minGrade || 1) || !n.grade)
       .filter(n => !mod.subjects?.length || mod.subjects.includes(n.subject))
       .filter(n => moduleNodeOk(archetype, mod, n))
       .map(n => ({ n, s: scoreModule(n, mod, goal, archetype) }))
@@ -241,24 +269,21 @@ async function main() {
   const summary = [];
 
   for (const c of cases) {
-    const archetype = resolveArchetype(c.goal, archetypeData, tagsData);
-    if (!archetype || archetype.id !== c.archetypeId) {
-      console.log(`❌ ${c.id}: 原型解析错误 got ${archetype?.id}`);
-      failCount++;
-      summary.push({ id: c.id, ok: false, reason: 'archetype' });
-      continue;
-    }
+    const blueprint = blueprintFixture(c, archetypeData);
+    const archetype = (archetypeData.archetypes || []).find(x => x.id === c.archetypeId) || null;
     const pool = allNodes.filter(n => {
-      if (archetype.subjects?.length && !archetype.subjects.includes(n.subject)) return false;
-      if ((parseInt(n.grade, 10) || 0) > 0 && (parseInt(n.grade, 10) || 0) < archetype.minGrade) return false;
+      if (archetype?.subjects?.length && !archetype.subjects.includes(n.subject)) return false;
+      if (archetype && (parseInt(n.grade, 10) || 0) > 0 && (parseInt(n.grade, 10) || 0) < archetype.minGrade) return false;
       return !isBanned(n, archetype, tagsData);
     });
-    const picked = pickByArchetype(pool, archetype, c.goal, tagsData);
+    const picked = pickByBlueprint(pool, blueprint, c.goal, tagsData, archetype);
     const issues = evaluate(c, picked, archetype);
-    const ext = (registry.entries || []).filter(e => e.archetypes?.includes(archetype.id));
+    const ext = archetype
+      ? (registry.entries || []).filter(e => e.archetypes?.includes(archetype.id))
+      : [];
 
     console.log(`── ${c.id} ──`);
-    console.log(`  原型: ${archetype.label}`);
+    console.log(`  蓝图模块: ${blueprintModules(blueprint).map(m => m.label).join(' → ') || '—'}`);
     console.log(`  本地检索(${picked.length}): ${picked.map(n => `${n.name}(${n.subject},G${n.grade})`).join(' | ')}`);
     console.log(`  课外(${ext.length}): ${ext.slice(0, 2).map(e => e.name).join(' | ')}`);
 

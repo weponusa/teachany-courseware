@@ -12,16 +12,8 @@ function textOf(node) {
   return `${node.name || ''} ${node.definition || ''}`;
 }
 
-export function resolveArchetype(goal, projectType, isMixedChemistry) {
-  const g = norm(goal);
-  for (const a of archetypeData.archetypes || []) {
-    if ((a.matchPatterns || []).some(p => new RegExp(p, 'i').test(g))) return a;
-  }
-  if (isMixedChemistry) {
-    return archetypeData.archetypes.find(x => x.id === 'mixed-solution-chemistry') || null;
-  }
-  const fb = archetypeData.typeFallback?.[projectType];
-  if (fb) return archetypeData.archetypes.find(x => x.id === fb) || null;
+/** 不再套原型；match 阶段仅以拆解蓝图 + 题目锚点约束 */
+export function resolveArchetype() {
   return null;
 }
 

@@ -101,6 +101,9 @@ function buildTopicKeywords(goal, subject, kind) {
   if (kind === 'planting-cultivation' || /种植|栽培|月季|花卉|蔬菜|盆栽|园艺|养殖|养蚕/.test(g + subject)) {
     base.push('植物', '分类', '生长', '光合', '种子', '萌发', '栽培', '根系', '蒸腾', '观察', '记录');
   }
+  if (kind === 'environmental-filtration' || /微塑料|过滤|净水|废水|滤芯/.test(g + subject)) {
+    base.push('过滤', '沉淀', '吸附', '微塑料', '拦截', '测试', '密封', '导流', '环境', '污染');
+  }
   for (let i = 0; i < subject.length - 1; i++) {
     const w = subject.slice(i, i + 2);
     if (w.length === 2 && !/[的与及了在]$/.test(w)) base.push(w);
@@ -118,6 +121,9 @@ function inferDeliverableHint(goal, subject, kind) {
   if (kind === 'planting-cultivation') {
     return `「${subject}」种植观察日记（植物分类笔记+栽培记录表+生长数据图表+总结）`;
   }
+  if (kind === 'environmental-filtration') {
+    return `可测试的「${subject}」原型+材料BOM+过滤效率测试报告（含拦截率数据）`;
+  }
   if (/报告|调查|论文|倡议|方案/.test(goal)) return `「${subject}」专题报告（含调研数据与可检查结论）`;
   if (/设计|制作|开发|建造/.test(goal)) return `可展示的「${subject}」作品+过程记录+说明文档`;
   return `「${subject}」项目成果包（可展示交付物+过程记录+说明）`;
@@ -129,6 +135,7 @@ function inferTopicKind(goal, subject) {
   if (/太空馆|天文馆|航天馆|科技馆|博物馆|展厅|展陈|太空.*馆|天文.*馆/.test(g) || (/馆|展厅|展览/.test(g + subject) && /重塑|改造|整治|升级|策展|布展|失控|翻新|重建|优化/.test(g))) return 'exhibition-redesign';
   if (/探寻|探索|研究|调研/.test(g) && /创新|产业|经济|行业/.test(g)) return 'industry-innovation';
   if (/种植|栽培|养花|月季|花卉|玫瑰|蔬菜|种菜|盆栽|园艺|养殖|养蚕|花坛|绿化|阳台种/.test(g)) return 'planting-cultivation';
+  if (/微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/.test(g)) return 'environmental-filtration';
   return 'subject-anchored';
 }
 
@@ -158,6 +165,15 @@ function plantingCultivationDomains(goal) {
 function extractTopicProfile(goal) {
   const g = String(goal || '').trim();
   const presets = [
+    {
+      test: /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/,
+      coreTopic: '微塑料过滤装置',
+      definition: '设计可测试的小型水体净化/过滤装置，模拟拦截洗衣废水或生活污水中的微塑料颗粒，含进水导流、多级过滤、吸附捕获、密封测试与维护回收',
+      keywords: ['微塑料', '过滤', '净水', '废水', '滤芯', '沉淀', '吸附', '活性炭', '拦截', '颗粒', '测试', '拦截率', '密封', '泵', '导流'],
+      banInSteps: ['火箭', '反冲', '抛体', '弹道', '发射', '原型驱动迭代', 'MVP', '快速原型', '递进式实施', '浸润式场景'],
+      deliverableHint: '可测试的微塑料过滤装置原型+材料清单+过滤效率测试报告',
+      kind: 'environmental-filtration',
+    },
     {
       test: /低空经济|低空飞行|低空空域|空域管理|通航产业|城市空中交通|UAM|eVTOL|低空物流|通用航空/,
       coreTopic: '低空经济',
@@ -743,6 +759,9 @@ function typeMatchHints(goal) {
     case 'consumer-decision':
       return `\n### 类型要求：消费决策\n- 交付物是决策报告/对比测算表；优先统计、函数/百分比、相关科普（如内燃机效率）、环境排放、说明文写作\n- 禁止 matched：电解池、原电池、程序控制、电磁感应、电池温度、传感器、数据采集算法\n- external 示例：全生命周期用车成本、购置补贴/税费政策、保值率评估（课标外）`;
     case 'engineering':
+      if (/微塑料|过滤装置|净水|污水处理|废水|水质净化|滤芯|膜过滤|拦截.*塑料/.test(goal)) {
+        return `\n### 类型要求：水体净化/过滤装置工程\n- 交付物是可测试的过滤装置原型+过滤效率测试报告，不是火箭/抛体/发射类项目\n- matched 须覆盖：溶液/沉淀/吸附、压强与流体、实验测量与数据统计、环境/污染相关\n- **禁止** matched：反冲、火箭、抛体、弹道、发射、程序设计、电解池、原电池\n- projectDomains 用：需求指标、进水导流、多级过滤、吸附捕获、密封结构、测试评价`;
+      }
       return `\n### 类型要求：工程/制作\n- 覆盖原理→装置→实验→必要定量；含至少 1 个装置/实验类节点\n- 数学 index ≤25%；名称含「计算/求解/方程式」的 ≤20%`;
     case 'scientific-inquiry':
       return isChemistryInquiryGoal(goal)
