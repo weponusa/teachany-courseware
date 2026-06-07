@@ -22,6 +22,13 @@ function isConsumerDecisionGoal(goal) {
   return false;
 }
 
+function isChemistryInquiryGoal(goal) {
+  const g = String(goal || '');
+  return /浓度|溶液|溶解度|溶质|溶剂|饱和溶液|质量分数|体积分数|物质的溶解|配制溶液/.test(g)
+    || /食盐|盐水|醋酸|苏打|洁厕|电解水|酸碱|中和|化学变化|物质的变化|离子反应/.test(g)
+    || (/厨房|餐桌|调味|烹饪/.test(g) && /盐|酸|碱|醋|化学|浓度|溶液|溶解/.test(g));
+}
+
 function isEnergyEngineeringGoal(goal) {
   const g = String(goal || '');
   if (isConsumerDecisionGoal(g)) return false;
@@ -49,7 +56,8 @@ function classifyProjectType(goal) {
   if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|研学|游学|路线规划|时间管理|班级布置|布置教室|嘉年华|游园/.test(g)) return 'life-planning';
   if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|公众.{0,4}认知|居民|乡土|口述史/.test(g)) return 'social-inquiry';
   if (/火箭|导弹|发射|机器人|无人机|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现/.test(g)) return 'engineering';
-  if (/探究|实验|观察|测量|验证|影响因素|变量|检测|成分|对照实验|科学问题/.test(g)) return 'scientific-inquiry';
+  if (isChemistryInquiryGoal(g)) return 'scientific-inquiry';
+  if (/探究|实验|观察|测量|验证|影响因素|变量|检测|成分|对照实验|科学问题|浓度|溶液|溶解/.test(g)) return 'scientific-inquiry';
   return 'general';
 }
 
@@ -129,8 +137,8 @@ function genericDomainsForType(id) {
     ],
     'general': [
       { id: 'define', label: '调研与定义', keywords: ['调研', '需求', '定义', '背景', '分析'], subjects: ['chinese', 'math', 'science'] },
-      { id: 'design', label: '方案设计', keywords: ['方案', '设计', '规划', '分工'], subjects: ['math', 'info-tech', 'chinese'] },
-      { id: 'make', label: '实施制作', keywords: ['实施', '制作', '搭建', '实验', '执行'], subjects: ['science', 'info-tech'] },
+      { id: 'design', label: '方案设计', keywords: ['方案', '设计', '规划', '分工'], subjects: ['math', 'science', 'chinese'] },
+      { id: 'make', label: '实施制作', keywords: ['实施', '制作', '搭建', '实验', '执行'], subjects: ['science', 'chemistry', 'physics'] },
       { id: 'test', label: '测试与展示', keywords: ['测试', '评估', '展示', '优化', '报告'], subjects: ['math', 'chinese'] },
     ],
   };
@@ -140,6 +148,14 @@ function genericDomainsForType(id) {
 /** 根据项目目标推断模块/子系统（服务端兜底，与前端 domain 逻辑对齐） */
 function inferProjectDomains(goal) {
   const g = String(goal || '');
+  if (isChemistryInquiryGoal(g)) {
+    return [
+      { id: 'solution', label: '溶液与浓度概念', keywords: ['溶液', '溶质', '溶剂', '浓度', '质量分数', '溶解', '饱和', '配制', '氯化钠', '溶解度'], subjects: ['chemistry'] },
+      { id: 'experiment', label: '实验设计与测量', keywords: ['实验', '变量', '对照', '量取', '称量', '配制', '测量', '滴定', '观察'], subjects: ['chemistry', 'science'] },
+      { id: 'data', label: '数据处理与表达', keywords: ['数据', '统计', '图表', '计算', '误差', '记录', '百分比', '平均数'], subjects: ['math'] },
+      { id: 'application', label: '生活情境与结论', keywords: ['厨房', '食盐', '应用', '安全', '生活', '结论', '报告', '分析', '比较'], subjects: ['chemistry', 'science', 'chinese'] },
+    ];
+  }
   if (isConsumerDecisionGoal(g)) {
     return [
       { id: 'needs', label: '需求与场景调研', keywords: ['调查', '数据', '统计', '问卷', '需求', '分析', '收集', '整理', '图表'], subjects: ['math', 'chinese'] },
@@ -439,7 +455,9 @@ function typeMatchHints(goal) {
     case 'engineering':
       return `\n### 类型要求：工程/制作\n- 覆盖原理→装置→实验→必要定量；含至少 1 个装置/实验类节点\n- 数学 index ≤25%；名称含「计算/求解/方程式」的 ≤20%`;
     case 'scientific-inquiry':
-      return `\n### 类型要求：科学探究\n- 必含实验设计与数据分析类节点；理论与实验并重，不要只选纯计算`;
+      return isChemistryInquiryGoal(goal)
+        ? `\n### 类型要求：化学溶液/浓度探究\n- **以 chemistry 为主线**（溶液、溶质溶剂、质量分数、溶解、配制）；math 仅用于数据记录/统计图表\n- **禁止** matched：程序设计、信息技术、人体器官系统、泛泛的「饮食营养与健康」\n- projectPhases 任务须写清实验步骤与计算，禁止「完成课件」空话`
+        : `\n### 类型要求：科学探究\n- 必含实验设计与数据分析类节点；理论与实验并重，不要只选纯计算`;
     case 'social-inquiry':
       return `\n### 类型要求：社会调查\n- 围绕调查方法、统计分析、报告写作；可用语文/地理/历史/数学，**不要塞理科公式**`;
     case 'humanities-literary':
