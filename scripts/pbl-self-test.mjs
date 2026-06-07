@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * PBL 原型层自测 — 本地候选检索 + 可选线上 match 校验
- * Usage: node scripts/pbl-self-test.mjs [--live]
+ * PBL 原型层全量 benchmark 自测 — 本地候选检索 + 可选线上 match
+ * Usage: node scripts/pbl-self-test.mjs [--live] [--id=water-rocket]
  */
 import fs from 'fs';
 import path from 'path';
@@ -10,34 +10,8 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const LIVE = process.argv.includes('--live');
+const ID_FILTER = process.argv.find(a => a.startsWith('--id='))?.split('=')[1];
 const API = 'https://www.teachany.cn/api/pbl/analyze';
-
-const CASES = [
-  {
-    id: 'water-rocket',
-    goal: '设计一款水火箭',
-    archetypeId: 'water-rocket',
-    forbidNames: [/100以内|人物描写|诗词|电解池|原电池|细胞|电流的测量|电学实验/],
-    requireSubjects: ['physics'],
-    minGrade: 7,
-  },
-  {
-    id: 'canteen-soup',
-    goal: '食堂菜汤的盐含量测定',
-    archetypeId: 'mixed-solution-chemistry',
-    forbidNames: [/100以内|20以内|认识图形|分数的初步|数据的描述|百分数$|电解池|气体摩尔体积/],
-    requireSubjects: ['chemistry'],
-    minGrade: 8,
-  },
-  {
-    id: 'car-cost',
-    goal: '探究新能源汽车与传统燃油汽车的成本效益分析',
-    archetypeId: 'consumer-decision',
-    forbidNames: [/人物描写|性格分析|诗词|文言|记叙|电解池|原电池|细胞|光合作用/],
-    requireAnyName: [/说明|统计|函数|内燃|热机|环境|排放|百分|图表|调查/],
-    minGrade: 7,
-  },
-];
 
 function loadJson(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -76,16 +50,30 @@ function buildCnIndex() {
   return nodes;
 }
 
-function resolveArchetype(goal, archetypeData) {
+function resolveArchetype(goal, archetypeData, tagsData) {
   const g = goal.trim();
-  for (const a of archetypeData.archetypes) {
+  const list = archetypeData.archetypes || [];
+  for (const a of list) {
+    if (a.id === 'general-practice') continue;
     if ((a.matchPatterns || []).some(p => new RegExp(p, 'i').test(g))) return a;
   }
-  return null;
+  return list.find(x => x.id === 'general-practice') || null;
 }
 
-function isBanned(node, archetype) {
+function isGloballyBanned(node, tagsData) {
+  const name = String(node.name || '');
+  return (tagsData.globalBanNames || []).some(b => name.includes(b));
+}
+
+function isBanned(node, archetype, tagsData) {
+  if (isGloballyBanned(node, tagsData)) return true;
+  const minG = archetype?.minGrade || 4;
   const t = `${node.name} ${node.definition || ''}`;
+  if (minG >= 4) {
+    for (const p of tagsData.elementaryBanPatterns || []) {
+      if (node.name.includes(p) || t.includes(p)) return true;
+    }
+  }
   for (const p of archetype.banNamePatterns || []) {
     try {
       if (new RegExp(p).test(node.name) || new RegExp(p).test(t)) return true;
@@ -99,6 +87,11 @@ function isBanned(node, archetype) {
       return !archetype.chineseAllowPatterns.some(p => t.includes(p));
     }
   }
+  for (const rule of tagsData.writingRules || []) {
+    if (!node.name.includes(rule.match)) continue;
+    if (rule.banArchetypes?.includes(archetype.id)) return true;
+    if (rule.allowArchetypes?.length && !rule.allowArchetypes.includes(archetype.id)) return true;
+  }
   return false;
 }
 
@@ -109,6 +102,8 @@ function moduleNodeOk(archetype, mod, node) {
     if (mod.id === 'titration' && node.subject === 'chemistry' && !/滴定|硝酸银|沉淀|物质的量|离子|摩尔/.test(t)) return false;
   }
   if (archetype.id === 'water-rocket' && mod.id === 'test' && node.subject === 'info-tech') return false;
+  if (archetype.id === 'application-writing' && /诗词|文言|小说|人物描写/.test(node.name)) return false;
+  if (archetype.id === 'labor-practice' && /朝花夕拾|整本书阅读|文言|外国文学|机械玩具|机器人|电学实验|线性规划|三角函数/.test(node.name)) return false;
   return true;
 }
 
@@ -129,13 +124,13 @@ function scoreModule(node, mod, goal, archetype) {
   return s;
 }
 
-function pickByArchetype(pool, archetype, goal, max = 24) {
+function pickByArchetype(pool, archetype, goal, tagsData, max = 24) {
   const picked = [];
   const seen = new Set();
   for (const mod of archetype.modules || []) {
     const ranked = pool
       .filter(n => !seen.has(n.id))
-      .filter(n => !isBanned(n, archetype))
+      .filter(n => !isBanned(n, archetype, tagsData))
       .filter(n => (parseInt(n.grade, 10) || 0) >= (archetype.minGrade || 1) || !n.grade)
       .filter(n => !mod.subjects?.length || mod.subjects.includes(n.subject))
       .filter(n => moduleNodeOk(archetype, mod, n))
@@ -169,10 +164,14 @@ function extractJson(text) {
   return JSON.parse(m[0]);
 }
 
+function toRegex(arr) {
+  return (arr || []).map(s => (s instanceof RegExp ? s : new RegExp(s)));
+}
+
 function evaluate(caseDef, picked, archetype) {
   const issues = [];
   const names = picked.map(n => n.name);
-  for (const re of caseDef.forbidNames || []) {
+  for (const re of toRegex(caseDef.forbidNames)) {
     const hit = names.filter(n => re.test(n));
     if (hit.length) issues.push(`禁止节点命中: ${hit.join('、')}`);
   }
@@ -183,19 +182,18 @@ function evaluate(caseDef, picked, archetype) {
     }
   }
   if (caseDef.requireAnyName) {
-    const ok = names.some(n => caseDef.requireAnyName.some(re => re.test(n)));
+    const ok = names.some(n => toRegex(caseDef.requireAnyName).some(re => re.test(n)));
     if (!ok) issues.push('缺少预期关键词节点');
   }
-  const lowGrade = picked.filter(n => (parseInt(n.grade, 10) || 0) > 0 && (parseInt(n.grade, 10) || 0) < caseDef.minGrade);
+  const minG = caseDef.minGrade || archetype.minGrade || 1;
+  const lowGrade = picked.filter(n => (parseInt(n.grade, 10) || 0) > 0 && (parseInt(n.grade, 10) || 0) < minG);
   if (lowGrade.length) issues.push(`学段过低: ${lowGrade.map(n => n.name).join('、')}`);
-  if (picked.length < (archetype.minMatched || 4)) issues.push(`节点过少: ${picked.length}`);
+  const minM = caseDef.minMatched || archetype.minMatched || 4;
+  if (picked.length < minM) issues.push(`节点过少: ${picked.length} < ${minM}`);
   return issues;
 }
 
 async function liveMatch(caseDef, candidates, archetype) {
-  const candidateList = candidates.map((n, i) =>
-    `[${i}] ${n.name} | G${n.grade || '?'} | ${n.subject} | cn`
-  ).join('\n');
   const content = await callApi('match', {
     goal: caseDef.goal,
     candidates: candidates.map(n => ({
@@ -210,7 +208,7 @@ async function liveMatch(caseDef, candidates, archetype) {
       deliverable: '测试交付物',
       schemes: [{ id: 'A', name: 'A', phases: archetype.modules.map(m => ({
         phase: m.label, subsystemIds: [m.id], knowledgeHints: m.hints,
-        steps: [`完成${m.label}任务`], deliverable: m.label,
+        steps: [`完成${m.label}具体任务：记录数据并提交${m.label}成果`], deliverable: m.label,
       })) }],
       recommendedSchemeId: 'A',
     },
@@ -226,37 +224,45 @@ async function liveMatch(caseDef, candidates, archetype) {
 async function main() {
   const archetypeData = loadJson(path.join(ROOT, 'data/pbl/archetypes.json'));
   const registry = loadJson(path.join(ROOT, 'data/pbl/engineering-registry.json'));
+  const tagsData = loadJson(path.join(ROOT, 'data/pbl/node-pbl-tags.json'));
+  const benchmark = loadJson(path.join(ROOT, 'data/pbl/benchmark-seed.json'));
+  const cases = (benchmark.cases || []).filter(c => !ID_FILTER || c.id === ID_FILTER);
   const allNodes = buildCnIndex();
-  console.log(`CN 索引: ${allNodes.length} 节点\n`);
+
+  console.log(`CN 索引: ${allNodes.length} 节点`);
+  console.log(`Benchmark: ${cases.length} 用例${LIVE ? ' (+线上 match)' : ''}\n`);
 
   let failCount = 0;
-  for (const c of CASES) {
-    const archetype = resolveArchetype(c.goal, archetypeData);
+  const summary = [];
+
+  for (const c of cases) {
+    const archetype = resolveArchetype(c.goal, archetypeData, tagsData);
     if (!archetype || archetype.id !== c.archetypeId) {
       console.log(`❌ ${c.id}: 原型解析错误 got ${archetype?.id}`);
       failCount++;
+      summary.push({ id: c.id, ok: false, reason: 'archetype' });
       continue;
     }
     const pool = allNodes.filter(n => {
       if (archetype.subjects?.length && !archetype.subjects.includes(n.subject)) return false;
       if ((parseInt(n.grade, 10) || 0) > 0 && (parseInt(n.grade, 10) || 0) < archetype.minGrade) return false;
-      return !isBanned(n, archetype);
+      return !isBanned(n, archetype, tagsData);
     });
-    const picked = pickByArchetype(pool, archetype, c.goal);
+    const picked = pickByArchetype(pool, archetype, c.goal, tagsData);
     const issues = evaluate(c, picked, archetype);
     const ext = (registry.entries || []).filter(e => e.archetypes?.includes(archetype.id));
 
     console.log(`── ${c.id} ──`);
     console.log(`  原型: ${archetype.label}`);
-    console.log(`  本地检索: ${picked.map(n => `${n.name}(${n.subject},G${n.grade})`).join(' | ')}`);
-    console.log(`  课外: ${ext.slice(0, 3).map(e => e.name).join(' | ')}`);
+    console.log(`  本地检索(${picked.length}): ${picked.map(n => `${n.name}(${n.subject},G${n.grade})`).join(' | ')}`);
+    console.log(`  课外(${ext.length}): ${ext.slice(0, 2).map(e => e.name).join(' | ')}`);
 
     if (LIVE && picked.length >= 4) {
       try {
-        console.log('  (线上 match 请求中，约 60–120s…)');
+        console.log('  (线上 match…)');
         const liveNames = await liveMatch(c, picked, archetype);
         console.log(`  线上match: ${liveNames.join(' | ')}`);
-        for (const re of c.forbidNames || []) {
+        for (const re of toRegex(c.forbidNames)) {
           const hit = liveNames.filter(n => re.test(n));
           if (hit.length) issues.push(`线上禁止命中: ${hit.join('、')}`);
         }
@@ -268,12 +274,16 @@ async function main() {
     if (issues.length) {
       console.log(`  ❌ ${issues.join('; ')}`);
       failCount++;
+      summary.push({ id: c.id, ok: false, issues });
     } else {
       console.log('  ✅ 通过');
+      summary.push({ id: c.id, ok: true });
     }
     console.log('');
   }
 
+  const passed = summary.filter(s => s.ok).length;
+  console.log(`══ 结果: ${passed}/${cases.length} 通过${failCount ? `, ${failCount} 失败` : ''} ══`);
   process.exit(failCount > 0 ? 1 : 0);
 }
 
