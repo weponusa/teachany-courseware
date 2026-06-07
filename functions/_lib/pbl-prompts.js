@@ -1,11 +1,11 @@
 /**
- * @internal PBL 拆解核心提示词 v4.0 — 仅服务端，勿复制到前端静态资源
+ * @internal PBL 拆解核心提示词 v5.0 — 仅服务端，勿复制到前端静态资源
  *
+ * v5.0：项目类型自适应 — 不再以 STEM/工程为唯一假设，覆盖工程制作、科学探究、
+ *       社会调查、人文创作、创意设计、商业实践、消费决策等多类项目；
+ *       学科按项目类型自然选取（理工 / 语文 / 历史 / 地理 / 英语 / 信息技术…）。
  * v4.0：先全链路拆解可行方案，再匹配课标（decompose → filter → match）
  * v3.1：主线优先 — 图谱只展示能「把东西做出来」的核心知识链
- * - 宁缺毋滥：5-8 个精准节点 > 10 个跨学科沾边节点
- * - 禁止用语文/地理/有机合成等无关课标凑跨学科
- * - 工程子系统拆解：推进/气动/动力学/测试，每个子系统 1 个 matched 即可
  */
 
 const PBL_MAX_MATCHED_COMPLEX = 12;
@@ -28,7 +28,87 @@ function isEnergyEngineeringGoal(goal) {
     && /设计|制作|研发|装置|系统|搭建|工程|发电|储能|模型|实验|探究/.test(g);
 }
 
-/** 根据项目目标推断工程子系统（服务端兜底，与前端 domain 逻辑对齐） */
+/**
+ * 项目类型分类（自适应多场景）：
+ * consumer-decision / creative-media / humanities-literary / business-economics /
+ * social-inquiry / engineering / scientific-inquiry / general
+ */
+function classifyProjectType(goal) {
+  const g = String(goal || '');
+  if (isConsumerDecisionGoal(g)) return 'consumer-decision';
+  if (/海报|短视频|微电影|动画|漫画|插画|绘画|展览|策展|广告|品牌|视觉|游戏设计|作曲|音乐创作|手工艺|表演|舞台|摄影|logo|标志设计|文创|周边设计/.test(g)) return 'creative-media';
+  if (/诗歌|诗集|现代诗|诗词|写诗|小说|剧本|散文|绘本|故事集|演讲|辩论|文学|翻译|双语|新闻稿|采访稿|写一[篇组]|作文|征文|朗诵|文集|杂志|读后感|书评|话剧|文章/.test(g)) return 'humanities-literary';
+  if (/创业|商业计划|营销|市场推广|运营|理财|市场调研|义卖|店铺|定价|商业模式|经济效益|盈利|众筹|招商|品牌策划/.test(g)) return 'business-economics';
+  if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|公众.{0,4}认知|居民|乡土|口述史/.test(g)) return 'social-inquiry';
+  if (/火箭|导弹|发射|机器人|无人机|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现/.test(g)) return 'engineering';
+  if (/探究|实验|观察|测量|验证|影响因素|变量|检测|成分|对照实验|科学问题/.test(g)) return 'scientific-inquiry';
+  return 'general';
+}
+
+const TYPE_PROFILES = {
+  'engineering': { label: '工程研发/制作', moduleWord: '工程子系统（原理 / 装置结构 / 电路控制 / 测试迭代）', subjectsHint: '以 physics、chemistry、math、info-tech 为主，按需含其他', redlines: '覆盖原理→装置→实验→必要定量；定量计算节点≤20%，不要只堆守恒定律/计算' },
+  'scientific-inquiry': { label: '科学探究/实验', moduleWord: '探究环节（问题假设 / 变量设计 / 数据采集 / 分析结论）', subjectsHint: 'physics、chemistry、biology、science、math 为主', redlines: '必须含实验设计与数据分析类节点；理论与实验并重，不要只选纯计算' },
+  'consumer-decision': { label: '消费决策/方案对比', moduleWord: '决策环节（需求调研 / 对比维度 / 成本测算 / 决策报告）', subjectsHint: 'math（统计/函数）为主，辅以相关科普与说明文写作', redlines: '交付物是决策报告/对比表；禁止电解池、原电池、程序控制、传感器、数据采集算法等研发节点' },
+  'social-inquiry': { label: '社会调查/田野研究', moduleWord: '调查环节（选题抽样 / 资料收集 / 整理统计 / 结论报告）', subjectsHint: 'chinese、geography、history、math（统计）按需组合', redlines: '核心是调查方法、数据统计与报告写作；不要硬塞物理化学公式' },
+  'humanities-literary': { label: '人文/文学/语言', moduleWord: '创作环节（立意选材 / 阅读积累 / 结构表达 / 修改展示）', subjectsHint: 'chinese、english、history 为主', redlines: '围绕阅读、写作、表达、文化理解；不要塞理科公式或工程装置节点' },
+  'creative-media': { label: '创意设计/媒体/艺术', moduleWord: '创作环节（创意构思 / 设计草案 / 制作实现 / 展示评议）', subjectsHint: '结合 info-tech、chinese 及相关学科，技术实现可含数学/信息技术', redlines: '围绕创意表达与制作；只在确需技术实现时引入理科节点' },
+  'business-economics': { label: '商业/创业/经济实践', moduleWord: '运营环节（需求调研 / 方案设计 / 成本定价 / 运营复盘）', subjectsHint: 'math（统计/比例/函数）、chinese（策划/表达）为主', redlines: '围绕调研、测算、方案与表达；不要堆无关理科节点' },
+  'general': { label: '综合实践', moduleWord: '项目模块（调研定义 / 方案设计 / 实施制作 / 测试展示）', subjectsHint: '按交付物自然选取所需学科', redlines: '每个节点都要服务于交付物某一步，不为凑学科塞无关内容' },
+};
+
+function projectTypeProfile(goal) {
+  return TYPE_PROFILES[classifyProjectType(goal)] || TYPE_PROFILES.general;
+}
+
+function typeGuardrailBlock(goal) {
+  const p = projectTypeProfile(goal);
+  return `\n## 本项目类型识别：${p.label}\n- 模块视角：${p.moduleWord}\n- 学科取向：${p.subjectsHint}\n- 类型红线：${p.redlines}\n`;
+}
+
+/** 非特定 STEM 类型的通用模块（供 filter/match 提供检索提示） */
+function genericDomainsForType(id) {
+  const map = {
+    'scientific-inquiry': [
+      { id: 'question', label: '问题与假设', keywords: ['问题', '假设', '猜想', '现象', '原理'], subjects: ['science', 'physics', 'chemistry', 'biology'] },
+      { id: 'design', label: '变量与实验设计', keywords: ['变量', '实验', '控制变量', '对照', '方案', '测量'], subjects: ['physics', 'chemistry', 'biology', 'science'] },
+      { id: 'data', label: '数据采集与处理', keywords: ['数据', '测量', '记录', '统计', '误差', '图表'], subjects: ['math', 'info-tech', 'science'] },
+      { id: 'conclusion', label: '分析与结论', keywords: ['分析', '结论', '解释', '规律', '报告'], subjects: ['science', 'math', 'chinese'] },
+    ],
+    'social-inquiry': [
+      { id: 'topic', label: '选题与调查设计', keywords: ['选题', '调查', '问卷', '访谈', '抽样', '样本'], subjects: ['chinese', 'math'] },
+      { id: 'collect', label: '资料与数据收集', keywords: ['资料', '数据', '收集', '记录', '文献', '实地'], subjects: ['geography', 'history', 'chinese'] },
+      { id: 'analyze', label: '整理与统计分析', keywords: ['统计', '整理', '图表', '分析', '百分比', '平均数'], subjects: ['math'] },
+      { id: 'report', label: '结论与报告', keywords: ['结论', '报告', '建议', '论证', '写作', '说明'], subjects: ['chinese'] },
+    ],
+    'humanities-literary': [
+      { id: 'theme', label: '立意与选材', keywords: ['立意', '主题', '选材', '构思', '观点'], subjects: ['chinese', 'english'] },
+      { id: 'read', label: '阅读与素材积累', keywords: ['阅读', '素材', '文本', '名著', '积累', '鉴赏'], subjects: ['chinese', 'english', 'history'] },
+      { id: 'express', label: '结构与表达', keywords: ['结构', '表达', '修辞', '语言', '写作', '叙述', '议论'], subjects: ['chinese', 'english'] },
+      { id: 'revise', label: '修改与展示', keywords: ['修改', '评议', '朗诵', '展示', '演讲', '发表'], subjects: ['chinese'] },
+    ],
+    'creative-media': [
+      { id: 'idea', label: '创意构思', keywords: ['创意', '构思', '主题', '灵感', '受众'], subjects: ['chinese', 'info-tech'] },
+      { id: 'design', label: '设计与草案', keywords: ['设计', '草图', '分镜', '排版', '色彩', '构图'], subjects: ['info-tech', 'chinese'] },
+      { id: 'make', label: '制作与实现', keywords: ['制作', '剪辑', '绘制', '编辑', '工具', '技术'], subjects: ['info-tech'] },
+      { id: 'show', label: '展示与评议', keywords: ['展示', '评议', '反馈', '发布', '优化'], subjects: ['chinese'] },
+    ],
+    'business-economics': [
+      { id: 'research', label: '需求与市场调研', keywords: ['需求', '市场', '调研', '调查', '数据', '用户'], subjects: ['math', 'chinese'] },
+      { id: 'plan', label: '方案与产品设计', keywords: ['方案', '产品', '设计', '策划', '创意'], subjects: ['chinese', 'info-tech'] },
+      { id: 'cost', label: '成本与定价测算', keywords: ['成本', '定价', '利润', '预算', '函数', '百分比', '统计'], subjects: ['math'] },
+      { id: 'operate', label: '运营与复盘', keywords: ['运营', '推广', '复盘', '反馈', '报告'], subjects: ['chinese', 'math'] },
+    ],
+    'general': [
+      { id: 'define', label: '调研与定义', keywords: ['调研', '需求', '定义', '背景', '分析'], subjects: ['chinese', 'math', 'science'] },
+      { id: 'design', label: '方案设计', keywords: ['方案', '设计', '规划', '分工'], subjects: ['math', 'info-tech', 'chinese'] },
+      { id: 'make', label: '实施制作', keywords: ['实施', '制作', '搭建', '实验', '执行'], subjects: ['science', 'info-tech'] },
+      { id: 'test', label: '测试与展示', keywords: ['测试', '评估', '展示', '优化', '报告'], subjects: ['math', 'chinese'] },
+    ],
+  };
+  return map[id] || [];
+}
+
+/** 根据项目目标推断模块/子系统（服务端兜底，与前端 domain 逻辑对齐） */
 function inferProjectDomains(goal) {
   const g = String(goal || '');
   if (isConsumerDecisionGoal(g)) {
@@ -91,7 +171,7 @@ function inferProjectDomains(goal) {
       { id: 'system', label: '系统测试与控制', keywords: ['控制', '传感', '传感器', '采集', '实验', '测试', '反馈', '调试', '数据采集', '误差'], subjects: ['info-tech', 'physics'] },
     ];
   }
-  return [];
+  return genericDomainsForType(classifyProjectType(g));
 }
 
 function formatDomainHints(domains) {
@@ -101,112 +181,97 @@ function formatDomainHints(domains) {
   ).join('\n');
 }
 
-function systemPromptMatch(complex) {
-  const base = `你是资深 PBL（项目式学习）导师，同时精通 K12 课标与工程教育。
+function systemPromptMatch(complex, goal) {
+  const base = `你是资深 PBL（项目式学习）导师，精通 K12 各学科课标，能为工程制作、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策等多类项目设计学习路径。
+${typeGuardrailBlock(goal)}
+## 第一步（必做）：把项目拆成「子任务 / 模块」
 
-## 第一步（必做）：拆解项目工程子系统
-
-在选任何候选 index 之前，先在脑中回答：
-「要完成这个项目交付物，学生必须分别解决哪几个**独立子问题**？」
-
-例如「设计并发射模型火箭」必须覆盖：
-- 推进与燃料：燃料燃烧、化学能→动能、推进剂选型
-- 空气动力与弹道：气流、阻力、飞行轨迹、抛体运动
-- 运动学与动力学：牛顿定律、动量、受力与加速度
-- 结构与材料：箭体强度、重心、稳定性
-- 控制与测试：发射角度、数据采集、实验设计与安全
-
-**禁止**跳过子系统直接选「看起来高级」但与项目无关的知识点（如：与火箭无关的纯代数、无关的语文阅读、无关的生物细胞）。
+在选任何候选 index 之前，先回答：「要做出本项目的交付物，学生必须分别解决哪几个**独立子问题**？」不同类型项目的模块不同：
+- 工程/制作：原理 → 装置/结构 → 电路/控制 → 测试迭代
+- 科学探究：问题假设 → 变量与实验设计 → 数据采集 → 分析结论
+- 社会调查：选题抽样 → 资料/问卷收集 → 整理统计 → 结论报告
+- 人文/写作：立意选材 → 阅读积累 → 结构表达 → 修改展示
+- 创意/媒体：创意构思 → 设计草案 → 制作实现 → 展示评议
+- 商业/经济：需求调研 → 方案设计 → 成本定价 → 运营复盘
+- 消费决策：需求调研 → 对比维度 → 成本测算 → 决策报告
 
 ## 第二步：从候选列表选点（相关性门禁）
 
-对候选列表中每个 index，必须通过以下测试才能入选：
-1. **子系统测试**：它能支撑上述哪一个子系统？reason 里必须写明「子系统：XXX」
-2. **删除测试**：若删掉该知识点，学生完成该子系统会明显受阻吗？若不会 → 不选
-3. **课标测试**：名称必须来自候选列表原文，不得编造候选中没有的知识点当作 matched
+对每个 index，必须通过以下测试才能入选：
+1. **模块测试**：它支撑上面哪一个模块？reason 必须以「模块：XXX」开头
+2. **删除测试**：若删掉它，学生完成该模块会明显受阻吗？若不会 → 不选
+3. **课标测试**：名称必须来自候选列表原文，禁止编造候选中没有的知识点
 
 ## 三层知识角色
 
-- **foundation**：完成某子系统所需的工具性知识（如：矢量分解、氧化还原概念）
-- **bridge**：连接 foundation 与工程实现（如：抛体运动分析、流体压强与升力阻力）
-- **core**：直接用于动手环节（如：燃料热值计算、发射实验设计、结构强度估算）
+- **foundation**：完成某模块所需的工具性/前置知识
+- **bridge**：连接基础与产出的关键方法
+- **core**：直接用于动手/产出环节的知识
 
-## 最高优先级：主线清晰 > 跨学科
+## 最高优先级：贴合交付物 > 学科齐全
 
-图谱**只展示核心 matched 节点**（学生按顺序学完就能动手做出来）。
-- **宁可只选 5 个精准节点**，也不要为了跨学科塞入语文作文、地理地形、有机合成等无关内容
-- 跨学科仅在**物理+化学+数学+信息技术**之间自然发生即可，**不强制**凑够多个学科
-- 每个 matched 必须是「删掉它就没法完成项目某一步」的知识
+- 选 matched 的唯一标准：删掉它，项目某一步就做不下去
+- **学科按项目类型自然选取**：工程/科学类多用理科；社会/人文/创作/商业类该用语文、历史、地理、英语、信息技术就大胆用——不要硬塞理科，也不要为凑跨学科塞无关节点
+- 宁可精准 5-8 个，也不为学科齐全凑数
 
 常见错误（绝对禁止）：
-❌ 选「弧长与扇形面积」「世界地形类型」「任务驱动型作文」「有机合成路线」做火箭项目
-❌ 新能源/光伏/电池项目选「细胞结构」「细胞呼吸」「细胞膜」等生物课节点（除非项目明确是生物能源）
-❌ 只选 PID、函数应用等泛知识，却没有燃料、气动、抛体、牛顿定律等核心知识
-❌ 为了凑数量选与交付物八竿子打不着的课标
-❌ 候选里有「抛体运动」「内能与热量」「流体压强」却不选
-❌ STEM 项目只堆「XX计算」「XX守恒定律」——必须覆盖原理/装置/实验/电化学/传感控制，定量计算节点不超过 20%
-❌ 「家庭购车/新能源 vs 燃油对比」写成研发方案——应选统计/函数/内燃机效率/环境排放/说明文，**禁止**电解池、原电池、程序设计、电池温度控制`;
+❌ matched 名称不在候选列表里（编造）
+❌ 工程/制作类只堆「XX计算」「XX守恒定律」，缺原理/装置/实验（定量节点≤20%）
+❌ 「家庭购车/方案对比」写成研发方案（应是统计/函数/科普/环境/说明文，禁止电解池、原电池、程序控制、传感器）
+❌ 人文写作 / 社会调查 / 创意设计类硬塞物理化学公式或工程装置节点
+❌ 为凑学科数量选与交付物无关的节点`;
 
   if (!complex) {
     return `${base}
 
-## 简单项目输出要求
-- matched 10-${PBL_MAX_MATCHED_NORMAL} 个，foundation/bridge/core 均有，且覆盖至少 2 个子系统
-- 每个 matched 的 reason 以「子系统：」开头
+## 输出要求（常规项目）
+- matched 8-${PBL_MAX_MATCHED_NORMAL} 个，foundation/bridge/core 均有，覆盖至少 2 个模块
+- 每个 matched 的 reason 以「模块：」开头
 - dependsOn 构成 DAG；pathOrder 满足依赖顺序
-- projectPhases 4-5 阶段，每阶段 literacy 六维（知识/方法/能力/态度/情感/价值观）各 1 句
-- knowledgeChain 用 → 串联子系统递进路径
+- projectPhases 3-5 阶段，每阶段 literacy 六维（知识/方法/能力/态度/情感/价值观）各 1 句，结合学科与项目类型，禁止套话
+- knowledgeChain 用 → 串联模块递进
 
 只返回 JSON，不要 markdown，不要解释。`;
   }
 
   return `${base}
 
-## 复杂/工程类项目（火箭、机器人、温控系统等）
-
-### 主线选点（matched 5-10 个即可）
-- 覆盖 **推进/气动/动力学/测试** 中至少 3 个子系统，每个 1 个节点就够
-- **总数 5-8 个优先**；节点不够时宁可少选，不要凑无关课标
-- 学科以 physics、chemistry、math、info-tech 为主；**禁止** chinese/geography/history
+## 输出要求（复杂项目）
+- matched 5-10 个；覆盖至少 3 个模块，每个模块 1-2 个节点即可
+- 节点不够时宁可少选，不要凑无关课标
 - foundation 1-2、bridge 2-3、core 2-3
-
-### 火箭类项目选点清单（候选中有近似名称时必须优先选）
-| 子系统 | 应优先在候选中找的课标词 |
-| 推进与燃料 | 氧化还原、燃烧、内能、热值、化学能、能量转化 |
-| 空气动力与弹道 | 抛体运动、流体压强、流速、大气压、飞行 |
-| 运动学与动力学 | 牛顿运动定律、动量、冲量、机械能、受力分析 |
-| 结构与材料 | 压强、材料、结构设计（勿选小学「认识图形」） |
-| 控制与测试 | 实验设计、数据采集、算法、传感器、电路（勿凭空写 PID 除非候选中有） |
-
-### 绝对禁止
-- 小学 1-6 年级、语文作文、地理地形、有机化学合成等与火箭制作无关的 index
-- 用无关知识点凑数量
-- techRoute / knowledgeNames 出现候选列表中不存在的名称
+- knowledgeNames / techRoute 只能出现候选列表中存在的名称
 
 只返回 JSON，不要 markdown，不要任何解释文字。`;
 }
 
-function systemPromptDecompose(complex) {
+function systemPromptDecompose(complex, goal) {
+  const p = projectTypeProfile(goal);
   const depth = complex
-    ? '复杂项目必须给出 2-3 套**不同实施路线**并推荐 1 套。'
-    : '至少给出 2 套可行实施思路，并推荐 1 套。';
-  return `你是资深 PBL 与跨学科课程设计顾问。
+    ? '给出 2-3 套**不同实施路线**并推荐 1 套。'
+    : '至少给出 2 套可行思路并推荐 1 套。';
+  return `你是资深 PBL 与跨学科课程设计顾问，覆盖工程、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策等各类项目。
 
 ## 任务（本阶段**不选课标知识点**）
 
 对用户项目目标做**全链路结构化拆解**：
-1. 先判断项目类型：**消费决策/调查对比**（如家庭购车选型） vs **工程研发/制作**（如设计储能装置）
+1. 判断项目类型（已初步识别：${p.label}）：
+   - 工程/制作：做出装置/系统/原型
+   - 科学探究：用实验回答科学问题
+   - 社会调查：用调查/访谈研究社会现象
+   - 人文/文学：阅读、写作、表达、文化理解
+   - 创意/媒体/艺术：创作海报/视频/作品并展示
+   - 商业/经济：调研—方案—成本—运营
+   - 消费决策：对比方案做出有据决策
 2. 澄清交付物、约束、适用学段
-3. 拆出 3-5 个子系统（决策类：需求调研/对比维度/成本测算/决策报告；工程类：子系统研发）
-4. 给出 ${depth}
+3. 拆出 3-5 个模块（${p.moduleWord}）
+4. ${depth}
 5. 为推荐方案列出 4-5 个**实施阶段**（任务步骤、产出、knowledgeHints 检索词）
 
 ## 原则
-- **严格贴合用户题目**，禁止把「购车对比」写成「新能源汽车研发」
-- 消费决策类：交付物是**决策报告/对比表/答辩**，不是原型、电池装置、数据采集系统
-- 消费决策类 knowledgeHints 用：统计、函数、内燃机效率、排放环境、说明文报告——**禁止**电解池、原电池、程序控制、电池温度控制
-- 工程研发类 knowledgeHints 才用：原电池、传感、电路等
-- 本阶段禁止编造课标节点名称
+- **严格贴合题目类型**：调查/对比类的交付物是报告/对比表/答辩，不是研发原型；写作/创作类的交付物是作品，不是实验装置
+- knowledgeHints 是**检索关键词**，按项目类型选取（理工类用学科概念，人文/社科类用阅读/写作/统计/调查等），不写课标原文节点名
+- 不跑题、不硬凑学科
 
 只返回 JSON，不要 markdown。`;
 }
@@ -214,7 +279,7 @@ function systemPromptDecompose(complex) {
 function userPromptDecompose(goal, complex) {
   const domains = inferProjectDomains(goal);
   const domainBlock = domains.length
-    ? `\n【可参考的工程子系统】\n${formatDomainHints(domains)}\n`
+    ? `\n【可参考的项目模块】\n${formatDomainHints(domains)}\n`
     : '';
   return `【项目目标】
 ${goal}
@@ -278,27 +343,25 @@ ${phases}
 `;
 }
 
-function systemPromptFilter(complex) {
+function systemPromptFilter(complex, goal) {
+  const p = projectTypeProfile(goal);
   const gradeHint = complex
-    ? 'grades 必须 7-12，不含小学。复杂工程类项目 subjects 必须含 physics，且至少再加 chemistry 或 info-tech 之一。'
+    ? 'grades 一般落在 7-12；若项目明显面向小学，可含 1-6。'
     : '';
-  return `你是 PBL 项目与课标对齐专家，擅长把**工程/制作类**项目拆解为可检索的学科与子系统。
-
+  return `你是 PBL 项目与课标对齐专家，能把工程、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策等各类项目拆解为可检索的学科与模块。
+${typeGuardrailBlock(goal)}
 ## 工作流程
-1. 判断项目类型：工程制作 / 科学探究 / 创意设计 / 调查
-2. 列出 3-5 个**工程子系统**（如火箭：推进、气动、结构、控制）
-3. 为每个子系统映射学科：math / physics / chemistry / biology / info-tech 等
+1. 判断项目类型（已识别：${p.label}）
+2. 列出 3-5 个模块（${p.moduleWord}）
+3. 为每个模块映射学科：math / physics / chemistry / biology / science / chinese / english / history / geography / info-tech
 4. 确定适用 grades 与 systems
 
-## 火箭/发射类项目
-- subjects 只允许：physics, chemistry, math, info-tech（**不要** geography/chinese/biology）
-- 必须含 physics；含 chemistry（推进/燃烧）
-
-## 新能源/光伏/储能/电池类项目
-- subjects 只允许：physics, chemistry, math, info-tech（**禁止 biology**）
-- 优先：能量转化原理、原电池/电化学、电路与电磁感应、光伏/风电装置、传感采集与系统测试
-- **严禁**选细胞、细胞呼吸、细胞膜等生物学节点
-- **禁止** matched 全是「守恒定律/综合计算」；必须含 chemistry（如原电池/电化学）与装置/实验类节点
+## 选学科原则（按类型自适应）
+- 学科必须能覆盖上述模块，**按项目类型自然选取**：理工类多用理科；社科/人文/创作/商业类大胆用语文、历史、地理、英语、信息技术
+- 工程/火箭/能源类：以 physics/chemistry/math/info-tech 为主，避免无关人文
+- 消费决策类：以 math（统计/函数）为主，辅以相关科普与说明文写作
+- 社会调查/人文/创作类：以 chinese/geography/history/english/info-tech 为主，不强行加理科
+- 不要为凑学科数量加入与交付物无关的学科
 
 ${gradeHint}
 
@@ -309,10 +372,10 @@ function userPromptFilter(goal, summaryList, complex, projectBlueprint) {
   const domains = inferProjectDomains(goal);
   const blueprintBlock = formatBlueprintForMatch(projectBlueprint);
   const domainBlock = domains.length
-    ? `\n【本项目工程子系统参考（filter 的 subjects 须能覆盖这些）】\n${formatDomainHints(domains)}\n`
+    ? `\n【本项目模块参考（filter 的 subjects 须能覆盖这些）】\n${formatDomainHints(domains)}\n`
     : '';
   const gradeHint = complex
-    ? `\n- grades 必须落在 7-12（初中、高中）`
+    ? `\n- grades 一般落在 7-12（初中、高中），除非项目面向小学`
     : '';
   return `PBL项目目标：${goal}
 ${blueprintBlock}${domainBlock}
@@ -321,20 +384,101 @@ ${summaryList}
 
 返回 JSON：
 {
-  "subjects": ["physics", "chemistry", "math", "info-tech"],
+  "subjects": ["math", "chinese", "geography"],
   "systems": ["cn", "ap"],
-  "grades": [8, 9, 10],
-  "projectDomains": ["推进与燃料", "空气动力与弹道", "运动学与动力学", "结构与材料", "控制与测试"],
-  "reasoning": "说明各子系统对应的学科与年级"
+  "grades": [7, 8, 9],
+  "projectDomains": ["从交付物拆出的 3-5 个模块名称"],
+  "reasoning": "说明各模块对应的学科与年级"
 }
 
 注意：
-- subjects：math/physics/chemistry/biology/chinese/english/history/geography/info-tech/science
+- subjects 取值：math/physics/chemistry/biology/chinese/english/history/geography/info-tech/science
 - systems：cn/ap/cambridge/ib/us
-- projectDomains：从项目交付物拆出的 3-5 个子系统名称
-- 火箭/工程类 subjects 仅限 physics/chemistry/math/info-tech，不要 geography/chinese
-- 最多 4 个学科${gradeHint}`;
+- projectDomains：从项目交付物拆出的 3-5 个模块名称
+- **学科按项目类型自然选取**，理工类用理科、社科人文创作类用文科/信息技术，不要硬塞无关学科
+- 通常 2-5 个学科即可${gradeHint}`;
 }
+
+/** 匹配阶段按项目类型给出针对性红线 */
+function typeMatchHints(goal) {
+  switch (classifyProjectType(goal)) {
+    case 'consumer-decision':
+      return `\n### 类型要求：消费决策\n- 交付物是决策报告/对比测算表；优先统计、函数/百分比、相关科普（如内燃机效率）、环境排放、说明文写作\n- 禁止 matched：电解池、原电池、程序控制、电磁感应、电池温度、传感器、数据采集算法`;
+    case 'engineering':
+      return `\n### 类型要求：工程/制作\n- 覆盖原理→装置→实验→必要定量；含至少 1 个装置/实验类节点\n- 数学 index ≤25%；名称含「计算/求解/方程式」的 ≤20%`;
+    case 'scientific-inquiry':
+      return `\n### 类型要求：科学探究\n- 必含实验设计与数据分析类节点；理论与实验并重，不要只选纯计算`;
+    case 'social-inquiry':
+      return `\n### 类型要求：社会调查\n- 围绕调查方法、统计分析、报告写作；可用语文/地理/历史/数学，**不要塞理科公式**`;
+    case 'humanities-literary':
+      return `\n### 类型要求：人文/文学\n- 围绕阅读、写作、表达、文化理解（语文/英语/历史）；**不要塞理科或工程节点**`;
+    case 'creative-media':
+      return `\n### 类型要求：创意/媒体\n- 围绕创意、设计、制作、展示；仅在确需技术实现时引入信息技术/数学`;
+    case 'business-economics':
+      return `\n### 类型要求：商业/经济\n- 围绕调研、成本定价测算、方案与表达（数学/语文/信息技术）`;
+    default:
+      return `\n### 类型要求：综合实践\n- 每个节点服务交付物某一步，学科按需自然选取`;
+  }
+}
+
+// 复杂非 STEM 项目的示范（社会调查类），避免 LLM 照抄工程示例而跑偏
+const GENERIC_COMPLEX_EXAMPLE = `
+返回 JSON 格式（严格遵循；下列 index 仅为**格式示范**，你必须在【候选知识点】中重新检索并填写真实 index）：
+{
+  "matched": [
+    {"index": 1, "confidence": 0.92, "role": "foundation", "reason": "模块：选题与调查设计。明确调查问题、对象与抽样方法", "dependsOn": []},
+    {"index": 4, "confidence": 0.90, "role": "bridge", "reason": "模块：整理与统计分析。用统计图表呈现调查数据", "dependsOn": [1]},
+    {"index": 7, "confidence": 0.88, "role": "core", "reason": "模块：结论与报告。撰写调查报告并提出建议", "dependsOn": [4]}
+  ],
+  "pathOrder": [1, 4, 7],
+  "knowledgeChain": "调查与抽样设计 → 数据整理与统计图表 → 报告写作与论证表达",
+  "projectPhases": [
+    {
+      "phase": "选题与调查设计",
+      "steps": ["确定调查问题与对象", "设计问卷/访谈提纲与抽样方案"],
+      "knowledgeNames": ["数据的收集"],
+      "deliverable": "调查方案与问卷初稿",
+      "literacy": {
+        "knowledge": "理解抽样与调查方法的适用条件",
+        "method": "用问卷/访谈设计获取一手资料",
+        "ability": "能针对问题设计可操作的调查工具",
+        "attitude": "尊重受访者、如实记录",
+        "emotion": "对真实社会现象产生探究兴趣",
+        "values": "树立实事求是的调查伦理"
+      }
+    },
+    {
+      "phase": "数据整理与分析",
+      "steps": ["整理回收数据", "用统计图表分析趋势"],
+      "knowledgeNames": ["条形统计图与折线统计图"],
+      "deliverable": "数据分析图表",
+      "literacy": {
+        "knowledge": "掌握统计图表的选择与解读",
+        "method": "用平均数/百分比刻画数据特征",
+        "ability": "能从数据中发现规律与异常",
+        "attitude": "客观对待数据，不臆断结论",
+        "emotion": "体验用数据说话的成就感",
+        "values": "尊重数据、不篡改结果"
+      }
+    },
+    {
+      "phase": "结论与报告",
+      "steps": ["归纳结论", "撰写调查报告并提出建议"],
+      "knowledgeNames": ["说明文写作"],
+      "deliverable": "调查报告与答辩",
+      "literacy": {
+        "knowledge": "理解调查报告的结构与论证方式",
+        "method": "用证据支撑结论、分层表达",
+        "ability": "能清晰传达发现并提出可行建议",
+        "attitude": "严谨论证、负责任地发声",
+        "emotion": "在分享中获得表达自信",
+        "values": "关注社会议题、服务公共利益"
+      }
+    }
+  ],
+  "external": [],
+  "techRoute": "阶段一：明确调查问题并设计问卷与抽样；阶段二：整理回收数据并用统计图表分析；阶段三：归纳结论、撰写报告并答辩。"
+}`;
 
 function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint) {
   const matchedRange = complex ? `5-${Math.min(maxMatched, 8)}` : `8-${maxMatched}`;
@@ -342,10 +486,11 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
   const domains = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
   const blueprintSection = formatBlueprintForMatch(projectBlueprint);
   const domainSection = domains.length
-    ? `\n【工程子系统 — 每个至少 1 个 matched，reason 必须以「子系统：XXX」开头】\n${formatDomainHints(domains)}\n`
+    ? `\n【项目模块 — 每个至少 1 个 matched，reason 必须以「模块：XXX」开头】\n${formatDomainHints(domains)}\n`
     : '';
+  const stemType = ['engineering', 'scientific-inquiry'].includes(classifyProjectType(goal));
 
-  // v3.0：主示例改为模型火箭，避免 LLM 照抄温控导致跑偏
+  // 工程类用模型火箭示范；非 STEM 复杂项目用社会调查示范，避免照抄跑偏
   const rocketExample = complex ? `
 返回 JSON 格式（严格遵循；下列 index 仅为**格式示范**，你必须在【候选知识点】中重新检索并填写真实 index，禁止照抄示例数字）：
 {
@@ -425,63 +570,56 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
 返回 JSON 格式（严格遵循）：
 {
   "matched": [
-    {"index": 3, "confidence": 0.95, "role": "foundation", "reason": "子系统：数学建模。建立变量函数关系", "dependsOn": []},
-    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "子系统：原理探究。连接模型与实验", "dependsOn": [3]}
+    {"index": 3, "confidence": 0.95, "role": "foundation", "reason": "模块：基础建模。建立变量与关系", "dependsOn": []},
+    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "模块：原理/方法探究。连接基础与产出", "dependsOn": [3]}
   ],
   "pathOrder": [3, 8],
-  "knowledgeChain": "基础概念 → 原理探究 → 工程实现",
+  "knowledgeChain": "基础概念 → 原理/方法探究 → 产出实现",
   "projectPhases": [],
   "external": [],
-  "techRoute": "按子系统递进实施"
+  "techRoute": "按模块递进实施"
 }`;
+
+  const example = (complex && !stemType) ? GENERIC_COMPLEX_EXAMPLE : rocketExample;
 
   return `【项目目标】
 ${goal}
 ${blueprintSection}${domainSection}
-【候选知识点】（matched 只能选下列 index；**先对齐上方蓝图阶段与 knowledgeHints**，再按子系统检索选 index）
+【候选知识点】（matched 只能选下列 index；**先对齐上方蓝图阶段与 knowledgeHints**，再按模块检索选 index）
 ${candidateList}
 
-${rocketExample}
+${example}
 
 ## 硬性要求
 
-### 0. 主线优先（最高优先级）
-- 每个 matched 的 reason **必须以「子系统：」开头**
-- **5-8 个精准节点**即可；不要为了跨学科凑满 10 个
-- **严禁**选：作文、地形图、有机合成、弧长扇形等与项目制作无关的 index
-- 候选中有「抛体」「内能」「流体」「氧化」「牛顿」必须优先选
-
-### 0a. 消费决策类（购车选型、方案对比）
-- 交付物是**决策报告/对比测算表**，不是研发原型
-- 优先：统计与数据、一次函数/百分比计算、内燃机与热机效率（科普）、环境排放、说明文/论证写作
-- **禁止** matched：电解池、原电池、程序控制、电磁感应、电池温度、传感器、数据采集算法
-
-### 0b. STEM 知识广度（工程类必守）
-- matched 须覆盖：**原理概念 + 装置/现象 + 实验/测试 + 少量必要定量**，不要全是「XX计算」「XX守恒定律」
-- 新能源/火箭类：physics + chemistry 都要有；含至少 1 个实验/装置/传感类 index
-- 数学 index 不超过 matched 总数的 25%；名称含「计算」「求解」「方程式」的 index 不超过 20%
+### 0. 贴合交付物（最高优先级）
+- 每个 matched 的 reason **必须以「模块：」开头**
+- **5-8 个精准节点**即可；不要为了学科齐全凑数
+- **严禁**选与交付物无关的 index（编造、凑数、跑题）
+- 学科按项目类型自然选取，理工类用理科、社科人文创作类用文科/信息技术
+${typeMatchHints(goal)}
 
 ### 1. 数量与角色
 - matched：${matchedRange} 个，confidence≥${minConf}
-- ${complex ? 'foundation 1-2、bridge 2-3、core 2-3；禁止 1-6 年级与语文/地理 index' : ''}
+- ${complex ? 'foundation 1-2、bridge 2-3、core 2-3；避免与交付物无关的 index' : '覆盖至少 2 个模块'}
 
 ### 2. 知识链
 - dependsOn 构成 DAG；pathOrder 满足依赖
-- knowledgeChain 体现子系统递进（如：燃料能量 → 弹道 → 结构 → 测试）
+- knowledgeChain 体现模块递进（按项目类型，如：调查设计 → 数据分析 → 报告表达）
 
 ### 3. projectPhases
-- ${complex ? '4-5' : '3-5'} 个阶段，按子系统组织
+- ${complex ? '4-5' : '3-5'} 个阶段，按模块组织
 - knowledgeNames **只能**使用候选列表中出现的名称（字面匹配或明显子串）
-- 每阶段 literacy 六维各 1 句，禁止套话
+- 每阶段 literacy 六维各 1 句，结合学科与项目类型，禁止套话
 
 ### 4. 跨学科（可选，不强制）
-- 物理+化学自然交叉即可；**禁止**为跨学科引入语文/地理
+- 围绕交付物自然跨学科即可；**禁止**为凑学科引入与项目无关的节点
 
 ### 5. external
 - 最多 ${externalMax} 个，候选中确实没有、项目又必需的专业概念
 
 ### 6. techRoute
-- 中文，500 字内，按子系统串联，体现「先推进原理→再弹道→再结构→再测试」类递进`;
+- 中文，500 字内，按模块串联，体现项目实施的递进逻辑`;
 }
 
 const SUBJECT_ZH = {
@@ -509,14 +647,14 @@ export function buildPBMessages(stage, payload) {
 
   if (stage === 'decompose') {
     return [
-      { role: 'system', content: systemPromptDecompose(complex) },
+      { role: 'system', content: systemPromptDecompose(complex, goal) },
       { role: 'user', content: userPromptDecompose(goal, complex) },
     ];
   }
 
   if (stage === 'filter') {
     return [
-      { role: 'system', content: systemPromptFilter(complex) },
+      { role: 'system', content: systemPromptFilter(complex, goal) },
       { role: 'user', content: userPromptFilter(goal, summaryList, complex, projectBlueprint) },
     ];
   }
@@ -531,7 +669,7 @@ export function buildPBMessages(stage, payload) {
     const hints = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
 
     return [
-      { role: 'system', content: systemPromptMatch(complex) },
+      { role: 'system', content: systemPromptMatch(complex, goal) },
       {
         role: 'user',
         content: userPromptMatch(goal, candidateList, complex, maxMatched, minConf, hints, projectBlueprint),
