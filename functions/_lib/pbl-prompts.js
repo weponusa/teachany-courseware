@@ -38,7 +38,10 @@ function classifyProjectType(goal) {
   if (isConsumerDecisionGoal(g)) return 'consumer-decision';
   if (/海报|短视频|微电影|动画|漫画|插画|绘画|展览|策展|广告|品牌|视觉|游戏设计|作曲|音乐创作|手工艺|表演|舞台|摄影|logo|标志设计|文创|周边设计/.test(g)) return 'creative-media';
   if (/诗歌|诗集|现代诗|诗词|写诗|小说|剧本|散文|绘本|故事集|演讲|辩论|文学|翻译|双语|新闻稿|采访稿|写一[篇组]|作文|征文|朗诵|文集|杂志|读后感|书评|话剧|文章/.test(g)) return 'humanities-literary';
-  if (/创业|商业计划|营销|市场推广|运营|理财|市场调研|义卖|店铺|定价|商业模式|经济效益|盈利|众筹|招商|品牌策划/.test(g)) return 'business-economics';
+  if (/创业|商业计划|营销|市场推广|运营|理财|零花钱|压岁钱|市场调研|义卖|跳蚤市场|店铺|定价|商业模式|经济效益|盈利|众筹|招商|品牌策划/.test(g)) return 'business-economics';
+  if (/健康|营养|饮食|食谱|减脂|减肥|健身|锻炼|运动会?|近视|视力|护眼|睡眠|作息|心理|情绪|压力|安全|急救|防溺水|防火|防疫|卫生|疾病|人体|体重|身高/.test(g)) return 'health-life';
+  if (/种植|种菜|盆栽|养护|养殖|养蚕|园艺|烹饪|烘焙|美食|菜谱|料理|手工|编织|缝纫|收纳|整理|维修|清洁|打扫|劳动/.test(g)) return 'labor-practice';
+  if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|研学|游学|路线规划|时间管理|班级布置|布置教室|嘉年华|游园/.test(g)) return 'life-planning';
   if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|公众.{0,4}认知|居民|乡土|口述史/.test(g)) return 'social-inquiry';
   if (/火箭|导弹|发射|机器人|无人机|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现/.test(g)) return 'engineering';
   if (/探究|实验|观察|测量|验证|影响因素|变量|检测|成分|对照实验|科学问题/.test(g)) return 'scientific-inquiry';
@@ -53,6 +56,9 @@ const TYPE_PROFILES = {
   'humanities-literary': { label: '人文/文学/语言', moduleWord: '创作环节（立意选材 / 阅读积累 / 结构表达 / 修改展示）', subjectsHint: 'chinese、english、history 为主', redlines: '围绕阅读、写作、表达、文化理解；不要塞理科公式或工程装置节点' },
   'creative-media': { label: '创意设计/媒体/艺术', moduleWord: '创作环节（创意构思 / 设计草案 / 制作实现 / 展示评议）', subjectsHint: '结合 info-tech、chinese 及相关学科，技术实现可含数学/信息技术', redlines: '围绕创意表达与制作；只在确需技术实现时引入理科节点' },
   'business-economics': { label: '商业/创业/经济实践', moduleWord: '运营环节（需求调研 / 方案设计 / 成本定价 / 运营复盘）', subjectsHint: 'math（统计/比例/函数）、chinese（策划/表达）为主', redlines: '围绕调研、测算、方案与表达；不要堆无关理科节点' },
+  'life-planning': { label: '生活规划/活动策划', moduleWord: '策划环节（需求目标 / 方案日程 / 预算分工 / 执行复盘）', subjectsHint: 'math（预算/时间/统计）、chinese（策划/通知/总结）、geography（路线）按需', redlines: '围绕目标、方案、预算分工与执行复盘；不要塞无关理科公式或工程装置' },
+  'health-life': { label: '健康生活/运动安全', moduleWord: '健康环节（现状了解 / 知识学习 / 计划制定 / 实践评估）', subjectsHint: 'biology、science（健康原理）、math（统计监测）、chinese（宣传倡议）', redlines: '围绕健康知识、数据监测与行为改进；不要堆与健康无关的工程/纯计算节点' },
+  'labor-practice': { label: '劳动实践/制作', moduleWord: '实践环节（认识准备 / 操作实践 / 观察记录 / 成果分享）', subjectsHint: 'biology、science、chinese、math 按需', redlines: '围绕动手操作、观察记录与成果分享；不要拔高成科研论文或工程系统' },
   'general': { label: '综合实践', moduleWord: '项目模块（调研定义 / 方案设计 / 实施制作 / 测试展示）', subjectsHint: '按交付物自然选取所需学科', redlines: '每个节点都要服务于交付物某一步，不为凑学科塞无关内容' },
 };
 
@@ -97,6 +103,24 @@ function genericDomainsForType(id) {
       { id: 'plan', label: '方案与产品设计', keywords: ['方案', '产品', '设计', '策划', '创意'], subjects: ['chinese', 'info-tech'] },
       { id: 'cost', label: '成本与定价测算', keywords: ['成本', '定价', '利润', '预算', '函数', '百分比', '统计'], subjects: ['math'] },
       { id: 'operate', label: '运营与复盘', keywords: ['运营', '推广', '复盘', '反馈', '报告'], subjects: ['chinese', 'math'] },
+    ],
+    'life-planning': [
+      { id: 'goal', label: '需求与目标', keywords: ['需求', '目标', '调查', '问卷', '场景', '人数'], subjects: ['chinese', 'math'] },
+      { id: 'plan', label: '方案与日程', keywords: ['方案', '计划', '日程', '安排', '路线', '流程', '行程'], subjects: ['chinese', 'geography', 'math'] },
+      { id: 'budget', label: '预算与分工', keywords: ['预算', '成本', '费用', '统计', '函数', '分工', '百分比', '比例'], subjects: ['math'] },
+      { id: 'review', label: '执行与复盘', keywords: ['执行', '记录', '反馈', '复盘', '总结', '报告', '通知'], subjects: ['chinese'] },
+    ],
+    'health-life': [
+      { id: 'status', label: '现状了解', keywords: ['现状', '调查', '统计', '数据', '测量', '记录'], subjects: ['math', 'biology', 'science'] },
+      { id: 'knowledge', label: '健康知识', keywords: ['健康', '营养', '饮食', '运动', '睡眠', '安全', '疾病', '人体', '视力'], subjects: ['biology', 'science'] },
+      { id: 'plan', label: '计划制定', keywords: ['计划', '方案', '目标', '食谱', '作息', '锻炼'], subjects: ['chinese', 'math'] },
+      { id: 'assess', label: '实践与评估', keywords: ['记录', '评估', '对比', '反馈', '改进', '报告', '宣传', '倡议'], subjects: ['chinese', 'math'] },
+    ],
+    'labor-practice': [
+      { id: 'prepare', label: '认识与准备', keywords: ['认识', '准备', '材料', '工具', '原理', '步骤'], subjects: ['science', 'biology', 'chinese'] },
+      { id: 'practice', label: '操作实践', keywords: ['操作', '制作', '种植', '养护', '烹饪', '步骤', '工艺'], subjects: ['science', 'biology'] },
+      { id: 'record', label: '观察与记录', keywords: ['观察', '记录', '测量', '数据', '变化', '统计'], subjects: ['science', 'math', 'biology'] },
+      { id: 'share', label: '成果与分享', keywords: ['成果', '分享', '展示', '总结', '报告', '改进'], subjects: ['chinese'] },
     ],
     'general': [
       { id: 'define', label: '调研与定义', keywords: ['调研', '需求', '定义', '背景', '分析'], subjects: ['chinese', 'math', 'science'] },
@@ -263,6 +287,9 @@ function systemPromptDecompose(complex, goal) {
    - 创意/媒体/艺术：创作海报/视频/作品并展示
    - 商业/经济：调研—方案—成本—运营
    - 消费决策：对比方案做出有据决策
+   - 生活规划/活动策划：班级活动、出游研学、时间/预算安排
+   - 健康生活：营养饮食、运动锻炼、近视/睡眠、安全急救
+   - 劳动实践：种植养殖、烹饪手工、收纳维修等动手任务
 2. 澄清交付物、约束、适用学段
 3. 拆出 3-5 个模块（${p.moduleWord}）
 4. ${depth}
@@ -416,6 +443,12 @@ function typeMatchHints(goal) {
       return `\n### 类型要求：创意/媒体\n- 围绕创意、设计、制作、展示；仅在确需技术实现时引入信息技术/数学`;
     case 'business-economics':
       return `\n### 类型要求：商业/经济\n- 围绕调研、成本定价测算、方案与表达（数学/语文/信息技术）`;
+    case 'life-planning':
+      return `\n### 类型要求：生活规划/活动策划\n- 围绕需求目标、方案日程、预算分工、执行复盘（数学/语文/地理）；不要塞工程装置或纯理科公式`;
+    case 'health-life':
+      return `\n### 类型要求：健康生活\n- 围绕健康知识、现状监测统计、行为计划与评估（生物/科学/数学/语文）；不要堆与健康无关的工程或纯计算节点`;
+    case 'labor-practice':
+      return `\n### 类型要求：劳动实践\n- 围绕动手操作、观察记录、成果分享（科学/生物/语文/数学）；贴近真实操作，不要拔高成科研论文或工程系统`;
     default:
       return `\n### 类型要求：综合实践\n- 每个节点服务交付物某一步，学科按需自然选取`;
   }
