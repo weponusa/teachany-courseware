@@ -22,14 +22,14 @@ export const BACKENDS = {
 
 /**
  * PBL 专用模型链（服务端预设，前端不可改）
- * 1. Qwen3 Next 80B — 中文课标 + 结构化 JSON 最佳免费档
- * 2. Llama 3.3 70B — 国外模型，指令跟随稳
- * 3. GLM-4-Flash — 国内快备，429 时兜底
+ * 1. GLM-4-Flash — 稳定快速，适合 Pages 限时环境
+ * 2. Qwen3 Next 80B — 中文课标 + JSON 质量更高（免费但慢）
+ * 3. Llama 3.3 70B — 国外免费备选
  */
 export const PBL_MODEL_CHAIN = [
+  { backendId: 'paratera', model: 'GLM-4-Flash' },
   { backendId: 'openrouter', model: 'qwen/qwen3-next-80b-a3b-instruct:free' },
   { backendId: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free' },
-  { backendId: 'paratera', model: 'GLM-4-Flash' },
 ];
 
 export const CORS = {
@@ -75,7 +75,7 @@ async function callSingleModel(env, backendId, model, messages, opts) {
   };
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 90000);
+  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 55000);
   try {
     const resp = await fetch(endpoint, {
       method: 'POST',
