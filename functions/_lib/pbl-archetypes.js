@@ -1,8 +1,8 @@
 /**
  * @internal 服务端项目原型解析（与 data/pbl/*.json 逻辑对齐）
  */
-import archetypeData from '../../data/pbl/archetypes.json' with { type: 'json' };
-import registryData from '../../data/pbl/engineering-registry.json' with { type: 'json' };
+import archetypeData from '../../data/pbl/archetypes.json';
+import registryData from '../../data/pbl/engineering-registry.json';
 
 function norm(s) {
   return String(s || '').trim();
