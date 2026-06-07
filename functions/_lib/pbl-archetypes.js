@@ -45,7 +45,7 @@ export function formatArchetypeForMatch(archetype, blueprint) {
 - 学科：${(archetype.subjects || []).join('、')}
 - 禁止 matched 名称含：${bans}
 ${chinese ? `- ${chinese}` : ''}
-- 每个模块至少 1 个 matched，reason 以「模块：XXX」开头并写明本阶段怎么用
+- 每个模块至少 1 个 matched，reason 必须以本原型模块名开头（如「模块：成本测算。」），**禁止**用科学探究套话（问题与假设/变量设计）
 - matched 总数 ${archetype.minMatched || 5}-${archetype.maxMatched || 12}，禁止为凑学科选无关节点
 ${phaseModules ? `蓝图模块对齐：\n${phaseModules}` : ''}`;
 }
