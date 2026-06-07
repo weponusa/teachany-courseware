@@ -329,6 +329,20 @@ class PBLPathBuilder {
       }
     }
 
+    if (this._isFiltrationGoal(goal)) {
+      if (!projectBlueprint?.scopeLimits?.length) {
+        score -= 10;
+        breakdown.push({ key: 'scope', label: '缺少局限说明', delta: -10 });
+      }
+      const unsafeExt = (external || []).some(e =>
+        /塑料微珠|聚酯纤维碎屑|剪塑料|剪塑料袋|亮片/.test(`${e.taskSnippet || ''}${e.name || ''}`)
+      );
+      if (unsafeExt) {
+        score -= 15;
+        breakdown.push({ key: 'unsafe', label: '不安全实验建议', delta: -15 });
+      }
+    }
+
     return {
       score: Math.max(0, Math.min(100, Math.round(score))),
       grade: score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 55 ? 'C' : 'D',
@@ -951,7 +965,22 @@ class PBLPathBuilder {
     if (/太空馆|天文馆|航天馆|科技馆|博物馆|展厅|展陈|太空.*馆|天文.*馆/.test(g) || (/馆|展厅|展览/.test(g + subject) && /重塑|改造|整治|升级|策展|布展|失控|翻新|重建|优化/.test(g))) return 'exhibition-redesign';
     if (/探寻|探索|研究|调研/.test(g) && /创新|产业|经济|行业/.test(g)) return 'industry-innovation';
     if (/种植|栽培|养花|月季|花卉|玫瑰|蔬菜|种菜|盆栽|园艺|养殖|养蚕|花坛|绿化|阳台种/.test(g)) return 'planting-cultivation';
+    if (/微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水|过滤.*水/.test(g)) return 'environmental-filtration';
     return 'subject-anchored';
+  }
+
+  _isFiltrationGoal(goal) {
+    return this._inferTopicKind(String(goal || ''), this._parseGoalSubject(goal)) === 'environmental-filtration';
+  }
+
+  _filtrationDomains() {
+    return [
+      { id: 'scope', label: '指标与局限', keywords: ['指标', '局限', '安全', '宣称', '对照', '变量', '实验'], subjects: ['science', 'chinese'] },
+      { id: 'prefilter', label: '粗滤保护层', keywords: ['粗滤', '滤网', '沉淀', '泥沙', '颗粒', '保护', '滤纸'], subjects: ['science', 'physics'] },
+      { id: 'adsorption', label: '吸附改味层', keywords: ['吸附', '活性炭', '异味', '颜色', '有机物'], subjects: ['chemistry', 'science'] },
+      { id: 'membrane', label: '膜孔径核心层', keywords: ['膜', '孔径', '滤芯', '微滤', '超滤', '陶瓷', '拦截', '微塑料'], subjects: ['chemistry', 'physics', 'science'] },
+      { id: 'test', label: '对照测试与评价', keywords: ['测试', '对照', '流速', '数据', '实验', '记录', '减少率', '统计'], subjects: ['science', 'math', 'physics'] },
+    ];
   }
 
   _plantingCropLabel(goal) {
@@ -987,6 +1016,9 @@ class PBLPathBuilder {
     if (kind === 'planting-cultivation' || /种植|栽培|月季|花卉|蔬菜|盆栽|园艺|养殖|养蚕/.test(g + subject)) {
       base.push('植物', '分类', '生长', '光合', '种子', '萌发', '栽培', '根系', '蒸腾', '观察', '记录');
     }
+    if (kind === 'environmental-filtration' || /微塑料|过滤|净水|废水|滤芯/.test(g + subject)) {
+      base.push('过滤', '沉淀', '吸附', '微塑料', '拦截', '对照', '流速', '孔径', '环境', '污染');
+    }
     for (let i = 0; i < subject.length - 1; i++) {
       const w = subject.slice(i, i + 2);
       if (w.length === 2 && !/[的与及了在]$/.test(w)) base.push(w);
@@ -998,6 +1030,7 @@ class PBLPathBuilder {
     if (kind === 'exhibition-redesign') return `「${subject}」改造方案册（现状诊断表+展陈设计图+整改实施清单+开放验收表）`;
     if (kind === 'industry-innovation') return `「${subject}」创新方案报告（场景调研+政策要点+可行性论证）`;
     if (kind === 'planting-cultivation') return `「${subject}」种植观察日记（植物分类笔记+栽培记录表+生长数据图表+总结）`;
+    if (kind === 'environmental-filtration') return `三级过滤装置原型 + A/B/C 对照实验记录表 + 含局限说明的测试报告`;
     if (/报告|调查|论文|倡议|方案/.test(goal)) return `「${subject}」专题报告（含调研数据与可检查结论）`;
     if (/设计|制作|开发|建造/.test(goal)) return `可展示的「${subject}」作品+过程记录+说明文档`;
     return `「${subject}」项目成果包（可展示交付物+过程记录+说明）`;
@@ -1007,6 +1040,15 @@ class PBLPathBuilder {
   _extractTopicProfile(goal) {
     const g = String(goal || '').trim();
     const presets = [
+      {
+        test: /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/,
+        coreTopic: '微塑料过滤装置',
+        definition: '设计可测试的三级水体过滤装置：粗滤保护层、活性炭吸附改味层、明确孔径的膜/陶瓷核心层，并通过 A/B/C 对照实验验证模型颗粒变化',
+        keywords: ['微塑料', '过滤', '净水', '废水', '滤芯', '沉淀', '吸附', '活性炭', '拦截', '颗粒', '对照', '流速', '孔径', '膜'],
+        banInSteps: ['火箭', '反冲', '抛体', '弹道', '发射', '原型驱动迭代', 'MVP', '快速原型', '塑料微珠', '剪塑料', '亮片'],
+        deliverableHint: '三级过滤装置原型 + A/B/C 对照实验记录表 + 含局限说明的测试报告',
+        kind: 'environmental-filtration',
+      },
       {
         test: /低空经济|低空飞行|低空空域|空域管理|通航产业|城市空中交通|UAM|eVTOL|低空物流|通用航空/,
         coreTopic: '低空经济',
@@ -1195,6 +1237,9 @@ class PBLPathBuilder {
     }
     if (this._isPlantingCultivationGoal(g)) {
       return this._plantingCultivationDomains(g);
+    }
+    if (this._isFiltrationGoal(g)) {
+      return this._filtrationDomains();
     }
     if (this._isExhibitionRedesignGoal(g)) {
       const subject = this._parseGoalSubject(g);
@@ -1710,6 +1755,21 @@ class PBLPathBuilder {
 
     if (!bp.deliverable || /素养|能力|精神|阶段成果$/.test(bp.deliverable) || bp.deliverable.length < 8) {
       bp.deliverable = profile.blueprintDeliverable || `可交付的「${profile.artifact}」成果包（作品+记录+说明）`;
+    }
+
+    if (this._isFiltrationGoal(goal) && (!Array.isArray(bp.scopeLimits) || !bp.scopeLimits.length)) {
+      bp.scopeLimits = [
+        '目标是可验证地减少模型颗粒，不能宣称已去除所有微塑料',
+        '不能把课堂/家庭自制装置等同于认证饮水净化系统',
+        '模型颗粒减少率不能写成真实微塑料去除率',
+      ];
+    }
+    if (this._isFiltrationGoal(goal) && (!Array.isArray(bp.successCriteria) || !bp.successCriteria.length)) {
+      bp.successCriteria = [
+        '完成原水/仅粗滤/完整三级三组对照实验',
+        '固定水量（如300mL）并记录过滤时间或流速',
+        '报告写明各滤层职责与装置局限',
+      ];
     }
 
     bp.schemes = bp.schemes.map(scheme => ({
@@ -3273,6 +3333,117 @@ class PBLPathBuilder {
     return this._buildSubjectAnchoredBlueprint(goal, `「${topic.coreTopic}」${crop}种植实施方案`);
   }
 
+  _buildFiltrationBlueprint(goal) {
+    const topic = this._extractTopicProfile(goal);
+    const subject = topic.coreTopic || '微塑料过滤装置';
+    const elem = /小学|家庭|亲子|四|五/.test(String(goal || ''));
+    const simulant = elem ? '胡椒粉或茶叶碎' : '茶叶碎/细沙等安全模型颗粒';
+    return {
+      projectSummary: `设计可测试的「${subject}」，理解粗滤保护、吸附改味与膜孔径拦截的分工`,
+      deliverable: '三级过滤装置原型 + A/B/C 对照实验记录表 + 含局限说明的测试报告',
+      projectType: 'engineering',
+      constraints: ['实验水不入口', '禁止制造或扩散塑料碎屑', '每阶段产出可检查'],
+      scopeLimits: [
+        '目标是可验证地减少模型颗粒，不能宣称已去除所有微塑料',
+        '不能把课堂/家庭自制装置等同于认证饮水净化系统',
+        '模型颗粒减少率不能写成真实微塑料去除率',
+      ],
+      successCriteria: [
+        '完成原水/仅粗滤/完整三级三组对照实验',
+        '固定水量（如300mL）并记录过滤时间',
+        '报告写明各滤层职责与装置局限',
+      ],
+      subsystems: [
+        { id: 'prefilter', name: '粗滤保护层', description: '拦截泥沙与大颗粒，保护后端滤芯' },
+        { id: 'adsorption', name: '吸附改味层', description: '活性炭改善异味和颜色，非微塑料过滤核心' },
+        { id: 'membrane', name: '膜孔径核心层', description: '明确孔径的膜/陶瓷滤芯承担主要颗粒拦截' },
+        { id: 'test', name: '对照测试评价', description: 'A/B/C 对照，记录流速与颗粒变化' },
+      ],
+      schemes: [
+        {
+          id: 'A',
+          name: '粗滤-活性炭-膜滤芯（推荐）',
+          summary: '三级减量结构：粗滤护后级，活性炭改味，膜孔径决定拦截能力',
+          pros: ['机理清晰', '可对照验证', '适合课堂或家庭科学项目'],
+          cons: ['膜滤芯流速较慢，需检查密封防旁路漏水'],
+          phases: [
+            {
+              phase: '指标与局限界定',
+              steps: [
+                `列出「${subject}」要验证的指标（模型颗粒变化、流速），并写下2条不能宣称的结论（饮水安全、真实去除率）`,
+                `确定实验用水与${simulant}悬浊液配制方案，明确实验水不入口`,
+              ],
+              deliverable: '指标与局限说明卡',
+              subsystemIds: ['test'],
+              knowledgeHints: ['过滤', '实验', '安全', '变量', '对照'],
+            },
+            {
+              phase: '滤层选型与组装',
+              steps: [
+                '制作滤层对比表：粗滤（滤网/滤纸）、活性炭层、膜/陶瓷核心层各写什么孔径或规格、主要作用',
+                '按粗滤→活性炭→膜滤芯顺序组装，检查密封与支架稳定，首次出水作冲洗水不饮用',
+              ],
+              deliverable: '滤层对比表 + 组装检查记录',
+              subsystemIds: ['prefilter', 'adsorption', 'membrane'],
+              knowledgeHints: ['过滤', '吸附', '沉淀', '孔径', '密封', '材料'],
+            },
+            {
+              phase: 'A/B/C 对照实验',
+              steps: [
+                'A组原水不过滤、B组仅粗滤、C组完整三级，各过滤300mL，用同一计时方式记录用时',
+                `在固定光线与背景下拍照比较三组水的颜色与可见颗粒，记录滤纸残留物`,
+              ],
+              deliverable: 'A/B/C 对照实验记录表（含照片编号）',
+              subsystemIds: ['test'],
+              knowledgeHints: ['对照', '实验', '变量', '记录', '观察', '测量'],
+            },
+            {
+              phase: '数据分析与局限说明',
+              steps: [
+                '计算各组流速（水量÷时间，如300mL÷6min=50mL/min），比较C组是否比B组更慢但更清',
+                '在结论中写明：模型颗粒减少率≠真实微塑料去除率，并说明装置不能用于未知野外饮水',
+              ],
+              deliverable: '测试报告（含数据表+局限段落）',
+              subsystemIds: ['test'],
+              knowledgeHints: ['统计', '百分', '数据', '计算', '报告', '说明'],
+            },
+            {
+              phase: '改进与展示',
+              steps: [
+                '根据堵塞或流速下降提出1条改进（如增加粗滤层、先静置再过滤），设计可复测方案',
+                '制作展示海报：装置结构图、对照照片、数据表、不能宣称什么',
+              ],
+              deliverable: '改进方案 + 展示海报',
+              subsystemIds: ['prefilter', 'membrane'],
+              knowledgeHints: ['改进', '设计', '展示', '说明', '环境'],
+            },
+          ],
+        },
+        {
+          id: 'B',
+          name: '仅粗滤演示版',
+          summary: '只用粗滤层演示「能拦什么、拦不住什么」，成本低、便于课堂观察',
+          pros: ['材料易得', '现象直观'],
+          cons: ['不能代表完整微塑料减量能力'],
+          phases: [
+            {
+              phase: '粗滤演示',
+              steps: [
+                `用${simulant}配制悬浊液，对比过滤前后照片，记录粗滤能拦截的颗粒类型`,
+                '撰写说明：粗滤保护后级滤芯，但不是微塑料过滤核心',
+              ],
+              deliverable: '粗滤演示记录',
+              knowledgeHints: ['过滤', '沉淀', '观察', '记录'],
+            },
+          ],
+        },
+      ],
+      recommendedSchemeId: 'A',
+      knowledgeChain: '指标与局限 → 滤层选型组装 → 对照实验 → 数据分析 → 改进展示',
+      fallback: true,
+    };
+  }
+
   _buildIndustryInnovationBlueprint(goal) {
     const topic = this._extractTopicProfile(goal);
     const topicName = topic.coreTopic || '低空经济';
@@ -3316,6 +3487,9 @@ class PBLPathBuilder {
   _fallbackDecomposeBlueprint(goal) {
     if (this._isPlantingCultivationGoal(goal)) {
       return this._sanitizeBlueprintForGoal(this._buildPlantingCultivationBlueprint(goal), goal);
+    }
+    if (this._isFiltrationGoal(goal)) {
+      return this._sanitizeBlueprintForGoal(this._buildFiltrationBlueprint(goal), goal);
     }
     if (this._isExhibitionRedesignGoal(goal)) {
       return this._sanitizeBlueprintForGoal(this._buildExhibitionRedesignBlueprint(goal), goal);

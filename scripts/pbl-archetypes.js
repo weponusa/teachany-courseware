@@ -3,7 +3,7 @@
  * 与 data/pbl/archetypes.json + engineering-registry.json + node-pbl-tags.json 同步
  */
 (function (global) {
-  const CACHE_KEY = 'teachany_pbl_archetypes_v7';
+  const CACHE_KEY = 'teachany_pbl_archetypes_v8';
 
   function norm(s) {
     return String(s || '').trim();
@@ -253,7 +253,7 @@
           .filter(n => !banFn(n))
           .filter(n => !meetsGrade || meetsGrade(n))
           .filter(n => !mod.subjects?.length || mod.subjects.includes(n.subject))
-          .filter(n => this._moduleNodeOk(archetype, mod, n))
+          .filter(n => !archetype || this._moduleNodeOk(archetype, mod, n))
           .map(n => {
             const s = (scoreForModule || ((a, b, c) => this.scoreForModule(a, b, c, archetype)))(n, mod, goalTerms);
             return { n, s };

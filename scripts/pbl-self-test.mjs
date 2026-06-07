@@ -128,7 +128,7 @@ function moduleNodeOk(archetype, mod, node) {
   }
   if (archetype.id === 'water-rocket' && mod.id === 'test' && node.subject === 'info-tech') return false;
   if (archetype.id === 'environmental-filtration' && /火箭|反冲|抛体|弹道|发射/.test(node.name)) return false;
-  if (archetype.id === 'environmental-filtration' && mod.id === 'filtration' && !/过滤|沉淀|吸附|溶液|颗粒|环境|污染|实验/.test(t)) return false;
+  if (archetype.id === 'environmental-filtration' && /^(prefilter|membrane|filtration)$/.test(mod.id) && !/过滤|沉淀|吸附|溶液|颗粒|环境|污染|实验|孔径|膜|陶瓷|滤网/.test(t)) return false;
   if (archetype.id === 'application-writing' && /诗词|文言|小说|人物描写/.test(node.name)) return false;
   if (archetype.id === 'labor-practice' && /朝花夕拾|整本书阅读|文言|外国文学|机械玩具|机器人|电学实验|线性规划|三角函数/.test(node.name)) return false;
   if (archetype.id === 'planting-cultivation') {

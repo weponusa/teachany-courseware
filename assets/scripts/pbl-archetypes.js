@@ -3,7 +3,7 @@
  * 与 data/pbl/archetypes.json + engineering-registry.json + node-pbl-tags.json 同步
  */
 (function (global) {
-  const CACHE_KEY = 'teachany_pbl_archetypes_v7';
+  const CACHE_KEY = 'teachany_pbl_archetypes_v8';
 
   function norm(s) {
     return String(s || '').trim();
@@ -226,7 +226,7 @@
       if (archetype?.id === 'consumer-decision' && node.subject === 'chinese' && !this._passesChinese(node, archetype)) return false;
       if (archetype?.id === 'water-rocket' && /程序|算法|物联网/.test(name)) return false;
       if (archetype?.id === 'environmental-filtration' && /火箭|反冲|抛体|弹道|发射/.test(name)) return false;
-      if (archetype?.id === 'environmental-filtration' && mod.id === 'filtration' && !/过滤|沉淀|吸附|溶液|颗粒|环境|污染|实验|分散/.test(t)) return false;
+      if (archetype?.id === 'environmental-filtration' && /^(prefilter|membrane|filtration)$/.test(mod.id) && !/过滤|沉淀|吸附|溶液|颗粒|环境|污染|实验|分散|孔径|膜|陶瓷|滤网/.test(t)) return false;
       if (archetype?.id === 'mixed-solution-chemistry' && mod.id === 'calc' && !/统计|概率|误差|计算|数据|方程/.test(t)) return false;
       if (archetype?.id === 'consumer-decision' && /线性规划|空间向量|立体几何|三角恒等|恒等变换|排列组合|二项式/.test(name)) return false;
       if (archetype?.id === 'humanities-writing' && /应用文|说明文|调查报告/.test(name) && !/诗|散文|小说|文学/.test(t)) return false;

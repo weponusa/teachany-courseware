@@ -122,7 +122,7 @@ function inferDeliverableHint(goal, subject, kind) {
     return `「${subject}」种植观察日记（植物分类笔记+栽培记录表+生长数据图表+总结）`;
   }
   if (kind === 'environmental-filtration') {
-    return `可测试的「${subject}」原型+材料BOM+过滤效率测试报告（含拦截率数据）`;
+    return `三级过滤装置原型 + A/B/C 对照实验记录表 + 含局限说明的测试报告`;
   }
   if (/报告|调查|论文|倡议|方案/.test(goal)) return `「${subject}」专题报告（含调研数据与可检查结论）`;
   if (/设计|制作|开发|建造/.test(goal)) return `可展示的「${subject}」作品+过程记录+说明文档`;
@@ -168,10 +168,10 @@ function extractTopicProfile(goal) {
     {
       test: /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/,
       coreTopic: '微塑料过滤装置',
-      definition: '设计可测试的小型水体净化/过滤装置，模拟拦截洗衣废水或生活污水中的微塑料颗粒，含进水导流、多级过滤、吸附捕获、密封测试与维护回收',
+      definition: '设计可测试的三级水体过滤装置：粗滤保护层、活性炭吸附改味层、明确孔径的膜/陶瓷核心层，并通过 A/B/C 对照实验验证模型颗粒变化（须写明局限，禁止宣称饮水安全或真实微塑料去除率）',
       keywords: ['微塑料', '过滤', '净水', '废水', '滤芯', '沉淀', '吸附', '活性炭', '拦截', '颗粒', '测试', '拦截率', '密封', '泵', '导流'],
       banInSteps: ['火箭', '反冲', '抛体', '弹道', '发射', '原型驱动迭代', 'MVP', '快速原型', '递进式实施', '浸润式场景'],
-      deliverableHint: '可测试的微塑料过滤装置原型+材料清单+过滤效率测试报告',
+      deliverableHint: '三级过滤装置原型 + A/B/C 对照实验记录表 + 含局限说明的测试报告',
       kind: 'environmental-filtration',
     },
     {
@@ -462,6 +462,9 @@ function inferProjectDomains(goal) {
   if (isPlantingCultivationGoal(g)) {
     return plantingCultivationDomains(g);
   }
+  if (isFiltrationGoal(g)) {
+    return filtrationDomains();
+  }
   if (classifyProjectType(g) === 'exhibition-redesign') {
     const subject = parseGoalSubject(g);
     return [
@@ -607,6 +610,41 @@ ${formatTopicAnchorBlock(goal)}
 只返回 JSON，不要 markdown。`;
 }
 
+function isFiltrationGoal(goal) {
+  const g = String(goal || '');
+  return /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水|过滤.*水/.test(g);
+}
+
+function isElementaryFiltrationGoal(goal) {
+  const g = String(goal || '');
+  return /小学|四年级|五年级|四至五|家庭|亲子|家长/.test(g);
+}
+
+function filtrationDomains() {
+  return [
+    { id: 'scope', label: '指标与局限', keywords: ['指标', '局限', '安全', '宣称', '对照', '变量', '实验'], subjects: ['science', 'chinese'] },
+    { id: 'prefilter', label: '粗滤保护层', keywords: ['粗滤', '滤网', '沉淀', '泥沙', '颗粒', '保护', '滤纸'], subjects: ['science', 'physics'] },
+    { id: 'adsorption', label: '吸附改味层', keywords: ['吸附', '活性炭', '异味', '颜色', '有机物'], subjects: ['chemistry', 'science'] },
+    { id: 'membrane', label: '膜孔径核心层', keywords: ['膜', '孔径', '滤芯', '微滤', '超滤', '陶瓷', '拦截', '微塑料'], subjects: ['chemistry', 'physics', 'science'] },
+    { id: 'test', label: '对照测试与评价', keywords: ['测试', '对照', '流速', '数据', '实验', '记录', '减少率', '统计'], subjects: ['science', 'math', 'physics'] },
+  ];
+}
+
+function filtrationDecomposeHint(goal) {
+  if (!isFiltrationGoal(goal)) return '';
+  const elem = isElementaryFiltrationGoal(goal);
+  return `
+【水体过滤装置拆解 — 硬性要求（机理导向）】
+- subsystems 按过滤机理拆：粗滤保护层 / 吸附改味层 / 膜孔径核心层 / 对照测试评价（**禁止**以「进水导流」「外壳密封」作主模块名）
+- 推荐方案须为「粗滤→活性炭→明确孔径膜/陶瓷滤芯」三级结构，写明各层职责（粗滤护后级、活性炭改味、膜孔径决定拦截能力）
+- 测试阶段须有 A/B/C 对照：原水 / 仅粗滤 / 完整三级，固定水量（如 300mL），记录过滤时间与颗粒变化
+- scopeLimits 至少 2 条：不能宣称饮水安全；${elem ? '模型颗粒实验结果不能写成真实微塑料去除率' : '课堂模拟液结果不能等同真实微塑料去除率'}
+- successCriteria 至少 2 条：有对照组、记录流速或颗粒数、结论写明装置局限
+- ${elem ? '模拟颗粒用胡椒粉/茶叶碎/细沙等安全替代物，**禁止**剪塑料袋、塑料微珠、亮片' : '模拟液须安全可控，**禁止**让学生剪切塑料袋或撒塑料碎屑'}
+- knowledgeChain 示例：指标与局限 → 选型组装 → 对照实验 → 数据分析 → 改进汇报
+`;
+}
+
 function chemistryDecomposeHint(goal) {
   const cap = getChemistryAnalysisProfile(goal);
   if (!isChemistryInquiryGoal(goal) || !cap.mixed) return '';
@@ -625,15 +663,18 @@ function userPromptDecompose(goal, complex) {
     ? `\n【可参考的项目模块】\n${formatDomainHints(domains)}\n`
     : '';
   const chemHint = chemistryDecomposeHint(goal);
+  const filtHint = filtrationDecomposeHint(goal);
   const topicBlock = formatTopicAnchorBlock(goal);
   return `【项目目标】
 ${goal}
-${topicBlock}${domainBlock}${chemHint}
+${topicBlock}${domainBlock}${chemHint}${filtHint}
 返回 JSON（严格遵循字段名）：
 {
   "projectSummary": "一句话概括项目",
   "deliverable": "最终交付物",
   "constraints": ["时间/安全/器材等约束"],
+  "scopeLimits": ["不能宣称的结论或能力边界，至少2条"],
+  "successCriteria": ["可检查的验收标准，至少2条"],
   "subsystems": [
     {"id": "energy", "name": "子系统名", "description": "该子系统要解决的问题"}
   ],
@@ -678,11 +719,13 @@ function formatBlueprintForMatch(blueprint) {
     const steps = (p.steps || []).join('；');
     return `  ${i + 1}. 【${p.phase}】任务：${steps}；产出：${p.deliverable || '阶段成果'}；知识检索提示：${hints}`;
   }).join('\n');
+  const scope = (blueprint.scopeLimits || []).map(s => `  - ${s}`).join('\n');
+  const success = (blueprint.successCriteria || []).map(s => `  - ${s}`).join('\n');
   return `
 【项目实施蓝图 — matched 必须对齐此结构，禁止跑题】
 项目摘要：${blueprint.projectSummary || ''}
 交付物：${blueprint.deliverable || ''}
-推荐方案：${scheme.name}（${scheme.summary || ''}）
+${scope ? `不能宣称：\n${scope}\n` : ''}${success ? `验收标准：\n${success}\n` : ''}推荐方案：${scheme.name}（${scheme.summary || ''}）
 子系统：${subs}
 实施阶段：
 ${phases}
