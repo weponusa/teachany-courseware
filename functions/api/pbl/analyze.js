@@ -13,6 +13,7 @@
  *   domainHints?: object[],
  *   projectBlueprint?: object,
  *   bloomProfile?: object,
+ *   archetypeId?: string,
  *   edges?: object[]
  * }
  *
@@ -79,6 +80,7 @@ export async function onRequestPost(context) {
         domainHints: body.domainHints || null,
         projectBlueprint: body.projectBlueprint || null,
         bloomProfile: body.bloomProfile || null,
+        archetypeId: body.archetypeId || null,
       });
     }
   } catch (e) {

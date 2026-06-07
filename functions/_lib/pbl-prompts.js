@@ -3,6 +3,11 @@ import {
   formatBloomHintForFilter,
   formatBloomHintForMatch,
 } from './pbl-bloom.js';
+import {
+  resolveArchetype,
+  formatArchetypeForMatch,
+  formatRegistryForMatch,
+} from './pbl-archetypes.js';
 
 /**
  * @internal PBL 拆解核心提示词 v5.1 — 仅服务端，勿复制到前端静态资源
@@ -619,7 +624,7 @@ const GENERIC_COMPLEX_EXAMPLE = `
   "techRoute": "阶段一：明确调查问题并设计问卷与抽样；阶段二：整理回收数据并用统计图表分析；阶段三：归纳结论、撰写报告并答辩。"
 }`;
 
-function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint, bloomProfile = null) {
+function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint, bloomProfile = null, archetypeId = null) {
   const matchedRange = complex ? `5-${Math.min(maxMatched, 8)}` : `8-${maxMatched}`;
   const externalMax = complex ? 2 : 3;
   const domains = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
@@ -725,10 +730,15 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
 
   const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
   const bloomBlock = formatBloomHintForMatch(bloom);
+  const archetype = archetypeId
+    ? resolveArchetype(goal, classifyProjectType(goal), getChemistryAnalysisProfile(goal).mixed)
+    : resolveArchetype(goal, classifyProjectType(goal), getChemistryAnalysisProfile(goal).mixed);
+  const archetypeBlock = formatArchetypeForMatch(archetype, projectBlueprint);
+  const registryBlock = archetype ? formatRegistryForMatch(archetype.id) : '';
 
   return `【项目目标】
 ${goal}
-${blueprintSection}${domainSection}${bloomBlock}
+${blueprintSection}${domainSection}${archetypeBlock}${bloomBlock}${registryBlock}
 【候选知识点】（matched 只能选下列 index；**先对齐上方蓝图阶段与 knowledgeHints**，再按模块检索选 index）
 ${candidateList}
 
@@ -790,6 +800,7 @@ export function buildPBMessages(stage, payload) {
     domainHints = null,
     projectBlueprint = null,
     bloomProfile = null,
+    archetypeId = null,
   } = payload;
 
   if (stage === 'decompose') {
@@ -824,7 +835,7 @@ export function buildPBMessages(stage, payload) {
       { role: 'system', content: systemPromptMatch(complex, goal) },
       {
         role: 'user',
-        content: userPromptMatch(goal, candidateList, complex, maxMatched, minConf, hints, projectBlueprint, bloom),
+        content: userPromptMatch(goal, candidateList, complex, maxMatched, minConf, hints, projectBlueprint, bloom, archetypeId),
       },
     ];
   }
