@@ -435,7 +435,7 @@ ${summaryList}
 function typeMatchHints(goal) {
   switch (classifyProjectType(goal)) {
     case 'consumer-decision':
-      return `\n### 类型要求：消费决策\n- 交付物是决策报告/对比测算表；优先统计、函数/百分比、相关科普（如内燃机效率）、环境排放、说明文写作\n- 禁止 matched：电解池、原电池、程序控制、电磁感应、电池温度、传感器、数据采集算法`;
+      return `\n### 类型要求：消费决策\n- 交付物是决策报告/对比测算表；优先统计、函数/百分比、相关科普（如内燃机效率）、环境排放、说明文写作\n- 禁止 matched：电解池、原电池、程序控制、电磁感应、电池温度、传感器、数据采集算法\n- external 示例：全生命周期用车成本、购置补贴/税费政策、保值率评估（课标外）`;
     case 'engineering':
       return `\n### 类型要求：工程/制作\n- 覆盖原理→装置→实验→必要定量；含至少 1 个装置/实验类节点\n- 数学 index ≤25%；名称含「计算/求解/方程式」的 ≤20%`;
     case 'scientific-inquiry':
@@ -514,7 +514,10 @@ const GENERIC_COMPLEX_EXAMPLE = `
       }
     }
   ],
-  "external": [],
+  "external": [
+    {"name": "问卷信效度检验", "reason": "调查工具质量保障方法，课标提及较少但本项目必需", "prerequisites": ["数据的收集"]},
+    {"name": "访谈伦理与知情同意", "reason": "田野调查伦理要求，课本通常不单独讲授"}
+  ],
   "techRoute": "阶段一：明确调查问题并设计问卷与抽样；阶段二：整理回收数据并用统计图表分析；阶段三：归纳结论、撰写报告并答辩。"
 }`;
 
@@ -614,7 +617,9 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
   "pathOrder": [3, 8],
   "knowledgeChain": "基础概念 → 原理/方法探究 → 产出实现",
   "projectPhases": [],
-  "external": [],
+  "external": [
+    {"name": "跨学科资料检索与引用", "reason": "整合多来源信息，课标较少系统讲授但项目落地必需"}
+  ],
   "techRoute": "按模块递进实施"
 }`;
 
@@ -653,8 +658,10 @@ ${typeMatchHints(goal)}
 ### 4. 跨学科（可选，不强制）
 - 围绕交付物自然跨学科即可；**禁止**为凑学科引入与项目无关的节点
 
-### 5. external
-- 最多 ${externalMax} 个，候选中确实没有、项目又必需的专业概念
+### 5. external（课标外，硬性要求）
+- **必须**输出 1-${externalMax} 个课标外知识点，不可为空数组
+- 填写候选列表中**没有**、但完成本项目**确实需要**的专业/实践概念（如安全规范、政策解读、行业方法、工具操作等）
+- 每个 external 须有 name + reason（说明为何课标未覆盖但项目必需）；可选 prerequisites 填关联的 matched 知识点名称
 
 ### 6. techRoute
 - 中文，500 字内，按模块串联，体现项目实施的递进逻辑`;
