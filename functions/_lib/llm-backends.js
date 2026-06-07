@@ -1,6 +1,13 @@
 /** @internal TeachAny LLM 后端配置（仅 Pages Functions，不对外暴露） */
 
 export const BACKENDS = {
+  siliconflow: {
+    name: '硅基流动 DeepSeek-V4-Flash',
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    defaultModel: 'deepseek-ai/DeepSeek-V4-Flash',
+    envKey: 'SILICONFLOW_KEY',
+    extraHeaders: {},
+  },
   paratera: {
     name: '并行超算 GLM-4-Flash',
     baseUrl: 'https://llmapi.paratera.com/v1',
@@ -20,28 +27,35 @@ export const BACKENDS = {
   },
 };
 
+/** @param {string} model */
+export function inferBackendIdForModel(model) {
+  const m = String(model || '').trim();
+  if (!m) return 'siliconflow';
+  if (!m.includes('/')) return 'paratera';
+  if (/^(deepseek-ai|Qwen|THUDM|zai-org|baidu|tencent|moonshotai|MiniMax|Pro\/)/i.test(m)) {
+    return 'siliconflow';
+  }
+  return 'openrouter';
+}
+
 /**
  * PBL 专用模型链（服务端预设，前端不可改）
- * 可通过环境变量 PBL_MODEL_OVERRIDE 临时锁定单模型做 A/B（如 deepseek/deepseek-v4-flash）
+ * 可通过环境变量 PBL_MODEL_OVERRIDE 临时锁定单模型做 A/B
  *
  * 默认顺序：
- * 1. DeepSeek V4 Flash — 中文 + 结构化 JSON 强，速度/成本均衡（OpenRouter 付费）
- * 2. GLM-4-Flash — 稳定快速兜底
- * 3. Qwen3 Next 80B / Llama 3.3 70B — 免费备选
+ * 1. 硅基流动 DeepSeek-V4-Flash — PBL 主模型
+ * 2. GLM-4-Flash — 并行超算兜底
  */
 export const PBL_MODEL_CHAIN = [
-  { backendId: 'openrouter', model: 'deepseek/deepseek-v4-flash' },
+  { backendId: 'siliconflow', model: 'deepseek-ai/DeepSeek-V4-Flash' },
   { backendId: 'paratera', model: 'GLM-4-Flash' },
-  { backendId: 'openrouter', model: 'qwen/qwen3-next-80b-a3b-instruct:free' },
-  { backendId: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free' },
 ];
 
 /** @param {Record<string,string>} env */
 export function resolvePBLModelChain(env = {}) {
   const override = String(env.PBL_MODEL_OVERRIDE || '').trim();
   if (override) {
-    const backendId = override.includes('/') ? 'openrouter' : 'paratera';
-    return [{ backendId, model: override }];
+    return [{ backendId: inferBackendIdForModel(override), model: override }];
   }
   return PBL_MODEL_CHAIN;
 }

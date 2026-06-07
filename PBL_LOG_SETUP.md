@@ -4,13 +4,12 @@ PBL 拆解**不再提供前端模型选择**，统一走服务端预设的免费
 
 ## 服务端模型链（自动降级）
 
-1. `deepseek/deepseek-v4-flash`（OpenRouter）— 默认首选，中文 + 结构化 JSON
+1. `deepseek-ai/DeepSeek-V4-Flash`（硅基流动）— 默认首选
 2. `GLM-4-Flash`（并行超算）— 快速兜底
-3. `qwen/qwen3-next-80b-a3b-instruct:free` / `meta-llama/llama-3.3-70b-instruct:free` — 免费备选
 
-临时 A/B：Pages 环境变量 `PBL_MODEL_OVERRIDE=deepseek/deepseek-v4-pro` 可锁定单模型测试。
+需配置环境变量：`SILICONFLOW_KEY`（PBL 主 Key）、`PARATERA_KEY`（兜底）。
 
-需配置环境变量：`OPENROUTER_KEY`、`PARATERA_KEY`（与现有 LLM 代理相同）。
+临时 A/B：Pages 环境变量 `PBL_MODEL_OVERRIDE=deepseek-ai/DeepSeek-V4-Pro` 可锁定单模型测试。
 
 ## D1 日志表
 
@@ -48,5 +47,5 @@ GET /api/pbl/logs?format=ndjson   # 导出 NDJSON 日志文件
 ## Cloudflare 配置 checklist
 
 1. D1 执行 `0002_pbl_llm_logs.sql`
-2. Pages 环境变量：`OPENROUTER_KEY`、`PARATERA_KEY`（已有则跳过）
+2. Pages 环境变量：`SILICONFLOW_KEY`（PBL 主 Key）、`PARATERA_KEY`（兜底）
 3. 可选：设置 `PBL_LOG_TOKEN` 保护日志 API
