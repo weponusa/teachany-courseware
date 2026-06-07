@@ -505,6 +505,75 @@ function getVisibleNodes() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// LABELS — 默认隐藏；高倍缩放碰撞避让后全显；悬浮/选中单点标注
+// ═══════════════════════════════════════════════════════════════
+
+const LABEL_MIN_SCREEN_GAP = 80; // 全量标注时标签中心最小屏幕间距（px）
+const LABEL_SHOW_ALL_MIN_K = 2.8; // 尝试全量标注的最低缩放
+
+function labelFontSize() {
+  return Math.max(9, 11 / transform.k);
+}
+
+function labelBoxOverlaps(a, b) {
+  return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
+}
+
+function shouldShowAllLabels(visibleCount) {
+  if (visibleCount < 2 || transform.k < LABEL_SHOW_ALL_MIN_K) return false;
+  const density = visibleCount / Math.max(width * height, 1);
+  const estScreenSpacing = Math.sqrt(1 / density) * transform.k * 0.55;
+  return estScreenSpacing >= LABEL_MIN_SCREEN_GAP;
+}
+
+function measureLabelBox(name, x, y, anchorR) {
+  const fontSize = labelFontSize();
+  ctx.font = `${fontSize}px -apple-system, PingFang SC, sans-serif`;
+  const tw = ctx.measureText(name).width;
+  const lx = x;
+  const ly = y - anchorR - 8;
+  const padX = 4;
+  const padY = 3;
+  return {
+    left: lx - tw / 2 - padX,
+    right: lx + tw / 2 + padX,
+    top: ly - fontSize - padY,
+    bottom: ly + padY,
+    lx,
+    ly,
+    fontSize,
+    tw,
+  };
+}
+
+function drawNodeLabel(n, r, alpha, { force = false, placed = null } = {}) {
+  const box = measureLabelBox(n.name, n.x, n.y, r);
+  if (!force && placed) {
+    if (placed.some(b => labelBoxOverlaps(box, b))) return false;
+    placed.push(box);
+  } else if (placed) {
+    placed.push(box);
+  }
+
+  if (force) {
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle = 'rgba(10, 14, 26, 0.9)';
+    ctx.fillRect(box.left, box.top, box.right - box.left, box.bottom - box.top);
+    ctx.strokeStyle = 'rgba(100, 120, 160, 0.35)';
+    ctx.lineWidth = 1 / transform.k;
+    ctx.strokeRect(box.left, box.top, box.right - box.left, box.bottom - box.top);
+  }
+
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = force ? '#f8fafc' : '#e8ecf4';
+  ctx.font = `${box.fontSize}px -apple-system, PingFang SC, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(n.name, box.lx, box.ly);
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // RENDER LOOP (Canvas)
 // ═══════════════════════════════════════════════════════════════
 
@@ -571,6 +640,11 @@ function render() {
   // Draw nodes
   ctx.globalAlpha = 1;
   const nodeRadius = Math.max(3, 5 / Math.sqrt(transform.k));
+  const showAllLabels = shouldShowAllLabels(visibleNodes.length);
+  const placedLabels = showAllLabels ? [] : (searchQuery ? [] : null);
+  const hoverId = hoveredNode?.id;
+  const selectedId = selectedNode?.id;
+
   visibleNodes.forEach(n => {
     if (n.x == null) return;
     const cfg = SUBJECT_CONFIG[n.subject] || { color: '#666' };
@@ -600,13 +674,17 @@ function render() {
       ctx.stroke();
     }
 
-    // Label at zoom
-    if (transform.k > 1.5 || isHighlighted || isSelected || (isSearchHit && searchQuery)) {
-      ctx.globalAlpha = alpha * 0.9;
-      ctx.fillStyle = '#e8ecf4';
-      ctx.font = `${Math.max(9, 11 / transform.k)}px -apple-system, PingFang SC, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(n.name, n.x, n.y - r - 4);
+    // 标注：悬浮/选中单点；搜索命中；或高倍缩放且碰撞不重叠时全量
+    const isHover = hoverId === n.id;
+    const isSel = selectedId === n.id;
+    if (isHover) {
+      drawNodeLabel(n, r, 1, { force: true });
+    } else if (isSel && !hoverId) {
+      drawNodeLabel(n, r, 1, { force: true });
+    } else if (searchQuery && isSearchHit && placedLabels) {
+      drawNodeLabel(n, r, alpha, { placed: placedLabels });
+    } else if (showAllLabels) {
+      drawNodeLabel(n, r, alpha * 0.9, { placed: placedLabels });
     }
   });
 
