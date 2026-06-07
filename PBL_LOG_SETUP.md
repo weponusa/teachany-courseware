@@ -21,7 +21,7 @@ migrations/0002_pbl_llm_logs.sql
 
 每次 `/api/pbl/analyze` 调用会写入：
 
-- 阶段 `decompose` / `filter` / `match`
+- 阶段 `decompose` / `filter` / `match` / `verify-deps`
 - 用户目标 `goal`
 - 完整 `messages`（system + user 提示词）
 - 模型原始返回 `response_text`

@@ -1,6 +1,13 @@
+import {
+  inferBloomFromBlueprint,
+  formatBloomHintForFilter,
+  formatBloomHintForMatch,
+} from './pbl-bloom.js';
+
 /**
- * @internal PBL 拆解核心提示词 v5.0 — 仅服务端，勿复制到前端静态资源
+ * @internal PBL 拆解核心提示词 v5.1 — 仅服务端，勿复制到前端静态资源
  *
+ * v5.1：Bloom 动词层级 filter + match 约束；候选节点注入先修/定义（RAG lite）
  * v5.0：项目类型自适应 — 不再以 STEM/工程为唯一假设，覆盖工程制作、科学探究、
  *       社会调查、人文创作、创意设计、商业实践、消费决策等多类项目；
  *       学科按项目类型自然选取（理工 / 语文 / 历史 / 地理 / 英语 / 信息技术…）。
@@ -468,6 +475,7 @@ ${typeGuardrailBlock(goal)}
 2. 列出 3-5 个模块（${p.moduleWord}）
 3. 为每个模块映射学科：math / physics / chemistry / biology / science / chinese / english / history / geography / info-tech
 4. 确定适用 grades 与 systems
+5. 从蓝图任务动词推断 Bloom 认知上限（bloomCeiling 1-6），过高阶的课标节点在 match 阶段应排除
 
 ## 选学科原则（按类型自适应）
 - 学科必须能覆盖上述模块，**按项目类型自然选取**：理工类多用理科；社科/人文/创作/商业类大胆用语文、历史、地理、英语、信息技术
@@ -481,17 +489,19 @@ ${gradeHint}
 只返回 JSON。`;
 }
 
-function userPromptFilter(goal, summaryList, complex, projectBlueprint) {
+function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomProfile = null) {
   const domains = inferProjectDomains(goal);
   const blueprintBlock = formatBlueprintForMatch(projectBlueprint);
   const domainBlock = domains.length
     ? `\n【本项目模块参考（filter 的 subjects 须能覆盖这些）】\n${formatDomainHints(domains)}\n`
     : '';
+  const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
+  const bloomBlock = formatBloomHintForFilter(bloom);
   const gradeHint = complex
     ? `\n- grades 一般落在 7-12（初中、高中），除非项目面向小学`
     : '';
   return `PBL项目目标：${goal}
-${blueprintBlock}${domainBlock}
+${blueprintBlock}${domainBlock}${bloomBlock}
 可用的知识体系：
 ${summaryList}
 
@@ -501,6 +511,9 @@ ${summaryList}
   "systems": ["cn", "ap"],
   "grades": [7, 8, 9],
   "projectDomains": ["从交付物拆出的 3-5 个模块名称"],
+  "bloomCeiling": 3,
+  "bloomEvidence": ["从蓝图 steps 提取的 2-4 条任务"],
+  "actionVerbs": ["测量", "统计"],
   "reasoning": "说明各模块对应的学科与年级"
 }
 
@@ -606,7 +619,7 @@ const GENERIC_COMPLEX_EXAMPLE = `
   "techRoute": "阶段一：明确调查问题并设计问卷与抽样；阶段二：整理回收数据并用统计图表分析；阶段三：归纳结论、撰写报告并答辩。"
 }`;
 
-function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint) {
+function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint, bloomProfile = null) {
   const matchedRange = complex ? `5-${Math.min(maxMatched, 8)}` : `8-${maxMatched}`;
   const externalMax = complex ? 2 : 3;
   const domains = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
@@ -710,9 +723,12 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
 
   const example = (complex && !stemType) ? GENERIC_COMPLEX_EXAMPLE : rocketExample;
 
+  const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
+  const bloomBlock = formatBloomHintForMatch(bloom);
+
   return `【项目目标】
 ${goal}
-${blueprintSection}${domainSection}
+${blueprintSection}${domainSection}${bloomBlock}
 【候选知识点】（matched 只能选下列 index；**先对齐上方蓝图阶段与 knowledgeHints**，再按模块检索选 index）
 ${candidateList}
 
@@ -773,6 +789,7 @@ export function buildPBMessages(stage, payload) {
     minConf = 0.68,
     domainHints = null,
     projectBlueprint = null,
+    bloomProfile = null,
   } = payload;
 
   if (stage === 'decompose') {
@@ -783,9 +800,10 @@ export function buildPBMessages(stage, payload) {
   }
 
   if (stage === 'filter') {
+    const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
     return [
       { role: 'system', content: systemPromptFilter(complex, goal) },
-      { role: 'user', content: userPromptFilter(goal, summaryList, complex, projectBlueprint) },
+      { role: 'user', content: userPromptFilter(goal, summaryList, complex, projectBlueprint, bloom) },
     ];
   }
 
@@ -793,16 +811,20 @@ export function buildPBMessages(stage, payload) {
     const candidateList = (candidates || []).map((n, i) => {
       const gradeStr = n.gradeLabel || (n.grade ? `G${n.grade}` : '通识');
       const subj = SUBJECT_ZH[n.subject] || n.subject || '';
-      return `[${i}] ${n.name} | ${gradeStr} | ${subj} | ${n.systemTag || ''}`;
+      const prereq = (n.prerequisiteNames || []).slice(0, 3).join('、') || '无';
+      const def = String(n.definition || '').replace(/\s+/g, ' ').slice(0, 72);
+      const defPart = def ? ` | ${def}` : '';
+      return `[${i}] ${n.name} | ${gradeStr} | ${subj} | 先修:${prereq}${defPart}`;
     }).join('\n');
 
     const hints = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
+    const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
 
     return [
       { role: 'system', content: systemPromptMatch(complex, goal) },
       {
         role: 'user',
-        content: userPromptMatch(goal, candidateList, complex, maxMatched, minConf, hints, projectBlueprint),
+        content: userPromptMatch(goal, candidateList, complex, maxMatched, minConf, hints, projectBlueprint, bloom),
       },
     ];
   }

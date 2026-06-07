@@ -3,7 +3,7 @@
  * POST /api/pbl/analyze
  *
  * Body: {
- *   stage: 'decompose' | 'filter' | 'match',
+ *   stage: 'decompose' | 'filter' | 'match' | 'verify-deps',
  *   goal: string,
  *   summaryList?: string,
  *   candidates?: object[],
@@ -11,13 +11,16 @@
  *   maxMatched?: number,
  *   minConf?: number,
  *   domainHints?: object[],
- *   projectBlueprint?: object
+ *   projectBlueprint?: object,
+ *   bloomProfile?: object,
+ *   edges?: object[]
  * }
  *
  * Response: { content: string, model: string, backend: string }
  */
 
 import { buildPBMessages } from '../../_lib/pbl-prompts.js';
+import { buildVerifyDepsMessages } from '../../_lib/pbl-verify-prompts.js';
 import { callBackendLLM, jsonResponse, CORS } from '../../_lib/llm-backends.js';
 import { logPBLCall } from '../../_lib/pbl-logger.js';
 
@@ -36,7 +39,7 @@ export async function onRequestPost(context) {
   }
 
   const stage = body.stage;
-  if (stage !== 'decompose' && stage !== 'filter' && stage !== 'match') {
+  if (stage !== 'decompose' && stage !== 'filter' && stage !== 'match' && stage !== 'verify-deps') {
     return jsonResponse({ error: 'Invalid stage' }, 400);
   }
 
@@ -53,25 +56,42 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: 'Too many candidates' }, 400);
   }
 
+  if (stage === 'verify-deps' && (!Array.isArray(body.edges) || body.edges.length === 0)) {
+    return jsonResponse({ error: 'edges required' }, 400);
+  }
+
+  if (stage === 'verify-deps' && body.edges.length > 24) {
+    return jsonResponse({ error: 'Too many edges' }, 400);
+  }
+
   let messages;
   try {
-    messages = buildPBMessages(stage, {
-      goal,
-      summaryList: body.summaryList || '',
-      candidates: body.candidates || [],
-      complex: !!body.complex,
-      maxMatched: body.maxMatched || (body.complex ? 12 : 18),
-      minConf: body.minConf ?? (body.complex ? 0.68 : 0.52),
-      domainHints: body.domainHints || null,
-      projectBlueprint: body.projectBlueprint || null,
-    });
+    if (stage === 'verify-deps') {
+      messages = buildVerifyDepsMessages({ goal, edges: body.edges });
+    } else {
+      messages = buildPBMessages(stage, {
+        goal,
+        summaryList: body.summaryList || '',
+        candidates: body.candidates || [],
+        complex: !!body.complex,
+        maxMatched: body.maxMatched || (body.complex ? 12 : 18),
+        minConf: body.minConf ?? (body.complex ? 0.68 : 0.52),
+        domainHints: body.domainHints || null,
+        projectBlueprint: body.projectBlueprint || null,
+        bloomProfile: body.bloomProfile || null,
+      });
+    }
   } catch (e) {
     return jsonResponse({ error: e.message }, 400);
   }
 
   const llmOpts = {
-    maxTokens: stage === 'match' ? 8000 : (stage === 'decompose' ? 4500 : 1200),
-    temperature: stage === 'match' ? 0.15 : (stage === 'decompose' ? 0.35 : 0.25),
+    maxTokens: stage === 'match' ? 8000
+      : (stage === 'decompose' ? 4500
+        : (stage === 'verify-deps' ? 2500 : 1200)),
+    temperature: stage === 'match' ? 0.15
+      : (stage === 'decompose' ? 0.35
+        : (stage === 'verify-deps' ? 0.08 : 0.25)),
   };
 
   const t0 = Date.now();
