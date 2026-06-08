@@ -3,7 +3,7 @@
  * POST /api/pbl/analyze
  *
  * Body: {
- *   stage: 'decompose' | 'filter' | 'match' | 'verify-relevance' | 'verify-deps' | 'refine',
+ *   stage: 'decompose' | 'filter' | 'match' | 'verify-relevance' | 'review-curriculum' | 'verify-deps' | 'refine',
  *   model?: string,          // 可选：用户自选模型（服务端 Key 调用）
  *   providerId?: string,     // 可选：siliconflow | paratera | openrouter（与 model 配合）
  *   messagesOnly?: boolean,  // 可选：仅返回 messages，供自定义 API 客户端直连
@@ -26,6 +26,7 @@
 import { buildPBMessages } from '../../_lib/pbl-prompts.js';
 import { buildVerifyDepsMessages } from '../../_lib/pbl-verify-prompts.js';
 import { buildVerifyRelevanceMessages } from '../../_lib/pbl-verify-relevance-prompts.js';
+import { buildReviewCurriculumMessages } from '../../_lib/pbl-review-curriculum-prompts.js';
 import { buildRefineMessages } from '../../_lib/pbl-refine-prompts.js';
 import {
   buildUserModelChain,
@@ -52,7 +53,8 @@ export async function onRequestPost(context) {
 
   const stage = body.stage;
   if (stage !== 'decompose' && stage !== 'filter' && stage !== 'match'
-    && stage !== 'verify-relevance' && stage !== 'verify-deps' && stage !== 'refine') {
+    && stage !== 'verify-relevance' && stage !== 'review-curriculum'
+    && stage !== 'verify-deps' && stage !== 'refine') {
     return jsonResponse({ error: 'Invalid stage' }, 400);
   }
 
@@ -81,6 +83,14 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: 'Too many matched' }, 400);
   }
 
+  if (stage === 'review-curriculum' && (!Array.isArray(body.nodes) || body.nodes.length === 0)) {
+    return jsonResponse({ error: 'nodes required' }, 400);
+  }
+
+  if (stage === 'review-curriculum' && body.nodes.length > 28) {
+    return jsonResponse({ error: 'Too many nodes' }, 400);
+  }
+
   if (stage === 'verify-deps' && (!Array.isArray(body.edges) || body.edges.length === 0)) {
     return jsonResponse({ error: 'edges required' }, 400);
   }
@@ -96,11 +106,16 @@ export async function onRequestPost(context) {
     } else if (stage === 'verify-relevance') {
       messages = buildVerifyRelevanceMessages({
         goal,
-        archetypeId: body.archetypeId || null,
-        projectType: body.projectType || null,
-        allowedSubjects: body.allowedSubjects || [],
         deliverable: body.deliverable || '',
+        projectBlueprint: body.projectBlueprint || null,
         matched: body.matched || [],
+      });
+    } else if (stage === 'review-curriculum') {
+      messages = buildReviewCurriculumMessages({
+        goal,
+        deliverable: body.deliverable || '',
+        projectBlueprint: body.projectBlueprint || null,
+        nodes: body.nodes || [],
       });
     } else if (stage === 'refine') {
       messages = buildRefineMessages({
@@ -137,12 +152,12 @@ export async function onRequestPost(context) {
   const llmOpts = {
     maxTokens: stage === 'match' ? 8000
       : (stage === 'decompose' ? 4500
-        : (stage === 'verify-relevance' ? 3000
+        : (stage === 'verify-relevance' || stage === 'review-curriculum' ? 3500
           : (stage === 'refine' ? 2500
             : (stage === 'verify-deps' ? 2500 : 1200)))),
     temperature: stage === 'match' ? 0.15
       : (stage === 'decompose' ? 0.35
-        : (stage === 'verify-relevance' ? 0.05
+        : (stage === 'verify-relevance' || stage === 'review-curriculum' ? 0.05
           : (stage === 'refine' ? 0.2
             : (stage === 'verify-deps' ? 0.08 : 0.25)))),
   };

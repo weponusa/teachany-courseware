@@ -705,47 +705,18 @@ class PBLPathBuilder {
       .join(' ');
     const basePool = (pool?.length >= 30 ? pool : null) || this._getK12Pool(goal);
     const k12Pool = basePool
-      .filter(n => !this._isGenericTransversalNode(n.name, goal))
-      .filter(n => !archetype || !this._isArchetypeBanned(n, archetype))
-      .filter(n => {
-        if (this._isConsumerDecisionGoal(goal) && !this._isMainlineRelevant(n, goal, domains)) return false;
-        if (floorMode && archetype?.id !== 'consumer-decision') {
-          return (archetype?.subjects || []).includes(n.subject) || this._isMainlineRelevant(n, goal, domains);
-        }
-        return this._isMainlineRelevant(n, goal, domains);
-      })
-      .filter(n => this._isSubjectAllowedForGoal(n, goal, archetype))
-      .filter(n => !this._shouldPurgeBiologyForGoal(goal) || !this._isBiologyHealthNode(n))
+      .filter(n => this._passesHardNodeGate(n, goal, archetype))
       .map(n => ({
         ...n,
-        _score: this._scoreNodeForGoal(n, goalTerms, null, false, domains, goal)
-          + this._scoreNodeForDomains(n, domains)
-          + (hintBlob && domains.some(d => (d.keywords || []).some(k => String(n.name || '').includes(k) || this._nodeSearchText(n).includes(k))) ? 4 : 0)
-          + (hintBlob.split(/[、,，\s]+/).filter(h => h.length >= 2 && this._nodeSearchText(n).includes(h)).length * 3),
+        _score: this._scoreUniversalRelevance(n, goal, blueprint, domains, archetype)
+          + (hintBlob.split(/[、,，\s]+/).filter(h => h.length >= 2 && this._nodeSearchText(n).includes(h)).length * 2),
       }))
-      .filter(n => n._score >= (floorMode ? 1 : 2))
+      .filter(n => n._score >= this._relevanceKeepThreshold(floorMode))
       .sort((a, b) => b._score - a._score);
 
     const picked = [];
     const seen = new Set();
     const roles = ['foundation', 'bridge', 'bridge', 'core', 'core', 'core', 'core', 'core'];
-
-    domains.forEach(dom => {
-      const hit = k12Pool.find(n => {
-        if (seen.has(n.id) || this._scoreNodeForDomains(n, [dom]) < 4) return false;
-        if (this._isConsumerDecisionGoal(goal) && n.subject === 'geography' && !this._isConsumerGeographyRelevant(n, goal)) return false;
-        return true;
-      });
-      if (!hit) return;
-      seen.add(hit.id);
-      picked.push({
-        ...hit,
-        confidence: Math.max(0.62, 0.88 - picked.length * 0.03),
-        matchReason: `K12图谱·${dom.label}`,
-        pblRole: roles[picked.length] || 'core',
-        _rescuedFromK12: true,
-      });
-    });
 
     k12Pool.forEach(n => {
       if (picked.length >= limit || seen.has(n.id)) return;
@@ -1209,43 +1180,92 @@ class PBLPathBuilder {
     return allowed.has(node.subject);
   }
 
-  /** 消费决策类应排除的研发/装置课节点 */
-  _isRdEngineeringNodeName(name, goal) {
-    const n = String(name || '');
-    if (!this._isConsumerDecisionGoal(goal)) return false;
-    return /电解池|原电池|程序控制|电磁感应|电池温度|传感器|数据采集|算法概念|模块化|物联网|闭环控制|电解(?!质)|逆变|并网装置/.test(n);
+  _collectBlueprintHints(blueprint, archetype = null) {
+    const hints = new Set();
+    const add = (s) => {
+      const t = String(s || '').trim();
+      if (t.length >= 2) hints.add(t);
+    };
+    if (blueprint?.deliverable) add(blueprint.deliverable);
+    if (blueprint?.knowledgeChain) {
+      String(blueprint.knowledgeChain).split(/[→、,，\s]+/).forEach(add);
+    }
+    (blueprint?.schemes || []).forEach(s => (s.phases || []).forEach(p => {
+      (p.knowledgeHints || []).forEach(add);
+      add(p.phase);
+      add(p.deliverable);
+      (p.steps || []).forEach(step => {
+        String(step).match(/[\u4e00-\u9fff]{2,12}/g)?.forEach(add);
+      });
+    }));
+    if (this._archetypeEngine) {
+      this._archetypeEngine.blueprintModules(blueprint).forEach(m => (m.hints || []).forEach(add));
+    }
+    (archetype?.modules || []).forEach(m => (m.hints || []).forEach(add));
+    return [...hints];
   }
 
-  /** 消费决策仅保留与排放/气候/能源相关的地理节点，拒绝自然地理、区位、地形等 */
-  _isConsumerGeographyRelevant(node, goal) {
-    if (!this._isConsumerDecisionGoal(goal)) return true;
-    if (node?.subject !== 'geography') return true;
+  _relevanceKeepThreshold(floorMode = false) {
+    return floorMode ? 5 : 7;
+  }
+
+  /** 泛化相关性：目标词 + 蓝图线索 + 领域词 + 节点文本重叠 */
+  _scoreUniversalRelevance(node, goal, blueprint = null, domains = null, archetype = null) {
+    if (!node) return -99;
+    const g = String(goal || '');
+    const domainsList = domains?.length ? domains : this._inferProjectDomains(g);
+    const goalTerms = this._tokenizeGoalTerms(g);
+    const hints = this._collectBlueprintHints(blueprint, archetype);
+    const text = this._nodeSearchText(node);
     const name = String(node.name || '');
-    const blob = `${name} ${this._nodeSearchText(node)}`;
-    if (/地形|地貌|等高线|经纬|经线|纬线|板块|断裂|河流|水系|水文|峡谷|瀑布|土壤|人口|区位|自然地理|区域特征|地图三要素|比例尺|地球仪|昼夜|时区|国界|行政区划|旅游资源|文化景观|世界地形|四大高原|四大盆地|三大平原|洋流|火山|地震|岩石|矿物|内力|外力|城乡规划|产业布局|农业地域|工业地域|交通网络|聚落|地图判读/.test(blob)) {
-      return false;
-    }
-    return /气候|温室|排放|污染|碳|环境|可持续|低碳|尾气|大气|臭氧|雾霾|能源|新能源|生态|环保|全球变暖|气候变化|资源消耗|碳中和|碳达峰|空气质量|PM2\.5|二氧化硫|氮氧化物/.test(blob);
+    let score = 0;
+
+    goalTerms.forEach(t => {
+      if (t.length < 2) return;
+      if (name.includes(t)) score += 5;
+      else if (text.includes(t)) score += 2;
+    });
+    hints.forEach(h => {
+      if (name.includes(h)) score += 7;
+      else if (text.includes(h)) score += 3;
+    });
+    score += this._scoreNodeForDomains(node, domainsList);
+    if (domainsList.some(d => (d.subjects || []).includes(node.subject))) score += 2;
+
+    if (this._isGenericTransversalNode(name, g)) score -= 40;
+    if (!this._shouldAllowUniversityNodes(g) && this._isUniversityNode(node)) score -= 35;
+    if (archetype && this._isArchetypeBanned(node, archetype)) score -= 60;
+    if (this._isK12Node(node)) score += 2;
+
+    const contextBlob = `${g} ${hints.join(' ')} ${domainsList.map(d => `${d.label} ${(d.keywords || []).join('')}`).join(' ')}`;
+    const subjectSignals = {
+      history: /历史|朝代|文物|革命|战争|史|考古/,
+      biology: /生物|细胞|遗传|生态|光合|酶|器官|人体|病毒|细菌/,
+      geography: /地理|环境|气候|污染|排放|地图|区域|资源|地形|区位/,
+    };
+    const sig = subjectSignals[node.subject];
+    if (sig && !sig.test(contextBlob) && !sig.test(name) && !sig.test(text)) score -= 10;
+
+    return score;
   }
 
-  _capConsumerSubjectBalance(nodes, goal) {
-    if (!this._isConsumerDecisionGoal(goal) || !Array.isArray(nodes)) return nodes;
-    const caps = { geography: 1, chinese: 2 };
-    const counts = {};
-    const kept = [];
-    const dropped = [];
-    nodes.forEach(n => {
-      const subj = n.subject || 'other';
-      const cap = caps[subj];
-      if (!cap) { kept.push(n); return; }
-      counts[subj] = (counts[subj] || 0) + 1;
-      if (counts[subj] <= cap) kept.push(n);
-      else dropped.push(n.name);
-    });
-    if (dropped.length) {
-      console.warn('[PBL] 消费决策学科配额裁剪:', dropped.join('、'));
-    }
-    return kept;
+  _passesHardNodeGate(node, goal, archetype = null) {
+    if (!node) return false;
+    if (node.isExternal || node.layer === 'external' || String(node.id || '').startsWith('ext-')) return true;
+    if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return false;
+    if (archetype && this._isArchetypeBanned(node, archetype)) return false;
+    if (this._isGenericTransversalNode(node.name, goal)) return false;
+    return true;
+  }
+
+  _shouldAttachPrerequisite(preNode, childNode, goal, blueprint, domains, archetype) {
+    if (!preNode || !childNode) return false;
+    if (!this._passesHardNodeGate(preNode, goal, archetype)) return false;
+    const preScore = this._scoreUniversalRelevance(preNode, goal, blueprint, domains, archetype);
+    const childScore = this._scoreUniversalRelevance(childNode, goal, blueprint, domains, archetype);
+    if (preScore < 5) return false;
+    if (preNode.subject !== childNode.subject && preScore < Math.max(6, childScore * 0.45)) return false;
+    return true;
   }
 
   _parseGoalSubject(goal) {
@@ -1871,25 +1891,18 @@ class PBLPathBuilder {
     return nodes.filter(n => !this._isAviationAerospaceNode(n));
   }
 
-  /** 返回无关节点剔除原因；null 表示可保留 */
+  /** 返回无关节点剔除原因；null 表示可保留（硬门禁 + 泛化相关性分） */
   _getNodeIrrelevanceReason(node, goal, domains, archetype) {
     if (!node) return '空节点';
     if (node.isExternal || node.layer === 'external' || String(node.id || '').startsWith('ext-')) return null;
-    if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return '大学层默认排除';
-    const name = String(node.name || '');
-    if (archetype && this._isArchetypeBanned(node, archetype)) return '原型禁用';
-    if (this._isGenericTransversalNode(name, goal)) return '泛素养';
-    if (this._isConsumerDecisionGoal(goal) && this._isHistoryCurriculumNode(node)) return '消费决策禁用历史';
-    if (this._isConsumerDecisionGoal(goal) && node.subject === 'geography' && !this._isConsumerGeographyRelevant(node, goal)) {
-      return '消费决策地理噪声';
+    if (!this._passesHardNodeGate(node, goal, archetype)) {
+      if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return '大学层默认排除';
+      if (archetype && this._isArchetypeBanned(node, archetype)) return '原型禁用';
+      return '泛素养或硬门禁';
     }
-    if (!this._isSubjectAllowedForGoal(node, goal, archetype)) return '学科白名单外';
-    if (!this._isMainlineRelevant(node, goal, domains)) return '主线不符';
-    if (this._shouldPurgeAviationForGoal(goal) && this._isAviationAerospaceNode(node)) return '航空噪声';
-    if (this._shouldPurgeBiologyForGoal(goal) && this._isBiologyHealthNode(node)) return '生物噪声';
-    if (this._isGroundRoboticsGoal(goal) && /正则表达式|上下文无关|形式语言|编译原理|自动机|量子力学|天体|抗生素|耐药|免疫|细胞/.test(name)) {
-      return '无关大学节点';
-    }
+    const blueprint = this._activeBlueprint || null;
+    const score = this._scoreUniversalRelevance(node, goal, blueprint, domains, archetype);
+    if (score < this._relevanceKeepThreshold(false)) return `相关性不足(${score})`;
     return null;
   }
 
@@ -2530,88 +2543,12 @@ class PBLPathBuilder {
     return this._defaultDeliverable(role || 'core', goal);
   }
 
-  /** 主线相关性：STEM/工程项目宁缺毋滥，拒绝语文/地理/无关生物等 */
-  _isMainlineRelevant(node, goal, domains) {
-    if (!node) return false;
-    const g = String(goal || '');
-    const domainList = domains && domains.length ? domains : this._inferProjectDomains(g);
-    const name = String(node.name || '');
-    if (this._isGenericTransversalNode(name, g)) return false;
-    const text = this._nodeSearchText(node);
-    const stemGoal = this._isStemProjectGoal(g);
-    const consumerGoal = this._isConsumerDecisionGoal(g);
-
-    if (consumerGoal) {
-      if (this._isHistoryCurriculumNode(node)) return false;
-      if (!this._isSubjectAllowedForGoal(node, g, null)) return false;
-      if (this._isRdEngineeringNodeName(name, g)) return false;
-      if (this._isBiologyNodeName(name)) return false;
-      if (node.subject === 'geography' && !this._isConsumerGeographyRelevant(node, g)) return false;
-      if (/比热容/.test(name) && !/热|环境/.test(text)) return false;
-    }
-
-    if (this._isSocialOrCivicInquiryGoal(g)) {
-      if (this._isBiologyNodeName(name)) return false;
-      if (['biology', 'advanced-biology'].includes(node.subject)) return false;
-      if (/植物|生物分类|细胞|微观|有丝分裂|减数分裂|DNA|基因|光合|酶/.test(name) && /分类/.test(name)) return false;
-    }
-
-    if (this._isGroundRoboticsGoal(g)) {
-      if (this._isAviationAerospaceNode(node)) return false;
-      if (this._isBiologyHealthNode(node)) return false;
-      if (/正则表达式|上下文无关文法|形式语言|编译原理|抗生素|耐药|细胞|免疫|病毒|细菌|药物/.test(name)) return false;
-    }
-
-    if (this._isChemistryInquiryGoal(g)) {
-      if (node.subject === 'info-tech') return false;
-      if (/程序|编程|算法|循环结构|分支结构|变量和数据类型|模块化|物联网/.test(name)) return false;
-      if (/人体.*器官|器官系统|循环.*系统|消化.*系统|呼吸.*系统|神经.*系统/.test(name)) return false;
-      if (/饮食.*健康|营养.*均衡|食物.*营养/.test(name) && !/钠|盐|矿物|离子|化学/.test(text)) return false;
-      if (node.subject === 'biology' && this._isBiologyNodeName(name)) return false;
-      if (this._getChemistryAnalysisProfile(g).mixed) {
-        if (/^(数据收集|数据的描述|统计图的认识)$/.test(name)) return false;
-        if (/质量分数|配制溶液/.test(name) && !/滴定|物质的量|离子|摩尔|电导/.test(text)) return false;
-      }
-    }
-
-    if (stemGoal) {
-      const badName = /作文|写作|任务驱动|实用类文本|地形|等高线|经纬|有机合成|官能团|烃的|弧长|扇形面积|几何图形初步|诗词|文言|议论文结构|世界地形/;
-      if (badName.test(name)) return false;
-      if (this._isBiologyHealthNode(node) && !/生物|细胞|生态|光合|发酵|酶|遗传|健康|人体|医学/.test(g)) return false;
-      const humanities = ['chinese', 'english', 'history', 'geography'];
-      if (humanities.includes(node.subject)) {
-        const need = {
-          chinese: /语文|作文|写作|阅读/,
-          english: /英语/,
-          history: /历史/,
-          geography: /地理|地形|地图/
-        };
-        if (!need[node.subject]?.test(g)) return false;
-      }
-      const allowedStem = new Set(['physics', 'chemistry', 'math', 'info-tech', 'science']);
-      if (this._isGroundRoboticsGoal(g)) {
-        ['engineering', 'computer-science'].forEach(s => allowedStem.add(s));
-      }
-      if (domainList.length && !allowedStem.has(node.subject)) return false;
-    }
-
-    if (!domainList.length) {
-      if (stemGoal) {
-        if (this._isBiologyNodeName(name) || node.subject === 'biology') return false;
-        const goalTerms = this._tokenizeGoalTerms(g);
-        return goalTerms.some(t => t.length >= 2 && (name.includes(t) || text.includes(t)));
-      }
-      return true;
-    }
-    const goalTerms = this._tokenizeGoalTerms(g);
-    // 非 STEM（生活化/人文/社科/创意/商业等）：节点学科须落在项目模块取向内，
-    // 避免「有机合成路线设计」靠「设计/路线」等通用词混入研学/文创等项目
-    const domainSubjects = new Set(domainList.flatMap(d => d.subjects || []));
-    const subjectOk = stemGoal || domainSubjects.size === 0 || domainSubjects.has(node.subject);
-    if (subjectOk && this._scoreNodeForDomains(node, domainList) >= 4) return true;
-    if (subjectOk && goalTerms.some(t => t.length >= 2 && name.includes(t))) return true;
-    if (stemGoal) return goalTerms.some(t => t.length >= 3 && text.includes(t));
-    return subjectOk && goalTerms.some(t => t.length >= 2 && text.includes(t));
+  /** 主线相关性：硬门禁 + 泛化相关性分（不依赖项目类型特化规则） */
+  _isMainlineRelevant(node, goal, domains, blueprint = null, archetype = null, floorMode = false) {
+    if (!this._passesHardNodeGate(node, goal, archetype)) return false;
+    const bp = blueprint || this._activeBlueprint || null;
+    const score = this._scoreUniversalRelevance(node, goal, bp, domains, archetype);
+    return score >= this._relevanceKeepThreshold(floorMode);
   }
 
   _filterMainlineNodes(matched, goal, archetype = null) {
@@ -2639,32 +2576,8 @@ class PBLPathBuilder {
     if (goal && (domains?.length || this._isStemProjectGoal(goal))) {
       score += this._stemBreadthScoreAdjust(node, goal);
     }
-    if (goal && this._isConsumerDecisionGoal(goal)) {
-      if (this._isRdEngineeringNodeName(node.name, goal)) score -= 20;
-      if (node.subject === 'geography' && !this._isConsumerGeographyRelevant(node, goal)) score -= 25;
-      else if (node.subject === 'geography') score += 4;
-      if (['math', 'chinese'].includes(node.subject)) score += 3;
-      if (/内燃机|热机|效率|统计|函数|环境|排放|污染|气候|温室|碳/.test(node.name || '')) score += 5;
-    }
-    if (goal && this._isSocialOrCivicInquiryGoal(goal)) {
-      if (['chinese', 'math', 'geography', 'science'].includes(node.subject)) score += 2;
-      if (/统计|调查|说明|报告|环境|垃圾|分类|问卷|图表|百分比|倡议/.test(node.name || '')) score += 6;
-      if (this._isBiologyNodeName(node.name)) score -= 20;
-    }
-    if (goal && this._isChemistryInquiryGoal(goal)) {
-      const cap = this._getChemistryAnalysisProfile(goal);
-      if (node.subject === 'chemistry') score += 8;
-      if (cap.mixed) {
-        if (/滴定|硝酸银|沉淀|离子反应|物质的量|摩尔|化学方程式|电解质|电离|氯离子/.test(node.name || '')) score += 9;
-        if (/电导|导电|电阻率|电解质溶液/.test(node.name || '')) score += 7;
-        if (/质量分数|配制溶液|称量溶解/.test(node.name || '') && !/滴定|物质的量|离子/.test(node.name || '')) score -= 10;
-      } else {
-        if (/溶液|浓度|溶解|溶质|溶剂|质量分数|配制|氯化钠/.test(node.name || '')) score += 6;
-      }
-      if (node.subject === 'math' && /数据|统计|图表|百分比|计算/.test(node.name || '')) score += 3;
-      if (node.subject === 'physics' && cap.mixed && /电导|导电|电解质/.test(node.name || '')) score += 5;
-      if (node.subject === 'info-tech') score -= 18;
-      if (/器官系统|程序设计|程序控制|饮食.*健康|营养.*均衡/.test(node.name || '')) score -= 22;
+    if (goal) {
+      score += Math.min(12, this._scoreUniversalRelevance(node, goal, this._activeBlueprint, domains, null) * 0.35);
     }
     return score;
   }
@@ -3113,10 +3026,8 @@ class PBLPathBuilder {
     const domains = this._inferProjectDomains(goal);
     if (archetype && this._archetypeEngine) {
       const pool = candidates.filter(n => {
-        if (this._isArchetypeBanned(n, archetype)) return false;
         if (!this._meetsArchetypeGrade(n, archetype, goal)) return false;
-        return this._isMainlineRelevant(n, goal, domains)
-          || (archetype.subjects || []).includes(n.subject);
+        return this._isMainlineRelevant(n, goal, domains, blueprint, archetype, true);
       });
       const picked = this._archetypeEngine.pickCandidates(
         pool, archetype, blueprint, Math.min(limit, archetype.maxMatched || limit), goalTerms,
@@ -3345,7 +3256,6 @@ class PBLPathBuilder {
   async _llmVerifyRelevanceStage(goal, stage2, candidates, archetype = null, projectBlueprint = null) {
     if (!stage2?.matched?.length) return stage2;
 
-    const allowed = this._getAllowedSubjects(goal, archetype);
     const matchedLite = stage2.matched.map(n => {
       const idx = candidates.findIndex(c => c.id === n.id);
       return {
@@ -3361,21 +3271,16 @@ class PBLPathBuilder {
     const ruleRemoveIdx = new Set();
     matchedLite.forEach(n => {
       const node = candidates[n.index];
-      if (!node) return;
-      const reason = this._getNodeIrrelevanceReason(
-        node, goal, this._inferProjectDomains(goal), archetype
-      );
-      if (reason) ruleRemoveIdx.add(n.index);
+      if (!node || this._passesHardNodeGate(node, goal, archetype)) return;
+      ruleRemoveIdx.add(n.index);
     });
 
     let llmRemove = [];
     try {
       const response = await this._callPBLAnalyzeStage('verify-relevance', {
         goal,
-        archetypeId: archetype?.id || null,
-        projectType: this._classifyProjectType(goal),
-        allowedSubjects: allowed ? [...allowed] : [],
         deliverable: projectBlueprint?.deliverable || '',
+        projectBlueprint,
         matched: matchedLite,
       });
       const jsonStr = this._extractJsonObject(response);
@@ -3384,14 +3289,60 @@ class PBLPathBuilder {
         index: typeof r.index === 'number' ? r.index : parseInt(r.index, 10),
         reason: r.reason || 'LLM审核剔除',
       })).filter(r => Number.isInteger(r.index) && r.index >= 0);
+      if (parsed.summary) console.warn('[PBL] verify-relevance:', parsed.summary);
     } catch (e) {
-      console.warn('[PBL] verify-relevance 失败，仅使用规则白名单:', e.message);
+      console.warn('[PBL] verify-relevance 失败，仅使用硬门禁:', e.message);
     }
 
     const merged = new Map();
-    [...ruleRemoveIdx].forEach(idx => merged.set(idx, { index: idx, reason: '规则白名单' }));
+    [...ruleRemoveIdx].forEach(idx => merged.set(idx, { index: idx, reason: '硬门禁' }));
     llmRemove.forEach(r => merged.set(r.index, r));
     return this._applyRelevanceVerification(stage2, candidates, [...merged.values()]);
+  }
+
+  async _llmReviewCurriculumStage(goal, nodes, projectBlueprint, archetype = null) {
+    const curriculum = (nodes || []).filter(n => n && n.layer !== 'external' && !n.isExternal);
+    if (!curriculum.length) return { nodes: nodes || [], removed: [], summary: '' };
+
+    const lite = curriculum.map((n, i) => ({
+      index: i,
+      id: n.id,
+      name: n.name,
+      subject: n.subject,
+      grade: parseInt(n.grade, 10) || 0,
+      layer: n.layer || 'matched',
+      reason: n.matchReason || '',
+      definition: (n.definition || '').slice(0, 100),
+    }));
+
+    let removeIdx = new Set();
+    let summary = '';
+    try {
+      const response = await this._callPBLAnalyzeStage('review-curriculum', {
+        goal,
+        deliverable: projectBlueprint?.deliverable || '',
+        projectBlueprint,
+        nodes: lite,
+      });
+      const parsed = JSON.parse(this._extractJsonObject(response));
+      (parsed.remove || []).forEach(r => {
+        const idx = typeof r.index === 'number' ? r.index : parseInt(r.index, 10);
+        if (Number.isInteger(idx) && idx >= 0 && idx < lite.length) removeIdx.add(idx);
+      });
+      summary = parsed.summary || '';
+      if (summary) console.warn('[PBL] review-curriculum:', summary);
+    } catch (e) {
+      console.warn('[PBL] review-curriculum 失败，保留规则分过滤结果:', e.message);
+      return { nodes, removed: [], summary: '' };
+    }
+
+    const removeIds = new Set([...removeIdx].map(i => lite[i]?.id).filter(Boolean));
+    const removed = lite.filter((n, i) => removeIdx.has(i));
+    const kept = (nodes || []).filter(n => !removeIds.has(n.id));
+    if (removed.length) {
+      console.warn('[PBL] LLM 二次检讨剔除:', removed.map(r => `${r.name}(${r.reason || '无关节点'})`).join('、'));
+    }
+    return { nodes: kept, removed, summary };
   }
 
   async _llmVerifyDepsStage(goal, matchResult, candidates, matched) {
@@ -3957,17 +3908,6 @@ class PBLPathBuilder {
         seen.add(n.id);
         list.push(n);
       });
-    }
-    list = this._capConsumerSubjectBalance(list.slice(0, limit), goal);
-    if (list.length < min) {
-      const refillPool = effectivePool.filter(n => !list.some(x => x.id === n.id));
-      this._rescueFromK12KnowledgeGraph(goal, blueprint, archetype, limit, refillPool, { floorMode: true })
-        .forEach(n => {
-          if (list.length >= min || list.some(x => x.id === n.id)) return;
-          if (this._isConsumerDecisionGoal(goal) && n.subject === 'geography' && list.some(x => x.subject === 'geography')) return;
-          list.push(n);
-        });
-      list = this._capConsumerSubjectBalance(this._assignCoreRoles(list.slice(0, limit), min), goal);
     }
     return this._assignCoreRoles(list.slice(0, limit), min);
   }
@@ -4895,30 +4835,24 @@ class PBLPathBuilder {
     });
 
     const matchedIds = new Set(matchedNodes.map(n => n.id));
-    const consumerGoal = this._isConsumerDecisionGoal(goal);
+    const blueprint = this._activeBlueprint || null;
+    const archetype = this._resolvedArchetype || null;
     matchedNodes.forEach(n => {
       const kg = this.unifiedIndex.get(n.id);
       if (!kg) return;
-      const prereqLimit = consumerGoal ? 1 : 5;
-      (kg.prerequisites || []).slice(0, prereqLimit).forEach(preId => {
+      (kg.prerequisites || []).slice(0, 2).forEach(preId => {
         if (matchedIds.has(preId) || nodeMap.has(preId)) return;
         const preNode = this.unifiedIndex.get(preId);
         if (!preNode) return;
         if (complex && this._excludeForComplexProject(preNode)) return;
-        if (consumerGoal) {
-          if (['history', 'biology', 'geography'].includes(preNode.subject) && preNode.subject !== kg.subject) return;
-          if (preNode.subject === 'geography' && !this._isConsumerGeographyRelevant(preNode, goal)) return;
-          if (!['math', 'physics', 'chemistry', 'chinese'].includes(preNode.subject) && preNode.subject !== kg.subject) return;
-        }
-        if (domains.length && !this._isMainlineRelevant(preNode, goal, domains)) return;
+        if (!this._shouldAttachPrerequisite(preNode, n, goal, blueprint, domains, archetype)) return;
         const enriched = { ...preNode, layer: 'prerequisite' };
         base.nodes.push(enriched);
         nodeMap.set(preId, enriched);
         links.push({ source: preId, target: n.id, type: 'prerequisite' });
       });
 
-      // 全科图谱增强：消费决策等严格类型不展开跨学科邻居，避免历史/自然地理噪声渗入
-      const strictGraphExpansion = consumerGoal;
+      const strictGraphExpansion = true;
       if (this.graphLoaded && !strictGraphExpansion) {
         const graphNb = this.graphNeighbors.get(n.id);
         if (graphNb) {
@@ -5166,6 +5100,7 @@ class PBLPathBuilder {
     this._reportPBLStatus(onStatus, '第 1/5 步：全链路拆解可行方案...');
     let projectBlueprint = await this._llmDecomposeStage(goal);
     projectBlueprint = this._concretizeBlueprint(goal, projectBlueprint, archetype);
+    this._activeBlueprint = projectBlueprint;
     const blueprintPhases = this._blueprintProjectPhases(projectBlueprint, goal);
     const bloomProfile = this._inferBloomProfile(projectBlueprint);
 
@@ -5234,6 +5169,49 @@ class PBLPathBuilder {
       dependsOnLinks: stage2.dependsOnLinks,
       projectBlueprint,
     });
+
+    this._reportPBLStatus(onStatus, 'LLM 二次检讨课内节点...');
+    const reviewed = await this._llmReviewCurriculumStage(
+      goal,
+      outputAudit.graphData?.nodes || [],
+      projectBlueprint,
+      archetype
+    );
+    if (reviewed.removed?.length) {
+      const keptIds = new Set(reviewed.nodes.map(n => n.id));
+      const links = (outputAudit.graphData?.links || []).filter(l => {
+        const src = typeof l.source === 'object' ? l.source.id : l.source;
+        const tgt = typeof l.target === 'object' ? l.target.id : l.target;
+        return keptIds.has(src) && keptIds.has(tgt);
+      });
+      outputAudit.graphData = { nodes: reviewed.nodes, links };
+      outputAudit.matched = this._getMainlinePath(outputAudit.graphData).length
+        ? this._getMainlinePath(outputAudit.graphData)
+        : reviewed.nodes.filter(n => n.layer === 'matched' || (n.pblRole || 'core') === 'core');
+      const min = this._getMinMatchedFloor(archetype);
+      if (outputAudit.matched.length < min) {
+        const refilled = this._guaranteeCurriculumFloor(
+          outputAudit.matched,
+          goal,
+          curriculumPool,
+          archetype,
+          this._getPBLGoalProfile(goal).maxMatched,
+          outputAudit.complex,
+          projectBlueprint
+        );
+        const graphData = this._buildRichMainlineGraph(
+          refilled,
+          stage2.pathOrderIds || [],
+          goal,
+          stage2.dependsOnLinks || [],
+          outputAudit.external || []
+        );
+        outputAudit.matched = refilled;
+        outputAudit.graphData = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES);
+        console.warn('[PBL] 检讨后不足底线，已按泛化分重补:', refilled.map(n => n.name).join('、'));
+      }
+    }
+
     const finalMatched = outputAudit.matched;
     const finalExternal = outputAudit.external;
     const finalGraphData = outputAudit.graphData;
