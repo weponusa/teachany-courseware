@@ -12,10 +12,12 @@ class PBLPathBuilder {
     this.loaded = false;
     this._loadPromise = null;
 
-    // 全科图谱增强：跨学科边关系图
+    // 全科图谱增强：跨学科边关系图（与 knowledge-map-data.json 对齐）
     this.graphEdges = [];              // [{source, target}] 全科图谱边
     this.graphNeighbors = new Map();   // nodeId -> { parents: Set, children: Set }
     this.graphLoaded = false;
+    this.k12NodeIds = new Set();       // grade 1–12 中国课标节点 ID
+    this.universityNodeIds = new Set(); // grade 0 大学层节点 ID
 
     // Tooltip 延迟隐藏：允许鼠标从节点移动到弹窗内点击课程链接
     this._tooltipHideTimer = null;
@@ -402,7 +404,7 @@ class PBLPathBuilder {
     if (this._loadPromise) return this._loadPromise;
 
     // v8.0.1：缓存 key 升级，修复 systemIndex 恢复 + 推理模型兼容
-    const CACHE_KEY = 'teachany_pbl_unified_index_v8';
+    const CACHE_KEY = 'teachany_pbl_unified_index_v9';
     const CACHE_TTL = 1800000;
     try {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -419,8 +421,7 @@ class PBLPathBuilder {
           });
           this.loaded = true;
           console.log(`[PBL] ✅ 从缓存恢复: ${this.unifiedIndex.size} 节点, ${this.systemIndex.size} 课标体系`);
-          // 异步加载全科图谱（即使走缓存也需要）
-          this._loadKnowledgeGraph();
+          await this._loadKnowledgeGraph();
           return this.unifiedIndex;
         }
       }
@@ -506,12 +507,11 @@ class PBLPathBuilder {
     const elapsed = (performance.now() - t0).toFixed(0);
     console.log(`[PBL] ✅ 统一索引就绪: ${totalNodes} 节点, ${elapsed}ms`);
 
-    // 异步加载全科图谱边数据（不阻塞主流程）
-    this._loadKnowledgeGraph();
+    await this._loadKnowledgeGraph();
 
     // 写入缓存
     try {
-      const CACHE_KEY = 'teachany_pbl_unified_index_v8';
+      const CACHE_KEY = 'teachany_pbl_unified_index_v9';
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         ts: Date.now(),
         entries: [...this.unifiedIndex.entries()]
@@ -529,58 +529,182 @@ class PBLPathBuilder {
       const resp = await fetch('./data/knowledge-map-data.json?t=' + Date.now());
       const data = await resp.json();
 
-      // 构建邻接表（双向索引）
       const neighbors = this.graphNeighbors;
-      (data.edges || []).forEach(e => {
-        const src = e.source, tgt = e.target;
-        if (!neighbors.has(src)) neighbors.set(src, { parents: new Set(), children: new Set() });
-        if (!neighbors.has(tgt)) neighbors.set(tgt, { parents: new Set(), children: new Set() });
-        neighbors.get(src).children.add(tgt);
-        neighbors.get(tgt).parents.add(src);
-      });
-
-      // 补充 unifiedIndex 中缺失的大学节点（grade=0）
+      const k12Ids = new Set();
+      const uniIds = new Set();
+      let k12Merged = 0;
       let uniAdded = 0;
+
       (data.nodes || []).forEach(n => {
-        if (n.grade === 0 && !this.unifiedIndex.has(n.id)) {
+        const grade = parseInt(n.grade, 10) || 0;
+        const isK12 = grade >= 1 && grade <= 12;
+        const isUni = grade === 0;
+        if (isK12) k12Ids.add(n.id);
+        if (isUni) uniIds.add(n.id);
+
+        const base = {
+          id: n.id,
+          name: n.name || n.id,
+          name_en: n.name_en || '',
+          subject: n.subject || '',
+          domain: n.domain || '',
+          domainColor: n.domainColor || '#3b82f6',
+          grade,
+          difficulty: n.difficulty || 0,
+          definition: n.definition || n.description || '',
+          key_concepts: n.key_concepts || [],
+          prerequisites: n.prerequisites || [],
+          extends: n.extends || [],
+          parallel: n.parallel || [],
+          status: n.status || 'active',
+          courses: n.courses || [],
+          curriculum_points: n.curriculum_points || [],
+          treePath: n.treePath || n.graph_path || '',
+          isExternal: false,
+          isUniversity: isUni,
+          isK12: isK12,
+        };
+
+        if (isK12) {
+          const prev = this.unifiedIndex.get(n.id);
+          const unified = {
+            ...(prev || {}),
+            ...base,
+            system: prev?.system || 'cn',
+            systemTag: prev?.systemTag || 'CN',
+            systemLabel: prev?.systemLabel || '中国课标',
+            curriculumLabel: prev?.curriculumLabel || '中国课标',
+            stageLabel: n.stageLabel || prev?.stageLabel || this._inferStageLabel(n, 'cn', base.treePath, grade),
+            gradeLabel: prev?.gradeLabel || this._formatGradeLabel(grade, 'cn', base.treePath, n.stage),
+          };
+          this.unifiedIndex.set(n.id, unified);
+          if (!this.systemIndex.has('cn')) this.systemIndex.set('cn', new Set());
+          this.systemIndex.get('cn').add(n.id);
+          k12Merged++;
+        } else if (isUni && !this.unifiedIndex.has(n.id)) {
           this.unifiedIndex.set(n.id, {
-            id: n.id,
-            name: n.name || n.id,
-            name_en: n.name_en || '',
-            subject: n.subject || '',
-            domain: n.domain || '',
-            domainColor: '#6366f1',
-            grade: 0,
-            difficulty: 0,
-            definition: n.definition || '',
-            key_concepts: [],
-            prerequisites: [],
-            extends: [],
-            parallel: [],
-            status: 'active',
-            courses: [],
-            curriculum_points: [],
+            ...base,
             system: 'cn',
             systemTag: 'CN',
             systemLabel: '大学',
             curriculumLabel: '大学课程',
             stageLabel: '大学',
             gradeLabel: '大学',
-            treePath: '',
-            isExternal: false,
-            isUniversity: true
           });
+          if (!this.systemIndex.has('cn')) this.systemIndex.set('cn', new Set());
+          this.systemIndex.get('cn').add(n.id);
           uniAdded++;
         }
       });
 
+      (data.edges || []).forEach(e => {
+        const src = e.source;
+        const tgt = e.target;
+        if (!neighbors.has(src)) neighbors.set(src, { parents: new Set(), children: new Set() });
+        if (!neighbors.has(tgt)) neighbors.set(tgt, { parents: new Set(), children: new Set() });
+        neighbors.get(src).children.add(tgt);
+        neighbors.get(tgt).parents.add(src);
+      });
+
+      this.k12NodeIds = k12Ids;
+      this.universityNodeIds = uniIds;
       this.graphEdges = data.edges || [];
       this.graphLoaded = true;
       const elapsed = (performance.now() - t0).toFixed(0);
-      console.log(`[PBL] 🧬 全科图谱就绪: ${this.graphEdges.length} 条边, ${neighbors.size} 节点邻接, ${uniAdded} 大学节点补充, ${elapsed}ms`);
+      console.log(`[PBL] 🧬 K12全科图谱就绪: K12=${k12Ids.size}（合并${k12Merged}）, 大学=${uniIds.size}（新增${uniAdded}）, 边=${this.graphEdges.length}, ${elapsed}ms`);
     } catch (e) {
       console.warn('[PBL] 全科图谱加载失败（降级为无跨学科增强）:', e.message);
     }
+  }
+
+  _isK12Node(node) {
+    if (!node) return false;
+    if (node.isK12) return true;
+    const g = parseInt(node.grade, 10) || 0;
+    return g >= 1 && g <= 12;
+  }
+
+  _isUniversityNode(node) {
+    if (!node) return false;
+    if (node.isUniversity) return true;
+    return (parseInt(node.grade, 10) || 0) === 0 && node.system === 'cn' && !node.isExternal;
+  }
+
+  /** 用户明确需要大学层拓展（默认 PBL 只匹配 K12 全科图谱子图） */
+  _shouldAllowUniversityNodes(goal) {
+    const g = String(goal || '');
+    return /大学|本科|高职|大一|大二|大三|大四|研究生|竞赛拓展|高等数学|大学物理|大学化学|AP\s|IB\s|Cambridge/i.test(g);
+  }
+
+  /** 默认匹配池：CN 仅 K12（grade 1–12），国际课标保留；大学层按需开启 */
+  _isMatchingPoolNode(node, goal) {
+    if (!node || node.isExternal) return false;
+    if (node.system !== 'cn') return true;
+    if (this._shouldAllowUniversityNodes(goal)) return true;
+    return this._isK12Node(node);
+  }
+
+  _getK12Pool(goal, pool = null) {
+    const src = pool || [...this.unifiedIndex.values()];
+    return src.filter(n => n.system === 'cn' && this._isK12Node(n) && this._isMatchingPoolNode(n, goal));
+  }
+
+  /**
+   * 确定性 K12 图谱检索：按蓝图 module hints + 项目 domain 从全科图谱子图取节点（LLM 失败时的硬保底）
+   */
+  _rescueFromK12KnowledgeGraph(goal, blueprint, archetype, limit = 8, pool = null) {
+    const domains = this._inferProjectDomains(goal);
+    const goalTerms = this._tokenizeGoalTerms(goal);
+    const hintBlob = (blueprint?.schemes || [])
+      .flatMap(s => (s.phases || []).flatMap(p => [...(p.knowledgeHints || []), p.phase, ...(p.steps || [])]))
+      .join(' ');
+    const k12Pool = (pool || this._getK12Pool(goal))
+      .filter(n => !this._isGenericTransversalNode(n.name, goal))
+      .filter(n => !archetype || !this._isArchetypeBanned(n, archetype))
+      .filter(n => !this._shouldPurgeBiologyForGoal(goal) || !this._isBiologyHealthNode(n))
+      .map(n => ({
+        ...n,
+        _score: this._scoreNodeForGoal(n, goalTerms, null, false, domains, goal)
+          + this._scoreNodeForDomains(n, domains)
+          + (hintBlob && domains.some(d => (d.keywords || []).some(k => String(n.name || '').includes(k) || this._nodeSearchText(n).includes(k))) ? 4 : 0)
+          + (hintBlob.split(/[、,，\s]+/).filter(h => h.length >= 2 && this._nodeSearchText(n).includes(h)).length * 3),
+      }))
+      .filter(n => n._score >= 2)
+      .sort((a, b) => b._score - a._score);
+
+    const picked = [];
+    const seen = new Set();
+    const roles = ['foundation', 'bridge', 'bridge', 'core', 'core', 'core', 'core', 'core'];
+
+    domains.forEach(dom => {
+      const hit = k12Pool.find(n => !seen.has(n.id) && this._scoreNodeForDomains(n, [dom]) >= 4);
+      if (!hit) return;
+      seen.add(hit.id);
+      picked.push({
+        ...hit,
+        confidence: Math.max(0.62, 0.88 - picked.length * 0.03),
+        matchReason: `K12图谱·${dom.label}`,
+        pblRole: roles[picked.length] || 'core',
+        _rescuedFromK12: true,
+      });
+    });
+
+    k12Pool.forEach(n => {
+      if (picked.length >= limit || seen.has(n.id)) return;
+      seen.add(n.id);
+      picked.push({
+        ...n,
+        confidence: Math.max(0.58, 0.85 - picked.length * 0.04),
+        matchReason: 'K12全科图谱检索回退',
+        pblRole: roles[picked.length] || 'core',
+        _rescuedFromK12: true,
+      });
+    });
+
+    if (picked.length) {
+      console.warn('[PBL] K12图谱硬保底匹配:', picked.map(n => n.name).join('、'));
+    }
+    return picked.slice(0, limit);
   }
 
   /**
@@ -1603,6 +1727,8 @@ class PBLPathBuilder {
   /** 返回无关节点剔除原因；null 表示可保留 */
   _getNodeIrrelevanceReason(node, goal, domains, archetype) {
     if (!node) return '空节点';
+    if (node.isExternal || node.layer === 'external' || String(node.id || '').startsWith('ext-')) return null;
+    if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return '大学层默认排除';
     const name = String(node.name || '');
     if (archetype && this._isArchetypeBanned(node, archetype)) return '原型禁用';
     if (this._isGenericTransversalNode(name, goal)) return '泛素养';
@@ -2301,8 +2427,8 @@ class PBLPathBuilder {
         return !/作文|地形|有机合成|弧长|扇形面积/.test(name);
       }), goal);
     }
-    // 非 STEM 项目：宁可保留原匹配，也不要整组清空；购车类须剔除生物噪声
-    return this._isStemProjectGoal(goal) ? [] : this._purgeBiologyNoise(matched, goal);
+    if (matched.length) return this._purgeBiologyNoise(matched, goal);
+    return [];
   }
 
   _scoreNodeForGoal(node, goalTerms, filterSubjects, complex, domains, goal = '') {
@@ -2318,6 +2444,8 @@ class PBLPathBuilder {
     if (domains && domains.length) score += this._scoreNodeForDomains(node, domains);
     if (filterSubjects && filterSubjects.includes(node.subject)) score += 1;
     const grade = parseInt(node.grade, 10) || 0;
+    if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) score -= 30;
+    if (this._isK12Node(node)) score += 4;
     if (complex && grade >= 7) score += 1;
     if (complex && grade > 0 && grade < 7) score -= 8;
     if (goal && (domains?.length || this._isStemProjectGoal(goal))) {
@@ -2730,9 +2858,10 @@ class PBLPathBuilder {
     const domains = this._inferProjectDomains(goal);
     const list = [...matched];
     const seen = new Set(list.map(n => n.id));
+    const domainMin = civic ? 2 : 6;
     const rescued = this._rescueCandidatesFromPool(goal, candidatePool, limit * 2)
       .filter(n => !seen.has(n.id) && !this._excludeForComplexProject(n))
-      .filter(n => !domains.length || this._scoreNodeForDomains(n, domains) >= 6)
+      .filter(n => !domains.length || this._scoreNodeForDomains(n, domains) >= domainMin)
       .sort((a, b) => this._scoreNodeForDomains(b, domains) - this._scoreNodeForDomains(a, domains));
     let roleIdx = 0;
     const roles = ['foundation', 'bridge', 'bridge', 'core', 'core'];
@@ -2747,6 +2876,13 @@ class PBLPathBuilder {
         pblRole: roles[roleIdx++] || 'core'
       });
     });
+    if (list.length < min) {
+      this._rescueFromK12KnowledgeGraph(goal, null, null, limit, candidatePool).forEach(n => {
+        if (list.length >= min || seen.has(n.id)) return;
+        seen.add(n.id);
+        list.push(n);
+      });
+    }
     return list.slice(0, limit);
   }
 
@@ -4227,19 +4363,18 @@ class PBLPathBuilder {
         (n, m) => this._archetypeEngine.scoreForModule(n, m, this._tokenizeGoalTerms(goal))
       );
     }
-    if (complex) {
-      core = this._ensureMinimumMatched(
-        core,
-        goal,
-        meta.candidatePool || [],
-        profile.maxMatched,
-        complex
-      );
+    const k12Pool = this._getK12Pool(goal, meta.candidatePool || []);
+    const needMin = this._isSocialOrCivicInquiryGoal(goal) || complex;
+    if (needMin) {
+      core = this._ensureMinimumMatched(core, goal, k12Pool.length ? k12Pool : meta.candidatePool || [], profile.maxMatched, complex || this._isSocialOrCivicInquiryGoal(goal));
       core = this._filterMainlineNodes(core, goal, archetype);
-      core = this._rebalanceStemMatched(core, goal, meta.candidatePool || [], profile.maxMatched);
+      if (complex) core = this._rebalanceStemMatched(core, goal, k12Pool.length ? k12Pool : meta.candidatePool || [], profile.maxMatched);
+    }
+    if (!core.length) {
+      core = this._rescueFromK12KnowledgeGraph(goal, meta.projectBlueprint, archetype, profile.maxMatched, k12Pool);
     }
     if (!core.length && meta.candidatePool?.length) {
-      core = this._rescueCandidatesFromPool(goal, meta.candidatePool, profile.maxMatched, meta.archetype, meta.projectBlueprint);
+      core = this._rescueCandidatesFromPool(goal, k12Pool.length ? k12Pool : meta.candidatePool, profile.maxMatched, meta.archetype, meta.projectBlueprint);
       console.warn('[PBL] 主线为空，已用蓝图模块回退:', core.map(n => n.name).join('、'));
     }
     // 主线 pathStep 链 + 角色分层着色 + 一层主线相关前置（不展开平行/跨学科噪声）
@@ -4253,12 +4388,12 @@ class PBLPathBuilder {
     graphData = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES);
     const mainline = this._getMainlinePath(graphData);
     const extOut = external.slice(0, PBLPathBuilder.PBL_MAX_EXTERNAL);
-    return this._verifyOutputBundle({
+    return {
       complex,
       matched: mainline.length ? mainline : core,
       external: extOut,
       graphData,
-    }, goal, archetype);
+    };
   }
 
   /**
@@ -4450,6 +4585,7 @@ class PBLPathBuilder {
     // 1. 确保索引已加载
     this._reportPBLStatus(onStatus, '正在加载多课标知识点索引...');
     await this.loadUnifiedIndex();
+    await this._loadKnowledgeGraph();
     await this._ensureArchetypeData();
 
     // 2. 筛选课标体系
@@ -4457,12 +4593,11 @@ class PBLPathBuilder {
       ? Array.from(this.systemIndex.keys())
       : selectedSystems.filter(s => this.systemIndex.has(s));
 
-    // 3. 构建候选知识点列表
+    // 3. 构建候选知识点列表（默认锚定 K12 全科图谱子图，大学层按需开启）
     const rawCandidates = [];
-    this.unifiedIndex.forEach((node, id) => {
-      if (activeSystems.includes(node.system)) {
-        rawCandidates.push(node);
-      }
+    this.unifiedIndex.forEach((node) => {
+      if (!activeSystems.includes(node.system)) return;
+      if (this._isMatchingPoolNode(node, goal)) rawCandidates.push(node);
     });
 
     if (rawCandidates.length === 0) {
@@ -4508,12 +4643,31 @@ class PBLPathBuilder {
       projectBlueprint,
     });
     this._reportPBLStatus(onStatus, '输出前核实无关节点...');
-    const outputAudit = this._verifyOutputBundle({
+    let outputAudit = this._verifyOutputBundle({
       complex: finalized.complex,
       matched: finalized.matched,
       external: finalized.external,
       graphData: finalized.graphData,
     }, goal, archetype);
+    if (!(outputAudit.graphData?.nodes || []).length) {
+      const k12Rescued = this._rescueFromK12KnowledgeGraph(
+        goal, projectBlueprint, archetype, this._getPBLGoalProfile(goal).maxMatched,
+        this._getK12Pool(goal, stage1.filteredCandidates)
+      );
+      if (k12Rescued.length) {
+        const graphData = this._buildRichMainlineGraph(
+          k12Rescued, stage2.pathOrderIds || [], goal, stage2.dependsOnLinks || [],
+          this._ensureExternalNodes(stage2.external || [], goal, k12Rescued, projectBlueprint, archetype)
+        );
+        outputAudit = this._verifyOutputBundle({
+          complex: finalized.complex,
+          matched: k12Rescued,
+          external: this._ensureExternalNodes(stage2.external || [], goal, k12Rescued, projectBlueprint, archetype),
+          graphData: this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES),
+        }, goal, archetype);
+        console.warn('[PBL] 课标匹配为空，已启用 K12 全科图谱硬保底');
+      }
+    }
     const finalMatched = outputAudit.matched;
     const finalExternal = outputAudit.external;
     const finalGraphData = outputAudit.graphData;
@@ -4651,7 +4805,7 @@ class PBLPathBuilder {
         ? ['chemistry', 'physics', 'math']
         : ['chemistry', 'science', 'math'];
     } else if (this._isGroundRoboticsGoal(goal)) {
-      filter.subjects = ['physics', 'info-tech', 'math', 'science', 'engineering', 'computer-science'];
+      filter.subjects = ['physics', 'info-tech', 'math', 'science'];
     } else if (this._isStemProjectGoal(goal) && profile.complex) {
       // STEM/工程/科学探究类：锁定主线学科，禁止人文学科渗入候选池
       if (/火箭|导弹|发射|弹道|模型火箭/.test(goal)) {
@@ -4692,7 +4846,7 @@ class PBLPathBuilder {
       return subjectMatch && systemMatch && gradeMatch && notElementary;
     });
 
-    const MAX_STAGE2_CANDIDATES = archetype ? 24 : (profile.complex ? 28 : 22);
+    const MAX_STAGE2_CANDIDATES = archetype ? 32 : (profile.complex ? 28 : (this._isSocialOrCivicInquiryGoal(goal) ? 40 : 22));
     let pool = filteredCandidates.length > 0 ? filteredCandidates : candidates.filter(n => {
       const g = parseInt(n.grade, 10) || 0;
       if (applyElemExclude) {
@@ -4700,6 +4854,7 @@ class PBLPathBuilder {
       }
       return true;
     });
+    pool = pool.filter(n => this._isMatchingPoolNode(n, goal));
     pool = this._applyArchetypePoolRules(pool, archetype, activeSystems, goal);
     const poolAudit = this._verifyAndPruneNodes(pool, goal, archetype, '拆解入口·Bloom筛选池');
     if (poolAudit.kept.length >= 6) pool = poolAudit.kept;
@@ -4728,7 +4883,7 @@ class PBLPathBuilder {
         scored, archetype, projectBlueprint, MAX_STAGE2_CANDIDATES, goalTerms,
         {
           isBanned: n => this._isArchetypeBanned(n, archetype),
-          meetsGrade: n => this._meetsArchetypeGrade(n, archetype),
+          meetsGrade: n => this._meetsArchetypeGrade(n, archetype, goal),
           scoreForModule: (n, m) => this._archetypeEngine.scoreForModule(n, m, goalTerms),
         }
       );
