@@ -707,9 +707,13 @@ class PBLPathBuilder {
     const k12Pool = basePool
       .filter(n => !this._isGenericTransversalNode(n.name, goal))
       .filter(n => !archetype || !this._isArchetypeBanned(n, archetype))
-      .filter(n => floorMode
-        ? ((archetype?.subjects || []).includes(n.subject) || this._isMainlineRelevant(n, goal, domains))
-        : this._isMainlineRelevant(n, goal, domains))
+      .filter(n => {
+        if (this._isConsumerDecisionGoal(goal) && !this._isMainlineRelevant(n, goal, domains)) return false;
+        if (floorMode && archetype?.id !== 'consumer-decision') {
+          return (archetype?.subjects || []).includes(n.subject) || this._isMainlineRelevant(n, goal, domains);
+        }
+        return this._isMainlineRelevant(n, goal, domains);
+      })
       .filter(n => this._isSubjectAllowedForGoal(n, goal, archetype))
       .filter(n => !this._shouldPurgeBiologyForGoal(goal) || !this._isBiologyHealthNode(n))
       .map(n => ({
@@ -727,7 +731,11 @@ class PBLPathBuilder {
     const roles = ['foundation', 'bridge', 'bridge', 'core', 'core', 'core', 'core', 'core'];
 
     domains.forEach(dom => {
-      const hit = k12Pool.find(n => !seen.has(n.id) && this._scoreNodeForDomains(n, [dom]) >= 4);
+      const hit = k12Pool.find(n => {
+        if (seen.has(n.id) || this._scoreNodeForDomains(n, [dom]) < 4) return false;
+        if (this._isConsumerDecisionGoal(goal) && n.subject === 'geography' && !this._isConsumerGeographyRelevant(n, goal)) return false;
+        return true;
+      });
       if (!hit) return;
       seen.add(hit.id);
       picked.push({
@@ -1206,6 +1214,38 @@ class PBLPathBuilder {
     const n = String(name || '');
     if (!this._isConsumerDecisionGoal(goal)) return false;
     return /电解池|原电池|程序控制|电磁感应|电池温度|传感器|数据采集|算法概念|模块化|物联网|闭环控制|电解(?!质)|逆变|并网装置/.test(n);
+  }
+
+  /** 消费决策仅保留与排放/气候/能源相关的地理节点，拒绝自然地理、区位、地形等 */
+  _isConsumerGeographyRelevant(node, goal) {
+    if (!this._isConsumerDecisionGoal(goal)) return true;
+    if (node?.subject !== 'geography') return true;
+    const name = String(node.name || '');
+    const blob = `${name} ${this._nodeSearchText(node)}`;
+    if (/地形|地貌|等高线|经纬|经线|纬线|板块|断裂|河流|水系|水文|峡谷|瀑布|土壤|人口|区位|自然地理|区域特征|地图三要素|比例尺|地球仪|昼夜|时区|国界|行政区划|旅游资源|文化景观|世界地形|四大高原|四大盆地|三大平原|洋流|火山|地震|岩石|矿物|内力|外力|城乡规划|产业布局|农业地域|工业地域|交通网络|聚落|地图判读/.test(blob)) {
+      return false;
+    }
+    return /气候|温室|排放|污染|碳|环境|可持续|低碳|尾气|大气|臭氧|雾霾|能源|新能源|生态|环保|全球变暖|气候变化|资源消耗|碳中和|碳达峰|空气质量|PM2\.5|二氧化硫|氮氧化物/.test(blob);
+  }
+
+  _capConsumerSubjectBalance(nodes, goal) {
+    if (!this._isConsumerDecisionGoal(goal) || !Array.isArray(nodes)) return nodes;
+    const caps = { geography: 1, chinese: 2 };
+    const counts = {};
+    const kept = [];
+    const dropped = [];
+    nodes.forEach(n => {
+      const subj = n.subject || 'other';
+      const cap = caps[subj];
+      if (!cap) { kept.push(n); return; }
+      counts[subj] = (counts[subj] || 0) + 1;
+      if (counts[subj] <= cap) kept.push(n);
+      else dropped.push(n.name);
+    });
+    if (dropped.length) {
+      console.warn('[PBL] 消费决策学科配额裁剪:', dropped.join('、'));
+    }
+    return kept;
   }
 
   _parseGoalSubject(goal) {
@@ -1840,6 +1880,9 @@ class PBLPathBuilder {
     if (archetype && this._isArchetypeBanned(node, archetype)) return '原型禁用';
     if (this._isGenericTransversalNode(name, goal)) return '泛素养';
     if (this._isConsumerDecisionGoal(goal) && this._isHistoryCurriculumNode(node)) return '消费决策禁用历史';
+    if (this._isConsumerDecisionGoal(goal) && node.subject === 'geography' && !this._isConsumerGeographyRelevant(node, goal)) {
+      return '消费决策地理噪声';
+    }
     if (!this._isSubjectAllowedForGoal(node, goal, archetype)) return '学科白名单外';
     if (!this._isMainlineRelevant(node, goal, domains)) return '主线不符';
     if (this._shouldPurgeAviationForGoal(goal) && this._isAviationAerospaceNode(node)) return '航空噪声';
@@ -2503,6 +2546,7 @@ class PBLPathBuilder {
       if (!this._isSubjectAllowedForGoal(node, g, null)) return false;
       if (this._isRdEngineeringNodeName(name, g)) return false;
       if (this._isBiologyNodeName(name)) return false;
+      if (node.subject === 'geography' && !this._isConsumerGeographyRelevant(node, g)) return false;
       if (/比热容/.test(name) && !/热|环境/.test(text)) return false;
     }
 
@@ -2597,8 +2641,10 @@ class PBLPathBuilder {
     }
     if (goal && this._isConsumerDecisionGoal(goal)) {
       if (this._isRdEngineeringNodeName(node.name, goal)) score -= 20;
-      if (['math', 'geography', 'chinese'].includes(node.subject)) score += 3;
-      if (/内燃机|热机|效率|统计|函数|环境|排放|污染/.test(node.name || '')) score += 4;
+      if (node.subject === 'geography' && !this._isConsumerGeographyRelevant(node, goal)) score -= 25;
+      else if (node.subject === 'geography') score += 4;
+      if (['math', 'chinese'].includes(node.subject)) score += 3;
+      if (/内燃机|热机|效率|统计|函数|环境|排放|污染|气候|温室|碳/.test(node.name || '')) score += 5;
     }
     if (goal && this._isSocialOrCivicInquiryGoal(goal)) {
       if (['chinese', 'math', 'geography', 'science'].includes(node.subject)) score += 2;
@@ -3912,6 +3958,17 @@ class PBLPathBuilder {
         list.push(n);
       });
     }
+    list = this._capConsumerSubjectBalance(list.slice(0, limit), goal);
+    if (list.length < min) {
+      const refillPool = effectivePool.filter(n => !list.some(x => x.id === n.id));
+      this._rescueFromK12KnowledgeGraph(goal, blueprint, archetype, limit, refillPool, { floorMode: true })
+        .forEach(n => {
+          if (list.length >= min || list.some(x => x.id === n.id)) return;
+          if (this._isConsumerDecisionGoal(goal) && n.subject === 'geography' && list.some(x => x.subject === 'geography')) return;
+          list.push(n);
+        });
+      list = this._capConsumerSubjectBalance(this._assignCoreRoles(list.slice(0, limit), min), goal);
+    }
     return this._assignCoreRoles(list.slice(0, limit), min);
   }
 
@@ -4838,15 +4895,21 @@ class PBLPathBuilder {
     });
 
     const matchedIds = new Set(matchedNodes.map(n => n.id));
+    const consumerGoal = this._isConsumerDecisionGoal(goal);
     matchedNodes.forEach(n => {
       const kg = this.unifiedIndex.get(n.id);
       if (!kg) return;
-      // 原有：展开课标内 prerequisites
-      (kg.prerequisites || []).slice(0, 5).forEach(preId => {
+      const prereqLimit = consumerGoal ? 1 : 5;
+      (kg.prerequisites || []).slice(0, prereqLimit).forEach(preId => {
         if (matchedIds.has(preId) || nodeMap.has(preId)) return;
         const preNode = this.unifiedIndex.get(preId);
         if (!preNode) return;
         if (complex && this._excludeForComplexProject(preNode)) return;
+        if (consumerGoal) {
+          if (['history', 'biology', 'geography'].includes(preNode.subject) && preNode.subject !== kg.subject) return;
+          if (preNode.subject === 'geography' && !this._isConsumerGeographyRelevant(preNode, goal)) return;
+          if (!['math', 'physics', 'chemistry', 'chinese'].includes(preNode.subject) && preNode.subject !== kg.subject) return;
+        }
         if (domains.length && !this._isMainlineRelevant(preNode, goal, domains)) return;
         const enriched = { ...preNode, layer: 'prerequisite' };
         base.nodes.push(enriched);
@@ -4854,8 +4917,8 @@ class PBLPathBuilder {
         links.push({ source: preId, target: n.id, type: 'prerequisite' });
       });
 
-      // 全科图谱增强：消费决策等严格类型不展开跨学科邻居，避免历史噪声渗入
-      const strictGraphExpansion = this._isConsumerDecisionGoal(goal);
+      // 全科图谱增强：消费决策等严格类型不展开跨学科邻居，避免历史/自然地理噪声渗入
+      const strictGraphExpansion = consumerGoal;
       if (this.graphLoaded && !strictGraphExpansion) {
         const graphNb = this.graphNeighbors.get(n.id);
         if (graphNb) {
