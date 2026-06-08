@@ -58,7 +58,10 @@ export const PBL_MATCH_MODEL_CHAIN = [
   { backendId: 'paratera', model: 'GLM-4-Flash' },
 ];
 
-const PBL_STRONG_STAGES = new Set(['match', 'verify-relevance', 'review-curriculum', 'refine']);
+const PBL_STRONG_STAGES = new Set([
+  'match', 'propose-curriculum', 'validate-match',
+  'verify-relevance', 'review-curriculum', 'refine',
+]);
 
 /** @param {Record<string,string>} env */
 export function resolvePBLModelChain(env = {}) {

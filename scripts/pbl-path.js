@@ -155,8 +155,11 @@ class PBLPathBuilder {
     const map = {
       decompose: { maxTokens: 4500, temperature: 0.35 },
       filter: { maxTokens: 1200, temperature: 0.25 },
+      'propose-curriculum': { maxTokens: 3000, temperature: 0.25 },
+      'validate-match': { maxTokens: 6000, temperature: 0.1 },
       match: { maxTokens: 8000, temperature: 0.15 },
       'verify-relevance': { maxTokens: 3000, temperature: 0.05 },
+      'review-curriculum': { maxTokens: 3500, temperature: 0.05 },
       refine: { maxTokens: 2500, temperature: 0.2 },
       'verify-deps': { maxTokens: 2500, temperature: 0.08 },
     };
@@ -3084,6 +3087,276 @@ class PBLPathBuilder {
     return partial || null;
   }
 
+  /** 提案名与图谱节点的对齐打分 */
+  _scoreProposalLink(node, proposal, goal, blueprint, archetype) {
+    if (!node || !proposal) return -99;
+    const pname = String(proposal.name || '').trim();
+    const nname = String(node.name || '').trim();
+    let score = this._scoreUniversalRelevance(node, goal, blueprint, null, archetype);
+    if (nname === pname) score += 25;
+    else if (nname.includes(pname) || pname.includes(nname)) score += 14;
+    else {
+      const ptokens = pname.split(/[、，,（）()\s]+/).filter(t => t.length >= 2);
+      ptokens.forEach(t => {
+        if (nname.includes(t)) score += 6;
+        else if (this._nodeSearchText(node).includes(t)) score += 2;
+      });
+    }
+    const pSubj = proposal.subject;
+    if (pSubj && node.subject === pSubj) score += 5;
+    const gHint = parseInt(proposal.gradeHint, 10);
+    const gNode = parseInt(node.grade, 10) || 0;
+    if (gHint >= 1 && gHint <= 12 && gNode > 0 && Math.abs(gNode - gHint) <= 1) score += 4;
+    return score;
+  }
+
+  /**
+   * 将模型提案的知识点名称对齐到 unifiedIndex / 候选池
+   * @returns {{ linked: object[], unlinked: object[] }}
+   */
+  _linkProposedToGraph(proposals, goal, pool, blueprint, archetype = null) {
+    const roles = ['foundation', 'bridge', 'bridge', 'core', 'core', 'core', 'core', 'core'];
+    const linked = [];
+    const unlinked = [];
+    const seen = new Set();
+    const searchPool = (pool?.length >= 20 ? pool : null)
+      || this._getBroadCurriculumPool(goal, pool || [], 80);
+    const minLinkScore = 10;
+
+    (proposals || []).forEach((p, i) => {
+      const pname = String(p.name || '').trim();
+      if (!pname) return;
+
+      let node = null;
+      let linkMethod = '';
+
+      const exact = searchPool.find(c => c.name === pname && this._passesHardNodeGate(c, goal, archetype));
+      if (exact) {
+        node = exact;
+        linkMethod = '精确名匹配';
+      }
+
+      if (!node) {
+        const partials = searchPool
+          .filter(c => this._passesHardNodeGate(c, goal, archetype)
+            && (c.name.includes(pname) || pname.includes(c.name)));
+        if (partials.length === 1) {
+          node = partials[0];
+          linkMethod = '子串匹配';
+        } else if (partials.length > 1) {
+          node = partials
+            .map(n => ({ n, s: this._scoreProposalLink(n, p, goal, blueprint, archetype) }))
+            .sort((a, b) => b.s - a.s)[0]?.n;
+          linkMethod = '子串消歧';
+        }
+      }
+
+      if (!node) {
+        const scored = searchPool
+          .filter(n => this._passesHardNodeGate(n, goal, archetype))
+          .map(n => ({ n, s: this._scoreProposalLink(n, p, goal, blueprint, archetype) }))
+          .filter(x => x.s >= minLinkScore)
+          .sort((a, b) => b.s - a.s);
+        if (scored.length) {
+          node = scored[0].n;
+          linkMethod = `语义对齐(${scored[0].s})`;
+        }
+      }
+
+      if (node && !seen.has(node.id)) {
+        seen.add(node.id);
+        const role = p.role || roles[linked.length] || 'core';
+        linked.push({
+          ...node,
+          confidence: Math.min(0.94, 0.72 + Math.min(0.2, (parseFloat(p.confidence) || 0.85) * 0.15)),
+          matchReason: p.reason ? `提案：${p.reason}` : `知识点提案对齐：${pname}`,
+          pblRole: ['foundation', 'bridge', 'core'].includes(role) ? role : 'core',
+          _proposedName: pname,
+          _linkMethod: linkMethod,
+          _proposeIndex: i,
+        });
+      } else {
+        unlinked.push(p);
+      }
+    });
+
+    return { linked, unlinked };
+  }
+
+  async _llmProposeCurriculumStage(goal, projectBlueprint) {
+    const profile = this._getPBLGoalProfile(goal);
+    const response = await this._callPBLAnalyzeStage('propose-curriculum', {
+      goal,
+      projectBlueprint,
+      projectSpec: this._activeProjectSpec || null,
+      deliverable: projectBlueprint?.deliverable || '',
+      maxProposed: profile.maxMatched || 14,
+      complex: profile.complex,
+    });
+    const parsed = JSON.parse(this._extractJsonObject(response));
+    if (parsed.summary) console.warn('[PBL] propose-curriculum:', parsed.summary);
+    return parsed;
+  }
+
+  _applyValidateMatchResult(linked, parsed, goal, projectBlueprint, archetype) {
+    const removeIdx = new Set(
+      (parsed.remove || [])
+        .map(r => (typeof r.index === 'number' ? r.index : parseInt(r.index, 10)))
+        .filter(i => Number.isInteger(i) && i >= 0 && i < linked.length)
+    );
+    const roleMap = new Map(
+      (parsed.roleUpdates || [])
+        .map(r => [typeof r.index === 'number' ? r.index : parseInt(r.index, 10), r.role])
+        .filter(([i]) => Number.isInteger(i))
+    );
+
+    const indexMap = [];
+    const matched = [];
+    linked.forEach((n, i) => {
+      if (removeIdx.has(i)) return;
+      indexMap.push({ oldIdx: i, id: n.id });
+      const role = roleMap.get(i) || n.pblRole || 'core';
+      matched.push({ ...n, pblRole: role });
+    });
+
+    const idByOldIdx = (idx) => {
+      const hit = indexMap.find(m => m.oldIdx === idx);
+      return hit?.id;
+    };
+
+    let pathOrderIds = (parsed.pathOrder || [])
+      .map(i => idByOldIdx(typeof i === 'number' ? i : parseInt(i, 10)))
+      .filter(id => id && matched.some(m => m.id === id));
+    if (!pathOrderIds.length) {
+      const byRole = (role) => matched.filter(m => (m.pblRole || 'core') === role).map(m => m.id);
+      pathOrderIds = [...byRole('foundation'), ...byRole('bridge'), ...byRole('core')];
+    }
+    const seenPath = new Set();
+    pathOrderIds = pathOrderIds.filter(id => {
+      if (seenPath.has(id)) return false;
+      seenPath.add(id);
+      return true;
+    });
+    matched.forEach(n => {
+      if (!seenPath.has(n.id)) pathOrderIds.push(n.id);
+    });
+
+    const dependsOnLinks = [];
+    (parsed.dependsOn || []).forEach(d => {
+      const src = idByOldIdx(typeof d.source === 'number' ? d.source : parseInt(d.source, 10));
+      const tgt = idByOldIdx(typeof d.target === 'number' ? d.target : parseInt(d.target, 10));
+      if (src && tgt && src !== tgt) {
+        dependsOnLinks.push({ source: src, target: tgt, type: d.type || 'depends-on' });
+      }
+    });
+
+    const blueprintPhases = this._blueprintProjectPhases(projectBlueprint, goal);
+    let projectPhases = (parsed.projectPhases || []).map(p => ({
+      phase: p.phase || p.name || '',
+      steps: p.steps || [],
+      knowledgeNames: this._filterPhaseKnowledgeNames(p.knowledgeNames || [], goal),
+      deliverable: p.deliverable || '',
+      literacy: p.literacy || {},
+    }));
+    if (!projectPhases.length && blueprintPhases.length) projectPhases = blueprintPhases;
+
+    const external = this._ensureExternalNodes(
+      parsed.external || [], goal, matched, projectBlueprint, archetype
+    );
+
+    if (parsed.summary) console.warn('[PBL] validate-match:', parsed.summary);
+    if (removeIdx.size) {
+      console.warn('[PBL] validate-match 剔除:', [...removeIdx].map(i => linked[i]?.name).filter(Boolean).join('、'));
+    }
+
+    return {
+      matched,
+      external,
+      techRoute: (parsed.techRoute || '').trim(),
+      knowledgeChain: (parsed.knowledgeChain || '').trim(),
+      pathOrderIds,
+      dependsOnLinks,
+      projectPhases,
+      rawMatchResult: parsed,
+    };
+  }
+
+  async _llmValidateMatchStage(goal, linked, projectBlueprint, bloomProfile, archetype, candidates) {
+    const profile = this._getPBLGoalProfile(goal);
+    const complex = profile.complex || !!archetype;
+    const linkedLite = (linked || []).map((n, index) => ({
+      index,
+      id: n.id,
+      name: n.name,
+      subject: n.subject,
+      grade: parseInt(n.grade, 10) || 0,
+      role: n.pblRole || 'core',
+      reason: n.matchReason || '',
+      linkMethod: n._linkMethod || '图谱匹配',
+    }));
+
+    let parsed = {};
+    try {
+      const response = await this._callPBLAnalyzeStage('validate-match', {
+        goal,
+        linked: linkedLite,
+        projectBlueprint,
+        projectSpec: this._activeProjectSpec || null,
+        deliverable: projectBlueprint?.deliverable || '',
+        bloomProfile: bloomProfile || this._inferBloomProfile(projectBlueprint),
+      });
+      parsed = JSON.parse(this._extractJsonObject(response));
+    } catch (e) {
+      console.warn('[PBL] validate-match 失败，保留提案对齐结果:', e.message);
+      parsed = {};
+    }
+
+    let stage = this._applyValidateMatchResult(linked, parsed, goal, projectBlueprint, archetype);
+    const broadCandidates = this._getBroadCurriculumPool(goal, candidates, 80);
+    stage.matched = this._guaranteeCurriculumFloor(
+      stage.matched,
+      goal,
+      broadCandidates,
+      archetype,
+      profile.maxMatched,
+      complex,
+      projectBlueprint
+    );
+    const pruned = this._verifyAndPruneNodes(stage.matched, goal, archetype, '校验后核实').kept;
+    if (pruned.length >= this._getMinMatchedFloor(archetype)) {
+      stage.matched = pruned;
+    }
+    stage.matched = this._purgeBiologyNoise(stage.matched, goal);
+    stage.matched = this._rebalanceStemMatched(stage.matched, goal, candidates, profile.maxMatched);
+    return stage;
+  }
+
+  /** 主路径：提案 → 图谱对齐 → validate-match；不足则回退 index match */
+  async _runCurriculumProposeValidatePipeline(goal, candidates, projectBlueprint, bloomProfile, archetype) {
+    const minNeed = Math.max(this._getMinMatchedFloor(archetype), archetype?.minMatched || 5);
+    const broadPool = this._getBroadCurriculumPool(goal, candidates, 80);
+
+    try {
+      const proposed = await this._llmProposeCurriculumStage(goal, projectBlueprint);
+      const { linked, unlinked } = this._linkProposedToGraph(
+        proposed.proposed || [], goal, broadPool, projectBlueprint, archetype
+      );
+      if (unlinked.length) {
+        console.warn('[PBL] 提案未对齐图谱:', unlinked.map(p => p.name).join('、'));
+      }
+      if (linked.length >= Math.min(3, minNeed)) {
+        console.warn('[PBL] 提案对齐图谱:', linked.map(n => `${n.name}(${n._linkMethod})`).join('、'));
+        return this._llmValidateMatchStage(
+          goal, linked, projectBlueprint, bloomProfile, archetype, candidates
+        );
+      }
+      console.warn(`[PBL] 提案对齐仅 ${linked.length} 个，回退 index match`);
+    } catch (e) {
+      console.warn('[PBL] 提案-校验管线失败，回退 index match:', e.message);
+    }
+    return this._llmMatchStage(goal, candidates, projectBlueprint, bloomProfile, archetype);
+  }
+
   _rescueCandidatesFromPool(goal, candidates, limit, archetype = null, blueprint = null) {
     const goalTerms = this._tokenizeGoalTerms(goal);
     const complex = this._isComplexPBLGoal(goal);
@@ -5178,7 +5451,7 @@ class PBLPathBuilder {
     }
 
     // 4. 第零阶段：全链路拆解可行方案（不选课标）
-    this._reportPBLStatus(onStatus, '第 1/5 步：全链路拆解可行方案...');
+    this._reportPBLStatus(onStatus, '第 1/6 步：全链路拆解可行方案...');
     let projectBlueprint = await this._llmDecomposeStage(goal);
     projectBlueprint = this._concretizeBlueprint(goal, projectBlueprint, archetype);
     this._activeBlueprint = projectBlueprint;
@@ -5186,7 +5459,7 @@ class PBLPathBuilder {
     const bloomProfile = this._inferBloomProfile(projectBlueprint);
 
     // 5. 第一阶段 LLM：判断学科+学段+课标体系（压缩候选集）
-    this._reportPBLStatus(onStatus, '第 2/5 步：按拆解蓝图筛选课标候选（Bloom 层级）...');
+    this._reportPBLStatus(onStatus, '第 2/6 步：按拆解蓝图筛选课标候选（Bloom 层级）...');
     const stage1 = await this._llmFilterStage(goal, candidates, projectBlueprint, bloomProfile, archetype, activeSystems);
     const filterAudit = this._verifyAndPruneNodes(stage1.filteredCandidates, goal, archetype, '拆解入口·课标筛选后');
     const minRecall = this._getMinMatchedFloor(archetype);
@@ -5202,12 +5475,14 @@ class PBLPathBuilder {
       }
     }
 
-    // 6. 第二阶段 LLM：按蓝图阶段精确匹配课标
-    this._reportPBLStatus(onStatus, '第 3/5 步：按蓝图阶段匹配课标知识点...');
-    let stage2 = await this._llmMatchStage(goal, stage1.filteredCandidates, projectBlueprint, stage1.bloomProfile, archetype);
+    // 6. 知识点提案 → 图谱对齐 → validate-match（失败回退 index match）
+    this._reportPBLStatus(onStatus, '第 3/6 步：知识点提案并对齐图谱...');
+    let stage2 = await this._runCurriculumProposeValidatePipeline(
+      goal, stage1.filteredCandidates, projectBlueprint, stage1.bloomProfile, archetype
+    );
 
     // 6.5 相关性二审：规则白名单 + LLM 剔除幻觉节点
-    this._reportPBLStatus(onStatus, '第 4/5 步：核实课标节点相关性...');
+    this._reportPBLStatus(onStatus, '第 4/6 步：核实课标节点相关性...');
     stage2 = await this._llmVerifyRelevanceStage(
       goal, stage2, stage1.filteredCandidates, archetype, projectBlueprint
     );
@@ -5227,9 +5502,14 @@ class PBLPathBuilder {
     };
 
     // 7. 第三阶段：dependsOn 方向性验证
-    this._reportPBLStatus(onStatus, '第 5/5 步：校验知识依赖方向...');
+    this._reportPBLStatus(onStatus, '第 5/6 步：校验知识依赖方向...');
     const verifiedResult = await this._llmVerifyDepsStage(goal, stage2.rawMatchResult, stage1.filteredCandidates, stage2.matched);
-    stage2.dependsOnLinks = this._buildDependsOnLinks(verifiedResult, stage1.filteredCandidates);
+    const builtLinks = this._buildDependsOnLinks(verifiedResult, stage1.filteredCandidates);
+    if (builtLinks.length) {
+      stage2.dependsOnLinks = builtLinks;
+    } else if (!(stage2.dependsOnLinks || []).length) {
+      stage2.dependsOnLinks = builtLinks;
+    }
 
     const finalized = this._finalizePBLGraph(goal, stage2.matched, stage2.external, activeSystems, {
       pathOrderIds: stage2.pathOrderIds,
@@ -5251,7 +5531,7 @@ class PBLPathBuilder {
       projectBlueprint,
     });
 
-    this._reportPBLStatus(onStatus, 'LLM 二次检讨课内节点...');
+    this._reportPBLStatus(onStatus, '第 6/6 步：LLM 二次检讨课内节点...');
     const reviewed = await this._llmReviewCurriculumStage(
       goal,
       outputAudit.graphData?.nodes || [],
