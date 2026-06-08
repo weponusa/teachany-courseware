@@ -727,7 +727,12 @@ class PBLPathBuilder {
 
   /** 保底/检索用宽池：窄池不足时并回全科 K12 子图，避免只在 3 个候选里打转 */
   _getBroadCurriculumPool(goal, narrowPool = [], minSize = 50) {
-    const full = this._getK12Pool(goal);
+    const archetype = this._resolveArchetype(goal);
+    const allowed = this._getAllowedSubjects(goal, archetype);
+    const subjectGate = (pool) => (allowed?.size
+      ? pool.filter(n => allowed.has(n.subject))
+      : pool);
+    const full = subjectGate(this._getK12Pool(goal));
     if (!narrowPool?.length) return full;
     if (narrowPool.length >= minSize) return narrowPool;
     return this._unionCandidateNodes([narrowPool, full], Math.max(minSize * 4, 400));
@@ -743,11 +748,13 @@ class PBLPathBuilder {
     const hintBlob = (blueprint?.schemes || [])
       .flatMap(s => (s.phases || []).flatMap(p => [...(p.knowledgeHints || []), p.phase, ...(p.steps || [])]))
       .join(' ');
+    const allowed = this._getAllowedSubjects(goal, archetype);
     const basePool = (pool?.length >= 30 ? pool : null) || this._getK12Pool(goal);
     const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
     const primaryCtx = this._isPrimarySchoolContext(goal);
     const k12Pool = basePool
       .filter(n => this._passesHardNodeGate(n, goal, archetype))
+      .filter(n => !allowed?.size || allowed.has(n.subject))
       .map(n => ({
         ...n,
         _score: this._scoreUniversalRelevance(n, goal, blueprint, domains, archetype)
@@ -774,10 +781,11 @@ class PBLPathBuilder {
       });
     });
 
-    if (picked.length) {
-      console.warn('[PBL] K12图谱硬保底匹配:', picked.map(n => n.name).join('、'));
+    const cleaned = this._purgeCurriculumNoise(picked, goal);
+    if (cleaned.length) {
+      console.warn('[PBL] K12图谱硬保底匹配:', cleaned.map(n => n.name).join('、'));
     }
-    return picked.slice(0, limit);
+    return cleaned.slice(0, limit);
   }
 
   /**
@@ -1206,15 +1214,53 @@ class PBLPathBuilder {
     return /历史背景|朝代|元代|元朝|宋朝|宋代|唐朝|隋唐|明清|西汉|东汉|蒙古|丝绸之路|世界大战|资产阶级|革命|改革开放|秦始皇|工业革命|文艺复兴|冷战|新航路|殖民|封建|帝国|奴隶社会|封建社会|通史|古代史|近代史|现代史/.test(name);
   }
 
-  /** 项目允许学科白名单（原型 subjects 优先，否则按类型推断） */
+  /** 项目允许学科白名单（表单单学科 > 原型 > 类型推断） */
   _getAllowedSubjects(goal, archetype = null) {
+    const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
+    if (specSubjects?.length) return new Set(specSubjects);
     if (archetype?.subjects?.length) return new Set(archetype.subjects);
+    if (this._isPrimaryCommerceGoal(goal)) return new Set(['math', 'chinese']);
     if (this._isConsumerDecisionGoal(goal)) {
       return new Set(['math', 'physics', 'chemistry', 'geography', 'chinese']);
     }
+    const type = this._classifyProjectType(goal);
+    const typeSubjects = {
+      'business-economics': ['math', 'chinese'],
+      'humanities-literary': ['chinese', 'english', 'history'],
+      'social-inquiry': ['chinese', 'math', 'geography', 'history'],
+      'life-planning': ['chinese', 'math', 'geography'],
+      'creative-media': ['chinese', 'info-tech'],
+      'health-life': ['biology', 'science', 'math', 'chinese'],
+      'planting-cultivation': ['science', 'biology', 'math', 'chinese'],
+    };
+    if (typeSubjects[type]) return new Set(typeSubjects[type]);
     const domains = this._inferProjectDomains(goal);
     const fromDomains = domains.flatMap(d => d.subjects || []);
     if (fromDomains.length) return new Set(fromDomains);
+    return null;
+  }
+
+  /** 小学数学/货币情境（购物、义卖记账等） */
+  _isPrimaryCommerceGoal(goal) {
+    return /小卖部|购物|找零|小票|义卖|记账|人民币|付款|收入.*图表|模拟.*购物/.test(String(goal || ''));
+  }
+
+  /** 非 PBL 典型输入（课件生成、单题、纯复习）— 仍允许继续，但收紧学科路由 */
+  _detectNonPBLGoal(goal) {
+    const g = String(goal || '');
+    if (/帮我生成|生成.*课件|制作.*课件|TeachAny.*课件|交互式课件/.test(g)) {
+      return { kind: 'courseware', hint: '这更像「课件生成」请求；PBL 拆解请描述可交付的项目任务（调查、制作、报告等）' };
+    }
+    if (/如图|△|∠|cm\/s|当点.*运动|四边形.*全等|求证|证明题/.test(g)) {
+      return { kind: 'math-problem', hint: '这是单道数学题，不是 PBL 项目；请改为「设计…探究…报告」类任务描述' };
+    }
+    if (/复习|下册|一轮复习|怎么学|教我|帮我理解|教我怎么读/.test(g)
+      && !/项目|设计|制作|调查|探究|报告|方案|策划/.test(g)) {
+      return { kind: 'tutoring', hint: '这是学科辅导/复习请求，不是 PBL 项目拆解' };
+    }
+    if (/上册语文|下册语文|上册数学|Unit\s*\d/i.test(g) && !/项目|设计|调查|报告/.test(g)) {
+      return { kind: 'curriculum', hint: '这是教材章节名；请补充具体项目任务与交付物' };
+    }
     return null;
   }
 
@@ -1312,6 +1358,9 @@ class PBLPathBuilder {
     if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return false;
     if (!this._passesGradeBandGate(node, goal)) return false;
     if (archetype && this._isArchetypeBanned(node, archetype)) return false;
+    if (!this._isSubjectAllowedForGoal(node, goal, archetype)) return false;
+    if (this._shouldPurgeBiologyForGoal(goal) && this._isBiologyHealthNode(node)) return false;
+    if (this._shouldPurgeOffTopicScienceForGoal(goal) && this._isOffTopicScienceNoiseNode(node)) return false;
     if (this._isGenericTransversalNode(node.name, goal)) return false;
     return true;
   }
@@ -1381,6 +1430,20 @@ class PBLPathBuilder {
     if (/大学|本科|高职|大一|大二|大三|大四/.test(g)) return { explicit: true, minGrade: 0, maxGrade: 0, label: '大学' };
     if (/高中|高一|高二|高三|十年级|十一年级|十二年级/.test(g)) return { explicit: true, minGrade: 10, maxGrade: 12, label: '高中' };
     if (/初中|初一|初二|初三|七年级|八年级|九年级/.test(g)) return { explicit: true, minGrade: 7, maxGrade: 9, label: '初中' };
+    if (/【学段】\s*小学|【受众[\/\\]场景】\s*小学|面向.{0,8}小学|小学\s*食堂/.test(g)) {
+      const m = g.match(/([一二三四五六])年级/);
+      if (m) {
+        const gNum = cnNum[m[1]] || 6;
+        return { explicit: true, minGrade: gNum, maxGrade: gNum, label: `小学${gNum}年级` };
+      }
+      if (/六年级/.test(g)) return { explicit: true, minGrade: 6, maxGrade: 6, label: '小学6年级' };
+      if (/五年级/.test(g)) return { explicit: true, minGrade: 5, maxGrade: 5, label: '小学5年级' };
+      if (/四年级/.test(g)) return { explicit: true, minGrade: 4, maxGrade: 4, label: '小学4年级' };
+      if (/三年级/.test(g)) return { explicit: true, minGrade: 3, maxGrade: 3, label: '小学3年级' };
+      if (/二年级/.test(g)) return { explicit: true, minGrade: 2, maxGrade: 2, label: '小学2年级' };
+      if (/一年级/.test(g)) return { explicit: true, minGrade: 1, maxGrade: 1, label: '小学1年级' };
+      return { explicit: true, minGrade: 1, maxGrade: 6, label: '小学' };
+    }
     if (/小学|一年级|二年级|三年级|四年级|五年级|六年级/.test(g)) {
       const m = g.match(/([一二三四五六])年级/);
       const gNum = m ? (cnNum[m[1]] || 6) : (/六年级/.test(g) ? 6 : /五年级/.test(g) ? 5 : /四年级/.test(g) ? 4 : 6);
@@ -1622,8 +1685,8 @@ class PBLPathBuilder {
     const g = String(goal || '');
     if (this._isConsumerDecisionGoal(g)) return 'consumer-decision';
     if (/海报|短视频|微电影|动画|漫画|插画|绘画|展览|策展|广告|品牌|视觉|游戏设计|作曲|音乐创作|手工艺|表演|舞台|摄影|logo|标志设计|文创|周边设计/.test(g)) return 'creative-media';
-    if (/诗歌|诗集|现代诗|诗词|写诗|小说|剧本|散文|绘本|故事集|演讲|辩论|文学|翻译|双语|新闻稿|采访稿|写一[篇组]|作文|征文|朗诵|文集|杂志|读后感|书评|话剧|文章/.test(g)) return 'humanities-literary';
-    if (/创业|商业计划|营销|市场推广|运营|理财|零花钱|压岁钱|市场调研|义卖|跳蚤市场|店铺|定价|商业模式|经济效益|盈利|众筹|招商|品牌策划/.test(g)) return 'business-economics';
+    if (/诗歌|诗集|现代诗|诗词|写诗|小说|剧本|散文|绘本|故事集|演讲|辩论|文学|翻译|双语|新闻稿|采访稿|写一[篇组]|作文|征文|朗诵|文集|杂志|读后感|书评|话剧|文章|苏东坡|苏轼|诗人|文学家|历史人物|人物研究|名人传记|古代诗人/.test(g)) return 'humanities-literary';
+    if (/创业|商业计划|营销|市场推广|运营|理财|零花钱|压岁钱|市场调研|义卖|跳蚤市场|店铺|定价|商业模式|经济效益|盈利|众筹|招商|品牌策划|购物|小卖部|找零|小票|记账|人民币学具|模拟.*购物|收入.*图表/.test(g)) return 'business-economics';
     if (/健康|营养|饮食|食谱|减脂|减肥|健身|锻炼|运动会?|近视|视力|护眼|睡眠|作息|心理|情绪|压力|安全|急救|防溺水|防火|防疫|卫生|疾病|人体|体重|身高/.test(g)) return 'health-life';
     if (this._isPlantingCultivationGoal(g)) return 'planting-cultivation';
     if (/烹饪|烘焙|美食|菜谱|料理|手工|编织|缝纫|收纳|整理|维修|清洁|打扫|劳动/.test(g)) return 'labor-practice';
@@ -1718,10 +1781,10 @@ class PBLPathBuilder {
         { id: 'test', label: '测试与迭代', keywords: ['测试', '实验', '测量', '数据', '误差', '记录', '优化'], subjects: ['math', 'physics', 'science'] },
       ],
       'general': [
-        { id: 'define', label: '调研与定义', keywords: ['调研', '需求', '定义', '背景', '分析'], subjects: ['chinese', 'math', 'science'] },
-        { id: 'design', label: '方案设计', keywords: ['方案', '设计', '规划', '分工'], subjects: ['math', 'science', 'chinese'] },
-        { id: 'make', label: '实施制作', keywords: ['实施', '制作', '搭建', '实验', '执行'], subjects: ['science', 'chemistry', 'physics'] },
-        { id: 'test', label: '测试与展示', keywords: ['测试', '评估', '展示', '优化', '报告'], subjects: ['math', 'chinese'] },
+        { id: 'define', label: '调研与定义', keywords: ['调研', '需求', '定义', '背景', '分析', '资料'], subjects: ['chinese', 'history', 'geography', 'math'] },
+        { id: 'design', label: '方案设计', keywords: ['方案', '设计', '规划', '分工', '构思'], subjects: ['chinese', 'math', 'geography'] },
+        { id: 'make', label: '实施与表达', keywords: ['实施', '制作', '执行', '记录', '表达'], subjects: ['chinese', 'math'] },
+        { id: 'test', label: '总结与展示', keywords: ['总结', '评估', '展示', '报告', '反思'], subjects: ['chinese', 'math'] },
       ],
     };
     return map[id] || [];
@@ -1939,8 +2002,33 @@ class PBLPathBuilder {
     if (this._isSocialOrCivicInquiryGoal(goal)) return true;
     if (this._isGroundRoboticsGoal(goal)) return true;
     const g = String(goal || '');
+    const type = this._classifyProjectType(g);
+    if (['humanities-literary', 'business-economics', 'life-planning', 'creative-media'].includes(type)) return true;
+    if (type === 'general' && !/生物|细胞|人体|健康|植物|种植|动物|光合|消化|器官/.test(g)) return true;
     if (/(车|汽车)/.test(g) && /新能源|燃油|电动|混动|油电/.test(g) && !/生物|细胞|生态|光合|酶|遗传|植物|动物/.test(g)) return true;
     if (this._isEngineeringGoal(goal) && !/健康|营养|生物|人体|疾病|医学/.test(g)) return true;
+    return false;
+  }
+
+  /** 商业/人文/调查等非理科项目：剔除磁铁、桥梁、动物外形等泛科学噪声 */
+  _isOffTopicScienceNoiseNode(node) {
+    if (!node) return false;
+    const name = String(node.name || '');
+    const blob = `${name} ${this._nodeSearchText(node)}`;
+    if (/磁铁|磁现象|推和拉|桥梁|结构.*稳|月相|四季变化|岩石与土壤|动物的外形|人的感官|食物链|食物网|人体器官|有丝分裂/.test(blob)) return true;
+    if (node.subject === 'science' && /动物|磁铁|推拉|桥梁|月相|岩石|材料|感官|四季/.test(name)) return true;
+    return false;
+  }
+
+  _shouldPurgeOffTopicScienceForGoal(goal) {
+    if (this._isPlantingCultivationGoal(goal)) return false;
+    if (this._isStemProjectGoal(goal) || this._isEngineeringGoal(goal)) return false;
+    const g = String(goal || '');
+    if (/生物|人体|消化|器官|健康|植物|种植|动物|光合|生态/.test(g)) return false;
+    const type = this._classifyProjectType(g);
+    if (['business-economics', 'humanities-literary', 'social-inquiry', 'life-planning', 'creative-media'].includes(type)) return true;
+    if (this._isPrimaryCommerceGoal(g)) return true;
+    if (type === 'general' && !/实验|工程|制作|搭建|装置|电路|化学|物理|测量|滴定/.test(g)) return true;
     return false;
   }
 
@@ -1951,6 +2039,17 @@ class PBLPathBuilder {
   _purgeBiologyNoise(nodes, goal) {
     if (!this._shouldPurgeBiologyForGoal(goal) || !Array.isArray(nodes)) return nodes;
     return nodes.filter(n => !this._isBiologyHealthNode(n));
+  }
+
+  _purgeOffTopicScienceNoise(nodes, goal) {
+    if (!this._shouldPurgeOffTopicScienceForGoal(goal) || !Array.isArray(nodes)) return nodes;
+    return nodes.filter(n => !this._isOffTopicScienceNoiseNode(n));
+  }
+
+  _purgeCurriculumNoise(nodes, goal) {
+    let list = this._purgeBiologyNoise(nodes, goal);
+    list = this._purgeOffTopicScienceNoise(list, goal);
+    return list;
   }
 
   _purgeAviationNoise(nodes, goal) {
@@ -3326,7 +3425,7 @@ class PBLPathBuilder {
     if (pruned.length >= this._getMinMatchedFloor(archetype)) {
       stage.matched = pruned;
     }
-    stage.matched = this._purgeBiologyNoise(stage.matched, goal);
+    stage.matched = this._purgeCurriculumNoise(stage.matched, goal);
     stage.matched = this._rebalanceStemMatched(stage.matched, goal, candidates, profile.maxMatched);
     return stage;
   }
@@ -4226,8 +4325,10 @@ class PBLPathBuilder {
     const min = this._getMinMatchedFloor(archetype);
     const excludeIds = new Set(options.excludeIds || []);
     let list = Array.isArray(nodes) ? [...nodes] : [];
+    const allowed = this._getAllowedSubjects(goal, archetype);
     const effectivePool = this._getBroadCurriculumPool(goal, pool, Math.max(min * 4, 50))
-      .filter(n => !excludeIds.has(n.id));
+      .filter(n => !excludeIds.has(n.id))
+      .filter(n => !allowed?.size || allowed.has(n.subject));
     if (list.length < min && effectivePool.length) {
       list = this._ensureMinimumMatched(list, goal, effectivePool, limit, complex, archetype);
     }
@@ -5110,7 +5211,7 @@ class PBLPathBuilder {
     const complex = profile.complex;
     const archetype = meta.archetype || null;
     let core = complex ? this._filterMatchedForComplexProject(matched) : matched;
-    core = this._purgeBiologyNoise(core, goal);
+    core = this._purgeCurriculumNoise(core, goal);
     core = this._filterMainlineNodes(core, goal, archetype);
     if (complex && core.length === 0 && matched.length) {
       core = this._filterMainlineNodes(
@@ -5255,10 +5356,11 @@ class PBLPathBuilder {
     });
 
     let nodes = base.nodes;
-    if (this._shouldPurgeAviationForGoal(goal) || this._shouldPurgeBiologyForGoal(goal)) {
+    if (this._shouldPurgeAviationForGoal(goal) || this._shouldPurgeBiologyForGoal(goal)
+      || this._shouldPurgeOffTopicScienceForGoal(goal)) {
       let keptNodes = nodes;
       keptNodes = this._purgeAviationNoise(keptNodes, goal);
-      keptNodes = this._purgeBiologyNoise(keptNodes, goal);
+      keptNodes = this._purgeCurriculumNoise(keptNodes, goal);
       const kept = new Set(keptNodes.map(n => n.id));
       nodes = nodes.filter(n => kept.has(n.id));
     }
@@ -5419,6 +5521,10 @@ class PBLPathBuilder {
     this._activeProjectSpec = options.projectSpec || null;
     this._refinementContext = options.refinementContext || null;
     const chatHistory = options.chatHistory || [];
+    const nonPblWarning = this._detectNonPBLGoal(goal);
+    if (nonPblWarning) {
+      console.warn('[PBL] 非典型 PBL 目标:', nonPblWarning.hint);
+    }
     // 1. 确保索引已加载
     this._reportPBLStatus(onStatus, '正在加载多课标知识点索引...');
     await this.loadUnifiedIndex();
@@ -5628,6 +5734,7 @@ class PBLPathBuilder {
 
     return {
       goal,
+      nonPblWarning: nonPblWarning?.hint || null,
       projectSpec: this._activeProjectSpec || options.projectSpec || null,
       chatHistory,
       systems: activeSystems,
@@ -5722,6 +5829,12 @@ class PBLPathBuilder {
         : ['chemistry', 'science', 'math'];
     } else if (this._isGroundRoboticsGoal(goal)) {
       filter.subjects = ['physics', 'info-tech', 'math', 'science'];
+    } else if (projectType === 'business-economics' || this._isPrimaryCommerceGoal(goal)) {
+      filter.subjects = ['math', 'chinese'];
+    } else if (projectType === 'humanities-literary') {
+      filter.subjects = ['chinese', 'english', 'history'];
+    } else if (projectType === 'social-inquiry') {
+      filter.subjects = ['chinese', 'math', 'geography', 'history'];
     } else if (this._isStemProjectGoal(goal) && profile.complex) {
       // STEM/工程/科学探究类：锁定主线学科，禁止人文学科渗入候选池
       if (/火箭|导弹|发射|弹道|模型火箭/.test(goal)) {
@@ -5748,7 +5861,7 @@ class PBLPathBuilder {
     const minGradeArchetype = profile.explicitGrade
       ? (archetype?.minGrade || profile.minGrade)
       : 1;
-    const isPrimaryBand = profile.explicitGrade && profile.gradeBand?.maxGrade <= 6;
+    const isPrimaryBand = this._isPrimarySchoolContext(goal);
     const applyElemExclude = !isPrimaryBand
       && (profile.explicitGrade || (profile.complex && this._isStemProjectGoal(goal)));
     const filteredCandidates = candidates.filter(n => {
@@ -5866,9 +5979,9 @@ class PBLPathBuilder {
     matched = this._guaranteeCurriculumFloor(
       matched, goal, broadCandidates, archetype, profile.maxMatched, complex, projectBlueprint
     );
-    matched = this._purgeBiologyNoise(matched, goal);
+    matched = this._purgeCurriculumNoise(matched, goal);
     matched = this._rebalanceStemMatched(matched, goal, candidates, profile.maxMatched);
-    matched = this._purgeBiologyNoise(matched, goal);
+    matched = this._purgeCurriculumNoise(matched, goal);
 
     let pathOrderIds = (result.pathOrder || result.learningSequence || [])
       .map(i => (typeof i === 'string' ? parseInt(i, 10) : i))
