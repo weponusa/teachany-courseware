@@ -1171,9 +1171,12 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
 
   const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
   const bloomBlock = formatBloomHintForMatch(bloom);
-  const archetype = archetypeId
-    ? resolveArchetype(goal, classifyProjectType(goal), getChemistryAnalysisProfile(goal).mixed)
-    : resolveArchetype(goal, classifyProjectType(goal), getChemistryAnalysisProfile(goal).mixed);
+  const archetype = resolveArchetype(
+    goal,
+    classifyProjectType(goal),
+    getChemistryAnalysisProfile(goal).mixed,
+    archetypeId
+  );
   const archetypeBlock = formatArchetypeForMatch(archetype, projectBlueprint);
   const registryBlock = archetype ? formatRegistryForMatch(archetype.id) : '';
 

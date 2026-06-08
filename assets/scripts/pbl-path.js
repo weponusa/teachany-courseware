@@ -2759,10 +2759,9 @@ class PBLPathBuilder {
   _mapMatchedEntries(result, candidates, complex, minConf, goal = '', archetype = null) {
     const out = [];
     (result.matched || []).forEach(m => {
-      const idx = this._parseMatchIndex(m, candidates.length);
-      if (idx < 0) return;
       if ((m.confidence || 0) < minConf) return;
-      const node = candidates[idx];
+      const node = this._resolveMatchCandidate(m, candidates);
+      if (!node) return;
       if (this._isGenericTransversalNode(node.name, goal)) return;
       if (archetype && this._isArchetypeBanned(node, archetype)) return;
       if (archetype && !this._meetsArchetypeGrade(node, archetype, goal)) return;
@@ -2929,12 +2928,126 @@ class PBLPathBuilder {
     return list.slice(0, max);
   }
 
+  _unionCandidateNodes(lists, maxCount = 50) {
+    const out = [];
+    const seen = new Set();
+    (lists || []).forEach(list => {
+      (list || []).forEach(n => {
+        if (!n?.id || seen.has(n.id) || out.length >= maxCount) return;
+        seen.add(n.id);
+        out.push(n);
+      });
+    });
+    return out;
+  }
+
+  _retrieveByBlueprintHints(pool, blueprint, archetype, goal, limit = 20) {
+    const hints = new Set();
+    if (this._archetypeEngine) {
+      this._archetypeEngine.blueprintModules(blueprint).forEach(m => (m.hints || []).forEach(h => hints.add(String(h).trim())));
+    }
+    (archetype?.modules || []).forEach(m => (m.hints || []).forEach(h => hints.add(String(h).trim())));
+    (blueprint?.schemes || []).forEach(s => (s.phases || []).forEach(p => (p.knowledgeHints || []).forEach(h => hints.add(String(h).trim()))));
+    const hintArr = [...hints].filter(h => h.length >= 2);
+    if (!hintArr.length) return [];
+    const goalTerms = this._tokenizeGoalTerms(goal);
+    return pool
+      .map(n => {
+        const text = this._nodeSearchText(n);
+        const name = String(n.name || '');
+        let s = 0;
+        hintArr.forEach(h => {
+          if (name.includes(h)) s += 10;
+          else if (text.includes(h)) s += 5;
+        });
+        goalTerms.forEach(term => {
+          if (term.length >= 2 && (name.includes(term) || text.includes(term))) s += 3;
+        });
+        return { n, s };
+      })
+      .filter(x => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, limit)
+      .map(x => x.n);
+  }
+
+  _buildSubjectExemplarSummary(candidates, goal, archetype, perSubject = 4) {
+    const goalTerms = this._tokenizeGoalTerms(goal);
+    const domains = this._inferProjectDomains(goal);
+    const bySubject = {};
+    candidates.forEach(n => {
+      const subj = n.subject || 'other';
+      if (!bySubject[subj]) bySubject[subj] = [];
+      bySubject[subj].push({
+        n,
+        s: this._scoreNodeForGoal(n, goalTerms, null, false, domains, goal),
+      });
+    });
+    return Object.entries(bySubject)
+      .map(([subj, arr]) => {
+        const names = arr.sort((a, b) => b.s - a.s).slice(0, perSubject).map(x => x.n.name);
+        if (!names.length) return '';
+        return `${subj}: ${names.join('、')}`;
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  _buildMatchCandidateList(goal, pool, projectBlueprint, archetype, filter, profile, domains, maxCount = 50) {
+    const goalTerms = this._tokenizeGoalTerms(goal);
+    const scored = pool.map(n => ({
+      ...n,
+      _score: this._scoreNodeForGoal(n, goalTerms, filter.subjects, profile.complex, domains, goal),
+    }));
+    const lists = [];
+
+    const hintHits = this._retrieveByBlueprintHints(pool, projectBlueprint, archetype, goal, Math.ceil(maxCount * 0.45));
+    if (hintHits.length) lists.push(hintHits);
+
+    if (archetype && this._archetypeEngine) {
+      const modulePicks = this._archetypeEngine.pickCandidates(
+        scored, archetype, projectBlueprint, Math.ceil(maxCount * 0.55), goalTerms,
+        {
+          isBanned: n => this._isArchetypeBanned(n, archetype),
+          meetsGrade: n => this._meetsArchetypeGrade(n, archetype, goal),
+          scoreForModule: (n, m) => this._archetypeEngine.scoreForModule(n, m, goalTerms),
+        }
+      );
+      if (modulePicks.length) lists.push(modulePicks);
+    }
+
+    if (domains.length && (profile.complex || this._isConsumerDecisionGoal(goal) || this._isChemistryInquiryGoal(goal))) {
+      lists.push(this._pickDomainAwareCandidates(scored, Math.ceil(maxCount * 0.4), domains, goal));
+    }
+
+    lists.push([...scored].sort((a, b) => (b._score || 0) - (a._score || 0)).slice(0, maxCount));
+    const merged = this._unionCandidateNodes(lists, maxCount);
+    if (merged.length >= Math.min(12, maxCount)) return merged;
+    return this._unionCandidateNodes([merged, scored.sort((a, b) => (b._score || 0) - (a._score || 0))], maxCount);
+  }
+
+  _resolveMatchCandidate(m, candidates) {
+    const idx = this._parseMatchIndex(m, candidates.length);
+    if (idx >= 0) return candidates[idx];
+    const name = String(m.name || m.nodeName || m.knowledgeName || '').trim();
+    if (!name) return null;
+    const exact = candidates.find(c => c.name === name);
+    if (exact) return exact;
+    const partial = candidates.find(c => c.name.includes(name) || name.includes(c.name));
+    return partial || null;
+  }
+
   _rescueCandidatesFromPool(goal, candidates, limit, archetype = null, blueprint = null) {
     const goalTerms = this._tokenizeGoalTerms(goal);
     const complex = this._isComplexPBLGoal(goal);
     const domains = this._inferProjectDomains(goal);
     if (archetype && this._archetypeEngine) {
-      const pool = candidates.filter(n => this._isMainlineRelevant(n, goal, domains));
+      const pool = candidates.filter(n => {
+        if (this._isArchetypeBanned(n, archetype)) return false;
+        if (!this._meetsArchetypeGrade(n, archetype, goal)) return false;
+        return this._isMainlineRelevant(n, goal, domains)
+          || (archetype.subjects || []).includes(n.subject);
+      });
       const picked = this._archetypeEngine.pickCandidates(
         pool, archetype, blueprint, Math.min(limit, archetype.maxMatched || limit), goalTerms,
         {
@@ -2943,7 +3056,7 @@ class PBLPathBuilder {
           scoreForModule: (n, m) => this._archetypeEngine.scoreForModule(n, m, goalTerms),
         }
       );
-      if (picked.length >= Math.min(3, archetype.minMatched || 3)) {
+      if (picked.length) {
         return picked.map((n, i) => ({
           ...n,
           confidence: Math.max(0.58, 0.85 - i * 0.04),
@@ -2952,7 +3065,7 @@ class PBLPathBuilder {
         }));
       }
     }
-    const minScore = archetype ? 8 : (this._isSocialOrCivicInquiryGoal(goal) ? 2 : 4);
+    const minScore = archetype ? 3 : (this._isSocialOrCivicInquiryGoal(goal) ? 2 : 4);
     const withScore = candidates
       .filter(n => this._isMainlineRelevant(n, goal, domains))
       .filter(n => !archetype || !this._isArchetypeBanned(n, archetype))
@@ -5119,10 +5232,14 @@ class PBLPathBuilder {
       subjectSummary[key].count++;
     });
 
-    const summaryList = Object.values(subjectSummary)
+    const countSummary = Object.values(subjectSummary)
       .sort((a, b) => b.count - a.count)
       .map(s => `${s.tag}/${s.subject}: ${s.count}个知识点`)
       .join('\n');
+    const exemplarSummary = this._buildSubjectExemplarSummary(candidates, goal, archetype, 4);
+    const summaryList = exemplarSummary
+      ? `${countSummary}\n\n【各学科高分示例节点】\n${exemplarSummary}`
+      : countSummary;
 
     const response = await this._callPBLAnalyzeStage('filter', {
       goal,
@@ -5195,7 +5312,7 @@ class PBLPathBuilder {
       return subjectMatch && systemMatch && gradeMatch && notElementary;
     });
 
-    const MAX_STAGE2_CANDIDATES = archetype ? 32 : (profile.complex ? 28 : (this._isSocialOrCivicInquiryGoal(goal) ? 40 : 22));
+    const MAX_STAGE2_CANDIDATES = archetype ? 50 : (profile.complex ? 45 : (this._isSocialOrCivicInquiryGoal(goal) ? 50 : 36));
     let pool = filteredCandidates.length > 0 ? filteredCandidates : candidates.filter(n => {
       const g = parseInt(n.grade, 10) || 0;
       if (applyElemExclude) {
@@ -5211,36 +5328,15 @@ class PBLPathBuilder {
     if (domains.length && (profile.complex || this._isGroundRoboticsGoal(goal)
       || this._isSocialOrCivicInquiryGoal(goal) || this._isConsumerDecisionGoal(goal))) {
       const mainlinePool = pool.filter(n => this._isMainlineRelevant(n, goal, domains));
-      if (mainlinePool.length >= 6) pool = mainlinePool;
+      if (mainlinePool.length >= 4) {
+        pool = this._unionCandidateNodes([mainlinePool, pool], Math.max(pool.length, MAX_STAGE2_CANDIDATES * 2));
+      }
     }
-    const goalTerms = this._tokenizeGoalTerms(goal);
-    const domainSubjectUnion = [...new Set(domains.flatMap(d => d.subjects || []))];
-    const defaultSubjects = this._isConsumerDecisionGoal(goal)
-      ? ['math', 'physics', 'chemistry', 'geography', 'chinese']
-      : (this._isStemProjectGoal(goal)
-        ? ['physics', 'chemistry', 'math', 'info-tech']
-        : (domainSubjectUnion.length
-          ? domainSubjectUnion
-          : ['math', 'physics', 'chemistry', 'biology', 'chinese', 'info-tech']));
-    const scored = pool.map(n => ({
-      ...n,
-      _score: this._scoreNodeForGoal(n, goalTerms, filter.subjects, profile.complex, domains, goal)
-    }));
-    const subjectList = filter.subjects && filter.subjects.length ? filter.subjects : defaultSubjects;
-    let topCandidates;
-    if (archetype && this._archetypeEngine) {
-      topCandidates = this._archetypeEngine.pickCandidates(
-        scored, archetype, projectBlueprint, MAX_STAGE2_CANDIDATES, goalTerms,
-        {
-          isBanned: n => this._isArchetypeBanned(n, archetype),
-          meetsGrade: n => this._meetsArchetypeGrade(n, archetype, goal),
-          scoreForModule: (n, m) => this._archetypeEngine.scoreForModule(n, m, goalTerms),
-        }
-      );
-    } else if (domains.length && (profile.complex || this._isConsumerDecisionGoal(goal) || this._isChemistryInquiryGoal(goal))) {
-      topCandidates = this._pickDomainAwareCandidates(scored, MAX_STAGE2_CANDIDATES, domains, goal);
-    } else {
-      topCandidates = [...scored].sort((a, b) => (b._score || 0) - (a._score || 0)).slice(0, MAX_STAGE2_CANDIDATES);
+    const topCandidates = this._buildMatchCandidateList(
+      goal, pool, projectBlueprint, archetype, filter, profile, domains, MAX_STAGE2_CANDIDATES
+    );
+    if (topCandidates.length) {
+      console.log(`[PBL] match 候选召回 ${topCandidates.length} 个:`, topCandidates.slice(0, 8).map(n => n.name).join('、'));
     }
     return { filter, filteredCandidates: topCandidates, domains, bloomProfile: mergedBloom, archetype };
   }
@@ -5272,25 +5368,33 @@ class PBLPathBuilder {
       console.warn('[PBL] match JSON 解析失败，将使用关键词回退:', e.message);
     }
 
-    let matched = this._mapMatchedEntries(result, candidates, complex, minConf, goal, archetype)
-      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
-      .slice(0, profile.maxMatched);
+    const llmMatched = this._mapMatchedEntries(result, candidates, complex, minConf, goal, archetype)
+      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+    const llmFallback = llmMatched.length
+      ? llmMatched
+      : this._mapMatchedEntries(result, candidates, complex, 0.48, goal, archetype)
+        .sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
 
-    if (!matched.length) {
-      matched = this._mapMatchedEntries(result, candidates, complex, 0.48, goal, archetype)
-        .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
-        .slice(0, profile.maxMatched);
+    const retrieved = this._rescueCandidatesFromPool(goal, candidates, profile.maxMatched, archetype, projectBlueprint);
+    const minNeed = Math.max(this._getMinMatchedFloor(archetype), archetype?.minMatched || 5);
+    let matched = this._unionCandidateNodes(
+      [retrieved, llmFallback],
+      profile.maxMatched
+    );
+
+    if (matched.length < minNeed && candidates.length) {
+      const hintRescued = this._retrieveByBlueprintHints(
+        candidates, projectBlueprint, archetype, goal, profile.maxMatched
+      ).map((n, i) => ({
+        ...n,
+        confidence: Math.max(0.6, 0.82 - i * 0.03),
+        matchReason: '蓝图 hints 检索匹配',
+        pblRole: i < 2 ? 'bridge' : 'core',
+      }));
+      matched = this._unionCandidateNodes([matched, hintRescued], profile.maxMatched);
+      if (hintRescued.length) console.warn('[PBL] 蓝图 hints 检索补齐:', hintRescued.map(n => n.name).join('、'));
     }
-    if (matched.length < (archetype?.minMatched || 3) && candidates.length) {
-      const rescued = this._rescueCandidatesFromPool(goal, candidates, profile.maxMatched, archetype, projectBlueprint);
-      const seen = new Set(matched.map(n => n.id));
-      rescued.forEach(n => {
-        if (matched.length >= profile.maxMatched || seen.has(n.id)) return;
-        seen.add(n.id);
-        matched.push(n);
-      });
-      if (rescued.length) console.warn('[PBL] 原型层模块检索补齐:', rescued.map(n => n.name).join('、'));
-    }
+    if (retrieved.length) console.warn('[PBL] 混合召回课内节点:', matched.map(n => n.name).join('、'));
     matched = this._filterMainlineNodes(matched, goal, archetype);
     matched = this._verifyAndPruneNodes(matched, goal, archetype, '匹配后核实').kept;
     if (archetype && this._archetypeEngine) {

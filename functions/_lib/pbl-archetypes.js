@@ -12,8 +12,26 @@ function textOf(node) {
   return `${node.name || ''} ${node.definition || ''}`;
 }
 
-/** 不再套原型；match 阶段仅以拆解蓝图 + 题目锚点约束 */
-export function resolveArchetype() {
+/** 按 archetypeId 或 goal 关键词解析项目原型（与客户端 _resolveArchetype 对齐） */
+export function resolveArchetype(goal, projectType = '', _mixedChemistry = false, archetypeId = null) {
+  const list = archetypeData.archetypes || [];
+  if (archetypeId) {
+    const byId = list.find(a => a.id === archetypeId);
+    if (byId) return byId;
+  }
+  const g = norm(goal);
+  for (const a of list) {
+    for (const p of a.matchPatterns || []) {
+      try {
+        if (new RegExp(p).test(g)) return a;
+      } catch (e) {
+        if (g.includes(p)) return a;
+      }
+    }
+  }
+  if (projectType) {
+    return list.find(a => a.projectType === projectType || a.id === projectType) || null;
+  }
   return null;
 }
 

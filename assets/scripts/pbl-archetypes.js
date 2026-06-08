@@ -260,7 +260,22 @@
           })
           .filter(x => x.s > 0)
           .sort((a, b) => b.s - a.s);
-        ranked.slice(0, topK).forEach(x => {
+        let hits = ranked.slice(0, topK);
+        if (!hits.length && mod.subjects?.length) {
+          hits = pool
+            .filter(n => !seen.has(n.id))
+            .filter(n => !banFn(n))
+            .filter(n => !meetsGrade || meetsGrade(n))
+            .filter(n => mod.subjects.includes(n.subject))
+            .filter(n => !archetype || this._moduleNodeOk(archetype, mod, n))
+            .map(n => {
+              const s = (scoreForModule || ((a, b, c) => this.scoreForModule(a, b, c, archetype)))(n, mod, goalTerms);
+              return { n, s: Math.max(s, 1) };
+            })
+            .sort((a, b) => b.s - a.s)
+            .slice(0, topK);
+        }
+        hits.forEach(x => {
           if (seen.has(x.n.id)) return;
           seen.add(x.n.id);
           picked.push({ ...x.n, _moduleId: mod.id, _moduleLabel: mod.label, _score: x.s });
@@ -275,7 +290,7 @@
             prefer.forEach(p => { if (norm(n.name).includes(p)) s += 5; });
             return { n, s };
           })
-          .filter(x => x.s >= 6)
+          .filter(x => x.s >= 4)
           .filter(x => !banFn(x.n))
           .filter(x => !meetsGrade || meetsGrade(x.n))
           .sort((a, b) => b.s - a.s)
