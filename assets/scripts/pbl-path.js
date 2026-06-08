@@ -822,7 +822,8 @@ class PBLPathBuilder {
       '材料', '结构', '设计', '制作', '模型', '搭建', '探究', '温室', '天气',
       '新能源', '光伏', '太阳能', '风电', '风能', '储能', '电池', '锂电', '充电',
       '发电', '电能', '电动', '能源', '碳中和', '并网', '逆变', '电磁', '电路',
-      '购车', '买车', '选车', '燃油', '油耗', '混动', '对比', '家用', '成本', '预算'
+      '购车', '买车', '选车', '燃油', '油耗', '混动', '对比', '家用', '成本', '预算',
+      '垃圾', '分类', '回收', '环保', '社区', '调查', '问卷', '访谈', '废弃物', '治理'
     ];
     lex.forEach(w => { if (g.includes(w)) terms.add(w); });
     // 领域词典命中足够时不再用二字随机切分，避免「设计并」等噪声匹配无关课标
@@ -1358,6 +1359,15 @@ class PBLPathBuilder {
         }
       ];
     }
+    if (/垃圾分类|垃圾治理|垃圾处理|废弃物|固体废物|社区.*环境|环保.*调查|回收.*调查/.test(g)) {
+      return [
+        { id: 'survey', label: '现状调查', keywords: ['调查', '问卷', '访谈', '抽样', '社区', '现状', '记录', '实地'], subjects: ['chinese', 'math'] },
+        { id: 'sorting', label: '分类标准与流程', keywords: ['分类', '可回收', '有害', '厨余', '其他', '标识', '投放', '垃圾'], subjects: ['geography', 'science'] },
+        { id: 'data', label: '数据统计', keywords: ['统计', '图表', '百分比', '整理', '分析', '数据', '平均数'], subjects: ['math'] },
+        { id: 'environment', label: '环境与影响', keywords: ['环境', '污染', '资源', '循环', '可持续', '减排', '生态'], subjects: ['geography', 'science'] },
+        { id: 'proposal', label: '改进建议与宣传', keywords: ['建议', '方案', '宣传', '倡议', '报告', '写作', '说明'], subjects: ['chinese'] },
+      ];
+    }
     return this._genericDomainsForType(this._classifyProjectType(g));
   }
 
@@ -1365,13 +1375,23 @@ class PBLPathBuilder {
     return this._isEnergyEngineeringGoal(goal);
   }
 
-  _isBiologyNodeName(name) {
-    return /细胞|细胞膜|细胞器|细胞核|细胞壁|细胞呼吸|线粒体|叶绿体|有丝分裂|减数分裂|DNA|基因表达|遗传|光合作用|酶|蛋白质合成|生物膜/.test(String(name || ''));
+  /** 社会调查/社区议题（垃圾分类、环保治理等）且题目未涉及生命科学 */
+  _isSocialOrCivicInquiryGoal(goal) {
+    const g = String(goal || '');
+    if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|居民|乡土|口述史|垃圾分类|垃圾治理|垃圾处理|废弃物|固体废物|环保|治理|倡议/.test(g)) {
+      return !/生物|细胞|生态|光合|酶|遗传|植物|动物|种植|栽培|养殖|人体|器官/.test(g);
+    }
+    return false;
   }
 
-  /** 购车/能耗比选等非生物项目：硬性剔除生物噪声（避免「新能源」误配细胞） */
+  _isBiologyNodeName(name) {
+    return /细胞|细胞膜|细胞器|细胞核|细胞壁|细胞呼吸|细胞代谢|细胞周期|细胞死亡|细胞分化|细胞衰老|细胞信号|细胞结构|线粒体|叶绿体|有丝分裂|减数分裂|DNA|基因表达|遗传|光合作用|酶|蛋白质合成|生物膜|生命与环境|微生物|植物.*分类|生物分类/.test(String(name || ''));
+  }
+
+  /** 非生物项目：硬性剔除生物噪声（购车/社会调查/垃圾分类等） */
   _shouldPurgeBiologyForGoal(goal) {
     if (this._isConsumerDecisionGoal(goal)) return true;
+    if (this._isSocialOrCivicInquiryGoal(goal)) return true;
     const g = String(goal || '');
     return /(车|汽车)/.test(g) && /新能源|燃油|电动|混动|油电/.test(g) && !/生物|细胞|生态|光合|酶|遗传|植物|动物/.test(g);
   }
@@ -1379,7 +1399,7 @@ class PBLPathBuilder {
   _purgeBiologyNoise(nodes, goal) {
     if (!this._shouldPurgeBiologyForGoal(goal) || !Array.isArray(nodes)) return nodes;
     return nodes.filter(n => {
-      if (n.subject === 'biology') return false;
+      if (n.subject === 'biology' || n.subject === 'advanced-biology') return false;
       if (this._isBiologyNodeName(n.name)) return false;
       return true;
     });
@@ -1830,6 +1850,12 @@ class PBLPathBuilder {
       if (this._isRdEngineeringNodeName(name, g)) return false;
       if (this._isBiologyNodeName(name)) return false;
       if (/比热容/.test(name) && !/热|环境/.test(text)) return false;
+    }
+
+    if (this._isSocialOrCivicInquiryGoal(g)) {
+      if (this._isBiologyNodeName(name)) return false;
+      if (['biology', 'advanced-biology'].includes(node.subject)) return false;
+      if (/植物|生物分类|细胞|微观|有丝分裂|减数分裂|DNA|基因|光合|酶/.test(name) && /分类/.test(name)) return false;
     }
 
     if (this._isChemistryInquiryGoal(g)) {
@@ -3842,6 +3868,7 @@ class PBLPathBuilder {
             if (!parentNode) return;
             if (parentNode.subject === kg.subject) return; // 同学科跳过（已由 prerequisites 覆盖）
             if (complex && this._excludeForComplexProject(parentNode)) return;
+            if (!this._isMainlineRelevant(parentNode, goal, domains)) return;
             const enriched = { ...parentNode, layer: 'prerequisite', crossSubject: true };
             base.nodes.push(enriched);
             nodeMap.set(parentId, enriched);
@@ -3856,6 +3883,7 @@ class PBLPathBuilder {
             if (matchedIds.has(childId) || nodeMap.has(childId)) return;
             const childNode = this.unifiedIndex.get(childId);
             if (!childNode || childNode.grade !== 0) return;
+            if (!this._isMainlineRelevant(childNode, goal, domains)) return;
             const enriched = { ...childNode, layer: 'advanced', isUniversity: true };
             base.nodes.push(enriched);
             nodeMap.set(childId, enriched);
@@ -4628,6 +4656,19 @@ class PBLPathBuilder {
 
 // ─── D3.js 图谱渲染器（复用 tree.html 节点样式） ──────────────────
 
+/** PBL 结果图谱学科亲密度分列（与全科图谱 SUBJECT_LAYOUT_ORDER 对齐） */
+const PBL_SUBJECT_LAYOUT_ORDER = [
+  'math', 'advanced-math',
+  'physics', 'advanced-physics',
+  'chemistry', 'advanced-chemistry',
+  'biology', 'advanced-biology',
+  'science', 'earth-space', 'formal-sciences',
+  'engineering', 'civil-engineering', 'chemical-engineering', 'aerospace-engineering',
+  'nuclear-engineering', 'naval-engineering', 'hydraulic-engineering', 'agricultural-engineering',
+  'computer-science', 'info-tech',
+  'chinese', 'english', 'history', 'geography',
+];
+
 class PBLGraphRenderer {
   constructor(containerId) {
     this.containerId = containerId;
@@ -4654,6 +4695,16 @@ class PBLGraphRenderer {
       external: '外部补充',
       university: '大学延伸'
     };
+  }
+
+  _getSubjectX(subject) {
+    let idx = PBL_SUBJECT_LAYOUT_ORDER.indexOf(subject);
+    let cols = PBL_SUBJECT_LAYOUT_ORDER.length;
+    if (idx < 0) {
+      idx = PBL_SUBJECT_LAYOUT_ORDER.length;
+      cols += 1;
+    }
+    return (this.width / (cols + 1)) * (idx + 1);
   }
 
   render(graphData, onNodeClick) {
@@ -4940,7 +4991,7 @@ class PBLGraphRenderer {
       .force('charge', d3.forceManyBody().strength(baseCharge))
       .force('center', d3.forceCenter(this.width / 2, this.height / 2))
       .force('collision', d3.forceCollide().radius(baseCollide))
-      .force('x', d3.forceX(this.width / 2).strength(0.03))
+      .force('x', d3.forceX(d => this._getSubjectX(d.subject)).strength(nodeCount > 30 ? 0.18 : 0.12))
       .force('y', d3.forceY(this.height / 2).strength(0.03))
       .on('tick', () => {
         link

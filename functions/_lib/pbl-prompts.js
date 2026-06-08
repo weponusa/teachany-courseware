@@ -34,6 +34,14 @@ function isConsumerDecisionGoal(goal) {
   return false;
 }
 
+function isSocialOrCivicInquiryGoal(goal) {
+  const g = String(goal || '');
+  if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|居民|乡土|口述史|垃圾分类|垃圾治理|垃圾处理|废弃物|固体废物|环保|治理|倡议/.test(g)) {
+    return !/生物|细胞|生态|光合|酶|遗传|植物|动物|种植|栽培|养殖|人体|器官/.test(g);
+  }
+  return false;
+}
+
 function isChemistryInquiryGoal(goal) {
   const g = String(goal || '');
   return /浓度|溶液|溶解度|溶质|溶剂|饱和溶液|质量分数|体积分数|物质的溶解|配制溶液|混合溶液/.test(g)
@@ -484,6 +492,15 @@ function inferProjectDomains(goal) {
       { id: 'system', label: '系统测试与控制', keywords: ['控制', '传感', '传感器', '采集', '实验', '测试', '反馈', '调试', '数据采集', '误差'], subjects: ['info-tech', 'physics'] },
     ];
   }
+  if (/垃圾分类|垃圾治理|垃圾处理|废弃物|固体废物|社区.*环境|环保.*调查|回收.*调查/.test(g)) {
+    return [
+      { id: 'survey', label: '现状调查', keywords: ['调查', '问卷', '访谈', '抽样', '社区', '现状', '记录', '实地'], subjects: ['chinese', 'math'] },
+      { id: 'sorting', label: '分类标准与流程', keywords: ['分类', '可回收', '有害', '厨余', '其他', '标识', '投放', '垃圾'], subjects: ['geography', 'science'] },
+      { id: 'data', label: '数据统计', keywords: ['统计', '图表', '百分比', '整理', '分析', '数据', '平均数'], subjects: ['math'] },
+      { id: 'environment', label: '环境与影响', keywords: ['环境', '污染', '资源', '循环', '可持续', '减排', '生态'], subjects: ['geography', 'science'] },
+      { id: 'proposal', label: '改进建议与宣传', keywords: ['建议', '方案', '宣传', '倡议', '报告', '写作', '说明'], subjects: ['chinese'] },
+    ];
+  }
   return genericDomainsForType(classifyProjectType(g));
 }
 
@@ -813,7 +830,9 @@ function typeMatchHints(goal) {
           : `\n### 类型要求：化学溶液/浓度探究\n- **以 chemistry 为主线**（溶液、溶质溶剂、质量分数、溶解、配制）；math 仅用于数据记录/统计图表\n- **禁止** matched：程序设计、信息技术、人体器官系统、泛泛的「饮食营养与健康」\n- projectPhases 任务须写清实验步骤与计算，禁止「完成课件」空话`)
         : `\n### 类型要求：科学探究\n- 必含实验设计与数据分析类节点；理论与实验并重，不要只选纯计算`;
     case 'social-inquiry':
-      return `\n### 类型要求：社会调查\n- 围绕调查方法、统计分析、报告写作；可用语文/地理/历史/数学，**不要塞理科公式**`;
+      return isSocialOrCivicInquiryGoal(goal) && /垃圾分类|垃圾治理|废弃物|环保/.test(goal)
+        ? `\n### 类型要求：社区环保/垃圾分类调查\n- 交付物是调查报告+改进建议/宣传方案；matched 须覆盖：问卷访谈、数据统计图表、垃圾分类标准、环境影响、说明文/倡议写作\n- 优先：统计图、百分比、调查方法、人口与环境/资源、说明文写作、地理实践\n- **禁止** matched：细胞结构/细胞代谢/细胞周期/细胞死亡、植物分类、DNA/遗传、大学细胞生物学、程序设计、工程装置\n- 「分类」指垃圾四分法，**不是**植物/生物分类；reason 须写明用于调查哪一环节`
+        : `\n### 类型要求：社会调查\n- 围绕调查方法、统计分析、报告写作；可用语文/地理/历史/数学，**不要塞理科公式**\n- **禁止** matched：细胞生物学、植物分类、DNA/遗传等生命科学节点（除非题目明确涉及生物/健康）`;
     case 'humanities-literary':
       return `\n### 类型要求：人文/文学\n- 围绕阅读、写作、表达、文化理解（语文/英语/历史）；**不要塞理科或工程节点**`;
     case 'creative-media':
