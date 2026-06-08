@@ -666,15 +666,52 @@ class PBLPathBuilder {
     return (parseInt(node.grade, 10) || 0) === 0 && node.system === 'cn' && !node.isExternal;
   }
 
+  /** 表单或目标是否锁定小学学段（1–6 年级） */
+  _isPrimarySchoolContext(goal, projectSpec = null) {
+    const band = this._parseExplicitGradeBand(goal, projectSpec || this._activeProjectSpec);
+    return band.explicit && band.minGrade >= 1 && band.maxGrade <= 6;
+  }
+
+  /** 节点是否落在用户选定的学段内（小学禁大学/超龄课标） */
+  _passesGradeBandGate(node, goal, projectSpec = null) {
+    if (!node || node.isExternal || node.layer === 'external') return true;
+    const band = this._parseExplicitGradeBand(goal, projectSpec || this._activeProjectSpec);
+    if (!band.explicit) return true;
+    const grade = parseInt(node.grade, 10) || 0;
+    if (band.maxGrade <= 6) {
+      if (this._isUniversityNode(node) || node.isUniversity) return false;
+      if (node.system === 'cn') return grade >= band.minGrade && grade <= band.maxGrade;
+      return false;
+    }
+    if (band.minGrade >= 7 && band.maxGrade <= 9) {
+      if (this._isUniversityNode(node) || node.isUniversity) return false;
+      if (node.system === 'cn' && grade > 0) return grade >= 7 && grade <= 9;
+    }
+    if (band.minGrade >= 10 && band.maxGrade <= 12) {
+      if (this._isUniversityNode(node) || node.isUniversity) return false;
+      if (node.system === 'cn' && grade > 0) return grade >= 10 && grade <= 12;
+    }
+    return true;
+  }
+
   /** 用户明确需要大学层拓展（默认 PBL 只匹配 K12 全科图谱子图） */
-  _shouldAllowUniversityNodes(goal) {
+  _shouldAllowUniversityNodes(goal, projectSpec = null) {
+    const spec = projectSpec || this._activeProjectSpec;
+    if (spec?.gradeLevel === 'university') return true;
+    if (this._isPrimarySchoolContext(goal, spec)) return false;
+    if (spec?.gradeLevel === 'primary' || spec?.gradeLevel === 'junior' || spec?.gradeLevel === 'senior') {
+      return false;
+    }
     const g = String(goal || '');
-    return /大学|本科|高职|大一|大二|大三|大四|研究生|竞赛拓展|高等数学|大学物理|大学化学|AP\s|IB\s|Cambridge/i.test(g);
+    return /大学|本科|高职|大一|大二|大三|大四|研究生|竞赛拓展|高等数学|大学物理|大学化学/i.test(g);
   }
 
   /** 默认匹配池：CN 仅 K12（grade 1–12），国际课标保留；大学层按需开启 */
   _isMatchingPoolNode(node, goal) {
     if (!node || node.isExternal) return false;
+    if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return false;
+    if (!this._passesGradeBandGate(node, goal)) return false;
+    if (this._isPrimarySchoolContext(goal)) return node.system === 'cn';
     if (node.system !== 'cn') return true;
     if (this._shouldAllowUniversityNodes(goal)) return true;
     return this._isK12Node(node);
@@ -704,12 +741,16 @@ class PBLPathBuilder {
       .flatMap(s => (s.phases || []).flatMap(p => [...(p.knowledgeHints || []), p.phase, ...(p.steps || [])]))
       .join(' ');
     const basePool = (pool?.length >= 30 ? pool : null) || this._getK12Pool(goal);
+    const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
+    const primaryCtx = this._isPrimarySchoolContext(goal);
     const k12Pool = basePool
       .filter(n => this._passesHardNodeGate(n, goal, archetype))
       .map(n => ({
         ...n,
         _score: this._scoreUniversalRelevance(n, goal, blueprint, domains, archetype)
-          + (hintBlob.split(/[、,，\s]+/).filter(h => h.length >= 2 && this._nodeSearchText(n).includes(h)).length * 2),
+          + (hintBlob.split(/[、,，\s]+/).filter(h => h.length >= 2 && this._nodeSearchText(n).includes(h)).length * 2)
+          + (primaryCtx && specSubjects?.includes(n.subject) ? 8 : 0)
+          + (primaryCtx && goalTerms.some(t => t.length >= 2 && this._nodeSearchText(n).includes(t)) ? 4 : 0),
       }))
       .filter(n => n._score >= this._relevanceKeepThreshold(floorMode))
       .sort((a, b) => b._score - a._score);
@@ -1246,6 +1287,19 @@ class PBLPathBuilder {
     const sig = subjectSignals[node.subject];
     if (sig && !sig.test(contextBlob) && !sig.test(name) && !sig.test(text)) score -= 10;
 
+    if (this._isPrimarySchoolContext(g)) {
+      const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
+      if (specSubjects?.includes(node.subject)) score += 6;
+      if (/购物|找零|人民币|记账|收入|小票/.test(g) && node.subject === 'math'
+        && /人民币|加减|乘|除|万以内|数的认识|统计|象形|条形|折线/.test(name)) score += 12;
+      if (/购物|找零|人民币|记账/.test(g) && node.subject === 'science'
+        && !/测量|数据|记录/.test(name)) score -= 10;
+      if (/植物|生长|观察/.test(g) && node.subject === 'science'
+        && /植物|生长|种子|测量|记录/.test(name)) score += 10;
+      if (/统计|平均|调查|图表/.test(g) && node.subject === 'math'
+        && /统计|平均|百分|分数|小数|条形|折线|扇形/.test(name)) score += 8;
+    }
+
     return score;
   }
 
@@ -1253,6 +1307,7 @@ class PBLPathBuilder {
     if (!node) return false;
     if (node.isExternal || node.layer === 'external' || String(node.id || '').startsWith('ext-')) return true;
     if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return false;
+    if (!this._passesGradeBandGate(node, goal)) return false;
     if (archetype && this._isArchetypeBanned(node, archetype)) return false;
     if (this._isGenericTransversalNode(node.name, goal)) return false;
     return true;
@@ -1291,6 +1346,15 @@ class PBLPathBuilder {
     };
     const band = maps[spec.gradeLevel];
     if (!band) return { explicit: false, minGrade: 1, maxGrade: 12, label: null };
+    if (spec.gradeLevel === 'primary' && detail >= 1 && detail <= 6) {
+      const slack = detail <= 2 ? 0 : 1;
+      return {
+        explicit: true,
+        minGrade: Math.max(1, detail - slack),
+        maxGrade: Math.min(6, detail + slack),
+        label: `${detail}年级`,
+      };
+    }
     if (detail >= 1 && detail <= 12) {
       return { explicit: true, minGrade: detail, maxGrade: detail, label: `${detail}年级` };
     }
@@ -3322,6 +3386,7 @@ class PBLPathBuilder {
         goal,
         deliverable: projectBlueprint?.deliverable || '',
         projectBlueprint,
+        projectSpec: this._activeProjectSpec || null,
         nodes: lite,
       });
       const parsed = JSON.parse(this._extractJsonObject(response));
@@ -3884,10 +3949,12 @@ class PBLPathBuilder {
     }));
   }
 
-  _guaranteeCurriculumFloor(nodes, goal, pool, archetype, limit, complex, blueprint = null) {
+  _guaranteeCurriculumFloor(nodes, goal, pool, archetype, limit, complex, blueprint = null, options = {}) {
     const min = this._getMinMatchedFloor(archetype);
+    const excludeIds = new Set(options.excludeIds || []);
     let list = Array.isArray(nodes) ? [...nodes] : [];
-    const effectivePool = this._getBroadCurriculumPool(goal, pool, Math.max(min * 4, 50));
+    const effectivePool = this._getBroadCurriculumPool(goal, pool, Math.max(min * 4, 50))
+      .filter(n => !excludeIds.has(n.id));
     if (list.length < min && effectivePool.length) {
       list = this._ensureMinimumMatched(list, goal, effectivePool, limit, complex, archetype);
     }
@@ -3901,12 +3968,24 @@ class PBLPathBuilder {
       });
     }
     if (list.length < min) {
-      const forced = this._rescueFromK12KnowledgeGraph(goal, blueprint, archetype, limit, this._getK12Pool(goal), { floorMode: true });
+      const forced = this._rescueFromK12KnowledgeGraph(
+        goal, blueprint, archetype, limit,
+        this._getK12Pool(goal).filter(n => !excludeIds.has(n.id)),
+        { floorMode: true }
+      );
       const seen = new Set(list.map(n => n.id));
       forced.forEach(n => {
         if (list.length >= min || seen.has(n.id)) return;
         seen.add(n.id);
         list.push(n);
+      });
+    }
+    const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
+    if (this._isPrimarySchoolContext(goal) && specSubjects?.length) {
+      list.sort((a, b) => {
+        const am = specSubjects.includes(a.subject) ? 1 : 0;
+        const bm = specSubjects.includes(b.subject) ? 1 : 0;
+        return bm - am;
       });
     }
     return this._assignCoreRoles(list.slice(0, limit), min);
@@ -4657,7 +4736,7 @@ class PBLPathBuilder {
     }
 
     const ac = new AbortController();
-    const timeout = setTimeout(() => ac.abort(), 90000);
+    const timeout = setTimeout(() => ac.abort(), 180000);
     try {
       const resp = await fetch(this._getPBLAnalyzeUrl(), {
         method: 'POST',
@@ -4877,10 +4956,12 @@ class PBLPathBuilder {
           // 大学延伸节点（来自图谱边的 children 中 grade=0 的大学节点）
           let uniAdded = 0;
           graphNb.children.forEach(childId => {
+            if (!this._shouldAllowUniversityNodes(goal)) return;
             if (uniAdded >= 2) return; // 每节点最多 2 个大学延伸
             if (matchedIds.has(childId) || nodeMap.has(childId)) return;
             const childNode = this.unifiedIndex.get(childId);
             if (!childNode || childNode.grade !== 0) return;
+            if (!this._passesGradeBandGate(childNode, goal)) return;
             if (!this._isMainlineRelevant(childNode, goal, domains)) return;
             const enriched = { ...childNode, layer: 'advanced', isUniversity: true };
             base.nodes.push(enriched);
@@ -5190,6 +5271,7 @@ class PBLPathBuilder {
         : reviewed.nodes.filter(n => n.layer === 'matched' || (n.pblRole || 'core') === 'core');
       const min = this._getMinMatchedFloor(archetype);
       if (outputAudit.matched.length < min) {
+        const reviewRemovedIds = (reviewed.removed || []).map(r => r.id).filter(Boolean);
         const refilled = this._guaranteeCurriculumFloor(
           outputAudit.matched,
           goal,
@@ -5197,7 +5279,8 @@ class PBLPathBuilder {
           archetype,
           this._getPBLGoalProfile(goal).maxMatched,
           outputAudit.complex,
-          projectBlueprint
+          projectBlueprint,
+          { excludeIds: reviewRemovedIds }
         );
         const graphData = this._buildRichMainlineGraph(
           refilled,
@@ -5385,7 +5468,9 @@ class PBLPathBuilder {
     const minGradeArchetype = profile.explicitGrade
       ? (archetype?.minGrade || profile.minGrade)
       : 1;
-    const applyElemExclude = profile.explicitGrade || (profile.complex && this._isStemProjectGoal(goal));
+    const isPrimaryBand = profile.explicitGrade && profile.gradeBand?.maxGrade <= 6;
+    const applyElemExclude = !isPrimaryBand
+      && (profile.explicitGrade || (profile.complex && this._isStemProjectGoal(goal)));
     const filteredCandidates = candidates.filter(n => {
       const subjectMatch = !filter.subjects || filter.subjects.length === 0 || filter.subjects.includes(n.subject);
       const systemMatch = !filter.systems || filter.systems.length === 0 || filter.systems.includes(n.system);
@@ -5393,6 +5478,7 @@ class PBLPathBuilder {
       const gradeMatch = !filter.grades || filter.grades.length === 0
         || filter.grades.some(g => Math.abs(grade - g) <= 2);
       const notElementary = !profile.explicitGrade || grade === 0 || grade >= Math.max(minGrade, minGradeArchetype);
+      if (!this._passesGradeBandGate(n, goal)) return false;
       if (applyElemExclude && this._excludeForComplexProject(n)) return false;
       if (archetype && this._isArchetypeBanned(n, archetype)) return false;
       if (this._isNodeAboveBloomCeiling(n, bloomCeiling)) return false;
@@ -5401,6 +5487,7 @@ class PBLPathBuilder {
 
     const MAX_STAGE2_CANDIDATES = archetype ? 50 : (profile.complex ? 45 : (this._isSocialOrCivicInquiryGoal(goal) ? 50 : 36));
     let pool = filteredCandidates.length > 0 ? filteredCandidates : candidates.filter(n => {
+      if (!this._passesGradeBandGate(n, goal)) return false;
       const g = parseInt(n.grade, 10) || 0;
       if (applyElemExclude) {
         return (g === 0 || g >= minGradeArchetype) && !this._excludeForComplexProject(n);

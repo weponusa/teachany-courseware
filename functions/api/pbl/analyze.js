@@ -115,6 +115,7 @@ export async function onRequestPost(context) {
         goal,
         deliverable: body.deliverable || '',
         projectBlueprint: body.projectBlueprint || null,
+        projectSpec: body.projectSpec || null,
         nodes: body.nodes || [],
       });
     } else if (stage === 'refine') {
