@@ -115,39 +115,26 @@ body {
 }
 .grade-val { font-size: 12px; color: var(--text); min-width: 50px; text-align: center; }
 
-/* Node detail panel */
-.detail-panel {
-  position: fixed; top: 96px; right: 16px; z-index: 80;
-  width: 320px; padding: 20px;
-  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-  backdrop-filter: blur(16px);
-  display: none; max-height: calc(100vh - 120px); overflow-y: auto;
+/* Node detail panel（与 tree / PBL 属性页一致） */
+.node-detail-panel {
+  position: fixed; top: 84px; right: -400px; width: 380px; height: calc(100vh - 84px);
+  background: var(--bg2); border-left: 1px solid var(--border);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.35); z-index: 95;
+  transition: right 0.3s ease; overflow-y: auto; padding: 22px 20px 28px;
 }
-.detail-panel.visible { display: block; }
-.detail-panel::-webkit-scrollbar { width: 4px; }
-.detail-panel::-webkit-scrollbar-thumb { background: var(--dimmer); border-radius: 2px; }
-.detail-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-.detail-subtitle { font-size: 12px; color: var(--dim); margin-bottom: 12px; }
-.detail-section { margin-bottom: 12px; }
-.detail-section-title { font-size: 11px; color: var(--dimmer); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
-.detail-text { font-size: 13px; color: var(--dim); line-height: 1.5; }
-.detail-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.detail-tag {
-  padding: 2px 8px; border-radius: 10px; font-size: 11px;
-  background: rgba(79,143,255,0.1); color: var(--primary);
+.node-detail-panel.open { right: 0; }
+.node-detail-panel::-webkit-scrollbar { width: 4px; }
+.node-detail-panel::-webkit-scrollbar-thumb { background: var(--dimmer); border-radius: 2px; }
+.node-detail-panel .close-btn {
+  position: absolute; top: 12px; right: 12px; padding: 6px 10px;
+  border-radius: 6px; border: 1px solid var(--border); background: var(--bg);
+  color: var(--dim); cursor: pointer; font-size: 14px; z-index: 1;
 }
-.detail-prereq {
-  padding: 3px 8px; border-radius: 6px; font-size: 12px; cursor: pointer;
-  background: rgba(168,85,247,0.1); color: #c084fc; margin: 2px;
-  display: inline-block; transition: background 0.2s;
+.node-detail-panel .close-btn:hover { color: var(--text); }
+.node-detail-panel h3 {
+  font-size: 18px; font-weight: 700; color: var(--text);
+  margin-bottom: 8px; padding-right: 36px;
 }
-.detail-prereq:hover { background: rgba(168,85,247,0.2); }
-.close-detail {
-  position: absolute; top: 12px; right: 12px; width: 24px; height: 24px;
-  border: none; background: rgba(255,255,255,0.05); border-radius: 50%;
-  color: var(--dim); cursor: pointer; font-size: 14px; line-height: 24px; text-align: center;
-}
-.close-detail:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 
 /* Canvas */
 #graphCanvas {
@@ -183,7 +170,7 @@ body {
 /* Responsive */
 @media (max-width: 768px) {
   .controls { width: 240px; left: 8px; top: 90px; padding: 12px; }
-  .detail-panel { width: 260px; right: 8px; }
+  .node-detail-panel { width: 300px; }
   .legend { gap: 8px; padding: 6px 12px; }
 }
 </style>
@@ -253,31 +240,17 @@ body {
 
 <canvas id="graphCanvas"></canvas>
 
-<div class="detail-panel" id="detailPanel">
-  <button class="close-detail" onclick="closeDetail()">✕</button>
-  <div class="detail-title" id="detailTitle"></div>
-  <div class="detail-subtitle" id="detailSubtitle"></div>
-  <div class="detail-section">
-    <div class="detail-section-title">定义</div>
-    <div class="detail-text" id="detailDef"></div>
-  </div>
-  <div class="detail-section" id="detailSkillsSection" style="display:none">
-    <div class="detail-section-title">技能</div>
-    <div class="detail-tags" id="detailSkills"></div>
-  </div>
-  <div class="detail-section" id="detailPrereqSection" style="display:none">
-    <div class="detail-section-title">先修知识</div>
-    <div id="detailPrereqs"></div>
-  </div>
-  <div class="detail-section" id="detailNextSection" style="display:none">
-    <div class="detail-section-title">后续知识</div>
-    <div id="detailNext"></div>
-  </div>
+<div class="node-detail-panel" id="detailPanel">
+  <button type="button" class="close-btn" onclick="closeDetail()" aria-label="关闭">✕</button>
+  <div id="detailContent"></div>
 </div>
 
 <div class="legend" id="legend"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="./assets/scripts/courseware-hub.js"></script>
+<script src="./assets/scripts/teachany-make-course.js"></script>
+<script src="./assets/scripts/knowledge-node-detail.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // DATA & CONFIG
@@ -324,6 +297,8 @@ function getDomainLabel(domainId) {
 }
 
 let graphData = { nodes: [], edges: [] };
+let metaById = null;
+let metaLoadPromise = null;
 let simulation = null;
 let currentLayout = 'force';
 let activeSubjects = new Set(Object.keys(SUBJECT_CONFIG));
@@ -356,15 +331,38 @@ async function loadDomainLabels() {
   } catch (e) { /* 使用内置 DOMAIN_LABELS 回退 */ }
 }
 
+async function ensureMetaIndex() {
+  if (metaById) return metaById;
+  if (!metaLoadPromise) {
+    metaLoadPromise = fetch('./data/nodes-metadata.json?v=20260608')
+      .then((r) => (r.ok ? r.json() : { nodes: [] }))
+      .then((d) => {
+        metaById = new Map();
+        (d.nodes || []).forEach((n) => { if (n.id) metaById.set(n.id, n); });
+        return metaById;
+      })
+      .catch(() => {
+        metaById = new Map();
+        return metaById;
+      });
+  }
+  return metaLoadPromise;
+}
+
 async function init() {
   await loadDomainLabels();
+  const hubInit = window.TeachAnyHub ? TeachAnyHub.init().catch(() => {}) : Promise.resolve();
   try {
-    const resp = await fetch('./data/knowledge-map-data.json?v=20260608');
+    const [_, resp] = await Promise.all([
+      hubInit,
+      fetch('./data/knowledge-map-data.json?v=20260608'),
+    ]);
     graphData = await resp.json();
   } catch (e) {
     document.getElementById('loading').innerHTML = '<div style="color:#ef4444">加载失败: ' + e.message + '</div>';
     return;
   }
+  ensureMetaIndex();
 
   // Build lookups
   graphData.nodes.forEach(n => {
@@ -742,59 +740,33 @@ function onClick(event) {
   }
 }
 
-function showDetail(node) {
+async function showDetail(node) {
   const panel = document.getElementById('detailPanel');
-  const cfg = SUBJECT_CONFIG[node.subject] || { label: node.subject, emoji: '📌', color: '#666' };
+  const content = document.getElementById('detailContent');
+  if (!panel || !content || !node) return;
 
-  document.getElementById('detailTitle').textContent = node.name;
-  const enLine = node.name_en ? `<div style="font-size:11px;color:var(--dimmer);margin-top:4px">${node.name_en}</div>` : '';
-  document.getElementById('detailSubtitle').innerHTML =
-    `<span style="color:${cfg.color}">${cfg.emoji} ${cfg.label}</span> · ${node.grade === 0 ? '大学' : node.grade + '年级'} · ${getDomainLabel(node.domain)}${enLine}`;
-  document.getElementById('detailDef').textContent = node.definition || '暂无定义';
+  await ensureMetaIndex();
+  if (window.TeachAnyHub) await TeachAnyHub.init();
 
-  // Skills
-  const skillsSection = document.getElementById('detailSkillsSection');
-  const skillsDiv = document.getElementById('detailSkills');
-  if (node.skills && node.skills.length) {
-    skillsDiv.innerHTML = node.skills.map(s => `<span class="detail-tag">${s}</span>`).join('');
-    skillsSection.style.display = 'block';
-  } else {
-    skillsSection.style.display = 'none';
-  }
+  const meta = metaById?.get(node.id) || {};
+  const graphPrereqs = edgesByTarget.get(node.id) || [];
+  const graphNexts = edgesBySource.get(node.id) || [];
 
-  // Prerequisites
-  const prereqSection = document.getElementById('detailPrereqSection');
-  const prereqsDiv = document.getElementById('detailPrereqs');
-  const prereqs = edgesByTarget.get(node.id) || [];
-  if (prereqs.length) {
-    prereqsDiv.innerHTML = prereqs.map(id => {
-      const pn = nodeMap.get(id);
-      return pn ? `<span class="detail-prereq" onclick="focusNode('${id}')">${pn.name}</span>` : '';
-    }).join('');
-    prereqSection.style.display = 'block';
-  } else {
-    prereqSection.style.display = 'none';
-  }
+  KnowledgeNodeDetail.render(content, node, {
+    meta,
+    subjectConfig: SUBJECT_CONFIG,
+    getDomainLabel,
+    getNodeById: (id) => nodeMap.get(id),
+    onFocusNode: focusNode,
+    prerequisiteIds: graphPrereqs.length ? graphPrereqs : (meta.prerequisites || []),
+    nextIds: graphNexts.length ? graphNexts : (meta.next_steps || []),
+  });
 
-  // Next steps
-  const nextSection = document.getElementById('detailNextSection');
-  const nextDiv = document.getElementById('detailNext');
-  const nexts = edgesBySource.get(node.id) || [];
-  if (nexts.length) {
-    nextDiv.innerHTML = nexts.map(id => {
-      const nn = nodeMap.get(id);
-      return nn ? `<span class="detail-prereq" onclick="focusNode('${id}')" style="background:rgba(6,182,212,0.1);color:#22d3ee;">${nn.name}</span>` : '';
-    }).join('');
-    nextSection.style.display = 'block';
-  } else {
-    nextSection.style.display = 'none';
-  }
-
-  panel.classList.add('visible');
+  panel.classList.add('open');
 }
 
 function closeDetail() {
-  document.getElementById('detailPanel').classList.remove('visible');
+  document.getElementById('detailPanel').classList.remove('open');
   selectedNode = null;
 }
 
