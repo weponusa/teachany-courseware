@@ -685,19 +685,31 @@ class PBLPathBuilder {
     return src.filter(n => n.system === 'cn' && this._isK12Node(n) && this._isMatchingPoolNode(n, goal));
   }
 
+  /** 保底/检索用宽池：窄池不足时并回全科 K12 子图，避免只在 3 个候选里打转 */
+  _getBroadCurriculumPool(goal, narrowPool = [], minSize = 50) {
+    const full = this._getK12Pool(goal);
+    if (!narrowPool?.length) return full;
+    if (narrowPool.length >= minSize) return narrowPool;
+    return this._unionCandidateNodes([narrowPool, full], Math.max(minSize * 4, 400));
+  }
+
   /**
    * 确定性 K12 图谱检索：按蓝图 module hints + 项目 domain 从全科图谱子图取节点（LLM 失败时的硬保底）
    */
-  _rescueFromK12KnowledgeGraph(goal, blueprint, archetype, limit = 8, pool = null) {
+  _rescueFromK12KnowledgeGraph(goal, blueprint, archetype, limit = 8, pool = null, options = {}) {
+    const floorMode = !!options.floorMode;
     const domains = this._inferProjectDomains(goal);
     const goalTerms = this._tokenizeGoalTerms(goal);
     const hintBlob = (blueprint?.schemes || [])
       .flatMap(s => (s.phases || []).flatMap(p => [...(p.knowledgeHints || []), p.phase, ...(p.steps || [])]))
       .join(' ');
-    const k12Pool = (pool || this._getK12Pool(goal))
+    const basePool = (pool?.length >= 30 ? pool : null) || this._getK12Pool(goal);
+    const k12Pool = basePool
       .filter(n => !this._isGenericTransversalNode(n.name, goal))
       .filter(n => !archetype || !this._isArchetypeBanned(n, archetype))
-      .filter(n => this._isMainlineRelevant(n, goal, domains))
+      .filter(n => floorMode
+        ? ((archetype?.subjects || []).includes(n.subject) || this._isMainlineRelevant(n, goal, domains))
+        : this._isMainlineRelevant(n, goal, domains))
       .filter(n => this._isSubjectAllowedForGoal(n, goal, archetype))
       .filter(n => !this._shouldPurgeBiologyForGoal(goal) || !this._isBiologyHealthNode(n))
       .map(n => ({
@@ -707,7 +719,7 @@ class PBLPathBuilder {
           + (hintBlob && domains.some(d => (d.keywords || []).some(k => String(n.name || '').includes(k) || this._nodeSearchText(n).includes(k))) ? 4 : 0)
           + (hintBlob.split(/[、,，\s]+/).filter(h => h.length >= 2 && this._nodeSearchText(n).includes(h)).length * 3),
       }))
-      .filter(n => n._score >= 2)
+      .filter(n => n._score >= (floorMode ? 1 : 2))
       .sort((a, b) => b._score - a._score);
 
     const picked = [];
@@ -1895,18 +1907,30 @@ class PBLPathBuilder {
     const profile = this._getPBLGoalProfile(goal);
     const matched = outputAudit.matched || [];
     const graphNodes = outputAudit.graphData?.nodes || [];
-    const coreLayer = graphNodes.filter(n => n.layer === 'matched').length;
-    if (matched.length >= min && coreLayer >= min && graphNodes.length >= min) return outputAudit;
+    const curriculumNodes = graphNodes.filter(n => n.layer !== 'external' && !n.isExternal);
+    const coreLayer = curriculumNodes.filter(n => n.layer === 'matched').length;
+    if (matched.length >= min && coreLayer >= min && curriculumNodes.length >= min) return outputAudit;
 
-    const floor = this._guaranteeCurriculumFloor(
+    let floor = this._guaranteeCurriculumFloor(
       matched,
       goal,
-      pool,
+      this._getBroadCurriculumPool(goal, pool, min * 4),
       archetype,
       profile.maxMatched,
       outputAudit.complex,
       meta.projectBlueprint
     );
+    if (floor.length < min) {
+      floor = this._guaranteeCurriculumFloor(
+        [],
+        goal,
+        this._getK12Pool(goal),
+        archetype,
+        profile.maxMatched,
+        outputAudit.complex,
+        meta.projectBlueprint
+      );
+    }
     if (floor.length < min) return outputAudit;
 
     const graphData = this._buildRichMainlineGraph(
@@ -3866,14 +3890,23 @@ class PBLPathBuilder {
   _guaranteeCurriculumFloor(nodes, goal, pool, archetype, limit, complex, blueprint = null) {
     const min = this._getMinMatchedFloor(archetype);
     let list = Array.isArray(nodes) ? [...nodes] : [];
-    const effectivePool = pool?.length ? pool : this._getK12Pool(goal);
+    const effectivePool = this._getBroadCurriculumPool(goal, pool, Math.max(min * 4, 50));
     if (list.length < min && effectivePool.length) {
       list = this._ensureMinimumMatched(list, goal, effectivePool, limit, complex, archetype);
     }
     if (list.length < min && effectivePool.length) {
-      const rescued = this._rescueFromK12KnowledgeGraph(goal, blueprint, archetype, limit, effectivePool);
+      const rescued = this._rescueFromK12KnowledgeGraph(goal, blueprint, archetype, limit, effectivePool, { floorMode: true });
       const seen = new Set(list.map(n => n.id));
       rescued.forEach(n => {
+        if (list.length >= min || seen.has(n.id)) return;
+        seen.add(n.id);
+        list.push(n);
+      });
+    }
+    if (list.length < min) {
+      const forced = this._rescueFromK12KnowledgeGraph(goal, blueprint, archetype, limit, this._getK12Pool(goal), { floorMode: true });
+      const seen = new Set(list.map(n => n.id));
+      forced.forEach(n => {
         if (list.length >= min || seen.has(n.id)) return;
         seen.add(n.id);
         list.push(n);
@@ -4744,7 +4777,9 @@ class PBLPathBuilder {
       );
     }
     const k12Pool = this._getK12Pool(goal, meta.candidatePool || []);
-    const poolForFloor = k12Pool.length ? k12Pool : (meta.candidatePool || []);
+    const poolForFloor = this._getBroadCurriculumPool(
+      goal, k12Pool.length ? k12Pool : (meta.candidatePool || []), 80
+    );
     core = this._guaranteeCurriculumFloor(
       core, goal, poolForFloor, archetype, profile.maxMatched, complex, meta.projectBlueprint
     );
@@ -5075,7 +5110,18 @@ class PBLPathBuilder {
     this._reportPBLStatus(onStatus, '第 2/5 步：按拆解蓝图筛选课标候选（Bloom 层级）...');
     const stage1 = await this._llmFilterStage(goal, candidates, projectBlueprint, bloomProfile, archetype, activeSystems);
     const filterAudit = this._verifyAndPruneNodes(stage1.filteredCandidates, goal, archetype, '拆解入口·课标筛选后');
-    stage1.filteredCandidates = filterAudit.kept.length ? filterAudit.kept : stage1.filteredCandidates;
+    const minRecall = this._getMinMatchedFloor(archetype);
+    if (filterAudit.kept.length >= minRecall) {
+      stage1.filteredCandidates = filterAudit.kept;
+    } else {
+      stage1.filteredCandidates = this._unionCandidateNodes(
+        [filterAudit.kept, stage1.filteredCandidates],
+        Math.max(50, minRecall * 6)
+      );
+      if (filterAudit.kept.length < minRecall) {
+        console.warn(`[PBL] 筛选后候选仅 ${filterAudit.kept.length} 个，已并回宽池 ${stage1.filteredCandidates.length} 个`);
+      }
+    }
 
     // 6. 第二阶段 LLM：按蓝图阶段精确匹配课标
     this._reportPBLStatus(onStatus, '第 3/5 步：按蓝图阶段匹配课标知识点...');
@@ -5087,7 +5133,7 @@ class PBLPathBuilder {
       goal, stage2, stage1.filteredCandidates, archetype, projectBlueprint
     );
     const goalProfile = this._getPBLGoalProfile(goal);
-    const curriculumPool = this._getK12Pool(goal, stage1.filteredCandidates) || stage1.filteredCandidates;
+    const curriculumPool = this._getBroadCurriculumPool(goal, stage1.filteredCandidates, 80);
     stage2 = {
       ...stage2,
       matched: this._guaranteeCurriculumFloor(
@@ -5395,8 +5441,14 @@ class PBLPathBuilder {
       if (hintRescued.length) console.warn('[PBL] 蓝图 hints 检索补齐:', hintRescued.map(n => n.name).join('、'));
     }
     if (retrieved.length) console.warn('[PBL] 混合召回课内节点:', matched.map(n => n.name).join('、'));
-    matched = this._filterMainlineNodes(matched, goal, archetype);
-    matched = this._verifyAndPruneNodes(matched, goal, archetype, '匹配后核实').kept;
+    const broadCandidates = this._getBroadCurriculumPool(goal, candidates, 80);
+    matched = this._guaranteeCurriculumFloor(
+      matched, goal, broadCandidates, archetype, profile.maxMatched, complex, projectBlueprint
+    );
+    const pruned = this._verifyAndPruneNodes(matched, goal, archetype, '匹配后核实').kept;
+    if (pruned.length >= this._getMinMatchedFloor(archetype)) {
+      matched = pruned;
+    }
     if (archetype && this._archetypeEngine) {
       matched = this._archetypeEngine.tagMatchedModules(
         matched, archetype, projectBlueprint,
@@ -5404,7 +5456,7 @@ class PBLPathBuilder {
       );
     }
     matched = this._guaranteeCurriculumFloor(
-      matched, goal, candidates, archetype, profile.maxMatched, complex, projectBlueprint
+      matched, goal, broadCandidates, archetype, profile.maxMatched, complex, projectBlueprint
     );
     matched = this._purgeBiologyNoise(matched, goal);
     matched = this._rebalanceStemMatched(matched, goal, candidates, profile.maxMatched);
