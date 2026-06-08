@@ -339,7 +339,7 @@ class PBLPathBuilder {
     let score = 100;
     const breakdown = [];
 
-    const minM = archetype?.minMatched || 4;
+    const minM = this._getMinMatchedFloor(archetype);
     if (matched.length < minM) {
       const pen = Math.min(25, (minM - matched.length) * 6);
       score -= pen;
@@ -1890,6 +1890,47 @@ class PBLPathBuilder {
     };
   }
 
+  _applyOutputCurriculumFloor(outputAudit, goal, archetype, pool, meta = {}) {
+    const min = this._getMinMatchedFloor(archetype);
+    const profile = this._getPBLGoalProfile(goal);
+    const matched = outputAudit.matched || [];
+    const graphNodes = outputAudit.graphData?.nodes || [];
+    const coreLayer = graphNodes.filter(n => n.layer === 'matched').length;
+    if (matched.length >= min && coreLayer >= min && graphNodes.length >= min) return outputAudit;
+
+    const floor = this._guaranteeCurriculumFloor(
+      matched,
+      goal,
+      pool,
+      archetype,
+      profile.maxMatched,
+      outputAudit.complex,
+      meta.projectBlueprint
+    );
+    if (floor.length < min) return outputAudit;
+
+    const graphData = this._buildRichMainlineGraph(
+      floor,
+      meta.pathOrderIds || [],
+      goal,
+      meta.dependsOnLinks || [],
+      outputAudit.external || []
+    );
+    const capped = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES);
+    const mainline = this._getMainlinePath(capped);
+    console.warn(`[PBL] 课内知识点不足 ${min}，已保底补齐:`, floor.map(n => n.name).join('、'));
+    return {
+      ...outputAudit,
+      matched: mainline.length ? mainline : floor,
+      graphData: capped,
+      relevanceAudit: {
+        ...outputAudit.relevanceAudit,
+        floorApplied: true,
+        floorCount: floor.length,
+      },
+    };
+  }
+
   _nodeSearchText(node) {
     return `${node.name || ''} ${node.definition || node.description || ''} ${(node.key_concepts || []).join(' ')}`.toLowerCase();
   }
@@ -2929,17 +2970,17 @@ class PBLPathBuilder {
     }));
   }
 
-  /** 主线节点不足时，仅按领域得分补齐，不凑跨学科 */
-  _ensureMinimumMatched(matched, goal, candidatePool, limit, complex) {
+  /** 主线节点不足时，仅按领域得分补齐，不凑跨学科；所有项目类型至少保底 5 个课内节点 */
+  _ensureMinimumMatched(matched, goal, candidatePool, limit, complex, archetype = null) {
     const civic = this._isSocialOrCivicInquiryGoal(goal);
-    const min = civic ? 4 : PBLPathBuilder.PBL_MIN_MATCHED_COMPLEX;
-    if ((!complex && !civic) || matched.length >= min || !candidatePool.length) {
-      return matched.slice(0, limit);
+    const min = this._getMinMatchedFloor(archetype);
+    if (matched.length >= min || !candidatePool.length) {
+      return this._assignCoreRoles(matched.slice(0, limit), Math.min(min, matched.length));
     }
     const domains = this._inferProjectDomains(goal);
     const list = [...matched];
     const seen = new Set(list.map(n => n.id));
-    const domainMin = civic ? 2 : 6;
+    const domainMin = (complex || civic) ? (civic ? 2 : 6) : 2;
     const rescued = this._rescueCandidatesFromPool(goal, candidatePool, limit * 2)
       .filter(n => !seen.has(n.id) && !this._excludeForComplexProject(n))
       .filter(n => !domains.length || this._scoreNodeForDomains(n, domains) >= domainMin)
@@ -2958,13 +2999,13 @@ class PBLPathBuilder {
       });
     });
     if (list.length < min) {
-      this._rescueFromK12KnowledgeGraph(goal, null, null, limit, candidatePool).forEach(n => {
+      this._rescueFromK12KnowledgeGraph(goal, null, archetype, limit, candidatePool).forEach(n => {
         if (list.length >= min || seen.has(n.id)) return;
         seen.add(n.id);
         list.push(n);
       });
     }
-    return list.slice(0, limit);
+    return this._assignCoreRoles(list.slice(0, limit), min);
   }
 
   _resolvePrerequisiteNames(node) {
@@ -3687,7 +3728,46 @@ class PBLPathBuilder {
   static PBL_MAX_EXTERNAL = 3;
   static PBL_MAX_MATCHED_COMPLEX = 10;
   static PBL_MIN_MATCHED_COMPLEX = 5;
+  static PBL_MIN_CURRICULUM_CORE = 5;
   static PBL_MIN_GRADE_COMPLEX = 7;
+
+  _getMinMatchedFloor(archetype) {
+    return Math.max(
+      PBLPathBuilder.PBL_MIN_CURRICULUM_CORE,
+      parseInt(archetype?.minMatched, 10) || 0,
+      PBLPathBuilder.PBL_MIN_MATCHED_COMPLEX
+    );
+  }
+
+  _assignCoreRoles(nodes, minCore) {
+    if (!nodes.length) return nodes;
+    const floor = Math.min(minCore, nodes.length);
+    const sorted = [...nodes].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+    const coreIds = new Set(sorted.slice(0, floor).map(n => n.id));
+    return nodes.map(n => ({
+      ...n,
+      pblRole: coreIds.has(n.id) ? 'core' : (n.pblRole || 'bridge'),
+    }));
+  }
+
+  _guaranteeCurriculumFloor(nodes, goal, pool, archetype, limit, complex, blueprint = null) {
+    const min = this._getMinMatchedFloor(archetype);
+    let list = Array.isArray(nodes) ? [...nodes] : [];
+    const effectivePool = pool?.length ? pool : this._getK12Pool(goal);
+    if (list.length < min && effectivePool.length) {
+      list = this._ensureMinimumMatched(list, goal, effectivePool, limit, complex, archetype);
+    }
+    if (list.length < min && effectivePool.length) {
+      const rescued = this._rescueFromK12KnowledgeGraph(goal, blueprint, archetype, limit, effectivePool);
+      const seen = new Set(list.map(n => n.id));
+      rescued.forEach(n => {
+        if (list.length >= min || seen.has(n.id)) return;
+        seen.add(n.id);
+        list.push(n);
+      });
+    }
+    return this._assignCoreRoles(list.slice(0, limit), min);
+  }
 
   _getPBLGoalProfile(goal) {
     const g = String(goal || '').trim();
@@ -4551,14 +4631,19 @@ class PBLPathBuilder {
       );
     }
     const k12Pool = this._getK12Pool(goal, meta.candidatePool || []);
-    const needMin = this._isSocialOrCivicInquiryGoal(goal) || complex;
-    if (needMin) {
-      core = this._ensureMinimumMatched(core, goal, k12Pool.length ? k12Pool : meta.candidatePool || [], profile.maxMatched, complex || this._isSocialOrCivicInquiryGoal(goal));
-      core = this._filterMainlineNodes(core, goal, archetype);
-      if (complex) core = this._rebalanceStemMatched(core, goal, k12Pool.length ? k12Pool : meta.candidatePool || [], profile.maxMatched);
+    const poolForFloor = k12Pool.length ? k12Pool : (meta.candidatePool || []);
+    core = this._guaranteeCurriculumFloor(
+      core, goal, poolForFloor, archetype, profile.maxMatched, complex, meta.projectBlueprint
+    );
+    if (complex) {
+      core = this._rebalanceStemMatched(core, goal, poolForFloor, profile.maxMatched);
+      core = this._guaranteeCurriculumFloor(
+        core, goal, poolForFloor, archetype, profile.maxMatched, complex, meta.projectBlueprint
+      );
     }
     if (!core.length) {
       core = this._rescueFromK12KnowledgeGraph(goal, meta.projectBlueprint, archetype, profile.maxMatched, k12Pool);
+      core = this._assignCoreRoles(core, this._getMinMatchedFloor(archetype));
     }
     if (!core.length && meta.candidatePool?.length) {
       core = this._rescueCandidatesFromPool(goal, k12Pool.length ? k12Pool : meta.candidatePool, profile.maxMatched, meta.archetype, meta.projectBlueprint);
@@ -4888,6 +4973,20 @@ class PBLPathBuilder {
     stage2 = await this._llmVerifyRelevanceStage(
       goal, stage2, stage1.filteredCandidates, archetype, projectBlueprint
     );
+    const goalProfile = this._getPBLGoalProfile(goal);
+    const curriculumPool = this._getK12Pool(goal, stage1.filteredCandidates) || stage1.filteredCandidates;
+    stage2 = {
+      ...stage2,
+      matched: this._guaranteeCurriculumFloor(
+        stage2.matched || [],
+        goal,
+        curriculumPool,
+        archetype,
+        goalProfile.maxMatched,
+        goalProfile.complex,
+        projectBlueprint
+      ),
+    };
 
     // 7. 第三阶段：dependsOn 方向性验证
     this._reportPBLStatus(onStatus, '第 5/5 步：校验知识依赖方向...');
@@ -4908,25 +5007,11 @@ class PBLPathBuilder {
       external: finalized.external,
       graphData: finalized.graphData,
     }, goal, archetype);
-    if (!(outputAudit.graphData?.nodes || []).length) {
-      const k12Rescued = this._rescueFromK12KnowledgeGraph(
-        goal, projectBlueprint, archetype, this._getPBLGoalProfile(goal).maxMatched,
-        this._getK12Pool(goal, stage1.filteredCandidates)
-      );
-      if (k12Rescued.length) {
-        const graphData = this._buildRichMainlineGraph(
-          k12Rescued, stage2.pathOrderIds || [], goal, stage2.dependsOnLinks || [],
-          this._ensureExternalNodes(stage2.external || [], goal, k12Rescued, projectBlueprint, archetype)
-        );
-        outputAudit = this._verifyOutputBundle({
-          complex: finalized.complex,
-          matched: k12Rescued,
-          external: this._ensureExternalNodes(stage2.external || [], goal, k12Rescued, projectBlueprint, archetype),
-          graphData: this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES),
-        }, goal, archetype);
-        console.warn('[PBL] 课标匹配为空，已启用 K12 全科图谱硬保底');
-      }
-    }
+    outputAudit = this._applyOutputCurriculumFloor(outputAudit, goal, archetype, curriculumPool, {
+      pathOrderIds: stage2.pathOrderIds,
+      dependsOnLinks: stage2.dependsOnLinks,
+      projectBlueprint,
+    });
     const finalMatched = outputAudit.matched;
     const finalExternal = outputAudit.external;
     const finalGraphData = outputAudit.graphData;
@@ -5214,8 +5299,9 @@ class PBLPathBuilder {
         (n, m) => this._archetypeEngine.scoreForModule(n, m, this._tokenizeGoalTerms(goal))
       );
     }
-    matched = this._ensureMinimumMatched(matched, goal, candidates, profile.maxMatched, complex);
-    matched = this._filterMainlineNodes(matched, goal, archetype);
+    matched = this._guaranteeCurriculumFloor(
+      matched, goal, candidates, archetype, profile.maxMatched, complex, projectBlueprint
+    );
     matched = this._purgeBiologyNoise(matched, goal);
     matched = this._rebalanceStemMatched(matched, goal, candidates, profile.maxMatched);
     matched = this._purgeBiologyNoise(matched, goal);
