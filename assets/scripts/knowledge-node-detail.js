@@ -160,15 +160,25 @@
         e.stopPropagation();
         const id = node.id;
         const name = node.name || id;
-        if (typeof global.generateCourseware === 'function') {
-          global.generateCourseware(id, name);
-        } else if (global.TeachAnyMakeCourse) {
+        const makeMeta = {
+          name,
+          subject: node.subject,
+          grade: node.grade,
+          domain: node.domain,
+          name_en: node.name_en,
+          definition: node.definition || opts.meta?.definition || '',
+          key_concepts: opts.meta?.key_concepts || node.key_concepts || node.skills || [],
+          curriculum_points: node.curriculum_points || opts.meta?.curriculum_points || [],
+        };
+        if (global.TeachAnyMakeCourse) {
           global.TeachAnyMakeCourse.open({
             nodeId: id,
             nodeName: name,
             source: 'knowledge-map',
-            meta: { subject: node.subject, grade: node.grade },
+            meta: makeMeta,
           });
+        } else if (typeof global.generateCourseware === 'function') {
+          global.generateCourseware(id, name, makeMeta);
         }
       }
     };

@@ -369,6 +369,7 @@ async function init() {
     n.vx = 0; n.vy = 0;
     nodeMap.set(n.id, n);
   });
+  window.KnowledgeMapNodeIndex = nodeMap;
   graphData.edges.forEach(e => {
     if (!edgesByTarget.has(e.target)) edgesByTarget.set(e.target, []);
     edgesByTarget.get(e.target).push(e.source);
@@ -506,14 +507,25 @@ function getVisibleNodes() {
 // LABELS — 默认隐藏；高倍缩放碰撞避让后全显；悬浮/选中单点标注
 // ═══════════════════════════════════════════════════════════════
 
-const NODE_SCREEN_R_BASE = 5;   // k=1 时节点屏幕半径（px）
-const NODE_SCREEN_R_MIN = 1.8;  // 放大后最小屏幕半径
-const LABEL_SCREEN_PX = 11;     // 标签固定屏幕字号
-const LABEL_MIN_SCREEN_GAP = 64; // 全量标注时标签中心最小屏幕间距（px）
+const NODE_SCREEN_R_BASE = 5;    // 默认屏幕半径（px）
+const NODE_SCREEN_R_ZOOMED = 6.5; // 放大后保持可点、可辨
+const LABEL_SCREEN_PX = 11;
 
-/** 节点屏幕半径：缩放越大，圆点越小（为标注腾位置） */
+/** 节点屏幕半径：远景略小，放大后稳定在 5–6.5px（不再越放大越小） */
 function nodeScreenRadius(multiplier = 1) {
-  return Math.max(NODE_SCREEN_R_MIN, NODE_SCREEN_R_BASE * multiplier / Math.sqrt(transform.k));
+  const k = transform.k;
+  if (k < 0.5) return Math.max(2.2, NODE_SCREEN_R_BASE * multiplier * (k / 0.5));
+  if (k < 1.2) return NODE_SCREEN_R_BASE * multiplier;
+  return Math.min(NODE_SCREEN_R_ZOOMED * multiplier, NODE_SCREEN_R_BASE * multiplier + (k - 1) * 0.9);
+}
+
+function getViewportNodes(nodes) {
+  const margin = 48;
+  const x0 = (-transform.x - margin) / transform.k;
+  const y0 = (-transform.y - margin) / transform.k;
+  const x1 = (width - transform.x + margin) / transform.k;
+  const y1 = (height - transform.y + margin) / transform.k;
+  return nodes.filter(n => n.x != null && n.x >= x0 && n.x <= x1 && n.y >= y0 && n.y <= y1);
 }
 
 function nodeGraphRadius(multiplier = 1) {
@@ -528,15 +540,13 @@ function labelBoxOverlaps(a, b) {
   return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
 }
 
-function shouldShowAllLabels(visibleCount) {
-  if (visibleCount < 2) return false;
-  const screenR = nodeScreenRadius();
-  // 圆点已缩小到「标签模式」，且节点屏幕间距足够
-  if (screenR > 3.4) return false;
-  const density = visibleCount / Math.max(width * height, 1);
-  const estScreenSpacing = Math.sqrt(1 / density) * transform.k * 0.55;
-  const gapNeed = Math.max(LABEL_MIN_SCREEN_GAP, screenR * 12 + LABEL_SCREEN_PX);
-  return estScreenSpacing >= gapNeed;
+function shouldShowAllLabels(viewportCount) {
+  if (viewportCount < 1 || transform.k < 1.05) return false;
+  const density = viewportCount / Math.max(width * height, 1);
+  const estSpacing = Math.sqrt(1 / Math.max(density, 1e-9)) * 0.55;
+  if (transform.k >= 2) return estSpacing >= 36 || viewportCount <= 80;
+  if (transform.k >= 1.4) return estSpacing >= 44 || viewportCount <= 150;
+  return estSpacing >= 58 && viewportCount <= 350;
 }
 
 function measureLabelBox(name, x, y, anchorR) {
@@ -650,11 +660,13 @@ function render() {
     });
   }
 
-  // Draw nodes（屏幕半径随放大而缩小）
+  // Draw nodes
   ctx.globalAlpha = 1;
   const nodeRadius = nodeGraphRadius();
-  const showAllLabels = shouldShowAllLabels(visibleNodes.length);
+  const viewportNodes = getViewportNodes(visibleNodes);
+  const showAllLabels = shouldShowAllLabels(viewportNodes.length);
   const placedLabels = showAllLabels ? [] : (searchQuery ? [] : null);
+  const labelViewportIds = showAllLabels ? new Set(viewportNodes.map(n => n.id)) : null;
   const hoverId = hoveredNode?.id;
   const selectedId = selectedNode?.id;
 
@@ -696,7 +708,7 @@ function render() {
       drawNodeLabel(n, r, 1, { force: true });
     } else if (searchQuery && isSearchHit && placedLabels) {
       drawNodeLabel(n, r, alpha, { placed: placedLabels });
-    } else if (showAllLabels) {
+    } else if (showAllLabels && labelViewportIds && labelViewportIds.has(n.id)) {
       drawNodeLabel(n, r, alpha * 0.9, { placed: placedLabels });
     }
   });
