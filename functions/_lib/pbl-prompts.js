@@ -643,6 +643,7 @@ ${formatTopicAnchorBlock(goal)}
 ## 原则
 - **严格贴合题目类型**：调查/对比类的交付物是报告/对比表/答辩，不是研发原型；写作/创作类的交付物是作品，不是实验装置
 - knowledgeHints 是**检索关键词**，按项目类型选取（理工类用学科概念，人文/社科类用阅读/写作/统计/调查等），不写课标原文节点名
+- **地面机器人/小车项目**的 knowledgeHints 禁止出现飞行、航空、医药、抗生素、细胞、购车、内燃机等无关词
 - deliverable 必须是可检查实物（报告、表格、海报、作品、数据记录表），不能是「提升素养」「增强能力」
 - 不跑题、不硬凑学科
 
@@ -667,6 +668,18 @@ function filtrationDomains() {
     { id: 'membrane', label: '膜孔径核心层', keywords: ['膜', '孔径', '滤芯', '微滤', '超滤', '陶瓷', '拦截', '微塑料'], subjects: ['chemistry', 'physics', 'science'] },
     { id: 'test', label: '对照测试与评价', keywords: ['测试', '对照', '流速', '数据', '实验', '记录', '减少率', '统计'], subjects: ['science', 'math', 'physics'] },
   ];
+}
+
+function groundRoboticsDecomposeHint(goal) {
+  if (!isGroundRoboticsGoal(goal)) return '';
+  return `
+【自动驾驶/循迹小车拆解 — 硬性要求】
+- 交付物是可运行的**地面小车**原型+调试测试记录，不是航空/无人机/火箭/购车对比/医药项目
+- subsystems 按：结构与运动 → 电路驱动 → 传感感知 → 控制算法 → 调试测试
+- knowledgeHints **仅限**地面机器人相关词：电路、电机、传感、循迹/巡线、摩擦/受力、控制/编程、调试/测试
+- **禁止** knowledgeHints、steps、phase 名出现：飞行、航空、航天、无人机、抗生素、医药、细胞、免疫、耐药、内燃机、购车、新能源对比
+- 禁止阶段名「科学理论补全」「科学原理补课」并填入医疗/航空/购车关键词；每阶段 hints 须对应该阶段子系统
+`;
 }
 
 function filtrationDecomposeHint(goal) {
@@ -703,10 +716,11 @@ function userPromptDecompose(goal, complex) {
     : '';
   const chemHint = chemistryDecomposeHint(goal);
   const filtHint = filtrationDecomposeHint(goal);
+  const robotHint = groundRoboticsDecomposeHint(goal);
   const topicBlock = formatTopicAnchorBlock(goal);
   return `【项目目标】
 ${goal}
-${topicBlock}${domainBlock}${chemHint}${filtHint}
+${topicBlock}${domainBlock}${chemHint}${filtHint}${robotHint}
 返回 JSON（严格遵循字段名）：
 {
   "projectSummary": "一句话概括项目",

@@ -1755,9 +1755,12 @@ class PBLPathBuilder {
     }
     if (domains.robot && !domains.woodwork) {
       mismatchRes.push(/斗拱|飞檐|榫卯|木工锯|刨子|古典建筑纹样/);
-      if (!domains.lowAltitude && !/无人机|航空|飞行|低空/.test(profile.raw)) {
-        mismatchRes.push(/飞行控制|航空电子|飞控|航空|航天|无人机|弹道|火箭|导弹|空域|低空|抗生素|耐药|细胞分裂|细胞的分裂/);
+      if (!domains.lowAltitude && !/无人机|航空|飞行|低空/.test(g)) {
+        mismatchRes.push(/飞行控制|航空电子|飞控|航空|航天|无人机|弹道|火箭|导弹|空域|低空|抗生素|耐药|医药|药物|细胞分裂|细胞的分裂|内燃机|购车|科学理论补全|科学原理补课/);
       }
+    }
+    if (this._isGroundRoboticsGoal(g) && !/无人机|航空|飞行|低空/.test(g)) {
+      mismatchRes.push(/飞行|航空|航天|无人机|飞控|抗生素|耐药|医药|药物|细胞|免疫|内燃机|购车|科学理论补全|科学原理补课/);
     }
     if (domains.writing && !domains.robot && !domains.software) {
       mismatchRes.push(/焊接|电路|传感器|电机|BOM表|下料/);
@@ -1777,6 +1780,61 @@ class PBLPathBuilder {
     const s = String(step || '');
     if (!s || !profile?.mismatchRes?.length) return false;
     return profile.mismatchRes.some(re => re.test(s));
+  }
+
+  /** 蓝图 knowledgeHints 是否与项目主题无关（用于课标检索前清洗） */
+  _isIrrelevantBlueprintHint(hint, goal) {
+    const h = String(hint || '').trim();
+    if (!h || h.length < 2) return true;
+    if (this._isGroundRoboticsGoal(goal)) {
+      if (/飞行|航空|航天|无人机|飞控|弹道|火箭|导弹|空域|低空|UAV|eVTOL|机翼|气动|起降|航空电子/.test(h)) return true;
+      if (/抗生素|耐药|免疫|疫苗|病毒|细菌|医药|药物|用药|细胞|分裂|分化|人体|器官|病理|疾病|基因|DNA|光合|酶|微生物/.test(h)) return true;
+      if (/内燃机|购车|燃油车|电动车|混动|油电|尾气|碳足迹|新能源对比/.test(h) && !this._isConsumerDecisionGoal(goal)) return true;
+      if (/电解池|原电池|有机合成|正则表达式|形式语言|编译原理/.test(h)) return true;
+    }
+    if (this._isConsumerDecisionGoal(goal) && /循迹|巡线|红外传感|电机驱动|PID|避障|小车制作|飞控/.test(h)) return true;
+    if (this._isSocialOrCivicInquiryGoal(goal) && /细胞|细胞膜|有丝分裂|减数分裂|抗生素|免疫|基因|DNA|光合|酶|微生物|生物分类/.test(h)) return true;
+    return false;
+  }
+
+  _isIrrelevantBlueprintStep(step, goal) {
+    const s = String(step || '');
+    if (!s) return true;
+    if (this._isGroundRoboticsGoal(goal)) {
+      if (/飞行|航空|航天|无人机|抗生素|耐药|免疫|细胞|医药|药物|内燃机|购车|新能源对比|电解池|航空电子|飞控/.test(s)) return true;
+    }
+    return false;
+  }
+
+  _sanitizeSingleBlueprintPhase(p, goal, profile, domains, phaseIndex) {
+    const dom = domains[phaseIndex] || domains[domains.length - 1];
+    const genericPhaseRe = /科学理论补全|科学原理补课|跨学科素养|素养提升/;
+    let phase = String(p.phase || '');
+    if (genericPhaseRe.test(phase) && dom) phase = dom.label;
+    const steps = (p.steps || []).map(st => String(st)).filter(st =>
+      st && !this._stepDomainMismatch(st, profile) && !this._isIrrelevantBlueprintStep(st, goal)
+    );
+    let hints = (p.knowledgeHints || []).filter(h => !this._isIrrelevantBlueprintHint(h, goal));
+    if (hints.length < 2 && dom) {
+      hints = [...new Set([...hints, ...dom.keywords.slice(0, 5)])].slice(0, 6);
+    }
+    return { ...p, phase, steps, knowledgeHints: hints };
+  }
+
+  _sanitizeBlueprintPhasesInPlace(bp, goal) {
+    if (!bp?.schemes?.length) return bp;
+    const profile = this._goalProfile(goal, bp);
+    const domains = this._inferProjectDomains(goal);
+    bp.schemes.forEach(s => {
+      s.phases = (s.phases || [])
+        .map((p, i) => this._sanitizeSingleBlueprintPhase(p, goal, profile, domains, i))
+        .filter(p => (p.steps || []).length > 0 || (p.knowledgeHints || []).length > 0);
+    });
+    return bp;
+  }
+
+  _filterPhaseKnowledgeNames(names, goal) {
+    return (names || []).map(n => String(n)).filter(n => n.length >= 2 && !this._isIrrelevantBlueprintHint(n, goal));
   }
 
   _goalTokens(artifact) {
@@ -3076,6 +3134,8 @@ class PBLPathBuilder {
     const mainline = this._getMainlinePath(graphData);
     const groups = this._groupMainlineIntoPhases(mainline);
     const llm = projectPhases || [];
+    const domains = this._inferProjectDomains(goal);
+    const archetype = this._resolvedArchetype || null;
     const phases = groups.map((g, i) => {
       const lp = llm[i] || {};
       const bp = blueprintPhases[i] || {};
@@ -3094,7 +3154,9 @@ class PBLPathBuilder {
         pathStepLabels: g.pathSteps.map(s => this._pathStepCircled(s)),
         graphRef: g.pathSteps.map(s => this._pathStepCircled(s)).join(''),
         nodeIds: g.nodeIds,
-        knowledgeNames: g.knowledgeNames,
+        knowledgeNames: (g.nodes || [])
+          .filter(n => !this._getNodeIrrelevanceReason(n, goal, domains, archetype))
+          .map(n => n.name),
         steps,
         deliverable: this._pickConcreteDeliverable(lp, bp, g.role, goal),
         tools: bp.tools || lp.tools || this._inferPhaseTools(goal, lp.phase || bp.phase || g.phase, this._classifyProjectType(goal)),
@@ -3118,7 +3180,7 @@ class PBLPathBuilder {
     if (result.pathPlan?.phases?.length) return result.pathPlan;
     const graphNodes = result.graphData?.nodes?.length || 0;
     if (!graphNodes && result.projectBlueprint) {
-      const phases = this._blueprintProjectPhases(result.projectBlueprint);
+      const phases = this._blueprintProjectPhases(result.projectBlueprint, result.goal);
       if (phases.length) {
         return {
           mode: 'blueprint-only',
@@ -3146,7 +3208,7 @@ class PBLPathBuilder {
       goal: result.goal,
       graphData: result.graphData,
       projectPhases: result.projectPhases,
-      blueprintPhases: result.projectBlueprint ? this._blueprintProjectPhases(result.projectBlueprint) : [],
+      blueprintPhases: result.projectBlueprint ? this._blueprintProjectPhases(result.projectBlueprint, result.goal) : [],
       knowledgeChain: result.knowledgeChain,
       external: result.external
     });
@@ -3272,13 +3334,14 @@ class PBLPathBuilder {
     return schemes.find(s => s.id === blueprint.recommendedSchemeId) || schemes[0] || null;
   }
 
-  _blueprintProjectPhases(blueprint) {
+  _blueprintProjectPhases(blueprint, goal = '') {
     const scheme = this._getRecommendedScheme(blueprint);
     if (!scheme) return [];
+    const g = String(goal || '');
     return (scheme.phases || []).map(p => ({
       phase: p.phase || p.name || '',
       steps: p.steps || [],
-      knowledgeNames: p.knowledgeHints || p.knowledgeNames || [],
+      knowledgeNames: this._filterPhaseKnowledgeNames(p.knowledgeHints || p.knowledgeNames || [], g),
       deliverable: p.deliverable || p.output || '',
       literacy: p.literacy || {},
       subsystemIds: p.subsystemIds || []
@@ -3340,14 +3403,28 @@ class PBLPathBuilder {
   _sanitizeBlueprintForGoal(blueprint, goal) {
     let bp = blueprint;
     if (bp?.schemes?.length) {
-      const profile = this._goalProfile(goal, bp);
       bp = JSON.parse(JSON.stringify(bp));
-      bp.schemes.forEach(s => {
-        s.phases = (s.phases || []).map(p => ({
-          ...p,
-          steps: (p.steps || []).filter(st => !this._stepDomainMismatch(st, profile)),
-        }));
-      });
+      this._sanitizeBlueprintPhasesInPlace(bp, goal);
+    }
+    if (this._isGroundRoboticsGoal(goal)) {
+      let grbp = bp;
+      if (!grbp?.schemes?.length) {
+        const topic = this._extractTopicProfile(goal);
+        grbp = this._buildSubjectAnchoredBlueprint(goal, `「${topic.coreTopic}」自动驾驶小车实施方案`);
+      } else {
+        grbp = JSON.parse(JSON.stringify(grbp));
+      }
+      grbp.projectType = 'engineering';
+      const topic = this._extractTopicProfile(goal);
+      const engRe = /购车|内燃机|新能源对比|飞行|航空|抗生素|医药|科学理论补全|科学原理补课/;
+      if (!grbp.deliverable || engRe.test(grbp.deliverable)) {
+        grbp.deliverable = topic.deliverableHint || '可运行的地面小车原型 + 调试测试记录 + 说明文档';
+      }
+      if (!grbp.projectSummary || grbp.projectSummary.length < 12) {
+        grbp.projectSummary = `围绕「${topic.coreTopic}」完成地面小车结构搭建、传感驱动、控制调试与测试验收`;
+      }
+      this._sanitizeBlueprintPhasesInPlace(grbp, goal);
+      return this._concretizeBlueprint(goal, grbp, this._resolvedArchetype);
     }
     if (bp && this._isChemistryInquiryGoal(goal) && this._getChemistryAnalysisProfile(goal).mixed) {
       const cap = this._getChemistryAnalysisProfile(goal);
@@ -3706,6 +3783,13 @@ class PBLPathBuilder {
     }
     if (this._isIndustryInnovationGoal(goal)) {
       return this._sanitizeBlueprintForGoal(this._buildIndustryInnovationBlueprint(goal), goal);
+    }
+    if (this._isGroundRoboticsGoal(goal)) {
+      const topic = this._extractTopicProfile(goal);
+      return this._sanitizeBlueprintForGoal(
+        this._buildSubjectAnchoredBlueprint(goal, `「${topic.coreTopic}」自动驾驶小车实施方案`),
+        goal
+      );
     }
     if (this._isConsumerDecisionGoal(goal)) {
       return this._sanitizeBlueprintForGoal({
@@ -4226,7 +4310,7 @@ class PBLPathBuilder {
     this._reportPBLStatus(onStatus, '第 1/4 步：全链路拆解可行方案...');
     let projectBlueprint = await this._llmDecomposeStage(goal);
     projectBlueprint = this._concretizeBlueprint(goal, projectBlueprint, archetype);
-    const blueprintPhases = this._blueprintProjectPhases(projectBlueprint);
+    const blueprintPhases = this._blueprintProjectPhases(projectBlueprint, goal);
     const bloomProfile = this._inferBloomProfile(projectBlueprint);
 
     // 5. 第一阶段 LLM：判断学科+学段+课标体系（压缩候选集）
@@ -4270,7 +4354,9 @@ class PBLPathBuilder {
       return {
         phase: lp.phase || bp.phase || `阶段 ${i + 1}`,
         steps: this._pickConcreteSteps(lp.steps, bp.steps, this._suggestPhaseSteps(goal, stubGroup, bp)),
-        knowledgeNames: lp.knowledgeNames?.length ? lp.knowledgeNames : bp.knowledgeNames,
+        knowledgeNames: this._filterPhaseKnowledgeNames(
+          lp.knowledgeNames?.length ? lp.knowledgeNames : bp.knowledgeNames, goal
+        ),
         deliverable: this._pickConcreteDeliverable(lp, bp, bp.role, goal),
         literacy: lp.literacy || bp.literacy,
       };
@@ -4280,42 +4366,32 @@ class PBLPathBuilder {
       : (projectBlueprint.knowledgeChain || '');
     const pathPlan = this._buildPathPlan({
       goal,
-      graphData: finalized.graphData,
+      graphData: finalGraphData,
       projectPhases: mergedPhases.length ? mergedPhases : blueprintPhases,
       blueprintPhases,
       knowledgeChain: moduleChainPre || stage2.knowledgeChain || projectBlueprint.knowledgeChain || '',
-      external: finalized.external
+      external: finalExternal
     });
     const moduleChain = moduleChainPre;
     const techRoute = this._buildTechRouteFromPathPlan(pathPlan)
       || this.resolveTechRouteText({
         goal,
-        graphData: finalized.graphData,
-        matched: finalized.matched,
-        external: finalized.external,
+        graphData: finalGraphData,
+        matched: finalMatched,
+        external: finalExternal,
         projectPhases: pathPlan.phases,
         knowledgeChain: moduleChain || pathPlan.knowledgeChain,
         pathPlan
       });
     const quality = this.computeQualityScore({
       goal,
-      matched: finalized.matched,
-      external: finalized.external,
+      matched: finalMatched,
+      external: finalExternal,
       projectBlueprint,
       archetype,
-      graphData: finalized.graphData,
+      graphData: finalGraphData,
       pathPlan,
     });
-
-    const outputAudit = this._verifyOutputBundle({
-      complex: finalized.complex,
-      matched: finalized.matched,
-      external: finalized.external,
-      graphData: finalized.graphData,
-    }, goal, archetype);
-    const finalMatched = outputAudit.matched;
-    const finalExternal = outputAudit.external;
-    const finalGraphData = outputAudit.graphData;
 
     return {
       goal,
@@ -4494,7 +4570,7 @@ class PBLPathBuilder {
     const complex = profile.complex || !!archetype;
     const minConf = archetype ? 0.55 : (complex ? 0.58 : 0.52);
     if (archetype) profile.maxMatched = archetype.maxMatched || profile.maxMatched;
-    const blueprintPhases = this._blueprintProjectPhases(projectBlueprint);
+    const blueprintPhases = this._blueprintProjectPhases(projectBlueprint, goal);
     const candidatesLite = candidates.map(n => this._enrichCandidateForMatch(n));
 
     const response = await this._callPBLAnalyzeStage('match', {
@@ -4572,7 +4648,7 @@ class PBLPathBuilder {
     let projectPhases = (result.projectPhases || result.phases || []).map(p => ({
       phase: p.phase || p.name || '',
       steps: p.steps || (p.tasks ? (Array.isArray(p.tasks) ? p.tasks : [p.tasks]) : []),
-      knowledgeNames: p.knowledgeNames || p.knowledge || [],
+      knowledgeNames: this._filterPhaseKnowledgeNames(p.knowledgeNames || p.knowledge || [], goal),
       deliverable: p.deliverable || p.output || '',
       literacy: p.literacy || {
         knowledge: p.knowledgeLiteracy || p.knowledge_dim || '',
