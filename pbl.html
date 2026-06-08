@@ -927,7 +927,7 @@ body {
 <script src="./assets/scripts/courseware-hub.js"></script>
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260608-blueprint"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260608-subject-affinity"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260608-relevance-audit"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1519,6 +1519,13 @@ function renderPBLStats(result) {
   `;
   if (q.breakdown?.length) {
     html += `<div class="pbl-quality-hint">待改进：${q.breakdown.map(b => b.label).join('、')}</div>`;
+  }
+  const ra = result.relevanceAudit;
+  if (ra?.output?.removedTotal > 0) {
+    const names = (ra.output.removedSamples || []).slice(0, 3).map(r => r.name).join('、');
+    html += `<div class="pbl-quality-hint">输出核实已剔除 ${ra.output.removedTotal} 个无关节点${names ? '（如 ' + names + '）' : ''}</div>`;
+  } else if (ra?.intake?.removed > 0 || ra?.postFilter?.removed > 0) {
+    html += `<div class="pbl-quality-hint">入口核实：候选池剔除 ${ra.intake?.removed || 0} · 筛选后剔除 ${ra.postFilter?.removed || 0}</div>`;
   }
   statsEl.innerHTML = html;
 

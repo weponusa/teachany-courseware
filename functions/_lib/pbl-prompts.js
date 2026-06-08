@@ -34,6 +34,13 @@ function isConsumerDecisionGoal(goal) {
   return false;
 }
 
+function isGroundRoboticsGoal(goal) {
+  const g = String(goal || '');
+  if (/无人机|飞行器|航空|火箭|导弹|低空|eVTOL|飞控|航天/.test(g)) return false;
+  return /自动驾驶|智能车|循迹车|循迹小车|无人车|小车制作|制作.*小车|小车|物流机器人|机械臂|机器人车|巡线车|避障车/.test(g)
+    || (/机器人|循迹/.test(g) && /制作|搭建|设计|开发|装置|小车|车/.test(g));
+}
+
 function isSocialOrCivicInquiryGoal(goal) {
   const g = String(goal || '');
   if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|居民|乡土|口述史|垃圾分类|垃圾治理|垃圾处理|废弃物|固体废物|环保|治理|倡议/.test(g)) {
@@ -395,6 +402,12 @@ function genericDomainsForType(id) {
       { id: 'record', label: '观察与记录', keywords: ['观察', '记录', '测量', '数据', '变化', '统计'], subjects: ['science', 'math', 'biology'] },
       { id: 'share', label: '成果与分享', keywords: ['成果', '分享', '展示', '总结', '报告', '改进'], subjects: ['chinese'] },
     ],
+    'engineering': [
+      { id: 'principle', label: '原理与需求', keywords: ['原理', '需求', '指标', '现象', '规律', '受力', '能量'], subjects: ['physics', 'science', 'chemistry'] },
+      { id: 'structure', label: '结构与装置', keywords: ['结构', '装置', '材料', '设计', '搭建', '组装', '电路', '机械'], subjects: ['physics', 'engineering', 'science'] },
+      { id: 'control', label: '控制与实现', keywords: ['控制', '传感', '编程', '算法', '电路', '反馈', '调试'], subjects: ['info-tech', 'physics', 'engineering'] },
+      { id: 'test', label: '测试与迭代', keywords: ['测试', '实验', '测量', '数据', '误差', '记录', '优化'], subjects: ['math', 'physics', 'science'] },
+    ],
     'general': [
       { id: 'define', label: '调研与定义', keywords: ['调研', '需求', '定义', '背景', '分析'], subjects: ['chinese', 'math', 'science'] },
       { id: 'design', label: '方案设计', keywords: ['方案', '设计', '规划', '分工'], subjects: ['math', 'science', 'chinese'] },
@@ -454,6 +467,15 @@ function inferProjectDomains(goal) {
         keywords: ['控制', '传感', '电路', '编程', '算法', '数据采集', '实验', '误差', '测试'],
         subjects: ['info-tech', 'physics'],
       },
+    ];
+  }
+  if (isGroundRoboticsGoal(g)) {
+    return [
+      { id: 'mechanics', label: '结构与运动', keywords: ['结构', '受力', '摩擦', '轮', '电机', '传动', '力', '平衡', '运动', '速度', '杠杆'], subjects: ['physics', 'science', 'engineering'] },
+      { id: 'circuit', label: '电路与驱动', keywords: ['电路', '电流', '电压', '电机', '驱动', '电源', '接线', '开关', '串联', '并联'], subjects: ['physics', 'info-tech'] },
+      { id: 'sense', label: '传感与感知', keywords: ['传感', '红外', '超声', '距离', '循迹', '检测', '巡线', '信号', '采集'], subjects: ['physics', 'info-tech', 'engineering'] },
+      { id: 'control', label: '控制与算法', keywords: ['控制', '反馈', 'PID', '算法', '编程', '逻辑', '避障', '决策', '调试'], subjects: ['info-tech', 'math', 'computer-science', 'engineering'] },
+      { id: 'test', label: '调试与测试', keywords: ['测试', '调试', '误差', '数据', '记录', '实验', '迭代', '验收'], subjects: ['math', 'science', 'engineering'] },
     ];
   }
   if (/温控|温室|温度|加热|散热|PID|闭环/.test(g)) {
@@ -819,10 +841,13 @@ function typeMatchHints(goal) {
     case 'consumer-decision':
       return `\n### 类型要求：消费决策\n- 交付物是决策报告/对比测算表；优先统计、函数/百分比、相关科普（如内燃机效率）、环境排放、说明文写作\n- 禁止 matched：电解池、原电池、程序控制、电磁感应、电池温度、传感器、数据采集算法\n- external 示例：全生命周期用车成本、购置补贴/税费政策、保值率评估（课标外）`;
     case 'engineering':
+      if (isGroundRoboticsGoal(goal)) {
+        return `\n### 类型要求：自动驾驶/循迹小车工程\n- 交付物是可运行的地面小车原型+调试测试记录，不是航空/无人机/火箭项目\n- matched 须覆盖：电路与电机驱动、循迹/距离传感、控制逻辑或算法、运动/摩擦/受力、测试调试\n- 优先：串联并联电路、传感器、摩擦力、牛顿运动、信息技术编程、简单机械、工业/服务机器人运动控制\n- **禁止** matched：飞行控制系统、航空电子、无人机、弹道/火箭、抗生素/细胞/免疫/耐药、正则表达式/形式语言/编译原理等无关大学节点\n- reason 须写明用于小车哪一子系统（传感/驱动/控制/调试），禁止泛泛「了解控制」`;
+      }
       if (/微塑料|过滤装置|净水|污水处理|废水|水质净化|滤芯|膜过滤|拦截.*塑料/.test(goal)) {
         return `\n### 类型要求：水体净化/过滤装置工程\n- 交付物是可测试的过滤装置原型+过滤效率测试报告，不是火箭/抛体/发射类项目\n- matched 须覆盖：溶液/沉淀/吸附、压强与流体、实验测量与数据统计、环境/污染相关\n- **禁止** matched：反冲、火箭、抛体、弹道、发射、程序设计、电解池、原电池\n- projectDomains 用：需求指标、进水导流、多级过滤、吸附捕获、密封结构、测试评价`;
       }
-      return `\n### 类型要求：工程/制作\n- 覆盖原理→装置→实验→必要定量；含至少 1 个装置/实验类节点\n- 数学 index ≤25%；名称含「计算/求解/方程式」的 ≤20%`;
+      return `\n### 类型要求：工程/制作\n- 覆盖原理→装置→实验→必要定量；含至少 1 个装置/实验类节点\n- 数学 index ≤25%；名称含「计算/求解/方程式」的 ≤20%\n- **禁止** matched：与题目无关的航空/飞行/生物医疗/形式语言节点`;
     case 'scientific-inquiry':
       return isChemistryInquiryGoal(goal)
         ? (getChemistryAnalysisProfile(goal).mixed

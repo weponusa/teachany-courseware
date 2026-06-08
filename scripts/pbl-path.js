@@ -207,7 +207,23 @@ class PBLPathBuilder {
     return this._archetypeEngine;
   }
 
-  _resolveArchetype() {
+  _resolveArchetype(goal) {
+    const g = String(goal || '');
+    const list = this._archetypeEngine?.archetypeData?.archetypes;
+    if (!list?.length) {
+      this._resolvedArchetype = null;
+      return null;
+    }
+    for (const a of list) {
+      for (const p of a.matchPatterns || []) {
+        try {
+          if (new RegExp(p).test(g)) {
+            this._resolvedArchetype = a;
+            return a;
+          }
+        } catch (e) { /* skip invalid pattern */ }
+      }
+    }
     this._resolvedArchetype = null;
     return null;
   }
@@ -277,6 +293,14 @@ class PBLPathBuilder {
       const pen = Math.min(25, (minM - matched.length) * 6);
       score -= pen;
       breakdown.push({ key: 'matched', label: '课标匹配不足', delta: -pen });
+    }
+
+    const domains = this._inferProjectDomains(goal);
+    const irrelevant = matched.filter(n => this._getNodeIrrelevanceReason(n, goal, domains, archetype));
+    if (irrelevant.length) {
+      const pen = Math.min(35, irrelevant.length * 10);
+      score -= pen;
+      breakdown.push({ key: 'irrelevant', label: `无关节点 ${irrelevant.length} 个`, delta: -pen });
     }
 
     const banned = matched.filter(n => this._isGenericTransversalNode(n.name, goal));
@@ -841,7 +865,8 @@ class PBLPathBuilder {
       '新能源', '光伏', '太阳能', '风电', '风能', '储能', '电池', '锂电', '充电',
       '发电', '电能', '电动', '能源', '碳中和', '并网', '逆变', '电磁', '电路',
       '购车', '买车', '选车', '燃油', '油耗', '混动', '对比', '家用', '成本', '预算',
-      '垃圾', '分类', '回收', '环保', '社区', '调查', '问卷', '访谈', '废弃物', '治理'
+      '垃圾', '分类', '回收', '环保', '社区', '调查', '问卷', '访谈', '废弃物', '治理',
+      '自动驾驶', '小车', '循迹', '巡线', '避障', '传感', '电机', '控制', '调试', '机器人'
     ];
     lex.forEach(w => { if (g.includes(w)) terms.add(w); });
     // 领域词典命中足够时不再用二字随机切分，避免「设计并」等噪声匹配无关课标
@@ -1236,6 +1261,12 @@ class PBLPathBuilder {
         { id: 'analysis', label: '数据可行性分析', keywords: ['统计', '图表', '比较', '分析', '成本', '效益', '数据'], subjects: ['math'] },
         { id: 'proposal', label: '创新方案报告', keywords: ['方案', '创新', '报告', '论证', '说明', '建议'], subjects: ['chinese', 'geography'] },
       ],
+      'engineering': [
+        { id: 'principle', label: '原理与需求', keywords: ['原理', '需求', '指标', '现象', '规律', '受力', '能量'], subjects: ['physics', 'science', 'chemistry'] },
+        { id: 'structure', label: '结构与装置', keywords: ['结构', '装置', '材料', '设计', '搭建', '组装', '电路', '机械'], subjects: ['physics', 'engineering', 'science'] },
+        { id: 'control', label: '控制与实现', keywords: ['控制', '传感', '编程', '算法', '电路', '反馈', '调试'], subjects: ['info-tech', 'physics', 'engineering'] },
+        { id: 'test', label: '测试与迭代', keywords: ['测试', '实验', '测量', '数据', '误差', '记录', '优化'], subjects: ['math', 'physics', 'science'] },
+      ],
       'general': [
         { id: 'define', label: '调研与定义', keywords: ['调研', '需求', '定义', '背景', '分析'], subjects: ['chinese', 'math', 'science'] },
         { id: 'design', label: '方案设计', keywords: ['方案', '设计', '规划', '分工'], subjects: ['math', 'science', 'chinese'] },
@@ -1340,6 +1371,15 @@ class PBLPathBuilder {
         }
       ];
     }
+    if (this._isGroundRoboticsGoal(g)) {
+      return [
+        { id: 'mechanics', label: '结构与运动', keywords: ['结构', '受力', '摩擦', '轮', '电机', '传动', '力', '平衡', '运动', '速度', '杠杆'], subjects: ['physics', 'science', 'engineering'] },
+        { id: 'circuit', label: '电路与驱动', keywords: ['电路', '电流', '电压', '电机', '驱动', '电源', '接线', '开关', '串联', '并联'], subjects: ['physics', 'info-tech'] },
+        { id: 'sense', label: '传感与感知', keywords: ['传感', '红外', '超声', '距离', '循迹', '检测', '巡线', '信号', '采集'], subjects: ['physics', 'info-tech', 'engineering'] },
+        { id: 'control', label: '控制与算法', keywords: ['控制', '反馈', 'PID', '算法', '编程', '逻辑', '避障', '决策', '调试'], subjects: ['info-tech', 'math', 'computer-science', 'engineering'] },
+        { id: 'test', label: '调试与测试', keywords: ['测试', '调试', '误差', '数据', '记录', '实验', '迭代', '验收'], subjects: ['math', 'science', 'engineering'] },
+      ];
+    }
     if (/温控|温室|温度|加热|散热|PID|闭环/.test(g)) {
       return [
         { id: 'modeling', label: '数学建模', keywords: ['函数', '方程', '建模', '图像'], subjects: ['math'] },
@@ -1393,6 +1433,43 @@ class PBLPathBuilder {
     return this._isEnergyEngineeringGoal(goal);
   }
 
+  /** 地面机器人/自动驾驶小车（非无人机/航空） */
+  _isGroundRoboticsGoal(goal) {
+    const g = String(goal || '');
+    if (/无人机|飞行器|航空|火箭|导弹|低空|eVTOL|飞控|航天/.test(g)) return false;
+    return /自动驾驶|智能车|循迹车|循迹小车|无人车|小车制作|制作.*小车|小车|物流机器人|机械臂|机器人车|巡线车|避障车/.test(g)
+      || (/机器人|循迹/.test(g) && /制作|搭建|设计|开发|装置|小车|车/.test(g));
+  }
+
+  _isAviationRoboticsGoal(goal) {
+    const g = String(goal || '');
+    return /无人机|飞行器|航空|飞控|低空|eVTOL/.test(g) && /设计|制作|研发|搭建|开发|装置/.test(g);
+  }
+
+  _isAviationAerospaceNode(node) {
+    if (!node) return false;
+    const name = String(node.name || '');
+    const text = this._nodeSearchText(node);
+    const blob = `${name} ${text}`;
+    if (/飞行控制|飞控系统|航空电子|航空航天|无人机|飞行器|弹道|导弹|火箭|低空|UAV|eVTOL|Autopilot|空域|机翼|气动|起降(?!点)/.test(blob)) return true;
+    if (/飞行|航空|航天/.test(name) && !/自动驾驶|无人车|智能交通|循迹|小车|地面/.test(blob)) return true;
+    const sub = String(node.subject || '');
+    if (sub === 'aerospace-engineering') return true;
+    if (sub === 'engineering' && /aerial|uav|aero-|flight|aviation/i.test(String(node.id || ''))) return true;
+    return false;
+  }
+
+  _isBiologyHealthNode(node) {
+    if (!node) return false;
+    const name = String(node.name || '');
+    const text = this._nodeSearchText(node);
+    const blob = `${name} ${text}`;
+    if (this._isBiologyNodeName(name)) return true;
+    if (/抗生素|耐药|免疫|疫苗|病毒|细菌|药物|用药|分裂|分化|人体|器官系统|营养与健康|疾病|病理/.test(blob)) return true;
+    if (['biology', 'advanced-biology'].includes(node.subject)) return true;
+    return false;
+  }
+
   /** 社会调查/社区议题（垃圾分类、环保治理等）且题目未涉及生命科学 */
   _isSocialOrCivicInquiryGoal(goal) {
     const g = String(goal || '');
@@ -1403,24 +1480,99 @@ class PBLPathBuilder {
   }
 
   _isBiologyNodeName(name) {
-    return /细胞|细胞膜|细胞器|细胞核|细胞壁|细胞呼吸|细胞代谢|细胞周期|细胞死亡|细胞分化|细胞衰老|细胞信号|细胞结构|线粒体|叶绿体|有丝分裂|减数分裂|DNA|基因表达|遗传|光合作用|酶|蛋白质合成|生物膜|生命与环境|微生物|植物.*分类|生物分类/.test(String(name || ''));
+    return /细胞|细胞膜|细胞器|细胞核|细胞壁|细胞呼吸|细胞代谢|细胞周期|细胞死亡|细胞分化|细胞衰老|细胞信号|细胞结构|线粒体|叶绿体|有丝分裂|减数分裂|DNA|基因表达|遗传|光合作用|酶|蛋白质合成|生物膜|生命与环境|微生物|植物.*分类|生物分类|抗生素|耐药|免疫|疫苗|病毒|细菌|药物|分裂与分化/.test(String(name || ''));
   }
 
-  /** 非生物项目：硬性剔除生物噪声（购车/社会调查/垃圾分类等） */
+  /** 非生物项目：硬性剔除生物噪声 */
   _shouldPurgeBiologyForGoal(goal) {
     if (this._isConsumerDecisionGoal(goal)) return true;
     if (this._isSocialOrCivicInquiryGoal(goal)) return true;
+    if (this._isGroundRoboticsGoal(goal)) return true;
     const g = String(goal || '');
-    return /(车|汽车)/.test(g) && /新能源|燃油|电动|混动|油电/.test(g) && !/生物|细胞|生态|光合|酶|遗传|植物|动物/.test(g);
+    if (/(车|汽车)/.test(g) && /新能源|燃油|电动|混动|油电/.test(g) && !/生物|细胞|生态|光合|酶|遗传|植物|动物/.test(g)) return true;
+    if (this._isEngineeringGoal(goal) && !/健康|营养|生物|人体|疾病|医学/.test(g)) return true;
+    return false;
+  }
+
+  _shouldPurgeAviationForGoal(goal) {
+    return this._isGroundRoboticsGoal(goal) && !this._isAviationRoboticsGoal(goal);
   }
 
   _purgeBiologyNoise(nodes, goal) {
     if (!this._shouldPurgeBiologyForGoal(goal) || !Array.isArray(nodes)) return nodes;
-    return nodes.filter(n => {
-      if (n.subject === 'biology' || n.subject === 'advanced-biology') return false;
-      if (this._isBiologyNodeName(n.name)) return false;
-      return true;
+    return nodes.filter(n => !this._isBiologyHealthNode(n));
+  }
+
+  _purgeAviationNoise(nodes, goal) {
+    if (!this._shouldPurgeAviationForGoal(goal) || !Array.isArray(nodes)) return nodes;
+    return nodes.filter(n => !this._isAviationAerospaceNode(n));
+  }
+
+  /** 返回无关节点剔除原因；null 表示可保留 */
+  _getNodeIrrelevanceReason(node, goal, domains, archetype) {
+    if (!node) return '空节点';
+    const name = String(node.name || '');
+    if (archetype && this._isArchetypeBanned(node, archetype)) return '原型禁用';
+    if (this._isGenericTransversalNode(name, goal)) return '泛素养';
+    if (!this._isMainlineRelevant(node, goal, domains)) return '主线不符';
+    if (this._shouldPurgeAviationForGoal(goal) && this._isAviationAerospaceNode(node)) return '航空噪声';
+    if (this._shouldPurgeBiologyForGoal(goal) && this._isBiologyHealthNode(node)) return '生物噪声';
+    if (this._isGroundRoboticsGoal(goal) && /正则表达式|上下文无关|形式语言|编译原理|自动机|量子力学|天体|抗生素|耐药|免疫|细胞/.test(name)) {
+      return '无关大学节点';
+    }
+    return null;
+  }
+
+  /**
+   * 统一无关节点核实：拆解入口 / 筛选后 / 输出前均调用
+   * @returns {{ kept, removed, stats }}
+   */
+  _verifyAndPruneNodes(nodes, goal, archetype, phase = '核实') {
+    const domains = this._inferProjectDomains(goal);
+    const list = Array.isArray(nodes) ? nodes : [];
+    const kept = [];
+    const removed = [];
+    list.forEach(n => {
+      const reason = this._getNodeIrrelevanceReason(n, goal, domains, archetype);
+      if (reason) removed.push({ id: n.id, name: n.name, reason });
+      else kept.push(n);
     });
+    if (removed.length) {
+      const preview = removed.slice(0, 10).map(r => `${r.name}(${r.reason})`).join('、');
+      console.warn(`[PBL] ${phase} 剔除 ${removed.length} 个无关节点: ${preview}${removed.length > 10 ? '…' : ''}`);
+    }
+    return {
+      kept,
+      removed,
+      stats: { input: list.length, kept: kept.length, removed: removed.length },
+    };
+  }
+
+  _verifyOutputBundle(bundle, goal, archetype) {
+    const { complex, matched = [], external = [], graphData } = bundle;
+    const m = this._verifyAndPruneNodes(matched, goal, archetype, '输出核实·matched');
+    const e = this._verifyAndPruneNodes(external, goal, archetype, '输出核实·external');
+    const g = this._verifyAndPruneNodes(graphData?.nodes || [], goal, archetype, '输出核实·图谱');
+    const keptIds = new Set(g.kept.map(n => n.id));
+    const links = (graphData?.links || []).filter(l => {
+      const src = typeof l.source === 'object' ? l.source.id : l.source;
+      const tgt = typeof l.target === 'object' ? l.target.id : l.target;
+      return keptIds.has(src) && keptIds.has(tgt);
+    });
+    const removedAll = [...m.removed, ...e.removed, ...g.removed];
+    return {
+      complex,
+      matched: m.kept,
+      external: e.kept,
+      graphData: { nodes: g.kept, links },
+      relevanceAudit: {
+        matched: m.stats,
+        external: e.stats,
+        graph: g.stats,
+        removedTotal: removedAll.length,
+        removedSamples: removedAll.slice(0, 20),
+      },
+    };
   }
 
   _nodeSearchText(node) {
@@ -1603,6 +1755,9 @@ class PBLPathBuilder {
     }
     if (domains.robot && !domains.woodwork) {
       mismatchRes.push(/斗拱|飞檐|榫卯|木工锯|刨子|古典建筑纹样/);
+      if (!domains.lowAltitude && !/无人机|航空|飞行|低空/.test(profile.raw)) {
+        mismatchRes.push(/飞行控制|航空电子|飞控|航空|航天|无人机|弹道|火箭|导弹|空域|低空|抗生素|耐药|细胞分裂|细胞的分裂/);
+      }
     }
     if (domains.writing && !domains.robot && !domains.software) {
       mismatchRes.push(/焊接|电路|传感器|电机|BOM表|下料/);
@@ -1876,6 +2031,12 @@ class PBLPathBuilder {
       if (/植物|生物分类|细胞|微观|有丝分裂|减数分裂|DNA|基因|光合|酶/.test(name) && /分类/.test(name)) return false;
     }
 
+    if (this._isGroundRoboticsGoal(g)) {
+      if (this._isAviationAerospaceNode(node)) return false;
+      if (this._isBiologyHealthNode(node)) return false;
+      if (/正则表达式|上下文无关文法|形式语言|编译原理|抗生素|耐药|细胞|免疫|病毒|细菌|药物/.test(name)) return false;
+    }
+
     if (this._isChemistryInquiryGoal(g)) {
       if (node.subject === 'info-tech') return false;
       if (/程序|编程|算法|循环结构|分支结构|变量和数据类型|模块化|物联网/.test(name)) return false;
@@ -1891,8 +2052,7 @@ class PBLPathBuilder {
     if (stemGoal) {
       const badName = /作文|写作|任务驱动|实用类文本|地形|等高线|经纬|有机合成|官能团|烃的|弧长|扇形面积|几何图形初步|诗词|文言|议论文结构|世界地形/;
       if (badName.test(name)) return false;
-      if (this._isBiologyNodeName(name) && !/生物|细胞|生态|光合|发酵|酶|遗传/.test(g)) return false;
-      if (node.subject === 'biology' && !/生物|细胞|生态|光合|发酵|酶|遗传|植物|动物/.test(g)) return false;
+      if (this._isBiologyHealthNode(node) && !/生物|细胞|生态|光合|发酵|酶|遗传|健康|人体|医学/.test(g)) return false;
       const humanities = ['chinese', 'english', 'history', 'geography'];
       if (humanities.includes(node.subject)) {
         const need = {
@@ -1904,6 +2064,9 @@ class PBLPathBuilder {
         if (!need[node.subject]?.test(g)) return false;
       }
       const allowedStem = new Set(['physics', 'chemistry', 'math', 'info-tech', 'science']);
+      if (this._isGroundRoboticsGoal(g)) {
+        ['engineering', 'computer-science'].forEach(s => allowedStem.add(s));
+      }
       if (domainList.length && !allowedStem.has(node.subject)) return false;
     }
 
@@ -1927,6 +2090,8 @@ class PBLPathBuilder {
   }
 
   _filterMainlineNodes(matched, goal, archetype = null) {
+    const audit = this._verifyAndPruneNodes(matched, goal, archetype, '主线过滤');
+    if (audit.kept.length) return audit.kept;
     const domains = this._inferProjectDomains(goal);
     let pool = matched;
     if (archetype) {
@@ -1935,6 +2100,7 @@ class PBLPathBuilder {
     if (domains.length || this._isStemProjectGoal(goal)) {
       pool = pool.filter(n => this._isMainlineRelevant(n, goal, domains));
     }
+    pool = this._purgeAviationNoise(pool, goal);
     pool = this._purgeBiologyNoise(pool, goal);
     if (pool.length) return pool;
     if (matched.length && this._isStemProjectGoal(goal)) {
@@ -3831,7 +3997,12 @@ class PBLPathBuilder {
     graphData = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES);
     const mainline = this._getMainlinePath(graphData);
     const extOut = external.slice(0, PBLPathBuilder.PBL_MAX_EXTERNAL);
-    return { complex, matched: mainline.length ? mainline : core, external: extOut, graphData };
+    return this._verifyOutputBundle({
+      complex,
+      matched: mainline.length ? mainline : core,
+      external: extOut,
+      graphData,
+    }, goal, archetype);
   }
 
   /**
@@ -3921,8 +4092,11 @@ class PBLPathBuilder {
     });
 
     let nodes = base.nodes;
-    if (this._shouldPurgeBiologyForGoal(goal)) {
-      const kept = new Set(this._purgeBiologyNoise(nodes, goal).map(n => n.id));
+    if (this._shouldPurgeAviationForGoal(goal) || this._shouldPurgeBiologyForGoal(goal)) {
+      let keptNodes = nodes;
+      keptNodes = this._purgeAviationNoise(keptNodes, goal);
+      keptNodes = this._purgeBiologyNoise(keptNodes, goal);
+      const kept = new Set(keptNodes.map(n => n.id));
       nodes = nodes.filter(n => kept.has(n.id));
     }
     const keptIds = new Set(nodes.map(n => n.id));
@@ -4028,28 +4202,38 @@ class PBLPathBuilder {
       : selectedSystems.filter(s => this.systemIndex.has(s));
 
     // 3. 构建候选知识点列表
-    const candidates = [];
+    const rawCandidates = [];
     this.unifiedIndex.forEach((node, id) => {
       if (activeSystems.includes(node.system)) {
-        candidates.push(node);
+        rawCandidates.push(node);
       }
     });
 
-    if (candidates.length === 0) {
+    if (rawCandidates.length === 0) {
       throw new Error('未找到任何知识点，请检查课标体系选择');
+    }
+
+    const archetype = this._resolveArchetype(goal);
+    this._reportPBLStatus(onStatus, '核实候选池无关节点...');
+    const intakeAudit = this._verifyAndPruneNodes(rawCandidates, goal, archetype, '拆解入口·候选池');
+    let candidates = intakeAudit.kept;
+    if (!candidates.length) {
+      console.warn('[PBL] 入口核实后候选池为空，回退原始候选集');
+      candidates = rawCandidates;
     }
 
     // 4. 第零阶段：全链路拆解可行方案（不选课标）
     this._reportPBLStatus(onStatus, '第 1/4 步：全链路拆解可行方案...');
     let projectBlueprint = await this._llmDecomposeStage(goal);
-    const archetype = null;
-    projectBlueprint = this._concretizeBlueprint(goal, projectBlueprint, null);
+    projectBlueprint = this._concretizeBlueprint(goal, projectBlueprint, archetype);
     const blueprintPhases = this._blueprintProjectPhases(projectBlueprint);
     const bloomProfile = this._inferBloomProfile(projectBlueprint);
 
     // 5. 第一阶段 LLM：判断学科+学段+课标体系（压缩候选集）
     this._reportPBLStatus(onStatus, '第 2/4 步：按拆解蓝图筛选课标候选（Bloom 层级）...');
     const stage1 = await this._llmFilterStage(goal, candidates, projectBlueprint, bloomProfile, archetype, activeSystems);
+    const filterAudit = this._verifyAndPruneNodes(stage1.filteredCandidates, goal, archetype, '拆解入口·课标筛选后');
+    stage1.filteredCandidates = filterAudit.kept.length ? filterAudit.kept : stage1.filteredCandidates;
 
     // 6. 第二阶段 LLM：按蓝图阶段精确匹配课标
     this._reportPBLStatus(onStatus, '第 3/4 步：按蓝图阶段匹配课标知识点...');
@@ -4067,6 +4251,16 @@ class PBLPathBuilder {
       archetype,
       projectBlueprint,
     });
+    this._reportPBLStatus(onStatus, '输出前核实无关节点...');
+    const outputAudit = this._verifyOutputBundle({
+      complex: finalized.complex,
+      matched: finalized.matched,
+      external: finalized.external,
+      graphData: finalized.graphData,
+    }, goal, archetype);
+    const finalMatched = outputAudit.matched;
+    const finalExternal = outputAudit.external;
+    const finalGraphData = outputAudit.graphData;
     const llmPhases = stage2.projectPhases || [];
     const phaseLen = Math.max(blueprintPhases.length, llmPhases.length);
     const mergedPhases = phaseLen ? Array.from({ length: phaseLen }, (_, i) => {
@@ -4113,30 +4307,48 @@ class PBLPathBuilder {
       pathPlan,
     });
 
+    const outputAudit = this._verifyOutputBundle({
+      complex: finalized.complex,
+      matched: finalized.matched,
+      external: finalized.external,
+      graphData: finalized.graphData,
+    }, goal, archetype);
+    const finalMatched = outputAudit.matched;
+    const finalExternal = outputAudit.external;
+    const finalGraphData = outputAudit.graphData;
+
     return {
       goal,
       systems: activeSystems,
       archetype: archetype ? { id: archetype.id, label: archetype.label } : null,
       moduleChain,
       projectBlueprint,
-      matched: finalized.matched,
-      external: finalized.external,
+      matched: finalMatched,
+      external: finalExternal,
       techRoute,
       projectPhases: pathPlan.phases,
       pathPlan,
       knowledgeChain: moduleChain || pathPlan.knowledgeChain,
-      graphData: finalized.graphData,
+      graphData: finalGraphData,
       complexProject: finalized.complex,
       quality,
+      relevanceAudit: {
+        intake: intakeAudit.stats,
+        postFilter: filterAudit.stats,
+        output: outputAudit.relevanceAudit,
+      },
       stats: {
         totalCandidates: candidates.length,
         filteredCandidates: stage1.filteredCandidates.length,
-        matchedCount: finalized.matched.length,
-        externalCount: finalized.external.length,
-        graphNodes: finalized.graphData.nodes.length,
-        graphLinks: finalized.graphData.links.length,
+        matchedCount: finalMatched.length,
+        externalCount: finalExternal.length,
+        graphNodes: finalGraphData.nodes.length,
+        graphLinks: finalGraphData.links.length,
         qualityScore: quality.score,
         qualityGrade: quality.grade,
+        prunedAtIntake: intakeAudit.stats.removed,
+        prunedAtFilter: filterAudit.stats.removed,
+        prunedAtOutput: outputAudit.relevanceAudit.removedTotal,
       }
     };
   }
@@ -4190,6 +4402,8 @@ class PBLPathBuilder {
       filter.subjects = this._getChemistryAnalysisProfile(goal).mixed
         ? ['chemistry', 'physics', 'math']
         : ['chemistry', 'science', 'math'];
+    } else if (this._isGroundRoboticsGoal(goal)) {
+      filter.subjects = ['physics', 'info-tech', 'math', 'science', 'engineering', 'computer-science'];
     } else if (this._isStemProjectGoal(goal) && profile.complex) {
       // STEM/工程/科学探究类：锁定主线学科，禁止人文学科渗入候选池
       if (/火箭|导弹|发射|弹道|模型火箭/.test(goal)) {
@@ -4236,9 +4450,12 @@ class PBLPathBuilder {
       return true;
     });
     pool = this._applyArchetypePoolRules(pool, archetype, activeSystems);
-    if (domains.length && profile.complex) {
+    const poolAudit = this._verifyAndPruneNodes(pool, goal, archetype, '拆解入口·Bloom筛选池');
+    if (poolAudit.kept.length >= 6) pool = poolAudit.kept;
+    else if (poolAudit.kept.length) pool = poolAudit.kept;
+    if (domains.length && (profile.complex || this._isGroundRoboticsGoal(goal) || this._isSocialOrCivicInquiryGoal(goal))) {
       const mainlinePool = pool.filter(n => this._isMainlineRelevant(n, goal, domains));
-      if (mainlinePool.length >= 8) pool = mainlinePool;
+      if (mainlinePool.length >= 6) pool = mainlinePool;
     }
     const goalTerms = this._tokenizeGoalTerms(goal);
     const domainSubjectUnion = [...new Set(domains.flatMap(d => d.subjects || []))];
@@ -4319,6 +4536,7 @@ class PBLPathBuilder {
       if (rescued.length) console.warn('[PBL] 原型层模块检索补齐:', rescued.map(n => n.name).join('、'));
     }
     matched = this._filterMainlineNodes(matched, goal, archetype);
+    matched = this._verifyAndPruneNodes(matched, goal, archetype, '匹配后核实').kept;
     if (archetype && this._archetypeEngine) {
       matched = this._archetypeEngine.tagMatchedModules(
         matched, archetype, projectBlueprint,
