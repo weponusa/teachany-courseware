@@ -51,6 +51,15 @@ export const PBL_MODEL_CHAIN = [
   { backendId: 'paratera', model: 'GLM-4-Flash' },
 ];
 
+/** match / verify-relevance / refine：默认与主链一致（硅基 Flash），可通过 PBL_MATCH_MODEL 覆盖 */
+export const PBL_MATCH_MODEL_CHAIN = [
+  { backendId: 'siliconflow', model: 'deepseek-ai/DeepSeek-V4-Flash' },
+  { backendId: 'siliconflow', model: 'deepseek-ai/DeepSeek-V4-Pro' },
+  { backendId: 'paratera', model: 'GLM-4-Flash' },
+];
+
+const PBL_STRONG_STAGES = new Set(['match', 'verify-relevance', 'refine']);
+
 /** @param {Record<string,string>} env */
 export function resolvePBLModelChain(env = {}) {
   const override = String(env.PBL_MODEL_OVERRIDE || '').trim();
@@ -58,6 +67,16 @@ export function resolvePBLModelChain(env = {}) {
     return [{ backendId: inferBackendIdForModel(override), model: override }];
   }
   return PBL_MODEL_CHAIN;
+}
+
+/** @param {Record<string,string>} env @param {string} stage */
+export function resolvePBLStageModelChain(env = {}, stage = '') {
+  if (!PBL_STRONG_STAGES.has(stage)) return resolvePBLModelChain(env);
+  const matchOverride = String(env.PBL_MATCH_MODEL || env.PBL_MODEL_OVERRIDE || '').trim();
+  if (matchOverride) {
+    return [{ backendId: inferBackendIdForModel(matchOverride), model: matchOverride }];
+  }
+  return PBL_MATCH_MODEL_CHAIN;
 }
 
 /** 前端服务商 id → 服务端 backendId（preset/custom 走模型推断） */

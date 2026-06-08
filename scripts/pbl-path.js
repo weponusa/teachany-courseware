@@ -27,10 +27,10 @@ class PBLPathBuilder {
     this.providers = [
       {
         id: 'preset',
-        name: 'TeachAny 默认（DeepSeek-V4-Flash）',
+        name: 'TeachAny 默认（硅基流动 DeepSeek-V4-Flash）',
         serverPreset: true,
         model: '',
-        models: ['', 'deepseek-ai/DeepSeek-V4-Flash', 'GLM-4-Flash', 'qwen/qwen3-next-80b-a3b-instruct:free', '__custom__'],
+        models: ['', 'deepseek-ai/DeepSeek-V4-Flash', 'deepseek-ai/DeepSeek-V4-Pro', 'GLM-4-Flash', 'deepseek/deepseek-v4-pro', '__custom__'],
       },
       {
         id: 'siliconflow',
@@ -48,10 +48,42 @@ class PBLPathBuilder {
       },
       {
         id: 'openrouter',
-        name: 'OpenRouter',
+        name: 'OpenRouter（可填自有 Key）',
         serverBacked: true,
-        model: 'qwen/qwen3-next-80b-a3b-instruct:free',
-        models: ['qwen/qwen3-next-80b-a3b-instruct:free', 'meta-llama/llama-3.3-70b-instruct:free', 'anthropic/claude-3.5-sonnet', '__custom__'],
+        clientKeyOk: true,
+        baseUrl: 'https://openrouter.ai/api/v1',
+        model: 'deepseek/deepseek-v4-pro',
+        models: [
+          'deepseek/deepseek-v4-pro',
+          'deepseek/deepseek-v4-flash',
+          'deepseek/deepseek-chat-v3.1',
+          'deepseek/deepseek-chat-v3-0324',
+          'deepseek/deepseek-r1',
+          'deepseek/deepseek-r1-0528',
+          'deepseek/deepseek-r1-distill-qwen-32b',
+          'deepseek/deepseek-r1-distill-llama-70b',
+          'anthropic/claude-sonnet-4',
+          'openai/gpt-4.1',
+          'google/gemini-2.5-pro-preview',
+          'qwen/qwen3-next-80b-a3b-instruct:free',
+          'meta-llama/llama-3.3-70b-instruct:free',
+          '__custom__',
+        ],
+        modelLabels: {
+          'deepseek/deepseek-v4-pro': 'DeepSeek V4 Pro（付费）',
+          'deepseek/deepseek-v4-flash': 'DeepSeek V4 Flash（付费）',
+          'deepseek/deepseek-chat-v3.1': 'DeepSeek Chat V3.1（付费）',
+          'deepseek/deepseek-chat-v3-0324': 'DeepSeek Chat V3 0324（付费）',
+          'deepseek/deepseek-r1': 'DeepSeek R1（付费）',
+          'deepseek/deepseek-r1-0528': 'DeepSeek R1 0528（付费）',
+          'deepseek/deepseek-r1-distill-qwen-32b': 'DeepSeek R1 Distill Qwen 32B',
+          'deepseek/deepseek-r1-distill-llama-70b': 'DeepSeek R1 Distill Llama 70B',
+          'anthropic/claude-sonnet-4': 'Claude Sonnet 4（付费）',
+          'openai/gpt-4.1': 'GPT-4.1（付费）',
+          'google/gemini-2.5-pro-preview': 'Gemini 2.5 Pro（付费）',
+          'qwen/qwen3-next-80b-a3b-instruct:free': 'Qwen3 Next 80B（免费）',
+          'meta-llama/llama-3.3-70b-instruct:free': 'Llama 3.3 70B（免费）',
+        },
       },
       {
         id: 'custom',
@@ -66,6 +98,8 @@ class PBLPathBuilder {
 
     this._archetypeEngine = null;
     this._resolvedArchetype = null;
+    this._activeProjectSpec = null;
+    this._refinementContext = null;
   }
 
   _loadLLMConfig() {
@@ -122,6 +156,8 @@ class PBLPathBuilder {
       decompose: { maxTokens: 4500, temperature: 0.35 },
       filter: { maxTokens: 1200, temperature: 0.25 },
       match: { maxTokens: 8000, temperature: 0.15 },
+      'verify-relevance': { maxTokens: 3000, temperature: 0.05 },
+      refine: { maxTokens: 2500, temperature: 0.2 },
       'verify-deps': { maxTokens: 2500, temperature: 0.08 },
     };
     return map[stage] || { maxTokens: 4000, temperature: 0.2 };
@@ -661,6 +697,8 @@ class PBLPathBuilder {
     const k12Pool = (pool || this._getK12Pool(goal))
       .filter(n => !this._isGenericTransversalNode(n.name, goal))
       .filter(n => !archetype || !this._isArchetypeBanned(n, archetype))
+      .filter(n => this._isMainlineRelevant(n, goal, domains))
+      .filter(n => this._isSubjectAllowedForGoal(n, goal, archetype))
       .filter(n => !this._shouldPurgeBiologyForGoal(goal) || !this._isBiologyHealthNode(n))
       .map(n => ({
         ...n,
@@ -1017,6 +1055,7 @@ class PBLPathBuilder {
   /** 消费决策/调查对比类（购车选型、方案比选），非工程研发 */
   _isConsumerDecisionGoal(goal) {
     const g = String(goal || '');
+    if (/研究.*购车|研究.*买车|研究.*选车|购车.*研究|买车.*研究/.test(g)) return true;
     if (/购车|买车|选车|用车方案|消费决策|方案比选|比选|选型|性价比|家用.*车|家庭.*(购车|买车|选车|用车)/.test(g)) return true;
     if (/对比|比较/.test(g) && /购|买|选|家用|家庭/.test(g) && /新能源|燃油|电动|混动|汽油|柴油/.test(g)) return true;
     if (/哪个更|哪种更|怎么选|如何选择/.test(g) && /车|新能源|燃油|电动/.test(g)) return true;
@@ -1124,6 +1163,32 @@ class PBLPathBuilder {
     ];
   }
 
+  /** 历史课标节点（朝代/革命/战争等），消费决策与多数非历史项目须剔除 */
+  _isHistoryCurriculumNode(node) {
+    const sub = String(node?.subject || '');
+    if (['history', 'advanced-history'].includes(sub)) return true;
+    const name = String(node?.name || '');
+    return /历史背景|朝代|元代|元朝|宋朝|宋代|唐朝|隋唐|明清|西汉|东汉|蒙古|丝绸之路|世界大战|资产阶级|革命|改革开放|秦始皇|工业革命|文艺复兴|冷战|新航路|殖民|封建|帝国|奴隶社会|封建社会|通史|古代史|近代史|现代史/.test(name);
+  }
+
+  /** 项目允许学科白名单（原型 subjects 优先，否则按类型推断） */
+  _getAllowedSubjects(goal, archetype = null) {
+    if (archetype?.subjects?.length) return new Set(archetype.subjects);
+    if (this._isConsumerDecisionGoal(goal)) {
+      return new Set(['math', 'physics', 'chemistry', 'geography', 'chinese']);
+    }
+    const domains = this._inferProjectDomains(goal);
+    const fromDomains = domains.flatMap(d => d.subjects || []);
+    if (fromDomains.length) return new Set(fromDomains);
+    return null;
+  }
+
+  _isSubjectAllowedForGoal(node, goal, archetype = null) {
+    const allowed = this._getAllowedSubjects(goal, archetype);
+    if (!allowed) return true;
+    return allowed.has(node.subject);
+  }
+
   /** 消费决策类应排除的研发/装置课节点 */
   _isRdEngineeringNodeName(name, goal) {
     const n = String(name || '');
@@ -1140,10 +1205,40 @@ class PBLPathBuilder {
     return subject || g.slice(0, 36);
   }
 
+  _gradeBandFromProjectSpec(spec) {
+    if (!spec || !spec.gradeLevel || spec.gradeLevel === 'any') {
+      return { explicit: false, minGrade: 1, maxGrade: 12, label: null };
+    }
+    const detail = parseInt(spec.gradeDetail, 10);
+    const maps = {
+      primary: { min: 1, max: 6, label: '小学' },
+      junior: { min: 7, max: 9, label: '初中' },
+      senior: { min: 10, max: 12, label: '高中' },
+      university: { min: 0, max: 0, label: '大学' },
+      adult: { min: 0, max: 0, label: '成人' },
+    };
+    const band = maps[spec.gradeLevel];
+    if (!band) return { explicit: false, minGrade: 1, maxGrade: 12, label: null };
+    if (detail >= 1 && detail <= 12) {
+      return { explicit: true, minGrade: detail, maxGrade: detail, label: `${detail}年级` };
+    }
+    return { explicit: true, minGrade: band.min, maxGrade: band.max, label: band.label };
+  }
+
+  _subjectFilterFromProjectSpec(spec) {
+    if (!spec || !spec.subject || spec.subject === 'cross') return null;
+    return [spec.subject];
+  }
+
   /** 用户是否在目标中写明年级/学段（未写明则跨学段匹配，仅作理解深度参考） */
-  _parseExplicitGradeBand(goal) {
+  _parseExplicitGradeBand(goal, projectSpec = null) {
+    if (projectSpec) {
+      const fromSpec = this._gradeBandFromProjectSpec(projectSpec);
+      if (fromSpec.explicit) return fromSpec;
+    }
     const g = String(goal || '');
     const cnNum = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+    if (/成人|在职|继续教育|培训/.test(g)) return { explicit: true, minGrade: 0, maxGrade: 0, label: '成人' };
     if (/大学|本科|高职|大一|大二|大三|大四/.test(g)) return { explicit: true, minGrade: 0, maxGrade: 0, label: '大学' };
     if (/高中|高一|高二|高三|十年级|十一年级|十二年级/.test(g)) return { explicit: true, minGrade: 10, maxGrade: 12, label: '高中' };
     if (/初中|初一|初二|初三|七年级|八年级|九年级/.test(g)) return { explicit: true, minGrade: 7, maxGrade: 9, label: '初中' };
@@ -1732,6 +1827,8 @@ class PBLPathBuilder {
     const name = String(node.name || '');
     if (archetype && this._isArchetypeBanned(node, archetype)) return '原型禁用';
     if (this._isGenericTransversalNode(name, goal)) return '泛素养';
+    if (this._isConsumerDecisionGoal(goal) && this._isHistoryCurriculumNode(node)) return '消费决策禁用历史';
+    if (!this._isSubjectAllowedForGoal(node, goal, archetype)) return '学科白名单外';
     if (!this._isMainlineRelevant(node, goal, domains)) return '主线不符';
     if (this._shouldPurgeAviationForGoal(goal) && this._isAviationAerospaceNode(node)) return '航空噪声';
     if (this._shouldPurgeBiologyForGoal(goal) && this._isBiologyHealthNode(node)) return '生物噪声';
@@ -2337,6 +2434,8 @@ class PBLPathBuilder {
     const consumerGoal = this._isConsumerDecisionGoal(g);
 
     if (consumerGoal) {
+      if (this._isHistoryCurriculumNode(node)) return false;
+      if (!this._isSubjectAllowedForGoal(node, g, null)) return false;
       if (this._isRdEngineeringNodeName(name, g)) return false;
       if (this._isBiologyNodeName(name)) return false;
       if (/比热容/.test(name) && !/热|环境/.test(text)) return false;
@@ -2408,27 +2507,7 @@ class PBLPathBuilder {
 
   _filterMainlineNodes(matched, goal, archetype = null) {
     const audit = this._verifyAndPruneNodes(matched, goal, archetype, '主线过滤');
-    if (audit.kept.length) return audit.kept;
-    const domains = this._inferProjectDomains(goal);
-    let pool = matched;
-    if (archetype) {
-      pool = matched.filter(n => !this._isArchetypeBanned(n, archetype));
-    }
-    if (domains.length || this._isStemProjectGoal(goal)) {
-      pool = pool.filter(n => this._isMainlineRelevant(n, goal, domains));
-    }
-    pool = this._purgeAviationNoise(pool, goal);
-    pool = this._purgeBiologyNoise(pool, goal);
-    if (pool.length) return pool;
-    if (matched.length && this._isStemProjectGoal(goal)) {
-      return this._purgeBiologyNoise(matched.filter(n => {
-        const name = String(n.name || '');
-        if (this._isBiologyNodeName(name) || n.subject === 'biology') return false;
-        return !/作文|地形|有机合成|弧长|扇形面积/.test(name);
-      }), goal);
-    }
-    if (matched.length) return this._purgeBiologyNoise(matched, goal);
-    return [];
+    return audit.kept;
   }
 
   _scoreNodeForGoal(node, goalTerms, filterSubjects, complex, domains, goal = '') {
@@ -2646,6 +2725,8 @@ class PBLPathBuilder {
       if (this._isGenericTransversalNode(node.name, goal)) return;
       if (archetype && this._isArchetypeBanned(node, archetype)) return;
       if (archetype && !this._meetsArchetypeGrade(node, archetype, goal)) return;
+      if (!this._isMainlineRelevant(node, goal, this._inferProjectDomains(goal))) return;
+      if (!this._isSubjectAllowedForGoal(node, goal, archetype)) return;
       if (complex && this._parseExplicitGradeBand(goal).explicit && this._excludeForComplexProject(node)) return;
       out.push({
         ...node,
@@ -3006,6 +3087,87 @@ class PBLPathBuilder {
       m.dependsOn = [...new Set(kept)];
     });
     return { ...matchResult, matched: patched };
+  }
+
+  _applyRelevanceVerification(stage2, candidates, removeList = []) {
+    if (!removeList.length || !stage2?.matched?.length) return stage2;
+    const removeIdx = new Set(
+      removeList
+        .map(r => (typeof r.index === 'number' ? r.index : parseInt(r.index, 10)))
+        .filter(i => Number.isInteger(i) && i >= 0)
+    );
+    if (!removeIdx.size) return stage2;
+
+    const keptMatched = stage2.matched.filter(n => {
+      const idx = candidates.findIndex(c => c.id === n.id);
+      return idx < 0 || !removeIdx.has(idx);
+    });
+    const keptIds = new Set(keptMatched.map(n => n.id));
+    const raw = stage2.rawMatchResult || {};
+    const patchedMatched = (raw.matched || []).filter(m => {
+      const idx = this._parseMatchIndex(m, candidates.length);
+      return idx >= 0 && !removeIdx.has(idx);
+    });
+    const pathOrderIds = (stage2.pathOrderIds || []).filter(id => keptIds.has(id));
+    console.warn('[PBL] verify-relevance 剔除:', removeList.map(r => r.reason || r.index).join('；'));
+    return {
+      ...stage2,
+      matched: keptMatched,
+      pathOrderIds,
+      rawMatchResult: { ...raw, matched: patchedMatched },
+    };
+  }
+
+  async _llmVerifyRelevanceStage(goal, stage2, candidates, archetype = null, projectBlueprint = null) {
+    if (!stage2?.matched?.length) return stage2;
+
+    const allowed = this._getAllowedSubjects(goal, archetype);
+    const matchedLite = stage2.matched.map(n => {
+      const idx = candidates.findIndex(c => c.id === n.id);
+      return {
+        index: idx,
+        name: n.name,
+        subject: n.subject,
+        grade: parseInt(n.grade, 10) || 0,
+        reason: n.matchReason || '',
+        role: n.pblRole || 'core',
+      };
+    }).filter(n => n.index >= 0);
+
+    const ruleRemoveIdx = new Set();
+    matchedLite.forEach(n => {
+      const node = candidates[n.index];
+      if (!node) return;
+      const reason = this._getNodeIrrelevanceReason(
+        node, goal, this._inferProjectDomains(goal), archetype
+      );
+      if (reason) ruleRemoveIdx.add(n.index);
+    });
+
+    let llmRemove = [];
+    try {
+      const response = await this._callPBLAnalyzeStage('verify-relevance', {
+        goal,
+        archetypeId: archetype?.id || null,
+        projectType: this._classifyProjectType(goal),
+        allowedSubjects: allowed ? [...allowed] : [],
+        deliverable: projectBlueprint?.deliverable || '',
+        matched: matchedLite,
+      });
+      const jsonStr = this._extractJsonObject(response);
+      const parsed = JSON.parse(jsonStr);
+      llmRemove = (parsed.remove || []).map(r => ({
+        index: typeof r.index === 'number' ? r.index : parseInt(r.index, 10),
+        reason: r.reason || 'LLM审核剔除',
+      })).filter(r => Number.isInteger(r.index) && r.index >= 0);
+    } catch (e) {
+      console.warn('[PBL] verify-relevance 失败，仅使用规则白名单:', e.message);
+    }
+
+    const merged = new Map();
+    [...ruleRemoveIdx].forEach(idx => merged.set(idx, { index: idx, reason: '规则白名单' }));
+    llmRemove.forEach(r => merged.set(r.index, r));
+    return this._applyRelevanceVerification(stage2, candidates, [...merged.values()]);
   }
 
   async _llmVerifyDepsStage(goal, matchResult, candidates, matched) {
@@ -3529,7 +3691,7 @@ class PBLPathBuilder {
 
   _getPBLGoalProfile(goal) {
     const g = String(goal || '').trim();
-    const gradeBand = this._parseExplicitGradeBand(g);
+    const gradeBand = this._parseExplicitGradeBand(g, this._activeProjectSpec);
     const advanced = /系统|平台|模型|算法|传感器|物联网|智能|仿真|优化|数据分析|机器学习|人工智能|开发|App|API|控制|工程|跨学科|综合性|自动化|闭环|原型|调试/i;
     let signals = 0;
     if (g.length >= 60) signals += 1;
@@ -4219,9 +4381,19 @@ class PBLPathBuilder {
 
   async _llmDecomposeStage(goal) {
     const profile = this._getPBLGoalProfile(goal);
+    let decomposeGoal = goal;
+    const rc = this._refinementContext;
+    if (rc?.userMessage) {
+      decomposeGoal += `\n\n【本轮调整要求】${rc.userMessage}`;
+      if (rc.previousMatched?.length) {
+        decomposeGoal += `\n【上轮已匹配课标】${rc.previousMatched.slice(0, 16).join('、')}`;
+      }
+      if (rc.removeKeywords?.length) decomposeGoal += `\n【须减少】${rc.removeKeywords.join('、')}`;
+      if (rc.addKeywords?.length) decomposeGoal += `\n【须加强】${rc.addKeywords.join('、')}`;
+    }
     try {
       const response = await this._callPBLAnalyzeStage('decompose', {
-        goal,
+        goal: decomposeGoal,
         complex: profile.complex
       });
       return this._parseDecomposeResult(response, goal);
@@ -4231,11 +4403,26 @@ class PBLPathBuilder {
     }
   }
 
+  /**
+   * 浏览器直连：自定义 API，或 OpenRouter 填写自有 Key
+   * 其余走 TeachAny 服务端中转（Key 在环境变量，用户不可见）
+   */
+  _usesClientLlm(cfg) {
+    return !!(cfg.clientLlm || cfg.providerId === 'custom'
+      || (cfg.providerId === 'openrouter' && cfg.apiKey));
+  }
+
   async _callPBLAnalyzeStage(stage, payload) {
     const cfg = this.getLLMConfig();
     const llmOpts = this._llmStageOptions(stage);
 
-    if (cfg.clientLlm) {
+    if (this._usesClientLlm(cfg)) {
+      if (!cfg.apiKey) {
+        throw new Error(cfg.providerId === 'openrouter'
+          ? '请先在 ⚙️ API 设置中填写 OpenRouter API Key，或改回 TeachAny 默认走服务端中转'
+          : '请先在 ⚙️ API 设置中填写 API Key');
+      }
+      if (!cfg.model) throw new Error('请先在 ⚙️ API 设置中选择或填写模型名称');
       const messages = await this._fetchPBLMessages(stage, payload);
       return this.callLLM(messages, llmOpts);
     }
@@ -4434,8 +4621,9 @@ class PBLPathBuilder {
         links.push({ source: preId, target: n.id, type: 'prerequisite' });
       });
 
-      // 全科图谱增强：展开跨学科前置和大学延伸节点
-      if (this.graphLoaded) {
+      // 全科图谱增强：消费决策等严格类型不展开跨学科邻居，避免历史噪声渗入
+      const strictGraphExpansion = this._isConsumerDecisionGoal(goal);
+      if (this.graphLoaded && !strictGraphExpansion) {
         const graphNb = this.graphNeighbors.get(n.id);
         if (graphNb) {
           // 跨学科前置（来自图谱边的 parents，且不在 prerequisites 中）
@@ -4581,7 +4769,72 @@ class PBLPathBuilder {
     if (typeof onStatus === 'function') onStatus(msg);
   }
 
-  async analyzePBLGoal(goal, selectedSystems = ['all'], onStatus = null) {
+  _buildRefineSnapshot(result) {
+    return {
+      deliverable: result?.projectBlueprint?.deliverable || '',
+      phaseNames: (result?.pathPlan?.phases || result?.projectPhases || []).map(p => p.phase).filter(Boolean),
+      matchedNames: (result?.matched || []).map(n => n.name),
+    };
+  }
+
+  async refinePBLResult(previousResult, userMessage, projectSpec, selectedSystems = ['all'], onStatus = null, chatHistory = []) {
+    const msg = String(userMessage || '').trim();
+    if (!msg) throw new Error('请输入修改要求');
+    if (!previousResult) throw new Error('请先完成一次项目拆解');
+
+    this._reportPBLStatus(onStatus, '理解修改要求...');
+    const snapshot = this._buildRefineSnapshot(previousResult);
+    let plan = { summary: '', fullRematch: true, userFacingReply: '好的，将按你的要求重新拆解。' };
+
+    try {
+      const response = await this._callPBLAnalyzeStage('refine', {
+        goal: previousResult.goal,
+        userMessage: msg,
+        projectSpec,
+        snapshot,
+      });
+      plan = { ...plan, ...JSON.parse(this._extractJsonObject(response)) };
+    } catch (e) {
+      console.warn('[PBL] refine 阶段失败，将直接带修改要求重拆:', e.message);
+    }
+
+    const spec = { ...(projectSpec || previousResult.projectSpec || {}) };
+    if (plan.revisedTask) spec.task = plan.revisedTask;
+    if (plan.revisedDeliverable) {
+      spec.deliverable = 'other';
+      spec.deliverableCustom = plan.revisedDeliverable;
+    }
+
+    const goal = (typeof PBLProjectForm !== 'undefined' && PBLProjectForm.composeGoalFromSpec)
+      ? PBLProjectForm.composeGoalFromSpec(spec)
+      : previousResult.goal;
+
+    const refinementContext = {
+      userMessage: msg,
+      previousMatched: snapshot.matchedNames,
+      removeKeywords: plan.removeKeywords || [],
+      addKeywords: plan.addKeywords || [],
+      summary: plan.summary || '',
+    };
+
+    const nextHistory = [
+      ...chatHistory,
+      { role: 'user', content: msg, ts: Date.now() },
+      { role: 'assistant', content: plan.userFacingReply || plan.summary || '已根据你的要求重新拆解。', ts: Date.now() },
+    ];
+
+    const result = await this.analyzePBLGoal(goal, selectedSystems, onStatus, {
+      projectSpec: spec,
+      refinementContext,
+      chatHistory: nextHistory,
+    });
+    return result;
+  }
+
+  async analyzePBLGoal(goal, selectedSystems = ['all'], onStatus = null, options = {}) {
+    this._activeProjectSpec = options.projectSpec || null;
+    this._refinementContext = options.refinementContext || null;
+    const chatHistory = options.chatHistory || [];
     // 1. 确保索引已加载
     this._reportPBLStatus(onStatus, '正在加载多课标知识点索引...');
     await this.loadUnifiedIndex();
@@ -4614,24 +4867,30 @@ class PBLPathBuilder {
     }
 
     // 4. 第零阶段：全链路拆解可行方案（不选课标）
-    this._reportPBLStatus(onStatus, '第 1/4 步：全链路拆解可行方案...');
+    this._reportPBLStatus(onStatus, '第 1/5 步：全链路拆解可行方案...');
     let projectBlueprint = await this._llmDecomposeStage(goal);
     projectBlueprint = this._concretizeBlueprint(goal, projectBlueprint, archetype);
     const blueprintPhases = this._blueprintProjectPhases(projectBlueprint, goal);
     const bloomProfile = this._inferBloomProfile(projectBlueprint);
 
     // 5. 第一阶段 LLM：判断学科+学段+课标体系（压缩候选集）
-    this._reportPBLStatus(onStatus, '第 2/4 步：按拆解蓝图筛选课标候选（Bloom 层级）...');
+    this._reportPBLStatus(onStatus, '第 2/5 步：按拆解蓝图筛选课标候选（Bloom 层级）...');
     const stage1 = await this._llmFilterStage(goal, candidates, projectBlueprint, bloomProfile, archetype, activeSystems);
     const filterAudit = this._verifyAndPruneNodes(stage1.filteredCandidates, goal, archetype, '拆解入口·课标筛选后');
     stage1.filteredCandidates = filterAudit.kept.length ? filterAudit.kept : stage1.filteredCandidates;
 
     // 6. 第二阶段 LLM：按蓝图阶段精确匹配课标
-    this._reportPBLStatus(onStatus, '第 3/4 步：按蓝图阶段匹配课标知识点...');
+    this._reportPBLStatus(onStatus, '第 3/5 步：按蓝图阶段匹配课标知识点...');
     let stage2 = await this._llmMatchStage(goal, stage1.filteredCandidates, projectBlueprint, stage1.bloomProfile, archetype);
 
+    // 6.5 相关性二审：规则白名单 + LLM 剔除幻觉节点
+    this._reportPBLStatus(onStatus, '第 4/5 步：核实课标节点相关性...');
+    stage2 = await this._llmVerifyRelevanceStage(
+      goal, stage2, stage1.filteredCandidates, archetype, projectBlueprint
+    );
+
     // 7. 第三阶段：dependsOn 方向性验证
-    this._reportPBLStatus(onStatus, '第 4/4 步：校验知识依赖方向...');
+    this._reportPBLStatus(onStatus, '第 5/5 步：校验知识依赖方向...');
     const verifiedResult = await this._llmVerifyDepsStage(goal, stage2.rawMatchResult, stage1.filteredCandidates, stage2.matched);
     stage2.dependsOnLinks = this._buildDependsOnLinks(verifiedResult, stage1.filteredCandidates);
 
@@ -4721,6 +4980,8 @@ class PBLPathBuilder {
 
     return {
       goal,
+      projectSpec: this._activeProjectSpec || options.projectSpec || null,
+      chatHistory,
       systems: activeSystems,
       archetype: archetype ? { id: archetype.id, label: archetype.label } : null,
       moduleChain,
@@ -4795,7 +5056,10 @@ class PBLPathBuilder {
 
     const projectType = this._classifyProjectType(goal);
 
-    if (archetype?.subjects?.length) {
+    const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
+    if (specSubjects?.length) {
+      filter.subjects = specSubjects;
+    } else if (archetype?.subjects?.length) {
       filter.subjects = archetype.subjects;
       if (archetype.primarySystem) filter.systems = [archetype.primarySystem, ...(archetype.extensionSystems || [])];
     } else if (this._isConsumerDecisionGoal(goal)) {
@@ -4859,7 +5123,8 @@ class PBLPathBuilder {
     const poolAudit = this._verifyAndPruneNodes(pool, goal, archetype, '拆解入口·Bloom筛选池');
     if (poolAudit.kept.length >= 6) pool = poolAudit.kept;
     else if (poolAudit.kept.length) pool = poolAudit.kept;
-    if (domains.length && (profile.complex || this._isGroundRoboticsGoal(goal) || this._isSocialOrCivicInquiryGoal(goal))) {
+    if (domains.length && (profile.complex || this._isGroundRoboticsGoal(goal)
+      || this._isSocialOrCivicInquiryGoal(goal) || this._isConsumerDecisionGoal(goal))) {
       const mainlinePool = pool.filter(n => this._isMainlineRelevant(n, goal, domains));
       if (mainlinePool.length >= 6) pool = mainlinePool;
     }

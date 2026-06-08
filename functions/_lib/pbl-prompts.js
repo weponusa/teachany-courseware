@@ -25,6 +25,7 @@ const PBL_MAX_MATCHED_NORMAL = 18;
 
 function isConsumerDecisionGoal(goal) {
   const g = String(goal || '');
+  if (/研究.*购车|研究.*买车|研究.*选车|购车.*研究|买车.*研究/.test(g)) return true;
   if (/购车|买车|选车|用车方案|消费决策|方案比选|比选|选型|性价比|家用.*车|家庭.*(购车|买车|选车|用车)/.test(g)) return true;
   if (/对比|比较/.test(g) && /购|买|选|家用|家庭/.test(g) && /新能源|燃油|电动|混动|汽油|柴油/.test(g)) return true;
   if (/哪个更|哪种更|怎么选|如何选择/.test(g) && /车|新能源|燃油|电动/.test(g)) return true;
@@ -866,7 +867,7 @@ ${summaryList}
 function typeMatchHints(goal) {
   switch (classifyProjectType(goal)) {
     case 'consumer-decision':
-      return `\n### 类型要求：消费决策\n- 交付物是决策报告/对比测算表；优先统计、函数/百分比、相关科普（如内燃机效率）、环境排放、说明文写作\n- 禁止 matched：电解池、原电池、程序控制、电磁感应、电池温度、传感器、数据采集算法\n- external 示例：全生命周期用车成本、购置补贴/税费政策、保值率评估（课标外）`;
+      return `\n### 类型要求：消费决策\n- 交付物是决策报告/对比测算表；优先统计、函数/百分比、相关科普（如内燃机效率）、环境排放、说明文写作\n- 禁止 matched：history 学科及一切历史朝代/革命/战争节点（蒙古、丝绸之路、世界大战、改革开放等）；电解池、原电池、程序控制、电磁感应、电池温度、传感器、数据采集算法\n- external 示例：全生命周期用车成本、购置补贴/税费政策、保值率评估（课标外）`;
     case 'engineering':
       if (isGroundRoboticsGoal(goal)) {
         return `\n### 类型要求：自动驾驶/循迹小车工程\n- 交付物是可运行的地面小车原型+调试测试记录，不是航空/无人机/火箭项目\n- matched 须覆盖：电路与电机驱动、循迹/距离传感、控制逻辑或算法、运动/摩擦/受力、测试调试\n- 优先：串联并联电路、传感器、摩擦力、牛顿运动、信息技术编程、简单机械、工业/服务机器人运动控制\n- **禁止** matched：飞行控制系统、航空电子、无人机、弹道/火箭、抗生素/细胞/免疫/耐药、正则表达式/形式语言/编译原理等无关大学节点\n- reason 须写明用于小车哪一子系统（传感/驱动/控制/调试），禁止泛泛「了解控制」`;

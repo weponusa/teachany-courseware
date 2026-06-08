@@ -3,7 +3,7 @@
  * POST /api/pbl/analyze
  *
  * Body: {
- *   stage: 'decompose' | 'filter' | 'match' | 'verify-deps',
+ *   stage: 'decompose' | 'filter' | 'match' | 'verify-relevance' | 'verify-deps' | 'refine',
  *   model?: string,          // 可选：用户自选模型（服务端 Key 调用）
  *   providerId?: string,     // 可选：siliconflow | paratera | openrouter（与 model 配合）
  *   messagesOnly?: boolean,  // 可选：仅返回 messages，供自定义 API 客户端直连
@@ -25,7 +25,15 @@
 
 import { buildPBMessages } from '../../_lib/pbl-prompts.js';
 import { buildVerifyDepsMessages } from '../../_lib/pbl-verify-prompts.js';
-import { buildUserModelChain, callBackendLLM, jsonResponse, CORS } from '../../_lib/llm-backends.js';
+import { buildVerifyRelevanceMessages } from '../../_lib/pbl-verify-relevance-prompts.js';
+import { buildRefineMessages } from '../../_lib/pbl-refine-prompts.js';
+import {
+  buildUserModelChain,
+  callBackendLLM,
+  jsonResponse,
+  CORS,
+  resolvePBLStageModelChain,
+} from '../../_lib/llm-backends.js';
 import { logPBLCall } from '../../_lib/pbl-logger.js';
 
 export async function onRequestOptions() {
@@ -43,7 +51,8 @@ export async function onRequestPost(context) {
   }
 
   const stage = body.stage;
-  if (stage !== 'decompose' && stage !== 'filter' && stage !== 'match' && stage !== 'verify-deps') {
+  if (stage !== 'decompose' && stage !== 'filter' && stage !== 'match'
+    && stage !== 'verify-relevance' && stage !== 'verify-deps' && stage !== 'refine') {
     return jsonResponse({ error: 'Invalid stage' }, 400);
   }
 
@@ -60,6 +69,18 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: 'Too many candidates' }, 400);
   }
 
+  if (stage === 'refine' && !String(body.userMessage || '').trim()) {
+    return jsonResponse({ error: 'userMessage required' }, 400);
+  }
+
+  if (stage === 'verify-relevance' && (!Array.isArray(body.matched) || body.matched.length === 0)) {
+    return jsonResponse({ error: 'matched required' }, 400);
+  }
+
+  if (stage === 'verify-relevance' && body.matched.length > 24) {
+    return jsonResponse({ error: 'Too many matched' }, 400);
+  }
+
   if (stage === 'verify-deps' && (!Array.isArray(body.edges) || body.edges.length === 0)) {
     return jsonResponse({ error: 'edges required' }, 400);
   }
@@ -72,6 +93,22 @@ export async function onRequestPost(context) {
   try {
     if (stage === 'verify-deps') {
       messages = buildVerifyDepsMessages({ goal, edges: body.edges });
+    } else if (stage === 'verify-relevance') {
+      messages = buildVerifyRelevanceMessages({
+        goal,
+        archetypeId: body.archetypeId || null,
+        projectType: body.projectType || null,
+        allowedSubjects: body.allowedSubjects || [],
+        deliverable: body.deliverable || '',
+        matched: body.matched || [],
+      });
+    } else if (stage === 'refine') {
+      messages = buildRefineMessages({
+        goal,
+        userMessage: body.userMessage || '',
+        projectSpec: body.projectSpec || null,
+        snapshot: body.snapshot || {},
+      });
     } else {
       messages = buildPBMessages(stage, {
         goal,
@@ -100,16 +137,22 @@ export async function onRequestPost(context) {
   const llmOpts = {
     maxTokens: stage === 'match' ? 8000
       : (stage === 'decompose' ? 4500
-        : (stage === 'verify-deps' ? 2500 : 1200)),
+        : (stage === 'verify-relevance' ? 3000
+          : (stage === 'refine' ? 2500
+            : (stage === 'verify-deps' ? 2500 : 1200)))),
     temperature: stage === 'match' ? 0.15
       : (stage === 'decompose' ? 0.35
-        : (stage === 'verify-deps' ? 0.08 : 0.25)),
+        : (stage === 'verify-relevance' ? 0.05
+          : (stage === 'refine' ? 0.2
+            : (stage === 'verify-deps' ? 0.08 : 0.25)))),
   };
 
   const userModel = String(body.model || '').trim();
   const providerId = String(body.providerId || '').trim();
   if (userModel || providerId) {
     llmOpts.modelChain = buildUserModelChain(env, userModel, providerId);
+  } else {
+    llmOpts.modelChain = resolvePBLStageModelChain(env, stage);
   }
 
   const t0 = Date.now();

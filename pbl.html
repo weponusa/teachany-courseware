@@ -153,27 +153,118 @@ body {
   background: rgba(245,158,11,0.08);
   transform: translateY(-1px);
 }
+.pbl-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 16px;
+  margin-bottom: 14px;
+}
+.pbl-field { display: flex; flex-direction: column; gap: 6px; }
+.pbl-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dim);
+}
+.pbl-field select,
+.pbl-field input,
 .pbl-textarea {
   width: 100%;
-  min-height: 80px;
-  padding: 14px 16px;
-  border-radius: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
-  line-height: 1.6;
-  resize: vertical;
   outline: none;
   transition: border-color 0.2s;
 }
+.pbl-field select:focus,
+.pbl-field input:focus,
 .pbl-textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
 }
-.pbl-textarea::placeholder {
-  color: var(--dimmer);
+.pbl-field-full { grid-column: 1 / -1; }
+.pbl-textarea {
+  min-height: 88px;
+  line-height: 1.6;
+  resize: vertical;
 }
+.pbl-textarea::placeholder,
+.pbl-field input::placeholder { color: var(--dimmer); }
+.pbl-form-hint {
+  font-size: 12px;
+  color: var(--dimmer);
+  margin: -4px 0 12px;
+  line-height: 1.6;
+}
+.pbl-chat-panel {
+  display: none;
+  margin: 24px 0;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(59,130,246,0.25);
+  background: rgba(30,41,59,0.6);
+}
+.pbl-chat-panel.visible { display: block; }
+.pbl-chat-header {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+.pbl-chat-messages {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.pbl-chat-msg {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 92%;
+}
+.pbl-chat-msg.user {
+  align-self: flex-end;
+  background: rgba(59,130,246,0.18);
+  border: 1px solid rgba(59,130,246,0.25);
+}
+.pbl-chat-msg.assistant {
+  align-self: flex-start;
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.2);
+}
+.pbl-chat-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.pbl-chat-input-row textarea {
+  flex: 1;
+  min-height: 56px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  resize: vertical;
+}
+.pbl-refine-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pbl-refine-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .pbl-actions {
   display: flex;
   align-items: center;
@@ -785,8 +876,8 @@ body {
     <div class="how-step">
       <div class="step-icon">📝</div>
       <div class="step-num">Step 1</div>
-      <div class="step-title">描述项目目标</div>
-      <div class="step-desc">用一句话描述你的 PBL 项目，如"设计智能温室"、"制作天气预报 App"</div>
+      <div class="step-title">结构化描述项目</div>
+      <div class="step-desc">填写学段、学科、任务与产出类型，AI 据此精准匹配课标</div>
     </div>
     <div class="how-step">
       <div class="step-icon">🤖</div>
@@ -813,10 +904,80 @@ body {
     <div class="pbl-title">🧭 PBL 项目式学习路径发现</div>
     <button type="button" class="pbl-settings-btn" id="pblSettingsBtn" onclick="toggleSettings()" title="配置 LLM 模型">⚙️ API 设置</button>
     <div class="pbl-desc">
-      用于项目式学习的个性化路径设计。只需描述你的项目目标，AI 将自动从全球课标体系中匹配所需知识点，生成完整的学习路径图谱。<br>
-      覆盖 <b>中国课标 / AP / Cambridge / IB / US CCSS</b> 五大体系，支持 K12 及以外的知识点。图谱中的每个知识点均可一键生成个性化课件。
+      用<b>结构化表单</b>描述 PBL 项目：学段、学科、任务、产出。拆解完成后可在下方<b>多轮对话</b>提出修改（如「去掉历史节点」「加强统计」），系统会重新调整图谱。<br>
+      覆盖 <b>中国课标 / AP / Cambridge / IB / US CCSS</b> 五大体系。默认经 <b>硅基流动 DeepSeek-V4-Flash</b> 服务端中转，无需配置 Key；可在 ⚙️ 自选模型或自定义 API。
     </div>
-    <textarea id="pblGoalInput" class="pbl-textarea" placeholder="描述你的项目目标，如：家庭购车方案对比、策划班级研学、阳台种菜记录、设计智能温室…"></textarea>
+    <div class="pbl-form-grid">
+      <div class="pbl-field">
+        <label for="pblGradeLevel">学段</label>
+        <select id="pblGradeLevel" onchange="updatePBLGradeDetailOptions()">
+          <option value="any">跨学段（不限）</option>
+          <option value="primary">小学</option>
+          <option value="junior">初中</option>
+          <option value="senior">高中</option>
+          <option value="university">大学</option>
+          <option value="adult">成人/在职</option>
+        </select>
+      </div>
+      <div class="pbl-field">
+        <label for="pblGradeDetail">具体年级（可选）</label>
+        <select id="pblGradeDetail"><option value="">不限具体年级</option></select>
+      </div>
+      <div class="pbl-field">
+        <label for="pblSubject">学科取向</label>
+        <select id="pblSubject">
+          <option value="cross">跨学科（默认）</option>
+          <option value="math">数学</option>
+          <option value="physics">物理</option>
+          <option value="chemistry">化学</option>
+          <option value="biology">生物</option>
+          <option value="science">科学</option>
+          <option value="chinese">语文</option>
+          <option value="english">英语</option>
+          <option value="history">历史</option>
+          <option value="geography">地理</option>
+          <option value="info-tech">信息技术</option>
+          <option value="art">艺术</option>
+        </select>
+      </div>
+      <div class="pbl-field">
+        <label for="pblDeliverable">产出类型</label>
+        <select id="pblDeliverable" onchange="togglePBLDeliverableCustom()">
+          <option value="report">研究报告 / 调查报告</option>
+          <option value="decision-table">决策对比表 / 方案比选</option>
+          <option value="engineering-prototype">工程作品 / 可运行原型</option>
+          <option value="experiment-report">实验报告 / 探究记录</option>
+          <option value="design-proposal">设计方案 / 策划案</option>
+          <option value="presentation">演示文稿 / 展板 / 讲解</option>
+          <option value="app-software">应用 / 程序 / 网站</option>
+          <option value="handwork-model">手工作品 / 实体模型</option>
+          <option value="portfolio">作品集 / 创作集</option>
+          <option value="plan-schedule">计划书 / 路线与预算</option>
+          <option value="other">其他（自定义）</option>
+        </select>
+      </div>
+      <div class="pbl-field pbl-field-full" id="pblDeliverableCustomRow" style="display:none">
+        <label for="pblDeliverableCustom">自定义产出说明</label>
+        <input type="text" id="pblDeliverableCustom" placeholder="如：家庭购车对比决策报告（含全成本表）" />
+      </div>
+      <div class="pbl-field pbl-field-full">
+        <label for="pblTaskInput">任务描述 <span style="color:var(--accent)">*</span></label>
+        <textarea id="pblTaskInput" class="pbl-textarea" placeholder="用自然语言描述要做什么，如：对比新能源与燃油家用轿车，从需求、全成本、环保等维度给出购车建议"></textarea>
+      </div>
+      <div class="pbl-field">
+        <label for="pblAudience">受众/场景（可选）</label>
+        <input type="text" id="pblAudience" placeholder="如：高一班级、家庭决策、社区调研" />
+      </div>
+      <div class="pbl-field">
+        <label for="pblDuration">周期（可选）</label>
+        <input type="text" id="pblDuration" placeholder="如：4 周、8 课时" />
+      </div>
+      <div class="pbl-field pbl-field-full">
+        <label for="pblConstraints">约束条件（可选）</label>
+        <input type="text" id="pblConstraints" placeholder="如：预算上限、安全要求、可用设备、必须使用的工具" />
+      </div>
+    </div>
+    <p class="pbl-form-hint">还可补充：课标体系（下方标签）、合作方式（个人/小组）、评价标准——目前通过「约束条件」或对话提出即可。</p>
     <div class="pbl-examples">
       <span class="ex-label">示范项目：</span>
       <span class="ex-chip" onclick="fillPBLExample(this)" data-key="water-rocket" data-goal="设计一款水火箭，完成箭体制作、推进测试与安全发射">🚀 水火箭设计</span>
@@ -829,7 +990,9 @@ body {
       <span class="ex-chip" onclick="fillPBLExample(this)" data-key="water-quality" data-goal="分析本地河流水质，采集pH值、溶解氧、浊度数据，评估污染程度并提出治理建议">💧 河流水质分析</span>
       <span class="ex-chip" onclick="fillPBLExample(this)" data-key="encryption-tool" data-goal="设计一个简易加密通信工具，实现凯撒密码和RSA加密，理解对称加密与非对称加密的原理">🔐 加密通信工具</span>
       <span class="ex-chip" onclick="fillPBLExample(this)" data-key="solar-system" data-goal="构建一个太阳系模拟器，用物理引擎模拟行星轨道运动，展示开普勒定律和万有引力">🪐 太阳系模拟器</span>
-      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="car-purchase" data-goal="家庭购车方案，对比新能源和传统燃油，从需求、全成本、环保等维度给出购车建议">🚙 家庭购车对比</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="car-purchase"
+        data-grade="senior" data-subject="cross" data-deliverable="decision-table"
+        data-task="家庭购车方案，对比新能源和传统燃油，从需求、全成本、环保等维度给出购车建议">🚙 家庭购车对比</span>
       <span class="ex-chip" onclick="fillPBLExample(this)" data-key="study-trip" data-goal="设计一次班级研学旅行路线和预算，包含日程安排、费用测算与安全预案">🎒 研学路线规划</span>
       <span class="ex-chip" onclick="fillPBLExample(this)" data-key="balcony-garden" data-goal="在阳台种植蔬菜并记录生长过程，观察光照和浇水对植物的影响，形成种植日记">🥬 阳台种菜日记</span>
       <span class="ex-chip" onclick="fillPBLExample(this)" data-key="charity-fair" data-goal="策划一次校园义卖活动，完成市场调研、成本定价、宣传推广和复盘总结">🎪 校园义卖策划</span>
@@ -855,6 +1018,17 @@ body {
   <div id="pblStatus" style="display:none" class="pbl-status">
     <span class="pulse"></span>
     <span class="status-text" id="pblStatusText">正在分析项目目标...</span>
+  </div>
+
+  <!-- 多轮对话调整 -->
+  <div id="pblChatPanel" class="pbl-chat-panel" aria-live="polite">
+    <div class="pbl-chat-header">💬 继续调整拆解结果</div>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:10px">例如：「去掉历史课标」「增加统计与函数」「产出改成演示文稿」「面向初二学生简化」</p>
+    <div class="pbl-chat-messages" id="pblChatMessages"></div>
+    <div class="pbl-chat-input-row">
+      <textarea id="pblRefineInput" placeholder="描述你想如何修改当前拆解…"></textarea>
+      <button type="button" class="pbl-refine-btn" id="pblRefineBtn" onclick="refinePBLGoal()">应用修改</button>
+    </div>
   </div>
 
   <!-- 导出 -->
@@ -925,15 +1099,59 @@ body {
 </div>
 
 <script src="./assets/scripts/courseware-hub.js"></script>
+<script src="./assets/scripts/pbl-project-form.js?v=20260609-structured"></script>
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260608-blueprint"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260608-k12-graph-match"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260609-structured-openrouter"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
 // ─── 全局状态 ──────────────────────────────────
 let pblRenderer = null;
 let pblResult = null;
+let pblChatHistory = [];
+
+function updatePBLGradeDetailOptions() {
+  const level = document.getElementById('pblGradeLevel')?.value || 'any';
+  const sel = document.getElementById('pblGradeDetail');
+  if (!sel) return;
+  const opts = (window.PBLProjectForm?.gradeDetailOptionsFor(level) || []);
+  sel.innerHTML = '<option value="">不限具体年级</option>' + opts.map(o =>
+    `<option value="${o.id}">${o.label}</option>`
+  ).join('');
+}
+
+function togglePBLDeliverableCustom() {
+  const v = document.getElementById('pblDeliverable')?.value;
+  const row = document.getElementById('pblDeliverableCustomRow');
+  if (row) row.style.display = v === 'other' ? 'block' : 'none';
+}
+
+function getPBLProjectSpec() {
+  return window.PBLProjectForm?.readProjectSpecFromDOM?.() || { task: '' };
+}
+
+function buildPBLGoalFromForm() {
+  const spec = getPBLProjectSpec();
+  if (!spec.task) return '';
+  return window.PBLProjectForm?.composeGoalFromSpec(spec) || spec.task;
+}
+
+function renderPBLChatMessages(history) {
+  const box = document.getElementById('pblChatMessages');
+  const panel = document.getElementById('pblChatPanel');
+  if (!box || !panel) return;
+  if (!history?.length) {
+    box.innerHTML = '';
+    panel.classList.remove('visible');
+    return;
+  }
+  panel.classList.add('visible');
+  box.innerHTML = history.map(m =>
+    `<div class="pbl-chat-msg ${m.role}">${escapePBLHtml(m.content)}</div>`
+  ).join('');
+  box.scrollTop = box.scrollHeight;
+}
 
 // ─── PBL 相关函数 ─────────────────────────────────
 
@@ -965,9 +1183,25 @@ function markPBLGoalDirty() {
 }
 
 async function fillPBLExample(el) {
-  const goal = el.dataset.goal;
   const key = el.dataset.key;
-  document.getElementById('pblGoalInput').value = goal;
+  const spec = {
+    gradeLevel: el.dataset.grade || 'any',
+    gradeDetail: el.dataset.gradeDetail || '',
+    subject: el.dataset.subject || 'cross',
+    task: el.dataset.task || el.dataset.goal || '',
+    deliverable: el.dataset.deliverable || 'report',
+    deliverableCustom: el.dataset.deliverableCustom || '',
+    audience: el.dataset.audience || '',
+    duration: el.dataset.duration || '',
+    constraints: el.dataset.constraints || '',
+  };
+  if (window.PBLProjectForm?.fillProjectSpecToDOM) {
+    window.PBLProjectForm.fillProjectSpecToDOM(spec);
+  } else {
+    const taskEl = document.getElementById('pblTaskInput');
+    if (taskEl) taskEl.value = spec.task;
+  }
+  const goal = buildPBLGoalFromForm();
 
   if (key) {
     const demoUrl = `./data/pbl-demos/${key}.json`;
@@ -1002,35 +1236,41 @@ async function fillPBLExample(el) {
   await analyzePBLGoal();
 }
 
-async function analyzePBLGoal() {
-  const goal = document.getElementById('pblGoalInput').value.trim();
-  if (!goal) {
-    alert('请输入项目目标描述');
+async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
+  const spec = getPBLProjectSpec();
+  const goal = buildPBLGoalFromForm();
+  if (!spec.task) {
+    alert('请填写任务描述');
     return;
   }
 
   const systems = getSelectedSystems();
-  const btn = document.getElementById('pblAnalyzeBtn');
+  const btn = refine ? document.getElementById('pblRefineBtn') : document.getElementById('pblAnalyzeBtn');
   const statusEl = document.getElementById('pblStatus');
   const statusText = document.getElementById('pblStatusText');
 
   btn.disabled = true;
   statusEl.style.display = 'block';
-  statusText.textContent = '正在加载多课标知识点索引...';
+  statusEl.querySelector('.pulse').style.background = '';
+  statusText.textContent = refine ? '正在根据修改要求调整…' : '正在加载多课标知识点索引...';
 
   try {
     const builder = window.PBLPathBuilder;
-
-    statusText.textContent = '正在加载多课标知识点索引（1300+ 节点）...';
     await builder.loadUnifiedIndex();
-
-    statusText.textContent = '第 1/3 步：全链路拆解可行方案...';
 
     let result;
     try {
-      result = await builder.analyzePBLGoal(goal, systems, (msg) => {
-        if (statusText && msg) statusText.textContent = msg;
-      });
+      if (refine && pblResult) {
+        result = await builder.refinePBLResult(
+          pblResult, userMessage, spec, systems,
+          (msg) => { if (statusText && msg) statusText.textContent = msg; },
+          pblChatHistory
+        );
+      } else {
+        result = await builder.analyzePBLGoal(goal, systems, (msg) => {
+          if (statusText && msg) statusText.textContent = msg;
+        }, { projectSpec: spec, chatHistory: pblChatHistory });
+      }
     } catch (llmError) {
       console.warn('[PBL] LLM 调用失败，降级为关键词搜索:', llmError.message);
       statusText.textContent = 'LLM 不可用，降级为关键词搜索...';
@@ -1038,16 +1278,16 @@ async function analyzePBLGoal() {
       if (builder._fallbackDecomposeBlueprint) {
         result.projectBlueprint = builder._fallbackDecomposeBlueprint(goal);
       }
+      result.projectSpec = spec;
     }
 
     pblResult = result;
+    pblChatHistory = result.chatHistory || pblChatHistory;
+    renderPBLChatMessages(pblChatHistory);
     statusText.textContent = '正在渲染知识路径图谱...';
-
-    renderPBLStats(result);
-    renderPBLGraph(result);
+    renderPBLResult(result);
     scrollToPBLOutput();
 
-    // ── TeachAny 历史上报 ──
     try {
       if (window.TeachAnyHistory && typeof window.TeachAnyHistory.recordPBL === 'function') {
         const llmCfg = builder.getLLMConfig();
@@ -1059,6 +1299,11 @@ async function analyzePBLGoal() {
     } catch (_e) { /* ignore */ }
 
     statusEl.style.display = 'none';
+    if (!refine) {
+      document.getElementById('pblChatPanel')?.classList.add('visible');
+    }
+    const refineInput = document.getElementById('pblRefineInput');
+    if (refineInput) refineInput.value = '';
   } catch (error) {
     console.error('[PBL] 分析失败:', error);
     statusText.textContent = '❌ ' + error.message;
@@ -1066,6 +1311,25 @@ async function analyzePBLGoal() {
   } finally {
     btn.disabled = false;
   }
+}
+
+async function analyzePBLGoal() {
+  pblChatHistory = [];
+  renderPBLChatMessages([]);
+  await runPBLAnalysis({ refine: false });
+}
+
+async function refinePBLGoal() {
+  if (!pblResult) {
+    alert('请先完成一次「拆解项目路径」');
+    return;
+  }
+  const msg = document.getElementById('pblRefineInput')?.value?.trim();
+  if (!msg) {
+    alert('请输入修改要求');
+    return;
+  }
+  await runPBLAnalysis({ refine: true, userMessage: msg });
 }
 
 function renderPBLResult(result) {
@@ -1142,8 +1406,14 @@ async function restorePBLRunFromHistory(id) {
   if (builder && typeof builder.resolveTechRouteText === 'function') {
     result.techRoute = builder.resolveTechRouteText(result);
   }
-  const input = document.getElementById('pblGoalInput');
-  if (input) input.value = result.goal;
+  if (result.projectSpec && window.PBLProjectForm?.fillProjectSpecToDOM) {
+    window.PBLProjectForm.fillProjectSpecToDOM(result.projectSpec);
+  } else {
+    const taskEl = document.getElementById('pblTaskInput');
+    if (taskEl) taskEl.value = result.goal || '';
+  }
+  pblChatHistory = result.chatHistory || [];
+  renderPBLChatMessages(pblChatHistory);
   const statusEl = document.getElementById('pblStatus');
   if (statusEl) statusEl.style.display = 'none';
   renderPBLResult(result);
@@ -1347,7 +1617,7 @@ function renderPBLExportNodeTableHTML(nodes) {
 }
 
 function collectPBLExportSections() {
-  const goal = (pblResult && pblResult.goal) || document.getElementById('pblGoalInput').value.trim();
+  const goal = (pblResult && pblResult.goal) || buildPBLGoalFromForm();
   const sections = [];
   sections.push(`<header class="pbl-export-header"><h1>🧩 PBL 项目拆解报告</h1><p class="goal"><strong>项目目标</strong>：${escapePBLHtml(goal)}</p><p class="goal" style="font-size:13px">导出时间：${escapePBLHtml(new Date().toLocaleString('zh-CN'))} · TeachAny PBL</p></header>`);
 
@@ -1766,30 +2036,37 @@ function onProviderChange() {
   const modelSel = document.getElementById('modelSelect');
   const customApiFields = document.getElementById('customApiFields');
 
+  const showOpenRouterKey = providerId === 'openrouter';
+  const showClientFields = provider.clientLlm || showOpenRouterKey;
   if (provider.clientLlm) {
     modelSel.innerHTML = '<option value="">在下方填写模型名</option>';
     modelSel.style.display = 'none';
-    customApiFields.style.display = 'block';
     document.getElementById('customModelRow').classList.add('visible');
     document.getElementById('baseUrlInput').value = provider.baseUrl || document.getElementById('baseUrlInput').value;
     document.getElementById('keyHint').textContent = '填写 OpenAI 兼容 API 的 Base URL、Key 与模型名；提示词仍由 TeachAny 服务端生成。';
   } else {
     modelSel.style.display = 'block';
-    customApiFields.style.display = 'none';
     const models = provider.models || [];
+    const labels = provider.modelLabels || {};
     modelSel.innerHTML = models.map(m => {
-      const label = m === '' ? '自动（DeepSeek-V4 → GLM 兜底）' : (m === '__custom__' ? '自定义模型名…' : m);
+      let label = labels[m] || m;
+      if (m === '') label = '自动（硅基 DeepSeek-V4-Flash → GLM 兜底）';
+      if (m === '__custom__') label = '自定义模型名…';
       const selected = m === provider.model ? 'selected' : '';
       return `<option value="${m}" ${selected}>${label}</option>`;
     }).join('');
     const hints = {
-      preset: 'TeachAny 服务端 Key，无需填写 API Key；可选指定模型或留空走默认链。',
+      preset: 'TeachAny 服务端 Key，默认硅基流动 DeepSeek-V4-Flash；留空模型名即走默认链。',
       siliconflow: '通过 TeachAny 服务端调用硅基流动；可选列表内模型或自定义模型名。',
       paratera: '通过 TeachAny 服务端调用并行超算。',
-      openrouter: '通过 TeachAny 服务端调用 OpenRouter。',
+      openrouter: '填写 OpenRouter API Key 后浏览器直连所选模型（推荐 DeepSeek V4 Pro）；Key 留空则走 TeachAny 服务端（需已配置 OPENROUTER_KEY）。',
     };
     document.getElementById('keyHint').textContent = hints[providerId] || '';
+    if (showOpenRouterKey && !document.getElementById('baseUrlInput').value) {
+      document.getElementById('baseUrlInput').value = provider.baseUrl || 'https://openrouter.ai/api/v1';
+    }
   }
+  customApiFields.style.display = showClientFields ? 'block' : 'none';
 
   onModelSelectChange();
 }
@@ -1823,12 +2100,17 @@ function saveSettings() {
     return;
   }
 
+  const resolvedModel = providerId === 'custom'
+    ? customModel
+    : (model === '__custom__' ? customModel : (model || (providerId === 'openrouter' ? 'deepseek/deepseek-v4-pro' : model)));
   builder.setLLMConfig({
     providerId,
-    model: providerId === 'custom' ? customModel : model,
+    model: resolvedModel,
     customModel,
-    apiKey,
-    baseUrl,
+    apiKey: (providerId === 'custom' || providerId === 'openrouter') ? apiKey : '',
+    baseUrl: providerId === 'custom'
+      ? baseUrl
+      : (providerId === 'openrouter' && apiKey ? (baseUrl || 'https://openrouter.ai/api/v1') : ''),
   });
 
   updateModelBadge();
@@ -1849,10 +2131,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) toggleSettings();
   });
 
-  // PBL 输入监听
-  document.getElementById('pblGoalInput').addEventListener('input', markPBLGoalDirty);
+  updatePBLGradeDetailOptions();
+  togglePBLDeliverableCustom();
+  ['pblTaskInput', 'pblGradeLevel', 'pblSubject', 'pblDeliverable'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', markPBLGoalDirty);
+    if (el) el.addEventListener('change', markPBLGoalDirty);
+  });
   if (pblGoalFromURL) {
-    document.getElementById('pblGoalInput').value = pblGoalFromURL;
+    const taskEl = document.getElementById('pblTaskInput');
+    if (taskEl) taskEl.value = pblGoalFromURL;
     markPBLGoalDirty();
   }
 
