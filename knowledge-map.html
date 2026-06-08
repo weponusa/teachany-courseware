@@ -508,11 +508,22 @@ function getVisibleNodes() {
 // LABELS — 默认隐藏；高倍缩放碰撞避让后全显；悬浮/选中单点标注
 // ═══════════════════════════════════════════════════════════════
 
-const LABEL_MIN_SCREEN_GAP = 80; // 全量标注时标签中心最小屏幕间距（px）
-const LABEL_SHOW_ALL_MIN_K = 2.8; // 尝试全量标注的最低缩放
+const NODE_SCREEN_R_BASE = 5;   // k=1 时节点屏幕半径（px）
+const NODE_SCREEN_R_MIN = 1.8;  // 放大后最小屏幕半径
+const LABEL_SCREEN_PX = 11;     // 标签固定屏幕字号
+const LABEL_MIN_SCREEN_GAP = 64; // 全量标注时标签中心最小屏幕间距（px）
 
-function labelFontSize() {
-  return Math.max(9, 11 / transform.k);
+/** 节点屏幕半径：缩放越大，圆点越小（为标注腾位置） */
+function nodeScreenRadius(multiplier = 1) {
+  return Math.max(NODE_SCREEN_R_MIN, NODE_SCREEN_R_BASE * multiplier / Math.sqrt(transform.k));
+}
+
+function nodeGraphRadius(multiplier = 1) {
+  return nodeScreenRadius(multiplier) / transform.k;
+}
+
+function labelFontSize(screenPx = LABEL_SCREEN_PX) {
+  return screenPx / transform.k;
 }
 
 function labelBoxOverlaps(a, b) {
@@ -520,10 +531,14 @@ function labelBoxOverlaps(a, b) {
 }
 
 function shouldShowAllLabels(visibleCount) {
-  if (visibleCount < 2 || transform.k < LABEL_SHOW_ALL_MIN_K) return false;
+  if (visibleCount < 2) return false;
+  const screenR = nodeScreenRadius();
+  // 圆点已缩小到「标签模式」，且节点屏幕间距足够
+  if (screenR > 3.4) return false;
   const density = visibleCount / Math.max(width * height, 1);
   const estScreenSpacing = Math.sqrt(1 / density) * transform.k * 0.55;
-  return estScreenSpacing >= LABEL_MIN_SCREEN_GAP;
+  const gapNeed = Math.max(LABEL_MIN_SCREEN_GAP, screenR * 12 + LABEL_SCREEN_PX);
+  return estScreenSpacing >= gapNeed;
 }
 
 function measureLabelBox(name, x, y, anchorR) {
@@ -531,9 +546,9 @@ function measureLabelBox(name, x, y, anchorR) {
   ctx.font = `${fontSize}px -apple-system, PingFang SC, sans-serif`;
   const tw = ctx.measureText(name).width;
   const lx = x;
-  const ly = y - anchorR - 8;
-  const padX = 4;
-  const padY = 3;
+  const ly = y - anchorR - 6 / transform.k;
+  const padX = 4 / transform.k;
+  const padY = 3 / transform.k;
   return {
     left: lx - tw / 2 - padX,
     right: lx + tw / 2 + padX,
@@ -637,9 +652,9 @@ function render() {
     });
   }
 
-  // Draw nodes
+  // Draw nodes（屏幕半径随放大而缩小）
   ctx.globalAlpha = 1;
-  const nodeRadius = Math.max(3, 5 / Math.sqrt(transform.k));
+  const nodeRadius = nodeGraphRadius();
   const showAllLabels = shouldShowAllLabels(visibleNodes.length);
   const placedLabels = showAllLabels ? [] : (searchQuery ? [] : null);
   const hoverId = hoveredNode?.id;
@@ -657,8 +672,8 @@ function render() {
     let r = nodeRadius;
     let alpha = 0.7;
 
-    if (isSelected) { r = nodeRadius * 2; alpha = 1; }
-    else if (isHighlighted) { r = nodeRadius * 1.5; alpha = 1; }
+    if (isSelected) { r = nodeGraphRadius(1.5); alpha = 1; }
+    else if (isHighlighted) { r = nodeGraphRadius(1.25); alpha = 1; }
     else if (searchQuery && !isSearchHit) { alpha = 0.15; }
     else if (highlightId && !isHighlighted) { alpha = 0.15; }
 
@@ -670,7 +685,7 @@ function render() {
 
     if (isSelected) {
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.5 / transform.k;
       ctx.stroke();
     }
 
@@ -702,7 +717,7 @@ function onMouseMove(event) {
 
   const visibleNodes = getVisibleNodes();
   let closest = null;
-  let minDist = 20 / transform.k;
+  let minDist = Math.max(nodeGraphRadius(1.8), 14 / transform.k);
 
   for (const n of visibleNodes) {
     if (n.x == null) continue;
