@@ -45,9 +45,14 @@
   }
 
   function gradeLabel(node) {
-    if (node.grade === 0) return '大学';
-    if (node.grade) return `${node.grade}年级`;
-    return '';
+    if (node.gradeLabel) return node.gradeLabel;
+    if (node.stage === 'university' || node.grade === 0) return '大学';
+    const g = parseInt(node.grade, 10);
+    if (!g) return '';
+    if (g <= 6) return `小学${g}年级`;
+    if (g <= 9) return `初中${g - 6}年级`;
+    if (g <= 12) return `高中${g - 9}年级`;
+    return `${g}年级`;
   }
 
   function buildCoursewareSection(nodeId) {

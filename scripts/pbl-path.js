@@ -430,7 +430,7 @@ class PBLPathBuilder {
         const curriculumLabel = this._inferCurriculumLabel(node, sysId, label, normalizedTreePath);
         const stageLabel = this._inferStageLabel(node, sysId, normalizedTreePath, normalizedGrade);
         // 统一格式，同时保留树节点原始字段（status/courses/domainColor/curriculum_points 等）
-        const unified = {
+        let unified = {
           ...node,                              // 保留所有原始字段
           id: node.id,
           name: node.name || node.name_zh || '',
@@ -457,6 +457,7 @@ class PBLPathBuilder {
           treePath: normalizedTreePath,
           isExternal: false
         };
+        unified = this._normalizeUniversitySubjectNode(unified);
         this.unifiedIndex.set(node.id, unified);
         this.systemIndex.get(sysId).add(node.id);
         totalNodes++;
@@ -768,11 +769,28 @@ class PBLPathBuilder {
     return stage || '';
   }
 
+  _universityTierSubjects() {
+    return new Set(['computer-science', 'engineering']);
+  }
+
+  _normalizeUniversitySubjectNode(node) {
+    if (!node || !this._universityTierSubjects().has(node.subject)) return node;
+    if (node.grade === 0 && node.stage === 'university') return node;
+    return {
+      ...node,
+      grade: 0,
+      stage: 'university',
+      stageLabel: '大学',
+      gradeLabel: '大学',
+    };
+  }
+
   _formatGradeLabel(grade, sysId, treePath, stage) {
     const g = parseInt(grade) || 0;
     const path = String(treePath || '').toLowerCase();
     const st = String(stage || '').toLowerCase();
-    if (!g) {
+    if (!g || st === 'university') {
+      if (st === 'university') return '大学';
       if (sysId === 'ib' && (st || path.includes('/ib/'))) return this._inferStageLabel({ stage }, sysId, treePath, g) || '通识';
       return '通识';
     }
@@ -4928,8 +4946,14 @@ class PBLGraphRenderer {
       .attr('text-anchor', 'middle')
       .attr('pointer-events', 'none')
       .text(d => {
-        if (!d.grade) return '';
-        if (d.system === 'cn') return d.grade + '年级';
+        if (d.gradeLabel) return d.gradeLabel;
+        if (!d.grade) return d.stage === 'university' ? '大学' : '';
+        if (d.system === 'cn') {
+          if (d.grade === 0 || d.stage === 'university') return '大学';
+          if (d.grade <= 6) return `小学${d.grade}年级`;
+          if (d.grade <= 9) return `初中${d.grade - 6}年级`;
+          if (d.grade <= 12) return `高中${d.grade - 9}年级`;
+        }
         return 'G' + d.grade;
       });
 

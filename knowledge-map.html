@@ -368,7 +368,7 @@ async function init() {
   try {
     const [_, resp] = await Promise.all([
       hubInit,
-      fetch('./data/knowledge-map-data.json?v=20260608'),
+      fetch('./data/knowledge-map-data.json?v=20260608-uni-grade'),
     ]);
     graphData = await resp.json();
   } catch (e) {
@@ -377,8 +377,13 @@ async function init() {
   }
   ensureMetaIndex();
 
+  const UNIVERSITY_TIER_SUBJECTS = new Set(['computer-science', 'engineering']);
   // Build lookups
   graphData.nodes.forEach(n => {
+    if (UNIVERSITY_TIER_SUBJECTS.has(n.subject) && n.grade !== 0) {
+      n.grade = 0;
+      n.stage = 'university';
+    }
     n.vx = 0; n.vy = 0;
     nodeMap.set(n.id, n);
   });
