@@ -670,6 +670,18 @@ function filtrationDomains() {
   ];
 }
 
+function socialCivicDecomposeHint(goal) {
+  if (!isSocialOrCivicInquiryGoal(goal)) return '';
+  return `
+【社会调查/社区议题拆解 — 硬性要求】
+- 交付物须含：现状调查记录表 + 统计图表 + 改进建议 + 宣传策划要点（对象/渠道/口号）
+- 跨学科跨学段：语文说明文/报告、数学统计图表、地理/科学环境内容均可匹配，未写明年级时不限学段
+- knowledgeHints 用：调查、问卷、统计、图表、环境、垃圾、分类、建议、宣传、倡议
+- **禁止** steps 重复粘贴用户目标全文；每条任务用短主题「社区垃圾分类」等，附数量/次数验收标准
+- **禁止** matched 生物细胞/航空/工程装置类课标；优先说明文、统计、环境、地理人文
+`;
+}
+
 function groundRoboticsDecomposeHint(goal) {
   if (!isGroundRoboticsGoal(goal)) return '';
   return `
@@ -717,10 +729,11 @@ function userPromptDecompose(goal, complex) {
   const chemHint = chemistryDecomposeHint(goal);
   const filtHint = filtrationDecomposeHint(goal);
   const robotHint = groundRoboticsDecomposeHint(goal);
+  const civicHint = socialCivicDecomposeHint(goal);
   const topicBlock = formatTopicAnchorBlock(goal);
   return `【项目目标】
 ${goal}
-${topicBlock}${domainBlock}${chemHint}${filtHint}${robotHint}
+${topicBlock}${domainBlock}${chemHint}${filtHint}${robotHint}${civicHint}
 返回 JSON（严格遵循字段名）：
 {
   "projectSummary": "一句话概括项目",

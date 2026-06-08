@@ -235,16 +235,29 @@ class PBLPathBuilder {
     return false;
   }
 
-  _meetsArchetypeGrade(node, archetype) {
+  _meetsArchetypeGrade(node, archetype, goal = '') {
     if (!archetype || !this._archetypeEngine) return true;
+    if (this._isArchetypeBanned(node, archetype)) return false;
+    const band = this._parseExplicitGradeBand(goal);
+    if (!band.explicit) return true;
     if (!this._archetypeEngine.meetsGrade(node, archetype)) return false;
-    if (archetype.minGrade >= 7 && this._excludeForComplexProject(node)) return false;
+    const minG = this._effectiveMinGradeForGoal(goal, archetype);
+    const grade = parseInt(node.grade, 10) || 0;
+    if (grade > 0 && grade < minG && !this._isPrerequisiteForGoal(node, goal)) return false;
+    if (archetype.minGrade >= 7 && band.explicit && this._excludeForComplexProject(node)) return false;
     return true;
   }
 
-  _applyArchetypePoolRules(pool, archetype, activeSystems) {
+  /** 低年级先修节点在明确年级目标下可保留 */
+  _isPrerequisiteForGoal(node, goal) {
+    if (!node || !this._parseExplicitGradeBand(goal).explicit) return false;
+    const name = String(node.name || '');
+    return /认识|初步|基础|入门/.test(name) && parseInt(node.grade, 10) > 0;
+  }
+
+  _applyArchetypePoolRules(pool, archetype, activeSystems, goal = '') {
     if (!archetype) return pool;
-    let out = pool.filter(n => this._meetsArchetypeGrade(n, archetype));
+    let out = pool.filter(n => this._meetsArchetypeGrade(n, archetype, goal));
     out = out.filter(n => !this._isArchetypeBanned(n, archetype));
     if (this._archetypeEngine) {
       out = this._archetypeEngine.applySystemLock(out, archetype, activeSystems);
@@ -997,10 +1010,75 @@ class PBLPathBuilder {
   _parseGoalSubject(goal) {
     const g = String(goal || '').trim();
     let subject = g;
-    const m = g.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
+    const m = g.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|记录|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
     if (m) subject = m[1].trim();
     subject = subject.replace(/^(?:关于|围绕|有关)\s*/, '').replace(/[，。；].*$/, '').slice(0, 36);
     return subject || g.slice(0, 36);
+  }
+
+  /** 用户是否在目标中写明年级/学段（未写明则跨学段匹配，仅作理解深度参考） */
+  _parseExplicitGradeBand(goal) {
+    const g = String(goal || '');
+    const cnNum = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+    if (/大学|本科|高职|大一|大二|大三|大四/.test(g)) return { explicit: true, minGrade: 0, maxGrade: 0, label: '大学' };
+    if (/高中|高一|高二|高三|十年级|十一年级|十二年级/.test(g)) return { explicit: true, minGrade: 10, maxGrade: 12, label: '高中' };
+    if (/初中|初一|初二|初三|七年级|八年级|九年级/.test(g)) return { explicit: true, minGrade: 7, maxGrade: 9, label: '初中' };
+    if (/小学|一年级|二年级|三年级|四年级|五年级|六年级/.test(g)) {
+      const m = g.match(/([一二三四五六])年级/);
+      const gNum = m ? (cnNum[m[1]] || 6) : (/六年级/.test(g) ? 6 : /五年级/.test(g) ? 5 : /四年级/.test(g) ? 4 : 6);
+      return { explicit: true, minGrade: gNum, maxGrade: gNum, label: `小学${gNum}年级` };
+    }
+    const m = g.match(/(\d{1,2})\s*年级/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n >= 1 && n <= 12) return { explicit: true, minGrade: n, maxGrade: n, label: `${n}年级` };
+    }
+    return { explicit: false, minGrade: 1, maxGrade: 12, label: null };
+  }
+
+  _effectiveMinGradeForGoal(goal, archetype = null, profile = null) {
+    const band = this._parseExplicitGradeBand(goal);
+    if (band.explicit) return band.minGrade;
+    if (this._isSocialOrCivicInquiryGoal(goal)) return 1;
+    return archetype?.minGrade || profile?.minGrade || 1;
+  }
+
+  /** 步骤展示用短标签，避免长目标全文重复嵌套 */
+  _compactProjectLabel(goal, topic = null) {
+    const t = topic || this._extractTopicProfile(goal);
+    let label = String(t.coreTopic || this._parseGoalSubject(goal) || '').trim();
+    label = label
+      .replace(/^关于/, '')
+      .replace(/现状.*$/, '')
+      .replace(/并提出.*$/, '')
+      .replace(/(调研|调查|研究|探究|倡议).*$/, '')
+      .trim();
+    if (/垃圾分类|垃圾治理/.test(String(goal || '')) && !/垃圾/.test(label)) label = '社区垃圾分类';
+    if (label.length > 18) label = label.slice(0, 18);
+    return label || this._parseGoalSubject(goal).slice(0, 18);
+  }
+
+  _unwrapDeliverableName(name) {
+    return String(name || '').replace(/^「+/, '').replace(/」+$/, '').trim();
+  }
+
+  _stepFingerprint(step) {
+    return String(step || '')
+      .replace(/^(记录|完成|制作|撰写|测量|绘制|围绕|开展|走访|整理|设计)/, '')
+      .replace(/[「」]/g, '')
+      .replace(/\s+/g, '')
+      .slice(0, 96);
+  }
+
+  _stepsNearDuplicate(a, b) {
+    if (!a || !b) return false;
+    const fa = this._stepFingerprint(a);
+    const fb = this._stepFingerprint(b);
+    if (!fa || !fb) return false;
+    if (fa === fb) return true;
+    const shorter = fa.length < fb.length ? fa : fb;
+    const longer = fa.length < fb.length ? fb : fa;
+    return shorter.length >= 24 && longer.includes(shorter.slice(0, Math.min(40, shorter.length)));
   }
 
   _inferTopicKind(goal, subject) {
@@ -1075,15 +1153,29 @@ class PBLPathBuilder {
     if (kind === 'industry-innovation') return `「${subject}」创新方案报告（场景调研+政策要点+可行性论证）`;
     if (kind === 'planting-cultivation') return `「${subject}」种植观察日记（植物分类笔记+栽培记录表+生长数据图表+总结）`;
     if (kind === 'environmental-filtration') return `三级过滤装置原型 + A/B/C 对照实验记录表 + 含局限说明的测试报告`;
-    if (/报告|调查|论文|倡议|方案/.test(goal)) return `「${subject}」专题报告（含调研数据与可检查结论）`;
+    if (/垃圾分类|垃圾治理|环保|社区.*环境/.test(goal)) {
+      return `社区垃圾分类调查报告（现状记录表+统计图表+改进建议与宣传策划）`;
+    }
+    if (/报告|调查|论文|倡议|方案|建议|改进/.test(goal)) {
+      return `「${this._compactProjectLabel(goal, { coreTopic: subject })}」专题报告（含调研数据、改进建议与宣传策划）`;
+    }
     if (/设计|制作|开发|建造/.test(goal)) return `可展示的「${subject}」作品+过程记录+说明文档`;
-    return `「${subject}」项目成果包（可展示交付物+过程记录+说明）`;
+    return `「${subject}」项目成果包（含策划说明+过程记录+可检查交付物）`;
   }
 
   /** 从用户目标提取核心主题（与服务端 extractTopicProfile 对齐，任何题目都必须锚定） */
   _extractTopicProfile(goal) {
     const g = String(goal || '').trim();
     const presets = [
+      {
+        test: /垃圾分类|垃圾治理|垃圾处理|废弃物|固体废物|社区.*垃圾|环保.*调查|回收.*调查/,
+        coreTopic: '社区垃圾分类',
+        definition: '调查社区垃圾分类现状，分析投放与分类问题，提出可落地的改进建议与宣传策划',
+        keywords: ['垃圾', '分类', '可回收', '有害', '厨余', '社区', '调查', '问卷', '统计', '环境', '建议', '宣传', '倡议'],
+        banInSteps: ['原型驱动迭代', 'MVP', '飞行', '航空', '抗生素', '细胞', '内燃机', '电解池'],
+        deliverableHint: '社区垃圾分类调查报告（现状记录表+统计图表+改进建议与宣传策划）',
+        kind: 'social-civic-survey',
+      },
       {
         test: /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/,
         coreTopic: '微塑料过滤装置',
@@ -1719,12 +1811,9 @@ class PBLPathBuilder {
   /** 从用户输入提取交付物锚点 — 一切任务步骤必须围绕此展开，禁止套其他项目模板 */
   _goalProfile(goal, blueprint = null) {
     const g = String(goal || '').trim();
-    let artifact = g;
-    const lead = g.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|重塑|改造|优化|重建|更新|升级|整治)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
-    if (lead) artifact = lead[1].trim();
-    artifact = artifact.replace(/[，。；].*$/, '').slice(0, 72);
-
     const topic = this._extractTopicProfile(g);
+    const artifact = this._compactProjectLabel(g, topic);
+    const shortLabel = artifact;
     const domains = {
       woodwork: /工坊|鲁班|榫卯|木结构|古典|斗拱|飞檐|建筑模型|微缩|木作/.test(g),
       robot: (/机器人|物流机器人|循迹|机械臂|自动驾驶/.test(g) || (/无人机/.test(g) && /设计|制作|研发|搭建|开发|装置/.test(g))) && !topic.matched,
@@ -1769,10 +1858,12 @@ class PBLPathBuilder {
     return {
       raw: g,
       artifact,
+      shortLabel,
       domains,
       mismatchRes,
       topic,
-      blueprintDeliverable: blueprint?.deliverable || '',
+      blueprintDeliverable: blueprint?.deliverable || topic?.deliverableHint || '',
+      gradeBand: this._parseExplicitGradeBand(g),
     };
   }
 
@@ -1869,10 +1960,10 @@ class PBLPathBuilder {
   }
 
   _expandStepAnchoredToGoal(rawStep, goal, phase, profile, ctx, stepIdx) {
-    const artifact = profile.artifact;
+    const artifact = profile.shortLabel || profile.artifact;
     const hints = ctx.hints.join('、') || '本阶段相关知识';
     const phaseName = ctx.phaseName || `阶段${stepIdx + 1}`;
-    const outName = ctx.deliverable || `${artifact}·${phaseName}产出`;
+    const outName = this._unwrapDeliverableName(ctx.deliverable) || `${artifact}·${phaseName}产出`;
     const verbs = ['记录', '完成', '制作', '撰写', '测量', '绘制'];
     const verb = verbs[stepIdx % verbs.length];
     const blob = `${phaseName} ${ctx.subsystems.join(' ')} ${rawStep || ''}`;
@@ -1929,8 +2020,23 @@ class PBLPathBuilder {
       }
       return `围绕「${artifact}」完成${phaseName}：结合 ${hints} 整理产业资料并产出可核查记录表（≥5条要点+来源标注）`;
     }
+    if (profile.domains.survey || this._isSocialOrCivicInquiryGoal(goal) || /垃圾|分类|社区|环保|倡议|问卷|访谈/.test(blob)) {
+      if (/现状|调查|问卷|访谈|勘测|实地|走访/.test(blob)) {
+        return `走访≥2处相关点位，填写${phaseName}记录表（观察项≥8条+居民访谈≥5条），附现场照片3张并标注时间与地点`;
+      }
+      if (/分类|标准|流程|标识|投放/.test(blob)) {
+        return `整理四类垃圾投放标准对照表（可回收/有害/厨余/其他），列举本社区常见误投案例≥6条并注明改正做法`;
+      }
+      if (/统计|数据|图表|整理|分析/.test(blob)) {
+        return `将调查数据录入表格并绘制≥2种统计图（条形/扇形任选），计算占比与平均数，写出3条数据结论`;
+      }
+      if (/建议|改进|宣传|倡议|策划|方案|报告/.test(blob)) {
+        return `撰写${artifact}${phaseName}（≥400字）：含问题归纳、3条可执行改进措施与1份宣传策划要点（对象/渠道/口号各1条）`;
+      }
+      return `完成${artifact}${phaseName}：结合${hints}整理资料并产出可核查记录表（≥5条要点+来源标注）`;
+    }
     if (/调研|勘测|现场|需求|资料/.test(blob)) {
-      return `围绕「${artifact}」开展${phaseName}：列出 5 条可验证需求并制成优先级表，附 3 张现场/参考照片（文件命名 P${stepIdx + 1}-01~03）`;
+      return `开展${phaseName}：列出5条可验证需求并制成优先级表，附3张现场/参考照片（文件命名 P${stepIdx + 1}-01~03）`;
     }
     if (/设计|方案|草图|图纸|规划|风格|定义/.test(blob)) {
       return `为「${artifact}」绘制${phaseName}草图（A3 或 CAD 均可），标注 ≥5 处关键尺寸，并结合 ${hints} 写 150 字方案说明`;
@@ -1948,9 +2054,34 @@ class PBLPathBuilder {
       return `按检查表验收「${artifact}」${phaseName}成果：逐项打勾，整理交付包（${outName} + 过程记录 + 300 字说明）`;
     }
     if (ctx.subDesc) {
-      return `${verb}「${artifact}」${phaseName}：${ctx.subDesc.slice(0, 80)}，产出「${outName}」并附可核查记录`;
+      return `${verb}${artifact}${phaseName}：${ctx.subDesc.slice(0, 80)}，产出「${outName}」并附可核查记录`;
     }
-    return `${verb}「${artifact}」${phaseName}任务（结合 ${hints}），交付「${outName}」并附 1 份签字确认的过程记录表`;
+    return `${verb}${artifact}${phaseName}（结合${hints}），交付「${outName}」并附1份签字确认的过程记录表`;
+  }
+
+  _phaseStepFillers(goal, phase, profile, ctx, startIdx) {
+    const domains = this._inferProjectDomains(goal);
+    const dom = domains[startIdx] || domains[domains.length - 1];
+    const label = profile.shortLabel || profile.artifact;
+    const phaseName = ctx.phaseName || '本阶段';
+    if (!dom) return [];
+    if (this._isSocialOrCivicInquiryGoal(goal)) {
+      const byId = {
+        survey: `设计10题${label}调查问卷，明确样本对象与回收目标≥15份`,
+        sorting: `整理垃圾分类标准与社区误投案例对照表（每类≥2条）`,
+        data: `录入调查数据并绘制1张统计图，计算至少2项百分比或平均数`,
+        environment: `查阅本地垃圾处理流程资料≥3条，说明与社区现状的关系`,
+        proposal: `列出3条可执行改进建议并附1条宣传口号与投放渠道`,
+        topic: `确定调查问题与对象，写出调查提纲（问题≥8条）`,
+        collect: `完成实地走访或访谈≥5人，记录原始数据表`,
+        analyze: `用表格与图表呈现调查结果，写出2条数据发现`,
+        report: `撰写${label}报告初稿（≥300字），含建议与宣传策划要点`,
+      };
+      const hit = byId[dom.id];
+      if (hit) return [hit];
+      return [`结合${dom.label}完成${label}${phaseName}记录（要点≥5条+可检查产出）`];
+    }
+    return [];
   }
 
   _concretizePhaseSteps(goal, phase, phaseIndex, totalPhases, archetype, blueprint) {
@@ -1964,32 +2095,34 @@ class PBLPathBuilder {
       const s = String(st || '').trim();
       if (!s) return;
       let out = s;
+      const actionable = this._stepActionabilityScore(s) >= 4;
       const needsRewrite = this._isHollowStep(s) || this._stepDomainMismatch(s, profile)
-        || (!this._stepAnchoredToGoal(s, profile) && this._stepActionabilityScore(s) < 4);
+        || (!actionable && !this._stepAnchoredToGoal(s, profile));
       if (needsRewrite) {
         out = this._expandStepAnchoredToGoal(s, goal, phase, profile, ctx, i);
       }
-      if (!seen.has(out)) {
-        seen.add(out);
+      if (!steps.some(ex => this._stepsNearDuplicate(ex, out)) && !seen.has(this._stepFingerprint(out))) {
+        seen.add(this._stepFingerprint(out));
         steps.push(out);
       }
     });
 
-    let idx = steps.length;
-    while (steps.length < 2) {
-      const filler = this._expandStepAnchoredToGoal('', goal, phase, profile, ctx, idx++);
-      if (!seen.has(filler)) {
-        seen.add(filler);
-        steps.push(filler);
-      } else break;
-    }
+    const fillers = this._phaseStepFillers(goal, phase, profile, ctx, steps.length);
+    fillers.forEach((filler, idx) => {
+      if (steps.length >= 2) return;
+      const out = filler || this._expandStepAnchoredToGoal('', goal, phase, profile, ctx, steps.length + idx);
+      if (!steps.some(ex => this._stepsNearDuplicate(ex, out)) && !seen.has(this._stepFingerprint(out))) {
+        seen.add(this._stepFingerprint(out));
+        steps.push(out);
+      }
+    });
     return steps.slice(0, 4);
   }
 
   _concretizeDeliverable(goal, phaseName, role, fallback, blueprint) {
     const profile = this._goalProfile(goal, blueprint);
     const phase = String(phaseName || '');
-    const art = profile.artifact;
+    const art = profile.shortLabel || profile.artifact;
     if (fallback && fallback.length >= 8 && !/阶段成果|探究任务|素养|能力/.test(fallback)) return fallback;
     if (/调研|勘测|现场|需求/.test(phase)) return `「${art}」调研记录表（需求清单+照片编号）`;
     if (/设计|方案|草图|图纸|风格/.test(phase)) return `「${art}」${phase}图册（标注尺寸的方案稿）`;
@@ -2195,6 +2328,11 @@ class PBLPathBuilder {
       if (['math', 'geography', 'chinese'].includes(node.subject)) score += 3;
       if (/内燃机|热机|效率|统计|函数|环境|排放|污染/.test(node.name || '')) score += 4;
     }
+    if (goal && this._isSocialOrCivicInquiryGoal(goal)) {
+      if (['chinese', 'math', 'geography', 'science'].includes(node.subject)) score += 2;
+      if (/统计|调查|说明|报告|环境|垃圾|分类|问卷|图表|百分比|倡议/.test(node.name || '')) score += 6;
+      if (this._isBiologyNodeName(node.name)) score -= 20;
+    }
     if (goal && this._isChemistryInquiryGoal(goal)) {
       const cap = this._getChemistryAnalysisProfile(goal);
       if (node.subject === 'chemistry') score += 8;
@@ -2377,10 +2515,10 @@ class PBLPathBuilder {
       if (idx < 0) return;
       if ((m.confidence || 0) < minConf) return;
       const node = candidates[idx];
-      if (complex && this._excludeForComplexProject(node)) return;
       if (this._isGenericTransversalNode(node.name, goal)) return;
       if (archetype && this._isArchetypeBanned(node, archetype)) return;
-      if (archetype && !this._meetsArchetypeGrade(node, archetype)) return;
+      if (archetype && !this._meetsArchetypeGrade(node, archetype, goal)) return;
+      if (complex && this._parseExplicitGradeBand(goal).explicit && this._excludeForComplexProject(node)) return;
       out.push({
         ...node,
         confidence: m.confidence,
@@ -2551,7 +2689,7 @@ class PBLPathBuilder {
         pool, archetype, blueprint, Math.min(limit, archetype.maxMatched || limit), goalTerms,
         {
           isBanned: n => this._isArchetypeBanned(n, archetype),
-          meetsGrade: n => this._meetsArchetypeGrade(n, archetype),
+          meetsGrade: n => this._meetsArchetypeGrade(n, archetype, goal),
           scoreForModule: (n, m) => this._archetypeEngine.scoreForModule(n, m, goalTerms),
         }
       );
@@ -2564,7 +2702,7 @@ class PBLPathBuilder {
         }));
       }
     }
-    const minScore = archetype ? 8 : 4;
+    const minScore = archetype ? 8 : (this._isSocialOrCivicInquiryGoal(goal) ? 2 : 4);
     const withScore = candidates
       .filter(n => this._isMainlineRelevant(n, goal, domains))
       .filter(n => !archetype || !this._isArchetypeBanned(n, archetype))
@@ -2584,8 +2722,9 @@ class PBLPathBuilder {
 
   /** 主线节点不足时，仅按领域得分补齐，不凑跨学科 */
   _ensureMinimumMatched(matched, goal, candidatePool, limit, complex) {
-    const min = PBLPathBuilder.PBL_MIN_MATCHED_COMPLEX;
-    if (!complex || matched.length >= min || !candidatePool.length) {
+    const civic = this._isSocialOrCivicInquiryGoal(goal);
+    const min = civic ? 4 : PBLPathBuilder.PBL_MIN_MATCHED_COMPLEX;
+    if ((!complex && !civic) || matched.length >= min || !candidatePool.length) {
       return matched.slice(0, limit);
     }
     const domains = this._inferProjectDomains(goal);
@@ -3254,16 +3393,23 @@ class PBLPathBuilder {
 
   _getPBLGoalProfile(goal) {
     const g = String(goal || '').trim();
+    const gradeBand = this._parseExplicitGradeBand(g);
     const advanced = /系统|平台|模型|算法|传感器|物联网|智能|仿真|优化|数据分析|机器学习|人工智能|开发|App|API|控制|工程|跨学科|综合性|自动化|闭环|原型|调试/i;
     let signals = 0;
     if (g.length >= 60) signals += 1;
     if (advanced.test(g)) signals += 1;
-    if (/设计|制作|构建|实现|分析|研究|探究|搭建|部署/.test(g)) signals += 1;
+    if (/设计|制作|构建|实现|搭建|部署/.test(g)) signals += 1;
     if ((g.match(/[，,、;；]/g) || []).length >= 2) signals += 1;
-    const complex = signals >= 2 || (g.length >= 45 && advanced.test(g));
+    const complex = !this._isSocialOrCivicInquiryGoal(g)
+      && (signals >= 2 || (g.length >= 45 && advanced.test(g)));
+    const minGrade = gradeBand.explicit
+      ? gradeBand.minGrade
+      : (complex ? PBLPathBuilder.PBL_MIN_GRADE_COMPLEX : 1);
     return {
       complex,
-      minGrade: complex ? PBLPathBuilder.PBL_MIN_GRADE_COMPLEX : 1,
+      explicitGrade: gradeBand.explicit,
+      gradeBand,
+      minGrade,
       maxMatched: complex ? PBLPathBuilder.PBL_MAX_MATCHED_COMPLEX : 14
     };
   }
@@ -3425,6 +3571,25 @@ class PBLPathBuilder {
       }
       this._sanitizeBlueprintPhasesInPlace(grbp, goal);
       return this._concretizeBlueprint(goal, grbp, this._resolvedArchetype);
+    }
+    if (this._isSocialOrCivicInquiryGoal(goal)) {
+      let sbp = bp;
+      if (!sbp?.schemes?.length) {
+        const label = this._compactProjectLabel(goal);
+        sbp = this._buildSubjectAnchoredBlueprint(goal, `「${label}」社会调查实施方案`);
+      } else {
+        sbp = JSON.parse(JSON.stringify(sbp));
+      }
+      sbp.projectType = 'social-inquiry';
+      const topic = this._extractTopicProfile(goal);
+      if (!sbp.deliverable || sbp.deliverable.length < 10 || /阶段成果|素养/.test(sbp.deliverable)) {
+        sbp.deliverable = topic.deliverableHint || '专题调查报告（现状记录表+统计图表+改进建议与宣传策划）';
+      }
+      if (!sbp.projectSummary || sbp.projectSummary.length < 12) {
+        sbp.projectSummary = `围绕「${topic.coreTopic}」开展现状调查、数据分析与改进宣传策划`;
+      }
+      this._sanitizeBlueprintPhasesInPlace(sbp, goal);
+      return this._concretizeBlueprint(goal, sbp, this._resolvedArchetype);
     }
     if (bp && this._isChemistryInquiryGoal(goal) && this._getChemistryAnalysisProfile(goal).mixed) {
       const cap = this._getChemistryAnalysisProfile(goal);
@@ -3788,6 +3953,13 @@ class PBLPathBuilder {
       const topic = this._extractTopicProfile(goal);
       return this._sanitizeBlueprintForGoal(
         this._buildSubjectAnchoredBlueprint(goal, `「${topic.coreTopic}」自动驾驶小车实施方案`),
+        goal
+      );
+    }
+    if (this._isSocialOrCivicInquiryGoal(goal)) {
+      const label = this._compactProjectLabel(goal);
+      return this._sanitizeBlueprintForGoal(
+        this._buildSubjectAnchoredBlueprint(goal, `「${label}」社会调查实施方案`),
         goal
       );
     }
@@ -4500,18 +4672,21 @@ class PBLPathBuilder {
       filter.subjects = [...new Set(domains.flatMap(d => d.subjects || []))];
     }
 
-    // 根据筛选条件过滤候选集
-    const minGrade = profile.complex ? PBLPathBuilder.PBL_MIN_GRADE_COMPLEX : 1;
+    // 根据筛选条件过滤候选集（未写明年级时跨学段，不因年级挡候选）
+    const minGrade = profile.explicitGrade ? profile.minGrade : 1;
     const bloomCeiling = mergedBloom.ceiling || 3;
-    const minGradeArchetype = archetype?.minGrade || (profile.complex ? PBLPathBuilder.PBL_MIN_GRADE_COMPLEX : 1);
+    const minGradeArchetype = profile.explicitGrade
+      ? (archetype?.minGrade || profile.minGrade)
+      : 1;
+    const applyElemExclude = profile.explicitGrade || (profile.complex && this._isStemProjectGoal(goal));
     const filteredCandidates = candidates.filter(n => {
       const subjectMatch = !filter.subjects || filter.subjects.length === 0 || filter.subjects.includes(n.subject);
       const systemMatch = !filter.systems || filter.systems.length === 0 || filter.systems.includes(n.system);
       const grade = parseInt(n.grade, 10) || 0;
       const gradeMatch = !filter.grades || filter.grades.length === 0
         || filter.grades.some(g => Math.abs(grade - g) <= 2);
-      const notElementary = grade === 0 || grade >= Math.max(minGrade, minGradeArchetype);
-      if ((profile.complex || archetype) && this._excludeForComplexProject(n)) return false;
+      const notElementary = !profile.explicitGrade || grade === 0 || grade >= Math.max(minGrade, minGradeArchetype);
+      if (applyElemExclude && this._excludeForComplexProject(n)) return false;
       if (archetype && this._isArchetypeBanned(n, archetype)) return false;
       if (this._isNodeAboveBloomCeiling(n, bloomCeiling)) return false;
       return subjectMatch && systemMatch && gradeMatch && notElementary;
@@ -4520,12 +4695,12 @@ class PBLPathBuilder {
     const MAX_STAGE2_CANDIDATES = archetype ? 24 : (profile.complex ? 28 : 22);
     let pool = filteredCandidates.length > 0 ? filteredCandidates : candidates.filter(n => {
       const g = parseInt(n.grade, 10) || 0;
-      if (archetype || profile.complex) {
+      if (applyElemExclude) {
         return (g === 0 || g >= minGradeArchetype) && !this._excludeForComplexProject(n);
       }
       return true;
     });
-    pool = this._applyArchetypePoolRules(pool, archetype, activeSystems);
+    pool = this._applyArchetypePoolRules(pool, archetype, activeSystems, goal);
     const poolAudit = this._verifyAndPruneNodes(pool, goal, archetype, '拆解入口·Bloom筛选池');
     if (poolAudit.kept.length >= 6) pool = poolAudit.kept;
     else if (poolAudit.kept.length) pool = poolAudit.kept;
