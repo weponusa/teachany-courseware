@@ -493,6 +493,76 @@ function getGradeY(grade) {
   return (height / 15) * (g + 0.5);
 }
 
+/** 学科簇大字标注（屏幕字号固定，远景导航用） */
+const CLUSTER_LABEL_SCREEN_PX = 26;
+
+function computeSubjectClusters(visibleNodes) {
+  const map = new Map();
+  visibleNodes.forEach((n) => {
+    if (n.x == null || n.y == null || !activeSubjects.has(n.subject)) return;
+    let c = map.get(n.subject);
+    if (!c) {
+      c = { sumX: 0, sumY: 0, count: 0, minY: Infinity, maxY: -Infinity };
+      map.set(n.subject, c);
+    }
+    c.sumX += n.x;
+    c.sumY += n.y;
+    c.count += 1;
+    c.minY = Math.min(c.minY, n.y);
+    c.maxY = Math.max(c.maxY, n.y);
+  });
+  return map;
+}
+
+function clusterInViewport(c) {
+  const cx = c.sumX / c.count;
+  const cy = (c.minY + c.maxY) / 2;
+  const margin = 120;
+  const x0 = (-transform.x - margin) / transform.k;
+  const y0 = (-transform.y - margin) / transform.k;
+  const x1 = (width - transform.x + margin) / transform.k;
+  const y1 = (height - transform.y + margin) / transform.k;
+  return cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1;
+}
+
+function drawSubjectClusterLabels(visibleNodes) {
+  const clusters = computeSubjectClusters(visibleNodes);
+  if (!clusters.size) return;
+
+  const fontPx = CLUSTER_LABEL_SCREEN_PX / transform.k;
+  const padX = 14 / transform.k;
+  const padY = 8 / transform.k;
+  const alpha = transform.k < 0.7 ? 0.52 : (transform.k < 1.2 ? 0.42 : (transform.k < 2.2 ? 0.3 : 0.2));
+
+  [...clusters.entries()]
+    .filter(([, c]) => c.count >= 5 && clusterInViewport(c))
+    .sort((a, b) => (a[1].sumX / a[1].count) - (b[1].sumX / b[1].count))
+    .forEach(([subjectId, c]) => {
+      const cfg = SUBJECT_CONFIG[subjectId];
+      if (!cfg) return;
+
+      const cx = c.sumX / c.count;
+      const labelY = c.minY - 28 / transform.k;
+      const text = `${cfg.emoji} ${cfg.label}`;
+
+      ctx.font = `800 ${fontPx}px -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+
+      const tw = ctx.measureText(text).width;
+      const boxH = fontPx + padY * 2;
+      const boxW = tw + padX * 2;
+
+      ctx.globalAlpha = alpha * 0.55;
+      ctx.fillStyle = 'rgba(10, 14, 26, 0.55)';
+      ctx.fillRect(cx - boxW / 2, labelY - boxH, boxW, boxH);
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = cfg.color;
+      ctx.fillText(text, cx, labelY - padY * 0.35);
+    });
+}
+
 function getVisibleNodes() {
   return graphData.nodes.filter(n => {
     if (!activeSubjects.has(n.subject)) return false;
@@ -632,6 +702,9 @@ function render() {
     edgeCount++;
   }
   ctx.stroke();
+
+  // 学科簇大字主题（在节点之下作背景导向）
+  drawSubjectClusterLabels(visibleNodes);
 
   // Highlight edges for selected/hovered node
   const highlightId = selectedNode?.id || hoveredNode?.id;
