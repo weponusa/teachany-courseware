@@ -105,24 +105,50 @@ class PBLPathBuilder {
     this._refinementContext = null;
   }
 
+  _defaultLLMConfig() {
+    return {
+      providerId: 'preset',
+      model: '',
+      apiKey: '',
+      baseUrl: '',
+      customModel: '',
+      configVersion: 2,
+    };
+  }
+
+  /** 迁移旧版默认（硅基 DeepSeek）到 TeachAny 服务端默认（Qwen3 Next 80B） */
+  _migrateLLMConfig(cfg) {
+    const c = { ...cfg };
+    const pid = String(c.providerId || '');
+    const model = String(c.model || '');
+    const hasKey = !!(c.apiKey || '').trim();
+    if (!hasKey && pid === 'siliconflow') {
+      return this._defaultLLMConfig();
+    }
+    if (!hasKey && pid === 'preset' && /^deepseek-ai\/DeepSeek-V4/i.test(model)) {
+      return { ...this._defaultLLMConfig() };
+    }
+    if (!hasKey && pid === 'openrouter' && !model) {
+      return this._defaultLLMConfig();
+    }
+    c.configVersion = 2;
+    return c;
+  }
+
   _loadLLMConfig() {
     try {
       const saved = localStorage.getItem('teachany_pbl_config');
       if (saved) {
         const cfg = JSON.parse(saved);
         if (this.providers.some(p => p.id === cfg.providerId)) {
-          this._llmConfig = cfg;
+          const migrated = this._migrateLLMConfig(cfg);
+          this._llmConfig = migrated;
+          if (migrated !== cfg || cfg.configVersion !== 2) this._saveLLMConfig();
           return;
         }
       }
     } catch (e) { /* ignore */ }
-    this._llmConfig = {
-      providerId: 'preset',
-      model: '',
-      apiKey: '',
-      baseUrl: '',
-      customModel: '',
-    };
+    this._llmConfig = this._defaultLLMConfig();
   }
 
   _saveLLMConfig() {
@@ -137,10 +163,16 @@ class PBLPathBuilder {
     if (model === '__custom__') {
       model = String(this._llmConfig.customModel || '').trim();
     }
+    const usesServerDefault = !!provider.serverPreset && !model && !(this._llmConfig.apiKey || '').trim();
     return {
       providerId: provider.id,
       providerName: provider.name,
       model,
+      displayLabel: usesServerDefault
+        ? '服务端默认'
+        : (model || (provider.serverPreset ? '服务端默认' : '自动')),
+      displayDetail: usesServerDefault ? 'Qwen3 Next 80B（OpenRouter）' : model,
+      usesServerDefault,
       apiKey: this._llmConfig.apiKey || '',
       baseUrl: this._llmConfig.baseUrl || provider.baseUrl || '',
       serverBacked: !!provider.serverBacked,

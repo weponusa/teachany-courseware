@@ -902,7 +902,7 @@ body {
   <!-- PBL 项目式学习路径发现 -->
   <div class="pbl-section">
     <div class="pbl-title">🧭 PBL 项目式学习路径发现</div>
-    <button type="button" class="pbl-settings-btn" id="pblSettingsBtn" onclick="toggleSettings()" title="配置 LLM 模型">⚙️ API 设置</button>
+    <button type="button" class="pbl-settings-btn" id="pblSettingsBtn" onclick="toggleSettings()" title="TeachAny 服务端默认 · Qwen3 Next 80B">⚙️ 服务端默认</button>
     <div class="pbl-desc">
       覆盖 TeachAny <b>全科知识图谱</b>：从项目目标自动匹配课内知识点，梳理前置、核心与扩展关系，生成交互式学习路径；图谱节点可一键跳转<a href="knowledge-map.html">全科图谱</a>或生成课件。
     </div>
@@ -1081,7 +1081,7 @@ body {
     <select id="modelSelect" onchange="onModelSelectChange()"></select>
     <div class="custom-model-row" id="customModelRow">
       <label for="customModelInput">自定义模型名</label>
-      <input type="text" id="customModelInput" placeholder="如 deepseek-ai/DeepSeek-V3 或 gpt-4o-mini" />
+      <input type="text" id="customModelInput" placeholder="如 qwen/qwen3-next-80b-a3b-instruct 或 gpt-4o-mini" />
     </div>
     <div id="customApiFields">
       <label for="apiKeyInput">API Key</label>
@@ -1101,7 +1101,7 @@ body {
 <script src="./assets/scripts/pbl-project-form.js?v=20260609-structured"></script>
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260609-qwen3-or-default"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260609-pbl-default-ui"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1979,9 +1979,11 @@ function updateModelBadge() {
   const builder = window.PBLPathBuilder;
   if (!btn || !builder?.getLLMConfig) return;
   const cfg = builder.getLLMConfig();
-  const label = cfg.model || (cfg.providerId === 'preset' ? 'Qwen3 Next 80B' : '自动');
+  const label = cfg.displayLabel || cfg.model || '自动';
   btn.textContent = `⚙️ ${label}`;
-  btn.title = `${cfg.providerName} · ${label}`;
+  btn.title = cfg.usesServerDefault
+    ? `${cfg.providerName} · ${cfg.displayDetail || 'Qwen3 Next 80B'}`
+    : `${cfg.providerName} · ${cfg.model || label}`;
 }
 
 function toggleSettings() {
@@ -2049,7 +2051,7 @@ function onProviderChange() {
     const labels = provider.modelLabels || {};
     modelSel.innerHTML = models.map(m => {
       let label = labels[m] || m;
-      if (m === '') label = '自动（Qwen3 Next 80B → DeepSeek → GLM 兜底）';
+      if (m === '') label = '服务端默认（Qwen3 Next 80B）';
       if (m === '__custom__') label = '自定义模型名…';
       const selected = m === provider.model ? 'selected' : '';
       return `<option value="${m}" ${selected}>${label}</option>`;
@@ -2075,7 +2077,8 @@ function onModelSelectChange() {
   const row = document.getElementById('customModelRow');
   const providerId = document.getElementById('providerSelect').value;
   const isCustomProvider = providerId === 'custom';
-  if (model === '__custom__' || isCustomProvider) {
+  const isServerDefault = providerId === 'preset' && !model;
+  if ((model === '__custom__' || isCustomProvider) && !isServerDefault) {
     row.classList.add('visible');
   } else {
     row.classList.remove('visible');
