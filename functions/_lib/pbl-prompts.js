@@ -10,330 +10,87 @@ import {
 } from './pbl-archetypes.js';
 
 /**
- * @internal PBL 拆解核心提示词 v5.1 — 仅服务端，勿复制到前端静态资源
+ * @internal PBL 拆解核心提示词 v6.0 — 仅服务端，勿复制到前端静态资源
  *
+ * v6.0：泛化重构 — 去掉所有具体案例硬编码（循迹小车/水体过滤/食堂汤水/低空经济/太空馆等），
+ *       保留 15 种大类型分类，每种类型给出通用性指导原则，让 AI 根据 goal 文本自行做细节映射。
  * v5.1：Bloom 动词层级 filter + match 约束；候选节点注入先修/定义（RAG lite）
- * v5.0：项目类型自适应 — 不再以 STEM/工程为唯一假设，覆盖工程制作、科学探究、
- *       社会调查、人文创作、创意设计、商业实践、消费决策等多类项目；
- *       学科按项目类型自然选取（理工 / 语文 / 历史 / 地理 / 英语 / 信息技术…）。
+ * v5.0：项目类型自适应
  * v4.0：先全链路拆解可行方案，再匹配课标（decompose → filter → match）
- * v3.1：主线优先 — 图谱只展示能「把东西做出来」的核心知识链
  */
 
 const PBL_MAX_MATCHED_COMPLEX = 12;
 const PBL_MAX_MATCHED_NORMAL = 18;
 
-function isConsumerDecisionGoal(goal) {
-  const g = String(goal || '');
-  if (/研究.*购车|研究.*买车|研究.*选车|购车.*研究|买车.*研究/.test(g)) return true;
-  if (/购车|买车|选车|用车方案|消费决策|方案比选|比选|选型|性价比|家用.*车|家庭.*(购车|买车|选车|用车)/.test(g)) return true;
-  if (/对比|比较/.test(g) && /购|买|选|家用|家庭/.test(g) && /新能源|燃油|电动|混动|汽油|柴油/.test(g)) return true;
-  if (/哪个更|哪种更|怎么选|如何选择/.test(g) && /车|新能源|燃油|电动/.test(g)) return true;
-  if (/新.{0,2}旧.{0,2}能源|油电混合|油电对比|燃油车|电动车|电车|混动车/.test(g) && /车|汽车|选|购|买|方案|对比|比较/.test(g)) return true;
-  if (/(车|汽车|轿车|SUV)/.test(g) && /新能源|燃油|电动|混动|油电|汽油|柴油/.test(g) && /选|购|买|对比|比较|方案|推荐|决策|建议/.test(g)) return true;
-  if (/选.{0,4}(车|汽车)/.test(g) || /(车|汽车).{0,4}选/.test(g)) return true;
-  return false;
-}
-
-function isGroundRoboticsGoal(goal) {
-  const g = String(goal || '');
-  if (/无人机|飞行器|航空|火箭|导弹|低空|eVTOL|飞控|航天/.test(g)) return false;
-  return /自动驾驶|智能车|循迹车|循迹小车|无人车|小车制作|制作.*小车|小车|物流机器人|机械臂|机器人车|巡线车|避障车/.test(g)
-    || (/机器人|循迹/.test(g) && /制作|搭建|设计|开发|装置|小车|车/.test(g));
-}
-
-function isSocialOrCivicInquiryGoal(goal) {
-  const g = String(goal || '');
-  if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|居民|乡土|口述史|垃圾分类|垃圾治理|垃圾处理|废弃物|固体废物|环保|治理|倡议/.test(g)) {
-    return !/生物|细胞|生态|光合|酶|遗传|植物|动物|种植|栽培|养殖|人体|器官/.test(g);
-  }
-  return false;
-}
-
-function isChemistryInquiryGoal(goal) {
-  const g = String(goal || '');
-  return /浓度|溶液|溶解度|溶质|溶剂|饱和溶液|质量分数|体积分数|物质的溶解|配制溶液|混合溶液/.test(g)
-    || /食盐|盐水|醋酸|苏打|洁厕|电解水|酸碱|中和|化学变化|物质的变化|离子反应/.test(g)
-    || /滴定|硝酸银|电导率|莫尔法|沉淀滴定|标准溶液|物质的量浓度/.test(g)
-    || /食堂|菜汤|汤水|汤汁|汤品|卤水/.test(g)
-    || (/厨房|餐桌|调味|烹饪|汤/.test(g) && /盐|酸|碱|醋|化学|浓度|溶液|溶解|测|含量/.test(g));
-}
-
-function getChemistryAnalysisProfile(goal) {
-  const g = String(goal || '');
-  const mixed = /混合溶液|食堂|菜汤|汤水|汤汁|汤品|卤水|景区水|河水|废水|不能直接|无法.*分离|不能.*称量|不能.*称重/.test(g)
-    || (/汤/.test(g) && /食堂|餐厅|厨房|测定|检测|含量|浓度|盐/.test(g))
-    || /滴定|硝酸银|电导率|间接测定/.test(g);
-  const wantsTitration = /滴定|硝酸银|AgNO|莫尔|沉淀滴定|氯离子|Cl⁻|Cl-/.test(g);
-  const wantsConductivity = /电导率|电导|导电率|电解质.*导电/.test(g);
-  const methods = [];
-  if (wantsTitration) methods.push('titration');
-  if (wantsConductivity) methods.push('conductivity');
-  if (mixed && !methods.length) methods.push('titration', 'conductivity');
-  return {
-    mixed,
-    methods,
-    sampleLabel: /食堂|菜汤|汤水/.test(g) ? '食堂汤水' : (/混合溶液/.test(g) ? '混合溶液' : '样品溶液'),
-  };
-}
-
-function mixedSolutionChemistryDomains() {
-  return [
-    { id: 'constraint', label: '测定约束与方案选型', keywords: ['混合溶液', '无法分离', '间接测定', '取样', '稀释', '滴定', '电导率'], subjects: ['chemistry'] },
-    { id: 'titration', label: '硝酸银滴定法', keywords: ['滴定', '硝酸银', '沉淀', '氯离子', '银离子', '物质的量浓度', '标准溶液'], subjects: ['chemistry'] },
-    { id: 'conductivity', label: '电导率法', keywords: ['电导率', '电解质', '导电', '离子浓度', '标准曲线'], subjects: ['chemistry', 'physics'] },
-    { id: 'calc', label: '数据处理与换算', keywords: ['物质的量', '浓度', '计算', '误差', '统计', '摩尔'], subjects: ['math', 'chemistry'] },
-    { id: 'report', label: '结论与应用', keywords: ['报告', '分析', '比较', '结论', '含量'], subjects: ['chemistry', 'chinese', 'math'] },
-  ];
-}
-
-function directSolutionChemistryDomains() {
-  return [
-    { id: 'solution', label: '溶液与浓度概念', keywords: ['溶液', '溶质', '溶剂', '浓度', '质量分数', '溶解', '配制', '氯化钠'], subjects: ['chemistry'] },
-    { id: 'experiment', label: '实验设计与测量', keywords: ['实验', '变量', '对照', '量取', '称量', '配制', '测量', '滴定'], subjects: ['chemistry', 'science'] },
-    { id: 'data', label: '数据处理与表达', keywords: ['数据', '统计', '图表', '计算', '误差', '记录'], subjects: ['math'] },
-    { id: 'application', label: '生活情境与结论', keywords: ['厨房', '食盐', '应用', '安全', '结论', '报告'], subjects: ['chemistry', 'science', 'chinese'] },
-  ];
-}
-
-/** 从目标句提取核心对象（动词后的名词短语） */
-function parseGoalSubject(goal) {
-  const g = String(goal || '').trim();
-  let subject = g;
-  const m = g.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新|整治)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
-  if (m) subject = m[1].trim();
-  subject = subject.replace(/^(?:关于|围绕|有关)\s*/, '').replace(/[，。；].*$/, '').slice(0, 36);
-  return subject || g.slice(0, 36);
-}
-
-function buildTopicKeywords(goal, subject, kind) {
-  const g = String(goal || '');
-  const base = [subject];
-  if (/太空|天文|航天|行星|月球|宇宙/.test(g + subject)) base.push('太阳系', '天文', '太空', '月球', '科学');
-  if (/馆|展厅|展览|展陈/.test(g + subject)) base.push('展览', '展陈', '科普', '布局', '设计');
-  if (/低空|空域|通航|无人机/.test(g + subject)) base.push('低空经济', '空域', '无人机', '飞行');
-  if (kind === 'exhibition-redesign') base.push('调查', '方案', '说明', '统计', '设计', '展示');
-  if (kind === 'industry-innovation') base.push('产业', '创新', '调研', '政策', '可行性');
-  if (kind === 'planting-cultivation' || /种植|栽培|月季|花卉|蔬菜|盆栽|园艺|养殖|养蚕/.test(g + subject)) {
-    base.push('植物', '分类', '生长', '光合', '种子', '萌发', '栽培', '根系', '蒸腾', '观察', '记录');
-  }
-  if (kind === 'environmental-filtration' || /微塑料|过滤|净水|废水|滤芯/.test(g + subject)) {
-    base.push('过滤', '沉淀', '吸附', '微塑料', '拦截', '测试', '密封', '导流', '环境', '污染');
-  }
-  for (let i = 0; i < subject.length - 1; i++) {
-    const w = subject.slice(i, i + 2);
-    if (w.length === 2 && !/[的与及了在]$/.test(w)) base.push(w);
-  }
-  return [...new Set(base)].slice(0, 12);
-}
-
-function inferDeliverableHint(goal, subject, kind) {
-  if (kind === 'exhibition-redesign') {
-    return `「${subject}」改造方案册（现状诊断表+展陈设计图+整改实施清单+开放验收表）`;
-  }
-  if (kind === 'industry-innovation') {
-    return `「${subject}」创新方案报告（场景调研+政策要点+可行性论证）`;
-  }
-  if (kind === 'planting-cultivation') {
-    return `「${subject}」种植观察日记（植物分类笔记+栽培记录表+生长数据图表+总结）`;
-  }
-  if (kind === 'environmental-filtration') {
-    return `三级过滤装置原型 + A/B/C 对照实验记录表 + 含局限说明的测试报告`;
-  }
-  if (/报告|调查|论文|倡议|方案/.test(goal)) return `「${subject}」专题报告（含调研数据与可检查结论）`;
-  if (/设计|制作|开发|建造/.test(goal)) return `可展示的「${subject}」作品+过程记录+说明文档`;
-  return `「${subject}」项目成果包（可展示交付物+过程记录+说明）`;
-}
-
-function inferTopicKind(goal, subject) {
-  const g = String(goal || '');
-  if (/低空经济|低空飞行|低空空域|空域管理|通航产业|城市空中交通|eVTOL|低空物流|通用航空/.test(g)) return 'industry-innovation';
-  if (/太空馆|天文馆|航天馆|科技馆|博物馆|展厅|展陈|太空.*馆|天文.*馆/.test(g) || (/馆|展厅|展览/.test(g + subject) && /重塑|改造|整治|升级|策展|布展|失控|翻新|重建|优化/.test(g))) return 'exhibition-redesign';
-  if (/探寻|探索|研究|调研/.test(g) && /创新|产业|经济|行业/.test(g)) return 'industry-innovation';
-  if (/种植|栽培|养花|月季|花卉|玫瑰|蔬菜|种菜|盆栽|园艺|养殖|养蚕|花坛|绿化|阳台种/.test(g)) return 'planting-cultivation';
-  if (/微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/.test(g)) return 'environmental-filtration';
-  return 'subject-anchored';
-}
-
-function isPlantingCultivationGoal(goal) {
-  return inferTopicKind(String(goal || ''), parseGoalSubject(goal)) === 'planting-cultivation';
-}
-
-function plantingCropLabel(goal) {
-  const g = String(goal || '');
-  const m = g.match(/月季|玫瑰|番茄|黄瓜|辣椒|白菜|菠菜|多肉|薰衣草|向日葵|郁金香|菊花|荷花|草莓|葡萄|玉米|小麦|蚕|百合|牡丹/);
-  return m ? m[0] : '植物';
-}
-
-function plantingCultivationDomains(goal) {
-  const crop = plantingCropLabel(goal);
-  const subject = parseGoalSubject(goal);
-  return [
-    { id: 'taxonomy', label: '植物识别与分类', keywords: [crop, subject, '植物', '分类', '特征', '结构', '器官', '绿色'], subjects: ['science', 'biology'] },
-    { id: 'growth', label: '生长与环境条件', keywords: [crop, '生长', '光合', '呼吸', '种子', '萌发', '根', '蒸腾', '环境', '水分'], subjects: ['science', 'biology'] },
-    { id: 'cultivate', label: '栽培实操', keywords: [crop, '种植', '栽培', '土壤', '浇水', '施肥', '扦插', '移栽', '步骤', '养护'], subjects: ['science', 'biology'] },
-    { id: 'observe', label: '生长观察记录', keywords: [crop, '观察', '记录', '测量', '数据', '图表', '变化', '高度', '叶片'], subjects: ['science', 'math', 'biology'] },
-    { id: 'share', label: '种植日记与分享', keywords: [crop, '日记', '报告', '总结', '分享', '说明', '写作'], subjects: ['chinese'] },
-  ];
-}
-
-/** 从用户目标提取核心主题 — 任何题目都必须锚定，禁止落入通用工程模板 */
-function extractTopicProfile(goal) {
-  const g = String(goal || '').trim();
-  const presets = [
-    {
-      test: /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/,
-      coreTopic: '微塑料过滤装置',
-      definition: '设计可测试的三级水体过滤装置：粗滤保护层、活性炭吸附改味层、明确孔径的膜/陶瓷核心层，并通过 A/B/C 对照实验验证模型颗粒变化（须写明局限，禁止宣称饮水安全或真实微塑料去除率）',
-      keywords: ['微塑料', '过滤', '净水', '废水', '滤芯', '沉淀', '吸附', '活性炭', '拦截', '颗粒', '测试', '拦截率', '密封', '泵', '导流'],
-      banInSteps: ['火箭', '反冲', '抛体', '弹道', '发射', '原型驱动迭代', 'MVP', '快速原型', '递进式实施', '浸润式场景'],
-      deliverableHint: '三级过滤装置原型 + A/B/C 对照实验记录表 + 含局限说明的测试报告',
-      kind: 'environmental-filtration',
-    },
-    {
-      test: /低空经济|低空飞行|低空空域|空域管理|通航产业|城市空中交通|UAM|eVTOL|低空物流|通用航空/,
-      coreTopic: '低空经济',
-      definition: '指在约1000–3000米低空空域内，以无人机物流配送、低空出行、应急救援、农业植保、巡检等飞行活动带动的新兴产业（含政策、空域、安全、应用场景）',
-      keywords: ['低空经济', '低空', '空域', '通航', '无人机', '低空物流', '飞行', '航空', '交通', '应急救援', '植保', '政策', '法规', '安全', '产业'],
-      banInSteps: ['现代物流管理', '智慧城市', '工程设计思维', '环境搭建', '硬件组件', '编写控制逻辑', '一般物流', '通用创新大赛', '原型驱动迭代', 'MVP', '快速原型'],
-      deliverableHint: '低空经济创新方案报告（场景调研+政策/空域要点+技术可行性+试点建议）',
-      kind: 'industry-innovation',
-    },
-  ];
-  for (const p of presets) {
-    if (p.test.test(g)) {
-      return { ...p, rawGoal: g, matched: true };
-    }
-  }
-  const subject = parseGoalSubject(g);
-  const kind = inferTopicKind(g, subject);
-  const banCommon = ['原型驱动迭代', 'MVP', '快速原型', '递进式实施', '浸润式场景', '硬件准备', '环境搭建', '工程设计思维', '招生简章', '现代物流管理', '智慧城市'];
-  if (kind === 'industry-innovation') {
-    const core = /低空经济/.test(g) ? '低空经济' : (g.match(/(?:.+?经济|.+?产业|.+?行业)/)?.[0]?.slice(0, 24) || subject);
-    return {
-      rawGoal: g,
-      matched: true,
-      coreTopic: core,
-      definition: `围绕「${core}」开展创新探究，须结合真实产业场景、政策或技术应用`,
-      keywords: buildTopicKeywords(g, core, kind),
-      banInSteps: [...banCommon, '硬件组件', '一般物流'],
-      deliverableHint: inferDeliverableHint(g, core, kind),
-      kind,
-    };
-  }
-  if (kind === 'exhibition-redesign') {
-    return {
-      rawGoal: g,
-      matched: true,
-      coreTopic: subject,
-      definition: `对「${subject}」进行现状诊断、主题策划、展陈设计与整改实施，交付可验收的改造方案（非软件工程或装置研发）`,
-      keywords: buildTopicKeywords(g, subject, kind),
-      banInSteps: [...banCommon, '程序设计', '电解池', '搭建原型'],
-      deliverableHint: inferDeliverableHint(g, subject, kind),
-      kind,
-    };
-  }
-  if (kind === 'planting-cultivation') {
-    const crop = plantingCropLabel(g);
-    return {
-      rawGoal: g,
-      matched: true,
-      coreTopic: subject,
-      definition: `围绕「${subject}」学习植物分类与生长原理，完成${crop}栽培实操并持续观察记录，形成种植日记`,
-      keywords: buildTopicKeywords(g, subject, kind),
-      banInSteps: [...banCommon, '程序设计', '牛顿', '化学方程式', '电解池'],
-      deliverableHint: inferDeliverableHint(g, subject, kind),
-      kind,
-      crop,
-    };
-  }
-  return {
-    rawGoal: g,
-    matched: true,
-    coreTopic: subject,
-    definition: `本项目必须围绕用户指定的「${subject}」展开，不得替换为其他主题或套用无关模板`,
-    keywords: buildTopicKeywords(g, subject, kind),
-    banInSteps: banCommon,
-    deliverableHint: inferDeliverableHint(g, subject, kind),
-    kind: 'subject-anchored',
-  };
-}
-
-function formatTopicAnchorBlock(goal) {
-  const t = extractTopicProfile(goal);
-  return `\n## 本题核心主题（硬性锚点 — 不可替换、不可泛化）\n- 用户目标原文：「${t.rawGoal}」\n- **核心主题：${t.coreTopic}**\n- 主题定义：${t.definition}\n- projectSummary、deliverable、scheme 名称、每个 phase 的 phase名/steps/deliverable/knowledgeHints **必须直接出现「${t.coreTopic}」或其关键词，禁止换成其他项目**\n- knowledgeHints 检索词须含：${t.keywords.join('、')}\n- 建议交付物：${t.deliverableHint}\n- **禁止** scheme 名使用「递进式实施」「原型驱动迭代」等通用模板名；禁止交付物写「项目原型」「MVP」「系统演示」等与题目无关的表述\n- **禁止** steps 中出现：${(t.banInSteps || []).join('、')}\n`;
-}
-
-function isIndustryInnovationGoal(goal) {
-  const t = extractTopicProfile(goal);
-  return t.kind === 'industry-innovation' || t.matched;
-}
-
-function industryInnovationDomains(goal) {
-  const t = extractTopicProfile(goal);
-  const topic = t.coreTopic || '产业创新';
-  return [
-    { id: 'background', label: `${topic}背景与政策`, keywords: [topic, '产业', '政策', '法规', '空域', '发展', '规划', '经济'], subjects: ['geography', 'history', 'chinese'] },
-    { id: 'scenarios', label: '应用场景调研', keywords: [topic, '物流', '出行', '应急', '植保', '巡检', '配送', '应用', '场景', '需求'], subjects: ['geography', 'chinese', 'math'] },
-    { id: 'tech', label: '技术原理支撑', keywords: ['飞行', '航空', '无人机', '导航', '通信', '动力', '电池', '抛体', '牛顿', '安全'], subjects: ['physics', 'info-tech', 'science'] },
-    { id: 'analysis', label: '数据与可行性分析', keywords: ['统计', '数据', '调查', '成本', '效益', '比较', '分析', '图表', '百分比'], subjects: ['math', 'chinese'] },
-    { id: 'proposal', label: '创新方案与报告', keywords: ['方案', '创新', '建议', '报告', '论证', '说明', '可行性', '试点'], subjects: ['chinese', 'geography'] },
-  ];
-}
-
-function isEnergyEngineeringGoal(goal) {
-  const g = String(goal || '');
-  if (isConsumerDecisionGoal(g)) return false;
-  if (/(车|汽车|轿车|SUV|用车)/.test(g) && /新能源|燃油|电动|混动|油电/.test(g) && !/设计|制作|研发|装置|系统开发|搭建|发明|工程化|发电|储能装置/.test(g)) return false;
-  if (/对比|比较|选购|购车|买车|选车|家用|家庭/.test(g) && !/设计|制作|研发|装置|系统开发|搭建|发电|储能/.test(g)) {
-    if (/新能源|电动|燃油|混动|光伏|储能/.test(g)) return false;
-  }
-  return /新能源|光伏|太阳能|风电|风力|储能|电池|锂电|充电|发电|电能|清洁能源|碳中和|能源车|并网|逆变/.test(g)
-    && /设计|制作|研发|装置|系统|搭建|工程|发电|储能|模型|实验|探究/.test(g);
-}
+// ============================================================
+// 一、项目类型分类（保留 15 种大类型，去掉内部子分支检测函数）
+// ============================================================
 
 /**
  * 项目类型分类（自适应多场景）：
  * consumer-decision / creative-media / humanities-literary / business-economics /
- * social-inquiry / engineering / scientific-inquiry / general
+ * health-life / planting-cultivation / labor-practice / life-planning /
+ * social-inquiry / engineering / scientific-inquiry / industry-innovation /
+ * exhibition-redesign / maker-workshop / general
  */
 function classifyProjectType(goal) {
   const g = String(goal || '');
-  if (isConsumerDecisionGoal(g)) return 'consumer-decision';
-  if (/太空馆|天文馆|航天馆|科技馆|博物馆|展厅|展陈|太空.*馆|天文.*馆/.test(g) || (/馆|展厅|展览/.test(g) && /重塑|改造|整治|升级|策展|布展|失控|翻新|重建|优化/.test(g))) return 'exhibition-redesign';
-  if (/海报|短视频|微电影|动画|漫画|插画|绘画|展览|策展|广告|品牌|视觉|游戏设计|作曲|音乐创作|手工艺|表演|舞台|摄影|logo|标志设计|文创|周边设计/.test(g)) return 'creative-media';
-  if (/诗歌|诗集|现代诗|诗词|写诗|小说|剧本|散文|绘本|故事集|演讲|辩论|文学|翻译|双语|新闻稿|采访稿|写一[篇组]|作文|征文|朗诵|文集|杂志|读后感|书评|话剧|文章|苏东坡|苏轼|诗人|文学家|历史人物|人物研究|名人传记|古代诗人/.test(g)) return 'humanities-literary';
-  if (/创业|商业计划|营销|市场推广|运营|理财|零花钱|压岁钱|市场调研|义卖|跳蚤市场|店铺|定价|商业模式|经济效益|盈利|众筹|招商|品牌策划|购物|小卖部|找零|小票|记账|人民币学具|模拟.*购物|收入.*图表/.test(g)) return 'business-economics';
-  if (/健康|营养|饮食|食谱|减脂|减肥|健身|锻炼|运动会?|近视|视力|护眼|睡眠|作息|心理|情绪|压力|安全|急救|防溺水|防火|防疫|卫生|疾病|人体|体重|身高/.test(g)) return 'health-life';
-  if (isPlantingCultivationGoal(g)) return 'planting-cultivation';
+  // 消费决策
+  if (/购车|买车|选车|消费决策|方案比选|比选|选型|性价比/.test(g)
+    || (/对比|比较/.test(g) && /购|买|选|家用|家庭/.test(g) && /新能源|燃油|电动|混动/.test(g))
+    || (/哪个更|哪种更|怎么选|如何选择/.test(g) && /车|新能源|电动|手机|电器|产品/.test(g))) {
+    return 'consumer-decision';
+  }
+  // 展陈/场馆改造
+  if (/馆|展厅|展览|展陈/.test(g) && /重塑|改造|整治|升级|策展|布展|翻新|重建|优化|设计/.test(g)) return 'exhibition-redesign';
+  // 创意媒体
+  if (/海报|短视频|微电影|动画|漫画|插画|绘画|策展|广告|品牌|视觉|游戏设计|作曲|音乐创作|手工艺|表演|舞台|摄影|logo|标志设计|文创|周边设计/.test(g)) return 'creative-media';
+  // 人文文学
+  if (/诗歌|诗集|现代诗|诗词|写诗|小说|剧本|散文|绘本|故事集|演讲|辩论|文学|翻译|双语|新闻稿|采访稿|写一[篇组]|作文|征文|朗诵|文集|杂志|读后感|书评|话剧|文章|诗人|文学家|历史人物|人物研究|名人传记/.test(g)) return 'humanities-literary';
+  // 商业经济
+  if (/创业|商业计划|营销|市场推广|运营|理财|零花钱|压岁钱|市场调研|义卖|跳蚤市场|店铺|定价|商业模式|盈利|众筹|记账|模拟.*购物/.test(g)) return 'business-economics';
+  // 健康生活
+  if (/健康|营养|饮食|食谱|减脂|减肥|健身|锻炼|运动会?|近视|视力|护眼|睡眠|作息|心理|情绪|压力|安全|急救|防溺水|防火|卫生|疾病|人体|体重|身高/.test(g)) return 'health-life';
+  // 种植养殖
+  if (/种植|栽培|养花|花卉|蔬菜|种菜|盆栽|园艺|养殖|养蚕|花坛|绿化|阳台种/.test(g)) return 'planting-cultivation';
+  // 劳动实践
   if (/烹饪|烘焙|美食|菜谱|料理|手工|编织|缝纫|收纳|整理|维修|清洁|打扫|劳动/.test(g)) return 'labor-practice';
-  if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|研学|游学|路线规划|时间管理|班级布置|布置教室|嘉年华|游园/.test(g)) return 'life-planning';
-  if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|公众.{0,4}认知|居民|乡土|口述史/.test(g)) return 'social-inquiry';
-  if (isIndustryInnovationGoal(g)) return 'industry-innovation';
+  // 活动策划/生活规划
+  if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|研学|游学|路线规划|时间管理|班级布置|嘉年华|游园/.test(g)) return 'life-planning';
+  // 社会调查
+  if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|居民|乡土|口述史|垃圾分类|垃圾治理|环保.*调查/.test(g)) return 'social-inquiry';
+  // 产业创新
+  if (/低空经济|通航产业|新兴产业|产业创新/.test(g) || (/探寻|探索|研究|调研/.test(g) && /创新|产业|经济|行业/.test(g))) return 'industry-innovation';
+  // 工坊/木作
   if (/工坊|鲁班|榫卯|古典.*风格|木结构|建筑模型|微缩|传统建筑|斗拱|飞檐/.test(g)) return 'maker-workshop';
-  if (/火箭|导弹|发射|机器人|物流机器人|医院.*机器人|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现/.test(g)) return 'engineering';
-  if (/无人机|原型/.test(g) && /设计|制作|研发|装置|系统|搭建|开发/.test(g)) return 'engineering';
-  if (isChemistryInquiryGoal(g)) return 'scientific-inquiry';
-  if (/探究|实验|观察|测量|验证|影响因素|变量|检测|成分|对照实验|科学问题|浓度|溶液|溶解/.test(g)) return 'scientific-inquiry';
+  // 工程/制作
+  if (/火箭|导弹|发射|机器人|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现|循迹|小车|无人机|过滤|净水/.test(g)
+    && /设计|制作|研发|装置|系统|搭建|开发|探究|实验/.test(g)) return 'engineering';
+  // 科学探究
+  if (/探究|实验|观察|测量|验证|影响因素|变量|检测|成分|对照实验|科学问题|浓度|溶液|溶解|滴定|电导率/.test(g)) return 'scientific-inquiry';
   return 'general';
 }
 
+// ============================================================
+// 二、TYPE_PROFILES — 每种大类型的通用描述
+// ============================================================
+
 const TYPE_PROFILES = {
-  'engineering': { label: '工程研发/制作', moduleWord: '工程子系统（原理 / 装置结构 / 电路控制 / 测试迭代）', subjectsHint: '以 physics、chemistry、math、info-tech 为主，按需含其他', redlines: '覆盖原理→装置→实验→必要定量；定量计算节点≤20%，不要只堆守恒定律/计算' },
-  'scientific-inquiry': { label: '科学探究/实验', moduleWord: '探究环节（问题假设 / 变量设计 / 数据采集 / 分析结论）', subjectsHint: 'physics、chemistry、biology、science、math 为主', redlines: '必须含实验设计与数据分析类节点；理论与实验并重，不要只选纯计算' },
-  'consumer-decision': { label: '消费决策/方案对比', moduleWord: '决策环节（需求调研 / 技术原理对比 / 成本测算 / 决策报告）', subjectsHint: '根据对象自然选科：涉及机械/能源用 physics+math，涉及材料/化学品用 chemistry+math，辅以 geography（环保）、chinese（说明文）', redlines: '交付物是决策报告/对比表；必须含与对象相关的技术原理节点（≥2）；禁止电解池、原电池、程序控制等工业研发节点' },
+  'engineering': { label: '工程研发/制作', moduleWord: '工程子系统（原理 / 装置结构 / 控制实现 / 测试迭代）', subjectsHint: '以 physics、chemistry、math、info-tech 为主，按需含其他', redlines: '覆盖原理→装置→实验→必要定量；定量计算节点≤20%' },
+  'scientific-inquiry': { label: '科学探究/实验', moduleWord: '探究环节（问题假设 / 变量设计 / 数据采集 / 分析结论）', subjectsHint: 'physics、chemistry、biology、science、math 为主', redlines: '必须含实验设计与数据分析类节点；理论与实验并重' },
+  'consumer-decision': { label: '消费决策/方案对比', moduleWord: '决策环节（需求调研 / 技术原理对比 / 成本测算 / 决策报告）', subjectsHint: '根据对象自然选科：涉及机械/能源用 physics+math，涉及材料/化学品用 chemistry+math，辅以 geography/chinese', redlines: '交付物是决策报告/对比表；必须含与对象相关的技术原理节点（≥2）；禁止工业研发节点' },
   'social-inquiry': { label: '社会调查/田野研究', moduleWord: '调查环节（选题抽样 / 资料收集 / 整理统计 / 结论报告）', subjectsHint: 'chinese、geography、history、math（统计）按需组合', redlines: '核心是调查方法、数据统计与报告写作；不要硬塞物理化学公式' },
   'humanities-literary': { label: '人文/文学/语言', moduleWord: '创作环节（立意选材 / 阅读积累 / 结构表达 / 修改展示）', subjectsHint: 'chinese、english、history 为主', redlines: '围绕阅读、写作、表达、文化理解；不要塞理科公式或工程装置节点' },
-  'creative-media': { label: '创意设计/媒体/艺术', moduleWord: '创作环节（创意构思 / 设计草案 / 制作实现 / 展示评议）', subjectsHint: '结合 info-tech、chinese 及相关学科，技术实现可含数学/信息技术', redlines: '围绕创意表达与制作；只在确需技术实现时引入理科节点' },
-  'business-economics': { label: '商业/创业/经济实践', moduleWord: '运营环节（需求调研 / 方案设计 / 成本定价 / 运营复盘）', subjectsHint: 'math（统计/比例/函数）、chinese（策划/表达）为主', redlines: '围绕调研、测算、方案与表达；不要堆无关理科节点' },
-  'life-planning': { label: '生活规划/活动策划', moduleWord: '策划环节（需求目标 / 方案日程 / 预算分工 / 执行复盘）', subjectsHint: 'math（预算/时间/统计）、chinese（策划/通知/总结）、geography（路线）按需', redlines: '围绕目标、方案、预算分工与执行复盘；不要塞无关理科公式或工程装置' },
-  'health-life': { label: '健康生活/运动安全', moduleWord: '健康环节（现状了解 / 知识学习 / 计划制定 / 实践评估）', subjectsHint: 'biology、science（健康原理）、math（统计监测）、chinese（宣传倡议）', redlines: '围绕健康知识、数据监测与行为改进；不要堆与健康无关的工程/纯计算节点' },
-  'planting-cultivation': { label: '种植养殖/园艺栽培', moduleWord: '环节（植物识别分类 / 生长与环境 / 栽培实操 / 观察记录 / 种植日记）', subjectsHint: 'science、biology 为主线，辅以 math（数据图表）、chinese（日记）', redlines: '交付物是种植观察日记；必须含植物分类、生长原理（光合/萌发/根系）、栽培步骤；禁止原型迭代、浸润式场景、工程装置' },
-  'labor-practice': { label: '劳动实践/制作', moduleWord: '实践环节（认识准备 / 操作实践 / 观察记录 / 成果分享）', subjectsHint: 'biology、science、chinese、math 按需', redlines: '围绕动手操作、观察记录与成果分享；不要拔高成科研论文或工程系统' },
-  'maker-workshop': { label: '工坊/木作/建筑模型', moduleWord: '工序（现场调研 / 风格方案 / 材料BOM / 搭建装饰 / 验收展示）', subjectsHint: 'science、physics、math、history、chinese、art 按需', redlines: '交付物是实体模型+图册+BOM；steps 须有尺寸、工具、照片、检查表，禁止「环境搭建」「选择组件」空话' },
-  'industry-innovation': { label: '产业创新/新兴经济探究', moduleWord: '环节（产业背景与政策 / 应用场景调研 / 技术原理支撑 / 数据可行性 / 创新方案报告）', subjectsHint: 'geography、chinese、math、physics、history、info-tech 按需；围绕主题产业而非通用物流或工程', redlines: '交付物是主题产业创新方案/调研报告；禁止现代物流管理、智慧城市、工程设计思维、装置制作等与主题无关的模块' },
-  'exhibition-redesign': { label: '展陈空间/场馆改造', moduleWord: '环节（现状诊断 / 主题策划 / 展陈设计 / 实施整改 / 开放验收）', subjectsHint: 'science（天文科普）、chinese（说明/讲解）、math（预算/统计）、info-tech（展板）按需', redlines: '交付物是场馆改造方案册+展陈设计图；禁止程序设计、工程原型、招生简章等与展陈无关节点' },
-  'general': { label: '综合实践', moduleWord: '项目模块（须按题目自定义，禁止套用通用四套模块名）', subjectsHint: '按交付物自然选取所需学科', redlines: '每个节点都要服务于题目交付物；禁止「递进式实施」「原型驱动迭代」等模板 scheme 名' },
+  'creative-media': { label: '创意设计/媒体/艺术', moduleWord: '创作环节（创意构思 / 设计草案 / 制作实现 / 展示评议）', subjectsHint: '结合 info-tech、chinese 及相关学科', redlines: '围绕创意表达与制作；只在确需技术实现时引入理科节点' },
+  'business-economics': { label: '商业/创业/经济实践', moduleWord: '运营环节（需求调研 / 方案设计 / 成本定价 / 运营复盘）', subjectsHint: 'math（统计/比例/函数）、chinese（策划/表达）为主', redlines: '围绕调研、测算、方案与表达' },
+  'life-planning': { label: '生活规划/活动策划', moduleWord: '策划环节（需求目标 / 方案日程 / 预算分工 / 执行复盘）', subjectsHint: 'math（预算/时间/统计）、chinese（策划/通知/总结）、geography（路线）按需', redlines: '围绕目标、方案、预算分工与执行复盘' },
+  'health-life': { label: '健康生活/运动安全', moduleWord: '健康环节（现状了解 / 知识学习 / 计划制定 / 实践评估）', subjectsHint: 'biology、science、math（统计监测）、chinese（宣传倡议）', redlines: '围绕健康知识、数据监测与行为改进' },
+  'planting-cultivation': { label: '种植养殖/园艺栽培', moduleWord: '环节（植物识别分类 / 生长与环境 / 栽培实操 / 观察记录 / 种植日记）', subjectsHint: 'science、biology 为主线，辅以 math（数据图表）、chinese（日记）', redlines: '交付物是种植观察日记；必须含生长原理与栽培步骤' },
+  'labor-practice': { label: '劳动实践/制作', moduleWord: '实践环节（认识准备 / 操作实践 / 观察记录 / 成果分享）', subjectsHint: 'biology、science、chinese、math 按需', redlines: '围绕动手操作、观察记录与成果分享' },
+  'maker-workshop': { label: '工坊/木作/建筑模型', moduleWord: '工序（现场调研 / 风格方案 / 材料BOM / 搭建装饰 / 验收展示）', subjectsHint: 'science、physics、math、history、chinese 按需', redlines: '交付物是实体模型+图册+BOM；须有尺寸、工具、照片、检查表' },
+  'industry-innovation': { label: '产业创新/新兴经济探究', moduleWord: '环节（产业背景与政策 / 应用场景调研 / 技术原理支撑 / 数据可行性 / 创新方案报告）', subjectsHint: 'geography、chinese、math、physics、history、info-tech 按需', redlines: '交付物是主题产业创新方案/调研报告；禁止与主题无关的模块' },
+  'exhibition-redesign': { label: '展陈空间/场馆改造', moduleWord: '环节（现状诊断 / 主题策划 / 展陈设计 / 实施整改 / 开放验收）', subjectsHint: 'science（科普内容）、chinese（说明/讲解）、math（预算/统计）、info-tech 按需', redlines: '交付物是场馆改造方案册+展陈设计图；禁止程序设计、工程原型等无关节点' },
+  'general': { label: '综合实践', moduleWord: '项目模块（须按题目自定义，禁止套用通用模块名）', subjectsHint: '按交付物自然选取所需学科', redlines: '每个节点都要服务于题目交付物' },
 };
 
 function projectTypeProfile(goal) {
@@ -345,7 +102,74 @@ function typeGuardrailBlock(goal) {
   return `\n## 本项目类型识别：${p.label}\n- 模块视角：${p.moduleWord}\n- 学科取向：${p.subjectsHint}\n- 类型红线：${p.redlines}\n`;
 }
 
-/** 非特定 STEM 类型的通用模块（供 filter/match 提供检索提示） */
+// ============================================================
+// 三、主题锚定（泛化版 — 不再为特定题目硬编码 preset）
+// ============================================================
+
+/** 从目标句提取核心对象（动词后的名词短语） */
+function parseGoalSubject(goal) {
+  const g = String(goal || '').trim();
+  let subject = g;
+  const m = g.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
+  if (m) subject = m[1].trim();
+  subject = subject.replace(/^(?:关于|围绕|有关)\s*/, '').replace(/[，。；].*$/, '').slice(0, 36);
+  return subject || g.slice(0, 36);
+}
+
+function buildTopicKeywords(goal, subject) {
+  const g = String(goal || '');
+  const base = [subject];
+  // 从 goal 中提取 2 字词元
+  for (let i = 0; i < subject.length - 1; i++) {
+    const w = subject.slice(i, i + 2);
+    if (w.length === 2 && !/[的与及了在]$/.test(w)) base.push(w);
+  }
+  // 从 goal 全文补充关键词
+  const extra = g.match(/[\u4e00-\u9fa5]{2,4}/g) || [];
+  for (const w of extra.slice(0, 8)) {
+    if (!base.includes(w) && !/^(设计|制作|开发|一个|关于|围绕|项目|方案|报告)$/.test(w)) base.push(w);
+  }
+  return [...new Set(base)].slice(0, 12);
+}
+
+function inferDeliverableHint(goal, subject, kind) {
+  const g = String(goal || '');
+  if (kind === 'exhibition-redesign') return `「${subject}」改造方案册（现状诊断+展陈设计+整改实施+验收）`;
+  if (kind === 'industry-innovation') return `「${subject}」创新方案报告（场景调研+政策要点+可行性论证）`;
+  if (kind === 'planting-cultivation') return `「${subject}」种植观察日记（分类笔记+栽培记录+生长数据+总结）`;
+  if (/报告|调查|论文|倡议|方案/.test(g)) return `「${subject}」专题报告（含调研数据与可检查结论）`;
+  if (/设计|制作|开发|建造/.test(g)) return `可展示的「${subject}」作品+过程记录+说明文档`;
+  return `「${subject}」项目成果包（可展示交付物+过程记录+说明）`;
+}
+
+/** 主题锚定 — 泛化版：从 goal 提取核心主题，生成通用约束 */
+function extractTopicProfile(goal) {
+  const g = String(goal || '').trim();
+  const subject = parseGoalSubject(g);
+  const kind = classifyProjectType(g);
+  const banCommon = ['原型驱动迭代', 'MVP', '快速原型', '递进式实施', '浸润式场景', '硬件准备', '环境搭建', '工程设计思维'];
+
+  return {
+    rawGoal: g,
+    matched: true,
+    coreTopic: subject,
+    definition: `本项目必须围绕用户指定的「${subject}」展开，不得替换为其他主题或套用无关模板`,
+    keywords: buildTopicKeywords(g, subject),
+    banInSteps: banCommon,
+    deliverableHint: inferDeliverableHint(g, subject, kind),
+    kind,
+  };
+}
+
+function formatTopicAnchorBlock(goal) {
+  const t = extractTopicProfile(goal);
+  return `\n## 本题核心主题（硬性锚点 — 不可替换、不可泛化）\n- 用户目标原文：「${t.rawGoal}」\n- **核心主题：${t.coreTopic}**\n- 主题定义：${t.definition}\n- projectSummary、deliverable、scheme 名称、每个 phase 的名称/steps/deliverable/knowledgeHints **必须直接出现核心主题关键词**\n- knowledgeHints 检索词须含：${t.keywords.join('、')}\n- 建议交付物：${t.deliverableHint}\n- **禁止** scheme 名使用通用模板名（递进式实施、原型驱动迭代等）；禁止交付物写「项目原型」「MVP」「系统演示」等与题目无关的表述\n- **禁止** steps 中出现：${(t.banInSteps || []).join('、')}\n`;
+}
+
+// ============================================================
+// 四、通用模块（genericDomainsForType）— 统一 domain 来源
+// ============================================================
+
 function genericDomainsForType(id) {
   const map = {
     'scientific-inquiry': [
@@ -363,7 +187,7 @@ function genericDomainsForType(id) {
     'humanities-literary': [
       { id: 'theme', label: '立意与选材', keywords: ['立意', '主题', '选材', '构思', '观点'], subjects: ['chinese', 'english'] },
       { id: 'read', label: '阅读与素材积累', keywords: ['阅读', '素材', '文本', '名著', '积累', '鉴赏'], subjects: ['chinese', 'english', 'history'] },
-      { id: 'express', label: '结构与表达', keywords: ['结构', '表达', '修辞', '语言', '写作', '叙述', '议论'], subjects: ['chinese', 'english'] },
+      { id: 'express', label: '结构与表达', keywords: ['结构', '表达', '修辞', '语言', '写作', '叙述'], subjects: ['chinese', 'english'] },
       { id: 'revise', label: '修改与展示', keywords: ['修改', '评议', '朗诵', '展示', '演讲', '发表'], subjects: ['chinese'] },
     ],
     'creative-media': [
@@ -380,26 +204,26 @@ function genericDomainsForType(id) {
     ],
     'life-planning': [
       { id: 'goal', label: '需求与目标', keywords: ['需求', '目标', '调查', '问卷', '场景', '人数'], subjects: ['chinese', 'math'] },
-      { id: 'plan', label: '方案与日程', keywords: ['方案', '计划', '日程', '安排', '路线', '流程', '行程'], subjects: ['chinese', 'geography', 'math'] },
-      { id: 'budget', label: '预算与分工', keywords: ['预算', '成本', '费用', '统计', '函数', '分工', '百分比', '比例'], subjects: ['math'] },
-      { id: 'review', label: '执行与复盘', keywords: ['执行', '记录', '反馈', '复盘', '总结', '报告', '通知'], subjects: ['chinese'] },
+      { id: 'plan', label: '方案与日程', keywords: ['方案', '计划', '日程', '安排', '路线', '流程'], subjects: ['chinese', 'geography', 'math'] },
+      { id: 'budget', label: '预算与分工', keywords: ['预算', '成本', '费用', '统计', '函数', '分工', '百分比'], subjects: ['math'] },
+      { id: 'review', label: '执行与复盘', keywords: ['执行', '记录', '反馈', '复盘', '总结', '报告'], subjects: ['chinese'] },
     ],
     'health-life': [
       { id: 'status', label: '现状了解', keywords: ['现状', '调查', '统计', '数据', '测量', '记录'], subjects: ['math', 'biology', 'science'] },
-      { id: 'knowledge', label: '健康知识', keywords: ['健康', '营养', '饮食', '运动', '睡眠', '安全', '疾病', '人体', '视力'], subjects: ['biology', 'science'] },
+      { id: 'knowledge', label: '健康知识', keywords: ['健康', '营养', '饮食', '运动', '睡眠', '安全', '疾病', '人体'], subjects: ['biology', 'science'] },
       { id: 'plan', label: '计划制定', keywords: ['计划', '方案', '目标', '食谱', '作息', '锻炼'], subjects: ['chinese', 'math'] },
-      { id: 'assess', label: '实践与评估', keywords: ['记录', '评估', '对比', '反馈', '改进', '报告', '宣传', '倡议'], subjects: ['chinese', 'math'] },
+      { id: 'assess', label: '实践与评估', keywords: ['记录', '评估', '对比', '反馈', '改进', '报告', '宣传'], subjects: ['chinese', 'math'] },
     ],
     'planting-cultivation': [
-      { id: 'taxonomy', label: '植物识别与分类', keywords: ['植物', '分类', '特征', '结构', '器官', '绿色'], subjects: ['science', 'biology'] },
-      { id: 'growth', label: '生长与环境', keywords: ['生长', '光合', '呼吸', '种子', '萌发', '根', '蒸腾', '环境'], subjects: ['science', 'biology'] },
-      { id: 'cultivate', label: '栽培实操', keywords: ['种植', '栽培', '土壤', '浇水', '施肥', '移栽', '养护'], subjects: ['science', 'biology'] },
+      { id: 'taxonomy', label: '植物识别与分类', keywords: ['植物', '分类', '特征', '结构', '器官'], subjects: ['science', 'biology'] },
+      { id: 'growth', label: '生长与环境', keywords: ['生长', '光合', '呼吸', '种子', '萌发', '环境'], subjects: ['science', 'biology'] },
+      { id: 'cultivate', label: '栽培实操', keywords: ['种植', '栽培', '土壤', '浇水', '施肥', '养护'], subjects: ['science', 'biology'] },
       { id: 'observe', label: '观察记录', keywords: ['观察', '记录', '测量', '数据', '图表', '变化'], subjects: ['science', 'math', 'biology'] },
       { id: 'share', label: '种植日记', keywords: ['日记', '报告', '总结', '分享', '说明'], subjects: ['chinese'] },
     ],
     'labor-practice': [
       { id: 'prepare', label: '认识与准备', keywords: ['认识', '准备', '材料', '工具', '原理', '步骤'], subjects: ['science', 'biology', 'chinese'] },
-      { id: 'practice', label: '操作实践', keywords: ['操作', '制作', '种植', '养护', '烹饪', '步骤', '工艺'], subjects: ['science', 'biology'] },
+      { id: 'practice', label: '操作实践', keywords: ['操作', '制作', '种植', '养护', '烹饪', '步骤'], subjects: ['science', 'biology'] },
       { id: 'record', label: '观察与记录', keywords: ['观察', '记录', '测量', '数据', '变化', '统计'], subjects: ['science', 'math', 'biology'] },
       { id: 'share', label: '成果与分享', keywords: ['成果', '分享', '展示', '总结', '报告', '改进'], subjects: ['chinese'] },
     ],
@@ -409,124 +233,47 @@ function genericDomainsForType(id) {
       { id: 'control', label: '控制与实现', keywords: ['控制', '传感', '编程', '算法', '电路', '反馈', '调试'], subjects: ['info-tech', 'physics', 'engineering'] },
       { id: 'test', label: '测试与迭代', keywords: ['测试', '实验', '测量', '数据', '误差', '记录', '优化'], subjects: ['math', 'physics', 'science'] },
     ],
+    'consumer-decision': [
+      { id: 'needs', label: '需求与场景调研', keywords: ['调查', '数据', '统计', '需求', '分析', '场景'], subjects: ['math', 'chinese'] },
+      { id: 'tech_principle', label: '产品核心技术原理', keywords: ['效率', '能量转化', '功率', '电路', '材料', '结构', '传感'], subjects: ['physics', 'chemistry'] },
+      { id: 'cost', label: '成本与数据建模', keywords: ['函数', '计算', '统计', '费用', '成本', '百分比', '预算'], subjects: ['math'] },
+      { id: 'environment', label: '环保与可持续', keywords: ['环境', '污染', '排放', '资源', '可持续', '回收'], subjects: ['geography', 'chemistry'] },
+      { id: 'decision', label: '决策论证与报告', keywords: ['说明', '报告', '论证', '分析', '比较', '建议'], subjects: ['chinese', 'math'] },
+    ],
+    'industry-innovation': [
+      { id: 'background', label: '产业背景与政策', keywords: ['产业', '政策', '法规', '发展', '规划', '经济'], subjects: ['geography', 'history', 'chinese'] },
+      { id: 'scenarios', label: '应用场景调研', keywords: ['场景', '需求', '应用', '调研', '数据', '用户'], subjects: ['geography', 'chinese', 'math'] },
+      { id: 'tech', label: '技术原理支撑', keywords: ['技术', '原理', '通信', '动力', '安全', '系统'], subjects: ['physics', 'info-tech', 'science'] },
+      { id: 'analysis', label: '数据与可行性分析', keywords: ['统计', '数据', '成本', '效益', '分析', '图表'], subjects: ['math', 'chinese'] },
+      { id: 'proposal', label: '创新方案与报告', keywords: ['方案', '创新', '建议', '报告', '论证', '可行性'], subjects: ['chinese', 'geography'] },
+    ],
+    'exhibition-redesign': [
+      { id: 'diagnose', label: '现状诊断', keywords: ['问题', '调查', '记录', '现状', '隐患'], subjects: ['chinese', 'math'] },
+      { id: 'theme', label: '主题策划', keywords: ['主题', '科普', '内容', '策划', '定位'], subjects: ['science', 'chinese'] },
+      { id: 'design', label: '展陈设计', keywords: ['布局', '动线', '展板', '设计', '模型', '互动'], subjects: ['info-tech', 'chinese', 'math'] },
+      { id: 'implement', label: '实施整改', keywords: ['整改', '布置', '预算', '分工', '安全', '清单'], subjects: ['math', 'chinese'] },
+      { id: 'launch', label: '开放验收', keywords: ['验收', '讲解', '宣传', '说明', '展示', '反馈'], subjects: ['chinese', 'science'] },
+    ],
+    'maker-workshop': [
+      { id: 'survey', label: '现场调研', keywords: ['调研', '测量', '场地', '历史', '风格', '需求'], subjects: ['history', 'math', 'chinese'] },
+      { id: 'design', label: '风格方案', keywords: ['设计', '风格', '结构', '草图', '比例', '方案'], subjects: ['math', 'science', 'chinese'] },
+      { id: 'bom', label: '材料BOM', keywords: ['材料', '清单', '成本', '尺寸', '工具', '预算'], subjects: ['math', 'science'] },
+      { id: 'build', label: '搭建制作', keywords: ['搭建', '制作', '工具', '步骤', '照片', '记录'], subjects: ['science', 'physics'] },
+      { id: 'review', label: '验收展示', keywords: ['验收', '展示', '检查', '报告', '分享'], subjects: ['chinese'] },
+    ],
     'general': [
-      { id: 'define', label: '调研与定义', keywords: ['调研', '需求', '定义', '背景', '分析', '资料'], subjects: ['chinese', 'history', 'geography', 'math'] },
+      { id: 'define', label: '调研与定义', keywords: ['调研', '需求', '定义', '背景', '分析'], subjects: ['chinese', 'history', 'geography', 'math'] },
       { id: 'design', label: '方案设计', keywords: ['方案', '设计', '规划', '分工', '构思'], subjects: ['chinese', 'math', 'geography'] },
       { id: 'make', label: '实施与表达', keywords: ['实施', '制作', '执行', '记录', '表达'], subjects: ['chinese', 'math'] },
       { id: 'test', label: '总结与展示', keywords: ['总结', '评估', '展示', '报告', '反思'], subjects: ['chinese', 'math'] },
     ],
   };
-  return map[id] || [];
+  return map[id] || map.general;
 }
 
-/** 根据项目目标推断模块/子系统（服务端兜底，与前端 domain 逻辑对齐） */
+/** 根据项目目标推断模块 — 统一走 genericDomainsForType */
 function inferProjectDomains(goal) {
-  const g = String(goal || '');
-  if (isChemistryInquiryGoal(g)) {
-    return getChemistryAnalysisProfile(g).mixed
-      ? mixedSolutionChemistryDomains()
-      : directSolutionChemistryDomains();
-  }
-  if (isConsumerDecisionGoal(g)) {
-    // 通用消费决策 domain：不绑定特定产品（汽车/手机/电器等），由 AI 根据 goal 动态匹配
-    return [
-      { id: 'needs', label: '需求与场景调研', keywords: ['调查', '数据', '统计', '问卷', '需求', '分析', '收集', '整理', '图表', '用途', '场景'], subjects: ['math', 'chinese'] },
-      { id: 'cost', label: '成本与数据建模', keywords: ['函数', '一次函数', '计算', '统计', '数据', '平均数', '费用', '成本', '百分比', '单价', '总价', '预算'], subjects: ['math'] },
-      { id: 'tech_principle', label: '产品核心技术原理', keywords: ['效率', '能量转化', '做功', '功率', '电功率', '电路', '电流', '电压', '电阻', '动能', '机械能', '摩擦力', '热机', '电动机', '电磁感应', '电池', '电能', '化学能', '热值', '内燃机', '频率', '信号', '材料', '结构', '传感'], subjects: ['physics', 'chemistry'] },
-      { id: 'energy_compare', label: '能耗与性能对比', keywords: ['能源', '能耗', '燃料', '比热容', '热量', '电能', '焦耳', '千瓦时', '效率', '续航', '寿命', '功耗', '性能', '参数'], subjects: ['physics', 'chemistry', 'geography'] },
-      { id: 'environment', label: '环保与可持续', keywords: ['环境', '污染', '排放', '碳', '气候', '资源', '可持续', '温室', '清洁能源', '碳中和', '回收', '降解'], subjects: ['geography', 'chemistry'] },
-      { id: 'decision', label: '决策论证与报告', keywords: ['说明', '报告', '论证', '写作', '分析', '比较', '调查', '建议', '推荐', '评估'], subjects: ['chinese', 'math'] },
-    ];
-  }
-  if (/火箭|导弹|发射|弹道|模型火箭|航天/.test(g)) {
-    return [
-      {
-        id: 'propulsion',
-        label: '推进与燃料',
-        keywords: ['燃烧', '氧化', '燃料', '热值', '内能', '化学能', '能量转化', '推进', '反应'],
-        subjects: ['chemistry', 'physics'],
-      },
-      {
-        id: 'aerodynamics',
-        label: '空气动力与弹道',
-        keywords: ['抛体', '流体', '压强', '流速', '气动', '弹道', '抛物', '飞行轨迹'],
-        subjects: ['physics', 'math'],
-      },
-      {
-        id: 'dynamics',
-        label: '运动学与动力学',
-        keywords: ['牛顿', '动量', '冲量', '受力', '加速度', '机械能', '守恒', '运动'],
-        subjects: ['physics', 'math'],
-      },
-      {
-        id: 'structure',
-        label: '结构与材料',
-        keywords: ['结构', '材料', '强度', '压强', '设计', '稳定性'],
-        subjects: ['physics', 'chemistry'],
-      },
-      {
-        id: 'control',
-        label: '控制、传感与测试',
-        keywords: ['控制', '传感', '电路', '编程', '算法', '数据采集', '实验', '误差', '测试'],
-        subjects: ['info-tech', 'physics'],
-      },
-    ];
-  }
-  if (isGroundRoboticsGoal(g)) {
-    return [
-      { id: 'mechanics', label: '结构与运动', keywords: ['结构', '受力', '摩擦', '轮', '电机', '传动', '力', '平衡', '运动', '速度', '杠杆'], subjects: ['physics', 'science', 'engineering'] },
-      { id: 'circuit', label: '电路与驱动', keywords: ['电路', '电流', '电压', '电机', '驱动', '电源', '接线', '开关', '串联', '并联'], subjects: ['physics', 'info-tech'] },
-      { id: 'sense', label: '传感与感知', keywords: ['传感', '红外', '超声', '距离', '循迹', '检测', '巡线', '信号', '采集'], subjects: ['physics', 'info-tech', 'engineering'] },
-      { id: 'control', label: '控制与算法', keywords: ['控制', '反馈', 'PID', '算法', '编程', '逻辑', '避障', '决策', '调试'], subjects: ['info-tech', 'math', 'computer-science', 'engineering'] },
-      { id: 'test', label: '调试与测试', keywords: ['测试', '调试', '误差', '数据', '记录', '实验', '迭代', '验收'], subjects: ['math', 'science', 'engineering'] },
-    ];
-  }
-  if (/温控|温室|温度|加热|散热|PID|闭环/.test(g)) {
-    return [
-      { id: 'modeling', label: '数学建模', keywords: ['函数', '方程', '建模', '图像'], subjects: ['math'] },
-      { id: 'physics', label: '热学原理', keywords: ['热传导', '温度', '内能', '热量'], subjects: ['physics'] },
-      { id: 'hardware', label: '传感与电路', keywords: ['传感器', '电路', '采集'], subjects: ['physics', 'info-tech'] },
-      { id: 'control', label: '控制算法', keywords: ['控制', '反馈', '编程', '算法'], subjects: ['info-tech', 'math'] },
-    ];
-  }
-  if (isIndustryInnovationGoal(g)) {
-    return industryInnovationDomains(g);
-  }
-  if (isPlantingCultivationGoal(g)) {
-    return plantingCultivationDomains(g);
-  }
-  if (isFiltrationGoal(g)) {
-    return filtrationDomains();
-  }
-  if (classifyProjectType(g) === 'exhibition-redesign') {
-    const subject = parseGoalSubject(g);
-    return [
-      { id: 'diagnose', label: '现状诊断', keywords: [subject, '问题', '调查', '记录', '失控', '隐患', '现状'], subjects: ['chinese', 'math'] },
-      { id: 'theme', label: '主题策划', keywords: [subject, '主题', '天文', '太阳系', '月球', '太空', '科普', '内容'], subjects: ['science', 'chinese'] },
-      { id: 'design', label: '展陈设计', keywords: [subject, '布局', '动线', '展板', '设计', '模型', '互动', '展陈'], subjects: ['info-tech', 'chinese', 'math'] },
-      { id: 'implement', label: '实施整改', keywords: [subject, '整改', '布置', '预算', '分工', '安全', '清单', '实施'], subjects: ['math', 'chinese'] },
-      { id: 'launch', label: '开放验收', keywords: [subject, '验收', '讲解', '宣传', '说明', '展示', '反馈', '开放'], subjects: ['chinese', 'science'] },
-    ];
-  }
-  if (isEnergyEngineeringGoal(g)) {
-    return [
-      { id: 'energy', label: '能量转换与守恒', keywords: ['能量转化', '能量转换', '机械能', '内能', '电能', '化学能', '热值', '效率', '做功'], subjects: ['physics', 'chemistry'] },
-      { id: 'electrochem', label: '电化学与电池', keywords: ['电池', '原电池', '电解', '电解池', '氧化还原', '电极', '电化学', '充放电', '储能', '燃料电池'], subjects: ['chemistry', 'physics'] },
-      { id: 'circuit', label: '电路与电磁', keywords: ['电路', '电流', '电压', '电阻', '电磁', '感应', '串联', '并联', '电磁感应', '发电机'], subjects: ['physics'] },
-      { id: 'renewable', label: '新能源装置', keywords: ['光伏', '太阳能', '风能', '风电', '发电', '新能源', '光能', '光电', '太阳能电池'], subjects: ['physics', 'chemistry'] },
-      { id: 'system', label: '系统测试与控制', keywords: ['控制', '传感', '传感器', '采集', '实验', '测试', '反馈', '调试', '数据采集', '误差'], subjects: ['info-tech', 'physics'] },
-    ];
-  }
-  if (/垃圾分类|垃圾治理|垃圾处理|废弃物|固体废物|社区.*环境|环保.*调查|回收.*调查/.test(g)) {
-    return [
-      { id: 'survey', label: '现状调查', keywords: ['调查', '问卷', '访谈', '抽样', '社区', '现状', '记录', '实地'], subjects: ['chinese', 'math'] },
-      { id: 'sorting', label: '分类标准与流程', keywords: ['分类', '可回收', '有害', '厨余', '其他', '标识', '投放', '垃圾'], subjects: ['geography', 'science'] },
-      { id: 'data', label: '数据统计', keywords: ['统计', '图表', '百分比', '整理', '分析', '数据', '平均数'], subjects: ['math'] },
-      { id: 'environment', label: '环境与影响', keywords: ['环境', '污染', '资源', '循环', '可持续', '减排', '生态'], subjects: ['geography', 'science'] },
-      { id: 'proposal', label: '改进建议与宣传', keywords: ['建议', '方案', '宣传', '倡议', '报告', '写作', '说明'], subjects: ['chinese'] },
-    ];
-  }
-  return genericDomainsForType(classifyProjectType(g));
+  return genericDomainsForType(classifyProjectType(goal));
 }
 
 function formatDomainHints(domains) {
@@ -536,11 +283,106 @@ function formatDomainHints(domains) {
   ).join('\n');
 }
 
+// ============================================================
+// 五、反空话与红线
+// ============================================================
+
 const ANTI_VACUUM_BLOCK = `
 ### 反空话与反泛素养（硬性）
-- **禁止** matched：批判性思维、创新思维、团队协作、项目管理、沟通能力、核心素养等综合素养类节点（除非题目明确要求协作/管理/沟通）
+- **禁止** matched：批判性思维、创新思维、团队协作、项目管理、沟通能力、核心素养等综合素养类节点（除非题目明确要求）
 - projectPhases 每阶段 steps 至少 2 条，每条 ≥15 字，须写清：动作 + 对象 + 方法/工具 + 检查标准；禁止「完成探究」「进行调研」「运用知识点」
 - reason 除「模块：」外须写明**本阶段怎么用**（例：「模块：数据整理。用条形图对比两方案 5 年成本，附数据来源」）`;
+
+// ============================================================
+// 六、typeMatchHints — 泛化版（通用类型指导，不再硬编码具体节点名）
+// ============================================================
+
+function typeMatchHints(goal) {
+  switch (classifyProjectType(goal)) {
+    case 'consumer-decision':
+      return `\n### 类型要求：消费决策（含技术原理理解）
+- 交付物是决策报告/对比测算表
+- **技术原理必选**（≥2 个 physics/chemistry 节点）：根据项目具体对象，选取与候选方案**核心技术差异**直接相关的原理节点（如动力原理、能量转换、电路功率、材料特性等）
+- 其他优先：统计与函数、环境排放、说明文写作
+- 禁止：与项目对象无关的工业研发节点（电解池、原电池等）、history 学科
+- reason 须写明该知识点如何帮助理解候选方案的技术差异`;
+    case 'engineering':
+      return `\n### 类型要求：工程/制作
+- **必含科学技术原理**（≥2 个 physics/chemistry/biology/science 节点）：解释项目核心装置/系统"为什么这样做能成功"的学科原理（选取与项目**驱动原理、感知机制、运动力学、材料特性、化学反应**直接相关的节点）
+- **必含数学技能**（≥1 个 math 节点）：用于测量、统计、数据分析、计算验证
+- matched 须覆盖项目的**核心技术子系统**（从 goal 中提取）
+- 覆盖原理→装置→实验→必要定量；含至少 1 个装置/实验类节点
+- 数学 index ≤25%；名称含「计算/求解/方程式」的 ≤20%
+- 禁止选择与项目交付物**不同物理域**的节点（如地面项目不选航空、化学项目不选生物医疗）
+- reason 须写明用于项目哪一子系统`;
+    case 'scientific-inquiry':
+      return `\n### 类型要求：科学探究
+- **必含科学技术原理**（≥2 个 physics/chemistry/biology/science 节点）：与实验核心原理直接相关
+- **必含数学技能**（≥1 个 math 节点）：用于数据分析、统计图表、测量计算
+- 必含实验设计与数据分析类节点；理论与实验并重
+- 根据探究对象选取相应学科：化学类选溶液/反应/滴定，物理类选力/热/电，生物类选生态/遗传/生理
+- 禁止选与探究对象无关领域的节点`;
+    case 'social-inquiry':
+      return `\n### 类型要求：社会调查
+- 围绕调查方法、数据统计与报告写作
+- 优先：统计图表、调查方法、说明文/报告写作、地理/环境相关（如题目涉及）
+- 可用：语文/地理/历史/数学，**不要塞理科公式**
+- 禁止：与调查主题无关的理科实验节点、生命科学节点（除非题目明确涉及）
+- reason 须写明用于调查哪一环节`;
+    case 'humanities-literary':
+      return `\n### 类型要求：人文/文学
+- 围绕阅读、写作、表达、文化理解（语文/英语/历史）
+- **不要塞理科或工程节点**`;
+    case 'creative-media':
+      return `\n### 类型要求：创意/媒体
+- 围绕创意、设计、制作、展示；仅在确需技术实现时引入信息技术/数学`;
+    case 'business-economics':
+      return `\n### 类型要求：商业/经济
+- 围绕调研、成本定价测算、方案与表达（数学/语文/信息技术）`;
+    case 'life-planning':
+      return `\n### 类型要求：生活规划/活动策划
+- 围绕需求目标、方案日程、预算分工、执行复盘（数学/语文/地理）；不要塞工程装置或纯理科公式`;
+    case 'health-life':
+      return `\n### 类型要求：健康生活
+- 围绕健康知识、现状监测统计、行为计划与评估（生物/科学/数学/语文）；不要堆与健康无关的工程或纯计算节点`;
+    case 'planting-cultivation':
+      return `\n### 类型要求：种植养殖/园艺栽培
+- 交付物是**种植观察日记**
+- matched **必须**覆盖：植物分类/特征、生长原理（光合/萌发/根系等）、栽培相关、数据记录
+- 优先：植物生长相关科学/生物节点、统计图表、说明文/日记写作
+- 禁止：与种植无关的工程装置、化学方程式、程序设计
+- reason 须写明如何用于种植的具体环节`;
+    case 'labor-practice':
+      return `\n### 类型要求：劳动实践
+- 围绕动手操作、观察记录、成果分享（科学/生物/语文/数学）；贴近真实操作，不要拔高成科研论文或工程系统`;
+    case 'industry-innovation':
+      return `\n### 类型要求：产业创新/新兴经济
+- 交付物是**产业创新方案/调研报告**，不是装置制作或软件工程
+- matched 须能支撑：产业背景政策、应用场景、技术原理（与产业领域相关）、数据统计、方案论证
+- 优先：地理/经济/交通相关、统计调查、说明文/报告写作、与产业技术领域直接相关的物理/信息技术节点
+- 禁止：与主题产业无关的模块
+- reason 必须写明该知识点如何用于本产业的具体环节`;
+    case 'exhibition-redesign':
+      return `\n### 类型要求：展陈空间/场馆改造
+- 交付物是**改造方案册**（现状诊断+展陈设计+整改清单）
+- matched 须支撑：现状调查、科普内容（与展馆主题相关）、展板设计、预算统计、说明文写作
+- 禁止：程序设计、工程装置研发等与展陈无关节点
+- reason 必须写明如何用于改造的具体环节`;
+    case 'maker-workshop':
+      return `\n### 类型要求：工坊/木作/建筑模型
+- 交付物是实体模型+图册+BOM
+- steps 须有尺寸、工具、照片、检查表
+- 禁止空话（「选择组件」「环境搭建」等）`;
+    default:
+      return `\n### 类型要求：综合实践
+- 每个节点服务交付物某一步，学科按需自然选取
+- 若题目抽象，先落地为 1 个可检查交付物，再选课标；禁止泛素养凑数${ANTI_VACUUM_BLOCK}`;
+  }
+}
+
+// ============================================================
+// 七、系统提示词 — Match 阶段
+// ============================================================
 
 function systemPromptMatch(complex, goal) {
   const base = `你是资深 PBL（项目式学习）导师，精通 K12 各学科课标，能为工程制作、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策、产业创新等多类项目设计学习路径。
@@ -579,7 +421,6 @@ ${typeGuardrailBlock(goal)}
 常见错误（绝对禁止）：
 ❌ matched 名称不在候选列表里（编造）
 ❌ 工程/制作类只堆「XX计算」「XX守恒定律」，缺原理/装置/实验（定量节点≤20%）
-❌ 「家庭购车/方案对比」写成研发方案（应是统计/函数/科普/环境/说明文，禁止电解池、原电池、程序控制、传感器）
 ❌ 人文写作 / 社会调查 / 创意设计类硬塞物理化学公式或工程装置节点
 ❌ 为凑学科数量选与交付物无关的节点
 ❌ 用批判性思维/团队协作/项目管理等泛素养节点凑数
@@ -610,6 +451,10 @@ ${ANTI_VACUUM_BLOCK}`;
 只返回 JSON，不要 markdown，不要任何解释文字。`;
 }
 
+// ============================================================
+// 八、系统提示词 — Decompose 阶段（泛化版，去掉特定 hint 函数）
+// ============================================================
+
 function systemPromptDecompose(complex, goal) {
   const p = projectTypeProfile(goal);
   const depth = complex
@@ -620,18 +465,7 @@ ${formatTopicAnchorBlock(goal)}
 ## 任务（本阶段**不选课标知识点**）
 
 对用户项目目标做**全链路结构化拆解**：
-1. 判断项目类型（已初步识别：${p.label}）：
-   - 工程/制作：做出装置/系统/原型
-   - 科学探究：用实验回答科学问题
-   - 社会调查：用调查/访谈研究社会现象
-   - 人文/文学：阅读、写作、表达、文化理解
-   - 创意/媒体/艺术：创作海报/视频/作品并展示
-   - 商业/经济：调研—方案—成本—运营
-   - 消费决策：对比方案做出有据决策
-   - 生活规划/活动策划：班级活动、出游研学、时间/预算安排
-   - 健康生活：营养饮食、运动锻炼、近视/睡眠、安全急救
-   - 劳动实践：种植养殖、烹饪手工、收纳维修等动手任务
-   - 产业创新/新兴经济：调研产业场景、政策与技术，提出创新方案报告（非装置制作）
+1. 判断项目类型（已初步识别：${p.label}）
 2. 澄清交付物、约束、适用学段
 3. 拆出 3-5 个模块（${p.moduleWord}）
 4. ${depth}
@@ -639,89 +473,23 @@ ${formatTopicAnchorBlock(goal)}
 
 ## 可执行任务步骤（硬性）
 - 每个 phase 的 steps 至少 2 条，每条 ≥20 字，须同时包含：**动词 + 操作对象 + 工具/数据/方法 + 可检查产出（含数量/尺寸/次数）**
-- 禁止空话：「进行调研」「完成探究」「选择硬件组件」「编写基础控制逻辑」「环境搭建」「确定材料清单」等无验收标准的表述
-- **每条 steps 必须出现用户目标中的关键名词**（从【项目目标】原文提取），不得换成无关领域任务（如对「鲁班工坊」写软件环境搭建，对「物流机器人」写木工榫卯）
+- 禁止空话：「进行调研」「完成探究」「选择硬件组件」「编写基础控制逻辑」「环境搭建」等无验收标准的表述
+- **每条 steps 必须出现用户目标中的关键名词**（从【项目目标】原文提取）
 - 若题目是口号/品牌/抽象表述，必须**落地为 1 个具体交付物**，steps 写清谁做什么、用什么表/工具、交什么稿
 
+## 去重去冗余（硬性）
+- **绝对禁止**同一意思换不同说法重复出现
+- 不同 phase 的 steps 内容之间**零重叠**
+- summary / projectSummary / constraints / scopeLimits / successCriteria 各字段之间不得互相复制粘贴
+- pros 每条 ≤15 字，禁止与 summary 重复
+
 ## 原则
-- **严格贴合题目类型**：调查/对比类的交付物是报告/对比表/答辩，不是研发原型；写作/创作类的交付物是作品，不是实验装置
+- **严格贴合题目类型**：调查/对比类的交付物是报告/对比表，不是研发原型；写作/创作类的交付物是作品，不是实验装置
 - knowledgeHints 是**检索关键词**，按项目类型选取（理工类用学科概念，人文/社科类用阅读/写作/统计/调查等），不写课标原文节点名
-- **地面机器人/小车项目**的 knowledgeHints 禁止出现飞行、航空、医药、抗生素、细胞、购车、内燃机等无关词
 - deliverable 必须是可检查实物（报告、表格、海报、作品、数据记录表），不能是「提升素养」「增强能力」
 - 不跑题、不硬凑学科
 
 只返回 JSON，不要 markdown。`;
-}
-
-function isFiltrationGoal(goal) {
-  const g = String(goal || '');
-  return /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水|过滤.*水/.test(g);
-}
-
-function isElementaryFiltrationGoal(goal) {
-  const g = String(goal || '');
-  return /小学|四年级|五年级|四至五|家庭|亲子|家长/.test(g);
-}
-
-function filtrationDomains() {
-  return [
-    { id: 'scope', label: '指标与局限', keywords: ['指标', '局限', '安全', '宣称', '对照', '变量', '实验'], subjects: ['science', 'chinese'] },
-    { id: 'prefilter', label: '粗滤保护层', keywords: ['粗滤', '滤网', '沉淀', '泥沙', '颗粒', '保护', '滤纸'], subjects: ['science', 'physics'] },
-    { id: 'adsorption', label: '吸附改味层', keywords: ['吸附', '活性炭', '异味', '颜色', '有机物'], subjects: ['chemistry', 'science'] },
-    { id: 'membrane', label: '膜孔径核心层', keywords: ['膜', '孔径', '滤芯', '微滤', '超滤', '陶瓷', '拦截', '微塑料'], subjects: ['chemistry', 'physics', 'science'] },
-    { id: 'test', label: '对照测试与评价', keywords: ['测试', '对照', '流速', '数据', '实验', '记录', '减少率', '统计'], subjects: ['science', 'math', 'physics'] },
-  ];
-}
-
-function socialCivicDecomposeHint(goal) {
-  if (!isSocialOrCivicInquiryGoal(goal)) return '';
-  return `
-【社会调查/社区议题拆解 — 硬性要求】
-- 交付物须含：现状调查记录表 + 统计图表 + 改进建议 + 宣传策划要点（对象/渠道/口号）
-- 跨学科跨学段：语文说明文/报告、数学统计图表、地理/科学环境内容均可匹配，未写明年级时不限学段
-- knowledgeHints 用：调查、问卷、统计、图表、环境、垃圾、分类、建议、宣传、倡议
-- **禁止** steps 重复粘贴用户目标全文；每条任务用短主题「社区垃圾分类」等，附数量/次数验收标准
-- **禁止** matched 生物细胞/航空/工程装置类课标；优先说明文、统计、环境、地理人文
-`;
-}
-
-function groundRoboticsDecomposeHint(goal) {
-  if (!isGroundRoboticsGoal(goal)) return '';
-  return `
-【自动驾驶/循迹小车拆解 — 硬性要求】
-- 交付物是可运行的**地面小车**原型+调试测试记录，不是航空/无人机/火箭/购车对比/医药项目
-- subsystems 按：结构与运动 → 电路驱动 → 传感感知 → 控制算法 → 调试测试
-- knowledgeHints **仅限**地面机器人相关词：电路、电机、传感、循迹/巡线、摩擦/受力、控制/编程、调试/测试
-- **禁止** knowledgeHints、steps、phase 名出现：飞行、航空、航天、无人机、抗生素、医药、细胞、免疫、耐药、内燃机、购车、新能源对比
-- 禁止阶段名「科学理论补全」「科学原理补课」并填入医疗/航空/购车关键词；每阶段 hints 须对应该阶段子系统
-`;
-}
-
-function filtrationDecomposeHint(goal) {
-  if (!isFiltrationGoal(goal)) return '';
-  const elem = isElementaryFiltrationGoal(goal);
-  return `
-【水体过滤装置拆解 — 硬性要求（机理导向）】
-- subsystems 按过滤机理拆：粗滤保护层 / 吸附改味层 / 膜孔径核心层 / 对照测试评价（**禁止**以「进水导流」「外壳密封」作主模块名）
-- 推荐方案须为「粗滤→活性炭→明确孔径膜/陶瓷滤芯」三级结构，写明各层职责（粗滤护后级、活性炭改味、膜孔径决定拦截能力）
-- 测试阶段须有 A/B/C 对照：原水 / 仅粗滤 / 完整三级，固定水量（如 300mL），记录过滤时间与颗粒变化
-- scopeLimits 至少 2 条：不能宣称饮水安全；${elem ? '模型颗粒实验结果不能写成真实微塑料去除率' : '课堂模拟液结果不能等同真实微塑料去除率'}
-- successCriteria 至少 2 条：有对照组、记录流速或颗粒数、结论写明装置局限
-- ${elem ? '模拟颗粒用胡椒粉/茶叶碎/细沙等安全替代物，**禁止**剪塑料袋、塑料微珠、亮片' : '模拟液须安全可控，**禁止**让学生剪切塑料袋或撒塑料碎屑'}
-- knowledgeChain 示例：指标与局限 → 选型组装 → 对照实验 → 数据分析 → 改进汇报
-`;
-}
-
-function chemistryDecomposeHint(goal) {
-  const cap = getChemistryAnalysisProfile(goal);
-  if (!isChemistryInquiryGoal(goal) || !cap.mixed) return '';
-  const sample = cap.sampleLabel;
-  return `
-【混合溶液深度拆解 — 硬性要求】
-- ${sample}属于混合溶液，**禁止**以「直接称量溶质+质量分数」作为唯一/主方案
-- schemes 至少 2 套：A **硝酸银滴定法**（测 Cl⁻/盐含量）；B **电导率法**（标准曲线反推浓度）
-- 每阶段 steps 须写：取样澄清/稀释、滴定或测电导率、物质的量浓度换算、平行测定与误差
-`;
 }
 
 function userPromptDecompose(goal, complex) {
@@ -729,14 +497,10 @@ function userPromptDecompose(goal, complex) {
   const domainBlock = domains.length
     ? `\n【可参考的项目模块】\n${formatDomainHints(domains)}\n`
     : '';
-  const chemHint = chemistryDecomposeHint(goal);
-  const filtHint = filtrationDecomposeHint(goal);
-  const robotHint = groundRoboticsDecomposeHint(goal);
-  const civicHint = socialCivicDecomposeHint(goal);
   const topicBlock = formatTopicAnchorBlock(goal);
   return `【项目目标】
 ${goal}
-${topicBlock}${domainBlock}${chemHint}${filtHint}${robotHint}${civicHint}
+${topicBlock}${domainBlock}
 返回 JSON（严格遵循字段名）：
 {
   "projectSummary": "一句话概括项目",
@@ -745,7 +509,7 @@ ${topicBlock}${domainBlock}${chemHint}${filtHint}${robotHint}${civicHint}
   "scopeLimits": ["不能宣称的结论或能力边界，至少2条"],
   "successCriteria": ["可检查的验收标准，至少2条"],
   "subsystems": [
-    {"id": "energy", "name": "子系统名", "description": "该子系统要解决的问题"}
+    {"id": "xxx", "name": "子系统名", "description": "该子系统要解决的问题"}
   ],
   "schemes": [
     {
@@ -759,7 +523,7 @@ ${topicBlock}${domainBlock}${chemHint}${filtHint}${robotHint}${civicHint}
           "phase": "阶段名",
           "steps": ["任务1", "任务2"],
           "deliverable": "阶段产出",
-          "subsystemIds": ["energy"],
+          "subsystemIds": ["xxx"],
           "knowledgeHints": ["检索关键词1", "检索关键词2"]
         }
       ]
@@ -774,7 +538,8 @@ ${topicBlock}${domainBlock}${chemHint}${filtHint}${robotHint}${civicHint}
 - 推荐方案 phases 4-5 个
 - 每个 steps 条目 ≥20 字，须含可操作动词 + 数量/尺寸/次数 + 可检查产出；动词对象必须来自用户目标原文
 - phases 的 phase 名称、deliverable、steps 须与【项目目标】同一领域，禁止跨域套模板
-- knowledgeHints 每阶段 2-5 个，用于下一步课标检索，勿写课标原文节点名`;
+- knowledgeHints 每阶段 2-5 个，用于下一步课标检索，勿写课标原文节点名
+- **去重**：不同 phase 的 steps、summary、pros、deliverable 之间不得有同义重复段落`;
 }
 
 function formatBlueprintForMatch(blueprint) {
@@ -802,6 +567,10 @@ ${phases}
 `;
 }
 
+// ============================================================
+// 九、系统提示词 — Filter 阶段
+// ============================================================
+
 function systemPromptFilter(complex, goal) {
   const p = projectTypeProfile(goal);
   const gradeHint = complex
@@ -815,11 +584,11 @@ ${typeGuardrailBlock(goal)}
 2. 列出 3-5 个模块（${p.moduleWord}）
 3. 为每个模块映射学科：math / physics / chemistry / biology / science / chinese / english / history / geography / info-tech
 4. 确定适用 grades 与 systems
-5. 从蓝图任务动词推断 Bloom 认知上限（bloomCeiling 1-6），过高阶的课标节点在 match 阶段应排除
+5. 从蓝图任务动词推断 Bloom 认知上限（bloomCeiling 1-6）
 
 ## 选学科原则（按类型自适应）
-- 学科必须能覆盖上述模块，**按项目类型自然选取**：理工类多用理科；社科/人文/创作/商业类大胆用语文、历史、地理、英语、信息技术
-- 工程/火箭/能源类：以 physics/chemistry/math/info-tech 为主，避免无关人文
+- 学科必须能覆盖上述模块，**按项目类型自然选取**
+- 工程/科学类：以 physics/chemistry/math/info-tech 为主
 - 消费决策类：以 math（统计/函数）为主，辅以相关科普与说明文写作
 - 社会调查/人文/创作类：以 chinese/geography/history/english/info-tech 为主，不强行加理科
 - 不要为凑学科数量加入与交付物无关的学科
@@ -865,199 +634,56 @@ ${summaryList}
 - 通常 2-5 个学科即可${gradeHint}`;
 }
 
-/** 匹配阶段按项目类型给出针对性红线 */
-function typeMatchHints(goal) {
-  switch (classifyProjectType(goal)) {
-    case 'consumer-decision':
-      return `\n### 类型要求：消费决策（含技术原理理解）\n- 交付物是决策报告/对比测算表\n- **技术原理必选**：消费决策不能只做价格对比，必须理解候选方案背后的核心技术差异（至少 2 个 physics/chemistry 节点）。根据项目具体对象选取相关原理——如涉及动力选型则选电动机/热机/效率，涉及电子产品则选电路/信号/频率/功率，涉及材料则选结构/强度/热传导等\n- 其他优先：统计、函数/百分比、环境排放、说明文写作\n- 禁止 matched：history 学科及一切历史朝代/革命/战争节点；电解池、原电池（属工业化学）；与项目对象无关的研发级节点\n- external 示例：全生命周期使用成本、购置补贴/税费政策、保值率评估（课标外）\n- reason 须写明该知识点如何帮助理解候选方案的技术差异，禁止泛泛「了解能源」「了解技术」`;
-    case 'engineering':
-      if (isGroundRoboticsGoal(goal)) {
-        return `\n### 类型要求：自动驾驶/循迹小车工程\n- 交付物是可运行的地面小车原型+调试测试记录，不是航空/无人机/火箭项目\n- matched 须覆盖：电路与电机驱动、循迹/距离传感、控制逻辑或算法、运动/摩擦/受力、测试调试\n- 优先：串联并联电路、传感器、摩擦力、牛顿运动、信息技术编程、简单机械、工业/服务机器人运动控制\n- **禁止** matched：飞行控制系统、航空电子、无人机、弹道/火箭、抗生素/细胞/免疫/耐药、正则表达式/形式语言/编译原理等无关大学节点\n- reason 须写明用于小车哪一子系统（传感/驱动/控制/调试），禁止泛泛「了解控制」`;
-      }
-      if (/微塑料|过滤装置|净水|污水处理|废水|水质净化|滤芯|膜过滤|拦截.*塑料/.test(goal)) {
-        return `\n### 类型要求：水体净化/过滤装置工程\n- 交付物是可测试的过滤装置原型+过滤效率测试报告，不是火箭/抛体/发射类项目\n- matched 须覆盖：溶液/沉淀/吸附、压强与流体、实验测量与数据统计、环境/污染相关\n- **禁止** matched：反冲、火箭、抛体、弹道、发射、程序设计、电解池、原电池\n- projectDomains 用：需求指标、进水导流、多级过滤、吸附捕获、密封结构、测试评价`;
-      }
-      return `\n### 类型要求：工程/制作\n- 覆盖原理→装置→实验→必要定量；含至少 1 个装置/实验类节点\n- 数学 index ≤25%；名称含「计算/求解/方程式」的 ≤20%\n- **禁止** matched：与题目无关的航空/飞行/生物医疗/形式语言节点`;
-    case 'scientific-inquiry':
-      return isChemistryInquiryGoal(goal)
-        ? (getChemistryAnalysisProfile(goal).mixed
-          ? `\n### 类型要求：混合溶液间接测定（如食堂汤水测盐）\n- 样品为**混合溶液**，不能直接用「称量溶质求质量分数」；主方案须为**硝酸银滴定法**（Ag⁺+Cl⁻→AgCl↓）和/或**电导率法**（标准曲线）\n- matched 优先：离子反应、沉淀滴定、物质的量浓度、电解质溶液/电导率；math 用于换算与误差\n- **禁止** matched：程序设计、人体器官、饮食营养、仅用小学「数据收集/描述」糊弄\n- projectPhases 每步写清取样、滴定/测电导率、换算，禁止空话`
-          : `\n### 类型要求：化学溶液/浓度探究\n- **以 chemistry 为主线**（溶液、溶质溶剂、质量分数、溶解、配制）；math 仅用于数据记录/统计图表\n- **禁止** matched：程序设计、信息技术、人体器官系统、泛泛的「饮食营养与健康」\n- projectPhases 任务须写清实验步骤与计算，禁止「完成课件」空话`)
-        : `\n### 类型要求：科学探究\n- 必含实验设计与数据分析类节点；理论与实验并重，不要只选纯计算`;
-    case 'social-inquiry':
-      return isSocialOrCivicInquiryGoal(goal) && /垃圾分类|垃圾治理|废弃物|环保/.test(goal)
-        ? `\n### 类型要求：社区环保/垃圾分类调查\n- 交付物是调查报告+改进建议/宣传方案；matched 须覆盖：问卷访谈、数据统计图表、垃圾分类标准、环境影响、说明文/倡议写作\n- 优先：统计图、百分比、调查方法、人口与环境/资源、说明文写作、地理实践\n- **禁止** matched：细胞结构/细胞代谢/细胞周期/细胞死亡、植物分类、DNA/遗传、大学细胞生物学、程序设计、工程装置\n- 「分类」指垃圾四分法，**不是**植物/生物分类；reason 须写明用于调查哪一环节`
-        : `\n### 类型要求：社会调查\n- 围绕调查方法、统计分析、报告写作；可用语文/地理/历史/数学，**不要塞理科公式**\n- **禁止** matched：细胞生物学、植物分类、DNA/遗传等生命科学节点（除非题目明确涉及生物/健康）`;
-    case 'humanities-literary':
-      return `\n### 类型要求：人文/文学\n- 围绕阅读、写作、表达、文化理解（语文/英语/历史）；**不要塞理科或工程节点**`;
-    case 'creative-media':
-      return `\n### 类型要求：创意/媒体\n- 围绕创意、设计、制作、展示；仅在确需技术实现时引入信息技术/数学`;
-    case 'business-economics':
-      return `\n### 类型要求：商业/经济\n- 围绕调研、成本定价测算、方案与表达（数学/语文/信息技术）`;
-    case 'life-planning':
-      return `\n### 类型要求：生活规划/活动策划\n- 围绕需求目标、方案日程、预算分工、执行复盘（数学/语文/地理）；不要塞工程装置或纯理科公式`;
-    case 'health-life':
-      return `\n### 类型要求：健康生活\n- 围绕健康知识、现状监测统计、行为计划与评估（生物/科学/数学/语文）；不要堆与健康无关的工程或纯计算节点`;
-    case 'planting-cultivation': {
-      const t = extractTopicProfile(goal);
-      const crop = t.crop || plantingCropLabel(goal);
-      return `\n### 类型要求：种植养殖/园艺栽培（${t.coreTopic}）\n- 交付物是**种植观察日记**，不是工程原型或浸润式场景任务\n- matched **必须**覆盖：植物分类/特征、生长原理（光合/种子萌发/根系吸收）、栽培相关、数据记录\n- 优先：植物的一生、绿色植物结构、种子结构与萌发、光合作用、植物分类、条形/折线统计图、说明文/日记写作\n- **禁止** matched：朝花夕拾、文言、外国文学、牛顿定律、化学方程式、程序设计、机械玩具\n- reason 须写明如何用于「${crop}」种植的具体环节（如辨认分类、理解生长、记录株高）`;
-    }
-    case 'labor-practice':
-      return `\n### 类型要求：劳动实践\n- 围绕动手操作、观察记录、成果分享（科学/生物/语文/数学）；贴近真实操作，不要拔高成科研论文或工程系统`;
-    case 'industry-innovation': {
-      const t = extractTopicProfile(goal);
-      const topic = t.coreTopic || '主题产业';
-      return `\n### 类型要求：产业创新/新兴经济（${topic}）\n- 交付物是**${topic}创新方案/调研报告**，不是装置制作或软件工程\n- matched 须能支撑：产业背景政策、应用场景、技术原理（如飞行/导航）、数据统计、方案论证\n- 优先：交通运输布局、交通与区域发展、抛体/牛顿（飞行原理）、统计调查、说明文/报告写作、中国经济地理\n- **禁止** matched：现代物流管理（除非 reason 明确写「${topic}低空物流配送」）、智慧城市、程序设计、电解池、小学数学\n- reason 必须写明该知识点如何用于「${topic}」的具体环节，禁止泛泛「了解产业发展」`;
-    }
-    case 'exhibition-redesign': {
-      const t = extractTopicProfile(goal);
-      const topic = t.coreTopic || '场馆';
-      return `\n### 类型要求：展陈空间/场馆改造（${topic}）\n- 交付物是**${topic}改造方案册**（现状诊断+展陈设计+整改清单），不是软件工程或装置研发\n- matched 须支撑：现状调查、天文/太空科普内容、展板设计、预算统计、说明文写作\n- 优先：太阳系、地球与宇宙、说明文写作、统计图表、简单设计/信息技术\n- **禁止** matched：招生简章、程序设计、电解池、牛顿定律（除非用于科普讲解）、外国文学、小学数学\n- reason 必须写明如何用于「${topic}」改造的具体环节`;
-    }
-    default:
-      return `\n### 类型要求：综合实践\n- 每个节点服务交付物某一步，学科按需自然选取\n- 若题目抽象，先落地为 1 个可检查交付物，再选课标；禁止泛素养凑数${ANTI_VACUUM_BLOCK}`;
-  }
-}
+// ============================================================
+// 十、Match 阶段 User Prompt（泛化版 — 统一格式示范）
+// ============================================================
 
-// 复杂非 STEM 项目的示范（社会调查类），避免 LLM 照抄工程示例而跑偏
-const GENERIC_COMPLEX_EXAMPLE = `
-返回 JSON 格式（严格遵循；下列 index 仅为**格式示范**，你必须在【候选知识点】中重新检索并填写真实 index）：
-{
-  "matched": [
-    {"index": 1, "confidence": 0.92, "role": "foundation", "reason": "模块：选题与调查设计。明确调查问题、对象与抽样方法", "dependsOn": []},
-    {"index": 4, "confidence": 0.90, "role": "bridge", "reason": "模块：整理与统计分析。用统计图表呈现调查数据", "dependsOn": [1]},
-    {"index": 7, "confidence": 0.88, "role": "core", "reason": "模块：结论与报告。撰写调查报告并提出建议", "dependsOn": [4]}
-  ],
-  "pathOrder": [1, 4, 7],
-  "knowledgeChain": "调查与抽样设计 → 数据整理与统计图表 → 报告写作与论证表达",
-  "projectPhases": [
-    {
-      "phase": "选题与调查设计",
-      "steps": ["确定调查问题与对象", "设计问卷/访谈提纲与抽样方案"],
-      "knowledgeNames": ["数据的收集"],
-      "deliverable": "调查方案与问卷初稿",
-      "literacy": {
-        "knowledge": "理解抽样与调查方法的适用条件",
-        "method": "用问卷/访谈设计获取一手资料",
-        "ability": "能针对问题设计可操作的调查工具",
-        "attitude": "尊重受访者、如实记录",
-        "emotion": "对真实社会现象产生探究兴趣",
-        "values": "树立实事求是的调查伦理"
-      }
-    },
-    {
-      "phase": "数据整理与分析",
-      "steps": ["整理回收数据", "用统计图表分析趋势"],
-      "knowledgeNames": ["条形统计图与折线统计图"],
-      "deliverable": "数据分析图表",
-      "literacy": {
-        "knowledge": "掌握统计图表的选择与解读",
-        "method": "用平均数/百分比刻画数据特征",
-        "ability": "能从数据中发现规律与异常",
-        "attitude": "客观对待数据，不臆断结论",
-        "emotion": "体验用数据说话的成就感",
-        "values": "尊重数据、不篡改结果"
-      }
-    },
-    {
-      "phase": "结论与报告",
-      "steps": ["归纳结论", "撰写调查报告并提出建议"],
-      "knowledgeNames": ["说明文写作"],
-      "deliverable": "调查报告与答辩",
-      "literacy": {
-        "knowledge": "理解调查报告的结构与论证方式",
-        "method": "用证据支撑结论、分层表达",
-        "ability": "能清晰传达发现并提出可行建议",
-        "attitude": "严谨论证、负责任地发声",
-        "emotion": "在分享中获得表达自信",
-        "values": "关注社会议题、服务公共利益"
-      }
-    }
-  ],
-  "external": [
-    {"name": "问卷信效度检验", "reason": "调查工具质量保障方法，课标提及较少但本项目必需", "prerequisites": ["数据的收集"]},
-    {"name": "访谈伦理与知情同意", "reason": "田野调查伦理要求，课本通常不单独讲授"}
-  ],
-  "techRoute": "阶段一：明确调查问题并设计问卷与抽样；阶段二：整理回收数据并用统计图表分析；阶段三：归纳结论、撰写报告并答辩。"
-}`;
-
-const LOW_ALTITUDE_ECONOMY_EXAMPLE = `
+const FORMAT_EXAMPLE_COMPLEX = `
 返回 JSON 格式（严格遵循；下列 index 仅为**格式示范**，你必须在【候选知识点】中重新检索并填写真实 index，禁止照抄示例数字）：
 {
   "matched": [
-    {"index": 2, "confidence": 0.94, "role": "foundation", "reason": "模块：低空经济背景与政策。用区域发展与交通布局理解低空产业与空域资源的空间约束", "dependsOn": []},
-    {"index": 5, "confidence": 0.91, "role": "foundation", "reason": "模块：低空经济背景与政策。从中国经济地理把握产业政策与试点城市分布", "dependsOn": []},
-    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "模块：应用场景调研。用统计调查方法整理无人机配送/应急/植保等场景需求数据", "dependsOn": [2]},
-    {"index": 11, "confidence": 0.89, "role": "bridge", "reason": "模块：技术原理支撑。用抛体运动分析低空飞行器起降与航线高度约束", "dependsOn": [8]},
-    {"index": 17, "confidence": 0.92, "role": "core", "reason": "模块：数据与可行性分析。用图表比较不同低空应用场景的成本效益", "dependsOn": [8]},
-    {"index": 23, "confidence": 0.88, "role": "core", "reason": "模块：创新方案与报告。用说明文结构撰写低空经济创新方案与试点建议", "dependsOn": [17]}
+    {"index": 2, "confidence": 0.93, "role": "foundation", "reason": "模块：XXX。建立基础概念与前置知识", "dependsOn": []},
+    {"index": 5, "confidence": 0.91, "role": "bridge", "reason": "模块：YYY。连接基础与产出的关键方法/技能", "dependsOn": [2]},
+    {"index": 8, "confidence": 0.90, "role": "core", "reason": "模块：ZZZ。直接用于动手/产出环节", "dependsOn": [5]}
   ],
-  "pathOrder": [2, 5, 8, 11, 17, 23],
-  "knowledgeChain": "产业政策与区域交通 → 场景调研与统计 → 飞行原理支撑 → 可行性分析 → 创新方案报告",
+  "pathOrder": [2, 5, 8],
+  "knowledgeChain": "基础概念 → 方法/技能 → 产出应用",
   "projectPhases": [
     {
-      "phase": "低空经济背景与政策梳理",
-      "steps": ["检索国家及本地低空经济试点政策≥3条并摘录要点", "用思维导图归纳空域、产业、安全三类关键词"],
-      "knowledgeNames": ["交通运输布局", "中国的经济发展"],
-      "deliverable": "政策与产业背景对照表",
+      "phase": "阶段名（须含项目关键词）",
+      "steps": ["具体任务1（≥15字，含动词+对象+方法+检查标准）", "具体任务2"],
+      "knowledgeNames": ["候选列表中存在的节点名称"],
+      "deliverable": "阶段产出物",
       "literacy": {
-        "knowledge": "理解低空经济是低空空域飞行活动带动的新兴产业",
-        "method": "用权威来源摘录并标注政策要点",
-        "ability": "能说明政策与本地场景的关系",
-        "attitude": "尊重法规、不夸大政策红利",
-        "emotion": "对新兴产业机遇保持理性好奇",
-        "values": "关注公共安全与合规发展"
-      }
-    },
-    {
-      "phase": "应用场景调研",
-      "steps": ["选定1个低空场景（配送/应急/植保/出行）并设计10题问卷", "回收≥20份有效问卷并制成统计图表"],
-      "knowledgeNames": ["数据的收集", "统计图表"],
-      "deliverable": "场景需求调研表与图表",
-      "literacy": {
-        "knowledge": "掌握调查设计与数据整理方法",
-        "method": "用问卷与图表呈现场景需求",
-        "ability": "能从数据提炼1条场景痛点",
-        "attitude": "如实记录、不篡改数据",
-        "emotion": "在实地调研中增强社会观察力",
-        "values": "尊重受访者隐私与知情同意"
-      }
-    },
-    {
-      "phase": "技术原理与安全要点",
-      "steps": ["查阅无人机飞行高度、载重、续航三类参数并制对比表", "用抛体运动示意图说明起降安全距离估算思路"],
-      "knowledgeNames": ["抛体运动", "牛顿运动定律"],
-      "deliverable": "技术参数与安全要点笔记",
-      "literacy": {
-        "knowledge": "理解飞行高度与运动学基本关系",
-        "method": "用示意图辅助解释技术约束",
-        "ability": "能指出方案中的1项安全风险",
-        "attitude": "把安全合规放在首位",
-        "emotion": "体验跨学科理解技术的成就感",
-        "values": "树立空域安全与公众利益意识"
-      }
-    },
-    {
-      "phase": "创新方案与可行性论证",
-      "steps": ["提出1个低空经济创新点子并写200字场景描述", "用成本效益简表论证可行性并列出2条落地障碍"],
-      "knowledgeNames": ["说明文写作"],
-      "deliverable": "低空经济创新方案报告",
-      "literacy": {
-        "knowledge": "掌握创新方案报告的结构与论证方式",
-        "method": "用数据与政策依据支撑建议",
-        "ability": "能提出可操作的试点建议",
-        "attitude": "论证务实、承认局限",
-        "emotion": "在方案打磨中获得表达自信",
-        "values": "平衡创新与公共安全"
+        "knowledge": "理解XXX原理/概念",
+        "method": "用YYY方法完成ZZZ",
+        "ability": "能独立完成XXX操作",
+        "attitude": "严谨/认真/负责的态度",
+        "emotion": "对XXX产生好奇/成就感",
+        "values": "树立YYY意识"
       }
     }
   ],
   "external": [
-    {"name": "低空空域分类与管理要点", "reason": "空域划设与飞行审批是低空经济落地关键，课标无专项条目", "prerequisites": ["交通运输布局"]},
-    {"name": "无人机飞行安全操作规范", "reason": "场景调研后须理解禁飞区与操作红线，课本较少系统讲授", "prerequisites": ["抛体运动"]}
+    {"name": "课标外知识点名称", "reason": "说明为何课标未覆盖但项目必需", "prerequisites": ["关联的 matched 知识点名称"]}
   ],
-  "techRoute": "阶段一：梳理低空经济政策与产业背景；阶段二：调研典型应用场景并统计需求；阶段三：补足飞行原理与安全要点；阶段四：撰写创新方案并完成可行性论证。"
+  "techRoute": "按模块串联的中文实施路线描述（500字内）"
+}`;
+
+const FORMAT_EXAMPLE_NORMAL = `
+返回 JSON 格式（严格遵循）：
+{
+  "matched": [
+    {"index": 3, "confidence": 0.95, "role": "foundation", "reason": "模块：XXX。建立变量与关系", "dependsOn": []},
+    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "模块：YYY。连接基础与产出", "dependsOn": [3]}
+  ],
+  "pathOrder": [3, 8],
+  "knowledgeChain": "基础概念 → 方法探究 → 产出实现",
+  "projectPhases": [],
+  "external": [
+    {"name": "跨学科资料检索与引用", "reason": "整合多来源信息，课标较少系统讲授但项目落地必需"}
+  ],
+  "techRoute": "按模块递进实施"
 }`;
 
 function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint, bloomProfile = null, archetypeId = null) {
@@ -1068,115 +694,15 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
   const domainSection = domains.length
     ? `\n【项目模块 — 每个至少 1 个 matched，reason 必须以「模块：XXX」开头】\n${formatDomainHints(domains)}\n`
     : '';
-  const projectType = classifyProjectType(goal);
-  const topic = extractTopicProfile(goal);
-  const stemType = ['engineering', 'scientific-inquiry'].includes(projectType);
 
-  // 工程类用模型火箭示范；产业创新用低空经济示范；非 STEM 复杂项目用社会调查示范
-  const rocketExample = complex ? `
-返回 JSON 格式（严格遵循；下列 index 仅为**格式示范**，你必须在【候选知识点】中重新检索并填写真实 index，禁止照抄示例数字）：
-{
-  "matched": [
-    {"index": 2, "confidence": 0.93, "role": "foundation", "reason": "子系统：运动学与动力学。建立受力与加速度关系，为弹道分析打基础", "dependsOn": []},
-    {"index": 5, "confidence": 0.91, "role": "foundation", "reason": "子系统：推进与燃料。理解燃烧与氧化还原，解释化学能转化为推进动能", "dependsOn": []},
-    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "子系统：空气动力与弹道。将运动分解为水平和竖直分量，分析飞行轨迹", "dependsOn": [2]},
-    {"index": 11, "confidence": 0.89, "role": "bridge", "reason": "子系统：空气动力与弹道。理解气流与压强差，解释箭体所受升力与阻力", "dependsOn": [8]},
-    {"index": 17, "confidence": 0.92, "role": "core", "reason": "子系统：运动学与动力学。用牛顿定律分析发射瞬间推力与加速度", "dependsOn": [2, 8]},
-    {"index": 23, "confidence": 0.86, "role": "core", "reason": "子系统：控制与测试。设计发射实验、测量飞行高度与落点", "dependsOn": [17]}
-  ],
-  "pathOrder": [5, 2, 8, 11, 17, 23],
-  "knowledgeChain": "氧化还原与燃烧 → 牛顿定律 → 抛体运动 → 流体压强与阻力 → 发射实验测试",
-  "projectPhases": [
-    {
-      "phase": "推进原理与燃料选型",
-      "steps": ["分析推进剂燃烧反应", "估算化学能转化为动能"],
-      "knowledgeNames": ["氧化还原反应概念", "内能与热量"],
-      "deliverable": "推进剂方案与能量估算表",
-      "literacy": {
-        "knowledge": "理解燃烧本质是氧化还原与能量释放",
-        "method": "用热值数据估算推进能量",
-        "ability": "能比较不同推进方案的化学能输出",
-        "attitude": "严谨对待化学品使用与用量计算",
-        "emotion": "对「一点燃料推动火箭」的化学反应感到好奇",
-        "values": "树立实验安全与环保意识，合规处置残余药剂"
-      }
-    },
-    {
-      "phase": "弹道与空气动力分析",
-      "steps": ["建立抛体运动模型", "讨论气流对箭体的影响"],
-      "knowledgeNames": ["抛体运动", "流体压强与流速关系"],
-      "deliverable": "弹道预测草图与关键参数表",
-      "literacy": {
-        "knowledge": "掌握抛体分解与流体压强基本原理",
-        "method": "用物理模型预测轨迹并标注假设条件",
-        "ability": "能解释发射角度与射程的关系",
-        "attitude": "养成先建模再实验的科学思维",
-        "emotion": "体验用公式预测飞行轨迹的成就感",
-        "values": "尊重实测数据，不夸大模型精度"
-      }
-    },
-    {
-      "phase": "结构设计与制作",
-      "steps": ["设计箭体结构", "检查重心与稳定性"],
-      "knowledgeNames": ["牛顿运动定律"],
-      "deliverable": "模型火箭原型与结构说明",
-      "literacy": {
-        "knowledge": "理解受力平衡与运动状态改变条件",
-        "method": "用工程草图表达结构尺寸与连接方式",
-        "ability": "能根据力学分析改进结构设计",
-        "attitude": "细致检查每个连接部位",
-        "emotion": "享受从图纸到实物的创造过程",
-        "values": "强调制作规范与发射安全距离"
-      }
-    },
-    {
-      "phase": "发射测试与迭代",
-      "steps": ["制定发射与测距方案", "记录数据并对比预测"],
-      "knowledgeNames": ["抛体运动"],
-      "deliverable": "测试报告（预测 vs 实测）",
-      "literacy": {
-        "knowledge": "综合运用动力学与弹道知识解释偏差",
-        "method": "控制变量法组织对比发射实验",
-        "ability": "能根据测试数据提出改进建议",
-        "attitude": "客观记录失败发射并分析原因",
-        "emotion": "在迭代中保持对科学探究的热情",
-        "values": "遵守安全规程，对他人与场地负责"
-      }
-    }
-  ],
-  "external": [
-    {"name": "模型火箭安全发射规范", "reason": "课标中无专项安全规程，但发射环节必需", "prerequisites": ["发射实验设计"]}
-  ],
-  "techRoute": "阶段一：从氧化还原与内能/热值理解推进剂能量；阶段二：用抛体运动与流体压强建立弹道模型；阶段三：依据牛顿定律完成结构受力设计与制作；阶段四：实施发射测试，用数据验证并迭代优化。"
-}` : `
-返回 JSON 格式（严格遵循）：
-{
-  "matched": [
-    {"index": 3, "confidence": 0.95, "role": "foundation", "reason": "模块：基础建模。建立变量与关系", "dependsOn": []},
-    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "模块：原理/方法探究。连接基础与产出", "dependsOn": [3]}
-  ],
-  "pathOrder": [3, 8],
-  "knowledgeChain": "基础概念 → 原理/方法探究 → 产出实现",
-  "projectPhases": [],
-  "external": [
-    {"name": "跨学科资料检索与引用", "reason": "整合多来源信息，课标较少系统讲授但项目落地必需"}
-  ],
-  "techRoute": "按模块递进实施"
-}`;
-
-  let example = rocketExample;
-  if (topic.coreTopic === '低空经济' || projectType === 'industry-innovation') {
-    example = LOW_ALTITUDE_ECONOMY_EXAMPLE;
-  } else if (complex && !stemType) {
-    example = GENERIC_COMPLEX_EXAMPLE;
-  }
+  const example = complex ? FORMAT_EXAMPLE_COMPLEX : FORMAT_EXAMPLE_NORMAL;
 
   const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
   const bloomBlock = formatBloomHintForMatch(bloom);
   const archetype = resolveArchetype(
     goal,
     classifyProjectType(goal),
-    getChemistryAnalysisProfile(goal).mixed,
+    false,
     archetypeId
   );
   const archetypeBlock = formatArchetypeForMatch(archetype, projectBlueprint);
@@ -1197,6 +723,7 @@ ${example}
 - **5-8 个精准节点**即可；不要为了学科齐全凑数
 - **严禁**选与交付物无关的 index（编造、凑数、跑题）
 - 学科按项目类型自然选取，理工类用理科、社科人文创作类用文科/信息技术
+- **科学/工程/探究类项目必须同时含两类节点**：①科学技术原理（physics/chemistry/biology/science ≥2 个，解释"为什么能成功"）②数学技能（math ≥1 个，用于测量/统计/计算验证）
 ${typeMatchHints(goal)}
 
 ### 1. 数量与角色
@@ -1205,7 +732,7 @@ ${typeMatchHints(goal)}
 
 ### 2. 知识链
 - dependsOn 构成 DAG；pathOrder 满足依赖
-- knowledgeChain 体现模块递进（按项目类型，如：调查设计 → 数据分析 → 报告表达）
+- knowledgeChain 体现模块递进（按项目类型）
 
 ### 3. projectPhases
 - ${complex ? '4-5' : '3-5'} 个阶段，按模块组织
@@ -1217,12 +744,16 @@ ${typeMatchHints(goal)}
 
 ### 5. external（课标外，硬性要求）
 - **必须**输出 1-${externalMax} 个课标外知识点，不可为空数组
-- 填写候选列表中**没有**、但完成本项目**确实需要**的专业/实践概念（如安全规范、政策解读、行业方法、工具操作等）
-- 每个 external 须有 name + reason（说明为何课标未覆盖但项目必需）；可选 prerequisites 填关联的 matched 知识点名称
+- 填写候选列表中**没有**、但完成本项目**确实需要**的专业/实践概念
+- 每个 external 须有 name + reason；可选 prerequisites
 
 ### 6. techRoute
 - 中文，500 字内，按模块串联，体现项目实施的递进逻辑`;
 }
+
+// ============================================================
+// 十一、SUBJECT_ZH 与 buildPBMessages 主入口
+// ============================================================
 
 const SUBJECT_ZH = {
   math: '数学', physics: '物理', chemistry: '化学', biology: '生物',
