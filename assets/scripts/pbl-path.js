@@ -1854,35 +1854,36 @@ class PBLPathBuilder {
       return this._industryInnovationDomains(g);
     }
     if (this._isConsumerDecisionGoal(g)) {
+      // 通用消费决策 domain：不绑定特定产品，由目标动态匹配
       return [
         {
           id: 'needs', label: '需求与场景调研',
-          keywords: ['调查', '数据', '统计', '问卷', '需求', '分析', '收集', '整理', '图表'],
+          keywords: ['调查', '数据', '统计', '问卷', '需求', '分析', '收集', '整理', '图表', '用途', '场景'],
           subjects: ['math', 'chinese']
         },
         {
           id: 'cost', label: '成本与数据建模',
-          keywords: ['函数', '一次函数', '计算', '统计', '数据', '平均数', '费用', '成本', '百分比', '方程', '电费', '油耗'],
+          keywords: ['函数', '一次函数', '计算', '统计', '数据', '平均数', '费用', '成本', '百分比', '方程', '单价', '总价', '预算'],
           subjects: ['math']
         },
         {
-          id: 'tech_principle', label: '动力系统技术原理',
-          keywords: ['内燃机', '热机', '效率', '电动机', '电磁感应', '电池', '电能', '化学能', '能量转化', '热值', '做功', '功率', '电功率', '电路', '电流', '电压', '电阻', '动能', '机械能', '摩擦力'],
+          id: 'tech_principle', label: '产品核心技术原理',
+          keywords: ['效率', '能量转化', '做功', '功率', '电功率', '电路', '电流', '电压', '电阻', '动能', '机械能', '摩擦力', '热机', '电动机', '电磁感应', '电池', '电能', '化学能', '热值', '内燃机', '频率', '信号', '材料', '结构', '传感'],
           subjects: ['physics', 'chemistry']
         },
         {
-          id: 'energy_compare', label: '能源类型与能耗对比',
-          keywords: ['能源', '新能源', '燃料', '比热容', '热量', '内能', '电能', '焦耳', '千瓦时', '续航', '充电', '油耗', '百公里', '能量守恒'],
+          id: 'energy_compare', label: '能耗与性能对比',
+          keywords: ['能源', '能耗', '燃料', '比热容', '热量', '内能', '电能', '焦耳', '千瓦时', '效率', '续航', '寿命', '功耗', '性能', '参数', '能量守恒'],
           subjects: ['physics', 'chemistry', 'geography']
         },
         {
           id: 'environment', label: '环保与可持续',
-          keywords: ['环境', '污染', '排放', '碳', '气候', '资源', '可持续', '温室', '清洁能源', '碳中和'],
+          keywords: ['环境', '污染', '排放', '碳', '气候', '资源', '可持续', '温室', '清洁能源', '碳中和', '回收', '降解'],
           subjects: ['geography', 'chemistry']
         },
         {
           id: 'decision', label: '决策论证与报告',
-          keywords: ['说明', '报告', '论证', '写作', '分析', '比较', '调查', '实用', '建议'],
+          keywords: ['说明', '报告', '论证', '写作', '分析', '比较', '调查', '实用', '建议', '推荐', '评估'],
           subjects: ['chinese', 'math']
         }
       ];
@@ -4403,14 +4404,17 @@ class PBLPathBuilder {
         return bm - am;
       });
     }
-    // 消费决策类（新能源vs燃油）：保底至少 2 个 physics 技术原理节点
+    // 消费决策类：保底至少 2 个理科（physics/chemistry）技术原理节点
+    // 根据项目目标动态选择保底关键词，不绑定特定产品
     if (this._isConsumerDecisionGoal(goal)) {
-      const physicsCount = list.filter(n => n.subject === 'physics').length;
-      if (physicsCount < 2) {
-        const techKeywords = ['电动机', '内燃机', '热机', '电功率', '电磁感应', '能量转化', '功率', '电路', '动能', '机械能', '摩擦力', '电流', '电压', '电阻'];
+      const sciCount = list.filter(n => n.subject === 'physics' || n.subject === 'chemistry').length;
+      if (sciCount < 2) {
+        // 从 tech_principle domain 的关键词中取（已是通用列表）
+        const domain = this._inferProjectDomains(goal).find(d => d.id === 'tech_principle');
+        const techKeywords = domain ? domain.keywords : ['效率', '能量转化', '功率', '电路', '电流', '电压', '电阻', '做功', '动能', '机械能'];
         const seen = new Set(list.map(n => n.id));
-        const physicsPool = effectivePool
-          .filter(n => n.subject === 'physics' && !seen.has(n.id))
+        const sciPool = effectivePool
+          .filter(n => (n.subject === 'physics' || n.subject === 'chemistry') && !seen.has(n.id))
           .map(n => {
             const name = String(n.name || '');
             let s = 0;
@@ -4419,14 +4423,14 @@ class PBLPathBuilder {
           })
           .filter(n => n._techScore > 0)
           .sort((a, b) => b._techScore - a._techScore);
-        const need = 2 - physicsCount;
-        physicsPool.slice(0, need).forEach(n => {
+        const need = 2 - sciCount;
+        sciPool.slice(0, need).forEach(n => {
           if (list.length < limit) {
             list.push({ ...n, confidence: 0.82, matchReason: '技术原理保底召回', pblRole: 'bridge' });
           }
         });
-        if (physicsPool.slice(0, need).length) {
-          console.warn('[PBL] 消费决策技术原理保底:', physicsPool.slice(0, need).map(n => n.name).join('、'));
+        if (sciPool.slice(0, need).length) {
+          console.warn('[PBL] 消费决策技术原理保底:', sciPool.slice(0, need).map(n => n.name).join('、'));
         }
       }
     }

@@ -321,7 +321,7 @@ function classifyProjectType(goal) {
 const TYPE_PROFILES = {
   'engineering': { label: '工程研发/制作', moduleWord: '工程子系统（原理 / 装置结构 / 电路控制 / 测试迭代）', subjectsHint: '以 physics、chemistry、math、info-tech 为主，按需含其他', redlines: '覆盖原理→装置→实验→必要定量；定量计算节点≤20%，不要只堆守恒定律/计算' },
   'scientific-inquiry': { label: '科学探究/实验', moduleWord: '探究环节（问题假设 / 变量设计 / 数据采集 / 分析结论）', subjectsHint: 'physics、chemistry、biology、science、math 为主', redlines: '必须含实验设计与数据分析类节点；理论与实验并重，不要只选纯计算' },
-  'consumer-decision': { label: '消费决策/方案对比', moduleWord: '决策环节（需求调研 / 技术原理对比 / 成本测算 / 决策报告）', subjectsHint: 'physics（动力原理/能耗）+ math（统计/函数）为双主线，辅以 chemistry（能源科普）、geography（环保）、chinese（说明文）', redlines: '交付物是决策报告/对比表；**必须含技术原理知识点**（电动机/内燃机/电功率/能量转化）；禁止电解池、原电池、程序控制等工业研发节点' },
+  'consumer-decision': { label: '消费决策/方案对比', moduleWord: '决策环节（需求调研 / 技术原理对比 / 成本测算 / 决策报告）', subjectsHint: '根据对象自然选科：涉及机械/能源用 physics+math，涉及材料/化学品用 chemistry+math，辅以 geography（环保）、chinese（说明文）', redlines: '交付物是决策报告/对比表；必须含与对象相关的技术原理节点（≥2）；禁止电解池、原电池、程序控制等工业研发节点' },
   'social-inquiry': { label: '社会调查/田野研究', moduleWord: '调查环节（选题抽样 / 资料收集 / 整理统计 / 结论报告）', subjectsHint: 'chinese、geography、history、math（统计）按需组合', redlines: '核心是调查方法、数据统计与报告写作；不要硬塞物理化学公式' },
   'humanities-literary': { label: '人文/文学/语言', moduleWord: '创作环节（立意选材 / 阅读积累 / 结构表达 / 修改展示）', subjectsHint: 'chinese、english、history 为主', redlines: '围绕阅读、写作、表达、文化理解；不要塞理科公式或工程装置节点' },
   'creative-media': { label: '创意设计/媒体/艺术', moduleWord: '创作环节（创意构思 / 设计草案 / 制作实现 / 展示评议）', subjectsHint: '结合 info-tech、chinese 及相关学科，技术实现可含数学/信息技术', redlines: '围绕创意表达与制作；只在确需技术实现时引入理科节点' },
@@ -428,13 +428,14 @@ function inferProjectDomains(goal) {
       : directSolutionChemistryDomains();
   }
   if (isConsumerDecisionGoal(g)) {
+    // 通用消费决策 domain：不绑定特定产品（汽车/手机/电器等），由 AI 根据 goal 动态匹配
     return [
-      { id: 'needs', label: '需求与场景调研', keywords: ['调查', '数据', '统计', '问卷', '需求', '分析', '收集', '整理', '图表'], subjects: ['math', 'chinese'] },
-      { id: 'cost', label: '成本与数据建模', keywords: ['函数', '一次函数', '计算', '统计', '数据', '平均数', '费用', '成本', '百分比', '电费', '油耗'], subjects: ['math'] },
-      { id: 'tech_principle', label: '动力系统技术原理', keywords: ['内燃机', '热机', '效率', '电动机', '电磁感应', '电池', '电能', '化学能', '能量转化', '热值', '做功', '功率', '电功率', '电路', '电流', '电压', '电阻', '动能', '机械能', '摩擦力'], subjects: ['physics', 'chemistry'] },
-      { id: 'energy_compare', label: '能源类型与能耗对比', keywords: ['能源', '新能源', '燃料', '比热容', '热量', '电能', '焦耳', '千瓦时', '续航', '充电', '油耗', '百公里'], subjects: ['physics', 'chemistry', 'geography'] },
-      { id: 'environment', label: '环保与可持续', keywords: ['环境', '污染', '排放', '碳', '气候', '资源', '可持续', '温室', '清洁能源', '碳中和'], subjects: ['geography', 'chemistry'] },
-      { id: 'decision', label: '决策论证与报告', keywords: ['说明', '报告', '论证', '写作', '分析', '比较', '调查', '建议'], subjects: ['chinese', 'math'] },
+      { id: 'needs', label: '需求与场景调研', keywords: ['调查', '数据', '统计', '问卷', '需求', '分析', '收集', '整理', '图表', '用途', '场景'], subjects: ['math', 'chinese'] },
+      { id: 'cost', label: '成本与数据建模', keywords: ['函数', '一次函数', '计算', '统计', '数据', '平均数', '费用', '成本', '百分比', '单价', '总价', '预算'], subjects: ['math'] },
+      { id: 'tech_principle', label: '产品核心技术原理', keywords: ['效率', '能量转化', '做功', '功率', '电功率', '电路', '电流', '电压', '电阻', '动能', '机械能', '摩擦力', '热机', '电动机', '电磁感应', '电池', '电能', '化学能', '热值', '内燃机', '频率', '信号', '材料', '结构', '传感'], subjects: ['physics', 'chemistry'] },
+      { id: 'energy_compare', label: '能耗与性能对比', keywords: ['能源', '能耗', '燃料', '比热容', '热量', '电能', '焦耳', '千瓦时', '效率', '续航', '寿命', '功耗', '性能', '参数'], subjects: ['physics', 'chemistry', 'geography'] },
+      { id: 'environment', label: '环保与可持续', keywords: ['环境', '污染', '排放', '碳', '气候', '资源', '可持续', '温室', '清洁能源', '碳中和', '回收', '降解'], subjects: ['geography', 'chemistry'] },
+      { id: 'decision', label: '决策论证与报告', keywords: ['说明', '报告', '论证', '写作', '分析', '比较', '调查', '建议', '推荐', '评估'], subjects: ['chinese', 'math'] },
     ];
   }
   if (/火箭|导弹|发射|弹道|模型火箭|航天/.test(g)) {
@@ -868,7 +869,7 @@ ${summaryList}
 function typeMatchHints(goal) {
   switch (classifyProjectType(goal)) {
     case 'consumer-decision':
-      return `\n### 类型要求：消费决策（含技术原理理解）\n- 交付物是决策报告/对比测算表；**必须包含技术原理知识点**（至少 2-3 个 physics 节点）\n- **技术原理必选**：内燃机与热机效率（燃油车）、电动机原理/电磁感应（电动车）、电功率/电路基本连接（充电与能耗）、能量转化与守恒（对比核心）、摩擦力/动能（行驶原理）—— 缺少技术原理的对比报告是空洞的\n- 其他优先：统计、函数/百分比、比热容/热值（能耗计算）、环境排放、说明文写作\n- 禁止 matched：history 学科及一切历史朝代/革命/战争节点；电解池、原电池（属工业化学非消费科普）；程序控制、传感器、数据采集算法\n- external 示例：全生命周期用车成本、购置补贴/税费政策、保值率评估、电池衰减与续航里程（课标外）\n- reason 须写明该知识点如何帮助理解"新能源 vs 燃油"的技术差异，禁止泛泛「了解能源」`;
+      return `\n### 类型要求：消费决策（含技术原理理解）\n- 交付物是决策报告/对比测算表\n- **技术原理必选**：消费决策不能只做价格对比，必须理解候选方案背后的核心技术差异（至少 2 个 physics/chemistry 节点）。根据项目具体对象选取相关原理——如涉及动力选型则选电动机/热机/效率，涉及电子产品则选电路/信号/频率/功率，涉及材料则选结构/强度/热传导等\n- 其他优先：统计、函数/百分比、环境排放、说明文写作\n- 禁止 matched：history 学科及一切历史朝代/革命/战争节点；电解池、原电池（属工业化学）；与项目对象无关的研发级节点\n- external 示例：全生命周期使用成本、购置补贴/税费政策、保值率评估（课标外）\n- reason 须写明该知识点如何帮助理解候选方案的技术差异，禁止泛泛「了解能源」「了解技术」`;
     case 'engineering':
       if (isGroundRoboticsGoal(goal)) {
         return `\n### 类型要求：自动驾驶/循迹小车工程\n- 交付物是可运行的地面小车原型+调试测试记录，不是航空/无人机/火箭项目\n- matched 须覆盖：电路与电机驱动、循迹/距离传感、控制逻辑或算法、运动/摩擦/受力、测试调试\n- 优先：串联并联电路、传感器、摩擦力、牛顿运动、信息技术编程、简单机械、工业/服务机器人运动控制\n- **禁止** matched：飞行控制系统、航空电子、无人机、弹道/火箭、抗生素/细胞/免疫/耐药、正则表达式/形式语言/编译原理等无关大学节点\n- reason 须写明用于小车哪一子系统（传感/驱动/控制/调试），禁止泛泛「了解控制」`;
