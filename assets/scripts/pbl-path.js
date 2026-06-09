@@ -1862,22 +1862,27 @@ class PBLPathBuilder {
         },
         {
           id: 'cost', label: '成本与数据建模',
-          keywords: ['函数', '一次函数', '计算', '统计', '数据', '平均数', '费用', '成本', '百分比', '方程'],
+          keywords: ['函数', '一次函数', '计算', '统计', '数据', '平均数', '费用', '成本', '百分比', '方程', '电费', '油耗'],
           subjects: ['math']
         },
         {
-          id: 'energy_compare', label: '动力与能耗差异（科普）',
-          keywords: ['内燃机', '热机', '效率', '电能', '化学能', '能量', '热值', '做功', '机械能', '内能'],
+          id: 'tech_principle', label: '动力系统技术原理',
+          keywords: ['内燃机', '热机', '效率', '电动机', '电磁感应', '电池', '电能', '化学能', '能量转化', '热值', '做功', '功率', '电功率', '电路', '电流', '电压', '电阻', '动能', '机械能', '摩擦力'],
           subjects: ['physics', 'chemistry']
         },
         {
+          id: 'energy_compare', label: '能源类型与能耗对比',
+          keywords: ['能源', '新能源', '燃料', '比热容', '热量', '内能', '电能', '焦耳', '千瓦时', '续航', '充电', '油耗', '百公里', '能量守恒'],
+          subjects: ['physics', 'chemistry', 'geography']
+        },
+        {
           id: 'environment', label: '环保与可持续',
-          keywords: ['环境', '污染', '排放', '碳', '气候', '资源', '可持续', '温室'],
+          keywords: ['环境', '污染', '排放', '碳', '气候', '资源', '可持续', '温室', '清洁能源', '碳中和'],
           subjects: ['geography', 'chemistry']
         },
         {
           id: 'decision', label: '决策论证与报告',
-          keywords: ['说明', '报告', '论证', '写作', '分析', '比较', '调查', '实用'],
+          keywords: ['说明', '报告', '论证', '写作', '分析', '比较', '调查', '实用', '建议'],
           subjects: ['chinese', 'math']
         }
       ];
@@ -4397,6 +4402,33 @@ class PBLPathBuilder {
         const bm = specSubjects.includes(b.subject) ? 1 : 0;
         return bm - am;
       });
+    }
+    // 消费决策类（新能源vs燃油）：保底至少 2 个 physics 技术原理节点
+    if (this._isConsumerDecisionGoal(goal)) {
+      const physicsCount = list.filter(n => n.subject === 'physics').length;
+      if (physicsCount < 2) {
+        const techKeywords = ['电动机', '内燃机', '热机', '电功率', '电磁感应', '能量转化', '功率', '电路', '动能', '机械能', '摩擦力', '电流', '电压', '电阻'];
+        const seen = new Set(list.map(n => n.id));
+        const physicsPool = effectivePool
+          .filter(n => n.subject === 'physics' && !seen.has(n.id))
+          .map(n => {
+            const name = String(n.name || '');
+            let s = 0;
+            techKeywords.forEach(kw => { if (name.includes(kw)) s += 5; });
+            return { ...n, _techScore: s };
+          })
+          .filter(n => n._techScore > 0)
+          .sort((a, b) => b._techScore - a._techScore);
+        const need = 2 - physicsCount;
+        physicsPool.slice(0, need).forEach(n => {
+          if (list.length < limit) {
+            list.push({ ...n, confidence: 0.82, matchReason: '技术原理保底召回', pblRole: 'bridge' });
+          }
+        });
+        if (physicsPool.slice(0, need).length) {
+          console.warn('[PBL] 消费决策技术原理保底:', physicsPool.slice(0, need).map(n => n.name).join('、'));
+        }
+      }
     }
     return this._assignCoreRoles(list.slice(0, limit), min);
   }
