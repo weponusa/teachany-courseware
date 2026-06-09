@@ -207,6 +207,65 @@ body {
   background: rgba(30,41,59,0.6);
 }
 .pbl-chat-panel.visible { display: block; }
+.pbl-candidate-panel {
+  display: none;
+  margin: 18px 0;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(245,158,11,0.28);
+  background: rgba(15,23,42,0.72);
+}
+.pbl-candidate-panel.visible { display: block; }
+.pbl-candidate-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 10px 0 12px;
+}
+.pbl-candidate-toolbar input {
+  flex: 1;
+  min-width: 220px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.pbl-candidate-btn {
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(245,158,11,0.35);
+  background: rgba(245,158,11,0.12);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+}
+.pbl-candidate-btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--secondary));
+  color: #fff;
+  border: none;
+}
+.pbl-candidate-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.pbl-candidate-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 9px 10px;
+  border: 1px solid rgba(148,163,184,0.18);
+  border-radius: 10px;
+  background: rgba(30,41,59,0.45);
+  font-size: 13px;
+}
+.pbl-candidate-name { font-weight: 650; color: var(--text); line-height: 1.45; }
+.pbl-candidate-meta { margin-top: 3px; color: var(--dimmer); font-size: 12px; }
+.pbl-selected-summary { color: var(--dim); font-size: 12px; margin: 6px 0 10px; }
 .pbl-chat-header {
   font-size: 15px;
   font-weight: 700;
@@ -1030,6 +1089,19 @@ body {
     </div>
   </div>
 
+  <!-- 候选知识点编辑 -->
+  <div id="pblCandidatePanel" class="pbl-candidate-panel" aria-live="polite">
+    <div class="pbl-chat-header">候选知识点与图谱重设</div>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:8px">勾选要进入学习图谱主线的知识点；可从候选列表增减，也可从全科图谱模糊检索补充。点击重设后，图谱和实施路径会同步更新。</p>
+    <div class="pbl-candidate-toolbar">
+      <input id="pblKnowledgeSearchInput" type="text" placeholder="搜索全科图谱，如：任务调度、热控、通信链路" onkeydown="if(event.key==='Enter') searchPBLKnowledgeCandidates()" />
+      <button type="button" class="pbl-candidate-btn" onclick="searchPBLKnowledgeCandidates()">检索补充</button>
+      <button type="button" class="pbl-candidate-btn primary" onclick="applyPBLKnowledgeSelection()">一键重设学习图谱和实施路径</button>
+    </div>
+    <div class="pbl-selected-summary" id="pblSelectedSummary"></div>
+    <div class="pbl-candidate-list" id="pblCandidateList"></div>
+  </div>
+
   <!-- 导出 -->
   <div id="pblExportBar" class="pbl-export-bar" aria-live="polite">
     <span class="pbl-export-label">拆解结果可离线保存或分享</span>
@@ -1101,7 +1173,7 @@ body {
 <script src="./assets/scripts/pbl-project-form.js?v=20260609-structured"></script>
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260609-pbl-adult-space-fix"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260609-pbl-candidate-editor"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1109,6 +1181,8 @@ body {
 let pblRenderer = null;
 let pblResult = null;
 let pblChatHistory = [];
+let pblKnowledgeSelection = new Set();
+let pblCandidateView = [];
 
 function updatePBLGradeDetailOptions() {
   const level = document.getElementById('pblGradeLevel')?.value || 'any';
@@ -1331,12 +1405,99 @@ async function refinePBLGoal() {
   await runPBLAnalysis({ refine: true, userMessage: msg });
 }
 
+function getPBLMainlineNodes(result) {
+  const nodes = result?.graphData?.nodes || [];
+  return nodes.filter(n => n && n.pathStep).sort((a, b) => (a.pathStep || 99) - (b.pathStep || 99));
+}
+
+function ensurePBLCandidateState(result) {
+  const mainline = getPBLMainlineNodes(result);
+  const selectedIds = result?.selectedKnowledgeIds?.length
+    ? result.selectedKnowledgeIds
+    : mainline.map(n => n.id).filter(Boolean);
+  pblKnowledgeSelection = new Set(selectedIds);
+  const merged = [
+    ...(mainline || []),
+    ...(result?.candidateNodes || []),
+    ...(result?.graphData?.nodes || []).filter(n => n && !n.isExternal),
+  ];
+  const seen = new Set();
+  pblCandidateView = merged.filter(n => n && n.id && !seen.has(n.id) && (seen.add(n.id) || true)).slice(0, 120);
+}
+
+function renderPBLCandidatePanel(result) {
+  const panel = document.getElementById('pblCandidatePanel');
+  const list = document.getElementById('pblCandidateList');
+  const summary = document.getElementById('pblSelectedSummary');
+  if (!panel || !list || !summary || !result) return;
+  ensurePBLCandidateState(result);
+  panel.classList.add('visible');
+  renderPBLCandidateList();
+}
+
+function renderPBLCandidateList(nodes = pblCandidateView) {
+  const list = document.getElementById('pblCandidateList');
+  const summary = document.getElementById('pblSelectedSummary');
+  if (!list || !summary) return;
+  const items = nodes || [];
+  summary.textContent = `已选择 ${pblKnowledgeSelection.size} 个主线知识点；当前列表 ${items.length} 个候选。`;
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--dim);font-size:13px">暂无候选，请先检索或重新拆解项目。</div>';
+    return;
+  }
+  list.innerHTML = items.map(n => {
+    const id = encodeURIComponent(n.id);
+    const checked = pblKnowledgeSelection.has(n.id) ? 'checked' : '';
+    const meta = [n.systemTag || n.system || '', n.subject || '', n.gradeLabel || (n.grade > 0 ? `G${n.grade}` : (n.stage || ''))].filter(Boolean).join(' · ');
+    return `<label class="pbl-candidate-item">
+      <input type="checkbox" ${checked} onchange="togglePBLKnowledgeCandidate('${id}', this.checked)" />
+      <span><span class="pbl-candidate-name">${escapePBLHtml(n.name || n.id)}</span><span class="pbl-candidate-meta">${escapePBLHtml(meta || '知识点')}</span></span>
+    </label>`;
+  }).join('');
+}
+
+function togglePBLKnowledgeCandidate(encodedId, checked) {
+  const id = decodeURIComponent(encodedId || '');
+  if (!id) return;
+  if (checked) pblKnowledgeSelection.add(id);
+  else pblKnowledgeSelection.delete(id);
+  const summary = document.getElementById('pblSelectedSummary');
+  if (summary) summary.textContent = `已选择 ${pblKnowledgeSelection.size} 个主线知识点；当前列表 ${pblCandidateView.length} 个候选。`;
+}
+
+async function searchPBLKnowledgeCandidates() {
+  if (!pblResult) { alert('请先完成一次项目拆解'); return; }
+  const input = document.getElementById('pblKnowledgeSearchInput');
+  const q = input?.value?.trim();
+  if (!q) { alert('请输入检索关键词'); return; }
+  const builder = window.PBLPathBuilder;
+  if (!builder || typeof builder.searchKnowledgeCandidates !== 'function') return;
+  await builder.loadUnifiedIndex();
+  const results = builder.searchKnowledgeCandidates(q, pblResult.goal || buildPBLGoalFromForm(), pblResult.systems || getSelectedSystems(), 40);
+  const seen = new Set();
+  pblCandidateView = [...results, ...pblCandidateView].filter(n => n && n.id && !seen.has(n.id) && (seen.add(n.id) || true)).slice(0, 160);
+  pblResult.candidateNodes = pblCandidateView;
+  renderPBLCandidateList(results.length ? pblCandidateView : []);
+}
+
+async function applyPBLKnowledgeSelection() {
+  if (!pblResult) { alert('请先完成一次项目拆解'); return; }
+  if (!pblKnowledgeSelection.size) { alert('请至少选择 1 个知识点'); return; }
+  const builder = window.PBLPathBuilder;
+  if (!builder || typeof builder.redesignPBLWithSelectedKnowledge !== 'function') return;
+  await builder.loadUnifiedIndex();
+  const updated = builder.redesignPBLWithSelectedKnowledge(pblResult, [...pblKnowledgeSelection]);
+  pblResult = updated;
+  renderPBLResult(updated);
+}
+
 function renderPBLResult(result) {
   pblResult = result;
   if (window.PBLPathBuilder && typeof window.PBLPathBuilder.buildPathPlanFromResult === 'function') {
     result.pathPlan = window.PBLPathBuilder.buildPathPlanFromResult(result);
     if (result.pathPlan && result.pathPlan.phases) result.projectPhases = result.pathPlan.phases;
   }
+  renderPBLCandidatePanel(result);
   renderPBLStats(result);
   renderPBLGraph(result);
   const activePhase = document.querySelector('.pbl-path-phase.active') || document.querySelector('.pbl-path-phase');

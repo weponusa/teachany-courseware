@@ -2145,6 +2145,7 @@ class PBLPathBuilder {
   /** 返回无关节点剔除原因；null 表示可保留（硬门禁 + 泛化相关性分） */
   _getNodeIrrelevanceReason(node, goal, domains, archetype) {
     if (!node) return '空节点';
+    if (node._manualSelected) return null;
     if (node.isExternal || node.layer === 'external' || String(node.id || '').startsWith('ext-')) return null;
     if (!this._passesHardNodeGate(node, goal, archetype)) {
       if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return '大学层默认排除';
@@ -5598,6 +5599,129 @@ class PBLPathBuilder {
     };
   }
 
+  _compactCandidateNodes(nodes, limit = 120) {
+    const seen = new Set();
+    return (nodes || [])
+      .filter(n => n && n.id && !seen.has(n.id) && (seen.add(n.id) || true))
+      .slice(0, limit)
+      .map(n => ({
+        id: n.id,
+        name: n.name,
+        subject: n.subject,
+        grade: n.grade,
+        gradeLabel: n.gradeLabel,
+        stage: n.stage,
+        system: n.system,
+        systemTag: n.systemTag,
+        definition: n.definition,
+        pblRole: n.pblRole,
+        confidence: n.confidence,
+      }));
+  }
+
+  searchKnowledgeCandidates(query, goal = '', selectedSystems = ['all'], limit = 30) {
+    const q = String(query || '').trim();
+    if (!q) return [];
+    const terms = q.split(/[\s,，、]+/).map(t => t.trim()).filter(Boolean);
+    const activeSystems = selectedSystems.includes('all')
+      ? Array.from(this.systemIndex.keys())
+      : selectedSystems.filter(s => this.systemIndex.has(s));
+    const scored = [];
+    this.unifiedIndex.forEach((node) => {
+      if (!node || node.isExternal) return;
+      if (activeSystems.length && !activeSystems.includes(node.system)) return;
+      if (goal && !this._isMatchingPoolNode(node, goal)) return;
+      const name = String(node.name || '');
+      const text = this._nodeSearchText(node);
+      let score = 0;
+      terms.forEach(t => {
+        if (!t) return;
+        if (name === t) score += 30;
+        else if (name.includes(t)) score += 18;
+        else if (text.includes(t)) score += 8;
+      });
+      if (!score && terms.length) return;
+      score += this._scoreUniversalRelevance(node, goal || q, this._activeBlueprint, this._inferProjectDomains(goal || q), this._resolvedArchetype) * 0.25;
+      scored.push({ ...node, _score: score });
+    });
+    scored.sort((a, b) => b._score - a._score);
+    return this._compactCandidateNodes(scored, limit);
+  }
+
+  redesignPBLWithSelectedKnowledge(previousResult, selectedIds = []) {
+    if (!previousResult) throw new Error('请先完成一次项目拆解');
+    const ids = [...new Set((selectedIds || []).filter(Boolean))];
+    if (!ids.length) throw new Error('请至少选择 1 个知识点');
+    const goal = previousResult.goal || '';
+    this._activeProjectSpec = previousResult.projectSpec || this._activeProjectSpec || null;
+    this._activeBlueprint = previousResult.projectBlueprint || this._activeBlueprint || null;
+    const archetype = this._resolveArchetype(goal);
+    this._resolvedArchetype = archetype;
+    const existing = new Map((previousResult.graphData?.nodes || []).map(n => [n.id, n]));
+    const selected = ids.map((id, idx) => {
+      const full = this.unifiedIndex.get(id) || existing.get(id);
+      if (!full) return null;
+      const ratio = ids.length <= 1 ? 1 : idx / (ids.length - 1);
+      const role = ratio < 0.34 ? 'foundation' : (ratio < 0.67 ? 'bridge' : 'core');
+      return { ...full, pblRole: full.pblRole || role, confidence: full.confidence || 0.95, _manualSelected: true };
+    }).filter(Boolean);
+    if (!selected.length) throw new Error('所选知识点不在当前图谱索引中');
+
+    const external = (previousResult.external || previousResult.graphData?.nodes?.filter(n => n.layer === 'external') || [])
+      .slice(0, PBLPathBuilder.PBL_MAX_EXTERNAL);
+    let graphData = this._buildRichMainlineGraph(selected, ids, goal, [], external);
+    graphData = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES);
+    const matched = this._getMainlinePath(graphData);
+    const blueprintPhases = previousResult.projectBlueprint
+      ? this._blueprintProjectPhases(previousResult.projectBlueprint, goal)
+      : [];
+    const pathPlan = this._buildPathPlan({
+      goal,
+      graphData,
+      projectPhases: previousResult.projectPhases || [],
+      blueprintPhases,
+      knowledgeChain: matched.map(n => n.name).join(' → '),
+      external,
+    });
+    const techRoute = this._buildTechRouteFromPathPlan(pathPlan) || previousResult.techRoute || '';
+    const candidateNodes = this._compactCandidateNodes([
+      ...(previousResult.candidateNodes || []),
+      ...selected,
+      ...(previousResult.graphData?.nodes || []),
+    ], 160);
+    const quality = this.computeQualityScore({
+      goal,
+      matched,
+      external,
+      projectBlueprint: previousResult.projectBlueprint,
+      archetype,
+      graphData,
+      pathPlan,
+    });
+    return {
+      ...previousResult,
+      matched,
+      external,
+      graphData,
+      pathPlan,
+      projectPhases: pathPlan.phases,
+      techRoute,
+      knowledgeChain: pathPlan.knowledgeChain,
+      candidateNodes,
+      selectedKnowledgeIds: ids,
+      quality,
+      stats: {
+        ...(previousResult.stats || {}),
+        matchedCount: matched.length,
+        externalCount: external.length,
+        graphNodes: graphData.nodes.length,
+        graphLinks: graphData.links.length,
+        qualityScore: quality.score,
+        qualityGrade: quality.grade,
+      },
+    };
+  }
+
   async refinePBLResult(previousResult, userMessage, projectSpec, selectedSystems = ['all'], onStatus = null, chatHistory = []) {
     const msg = String(userMessage || '').trim();
     if (!msg) throw new Error('请输入修改要求');
@@ -5866,6 +5990,11 @@ class PBLPathBuilder {
       graphData: finalGraphData,
       pathPlan,
     });
+    const candidateNodes = this._compactCandidateNodes([
+      ...finalMatched,
+      ...(stage1.filteredCandidates || []),
+      ...(curriculumPool || []),
+    ], 160);
 
     return {
       goal,
@@ -5883,6 +6012,8 @@ class PBLPathBuilder {
       pathPlan,
       knowledgeChain: moduleChain || pathPlan.knowledgeChain,
       graphData: finalGraphData,
+      candidateNodes,
+      selectedKnowledgeIds: finalMatched.map(n => n.id),
       complexProject: finalized.complex,
       quality,
       relevanceAudit: {
