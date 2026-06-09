@@ -716,6 +716,9 @@ class PBLPathBuilder {
     const band = this._parseExplicitGradeBand(goal, projectSpec || this._activeProjectSpec);
     if (!band.explicit) return true;
     const grade = parseInt(node.grade, 10) || 0;
+    if (band.minGrade === 0 && band.maxGrade === 0) {
+      return !!(this._isUniversityNode(node) || node.isUniversity);
+    }
     if (band.maxGrade <= 6) {
       if (this._isUniversityNode(node) || node.isUniversity) return false;
       if (node.system === 'cn') return grade >= band.minGrade && grade <= band.maxGrade;
@@ -732,21 +735,31 @@ class PBLPathBuilder {
     return true;
   }
 
+  /** 成人/大学项目：优先使用大学层工程/计算机节点，避免退回 K12 课标 */
+  _isAdultOrUniversityContext(goal, projectSpec = null) {
+    const spec = projectSpec || this._activeProjectSpec;
+    if (spec?.gradeLevel === 'adult' || spec?.gradeLevel === 'university') return true;
+    const g = String(goal || '');
+    return /成人|在职|大学|本科|高职|大一|大二|大三|大四|研究生|工程实施方案|企业|产业级/i.test(g);
+  }
+
   /** 用户明确需要大学层拓展（默认 PBL 只匹配 K12 全科图谱子图） */
   _shouldAllowUniversityNodes(goal, projectSpec = null) {
     const spec = projectSpec || this._activeProjectSpec;
-    if (spec?.gradeLevel === 'university') return true;
+    if (this._isAdultOrUniversityContext(goal, spec)) return true;
     if (this._isPrimarySchoolContext(goal, spec)) return false;
     if (spec?.gradeLevel === 'primary' || spec?.gradeLevel === 'junior' || spec?.gradeLevel === 'senior') {
       return false;
     }
     const g = String(goal || '');
-    return /大学|本科|高职|大一|大二|大三|大四|研究生|竞赛拓展|高等数学|大学物理|大学化学/i.test(g);
+    return /竞赛拓展|高等数学|大学物理|大学化学/i.test(g);
   }
 
   /** 默认匹配池：CN 仅 K12（grade 1–12），国际课标保留；大学层按需开启 */
   _isMatchingPoolNode(node, goal) {
     if (!node || node.isExternal) return false;
+    const adultOrUni = this._isAdultOrUniversityContext(goal);
+    if (adultOrUni) return !!(this._isUniversityNode(node) || node.isUniversity);
     if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return false;
     if (!this._passesGradeBandGate(node, goal)) return false;
     if (this._isPrimarySchoolContext(goal)) return node.system === 'cn';
@@ -757,6 +770,9 @@ class PBLPathBuilder {
 
   _getK12Pool(goal, pool = null) {
     const src = pool || [...this.unifiedIndex.values()];
+    if (this._isAdultOrUniversityContext(goal)) {
+      return src.filter(n => n.system === 'cn' && this._isMatchingPoolNode(n, goal));
+    }
     return src.filter(n => n.system === 'cn' && this._isK12Node(n) && this._isMatchingPoolNode(n, goal));
   }
 
@@ -1412,6 +1428,16 @@ class PBLPathBuilder {
 
   _parseGoalSubject(goal) {
     const g = String(goal || '').trim();
+    // 处理带【标签】格式的结构化 goal：优先提取【任务】字段
+    const taskMatch = g.match(/【任务】\s*(.+?)(?:\n|【|$)/);
+    if (taskMatch) {
+      let task = taskMatch[1].trim();
+      // 进一步剥离动词前缀
+      const verbM = task.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|记录|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
+      if (verbM) task = verbM[1].trim();
+      task = task.replace(/^(?:关于|围绕|有关)\s*/, '').replace(/[，。；].*$/, '').slice(0, 36);
+      return task || g.slice(0, 36);
+    }
     let subject = g;
     const m = g.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|记录|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
     if (m) subject = m[1].trim();
@@ -1503,6 +1529,15 @@ class PBLPathBuilder {
   _compactProjectLabel(goal, topic = null) {
     const t = topic || this._extractTopicProfile(goal);
     let label = String(t.coreTopic || this._parseGoalSubject(goal) || '').trim();
+    // 防护：如果 label 仍含【标签】格式（上游未完全剥离），从中提取任务核心
+    if (/【/.test(label)) {
+      const taskM = label.match(/【任务】\s*(.+?)(?:\s*【|$)/);
+      if (taskM) {
+        label = taskM[1].trim().replace(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|记录|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*/, '');
+      } else {
+        label = this._parseGoalSubject(goal);
+      }
+    }
     label = label
       .replace(/^关于/, '')
       .replace(/现状.*$/, '')
@@ -1730,6 +1765,7 @@ class PBLPathBuilder {
     if (this._isExhibitionRedesignGoal(g)) return 'exhibition-redesign';
     if (this._isIndustryInnovationGoal(g)) return 'industry-innovation';
     if (/工坊|鲁班|榫卯|古典.*风格|木结构|建筑模型|微缩|传统建筑|斗拱|飞檐/.test(g)) return 'maker-workshop';
+    if (/算力中心|数据中心|太空算力|云计算|边缘计算|计算中心|服务器集群|卫星计算|轨道计算/.test(g)) return 'engineering';
     if (/火箭|导弹|发射|机器人|物流机器人|医院.*机器人|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现/.test(g)) return 'engineering';
     if (/无人机|原型/.test(g) && /设计|制作|研发|装置|系统|搭建|开发/.test(g)) return 'engineering';
     if (this._isChemistryInquiryGoal(g)) return 'scientific-inquiry';
@@ -1888,6 +1924,14 @@ class PBLPathBuilder {
         { id: 'material', label: '材料与工艺', keywords: ['材料', '木材', '榫卯', '胶合', '工具', '安全', '工艺'], subjects: ['science', 'physics'] },
         { id: 'build', label: '搭建与装饰', keywords: ['搭建', '组装', '切割', '打磨', '装饰', '斗拱', '结构'], subjects: ['science', 'physics'] },
         { id: 'accept', label: '验收与展示', keywords: ['验收', '测试', '展示', '报告', '量规', '改进'], subjects: ['chinese', 'math'] },
+      ];
+    }
+    if (/算力中心|数据中心|太空算力|云计算|边缘计算|计算中心|服务器集群|卫星计算|轨道计算/.test(g)) {
+      return [
+        { id: 'requirements', label: '需求与约束定义', keywords: ['算力', '任务负载', '轨道环境', '功耗', '散热', '通信链路', '辐射', '需求'], subjects: ['computer-science', 'engineering', 'physics'] },
+        { id: 'architecture', label: '系统架构设计', keywords: ['系统架构', '计算节点', '电源', '热控', '通信', '冗余', '模块化', '接口'], subjects: ['computer-science', 'engineering'] },
+        { id: 'operations', label: '调度与运行控制', keywords: ['任务调度', '遥测', '容错', '故障切换', '资源分配', '监控', '控制流程'], subjects: ['computer-science', 'engineering'] },
+        { id: 'verification', label: '仿真测试与迭代', keywords: ['仿真', '指标', '延迟', '带宽', '能耗', '热平衡', '可靠性', '测试'], subjects: ['computer-science', 'engineering', 'physics'] },
       ];
     }
     if (/火箭|导弹|发射|弹道|模型火箭|航天/.test(g)) {
@@ -2515,8 +2559,15 @@ class PBLPathBuilder {
     let name = String(raw || '').trim();
     // 去除【学科】XX【任务】XX」前缀
     name = name.replace(/^【学科】[^】]*【任务】[^」]*」\s*/, '');
-    // 去除残留的【...】标签对
-    name = name.replace(/^【[^】]{1,6}】\s*/, '');
+    // 去除所有残留的【...】标签对（可能有多个连续的：【学段】XX【学科】XX【任务】XX【产出】XX）
+    if (/【/.test(name)) {
+      const taskM = name.match(/【任务】\s*(.+?)(?:\s*【|$)/);
+      if (taskM) {
+        name = taskM[1].trim().replace(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析)(?:一个|一款|一份|一组|一次)?\s*/, '');
+      } else {
+        name = name.replace(/【[^】]*】\s*/g, '').trim();
+      }
+    }
     // 去除 goal 全文嵌套（如果 phaseName 超过30字且含典型 goal 动词，截取最后的短标题）
     if (name.length > 30 && /制定|调查|提出|设计|完成|探究/.test(name)) {
       const lastSeg = name.split(/[，,；;、」]/).pop().trim();
@@ -2697,6 +2748,12 @@ class PBLPathBuilder {
     const phase = String(phaseName || '');
     const art = profile.shortLabel || profile.artifact;
     if (fallback && fallback.length >= 8 && !/阶段成果|探究任务|素养|能力/.test(fallback)) return fallback;
+    if (/算力中心|数据中心|太空算力|卫星计算|轨道计算/.test(String(goal || ''))) {
+      if (/需求|约束|原理|调研/.test(phase)) return `「${art}」需求与约束定义表（任务负载+轨道环境+性能指标）`;
+      if (/架构|结构|装置|设计|方案/.test(phase)) return `「${art}」系统架构图与方案对比表（含电源/热控/通信/冗余）`;
+      if (/控制|实现|调度|运行/.test(phase)) return `「${art}」调度控制流程图 + 故障切换策略说明`;
+      if (/测试|迭代|验证|验收/.test(phase)) return `「${art}」测试验收表 + 工程实施方案推荐稿`;
+    }
     if (/调研|勘测|现场|需求/.test(phase)) return `「${art}」调研记录表（需求清单+照片编号）`;
     if (/设计|方案|草图|图纸|风格/.test(phase)) return `「${art}」${phase}图册（标注尺寸的方案稿）`;
     if (/材料|采购|物料|预算/.test(phase)) return `「${art}」材料/经费清单（含规格与合计）`;
@@ -2747,6 +2804,12 @@ class PBLPathBuilder {
     const phase = String(phaseName || '');
     const profile = profileOrType?.artifact ? profileOrType : this._goalProfile(goal);
     const g = profile.raw || goal;
+    if (/算力中心|数据中心|太空算力|卫星计算|轨道计算/.test(String(g || ''))) {
+      if (/需求|约束|原理|调研/.test(phase)) return ['需求矩阵模板', '公开技术资料', '指标清单'];
+      if (/架构|结构|设计|方案/.test(phase)) return ['系统架构图模板', '方案对比矩阵', '风险清单'];
+      if (/控制|实现|调度|运行/.test(phase)) return ['流程图工具', '接口清单模板', '异常场景表'];
+      if (/测试|迭代|验证|验收/.test(phase)) return ['测试指标表', '仿真/估算表', '迭代记录表'];
+    }
     if (/调研|勘测/.test(phase)) return ['记录表模板', '相机/手机', profile.domains.woodwork ? '卷尺' : '数据来源清单'];
     if (/设计|草图|图纸|风格/.test(phase)) {
       return profile.domains.software ? ['绘图/CAD 或设计工具', '尺寸标注规范'] : ['A3纸或绘图纸', '铅笔尺规', '标注笔'];
@@ -3923,17 +3986,8 @@ class PBLPathBuilder {
     return { nodes: graphData.nodes, links: this._deduplicateLinks(links) };
   }
 
-  _formatPhaseLiteracy(phase) {
-    const lit = phase.literacy || {};
-    const rows = [
-      ['知识', lit.knowledge || phase.knowledge],
-      ['方法', lit.method || phase.method],
-      ['能力', lit.ability || phase.ability],
-      ['态度', lit.attitude || phase.attitude],
-      ['情感', lit.emotion || phase.emotion],
-      ['价值观', lit.values || phase.values]
-    ].filter(([, v]) => v && String(v).trim());
-    return rows.map(([k, v]) => `${k}：${v}`).join('；');
+  _formatPhaseLiteracy() {
+    return '';
   }
 
   static PATH_STEP_CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫'];
@@ -4101,6 +4155,25 @@ class PBLPathBuilder {
       return mk(map[role] || map.core);
     }
     if (type === 'engineering') {
+      if (/算力中心|数据中心|太空算力|云计算|边缘计算|计算中心|服务器集群|卫星计算|轨道计算/.test(String(goal || ''))) {
+        const phase = String(blueprintPhase?.phase || group.phase || '');
+        if (/需求|约束|原理/.test(phase)) return mk([
+          '梳理太空算力中心的 3 类任务负载（推理、遥感处理、链路缓存），形成需求矩阵',
+          '列出轨道环境、功耗、散热、通信时延、辐射防护 5 类约束并标注数据来源',
+        ]);
+        if (/架构|结构|方案|装置|设计/.test(phase)) return mk([
+          '绘制太空算力中心系统架构图，标注计算节点、电源、热控、通信与冗余链路',
+          '完成 2 套架构方案对比表，按功耗、重量、带宽、可靠性四项指标打分',
+        ]);
+        if (/控制|实现|调度|运行/.test(phase)) return mk([
+          '设计任务调度与遥测控制流程图，明确数据上行、计算处理、结果下传三个接口',
+          '编写故障切换策略说明，覆盖过热、链路中断、节点失效三种异常场景',
+        ]);
+        if (/测试|迭代|验证|验收/.test(phase)) return mk([
+          '用指标表验证延迟、带宽、能耗、热冗余四项性能，记录至少 2 轮方案调整',
+          '整理太空算力中心工程实施方案，附风险清单、测试结论与下一轮迭代建议',
+        ]);
+      }
       const map = {
         foundation: [
           `画出系统框图，标注输入/输出/关键部件、电源与信号走向`,
@@ -4128,8 +4201,8 @@ class PBLPathBuilder {
           `完成 1 次小范围试做/预调查，记录问题清单与修订计划`,
         ],
         core: [
-          `按方案执行并每日更新过程记录（数据/照片/草稿）`,
-          `整理最终成果并逐条对照验收标准自评打勾`,
+          `执行「${shortGoal}」核心方案，按阶段记录关键数据、过程证据与版本变化`,
+          `整理「${shortGoal}」最终成果包，对照验收标准写出自评结论与改进清单`,
         ],
       };
       return mk(map[role] || map.core);
@@ -4251,10 +4324,11 @@ class PBLPathBuilder {
     const phases = groups.map((g, i) => {
       const lp = llm[i] || {};
       const bp = blueprintPhases[i] || {};
-      const contextual = this._suggestPhaseSteps(goal, g, bp);
+      const keptNodes = (g.nodes || []).filter(n => !this._getNodeIrrelevanceReason(n, goal, domains, archetype));
+      const contextual = this._suggestPhaseSteps(goal, { ...g, nodes: keptNodes.length ? keptNodes : g.nodes }, bp);
       const steps = this._pickConcreteSteps(lp.steps, bp.steps, contextual)
         || contextual
-        || g.nodes.map(n => {
+        || keptNodes.map(n => {
           const circ = this._pathStepCircled(n.pathStep);
           return `阅读${circ}「${n.name}」要点，完成 1 份与本阶段产出相关的记录或计算（附数据/例证）`;
         });
@@ -4262,18 +4336,16 @@ class PBLPathBuilder {
         phaseIndex: g.phaseIndex,
         phase: lp.phase || bp.phase || lp.name || g.phase,
         role: g.role,
-        pathSteps: g.pathSteps,
-        pathStepLabels: g.pathSteps.map(s => this._pathStepCircled(s)),
-        graphRef: g.pathSteps.map(s => this._pathStepCircled(s)).join(''),
-        nodeIds: g.nodeIds,
-        knowledgeNames: (g.nodes || [])
-          .filter(n => !this._getNodeIrrelevanceReason(n, goal, domains, archetype))
-          .map(n => n.name),
+        pathSteps: keptNodes.map(n => n.pathStep),
+        pathStepLabels: keptNodes.map(n => this._pathStepCircled(n.pathStep)),
+        graphRef: keptNodes.map(n => this._pathStepCircled(n.pathStep)).join(''),
+        nodeIds: keptNodes.map(n => n.id),
+        knowledgeNames: keptNodes.map(n => n.name),
         steps,
         deliverable: this._pickConcreteDeliverable(lp, bp, g.role, goal),
         tools: bp.tools || lp.tools || this._inferPhaseTools(goal, lp.phase || bp.phase || g.phase, this._classifyProjectType(goal)),
         acceptance: bp.acceptance || lp.acceptance || [],
-        literacy: this._literacyFromLlmPhase(lp)
+        literacy: {}
       };
     });
     const chain = knowledgeChain || mainline.map(n => n.name).join(' → ');

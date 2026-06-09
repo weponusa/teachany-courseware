@@ -64,6 +64,7 @@ function classifyProjectType(goal) {
   // 工坊/木作
   if (/工坊|鲁班|榫卯|古典.*风格|木结构|建筑模型|微缩|传统建筑|斗拱|飞檐/.test(g)) return 'maker-workshop';
   // 工程/制作
+  if (/算力中心|数据中心|太空算力|云计算|边缘计算|计算中心|服务器集群|卫星计算|轨道计算/.test(g)) return 'engineering';
   if (/火箭|导弹|发射|机器人|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现|循迹|小车|无人机|过滤|净水/.test(g)
     && /设计|制作|研发|装置|系统|搭建|开发|探究|实验/.test(g)) return 'engineering';
   // 科学探究
@@ -170,7 +171,16 @@ function formatTopicAnchorBlock(goal) {
 // 四、通用模块（genericDomainsForType）— 统一 domain 来源
 // ============================================================
 
-function genericDomainsForType(id) {
+function genericDomainsForType(id, goal = '') {
+  const g = String(goal || '');
+  if (/算力中心|数据中心|太空算力|云计算|边缘计算|计算中心|服务器集群|卫星计算|轨道计算/.test(g)) {
+    return [
+      { id: 'requirements', label: '需求与约束定义', keywords: ['算力', '任务负载', '轨道环境', '功耗', '散热', '通信链路', '辐射', '需求'], subjects: ['computer-science', 'engineering', 'physics'] },
+      { id: 'architecture', label: '系统架构设计', keywords: ['系统架构', '计算节点', '电源', '热控', '通信', '冗余', '模块化', '接口'], subjects: ['computer-science', 'engineering'] },
+      { id: 'operations', label: '调度与运行控制', keywords: ['任务调度', '遥测', '容错', '故障切换', '资源分配', '监控', '控制流程'], subjects: ['computer-science', 'engineering'] },
+      { id: 'verification', label: '仿真测试与迭代', keywords: ['仿真', '指标', '延迟', '带宽', '能耗', '热平衡', '可靠性', '测试'], subjects: ['computer-science', 'engineering', 'physics'] },
+    ];
+  }
   const map = {
     'scientific-inquiry': [
       { id: 'question', label: '问题与假设', keywords: ['问题', '假设', '猜想', '现象', '原理'], subjects: ['science', 'physics', 'chemistry', 'biology'] },
@@ -274,7 +284,7 @@ function genericDomainsForType(id) {
 
 /** 根据项目目标推断模块 — 统一走 genericDomainsForType */
 function inferProjectDomains(goal) {
-  return genericDomainsForType(classifyProjectType(goal));
+  return genericDomainsForType(classifyProjectType(goal), goal);
 }
 
 function formatDomainHints(domains) {

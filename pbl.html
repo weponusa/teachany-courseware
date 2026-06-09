@@ -1101,7 +1101,7 @@ body {
 <script src="./assets/scripts/pbl-project-form.js?v=20260609-structured"></script>
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260609-pbl-default-ui"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260609-pbl-adult-space-fix"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1432,13 +1432,8 @@ function escapePBLHtml(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function formatPBLLiteracyRows(lit) {
-  if (!lit) return '';
-  const rows = [
-    ['知识', lit.knowledge], ['方法', lit.method], ['能力', lit.ability],
-    ['态度', lit.attitude], ['情感', lit.emotion], ['价值观', lit.values]
-  ].filter(([, v]) => v && String(v).trim());
-  return rows.map(([k, v]) => `${k}：${escapePBLHtml(v)}`).join('；');
+function formatPBLLiteracyRows() {
+  return '';
 }
 
 function renderPBLDecomposeHTML(blueprint) {
@@ -1517,19 +1512,20 @@ function renderPBLPathPlanHTML(pathPlan) {
   let html = `<div class="pbl-path-chain"><strong>模块主线 / 知识链</strong>：${escapePBLHtml(chainLabel)}</div><div class="pbl-path-phases">`;
   pathPlan.phases.forEach((p, idx) => {
     const color = roleColor[p.role] || '#ef4444';
-    const badges = (p.pathStepLabels || []).map(l =>
-      `<span class="pbl-step-badge" style="border-color:${color}">${l}</span>`).join('');
-    const kn = (p.knowledgeNames || []).map(n => `「${escapePBLHtml(n)}」`).join('、');
+    const knowledgeList = (p.knowledgeNames || []).filter(Boolean);
+    const badges = knowledgeList.length ? (p.pathStepLabels || []).slice(0, knowledgeList.length).map((l, bi) =>
+      `<span class="pbl-step-badge" style="border-color:${color}" title="${escapePBLHtml(knowledgeList[bi] || '')}">${l}</span>`).join('') : '';
+    const kn = knowledgeList.map(n => `「${escapePBLHtml(n)}」`).join('、');
     const stepsHtml = (p.steps || []).map((s, si) =>
       `<li style="margin-bottom:6px"><span style="color:var(--accent);font-weight:600">${si + 1}.</span> ${escapePBLHtml(s)}</li>`
     ).join('');
-    const lit = formatPBLLiteracyRows(p.literacy);
+    const lit = '';
     const tools = (p.tools || []).map(t => escapePBLHtml(t)).join('、');
     html += `<article class="pbl-path-phase${idx === 0 ? ' active' : ''}" data-steps="${(p.pathSteps || []).join(',')}" onclick="highlightPBLPhase(this)">`;
     html += `<header><span class="pbl-phase-idx">阶段 ${p.phaseIndex}</span>`;
     html += `<span class="pbl-phase-graph">${badges}</span>`;
     html += `<span class="pbl-phase-title">${escapePBLHtml(p.phase)}</span></header>`;
-    html += `<div class="pbl-phase-row"><span class="lbl">知识点</span>${kn}</div>`;
+    if (kn) html += `<div class="pbl-phase-row"><span class="lbl">知识点</span>${kn}</div>`;
     if (tools) html += `<div class="pbl-phase-row"><span class="lbl">工具</span>${tools}</div>`;
     html += `<div class="pbl-phase-row"><span class="lbl">任务</span><ol style="margin:0;padding-left:18px">${stepsHtml}</ol></div>`;
     if (lit) html += `<div class="pbl-phase-literacy"><span class="lbl">素养</span>${lit}</div>`;
