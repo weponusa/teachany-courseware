@@ -215,7 +215,10 @@ export async function callBackendLLM(env, messages, opts = {}) {
       return { content, model, backendId };
     } catch (e) {
       lastError = e;
-      const retryable = e.status === 429 || e.status === 503 || e.status === 502 || e.name === 'AbortError';
+      // 402/401：Key 余额不足或失效，降级到链上下一个后端
+      const retryable = e.status === 402 || e.status === 401
+        || e.status === 429 || e.status === 503 || e.status === 502
+        || e.name === 'AbortError';
       if (retryable && i < chain.length - 1) {
         await sleep(Math.min(4000 + i * 2000, 12000));
         continue;
