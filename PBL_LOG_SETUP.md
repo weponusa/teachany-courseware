@@ -1,14 +1,20 @@
 # PBL LLM 日志与模型配置
 
-PBL 拆解默认走 **TeachAny 服务端中转**（硅基流动 DeepSeek-V4-Flash），用户浏览器不接触 API Key；可在前端 ⚙️ 自选服务商/模型。
+PBL 拆解默认走 **TeachAny 服务端中转**（OpenRouter 付费 `qwen/qwen3-next-80b-a3b-instruct`），用户浏览器不接触 Key。
+
+前端 ⚙️ 可自选：
+- **TeachAny 默认**：服务端 OpenRouter Qwen3 Next 80B（无需填 Key）
+- **硅基 / 并行超算**：服务端 Key 中转，可选模型
+- **OpenRouter**：Key 留空走服务端；填写 Key 则浏览器直连所选模型
+- **自定义 API**：填写 Base URL + Key + 模型名
 
 ## 服务端模型链（自动降级）
 
-1. `deepseek-ai/DeepSeek-V4-Flash`（硅基流动）— 默认首选（含 match / 审核 / 调整）
-2. `deepseek-ai/DeepSeek-V4-Pro`（硅基流动）— 强阶段备选
+1. `qwen/qwen3-next-80b-a3b-instruct`（OpenRouter）— 默认首选（含 match / 审核 / 调整）
+2. `deepseek-ai/DeepSeek-V4-Flash`（硅基流动）— 兜底
 3. `GLM-4-Flash`（并行超算）— 兜底
 
-需配置 Pages 加密环境变量：`SILICONFLOW_KEY`（主 Key）、`PARATERA_KEY`（兜底）。`OPENROUTER_KEY` 可选。
+需配置 Pages 加密环境变量：`OPENROUTER_KEY`（主 Key）、`SILICONFLOW_KEY`（兜底）、`PARATERA_KEY`（兜底）。
 
 可选：`PBL_MATCH_MODEL` / `PBL_MODEL_OVERRIDE` 锁定单模型做 A/B。
 
@@ -48,5 +54,5 @@ GET /api/pbl/logs?format=ndjson   # 导出 NDJSON 日志文件
 ## Cloudflare 配置 checklist
 
 1. D1 执行 `0002_pbl_llm_logs.sql`
-2. Pages 加密环境变量：`SILICONFLOW_KEY`（主 Key）、`PARATERA_KEY`（兜底）；`OPENROUTER_KEY` 可选
+2. Pages 加密环境变量：`OPENROUTER_KEY`（PBL 主 Key）、`SILICONFLOW_KEY`（兜底）、`PARATERA_KEY`（兜底）
 3. 可选：设置 `PBL_LOG_TOKEN` 保护日志 API

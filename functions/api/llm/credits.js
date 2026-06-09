@@ -1,5 +1,5 @@
 /**
- * PBL 主 Key 余额查询（硅基流动 + 可选 OpenRouter 备用信息）
+ * PBL 主 Key 余额查询（OpenRouter 主 + 硅基兜底）
  * GET /api/llm/credits?token=...  （若配置了 PBL_LOG_TOKEN）
  */
 
@@ -31,7 +31,7 @@ export async function onRequestGet(context) {
 
   const result = {
     ok: false,
-    pbl_primary: { provider: 'siliconflow', model: 'deepseek-ai/DeepSeek-V4-Flash' },
+    pbl_primary: { provider: 'openrouter', model: 'qwen/qwen3-next-80b-a3b-instruct' },
     siliconflow: null,
     openrouter: null,
   };

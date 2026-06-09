@@ -27,10 +27,10 @@ class PBLPathBuilder {
     this.providers = [
       {
         id: 'preset',
-        name: 'TeachAny 默认（硅基流动 DeepSeek-V4-Flash）',
+        name: 'TeachAny 默认（Qwen3 Next 80B）',
         serverPreset: true,
         model: '',
-        models: ['', 'deepseek-ai/DeepSeek-V4-Flash', 'deepseek-ai/DeepSeek-V4-Pro', 'GLM-4-Flash', 'deepseek/deepseek-v4-pro', '__custom__'],
+        models: ['', 'qwen/qwen3-next-80b-a3b-instruct', 'deepseek-ai/DeepSeek-V4-Flash', 'deepseek-ai/DeepSeek-V4-Pro', 'GLM-4-Flash', '__custom__'],
       },
       {
         id: 'siliconflow',
@@ -52,10 +52,12 @@ class PBLPathBuilder {
         serverBacked: true,
         clientKeyOk: true,
         baseUrl: 'https://openrouter.ai/api/v1',
-        model: 'deepseek/deepseek-v4-pro',
+        model: 'qwen/qwen3-next-80b-a3b-instruct',
         models: [
-          'deepseek/deepseek-v4-pro',
+          '',
+          'qwen/qwen3-next-80b-a3b-instruct',
           'deepseek/deepseek-v4-flash',
+          'deepseek/deepseek-v4-pro',
           'deepseek/deepseek-chat-v3.1',
           'deepseek/deepseek-chat-v3-0324',
           'deepseek/deepseek-r1',
@@ -70,6 +72,7 @@ class PBLPathBuilder {
           '__custom__',
         ],
         modelLabels: {
+          'qwen/qwen3-next-80b-a3b-instruct': 'Qwen3 Next 80B（付费，默认）',
           'deepseek/deepseek-v4-pro': 'DeepSeek V4 Pro（付费）',
           'deepseek/deepseek-v4-flash': 'DeepSeek V4 Flash（付费）',
           'deepseek/deepseek-chat-v3.1': 'DeepSeek Chat V3.1（付费）',

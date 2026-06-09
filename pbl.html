@@ -1101,7 +1101,7 @@ body {
 <script src="./assets/scripts/pbl-project-form.js?v=20260609-structured"></script>
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260609-log-audit-fix"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260609-qwen3-or-default"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1979,7 +1979,7 @@ function updateModelBadge() {
   const builder = window.PBLPathBuilder;
   if (!btn || !builder?.getLLMConfig) return;
   const cfg = builder.getLLMConfig();
-  const label = cfg.model ? cfg.model : '自动';
+  const label = cfg.model || (cfg.providerId === 'preset' ? 'Qwen3 Next 80B' : '自动');
   btn.textContent = `⚙️ ${label}`;
   btn.title = `${cfg.providerName} · ${label}`;
 }
@@ -2049,16 +2049,16 @@ function onProviderChange() {
     const labels = provider.modelLabels || {};
     modelSel.innerHTML = models.map(m => {
       let label = labels[m] || m;
-      if (m === '') label = '自动（硅基 DeepSeek-V4-Flash → GLM 兜底）';
+      if (m === '') label = '自动（Qwen3 Next 80B → DeepSeek → GLM 兜底）';
       if (m === '__custom__') label = '自定义模型名…';
       const selected = m === provider.model ? 'selected' : '';
       return `<option value="${m}" ${selected}>${label}</option>`;
     }).join('');
     const hints = {
-      preset: 'TeachAny 服务端 Key，默认硅基流动 DeepSeek-V4-Flash；留空模型名即走默认链。',
-      siliconflow: '通过 TeachAny 服务端调用硅基流动；可选列表内模型或自定义模型名。',
-      paratera: '通过 TeachAny 服务端调用并行超算。',
-      openrouter: '填写 OpenRouter API Key 后浏览器直连所选模型（推荐 DeepSeek V4 Pro）；Key 留空则走 TeachAny 服务端（需已配置 OPENROUTER_KEY）。',
+      preset: 'TeachAny 服务端中转，默认 OpenRouter 付费 Qwen3 Next 80B；无需填 Key。',
+      siliconflow: '通过 TeachAny 服务端调用硅基流动（服务端 Key）；可选列表内模型或自定义模型名。',
+      paratera: '通过 TeachAny 服务端调用并行超算（服务端 Key）。',
+      openrouter: 'Key 留空：走 TeachAny 服务端 OpenRouter（默认 Qwen3 Next 80B）。填写 Key：浏览器直连所选模型，提示词仍由服务端生成。',
     };
     document.getElementById('keyHint').textContent = hints[providerId] || '';
     if (showOpenRouterKey && !document.getElementById('baseUrlInput').value) {
@@ -2101,7 +2101,7 @@ function saveSettings() {
 
   const resolvedModel = providerId === 'custom'
     ? customModel
-    : (model === '__custom__' ? customModel : (model || (providerId === 'openrouter' ? 'deepseek/deepseek-v4-pro' : model)));
+    : (model === '__custom__' ? customModel : model);
   builder.setLLMConfig({
     providerId,
     model: resolvedModel,

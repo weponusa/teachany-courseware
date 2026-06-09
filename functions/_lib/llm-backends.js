@@ -16,9 +16,9 @@ export const BACKENDS = {
     extraHeaders: {},
   },
   openrouter: {
-    name: 'OpenRouter',
+    name: 'OpenRouter Qwen3 Next 80B',
     baseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'qwen/qwen3-next-80b-a3b-instruct:free',
+    defaultModel: 'qwen/qwen3-next-80b-a3b-instruct',
     envKey: 'OPENROUTER_KEY',
     extraHeaders: {
       'HTTP-Referer': 'https://www.teachany.cn',
@@ -30,31 +30,41 @@ export const BACKENDS = {
 /** @param {string} model */
 export function inferBackendIdForModel(model) {
   const m = String(model || '').trim();
-  if (!m) return 'siliconflow';
+  if (!m) return 'openrouter';
   if (!m.includes('/')) return 'paratera';
-  if (/^(deepseek-ai|Qwen|THUDM|zai-org|baidu|tencent|moonshotai|MiniMax|Pro\/)/i.test(m)) {
+  // OpenRouter 命名：qwen/、deepseek/、google/、anthropic/ 等
+  if (/^(qwen|deepseek|google|anthropic|openai|meta-llama|z-ai|tencent|moonshotai|mistralai)\//i.test(m)) {
+    return 'openrouter';
+  }
+  // 硅基流动命名：deepseek-ai/、Qwen/、THUDM/ 等
+  if (/^(deepseek-ai|Qwen|THUDM|zai-org|baidu|Pro\/)/i.test(m)) {
     return 'siliconflow';
   }
   return 'openrouter';
 }
+
+/** PBL 主模型（OpenRouter 付费档，约 $0.09/1M in） */
+export const PBL_PRIMARY_MODEL = 'qwen/qwen3-next-80b-a3b-instruct';
 
 /**
  * PBL 专用模型链（默认链；前端可选模型时用户指定模型优先）
  * 可通过环境变量 PBL_MODEL_OVERRIDE 临时锁定单模型做 A/B
  *
  * 默认顺序：
- * 1. 硅基流动 DeepSeek-V4-Flash — PBL 主模型
- * 2. GLM-4-Flash — 并行超算兜底
+ * 1. OpenRouter Qwen3 Next 80B — PBL 主模型
+ * 2. 硅基 DeepSeek-V4-Flash — 兜底
+ * 3. GLM-4-Flash — 并行超算兜底
  */
 export const PBL_MODEL_CHAIN = [
+  { backendId: 'openrouter', model: PBL_PRIMARY_MODEL },
   { backendId: 'siliconflow', model: 'deepseek-ai/DeepSeek-V4-Flash' },
   { backendId: 'paratera', model: 'GLM-4-Flash' },
 ];
 
-/** match / verify-relevance / refine：默认与主链一致（硅基 Flash），可通过 PBL_MATCH_MODEL 覆盖 */
+/** match / verify-relevance / refine：默认同主链，可通过 PBL_MATCH_MODEL 覆盖 */
 export const PBL_MATCH_MODEL_CHAIN = [
+  { backendId: 'openrouter', model: PBL_PRIMARY_MODEL },
   { backendId: 'siliconflow', model: 'deepseek-ai/DeepSeek-V4-Flash' },
-  { backendId: 'siliconflow', model: 'deepseek-ai/DeepSeek-V4-Pro' },
   { backendId: 'paratera', model: 'GLM-4-Flash' },
 ];
 
