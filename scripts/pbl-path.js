@@ -2027,6 +2027,12 @@ class PBLPathBuilder {
     return false;
   }
 
+  /** 健康生活类项目（近视防控、营养、运动、睡眠等） */
+  _isHealthLifeGoal(goal) {
+    const g = String(goal || '');
+    return /健康|营养|饮食|食谱|减脂|减肥|健身|锻炼|近视|视力|护眼|睡眠|作息|心理|情绪|安全|急救|防溺水|防火|卫生|疾病|人体|体重|身高|防控|用眼/.test(g);
+  }
+
   _isBiologyNodeName(name) {
     return /细胞|细胞膜|细胞器|细胞核|细胞壁|细胞呼吸|细胞代谢|细胞周期|细胞死亡|细胞分化|细胞衰老|细胞信号|细胞结构|线粒体|叶绿体|有丝分裂|减数分裂|DNA|基因表达|遗传|光合作用|酶|蛋白质合成|生物膜|生命与环境|微生物|植物.*分类|生物分类|抗生素|耐药|免疫|疫苗|病毒|细菌|药物|分裂与分化/.test(String(name || ''));
   }
@@ -2496,12 +2502,31 @@ class PBLPathBuilder {
     const subIds = phase?.subsystemIds || [];
     const subs = (blueprint?.subsystems || []).filter(s => subIds.includes(s.id));
     return {
-      phaseName: String(phase?.phase || phase?.name || '').trim(),
+      phaseName: this._cleanPhaseName(String(phase?.phase || phase?.name || '').trim()),
       deliverable: String(phase?.deliverable || '').trim(),
       hints: (phase?.knowledgeHints || []).slice(0, 4),
       subsystems: subs.map(s => s.name).filter(Boolean),
       subDesc: subs.map(s => s.description).filter(Boolean).join('；'),
     };
+  }
+
+  /** 清洗 phaseName：去除 AI 误注入的 goal 前缀（如【学科】...【任务】...」）和重复冗余 */
+  _cleanPhaseName(raw) {
+    let name = String(raw || '').trim();
+    // 去除【学科】XX【任务】XX」前缀
+    name = name.replace(/^【学科】[^】]*【任务】[^」]*」\s*/, '');
+    // 去除残留的【...】标签对
+    name = name.replace(/^【[^】]{1,6}】\s*/, '');
+    // 去除 goal 全文嵌套（如果 phaseName 超过30字且含典型 goal 动词，截取最后的短标题）
+    if (name.length > 30 && /制定|调查|提出|设计|完成|探究/.test(name)) {
+      const lastSeg = name.split(/[，,；;、」]/).pop().trim();
+      if (lastSeg && lastSeg.length >= 2 && lastSeg.length <= 20) {
+        name = lastSeg;
+      }
+    }
+    // 最终限长
+    if (name.length > 20) name = name.slice(0, 20);
+    return name || '本阶段';
   }
 
   _expandStepAnchoredToGoal(rawStep, goal, phase, profile, ctx, stepIdx) {
@@ -2565,7 +2590,10 @@ class PBLPathBuilder {
       }
       return `围绕「${artifact}」完成${phaseName}：结合 ${hints} 整理产业资料并产出可核查记录表（≥5条要点+来源标注）`;
     }
-    if (profile.domains.survey || this._isSocialOrCivicInquiryGoal(goal) || /垃圾|分类|社区|环保|倡议|问卷|访谈/.test(blob)) {
+    // 社会/公民调查类模板（垃圾分类、社区环保等）——排除 health-life 类项目
+    const isTrueSocialSurvey = (this._isSocialOrCivicInquiryGoal(goal) || /垃圾|分类|社区|环保|倡议/.test(blob))
+      && !this._isHealthLifeGoal(goal);
+    if (isTrueSocialSurvey) {
       if (/现状|调查|问卷|访谈|勘测|实地|走访/.test(blob)) {
         return `走访≥2处相关点位，填写${phaseName}记录表（观察项≥8条+居民访谈≥5条），附现场照片3张并标注时间与地点`;
       }
