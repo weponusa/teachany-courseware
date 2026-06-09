@@ -84,7 +84,7 @@ const TYPE_PROFILES = {
   'creative-media': { label: '创意设计/媒体/艺术', moduleWord: '创作环节（创意构思 / 设计草案 / 制作实现 / 展示评议）', subjectsHint: '结合 info-tech、chinese 及相关学科', redlines: '围绕创意表达与制作；只在确需技术实现时引入理科节点' },
   'business-economics': { label: '商业/创业/经济实践', moduleWord: '运营环节（需求调研 / 方案设计 / 成本定价 / 运营复盘）', subjectsHint: 'math（统计/比例/函数）、chinese（策划/表达）为主', redlines: '围绕调研、测算、方案与表达' },
   'life-planning': { label: '生活规划/活动策划', moduleWord: '策划环节（需求目标 / 方案日程 / 预算分工 / 执行复盘）', subjectsHint: 'math（预算/时间/统计）、chinese（策划/通知/总结）、geography（路线）按需', redlines: '围绕目标、方案、预算分工与执行复盘' },
-  'health-life': { label: '健康生活/运动安全', moduleWord: '健康环节（现状了解 / 知识学习 / 计划制定 / 实践评估）', subjectsHint: 'biology、science、math（统计监测）、chinese（宣传倡议）', redlines: '围绕健康知识、数据监测与行为改进' },
+  'health-life': { label: '健康生活/运动安全', moduleWord: '健康环节（现状调查 / 科学原理与生理机制 / 预防干预原理 / 方案制定 / 实践评估）', subjectsHint: 'biology、physics、chemistry、science（原理机制必选≥2）、math（统计监测）、chinese（宣传倡议）', redlines: '必须覆盖科学原理层（生理机制+物理/化学原理），不能只有"调查统计"和"行为公约"两头；理/化/生原理节点≥2' },
   'planting-cultivation': { label: '种植养殖/园艺栽培', moduleWord: '环节（植物识别分类 / 生长与环境 / 栽培实操 / 观察记录 / 种植日记）', subjectsHint: 'science、biology 为主线，辅以 math（数据图表）、chinese（日记）', redlines: '交付物是种植观察日记；必须含生长原理与栽培步骤' },
   'labor-practice': { label: '劳动实践/制作', moduleWord: '实践环节（认识准备 / 操作实践 / 观察记录 / 成果分享）', subjectsHint: 'biology、science、chinese、math 按需', redlines: '围绕动手操作、观察记录与成果分享' },
   'maker-workshop': { label: '工坊/木作/建筑模型', moduleWord: '工序（现场调研 / 风格方案 / 材料BOM / 搭建装饰 / 验收展示）', subjectsHint: 'science、physics、math、history、chinese 按需', redlines: '交付物是实体模型+图册+BOM；须有尺寸、工具、照片、检查表' },
@@ -209,10 +209,11 @@ function genericDomainsForType(id) {
       { id: 'review', label: '执行与复盘', keywords: ['执行', '记录', '反馈', '复盘', '总结', '报告'], subjects: ['chinese'] },
     ],
     'health-life': [
-      { id: 'status', label: '现状了解', keywords: ['现状', '调查', '统计', '数据', '测量', '记录'], subjects: ['math', 'biology', 'science'] },
-      { id: 'knowledge', label: '健康知识', keywords: ['健康', '营养', '饮食', '运动', '睡眠', '安全', '疾病', '人体'], subjects: ['biology', 'science'] },
-      { id: 'plan', label: '计划制定', keywords: ['计划', '方案', '目标', '食谱', '作息', '锻炼'], subjects: ['chinese', 'math'] },
-      { id: 'assess', label: '实践与评估', keywords: ['记录', '评估', '对比', '反馈', '改进', '报告', '宣传'], subjects: ['chinese', 'math'] },
+      { id: 'status', label: '现状调查与数据', keywords: ['现状', '调查', '问卷', '统计', '数据', '测量', '记录', '比例', '图表'], subjects: ['math', 'biology', 'science'] },
+      { id: 'mechanism', label: '科学原理与生理机制', keywords: ['原理', '机制', '结构', '成因', '凸透镜', '晶状体', '视网膜', '睫状肌', '光学', '成像', '折射', '消化', '吸收', '代谢', '循环', '呼吸', '细胞', '神经', '肌肉', '骨骼'], subjects: ['physics', 'biology', 'chemistry', 'science'] },
+      { id: 'prevention', label: '预防/干预原理与方法', keywords: ['预防', '矫正', '凹透镜', '焦距', '屈光', '营养素', '膳食', '训练', '恢复', '保护', '防护', '干预', '治疗'], subjects: ['biology', 'physics', 'chemistry', 'science'] },
+      { id: 'plan', label: '方案制定与宣传', keywords: ['计划', '方案', '目标', '公约', '标准', '倡议', '宣传', '海报', '说明文'], subjects: ['chinese', 'math'] },
+      { id: 'assess', label: '实践记录与评估', keywords: ['记录', '评估', '对比', '反馈', '改进', '报告', '数据跟踪'], subjects: ['chinese', 'math', 'science'] },
     ],
     'planting-cultivation': [
       { id: 'taxonomy', label: '植物识别与分类', keywords: ['植物', '分类', '特征', '结构', '器官'], subjects: ['science', 'biology'] },
@@ -343,8 +344,12 @@ function typeMatchHints(goal) {
       return `\n### 类型要求：生活规划/活动策划
 - 围绕需求目标、方案日程、预算分工、执行复盘（数学/语文/地理）；不要塞工程装置或纯理科公式`;
     case 'health-life':
-      return `\n### 类型要求：健康生活
-- 围绕健康知识、现状监测统计、行为计划与评估（生物/科学/数学/语文）；不要堆与健康无关的工程或纯计算节点`;
+      return `\n### 类型要求：健康生活（含科学原理理解）
+- **科学/技术原理必选**（≥2 个 biology/physics/chemistry/science 节点）：根据项目具体健康主题，选取与该健康问题**生理机制、物理/化学原理**直接相关的学科节点（如近视→凸透镜成像+眼球结构+睫状肌调节；营养→消化吸收+食物成分+化学变化；运动→力学+呼吸循环）
+- **禁止只选"调查统计+行为公约"两头**——中间的科学原理层（为什么会近视？晶状体如何变形？凹透镜如何矫正？蓝光对视网膜的影响机制是什么？）必须覆盖
+- 其他优先：数据统计图表、健康知识科普写作/宣传
+- 禁止：与本健康主题无关的工程装置或纯计算节点
+- reason 须写明该知识点如何帮助学生理解该健康问题的**科学本质**`;
     case 'planting-cultivation':
       return `\n### 类型要求：种植养殖/园艺栽培
 - 交付物是**种植观察日记**
@@ -480,6 +485,8 @@ ${formatTopicAnchorBlock(goal)}
 ## 去重去冗余（硬性）
 - **绝对禁止**同一意思换不同说法重复出现
 - 不同 phase 的 steps 内容之间**零重叠**
+- **steps 与 deliverable/验收项之间不得同义重复**：deliverable 写「产出物名+数量标准」（如"护眼公约 4 条+全班签字确认"），steps 写「达成该产出物的操作过程」（如"组织全班讨论用眼习惯调查结果，票选出 4 项可量化条款"）——禁止 steps 里直接搬运 deliverable 的验收描述
+- **同一操作只出现一次**：若"走访点位"已出现在某 phase 的 steps 中，其他 phase 不得再出现同义表述（"调查走访""实地走访"等）
 - summary / projectSummary / constraints / scopeLimits / successCriteria 各字段之间不得互相复制粘贴
 - pros 每条 ≤15 字，禁止与 summary 重复
 
