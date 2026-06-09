@@ -1412,6 +1412,16 @@ class PBLPathBuilder {
 
   _parseGoalSubject(goal) {
     const g = String(goal || '').trim();
+    // 处理带【标签】格式的结构化 goal：优先提取【任务】字段
+    const taskMatch = g.match(/【任务】\s*(.+?)(?:\n|【|$)/);
+    if (taskMatch) {
+      let task = taskMatch[1].trim();
+      // 进一步剥离动词前缀
+      const verbM = task.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|记录|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
+      if (verbM) task = verbM[1].trim();
+      task = task.replace(/^(?:关于|围绕|有关)\s*/, '').replace(/[，。；].*$/, '').slice(0, 36);
+      return task || g.slice(0, 36);
+    }
     let subject = g;
     const m = g.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|记录|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
     if (m) subject = m[1].trim();
@@ -1503,6 +1513,15 @@ class PBLPathBuilder {
   _compactProjectLabel(goal, topic = null) {
     const t = topic || this._extractTopicProfile(goal);
     let label = String(t.coreTopic || this._parseGoalSubject(goal) || '').trim();
+    // 防护：如果 label 仍含【标签】格式（上游未完全剥离），从中提取任务核心
+    if (/【/.test(label)) {
+      const taskM = label.match(/【任务】\s*(.+?)(?:\s*【|$)/);
+      if (taskM) {
+        label = taskM[1].trim().replace(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|记录|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*/, '');
+      } else {
+        label = this._parseGoalSubject(goal);
+      }
+    }
     label = label
       .replace(/^关于/, '')
       .replace(/现状.*$/, '')
@@ -2515,8 +2534,15 @@ class PBLPathBuilder {
     let name = String(raw || '').trim();
     // 去除【学科】XX【任务】XX」前缀
     name = name.replace(/^【学科】[^】]*【任务】[^」]*」\s*/, '');
-    // 去除残留的【...】标签对
-    name = name.replace(/^【[^】]{1,6}】\s*/, '');
+    // 去除所有残留的【...】标签对（可能有多个连续的：【学段】XX【学科】XX【任务】XX【产出】XX）
+    if (/【/.test(name)) {
+      const taskM = name.match(/【任务】\s*(.+?)(?:\s*【|$)/);
+      if (taskM) {
+        name = taskM[1].trim().replace(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析)(?:一个|一款|一份|一组|一次)?\s*/, '');
+      } else {
+        name = name.replace(/【[^】]*】\s*/g, '').trim();
+      }
+    }
     // 去除 goal 全文嵌套（如果 phaseName 超过30字且含典型 goal 动词，截取最后的短标题）
     if (name.length > 30 && /制定|调查|提出|设计|完成|探究/.test(name)) {
       const lastSeg = name.split(/[，,；;、」]/).pop().trim();
