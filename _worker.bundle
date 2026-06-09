@@ -1,0 +1,3036 @@
+------formdata-undici-030285254607
+Content-Disposition: form-data; name="metadata"
+
+{"main_module":"functionsWorker-0.5117544312750053.js"}
+------formdata-undici-030285254607
+Content-Disposition: form-data; name="functionsWorker-0.5117544312750053.js"; filename="functionsWorker-0.5117544312750053.js"
+Content-Type: application/javascript+module
+
+var __defProp = Object.defineProperty;
+var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
+
+// api/llm/chat/completions.js
+var BACKENDS = {
+  paratera: {
+    name: "\u5E76\u884C\u8D85\u7B97 GLM-4-Flash",
+    baseUrl: "https://llmapi.paratera.com/v1",
+    defaultModel: "GLM-4-Flash",
+    envKey: "PARATERA_KEY",
+    free: true
+  },
+  openrouter: {
+    name: "OpenRouter \u514D\u8D39\u6A21\u578B",
+    baseUrl: "https://openrouter.ai/api/v1",
+    defaultModel: "qwen/qwen3-next-80b-a3b-instruct:free",
+    envKey: "OPENROUTER_KEY",
+    free: true,
+    extraHeaders: {
+      "HTTP-Referer": "https://www.teachany.cn",
+      "X-Title": "TeachAny-PBL"
+    }
+  }
+};
+var CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, X-Backend",
+  "Access-Control-Max-Age": "86400"
+};
+function json(data, status = 200, extra = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", ...CORS, ...extra }
+  });
+}
+__name(json, "json");
+async function onRequestOptions() {
+  return new Response(null, { status: 204, headers: CORS });
+}
+__name(onRequestOptions, "onRequestOptions");
+async function onRequestPost(context) {
+  const { request, env } = context;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "Invalid JSON body" }, 400);
+  }
+  const backendHint = request.headers.get("X-Backend") || "paratera";
+  const backend = BACKENDS[backendHint] || BACKENDS.paratera;
+  const apiKey = env[backend.envKey];
+  if (!apiKey) {
+    return json({ error: `Backend "${backendHint}" not configured` }, 503);
+  }
+  const model = body.model || backend.defaultModel;
+  const forwardBody = { ...body, model };
+  const headers = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${apiKey}`,
+    ...backend.extraHeaders || {}
+  };
+  const endpoint = `${backend.baseUrl}/chat/completions`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6e4);
+  try {
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(forwardBody),
+      signal: controller.signal
+    });
+    const data = await resp.text();
+    if (!resp.ok) {
+      console.error(`[LLM Proxy] ${backend.name} ${resp.status}: ${data.slice(0, 300)}`);
+      return new Response(data, { status: resp.status, headers: { "Content-Type": "application/json", ...CORS } });
+    }
+    return new Response(data, {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...CORS, "X-Backend": backendHint, "X-Model": model }
+    });
+  } catch (err) {
+    if (err.name === "AbortError") {
+      return json({ error: `Backend "${backendHint}" timed out (25s)` }, 504);
+    }
+    return json({ error: err.message }, 502);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+__name(onRequestPost, "onRequestPost");
+async function onRequestGet(context) {
+  const models = Object.entries(BACKENDS).map(([id, b]) => ({
+    id,
+    name: b.name,
+    model: b.defaultModel,
+    free: b.free
+  }));
+  return json({ data: models });
+}
+__name(onRequestGet, "onRequestGet");
+
+// _lib/llm-backends.js
+var BACKENDS2 = {
+  siliconflow: {
+    name: "\u7845\u57FA\u6D41\u52A8 DeepSeek-V4-Flash",
+    baseUrl: "https://api.siliconflow.cn/v1",
+    defaultModel: "deepseek-ai/DeepSeek-V4-Flash",
+    envKey: "SILICONFLOW_KEY",
+    extraHeaders: {}
+  },
+  paratera: {
+    name: "\u5E76\u884C\u8D85\u7B97 GLM-4-Flash",
+    baseUrl: "https://llmapi.paratera.com/v1",
+    defaultModel: "GLM-4-Flash",
+    envKey: "PARATERA_KEY",
+    extraHeaders: {}
+  },
+  openrouter: {
+    name: "OpenRouter",
+    baseUrl: "https://openrouter.ai/api/v1",
+    defaultModel: "qwen/qwen3-next-80b-a3b-instruct:free",
+    envKey: "OPENROUTER_KEY",
+    extraHeaders: {
+      "HTTP-Referer": "https://www.teachany.cn",
+      "X-Title": "TeachAny-PBL"
+    }
+  }
+};
+function inferBackendIdForModel(model) {
+  const m = String(model || "").trim();
+  if (!m) return "siliconflow";
+  if (!m.includes("/")) return "paratera";
+  if (/^(deepseek-ai|Qwen|THUDM|zai-org|baidu|tencent|moonshotai|MiniMax|Pro\/)/i.test(m)) {
+    return "siliconflow";
+  }
+  return "openrouter";
+}
+__name(inferBackendIdForModel, "inferBackendIdForModel");
+var PBL_MODEL_CHAIN = [
+  { backendId: "siliconflow", model: "deepseek-ai/DeepSeek-V4-Flash" },
+  { backendId: "paratera", model: "GLM-4-Flash" }
+];
+function resolvePBLModelChain(env = {}) {
+  const override = String(env.PBL_MODEL_OVERRIDE || "").trim();
+  if (override) {
+    return [{ backendId: inferBackendIdForModel(override), model: override }];
+  }
+  return PBL_MODEL_CHAIN;
+}
+__name(resolvePBLModelChain, "resolvePBLModelChain");
+var PROVIDER_BACKEND = {
+  siliconflow: "siliconflow",
+  paratera: "paratera",
+  openrouter: "openrouter"
+};
+function buildUserModelChain(env, userModel, providerId = "") {
+  const m = String(userModel || "").trim();
+  const pid = String(providerId || "").trim();
+  if (!m && !pid) return resolvePBLModelChain(env);
+  const forcedBackend = PROVIDER_BACKEND[pid];
+  const model = m || BACKENDS2[forcedBackend]?.defaultModel || "";
+  if (!model) return resolvePBLModelChain(env);
+  const backendId = forcedBackend || inferBackendIdForModel(model);
+  const chain = [{ backendId, model }];
+  for (const item of resolvePBLModelChain(env)) {
+    if (item.model !== model) chain.push(item);
+  }
+  return chain;
+}
+__name(buildUserModelChain, "buildUserModelChain");
+var CORS2 = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Backend",
+  "Access-Control-Max-Age": "86400"
+};
+function jsonResponse(data, status = 200, extra = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", ...CORS2, ...extra }
+  });
+}
+__name(jsonResponse, "jsonResponse");
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+__name(sleep, "sleep");
+async function callSingleModel(env, backendId, model, messages, opts) {
+  const backend = BACKENDS2[backendId];
+  if (!backend) throw new Error(`Unknown backend: ${backendId}`);
+  const apiKey = env[backend.envKey];
+  if (!apiKey) {
+    const err = new Error(`Backend "${backendId}" not configured`);
+    err.status = 503;
+    throw err;
+  }
+  const baseUrl = backend.baseUrl.replace(/\/$/, "");
+  const endpoint = /\/chat\/completions/.test(baseUrl) ? baseUrl : `${baseUrl}/chat/completions`;
+  const body = {
+    model,
+    messages,
+    stream: false,
+    temperature: opts.temperature ?? 0.2,
+    max_tokens: opts.maxTokens ?? 4500
+  };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 55e3);
+  try {
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        ...backend.extraHeaders || {}
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    const text = await resp.text();
+    if (!resp.ok) {
+      const err = new Error(`LLM ${resp.status} (${backendId}/${model})`);
+      err.status = resp.status;
+      err.body = text.slice(0, 400);
+      throw err;
+    }
+    const data = JSON.parse(text);
+    const message = data.choices?.[0]?.message || {};
+    const content = message.content || message.reasoning || message.reasoning_content || "";
+    if (!content) {
+      const err = new Error(`LLM empty response (${backendId}/${model})`);
+      err.status = 502;
+      throw err;
+    }
+    return content;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+__name(callSingleModel, "callSingleModel");
+async function callBackendLLM(env, messages, opts = {}) {
+  const chain = opts.modelChain || resolvePBLModelChain(env);
+  let lastError;
+  for (let i = 0; i < chain.length; i++) {
+    const { backendId, model } = chain[i];
+    try {
+      const content = await callSingleModel(env, backendId, model, messages, opts);
+      return { content, model, backendId };
+    } catch (e) {
+      lastError = e;
+      const retryable = e.status === 429 || e.status === 503 || e.status === 502 || e.name === "AbortError";
+      if (retryable && i < chain.length - 1) {
+        await sleep(Math.min(4e3 + i * 2e3, 12e3));
+        continue;
+      }
+      if (!retryable) throw e;
+    }
+  }
+  throw lastError || new Error("LLM failed");
+}
+__name(callBackendLLM, "callBackendLLM");
+
+// api/llm/credits.js
+function assertToken(request, env) {
+  const expected = String(env.PBL_LOG_TOKEN || "").trim();
+  if (!expected) return true;
+  const url = new URL(request.url);
+  return String(url.searchParams.get("token") || request.headers.get("X-PBL-Log-Token") || "").trim() === expected;
+}
+__name(assertToken, "assertToken");
+async function onRequestOptions2() {
+  return new Response(null, { status: 204, headers: CORS2 });
+}
+__name(onRequestOptions2, "onRequestOptions");
+async function onRequestGet2(context) {
+  const { request, env } = context;
+  if (!assertToken(request, env)) {
+    return jsonResponse({ error: "Forbidden" }, 403);
+  }
+  const sfKey = env.SILICONFLOW_KEY;
+  const orKey = env.OPENROUTER_KEY;
+  if (!sfKey && !orKey) {
+    return jsonResponse({ error: "SILICONFLOW_KEY / OPENROUTER_KEY not configured" }, 503);
+  }
+  const result = {
+    ok: false,
+    pbl_primary: { provider: "siliconflow", model: "deepseek-ai/DeepSeek-V4-Flash" },
+    siliconflow: null,
+    openrouter: null
+  };
+  if (sfKey) {
+    const sfResp = await fetch("https://api.siliconflow.cn/v1/user/info", {
+      headers: { Authorization: `Bearer ${sfKey}` }
+    });
+    const sf = await sfResp.json().catch(() => ({}));
+    const data = sf?.data || sf || {};
+    result.siliconflow = {
+      status: sfResp.status,
+      balance_cny: data.balance ?? data.totalBalance ?? null,
+      charge_balance_cny: data.chargeBalance ?? null,
+      raw: data
+    };
+    if (sfResp.ok) result.ok = true;
+  }
+  if (orKey) {
+    const headers = { Authorization: `Bearer ${orKey}` };
+    const [keyResp, creditsResp] = await Promise.all([
+      fetch("https://openrouter.ai/api/v1/key", { headers }),
+      fetch("https://openrouter.ai/api/v1/credits", { headers })
+    ]);
+    const keyInfo = await keyResp.json().catch(() => ({}));
+    const credits = await creditsResp.json().catch(() => ({}));
+    const d = keyInfo?.data || {};
+    const c = credits?.data || {};
+    result.openrouter = {
+      key_status: keyResp.status,
+      credits_status: creditsResp.status,
+      limit_remaining_usd: d.limit_remaining ?? null,
+      usage_monthly_usd: d.usage_monthly ?? null,
+      balance_usd: c.total_credits != null && c.total_usage != null ? Number((c.total_credits - c.total_usage).toFixed(4)) : null
+    };
+  }
+  return jsonResponse(result);
+}
+__name(onRequestGet2, "onRequestGet");
+
+// _lib/pbl-bloom.js
+var BLOOM_LEVELS = {
+  remember: 1,
+  understand: 2,
+  apply: 3,
+  analyze: 4,
+  evaluate: 5,
+  create: 6
+};
+var BLOOM_VERB_PATTERNS = [
+  { level: "remember", re: /列举|识别|记忆|背诵|默写|说出|写出.*名称|认读|记住/ },
+  { level: "understand", re: /理解|解释|说明|描述|举例|概括|归纳|翻译|复述|阐述/ },
+  { level: "apply", re: /应用|运用|计算|测量|配制|绘制|操作|实施|完成|制作|搭建|安装|调试|录入|统计|求解|列式/ },
+  { level: "analyze", re: /分析|比较|对比|区分|分解|推断|探究|讨论|归因|解读|拆读/ },
+  { level: "evaluate", re: /评价|评判|论证|判断|选择.*方案|评估|鉴别|审阅|答辩|反思.*优劣/ },
+  { level: "create", re: /设计|创造|发明|创作|构建|开发|策划|编写.*程序|搭建.*系统|原创|编导/ }
+];
+function inferBloomFromBlueprint(blueprint) {
+  const steps = [];
+  const scheme = (blueprint?.schemes || []).find((s) => s.id === blueprint?.recommendedSchemeId) || (blueprint?.schemes || [])[0];
+  (scheme?.phases || []).forEach((p) => {
+    (p.steps || []).forEach((s) => steps.push(String(s)));
+  });
+  if (!steps.length && blueprint?.deliverable) {
+    steps.push(String(blueprint.deliverable));
+  }
+  let maxLevel = 3;
+  const evidence = [];
+  const actionVerbs = /* @__PURE__ */ new Set();
+  steps.forEach((step) => {
+    BLOOM_VERB_PATTERNS.forEach(({ level, re }) => {
+      const m = step.match(re);
+      if (m) {
+        const lv = BLOOM_LEVELS[level];
+        if (lv > maxLevel) maxLevel = lv;
+        if (evidence.length < 6) evidence.push(step.slice(0, 60));
+        m.forEach((v) => actionVerbs.add(v));
+      }
+    });
+  });
+  const ceilingLabel = Object.entries(BLOOM_LEVELS).find(([, v]) => v === maxLevel)?.[0] || "apply";
+  return {
+    ceiling: maxLevel,
+    ceilingLabel,
+    evidence: evidence.slice(0, 4),
+    actionVerbs: [...actionVerbs].slice(0, 8)
+  };
+}
+__name(inferBloomFromBlueprint, "inferBloomFromBlueprint");
+function bloomCeilingLabel(ceiling) {
+  const map = { 1: "\u8BB0\u5FC6", 2: "\u7406\u89E3", 3: "\u5E94\u7528", 4: "\u5206\u6790", 5: "\u8BC4\u4EF7", 6: "\u521B\u9020" };
+  return map[ceiling] || "\u5E94\u7528";
+}
+__name(bloomCeilingLabel, "bloomCeilingLabel");
+function formatBloomHintForMatch(bloomProfile) {
+  if (!bloomProfile?.ceiling) return "";
+  const label = bloomCeilingLabel(bloomProfile.ceiling);
+  const ev = (bloomProfile.evidence || []).map((s) => `\u300C${s}\u300D`).join("\u3001");
+  return `
+\u3010Bloom \u8BA4\u77E5\u5C42\u7EA7\u7EA6\u675F\u3011
+- \u4ECE\u84DD\u56FE\u4EFB\u52A1\u63A8\u65AD\uFF0C\u672C\u9879\u76EE\u8BA4\u77E5\u4E0A\u9650\u7EA6\u4E3A\u300C${label}\u300D\uFF08level ${bloomProfile.ceiling}\uFF09
+- \u4F9D\u636E\uFF1A${ev || "\u84DD\u56FE\u9636\u6BB5\u4EFB\u52A1\u52A8\u8BCD"}
+- **\u7981\u6B62** matched \u9700\u8981\u300C\u8BC4\u4EF7/\u521B\u9020\u300D\u624D\u80FD\u5B8C\u6210\u7684\u8282\u70B9\uFF0C\u9664\u975E\u84DD\u56FE\u660E\u786E\u51FA\u73B0\u8BBE\u8BA1/\u8BC4\u4EF7/\u521B\u9020\u7C7B\u52A8\u8BCD
+- \u4F18\u5148\u9009\u62E9\u300C\u5E94\u7528/\u5206\u6790\u300D\u7EA7\u522B\u7684\u5DE5\u5177\u6027\u8BFE\u6807\u8282\u70B9`;
+}
+__name(formatBloomHintForMatch, "formatBloomHintForMatch");
+function formatBloomHintForFilter(bloomProfile) {
+  if (!bloomProfile?.ceiling) return "";
+  return `
+\u3010Bloom \u9884\u5206\u6790\uFF08\u4F9B\u4F60\u786E\u8BA4\uFF09\u3011
+- \u89C4\u5219\u63A8\u65AD\u8BA4\u77E5\u4E0A\u9650\uFF1A${bloomCeilingLabel(bloomProfile.ceiling)}\uFF08${bloomProfile.ceiling}\uFF09
+- \u8BF7\u5728 JSON \u4E2D\u8FD4\u56DE bloomCeiling\uFF081-6 \u6574\u6570\uFF09\u3001bloomEvidence\uFF082-4 \u6761\uFF09\u3001actionVerbs\uFF08\u52A8\u8BCD\u5217\u8868\uFF09`;
+}
+__name(formatBloomHintForFilter, "formatBloomHintForFilter");
+
+// ../data/pbl/engineering-registry.json
+var engineering_registry_default = {
+  version: "1.0",
+  entries: [
+    {
+      id: "ext-rocket-safety",
+      name: "\u6A21\u578B\u706B\u7BAD\u5B89\u5168\u53D1\u5C04\u89C4\u8303",
+      archetypes: ["water-rocket"],
+      moduleId: "test",
+      gradeBand: [7, 12],
+      reason: "\u53D1\u5C04\u89D2\u5EA6\u3001\u8B66\u6212\u8DDD\u79BB\u3001\u6CE8\u6C34\u6BD4\u4F8B\u7B49\u5B89\u5168\u64CD\u4F5C\uFF0C\u8BFE\u6807\u65E0\u4E13\u9879\u6761\u76EE\u4F46\u5B9E\u9A8C\u5FC5\u9700",
+      taskSnippet: "\u5236\u5B9A\u53D1\u5C04\u5B89\u5168\u68C0\u67E5\u8868\uFF1A\u89D2\u5EA6\u226475\xB0\u3001\u9000\u79BB\u226515m\u3001\u7981\u6B62\u5BF9\u4EBA\u53D1\u5C04",
+      prerequisites: ["\u725B\u987F\u8FD0\u52A8\u5B9A\u5F8B", "\u538B\u5F3A"]
+    },
+    {
+      id: "ext-cp-cg",
+      name: "\u91CD\u5FC3\u4E0E\u538B\u5FC3\u6D4B\u91CF",
+      archetypes: ["water-rocket"],
+      moduleId: "aerodynamics",
+      gradeBand: [8, 12],
+      reason: "\u7BAD\u4F53\u7A33\u5B9A\u6027\u5224\u65AD\u9700\u538B\u5FC3/\u91CD\u5FC3\u76F8\u5BF9\u4F4D\u7F6E\uFF0C\u8BFE\u672C\u8F83\u5C11\u5C55\u5F00\u6D4B\u91CF\u65B9\u6CD5",
+      taskSnippet: "\u60AC\u6302\u6CD5\u6D4B\u91CD\u5FC3\uFF0C\u98CE\u6D1E\u6216\u7ECF\u9A8C\u516C\u5F0F\u4F30\u7B97\u538B\u5FC3\u4F4D\u7F6E\u5E76\u6807\u6CE8\u5728\u7BAD\u4F53\u8349\u56FE\u4E0A",
+      prerequisites: ["\u529B\u7684\u5E73\u8861"]
+    },
+    {
+      id: "ext-nozzle",
+      name: "\u55B7\u5634\u6D41\u91CF\u4E0E\u53CD\u51B2\u63A8\u529B\u4F30\u7B97",
+      archetypes: ["water-rocket"],
+      moduleId: "propulsion",
+      gradeBand: [9, 12],
+      reason: "\u8FDE\u63A5\u53CD\u51B2\u8FD0\u52A8\u4E0E\u5B9E\u9645\u55B7\u6C34\u6D41\u91CF\uFF0C\u5DE5\u7A0B\u4F30\u7B97\u8D85\u51FA\u8BFE\u672C",
+      taskSnippet: "\u8BB0\u5F55\u74F6\u5185\u6C14\u538B\u3001\u55B7\u53E3\u76F4\u5F84\uFF0C\u7528\u7B80\u5316\u6A21\u578B\u4F30\u7B97\u521D\u59CB\u63A8\u529B\u5CF0\u503C",
+      prerequisites: ["\u52A8\u91CF", "\u538B\u5F3A"]
+    },
+    {
+      id: "ext-titration-ware",
+      name: "\u6EF4\u5B9A\u7BA1/\u79FB\u6DB2\u7BA1\u64CD\u4F5C\u89C4\u8303",
+      archetypes: ["mixed-solution-chemistry"],
+      moduleId: "titration",
+      gradeBand: [9, 12],
+      reason: "\u5B9A\u91CF\u6EF4\u5B9A\u5668\u76BF\u6DA6\u6D17\u4E0E\u8BFB\u6570\u7EC6\u8282\uFF0C\u5B9E\u9A8C\u64CD\u4F5C\u5FC5\u9700",
+      taskSnippet: "\u5B8C\u6210\u6EF4\u5B9A\u7BA1\u68C0\u6F0F\u3001\u6DA6\u6D17\u3001\u521D\u8BFB\u6570\u8BB0\u5F55\uFF0C\u9644\u64CD\u4F5C\u7167\u7247",
+      prerequisites: ["\u7269\u8D28\u7684\u91CF\u6D53\u5EA6"]
+    },
+    {
+      id: "ext-agno3-prep",
+      name: "\u785D\u9178\u94F6\u6807\u51C6\u6EB6\u6DB2\u914D\u5236",
+      archetypes: ["mixed-solution-chemistry"],
+      moduleId: "titration",
+      gradeBand: [10, 12],
+      reason: "\u6C89\u6DC0\u6EF4\u5B9A\u5173\u952E\u8BD5\u5242\u51C6\u5907\uFF0C\u9700\u8BFE\u5916\u5B9E\u9A8C\u6307\u5BFC",
+      taskSnippet: "\u8BA1\u7B97\u5E76\u914D\u5236\u4E00\u5B9A\u7269\u8D28\u7684\u91CF\u6D53\u5EA6\u7684 AgNO\u2083 \u6EB6\u6DB2\uFF0C\u6CE8\u660E\u907F\u5149\u4FDD\u5B58",
+      prerequisites: ["\u7269\u8D28\u7684\u91CF\u6D53\u5EA6", "\u79BB\u5B50\u53CD\u5E94"]
+    },
+    {
+      id: "ext-conductivity-cal",
+      name: "\u7535\u5BFC\u7387\u4EEA\u6821\u51C6\u4E0E\u6E29\u5EA6\u8865\u507F",
+      archetypes: ["mixed-solution-chemistry"],
+      moduleId: "conductivity",
+      gradeBand: [10, 12],
+      reason: "\u7535\u5BFC\u7387\u6D4B\u5B9A\u987B\u63A7\u5236\u6E29\u5EA6\u5F71\u54CD\uFF0C\u4EEA\u5668\u64CD\u4F5C\u8D85\u51FA\u8BFE\u672C",
+      taskSnippet: "\u7528\u6807\u51C6 KCl \u6EB6\u6DB2\u6821\u51C6\u7535\u5BFC\u7387\u4EEA\uFF0C\u8BB0\u5F55\u6E29\u5EA6\u8865\u507F\u8BBE\u7F6E",
+      prerequisites: ["\u7535\u89E3\u8D28\u6EB6\u6DB2"]
+    },
+    {
+      id: "ext-sample-prep",
+      name: "\u98DF\u5802\u6C64\u6C34\u53D6\u6837\u4E0E\u4EE3\u8868\u6027",
+      archetypes: ["mixed-solution-chemistry"],
+      moduleId: "constraint",
+      gradeBand: [8, 12],
+      reason: "\u771F\u5B9E\u6837\u54C1\u53D6\u6837\u89C4\u8303\u4E0E\u4EE3\u8868\u6027\u5224\u65AD\uFF0C\u98DF\u54C1\u5B89\u5168\u76F8\u5173",
+      taskSnippet: "\u8BBE\u8BA1\u5E73\u884C\u53D6\u6837\u65B9\u6848\uFF1A\u6F84\u6E05\u3001\u5B9A\u5BB9\u3001\u6807\u6CE8\u53D6\u6837\u65F6\u95F4\u4E0E\u4F4D\u7F6E",
+      prerequisites: []
+    },
+    {
+      id: "ext-tco",
+      name: "\u5168\u751F\u547D\u5468\u671F\u7528\u8F66\u6210\u672C\uFF08TCO\uFF09",
+      archetypes: ["consumer-decision"],
+      moduleId: "cost",
+      gradeBand: [8, 12],
+      reason: "\u8D2D\u8F66\u51B3\u7B56\u9700 5 \u5E74\u603B\u6210\u672C\u6A21\u578B\uFF0C\u8BFE\u6807\u672A\u7CFB\u7EDF\u8BB2\u6388",
+      taskSnippet: "\u5EFA\u7ACB TCO \u8868\uFF1A\u8D2D\u7F6E+5\u5E74\u80FD\u8017+\u4FDD\u517B+\u4FDD\u9669\uFF0C\u5BF9\u6BD4\u4E24\u6B3E\u8F66\u578B",
+      prerequisites: ["\u7EDF\u8BA1", "\u767E\u5206\u6BD4"]
+    },
+    {
+      id: "ext-ev-policy",
+      name: "\u65B0\u80FD\u6E90\u6C7D\u8F66\u8D2D\u7F6E\u8865\u8D34\u4E0E\u7A0E\u8D39",
+      archetypes: ["consumer-decision"],
+      moduleId: "cost",
+      gradeBand: [8, 12],
+      reason: "\u653F\u7B56\u76F4\u63A5\u5F71\u54CD\u8D2D\u8F66\u6210\u672C\uFF0C\u9700\u67E5\u9605\u8BFE\u5916\u653F\u7B56\u8D44\u6599",
+      taskSnippet: "\u68C0\u7D22\u672C\u5730\u65B0\u80FD\u6E90\u8865\u8D34/\u514D\u8D2D\u7F6E\u7A0E\u653F\u7B56\uFF0C\u8BA1\u5165\u6210\u672C\u5BF9\u6BD4\u8868",
+      prerequisites: []
+    },
+    {
+      id: "ext-residual",
+      name: "\u8F66\u8F86\u4FDD\u503C\u7387\u4E0E\u6B8B\u503C\u8BC4\u4F30",
+      archetypes: ["consumer-decision"],
+      moduleId: "decision",
+      gradeBand: [9, 12],
+      reason: "\u4E8C\u624B\u6B8B\u503C\u662F\u9009\u8F66\u91CD\u8981\u7EF4\u5EA6\uFF0C\u8BFE\u672C\u901A\u5E38\u4E0D\u6D89\u53CA",
+      taskSnippet: "\u67E5\u9605\u4E8C\u624B\u8F66\u5E73\u53F0\u6570\u636E\uFF0C\u4F30\u7B97 3 \u5E74\u540E\u6B8B\u503C\u7387\u5E76\u5199\u5165\u51B3\u7B56\u62A5\u544A",
+      prerequisites: ["\u7EDF\u8BA1"]
+    },
+    {
+      id: "ext-charging",
+      name: "\u5145\u7535\u4FBF\u5229\u6027\u4E0E\u7EED\u822A\u573A\u666F\u8BC4\u4F30",
+      archetypes: ["consumer-decision"],
+      moduleId: "needs",
+      gradeBand: [7, 12],
+      reason: "\u65B0\u80FD\u6E90\u7528\u8F66\u9700\u7ED3\u5408\u5BB6\u5EAD\u5145\u7535\u6761\u4EF6\uFF0C\u5C5E\u5B9E\u8DF5\u8C03\u7814",
+      taskSnippet: "\u8C03\u67E5\u5BB6\u5EAD/\u5C0F\u533A\u5145\u7535\u6869\u6761\u4EF6\uFF0C\u5339\u914D\u65E5\u5E38\u901A\u52E4\u91CC\u7A0B\u9700\u6C42",
+      prerequisites: []
+    },
+    {
+      id: "ext-survey-validity",
+      name: "\u95EE\u5377\u4FE1\u6548\u5EA6\u57FA\u672C\u68C0\u9A8C",
+      archetypes: ["social-inquiry"],
+      moduleId: "topic",
+      gradeBand: [8, 12],
+      reason: "\u8C03\u67E5\u5DE5\u5177\u8D28\u91CF\u4FDD\u969C\uFF0C\u8BFE\u6807\u63D0\u53CA\u8F83\u5C11",
+      taskSnippet: "\u9884\u8C03\u67E5 5 \u4EBA\u540E\u4FEE\u8BA2\u95EE\u5377\uFF0C\u5220\u9664\u8868\u8FF0\u4E0D\u6E05\u7684\u9898\u76EE",
+      prerequisites: ["\u6570\u636E\u7684\u6536\u96C6"]
+    },
+    {
+      id: "ext-interview-ethics",
+      name: "\u8BBF\u8C08\u4F26\u7406\u4E0E\u77E5\u60C5\u540C\u610F",
+      archetypes: ["social-inquiry"],
+      moduleId: "collect",
+      gradeBand: [7, 12],
+      reason: "\u7530\u91CE\u8C03\u67E5\u4F26\u7406\u8981\u6C42\uFF0C\u8BFE\u672C\u901A\u5E38\u4E0D\u5355\u72EC\u8BB2\u6388",
+      taskSnippet: "\u8BBE\u8BA1\u8BBF\u8C08\u5F00\u573A\u8BF4\u660E\u4E0E\u533F\u540D\u627F\u8BFA\uFF0C\u53D7\u8BBF\u8005\u7B7E\u5B57\u786E\u8BA4",
+      prerequisites: []
+    },
+    {
+      id: "ext-petition-format",
+      name: "\u5021\u8BAE\u4E66\u683C\u5F0F\u4E0E\u843D\u6B3E\u89C4\u8303",
+      archetypes: ["application-writing"],
+      moduleId: "format",
+      gradeBand: [6, 12],
+      reason: "\u5E94\u7528\u6587\u5199\u4F5C\u683C\u5F0F\u7EC6\u8282\uFF0C\u8BFE\u5802\u5E38\u9700\u4E13\u9879\u63D0\u9192",
+      taskSnippet: "\u6309\u6807\u9898\u3001\u79F0\u547C\u3001\u6B63\u6587\u3001\u843D\u6B3E\u3001\u65E5\u671F\u4E94\u90E8\u5206\u6392\u7248\uFF0C\u9644\u8303\u6587\u5BF9\u7167",
+      prerequisites: ["\u5E94\u7528\u6587"]
+    },
+    {
+      id: "ext-poetry-workshop",
+      name: "\u8BD7\u6B4C\u4FEE\u6539\u5DE5\u4F5C\u574A\u6D41\u7A0B",
+      archetypes: ["humanities-writing"],
+      moduleId: "revise",
+      gradeBand: [6, 12],
+      reason: "\u4E92\u8BC4\u4FEE\u6539\u7684\u7EC4\u7EC7\u65B9\u6CD5\uFF0C\u8BFE\u672C\u8F83\u5C11\u7CFB\u7EDF\u8BB2\u6388",
+      taskSnippet: "\u4E09\u4EBA\u4E00\u7EC4\u4E92\u8BC4\uFF1A\u6807\u51FA\u610F\u8C61\u3001\u8282\u594F\u3001\u7528\u8BCD\u4E09\u5904\u53EF\u6539\u70B9\u5E76\u4E8C\u7A3F\u4FEE\u8BA2",
+      prerequisites: []
+    },
+    {
+      id: "ext-trip-risk",
+      name: "\u7814\u5B66\u884C\u7A0B\u98CE\u9669\u8BC4\u4F30\u8868",
+      archetypes: ["life-planning"],
+      moduleId: "plan",
+      gradeBand: [6, 12],
+      reason: "\u6D3B\u52A8\u7B56\u5212\u4E2D\u7684\u98CE\u9669\u7BA1\u7406\uFF0C\u8BFE\u6807\u65E0\u4E13\u9879\u6761\u76EE",
+      taskSnippet: "\u5217\u51FA\u4EA4\u901A/\u5929\u6C14/\u996E\u98DF\u4E09\u7C7B\u98CE\u9669\u53CA\u5BF9\u5E94\u9884\u6848\uFF0C\u8D1F\u8D23\u4EBA\u7B7E\u5B57\u786E\u8BA4",
+      prerequisites: []
+    },
+    {
+      id: "ext-break-even",
+      name: "\u4E49\u5356\u76C8\u4E8F\u5E73\u8861\u6D4B\u7B97",
+      archetypes: ["business-economics"],
+      moduleId: "cost",
+      gradeBand: [6, 12],
+      reason: "\u7B80\u6613\u5546\u4E1A\u6D4B\u7B97\u6A21\u578B\uFF0C\u8BFE\u672C\u901A\u5E38\u4E0D\u5355\u72EC\u8BB2\u6388",
+      taskSnippet: "\u4F30\u7B97\u56FA\u5B9A\u6210\u672C\u4E0E\u5355\u4EF7\uFF0C\u8BA1\u7B97\u81F3\u5C11\u5356\u51FA\u591A\u5C11\u4EF6\u624D\u80FD\u56DE\u672C",
+      prerequisites: ["\u767E\u5206\u6BD4", "\u7EDF\u8BA1"]
+    },
+    {
+      id: "ext-screen-time",
+      name: "\u5C4F\u5E55\u65F6\u95F4\u4E0E\u7528\u773C\u8DDD\u79BB\u8BB0\u5F55\u6CD5",
+      archetypes: ["health-life"],
+      moduleId: "status",
+      gradeBand: [4, 12],
+      reason: "\u8FD1\u89C6\u9632\u63A7\u9700\u53EF\u64CD\u4F5C\u7684\u81EA\u6211\u76D1\u6D4B\u65B9\u6CD5",
+      taskSnippet: "\u8FDE\u7EED 7 \u5929\u8BB0\u5F55\u6BCF\u65E5\u5C4F\u5E55\u65F6\u957F\u4E0E\u9605\u8BFB\u8DDD\u79BB\uFF0C\u5236\u8868\u5BF9\u6BD4\u57FA\u7EBF",
+      prerequisites: []
+    },
+    {
+      id: "ext-rose-care",
+      name: "\u6708\u5B63\u683D\u57F9\u4E0E\u517B\u62A4\u8981\u70B9",
+      archetypes: ["planting-cultivation"],
+      moduleId: "cultivate",
+      gradeBand: [4, 9],
+      reason: "\u6708\u5B63\u6266\u63D2\u3001\u6D47\u6C34\u3001\u4FEE\u526A\u3001\u75C5\u866B\u5BB3\u9632\u6CBB\u7B49\u56ED\u827A\u64CD\u4F5C\uFF0C\u8BFE\u672C\u8F83\u5C11\u5C55\u5F00",
+      taskSnippet: "\u8BB0\u5F55\u6708\u5B63\u683D\u690D\u6B65\u9AA4\uFF1A\u9009\u82D7\u2192\u6316\u7A74\u2192\u57FA\u80A5\u2192\u5B9A\u690D\u2192\u6D47\u900F\u6C34\uFF1B\u6BCF\u5468\u8BB0\u5F55\u6D47\u6C34\u6B21\u6570\u4E0E\u682A\u9AD8",
+      prerequisites: ["\u690D\u7269\u7684\u4E00\u751F\uFF08\u79CD\u5B50\u5230\u679C\u5B9E\uFF09", "\u7EFF\u8272\u690D\u7269\u6574\u4F53\u7ED3\u6784"]
+    },
+    {
+      id: "ext-soil-ph",
+      name: "\u683D\u57F9\u571F\u58E4\u4E0E\u6392\u6C34\u68C0\u6D4B",
+      archetypes: ["planting-cultivation"],
+      moduleId: "cultivate",
+      gradeBand: [5, 9],
+      reason: "\u571F\u58E4\u758F\u677E\u5EA6\u3001pH\u3001\u6392\u6C34\u6027\u5F71\u54CD\u683D\u57F9\u6210\u6D3B\uFF0C\u52B3\u52A8\u5B9E\u8DF5\u9700\u7B80\u6613\u68C0\u6D4B\u65B9\u6CD5",
+      taskSnippet: "\u7528\u7B80\u6613\u65B9\u6CD5\u68C0\u6D4B\u79CD\u690D\u533A\u571F\u58E4\uFF1A\u8BB0\u5F55\u677E\u571F\u6DF1\u5EA6\u3001\u79EF\u6C34\u60C5\u51B5\u3001\u65E5\u7167\u65F6\u957F\u54041\u6B21",
+      prerequisites: ["\u690D\u7269\u7684\u5149\u5408\u4F5C\u7528\u4E0E\u547C\u5438\uFF08\u5165\u95E8\uFF09"]
+    },
+    {
+      id: "ext-plant-log",
+      name: "\u79CD\u690D\u89C2\u5BDF\u65E5\u5FD7\u6A21\u677F",
+      archetypes: ["planting-cultivation", "labor-practice"],
+      moduleId: "record",
+      gradeBand: [3, 9],
+      reason: "\u52B3\u52A8\u5B9E\u8DF5\u4E2D\u7684\u8FC7\u7A0B\u8BB0\u5F55\u89C4\u8303\uFF0C\u9700\u8BFE\u5916\u6A21\u677F\u652F\u6301",
+      taskSnippet: "\u6309\u65E5\u671F\u8BB0\u5F55\u682A\u9AD8\u3001\u53F6\u7247\u6570\u3001\u6D47\u6C34\u6B21\u6570\uFF0C\u9644\u7167\u7247\u6216\u7B80\u7B14\u753B",
+      prerequisites: []
+    },
+    {
+      id: "ext-storyboard",
+      name: "\u77ED\u89C6\u9891\u5206\u955C\u811A\u672C\u89C4\u8303",
+      archetypes: ["creative-media"],
+      moduleId: "design",
+      gradeBand: [6, 12],
+      reason: "\u89C6\u542C\u4F5C\u54C1\u524D\u671F\u8BBE\u8BA1\u65B9\u6CD5\uFF0C\u4FE1\u606F\u6280\u672F\u8BFE\u6807\u8F83\u5C11\u6DF1\u5165",
+      taskSnippet: "\u7528\u8868\u683C\u5217\u51FA\u955C\u5934\u53F7\u3001\u666F\u522B\u3001\u753B\u9762\u3001\u53F0\u8BCD/\u5B57\u5E55\u3001\u65F6\u957F\u5171 8\u201312 \u955C",
+      prerequisites: []
+    },
+    {
+      id: "ext-exhibit-floorplan",
+      name: "\u5C55\u9648\u5E73\u9762\u5E03\u5C40\u4E0E\u53C2\u89C2\u52A8\u7EBF\u8BBE\u8BA1",
+      archetypes: ["exhibition-redesign"],
+      moduleId: "design",
+      gradeBand: [6, 12],
+      reason: "\u573A\u9986\u6539\u9020\u987B\u89C4\u5212\u52A8\u7EBF\u4E0E\u5C55\u677F\u70B9\u4F4D\uFF0C\u8BFE\u6807\u8F83\u5C11\u7CFB\u7EDF\u8BB2\u6388\u5C55\u9648\u8BBE\u8BA1\u65B9\u6CD5",
+      taskSnippet: "\u7528A3\u7EB8\u7ED8\u5236\u5E73\u9762\u56FE\uFF1A\u5165\u53E3\u21923\u4E2A\u5C55\u533A\u2192\u51FA\u53E3\u52A8\u7EBF\uFF0C\u6807\u6CE8\u5404\u5C55\u677F\u5C3A\u5BF8\u4E0E\u4E92\u52A8\u70B9\u4F4D\u7F6E",
+      prerequisites: ["\u8BF4\u660E\u6587\u5199\u4F5C"]
+    },
+    {
+      id: "ext-airspace-mgmt",
+      name: "\u4F4E\u7A7A\u7A7A\u57DF\u5206\u7C7B\u4E0E\u7BA1\u7406\u8981\u70B9",
+      archetypes: ["industry-innovation"],
+      moduleId: "background",
+      gradeBand: [8, 12],
+      reason: "\u7A7A\u57DF\u5212\u8BBE\u3001\u98DE\u884C\u5BA1\u6279\u4E0E\u7981\u98DE\u533A\u662F\u4F4E\u7A7A\u7ECF\u6D4E\u843D\u5730\u524D\u63D0\uFF0C\u8BFE\u6807\u65E0\u4E13\u9879\u6761\u76EE",
+      taskSnippet: "\u6574\u7406\u7BA1\u5236\u7A7A\u57DF/\u76D1\u89C6\u7A7A\u57DF/\u62A5\u544A\u7A7A\u57DF\u4E09\u7C7B\u5B9A\u4E49\uFF0C\u6807\u6CE8\u672C\u57301\u5904\u7981\u98DE\u533A\u53CA\u7533\u8BF7\u6D41\u7A0B",
+      prerequisites: ["\u4EA4\u901A\u8FD0\u8F93\u5E03\u5C40", "\u4E2D\u56FD\u7684\u7ECF\u6D4E\u53D1\u5C55"]
+    },
+    {
+      id: "ext-lowalt-safety",
+      name: "\u65E0\u4EBA\u673A\u98DE\u884C\u5B89\u5168\u64CD\u4F5C\u89C4\u8303",
+      archetypes: ["industry-innovation"],
+      moduleId: "tech",
+      gradeBand: [7, 12],
+      reason: "\u573A\u666F\u8C03\u7814\u540E\u987B\u7406\u89E3\u7981\u98DE\u3001\u9650\u9AD8\u3001\u76EE\u89C6\u98DE\u884C\u7B49\u5B89\u5168\u7EA2\u7EBF\uFF0C\u8BFE\u672C\u8F83\u5C11\u7CFB\u7EDF\u8BB2\u6388",
+      taskSnippet: "\u5236\u5B9A\u98DE\u884C\u524D\u68C0\u67E5\u8868\uFF1A\u5B9E\u540D\u767B\u8BB0\u3001\u9650\u9AD8120m\u3001\u8FDC\u79BB\u4EBA\u7FA4\u226530m\u3001\u7981\u98DE\u533A\u6838\u67E5",
+      prerequisites: ["\u629B\u4F53\u8FD0\u52A8", "\u725B\u987F\u8FD0\u52A8\u5B9A\u5F8B"]
+    },
+    {
+      id: "ext-drone-scenarios",
+      name: "\u4F4E\u7A7A\u7ECF\u6D4E\u5178\u578B\u5E94\u7528\u573A\u666F\u56FE\u8C31",
+      archetypes: ["industry-innovation"],
+      moduleId: "scenarios",
+      gradeBand: [7, 12],
+      reason: "\u914D\u9001/\u5E94\u6025/\u690D\u4FDD/\u5DE1\u68C0/\u51FA\u884C\u7B49\u573A\u666F\u5206\u7C7B\u662F\u521B\u65B0\u9009\u9898\u57FA\u7840\uFF0C\u8BFE\u6807\u5916\u884C\u4E1A\u77E5\u8BC6",
+      taskSnippet: "\u7ED8\u5236\u573A\u666F\u77E9\u9635\uFF1A\u884C=\u573A\u666F\u7C7B\u578B\uFF0C\u5217=\u76EE\u6807\u7528\u6237/\u75DB\u70B9/\u73B0\u6709\u65B9\u6848\uFF0C\u81F3\u5C11\u586B4\u683C",
+      prerequisites: ["\u6570\u636E\u7684\u6536\u96C6"]
+    },
+    {
+      id: "ext-filter-efficiency",
+      name: "\u8FC7\u6EE4\u5BF9\u7167\u6D4B\u8BD5\u65B9\u6CD5",
+      archetypes: ["environmental-filtration"],
+      moduleId: "test",
+      gradeBand: [4, 12],
+      reason: "\u987B\u7528\u5B89\u5168\u6A21\u578B\u9897\u7C92\u505A A/B/C \u5BF9\u7167\uFF0C\u8BB0\u5F55\u6D41\u901F\u4E0E\u53EF\u89C1\u9897\u7C92\u53D8\u5316\uFF0C\u8BFE\u672C\u8F83\u5C11\u7CFB\u7EDF\u8BB2\u6388\u88C5\u7F6E\u9A8C\u6536\u65B9\u6CD5",
+      taskSnippet: "A\u539F\u6C34/B\u4EC5\u7C97\u6EE4/C\u5B8C\u6574\u4E09\u7EA7\u5404\u8FC7\u6EE4300mL\uFF0C\u8BB0\u5F55\u7528\u65F6\u5E76\u8BA1\u7B97\u6D41\u901F\uFF1B\u62A5\u544A\u6CE8\u660E\u300C\u6A21\u578B\u9897\u7C92\u51CF\u5C11\u7387\u2260\u771F\u5B9E\u5FAE\u5851\u6599\u53BB\u9664\u7387\u300D",
+      prerequisites: ["\u8FC7\u6EE4", "\u5B9E\u9A8C"]
+    },
+    {
+      id: "ext-microplastic-sim",
+      name: "\u5B89\u5168\u6A21\u578B\u9897\u7C92\u9009\u7528",
+      archetypes: ["environmental-filtration"],
+      moduleId: "prefilter",
+      gradeBand: [4, 12],
+      reason: "\u8BFE\u5802\u987B\u7528\u5B89\u5168\u66FF\u4EE3\u7269\u6A21\u62DF\u6C34\u4E2D\u9897\u7C92\uFF0C\u7981\u6B62\u5236\u9020\u6216\u6269\u6563\u771F\u5B9E\u5851\u6599\u788E\u5C51",
+      taskSnippet: "\u9009\u7528\u80E1\u6912\u7C89/\u8336\u53F6\u788E/\u7EC6\u6C99\u7B49\u5B89\u5168\u9897\u7C92\u914D\u5236\u60AC\u6D4A\u6DB2\uFF0C\u5B9E\u9A8C\u540E\u96C6\u4E2D\u6536\u96C6\u5904\u7406\uFF1B\u7981\u6B62\u526A\u5851\u6599\u888B\u3001\u5851\u6599\u5FAE\u73E0\u6216\u4EAE\u7247",
+      prerequisites: ["\u8FC7\u6EE4", "\u5B9E\u9A8C"]
+    },
+    {
+      id: "ext-filter-media",
+      name: "\u6EE4\u5C42\u6750\u6599\u4E0E\u5B54\u5F84\u9009\u578B",
+      archetypes: ["environmental-filtration"],
+      moduleId: "membrane",
+      gradeBand: [4, 12],
+      reason: "\u987B\u533A\u5206\u7C97\u6EE4/\u6D3B\u6027\u70AD/\u819C\u6EE4\u82AF\u804C\u8D23\uFF0C\u819C\u5B54\u5F84\u51B3\u5B9A\u62E6\u622A\u80FD\u529B\uFF0C\u5DE5\u7A0B\u9009\u578B\u8D85\u51FA\u8BFE\u672C",
+      taskSnippet: "\u5236\u4F5C\u6EE4\u5C42\u5BF9\u6BD4\u8868\uFF1A\u5C42\u7EA7\u3001\u6750\u6599\u3001\u5B54\u5F84\u6216\u89C4\u683C\u3001\u4E3B\u8981\u4F5C\u7528\u3001\u66F4\u6362\u5468\u671F\uFF1B\u6807\u51FA\u819C/\u9676\u74F7\u6EE4\u82AF\u4E3A\u6838\u5FC3\u5C42",
+      prerequisites: ["\u8FC7\u6EE4", "\u6C89\u6DC0"]
+    },
+    {
+      id: "ext-rubric",
+      name: "\u9879\u76EE\u6210\u679C\u8BC4\u4EF7\u91CF\u89C4\uFF08Rubric\uFF09",
+      archetypes: ["general-practice"],
+      moduleId: "test",
+      gradeBand: [4, 12],
+      reason: "PBL \u5C55\u793A\u8BC4\u4EF7\u9700\u8981\u53EF\u64CD\u4F5C\u7684\u8BC4\u5206\u6807\u51C6",
+      taskSnippet: "\u5236\u5B9A 3 \u7EF4\u5EA6 4 \u6863\u91CF\u89C4\uFF1A\u5B8C\u6210\u5EA6\u3001\u5408\u4F5C\u3001\u5C55\u793A\u8868\u8FBE\uFF0C\u5C0F\u7EC4\u81EA\u8BC4\u4E92\u8BC4",
+      prerequisites: []
+    }
+  ]
+};
+
+// _lib/pbl-archetypes.js
+function resolveArchetype() {
+  return null;
+}
+__name(resolveArchetype, "resolveArchetype");
+function formatArchetypeForMatch(archetype, blueprint) {
+  if (!archetype) return "";
+  const scheme = (blueprint?.schemes || []).find((s) => s.id === blueprint?.recommendedSchemeId) || (blueprint?.schemes || [])[0];
+  const phaseModules = (scheme?.phases || []).map((p, i) => {
+    const mid = p.subsystemIds?.[0] || "";
+    const mod = (archetype.modules || []).find((m) => m.id === mid);
+    return `  ${i + 1}. \u6A21\u5757\u3010${mod?.label || mid || p.phase}\u3011\u68C0\u7D22\u8BCD\uFF1A${(p.knowledgeHints || []).join("\u3001")}`;
+  }).join("\n");
+  const bans = (archetype.banNamePatterns || []).slice(0, 8).join("\u3001");
+  const chinese = archetype.chineseAllowPatterns?.length ? `\u8BED\u6587\u4EC5\u5141\u8BB8\uFF1A${archetype.chineseAllowPatterns.join("\u3001")}` : "";
+  return `
+\u3010\u9879\u76EE\u539F\u578B\uFF1A${archetype.label}\uFF08${archetype.id}\uFF09\u2014 \u786C\u6027\u7EA6\u675F\u3011
+- \u4E3B\u8BFE\u6807\u4F53\u7CFB\uFF1A${archetype.primarySystem || "cn"}\uFF08\u4F18\u5148 CN \u8282\u70B9\uFF0CAP/IB \u4EC5\u4F5C\u62D3\u5C55\uFF09
+- \u5B66\u6BB5\uFF1A${(archetype.gradeBand || []).join("-")}\uFF0C\u6700\u4F4E grade ${archetype.minGrade || 7}
+- \u5B66\u79D1\uFF1A${(archetype.subjects || []).join("\u3001")}
+- \u7981\u6B62 matched \u540D\u79F0\u542B\uFF1A${bans}
+${chinese ? `- ${chinese}` : ""}
+- \u6BCF\u4E2A\u6A21\u5757\u81F3\u5C11 1 \u4E2A matched\uFF0Creason \u5FC5\u987B\u4EE5\u672C\u539F\u578B\u6A21\u5757\u540D\u5F00\u5934\uFF08\u5982\u300C\u6A21\u5757\uFF1A\u6210\u672C\u6D4B\u7B97\u3002\u300D\uFF09\uFF0C**\u7981\u6B62**\u7528\u79D1\u5B66\u63A2\u7A76\u5957\u8BDD\uFF08\u95EE\u9898\u4E0E\u5047\u8BBE/\u53D8\u91CF\u8BBE\u8BA1\uFF09
+- matched \u603B\u6570 ${archetype.minMatched || 5}-${archetype.maxMatched || 12}\uFF0C\u7981\u6B62\u4E3A\u51D1\u5B66\u79D1\u9009\u65E0\u5173\u8282\u70B9
+${phaseModules ? `\u84DD\u56FE\u6A21\u5757\u5BF9\u9F50\uFF1A
+${phaseModules}` : ""}`;
+}
+__name(formatArchetypeForMatch, "formatArchetypeForMatch");
+function getRegistryEntries(archetypeId, moduleIds = []) {
+  return (engineering_registry_default.entries || []).filter(
+    (e) => (e.archetypes || []).includes(archetypeId) && (!moduleIds.length || !e.moduleId || moduleIds.includes(e.moduleId))
+  );
+}
+__name(getRegistryEntries, "getRegistryEntries");
+function formatRegistryForMatch(archetypeId) {
+  const entries = getRegistryEntries(archetypeId);
+  if (!entries.length) return "";
+  const lines = entries.slice(0, 6).map(
+    (e) => `- [${e.moduleId}] ${e.name}\uFF1A${e.reason}`
+  ).join("\n");
+  return `
+\u3010\u63A8\u8350\u8BFE\u6807\u5916\u8865\u5145\uFF08\u4F18\u5148\u4ECE\u4E0B\u5217\u9009\u7528\uFF0C\u987B\u7ED1\u5B9A\u6A21\u5757\uFF09\u3011
+${lines}`;
+}
+__name(formatRegistryForMatch, "formatRegistryForMatch");
+
+// _lib/pbl-prompts.js
+var PBL_MAX_MATCHED_COMPLEX = 12;
+var PBL_MAX_MATCHED_NORMAL = 18;
+function isConsumerDecisionGoal(goal) {
+  const g = String(goal || "");
+  if (/购车|买车|选车|用车方案|消费决策|方案比选|比选|选型|性价比|家用.*车|家庭.*(购车|买车|选车|用车)/.test(g)) return true;
+  if (/对比|比较/.test(g) && /购|买|选|家用|家庭/.test(g) && /新能源|燃油|电动|混动|汽油|柴油/.test(g)) return true;
+  if (/哪个更|哪种更|怎么选|如何选择/.test(g) && /车|新能源|燃油|电动/.test(g)) return true;
+  if (/新.{0,2}旧.{0,2}能源|油电混合|油电对比|燃油车|电动车|电车|混动车/.test(g) && /车|汽车|选|购|买|方案|对比|比较/.test(g)) return true;
+  if (/(车|汽车|轿车|SUV)/.test(g) && /新能源|燃油|电动|混动|油电|汽油|柴油/.test(g) && /选|购|买|对比|比较|方案|推荐|决策|建议/.test(g)) return true;
+  if (/选.{0,4}(车|汽车)/.test(g) || /(车|汽车).{0,4}选/.test(g)) return true;
+  return false;
+}
+__name(isConsumerDecisionGoal, "isConsumerDecisionGoal");
+function isChemistryInquiryGoal(goal) {
+  const g = String(goal || "");
+  return /浓度|溶液|溶解度|溶质|溶剂|饱和溶液|质量分数|体积分数|物质的溶解|配制溶液|混合溶液/.test(g) || /食盐|盐水|醋酸|苏打|洁厕|电解水|酸碱|中和|化学变化|物质的变化|离子反应/.test(g) || /滴定|硝酸银|电导率|莫尔法|沉淀滴定|标准溶液|物质的量浓度/.test(g) || /食堂|菜汤|汤水|汤汁|汤品|卤水/.test(g) || /厨房|餐桌|调味|烹饪|汤/.test(g) && /盐|酸|碱|醋|化学|浓度|溶液|溶解|测|含量/.test(g);
+}
+__name(isChemistryInquiryGoal, "isChemistryInquiryGoal");
+function getChemistryAnalysisProfile(goal) {
+  const g = String(goal || "");
+  const mixed = /混合溶液|食堂|菜汤|汤水|汤汁|汤品|卤水|景区水|河水|废水|不能直接|无法.*分离|不能.*称量|不能.*称重/.test(g) || /汤/.test(g) && /食堂|餐厅|厨房|测定|检测|含量|浓度|盐/.test(g) || /滴定|硝酸银|电导率|间接测定/.test(g);
+  const wantsTitration = /滴定|硝酸银|AgNO|莫尔|沉淀滴定|氯离子|Cl⁻|Cl-/.test(g);
+  const wantsConductivity = /电导率|电导|导电率|电解质.*导电/.test(g);
+  const methods = [];
+  if (wantsTitration) methods.push("titration");
+  if (wantsConductivity) methods.push("conductivity");
+  if (mixed && !methods.length) methods.push("titration", "conductivity");
+  return {
+    mixed,
+    methods,
+    sampleLabel: /食堂|菜汤|汤水/.test(g) ? "\u98DF\u5802\u6C64\u6C34" : /混合溶液/.test(g) ? "\u6DF7\u5408\u6EB6\u6DB2" : "\u6837\u54C1\u6EB6\u6DB2"
+  };
+}
+__name(getChemistryAnalysisProfile, "getChemistryAnalysisProfile");
+function mixedSolutionChemistryDomains() {
+  return [
+    { id: "constraint", label: "\u6D4B\u5B9A\u7EA6\u675F\u4E0E\u65B9\u6848\u9009\u578B", keywords: ["\u6DF7\u5408\u6EB6\u6DB2", "\u65E0\u6CD5\u5206\u79BB", "\u95F4\u63A5\u6D4B\u5B9A", "\u53D6\u6837", "\u7A00\u91CA", "\u6EF4\u5B9A", "\u7535\u5BFC\u7387"], subjects: ["chemistry"] },
+    { id: "titration", label: "\u785D\u9178\u94F6\u6EF4\u5B9A\u6CD5", keywords: ["\u6EF4\u5B9A", "\u785D\u9178\u94F6", "\u6C89\u6DC0", "\u6C2F\u79BB\u5B50", "\u94F6\u79BB\u5B50", "\u7269\u8D28\u7684\u91CF\u6D53\u5EA6", "\u6807\u51C6\u6EB6\u6DB2"], subjects: ["chemistry"] },
+    { id: "conductivity", label: "\u7535\u5BFC\u7387\u6CD5", keywords: ["\u7535\u5BFC\u7387", "\u7535\u89E3\u8D28", "\u5BFC\u7535", "\u79BB\u5B50\u6D53\u5EA6", "\u6807\u51C6\u66F2\u7EBF"], subjects: ["chemistry", "physics"] },
+    { id: "calc", label: "\u6570\u636E\u5904\u7406\u4E0E\u6362\u7B97", keywords: ["\u7269\u8D28\u7684\u91CF", "\u6D53\u5EA6", "\u8BA1\u7B97", "\u8BEF\u5DEE", "\u7EDF\u8BA1", "\u6469\u5C14"], subjects: ["math", "chemistry"] },
+    { id: "report", label: "\u7ED3\u8BBA\u4E0E\u5E94\u7528", keywords: ["\u62A5\u544A", "\u5206\u6790", "\u6BD4\u8F83", "\u7ED3\u8BBA", "\u542B\u91CF"], subjects: ["chemistry", "chinese", "math"] }
+  ];
+}
+__name(mixedSolutionChemistryDomains, "mixedSolutionChemistryDomains");
+function directSolutionChemistryDomains() {
+  return [
+    { id: "solution", label: "\u6EB6\u6DB2\u4E0E\u6D53\u5EA6\u6982\u5FF5", keywords: ["\u6EB6\u6DB2", "\u6EB6\u8D28", "\u6EB6\u5242", "\u6D53\u5EA6", "\u8D28\u91CF\u5206\u6570", "\u6EB6\u89E3", "\u914D\u5236", "\u6C2F\u5316\u94A0"], subjects: ["chemistry"] },
+    { id: "experiment", label: "\u5B9E\u9A8C\u8BBE\u8BA1\u4E0E\u6D4B\u91CF", keywords: ["\u5B9E\u9A8C", "\u53D8\u91CF", "\u5BF9\u7167", "\u91CF\u53D6", "\u79F0\u91CF", "\u914D\u5236", "\u6D4B\u91CF", "\u6EF4\u5B9A"], subjects: ["chemistry", "science"] },
+    { id: "data", label: "\u6570\u636E\u5904\u7406\u4E0E\u8868\u8FBE", keywords: ["\u6570\u636E", "\u7EDF\u8BA1", "\u56FE\u8868", "\u8BA1\u7B97", "\u8BEF\u5DEE", "\u8BB0\u5F55"], subjects: ["math"] },
+    { id: "application", label: "\u751F\u6D3B\u60C5\u5883\u4E0E\u7ED3\u8BBA", keywords: ["\u53A8\u623F", "\u98DF\u76D0", "\u5E94\u7528", "\u5B89\u5168", "\u7ED3\u8BBA", "\u62A5\u544A"], subjects: ["chemistry", "science", "chinese"] }
+  ];
+}
+__name(directSolutionChemistryDomains, "directSolutionChemistryDomains");
+function parseGoalSubject(goal) {
+  const g = String(goal || "").trim();
+  let subject = g;
+  const m = g.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新|整治)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
+  if (m) subject = m[1].trim();
+  subject = subject.replace(/^(?:关于|围绕|有关)\s*/, "").replace(/[，。；].*$/, "").slice(0, 36);
+  return subject || g.slice(0, 36);
+}
+__name(parseGoalSubject, "parseGoalSubject");
+function buildTopicKeywords(goal, subject, kind) {
+  const g = String(goal || "");
+  const base = [subject];
+  if (/太空|天文|航天|行星|月球|宇宙/.test(g + subject)) base.push("\u592A\u9633\u7CFB", "\u5929\u6587", "\u592A\u7A7A", "\u6708\u7403", "\u79D1\u5B66");
+  if (/馆|展厅|展览|展陈/.test(g + subject)) base.push("\u5C55\u89C8", "\u5C55\u9648", "\u79D1\u666E", "\u5E03\u5C40", "\u8BBE\u8BA1");
+  if (/低空|空域|通航|无人机/.test(g + subject)) base.push("\u4F4E\u7A7A\u7ECF\u6D4E", "\u7A7A\u57DF", "\u65E0\u4EBA\u673A", "\u98DE\u884C");
+  if (kind === "exhibition-redesign") base.push("\u8C03\u67E5", "\u65B9\u6848", "\u8BF4\u660E", "\u7EDF\u8BA1", "\u8BBE\u8BA1", "\u5C55\u793A");
+  if (kind === "industry-innovation") base.push("\u4EA7\u4E1A", "\u521B\u65B0", "\u8C03\u7814", "\u653F\u7B56", "\u53EF\u884C\u6027");
+  if (kind === "planting-cultivation" || /种植|栽培|月季|花卉|蔬菜|盆栽|园艺|养殖|养蚕/.test(g + subject)) {
+    base.push("\u690D\u7269", "\u5206\u7C7B", "\u751F\u957F", "\u5149\u5408", "\u79CD\u5B50", "\u840C\u53D1", "\u683D\u57F9", "\u6839\u7CFB", "\u84B8\u817E", "\u89C2\u5BDF", "\u8BB0\u5F55");
+  }
+  if (kind === "environmental-filtration" || /微塑料|过滤|净水|废水|滤芯/.test(g + subject)) {
+    base.push("\u8FC7\u6EE4", "\u6C89\u6DC0", "\u5438\u9644", "\u5FAE\u5851\u6599", "\u62E6\u622A", "\u6D4B\u8BD5", "\u5BC6\u5C01", "\u5BFC\u6D41", "\u73AF\u5883", "\u6C61\u67D3");
+  }
+  for (let i = 0; i < subject.length - 1; i++) {
+    const w = subject.slice(i, i + 2);
+    if (w.length === 2 && !/[的与及了在]$/.test(w)) base.push(w);
+  }
+  return [...new Set(base)].slice(0, 12);
+}
+__name(buildTopicKeywords, "buildTopicKeywords");
+function inferDeliverableHint(goal, subject, kind) {
+  if (kind === "exhibition-redesign") {
+    return `\u300C${subject}\u300D\u6539\u9020\u65B9\u6848\u518C\uFF08\u73B0\u72B6\u8BCA\u65AD\u8868+\u5C55\u9648\u8BBE\u8BA1\u56FE+\u6574\u6539\u5B9E\u65BD\u6E05\u5355+\u5F00\u653E\u9A8C\u6536\u8868\uFF09`;
+  }
+  if (kind === "industry-innovation") {
+    return `\u300C${subject}\u300D\u521B\u65B0\u65B9\u6848\u62A5\u544A\uFF08\u573A\u666F\u8C03\u7814+\u653F\u7B56\u8981\u70B9+\u53EF\u884C\u6027\u8BBA\u8BC1\uFF09`;
+  }
+  if (kind === "planting-cultivation") {
+    return `\u300C${subject}\u300D\u79CD\u690D\u89C2\u5BDF\u65E5\u8BB0\uFF08\u690D\u7269\u5206\u7C7B\u7B14\u8BB0+\u683D\u57F9\u8BB0\u5F55\u8868+\u751F\u957F\u6570\u636E\u56FE\u8868+\u603B\u7ED3\uFF09`;
+  }
+  if (kind === "environmental-filtration") {
+    return `\u4E09\u7EA7\u8FC7\u6EE4\u88C5\u7F6E\u539F\u578B + A/B/C \u5BF9\u7167\u5B9E\u9A8C\u8BB0\u5F55\u8868 + \u542B\u5C40\u9650\u8BF4\u660E\u7684\u6D4B\u8BD5\u62A5\u544A`;
+  }
+  if (/报告|调查|论文|倡议|方案/.test(goal)) return `\u300C${subject}\u300D\u4E13\u9898\u62A5\u544A\uFF08\u542B\u8C03\u7814\u6570\u636E\u4E0E\u53EF\u68C0\u67E5\u7ED3\u8BBA\uFF09`;
+  if (/设计|制作|开发|建造/.test(goal)) return `\u53EF\u5C55\u793A\u7684\u300C${subject}\u300D\u4F5C\u54C1+\u8FC7\u7A0B\u8BB0\u5F55+\u8BF4\u660E\u6587\u6863`;
+  return `\u300C${subject}\u300D\u9879\u76EE\u6210\u679C\u5305\uFF08\u53EF\u5C55\u793A\u4EA4\u4ED8\u7269+\u8FC7\u7A0B\u8BB0\u5F55+\u8BF4\u660E\uFF09`;
+}
+__name(inferDeliverableHint, "inferDeliverableHint");
+function inferTopicKind(goal, subject) {
+  const g = String(goal || "");
+  if (/低空经济|低空飞行|低空空域|空域管理|通航产业|城市空中交通|eVTOL|低空物流|通用航空/.test(g)) return "industry-innovation";
+  if (/太空馆|天文馆|航天馆|科技馆|博物馆|展厅|展陈|太空.*馆|天文.*馆/.test(g) || /馆|展厅|展览/.test(g + subject) && /重塑|改造|整治|升级|策展|布展|失控|翻新|重建|优化/.test(g)) return "exhibition-redesign";
+  if (/探寻|探索|研究|调研/.test(g) && /创新|产业|经济|行业/.test(g)) return "industry-innovation";
+  if (/种植|栽培|养花|月季|花卉|玫瑰|蔬菜|种菜|盆栽|园艺|养殖|养蚕|花坛|绿化|阳台种/.test(g)) return "planting-cultivation";
+  if (/微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/.test(g)) return "environmental-filtration";
+  return "subject-anchored";
+}
+__name(inferTopicKind, "inferTopicKind");
+function isPlantingCultivationGoal(goal) {
+  return inferTopicKind(String(goal || ""), parseGoalSubject(goal)) === "planting-cultivation";
+}
+__name(isPlantingCultivationGoal, "isPlantingCultivationGoal");
+function plantingCropLabel(goal) {
+  const g = String(goal || "");
+  const m = g.match(/月季|玫瑰|番茄|黄瓜|辣椒|白菜|菠菜|多肉|薰衣草|向日葵|郁金香|菊花|荷花|草莓|葡萄|玉米|小麦|蚕|百合|牡丹/);
+  return m ? m[0] : "\u690D\u7269";
+}
+__name(plantingCropLabel, "plantingCropLabel");
+function plantingCultivationDomains(goal) {
+  const crop = plantingCropLabel(goal);
+  const subject = parseGoalSubject(goal);
+  return [
+    { id: "taxonomy", label: "\u690D\u7269\u8BC6\u522B\u4E0E\u5206\u7C7B", keywords: [crop, subject, "\u690D\u7269", "\u5206\u7C7B", "\u7279\u5F81", "\u7ED3\u6784", "\u5668\u5B98", "\u7EFF\u8272"], subjects: ["science", "biology"] },
+    { id: "growth", label: "\u751F\u957F\u4E0E\u73AF\u5883\u6761\u4EF6", keywords: [crop, "\u751F\u957F", "\u5149\u5408", "\u547C\u5438", "\u79CD\u5B50", "\u840C\u53D1", "\u6839", "\u84B8\u817E", "\u73AF\u5883", "\u6C34\u5206"], subjects: ["science", "biology"] },
+    { id: "cultivate", label: "\u683D\u57F9\u5B9E\u64CD", keywords: [crop, "\u79CD\u690D", "\u683D\u57F9", "\u571F\u58E4", "\u6D47\u6C34", "\u65BD\u80A5", "\u6266\u63D2", "\u79FB\u683D", "\u6B65\u9AA4", "\u517B\u62A4"], subjects: ["science", "biology"] },
+    { id: "observe", label: "\u751F\u957F\u89C2\u5BDF\u8BB0\u5F55", keywords: [crop, "\u89C2\u5BDF", "\u8BB0\u5F55", "\u6D4B\u91CF", "\u6570\u636E", "\u56FE\u8868", "\u53D8\u5316", "\u9AD8\u5EA6", "\u53F6\u7247"], subjects: ["science", "math", "biology"] },
+    { id: "share", label: "\u79CD\u690D\u65E5\u8BB0\u4E0E\u5206\u4EAB", keywords: [crop, "\u65E5\u8BB0", "\u62A5\u544A", "\u603B\u7ED3", "\u5206\u4EAB", "\u8BF4\u660E", "\u5199\u4F5C"], subjects: ["chinese"] }
+  ];
+}
+__name(plantingCultivationDomains, "plantingCultivationDomains");
+function extractTopicProfile(goal) {
+  const g = String(goal || "").trim();
+  const presets = [
+    {
+      test: /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/,
+      coreTopic: "\u5FAE\u5851\u6599\u8FC7\u6EE4\u88C5\u7F6E",
+      definition: "\u8BBE\u8BA1\u53EF\u6D4B\u8BD5\u7684\u4E09\u7EA7\u6C34\u4F53\u8FC7\u6EE4\u88C5\u7F6E\uFF1A\u7C97\u6EE4\u4FDD\u62A4\u5C42\u3001\u6D3B\u6027\u70AD\u5438\u9644\u6539\u5473\u5C42\u3001\u660E\u786E\u5B54\u5F84\u7684\u819C/\u9676\u74F7\u6838\u5FC3\u5C42\uFF0C\u5E76\u901A\u8FC7 A/B/C \u5BF9\u7167\u5B9E\u9A8C\u9A8C\u8BC1\u6A21\u578B\u9897\u7C92\u53D8\u5316\uFF08\u987B\u5199\u660E\u5C40\u9650\uFF0C\u7981\u6B62\u5BA3\u79F0\u996E\u6C34\u5B89\u5168\u6216\u771F\u5B9E\u5FAE\u5851\u6599\u53BB\u9664\u7387\uFF09",
+      keywords: ["\u5FAE\u5851\u6599", "\u8FC7\u6EE4", "\u51C0\u6C34", "\u5E9F\u6C34", "\u6EE4\u82AF", "\u6C89\u6DC0", "\u5438\u9644", "\u6D3B\u6027\u70AD", "\u62E6\u622A", "\u9897\u7C92", "\u6D4B\u8BD5", "\u62E6\u622A\u7387", "\u5BC6\u5C01", "\u6CF5", "\u5BFC\u6D41"],
+      banInSteps: ["\u706B\u7BAD", "\u53CD\u51B2", "\u629B\u4F53", "\u5F39\u9053", "\u53D1\u5C04", "\u539F\u578B\u9A71\u52A8\u8FED\u4EE3", "MVP", "\u5FEB\u901F\u539F\u578B", "\u9012\u8FDB\u5F0F\u5B9E\u65BD", "\u6D78\u6DA6\u5F0F\u573A\u666F"],
+      deliverableHint: "\u4E09\u7EA7\u8FC7\u6EE4\u88C5\u7F6E\u539F\u578B + A/B/C \u5BF9\u7167\u5B9E\u9A8C\u8BB0\u5F55\u8868 + \u542B\u5C40\u9650\u8BF4\u660E\u7684\u6D4B\u8BD5\u62A5\u544A",
+      kind: "environmental-filtration"
+    },
+    {
+      test: /低空经济|低空飞行|低空空域|空域管理|通航产业|城市空中交通|UAM|eVTOL|低空物流|通用航空/,
+      coreTopic: "\u4F4E\u7A7A\u7ECF\u6D4E",
+      definition: "\u6307\u5728\u7EA61000\u20133000\u7C73\u4F4E\u7A7A\u7A7A\u57DF\u5185\uFF0C\u4EE5\u65E0\u4EBA\u673A\u7269\u6D41\u914D\u9001\u3001\u4F4E\u7A7A\u51FA\u884C\u3001\u5E94\u6025\u6551\u63F4\u3001\u519C\u4E1A\u690D\u4FDD\u3001\u5DE1\u68C0\u7B49\u98DE\u884C\u6D3B\u52A8\u5E26\u52A8\u7684\u65B0\u5174\u4EA7\u4E1A\uFF08\u542B\u653F\u7B56\u3001\u7A7A\u57DF\u3001\u5B89\u5168\u3001\u5E94\u7528\u573A\u666F\uFF09",
+      keywords: ["\u4F4E\u7A7A\u7ECF\u6D4E", "\u4F4E\u7A7A", "\u7A7A\u57DF", "\u901A\u822A", "\u65E0\u4EBA\u673A", "\u4F4E\u7A7A\u7269\u6D41", "\u98DE\u884C", "\u822A\u7A7A", "\u4EA4\u901A", "\u5E94\u6025\u6551\u63F4", "\u690D\u4FDD", "\u653F\u7B56", "\u6CD5\u89C4", "\u5B89\u5168", "\u4EA7\u4E1A"],
+      banInSteps: ["\u73B0\u4EE3\u7269\u6D41\u7BA1\u7406", "\u667A\u6167\u57CE\u5E02", "\u5DE5\u7A0B\u8BBE\u8BA1\u601D\u7EF4", "\u73AF\u5883\u642D\u5EFA", "\u786C\u4EF6\u7EC4\u4EF6", "\u7F16\u5199\u63A7\u5236\u903B\u8F91", "\u4E00\u822C\u7269\u6D41", "\u901A\u7528\u521B\u65B0\u5927\u8D5B", "\u539F\u578B\u9A71\u52A8\u8FED\u4EE3", "MVP", "\u5FEB\u901F\u539F\u578B"],
+      deliverableHint: "\u4F4E\u7A7A\u7ECF\u6D4E\u521B\u65B0\u65B9\u6848\u62A5\u544A\uFF08\u573A\u666F\u8C03\u7814+\u653F\u7B56/\u7A7A\u57DF\u8981\u70B9+\u6280\u672F\u53EF\u884C\u6027+\u8BD5\u70B9\u5EFA\u8BAE\uFF09",
+      kind: "industry-innovation"
+    }
+  ];
+  for (const p of presets) {
+    if (p.test.test(g)) {
+      return { ...p, rawGoal: g, matched: true };
+    }
+  }
+  const subject = parseGoalSubject(g);
+  const kind = inferTopicKind(g, subject);
+  const banCommon = ["\u539F\u578B\u9A71\u52A8\u8FED\u4EE3", "MVP", "\u5FEB\u901F\u539F\u578B", "\u9012\u8FDB\u5F0F\u5B9E\u65BD", "\u6D78\u6DA6\u5F0F\u573A\u666F", "\u786C\u4EF6\u51C6\u5907", "\u73AF\u5883\u642D\u5EFA", "\u5DE5\u7A0B\u8BBE\u8BA1\u601D\u7EF4", "\u62DB\u751F\u7B80\u7AE0", "\u73B0\u4EE3\u7269\u6D41\u7BA1\u7406", "\u667A\u6167\u57CE\u5E02"];
+  if (kind === "industry-innovation") {
+    const core = /低空经济/.test(g) ? "\u4F4E\u7A7A\u7ECF\u6D4E" : g.match(/(?:.+?经济|.+?产业|.+?行业)/)?.[0]?.slice(0, 24) || subject;
+    return {
+      rawGoal: g,
+      matched: true,
+      coreTopic: core,
+      definition: `\u56F4\u7ED5\u300C${core}\u300D\u5F00\u5C55\u521B\u65B0\u63A2\u7A76\uFF0C\u987B\u7ED3\u5408\u771F\u5B9E\u4EA7\u4E1A\u573A\u666F\u3001\u653F\u7B56\u6216\u6280\u672F\u5E94\u7528`,
+      keywords: buildTopicKeywords(g, core, kind),
+      banInSteps: [...banCommon, "\u786C\u4EF6\u7EC4\u4EF6", "\u4E00\u822C\u7269\u6D41"],
+      deliverableHint: inferDeliverableHint(g, core, kind),
+      kind
+    };
+  }
+  if (kind === "exhibition-redesign") {
+    return {
+      rawGoal: g,
+      matched: true,
+      coreTopic: subject,
+      definition: `\u5BF9\u300C${subject}\u300D\u8FDB\u884C\u73B0\u72B6\u8BCA\u65AD\u3001\u4E3B\u9898\u7B56\u5212\u3001\u5C55\u9648\u8BBE\u8BA1\u4E0E\u6574\u6539\u5B9E\u65BD\uFF0C\u4EA4\u4ED8\u53EF\u9A8C\u6536\u7684\u6539\u9020\u65B9\u6848\uFF08\u975E\u8F6F\u4EF6\u5DE5\u7A0B\u6216\u88C5\u7F6E\u7814\u53D1\uFF09`,
+      keywords: buildTopicKeywords(g, subject, kind),
+      banInSteps: [...banCommon, "\u7A0B\u5E8F\u8BBE\u8BA1", "\u7535\u89E3\u6C60", "\u642D\u5EFA\u539F\u578B"],
+      deliverableHint: inferDeliverableHint(g, subject, kind),
+      kind
+    };
+  }
+  if (kind === "planting-cultivation") {
+    const crop = plantingCropLabel(g);
+    return {
+      rawGoal: g,
+      matched: true,
+      coreTopic: subject,
+      definition: `\u56F4\u7ED5\u300C${subject}\u300D\u5B66\u4E60\u690D\u7269\u5206\u7C7B\u4E0E\u751F\u957F\u539F\u7406\uFF0C\u5B8C\u6210${crop}\u683D\u57F9\u5B9E\u64CD\u5E76\u6301\u7EED\u89C2\u5BDF\u8BB0\u5F55\uFF0C\u5F62\u6210\u79CD\u690D\u65E5\u8BB0`,
+      keywords: buildTopicKeywords(g, subject, kind),
+      banInSteps: [...banCommon, "\u7A0B\u5E8F\u8BBE\u8BA1", "\u725B\u987F", "\u5316\u5B66\u65B9\u7A0B\u5F0F", "\u7535\u89E3\u6C60"],
+      deliverableHint: inferDeliverableHint(g, subject, kind),
+      kind,
+      crop
+    };
+  }
+  return {
+    rawGoal: g,
+    matched: true,
+    coreTopic: subject,
+    definition: `\u672C\u9879\u76EE\u5FC5\u987B\u56F4\u7ED5\u7528\u6237\u6307\u5B9A\u7684\u300C${subject}\u300D\u5C55\u5F00\uFF0C\u4E0D\u5F97\u66FF\u6362\u4E3A\u5176\u4ED6\u4E3B\u9898\u6216\u5957\u7528\u65E0\u5173\u6A21\u677F`,
+    keywords: buildTopicKeywords(g, subject, kind),
+    banInSteps: banCommon,
+    deliverableHint: inferDeliverableHint(g, subject, kind),
+    kind: "subject-anchored"
+  };
+}
+__name(extractTopicProfile, "extractTopicProfile");
+function formatTopicAnchorBlock(goal) {
+  const t = extractTopicProfile(goal);
+  return `
+## \u672C\u9898\u6838\u5FC3\u4E3B\u9898\uFF08\u786C\u6027\u951A\u70B9 \u2014 \u4E0D\u53EF\u66FF\u6362\u3001\u4E0D\u53EF\u6CDB\u5316\uFF09
+- \u7528\u6237\u76EE\u6807\u539F\u6587\uFF1A\u300C${t.rawGoal}\u300D
+- **\u6838\u5FC3\u4E3B\u9898\uFF1A${t.coreTopic}**
+- \u4E3B\u9898\u5B9A\u4E49\uFF1A${t.definition}
+- projectSummary\u3001deliverable\u3001scheme \u540D\u79F0\u3001\u6BCF\u4E2A phase \u7684 phase\u540D/steps/deliverable/knowledgeHints **\u5FC5\u987B\u76F4\u63A5\u51FA\u73B0\u300C${t.coreTopic}\u300D\u6216\u5176\u5173\u952E\u8BCD\uFF0C\u7981\u6B62\u6362\u6210\u5176\u4ED6\u9879\u76EE**
+- knowledgeHints \u68C0\u7D22\u8BCD\u987B\u542B\uFF1A${t.keywords.join("\u3001")}
+- \u5EFA\u8BAE\u4EA4\u4ED8\u7269\uFF1A${t.deliverableHint}
+- **\u7981\u6B62** scheme \u540D\u4F7F\u7528\u300C\u9012\u8FDB\u5F0F\u5B9E\u65BD\u300D\u300C\u539F\u578B\u9A71\u52A8\u8FED\u4EE3\u300D\u7B49\u901A\u7528\u6A21\u677F\u540D\uFF1B\u7981\u6B62\u4EA4\u4ED8\u7269\u5199\u300C\u9879\u76EE\u539F\u578B\u300D\u300CMVP\u300D\u300C\u7CFB\u7EDF\u6F14\u793A\u300D\u7B49\u4E0E\u9898\u76EE\u65E0\u5173\u7684\u8868\u8FF0
+- **\u7981\u6B62** steps \u4E2D\u51FA\u73B0\uFF1A${(t.banInSteps || []).join("\u3001")}
+`;
+}
+__name(formatTopicAnchorBlock, "formatTopicAnchorBlock");
+function isIndustryInnovationGoal(goal) {
+  const t = extractTopicProfile(goal);
+  return t.kind === "industry-innovation" || t.matched;
+}
+__name(isIndustryInnovationGoal, "isIndustryInnovationGoal");
+function industryInnovationDomains(goal) {
+  const t = extractTopicProfile(goal);
+  const topic = t.coreTopic || "\u4EA7\u4E1A\u521B\u65B0";
+  return [
+    { id: "background", label: `${topic}\u80CC\u666F\u4E0E\u653F\u7B56`, keywords: [topic, "\u4EA7\u4E1A", "\u653F\u7B56", "\u6CD5\u89C4", "\u7A7A\u57DF", "\u53D1\u5C55", "\u89C4\u5212", "\u7ECF\u6D4E"], subjects: ["geography", "history", "chinese"] },
+    { id: "scenarios", label: "\u5E94\u7528\u573A\u666F\u8C03\u7814", keywords: [topic, "\u7269\u6D41", "\u51FA\u884C", "\u5E94\u6025", "\u690D\u4FDD", "\u5DE1\u68C0", "\u914D\u9001", "\u5E94\u7528", "\u573A\u666F", "\u9700\u6C42"], subjects: ["geography", "chinese", "math"] },
+    { id: "tech", label: "\u6280\u672F\u539F\u7406\u652F\u6491", keywords: ["\u98DE\u884C", "\u822A\u7A7A", "\u65E0\u4EBA\u673A", "\u5BFC\u822A", "\u901A\u4FE1", "\u52A8\u529B", "\u7535\u6C60", "\u629B\u4F53", "\u725B\u987F", "\u5B89\u5168"], subjects: ["physics", "info-tech", "science"] },
+    { id: "analysis", label: "\u6570\u636E\u4E0E\u53EF\u884C\u6027\u5206\u6790", keywords: ["\u7EDF\u8BA1", "\u6570\u636E", "\u8C03\u67E5", "\u6210\u672C", "\u6548\u76CA", "\u6BD4\u8F83", "\u5206\u6790", "\u56FE\u8868", "\u767E\u5206\u6BD4"], subjects: ["math", "chinese"] },
+    { id: "proposal", label: "\u521B\u65B0\u65B9\u6848\u4E0E\u62A5\u544A", keywords: ["\u65B9\u6848", "\u521B\u65B0", "\u5EFA\u8BAE", "\u62A5\u544A", "\u8BBA\u8BC1", "\u8BF4\u660E", "\u53EF\u884C\u6027", "\u8BD5\u70B9"], subjects: ["chinese", "geography"] }
+  ];
+}
+__name(industryInnovationDomains, "industryInnovationDomains");
+function isEnergyEngineeringGoal(goal) {
+  const g = String(goal || "");
+  if (isConsumerDecisionGoal(g)) return false;
+  if (/(车|汽车|轿车|SUV|用车)/.test(g) && /新能源|燃油|电动|混动|油电/.test(g) && !/设计|制作|研发|装置|系统开发|搭建|发明|工程化|发电|储能装置/.test(g)) return false;
+  if (/对比|比较|选购|购车|买车|选车|家用|家庭/.test(g) && !/设计|制作|研发|装置|系统开发|搭建|发电|储能/.test(g)) {
+    if (/新能源|电动|燃油|混动|光伏|储能/.test(g)) return false;
+  }
+  return /新能源|光伏|太阳能|风电|风力|储能|电池|锂电|充电|发电|电能|清洁能源|碳中和|能源车|并网|逆变/.test(g) && /设计|制作|研发|装置|系统|搭建|工程|发电|储能|模型|实验|探究/.test(g);
+}
+__name(isEnergyEngineeringGoal, "isEnergyEngineeringGoal");
+function classifyProjectType(goal) {
+  const g = String(goal || "");
+  if (isConsumerDecisionGoal(g)) return "consumer-decision";
+  if (/太空馆|天文馆|航天馆|科技馆|博物馆|展厅|展陈|太空.*馆|天文.*馆/.test(g) || /馆|展厅|展览/.test(g) && /重塑|改造|整治|升级|策展|布展|失控|翻新|重建|优化/.test(g)) return "exhibition-redesign";
+  if (/海报|短视频|微电影|动画|漫画|插画|绘画|展览|策展|广告|品牌|视觉|游戏设计|作曲|音乐创作|手工艺|表演|舞台|摄影|logo|标志设计|文创|周边设计/.test(g)) return "creative-media";
+  if (/诗歌|诗集|现代诗|诗词|写诗|小说|剧本|散文|绘本|故事集|演讲|辩论|文学|翻译|双语|新闻稿|采访稿|写一[篇组]|作文|征文|朗诵|文集|杂志|读后感|书评|话剧|文章/.test(g)) return "humanities-literary";
+  if (/创业|商业计划|营销|市场推广|运营|理财|零花钱|压岁钱|市场调研|义卖|跳蚤市场|店铺|定价|商业模式|经济效益|盈利|众筹|招商|品牌策划/.test(g)) return "business-economics";
+  if (/健康|营养|饮食|食谱|减脂|减肥|健身|锻炼|运动会?|近视|视力|护眼|睡眠|作息|心理|情绪|压力|安全|急救|防溺水|防火|防疫|卫生|疾病|人体|体重|身高/.test(g)) return "health-life";
+  if (isPlantingCultivationGoal(g)) return "planting-cultivation";
+  if (/烹饪|烘焙|美食|菜谱|料理|手工|编织|缝纫|收纳|整理|维修|清洁|打扫|劳动/.test(g)) return "labor-practice";
+  if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|研学|游学|路线规划|时间管理|班级布置|布置教室|嘉年华|游园/.test(g)) return "life-planning";
+  if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|公众.{0,4}认知|居民|乡土|口述史/.test(g)) return "social-inquiry";
+  if (isIndustryInnovationGoal(g)) return "industry-innovation";
+  if (/工坊|鲁班|榫卯|古典.*风格|木结构|建筑模型|微缩|传统建筑|斗拱|飞檐/.test(g)) return "maker-workshop";
+  if (/火箭|导弹|发射|机器人|物流机器人|医院.*机器人|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现/.test(g)) return "engineering";
+  if (/无人机|原型/.test(g) && /设计|制作|研发|装置|系统|搭建|开发/.test(g)) return "engineering";
+  if (isChemistryInquiryGoal(g)) return "scientific-inquiry";
+  if (/探究|实验|观察|测量|验证|影响因素|变量|检测|成分|对照实验|科学问题|浓度|溶液|溶解/.test(g)) return "scientific-inquiry";
+  return "general";
+}
+__name(classifyProjectType, "classifyProjectType");
+var TYPE_PROFILES = {
+  "engineering": { label: "\u5DE5\u7A0B\u7814\u53D1/\u5236\u4F5C", moduleWord: "\u5DE5\u7A0B\u5B50\u7CFB\u7EDF\uFF08\u539F\u7406 / \u88C5\u7F6E\u7ED3\u6784 / \u7535\u8DEF\u63A7\u5236 / \u6D4B\u8BD5\u8FED\u4EE3\uFF09", subjectsHint: "\u4EE5 physics\u3001chemistry\u3001math\u3001info-tech \u4E3A\u4E3B\uFF0C\u6309\u9700\u542B\u5176\u4ED6", redlines: "\u8986\u76D6\u539F\u7406\u2192\u88C5\u7F6E\u2192\u5B9E\u9A8C\u2192\u5FC5\u8981\u5B9A\u91CF\uFF1B\u5B9A\u91CF\u8BA1\u7B97\u8282\u70B9\u226420%\uFF0C\u4E0D\u8981\u53EA\u5806\u5B88\u6052\u5B9A\u5F8B/\u8BA1\u7B97" },
+  "scientific-inquiry": { label: "\u79D1\u5B66\u63A2\u7A76/\u5B9E\u9A8C", moduleWord: "\u63A2\u7A76\u73AF\u8282\uFF08\u95EE\u9898\u5047\u8BBE / \u53D8\u91CF\u8BBE\u8BA1 / \u6570\u636E\u91C7\u96C6 / \u5206\u6790\u7ED3\u8BBA\uFF09", subjectsHint: "physics\u3001chemistry\u3001biology\u3001science\u3001math \u4E3A\u4E3B", redlines: "\u5FC5\u987B\u542B\u5B9E\u9A8C\u8BBE\u8BA1\u4E0E\u6570\u636E\u5206\u6790\u7C7B\u8282\u70B9\uFF1B\u7406\u8BBA\u4E0E\u5B9E\u9A8C\u5E76\u91CD\uFF0C\u4E0D\u8981\u53EA\u9009\u7EAF\u8BA1\u7B97" },
+  "consumer-decision": { label: "\u6D88\u8D39\u51B3\u7B56/\u65B9\u6848\u5BF9\u6BD4", moduleWord: "\u51B3\u7B56\u73AF\u8282\uFF08\u9700\u6C42\u8C03\u7814 / \u5BF9\u6BD4\u7EF4\u5EA6 / \u6210\u672C\u6D4B\u7B97 / \u51B3\u7B56\u62A5\u544A\uFF09", subjectsHint: "math\uFF08\u7EDF\u8BA1/\u51FD\u6570\uFF09\u4E3A\u4E3B\uFF0C\u8F85\u4EE5\u76F8\u5173\u79D1\u666E\u4E0E\u8BF4\u660E\u6587\u5199\u4F5C", redlines: "\u4EA4\u4ED8\u7269\u662F\u51B3\u7B56\u62A5\u544A/\u5BF9\u6BD4\u8868\uFF1B\u7981\u6B62\u7535\u89E3\u6C60\u3001\u539F\u7535\u6C60\u3001\u7A0B\u5E8F\u63A7\u5236\u3001\u4F20\u611F\u5668\u3001\u6570\u636E\u91C7\u96C6\u7B97\u6CD5\u7B49\u7814\u53D1\u8282\u70B9" },
+  "social-inquiry": { label: "\u793E\u4F1A\u8C03\u67E5/\u7530\u91CE\u7814\u7A76", moduleWord: "\u8C03\u67E5\u73AF\u8282\uFF08\u9009\u9898\u62BD\u6837 / \u8D44\u6599\u6536\u96C6 / \u6574\u7406\u7EDF\u8BA1 / \u7ED3\u8BBA\u62A5\u544A\uFF09", subjectsHint: "chinese\u3001geography\u3001history\u3001math\uFF08\u7EDF\u8BA1\uFF09\u6309\u9700\u7EC4\u5408", redlines: "\u6838\u5FC3\u662F\u8C03\u67E5\u65B9\u6CD5\u3001\u6570\u636E\u7EDF\u8BA1\u4E0E\u62A5\u544A\u5199\u4F5C\uFF1B\u4E0D\u8981\u786C\u585E\u7269\u7406\u5316\u5B66\u516C\u5F0F" },
+  "humanities-literary": { label: "\u4EBA\u6587/\u6587\u5B66/\u8BED\u8A00", moduleWord: "\u521B\u4F5C\u73AF\u8282\uFF08\u7ACB\u610F\u9009\u6750 / \u9605\u8BFB\u79EF\u7D2F / \u7ED3\u6784\u8868\u8FBE / \u4FEE\u6539\u5C55\u793A\uFF09", subjectsHint: "chinese\u3001english\u3001history \u4E3A\u4E3B", redlines: "\u56F4\u7ED5\u9605\u8BFB\u3001\u5199\u4F5C\u3001\u8868\u8FBE\u3001\u6587\u5316\u7406\u89E3\uFF1B\u4E0D\u8981\u585E\u7406\u79D1\u516C\u5F0F\u6216\u5DE5\u7A0B\u88C5\u7F6E\u8282\u70B9" },
+  "creative-media": { label: "\u521B\u610F\u8BBE\u8BA1/\u5A92\u4F53/\u827A\u672F", moduleWord: "\u521B\u4F5C\u73AF\u8282\uFF08\u521B\u610F\u6784\u601D / \u8BBE\u8BA1\u8349\u6848 / \u5236\u4F5C\u5B9E\u73B0 / \u5C55\u793A\u8BC4\u8BAE\uFF09", subjectsHint: "\u7ED3\u5408 info-tech\u3001chinese \u53CA\u76F8\u5173\u5B66\u79D1\uFF0C\u6280\u672F\u5B9E\u73B0\u53EF\u542B\u6570\u5B66/\u4FE1\u606F\u6280\u672F", redlines: "\u56F4\u7ED5\u521B\u610F\u8868\u8FBE\u4E0E\u5236\u4F5C\uFF1B\u53EA\u5728\u786E\u9700\u6280\u672F\u5B9E\u73B0\u65F6\u5F15\u5165\u7406\u79D1\u8282\u70B9" },
+  "business-economics": { label: "\u5546\u4E1A/\u521B\u4E1A/\u7ECF\u6D4E\u5B9E\u8DF5", moduleWord: "\u8FD0\u8425\u73AF\u8282\uFF08\u9700\u6C42\u8C03\u7814 / \u65B9\u6848\u8BBE\u8BA1 / \u6210\u672C\u5B9A\u4EF7 / \u8FD0\u8425\u590D\u76D8\uFF09", subjectsHint: "math\uFF08\u7EDF\u8BA1/\u6BD4\u4F8B/\u51FD\u6570\uFF09\u3001chinese\uFF08\u7B56\u5212/\u8868\u8FBE\uFF09\u4E3A\u4E3B", redlines: "\u56F4\u7ED5\u8C03\u7814\u3001\u6D4B\u7B97\u3001\u65B9\u6848\u4E0E\u8868\u8FBE\uFF1B\u4E0D\u8981\u5806\u65E0\u5173\u7406\u79D1\u8282\u70B9" },
+  "life-planning": { label: "\u751F\u6D3B\u89C4\u5212/\u6D3B\u52A8\u7B56\u5212", moduleWord: "\u7B56\u5212\u73AF\u8282\uFF08\u9700\u6C42\u76EE\u6807 / \u65B9\u6848\u65E5\u7A0B / \u9884\u7B97\u5206\u5DE5 / \u6267\u884C\u590D\u76D8\uFF09", subjectsHint: "math\uFF08\u9884\u7B97/\u65F6\u95F4/\u7EDF\u8BA1\uFF09\u3001chinese\uFF08\u7B56\u5212/\u901A\u77E5/\u603B\u7ED3\uFF09\u3001geography\uFF08\u8DEF\u7EBF\uFF09\u6309\u9700", redlines: "\u56F4\u7ED5\u76EE\u6807\u3001\u65B9\u6848\u3001\u9884\u7B97\u5206\u5DE5\u4E0E\u6267\u884C\u590D\u76D8\uFF1B\u4E0D\u8981\u585E\u65E0\u5173\u7406\u79D1\u516C\u5F0F\u6216\u5DE5\u7A0B\u88C5\u7F6E" },
+  "health-life": { label: "\u5065\u5EB7\u751F\u6D3B/\u8FD0\u52A8\u5B89\u5168", moduleWord: "\u5065\u5EB7\u73AF\u8282\uFF08\u73B0\u72B6\u4E86\u89E3 / \u77E5\u8BC6\u5B66\u4E60 / \u8BA1\u5212\u5236\u5B9A / \u5B9E\u8DF5\u8BC4\u4F30\uFF09", subjectsHint: "biology\u3001science\uFF08\u5065\u5EB7\u539F\u7406\uFF09\u3001math\uFF08\u7EDF\u8BA1\u76D1\u6D4B\uFF09\u3001chinese\uFF08\u5BA3\u4F20\u5021\u8BAE\uFF09", redlines: "\u56F4\u7ED5\u5065\u5EB7\u77E5\u8BC6\u3001\u6570\u636E\u76D1\u6D4B\u4E0E\u884C\u4E3A\u6539\u8FDB\uFF1B\u4E0D\u8981\u5806\u4E0E\u5065\u5EB7\u65E0\u5173\u7684\u5DE5\u7A0B/\u7EAF\u8BA1\u7B97\u8282\u70B9" },
+  "planting-cultivation": { label: "\u79CD\u690D\u517B\u6B96/\u56ED\u827A\u683D\u57F9", moduleWord: "\u73AF\u8282\uFF08\u690D\u7269\u8BC6\u522B\u5206\u7C7B / \u751F\u957F\u4E0E\u73AF\u5883 / \u683D\u57F9\u5B9E\u64CD / \u89C2\u5BDF\u8BB0\u5F55 / \u79CD\u690D\u65E5\u8BB0\uFF09", subjectsHint: "science\u3001biology \u4E3A\u4E3B\u7EBF\uFF0C\u8F85\u4EE5 math\uFF08\u6570\u636E\u56FE\u8868\uFF09\u3001chinese\uFF08\u65E5\u8BB0\uFF09", redlines: "\u4EA4\u4ED8\u7269\u662F\u79CD\u690D\u89C2\u5BDF\u65E5\u8BB0\uFF1B\u5FC5\u987B\u542B\u690D\u7269\u5206\u7C7B\u3001\u751F\u957F\u539F\u7406\uFF08\u5149\u5408/\u840C\u53D1/\u6839\u7CFB\uFF09\u3001\u683D\u57F9\u6B65\u9AA4\uFF1B\u7981\u6B62\u539F\u578B\u8FED\u4EE3\u3001\u6D78\u6DA6\u5F0F\u573A\u666F\u3001\u5DE5\u7A0B\u88C5\u7F6E" },
+  "labor-practice": { label: "\u52B3\u52A8\u5B9E\u8DF5/\u5236\u4F5C", moduleWord: "\u5B9E\u8DF5\u73AF\u8282\uFF08\u8BA4\u8BC6\u51C6\u5907 / \u64CD\u4F5C\u5B9E\u8DF5 / \u89C2\u5BDF\u8BB0\u5F55 / \u6210\u679C\u5206\u4EAB\uFF09", subjectsHint: "biology\u3001science\u3001chinese\u3001math \u6309\u9700", redlines: "\u56F4\u7ED5\u52A8\u624B\u64CD\u4F5C\u3001\u89C2\u5BDF\u8BB0\u5F55\u4E0E\u6210\u679C\u5206\u4EAB\uFF1B\u4E0D\u8981\u62D4\u9AD8\u6210\u79D1\u7814\u8BBA\u6587\u6216\u5DE5\u7A0B\u7CFB\u7EDF" },
+  "maker-workshop": { label: "\u5DE5\u574A/\u6728\u4F5C/\u5EFA\u7B51\u6A21\u578B", moduleWord: "\u5DE5\u5E8F\uFF08\u73B0\u573A\u8C03\u7814 / \u98CE\u683C\u65B9\u6848 / \u6750\u6599BOM / \u642D\u5EFA\u88C5\u9970 / \u9A8C\u6536\u5C55\u793A\uFF09", subjectsHint: "science\u3001physics\u3001math\u3001history\u3001chinese\u3001art \u6309\u9700", redlines: "\u4EA4\u4ED8\u7269\u662F\u5B9E\u4F53\u6A21\u578B+\u56FE\u518C+BOM\uFF1Bsteps \u987B\u6709\u5C3A\u5BF8\u3001\u5DE5\u5177\u3001\u7167\u7247\u3001\u68C0\u67E5\u8868\uFF0C\u7981\u6B62\u300C\u73AF\u5883\u642D\u5EFA\u300D\u300C\u9009\u62E9\u7EC4\u4EF6\u300D\u7A7A\u8BDD" },
+  "industry-innovation": { label: "\u4EA7\u4E1A\u521B\u65B0/\u65B0\u5174\u7ECF\u6D4E\u63A2\u7A76", moduleWord: "\u73AF\u8282\uFF08\u4EA7\u4E1A\u80CC\u666F\u4E0E\u653F\u7B56 / \u5E94\u7528\u573A\u666F\u8C03\u7814 / \u6280\u672F\u539F\u7406\u652F\u6491 / \u6570\u636E\u53EF\u884C\u6027 / \u521B\u65B0\u65B9\u6848\u62A5\u544A\uFF09", subjectsHint: "geography\u3001chinese\u3001math\u3001physics\u3001history\u3001info-tech \u6309\u9700\uFF1B\u56F4\u7ED5\u4E3B\u9898\u4EA7\u4E1A\u800C\u975E\u901A\u7528\u7269\u6D41\u6216\u5DE5\u7A0B", redlines: "\u4EA4\u4ED8\u7269\u662F\u4E3B\u9898\u4EA7\u4E1A\u521B\u65B0\u65B9\u6848/\u8C03\u7814\u62A5\u544A\uFF1B\u7981\u6B62\u73B0\u4EE3\u7269\u6D41\u7BA1\u7406\u3001\u667A\u6167\u57CE\u5E02\u3001\u5DE5\u7A0B\u8BBE\u8BA1\u601D\u7EF4\u3001\u88C5\u7F6E\u5236\u4F5C\u7B49\u4E0E\u4E3B\u9898\u65E0\u5173\u7684\u6A21\u5757" },
+  "exhibition-redesign": { label: "\u5C55\u9648\u7A7A\u95F4/\u573A\u9986\u6539\u9020", moduleWord: "\u73AF\u8282\uFF08\u73B0\u72B6\u8BCA\u65AD / \u4E3B\u9898\u7B56\u5212 / \u5C55\u9648\u8BBE\u8BA1 / \u5B9E\u65BD\u6574\u6539 / \u5F00\u653E\u9A8C\u6536\uFF09", subjectsHint: "science\uFF08\u5929\u6587\u79D1\u666E\uFF09\u3001chinese\uFF08\u8BF4\u660E/\u8BB2\u89E3\uFF09\u3001math\uFF08\u9884\u7B97/\u7EDF\u8BA1\uFF09\u3001info-tech\uFF08\u5C55\u677F\uFF09\u6309\u9700", redlines: "\u4EA4\u4ED8\u7269\u662F\u573A\u9986\u6539\u9020\u65B9\u6848\u518C+\u5C55\u9648\u8BBE\u8BA1\u56FE\uFF1B\u7981\u6B62\u7A0B\u5E8F\u8BBE\u8BA1\u3001\u5DE5\u7A0B\u539F\u578B\u3001\u62DB\u751F\u7B80\u7AE0\u7B49\u4E0E\u5C55\u9648\u65E0\u5173\u8282\u70B9" },
+  "general": { label: "\u7EFC\u5408\u5B9E\u8DF5", moduleWord: "\u9879\u76EE\u6A21\u5757\uFF08\u987B\u6309\u9898\u76EE\u81EA\u5B9A\u4E49\uFF0C\u7981\u6B62\u5957\u7528\u901A\u7528\u56DB\u5957\u6A21\u5757\u540D\uFF09", subjectsHint: "\u6309\u4EA4\u4ED8\u7269\u81EA\u7136\u9009\u53D6\u6240\u9700\u5B66\u79D1", redlines: "\u6BCF\u4E2A\u8282\u70B9\u90FD\u8981\u670D\u52A1\u4E8E\u9898\u76EE\u4EA4\u4ED8\u7269\uFF1B\u7981\u6B62\u300C\u9012\u8FDB\u5F0F\u5B9E\u65BD\u300D\u300C\u539F\u578B\u9A71\u52A8\u8FED\u4EE3\u300D\u7B49\u6A21\u677F scheme \u540D" }
+};
+function projectTypeProfile(goal) {
+  return TYPE_PROFILES[classifyProjectType(goal)] || TYPE_PROFILES.general;
+}
+__name(projectTypeProfile, "projectTypeProfile");
+function typeGuardrailBlock(goal) {
+  const p = projectTypeProfile(goal);
+  return `
+## \u672C\u9879\u76EE\u7C7B\u578B\u8BC6\u522B\uFF1A${p.label}
+- \u6A21\u5757\u89C6\u89D2\uFF1A${p.moduleWord}
+- \u5B66\u79D1\u53D6\u5411\uFF1A${p.subjectsHint}
+- \u7C7B\u578B\u7EA2\u7EBF\uFF1A${p.redlines}
+`;
+}
+__name(typeGuardrailBlock, "typeGuardrailBlock");
+function genericDomainsForType(id) {
+  const map = {
+    "scientific-inquiry": [
+      { id: "question", label: "\u95EE\u9898\u4E0E\u5047\u8BBE", keywords: ["\u95EE\u9898", "\u5047\u8BBE", "\u731C\u60F3", "\u73B0\u8C61", "\u539F\u7406"], subjects: ["science", "physics", "chemistry", "biology"] },
+      { id: "design", label: "\u53D8\u91CF\u4E0E\u5B9E\u9A8C\u8BBE\u8BA1", keywords: ["\u53D8\u91CF", "\u5B9E\u9A8C", "\u63A7\u5236\u53D8\u91CF", "\u5BF9\u7167", "\u65B9\u6848", "\u6D4B\u91CF"], subjects: ["physics", "chemistry", "biology", "science"] },
+      { id: "data", label: "\u6570\u636E\u91C7\u96C6\u4E0E\u5904\u7406", keywords: ["\u6570\u636E", "\u6D4B\u91CF", "\u8BB0\u5F55", "\u7EDF\u8BA1", "\u8BEF\u5DEE", "\u56FE\u8868"], subjects: ["math", "info-tech", "science"] },
+      { id: "conclusion", label: "\u5206\u6790\u4E0E\u7ED3\u8BBA", keywords: ["\u5206\u6790", "\u7ED3\u8BBA", "\u89E3\u91CA", "\u89C4\u5F8B", "\u62A5\u544A"], subjects: ["science", "math", "chinese"] }
+    ],
+    "social-inquiry": [
+      { id: "topic", label: "\u9009\u9898\u4E0E\u8C03\u67E5\u8BBE\u8BA1", keywords: ["\u9009\u9898", "\u8C03\u67E5", "\u95EE\u5377", "\u8BBF\u8C08", "\u62BD\u6837", "\u6837\u672C"], subjects: ["chinese", "math"] },
+      { id: "collect", label: "\u8D44\u6599\u4E0E\u6570\u636E\u6536\u96C6", keywords: ["\u8D44\u6599", "\u6570\u636E", "\u6536\u96C6", "\u8BB0\u5F55", "\u6587\u732E", "\u5B9E\u5730"], subjects: ["geography", "history", "chinese"] },
+      { id: "analyze", label: "\u6574\u7406\u4E0E\u7EDF\u8BA1\u5206\u6790", keywords: ["\u7EDF\u8BA1", "\u6574\u7406", "\u56FE\u8868", "\u5206\u6790", "\u767E\u5206\u6BD4", "\u5E73\u5747\u6570"], subjects: ["math"] },
+      { id: "report", label: "\u7ED3\u8BBA\u4E0E\u62A5\u544A", keywords: ["\u7ED3\u8BBA", "\u62A5\u544A", "\u5EFA\u8BAE", "\u8BBA\u8BC1", "\u5199\u4F5C", "\u8BF4\u660E"], subjects: ["chinese"] }
+    ],
+    "humanities-literary": [
+      { id: "theme", label: "\u7ACB\u610F\u4E0E\u9009\u6750", keywords: ["\u7ACB\u610F", "\u4E3B\u9898", "\u9009\u6750", "\u6784\u601D", "\u89C2\u70B9"], subjects: ["chinese", "english"] },
+      { id: "read", label: "\u9605\u8BFB\u4E0E\u7D20\u6750\u79EF\u7D2F", keywords: ["\u9605\u8BFB", "\u7D20\u6750", "\u6587\u672C", "\u540D\u8457", "\u79EF\u7D2F", "\u9274\u8D4F"], subjects: ["chinese", "english", "history"] },
+      { id: "express", label: "\u7ED3\u6784\u4E0E\u8868\u8FBE", keywords: ["\u7ED3\u6784", "\u8868\u8FBE", "\u4FEE\u8F9E", "\u8BED\u8A00", "\u5199\u4F5C", "\u53D9\u8FF0", "\u8BAE\u8BBA"], subjects: ["chinese", "english"] },
+      { id: "revise", label: "\u4FEE\u6539\u4E0E\u5C55\u793A", keywords: ["\u4FEE\u6539", "\u8BC4\u8BAE", "\u6717\u8BF5", "\u5C55\u793A", "\u6F14\u8BB2", "\u53D1\u8868"], subjects: ["chinese"] }
+    ],
+    "creative-media": [
+      { id: "idea", label: "\u521B\u610F\u6784\u601D", keywords: ["\u521B\u610F", "\u6784\u601D", "\u4E3B\u9898", "\u7075\u611F", "\u53D7\u4F17"], subjects: ["chinese", "info-tech"] },
+      { id: "design", label: "\u8BBE\u8BA1\u4E0E\u8349\u6848", keywords: ["\u8BBE\u8BA1", "\u8349\u56FE", "\u5206\u955C", "\u6392\u7248", "\u8272\u5F69", "\u6784\u56FE"], subjects: ["info-tech", "chinese"] },
+      { id: "make", label: "\u5236\u4F5C\u4E0E\u5B9E\u73B0", keywords: ["\u5236\u4F5C", "\u526A\u8F91", "\u7ED8\u5236", "\u7F16\u8F91", "\u5DE5\u5177", "\u6280\u672F"], subjects: ["info-tech"] },
+      { id: "show", label: "\u5C55\u793A\u4E0E\u8BC4\u8BAE", keywords: ["\u5C55\u793A", "\u8BC4\u8BAE", "\u53CD\u9988", "\u53D1\u5E03", "\u4F18\u5316"], subjects: ["chinese"] }
+    ],
+    "business-economics": [
+      { id: "research", label: "\u9700\u6C42\u4E0E\u5E02\u573A\u8C03\u7814", keywords: ["\u9700\u6C42", "\u5E02\u573A", "\u8C03\u7814", "\u8C03\u67E5", "\u6570\u636E", "\u7528\u6237"], subjects: ["math", "chinese"] },
+      { id: "plan", label: "\u65B9\u6848\u4E0E\u4EA7\u54C1\u8BBE\u8BA1", keywords: ["\u65B9\u6848", "\u4EA7\u54C1", "\u8BBE\u8BA1", "\u7B56\u5212", "\u521B\u610F"], subjects: ["chinese", "info-tech"] },
+      { id: "cost", label: "\u6210\u672C\u4E0E\u5B9A\u4EF7\u6D4B\u7B97", keywords: ["\u6210\u672C", "\u5B9A\u4EF7", "\u5229\u6DA6", "\u9884\u7B97", "\u51FD\u6570", "\u767E\u5206\u6BD4", "\u7EDF\u8BA1"], subjects: ["math"] },
+      { id: "operate", label: "\u8FD0\u8425\u4E0E\u590D\u76D8", keywords: ["\u8FD0\u8425", "\u63A8\u5E7F", "\u590D\u76D8", "\u53CD\u9988", "\u62A5\u544A"], subjects: ["chinese", "math"] }
+    ],
+    "life-planning": [
+      { id: "goal", label: "\u9700\u6C42\u4E0E\u76EE\u6807", keywords: ["\u9700\u6C42", "\u76EE\u6807", "\u8C03\u67E5", "\u95EE\u5377", "\u573A\u666F", "\u4EBA\u6570"], subjects: ["chinese", "math"] },
+      { id: "plan", label: "\u65B9\u6848\u4E0E\u65E5\u7A0B", keywords: ["\u65B9\u6848", "\u8BA1\u5212", "\u65E5\u7A0B", "\u5B89\u6392", "\u8DEF\u7EBF", "\u6D41\u7A0B", "\u884C\u7A0B"], subjects: ["chinese", "geography", "math"] },
+      { id: "budget", label: "\u9884\u7B97\u4E0E\u5206\u5DE5", keywords: ["\u9884\u7B97", "\u6210\u672C", "\u8D39\u7528", "\u7EDF\u8BA1", "\u51FD\u6570", "\u5206\u5DE5", "\u767E\u5206\u6BD4", "\u6BD4\u4F8B"], subjects: ["math"] },
+      { id: "review", label: "\u6267\u884C\u4E0E\u590D\u76D8", keywords: ["\u6267\u884C", "\u8BB0\u5F55", "\u53CD\u9988", "\u590D\u76D8", "\u603B\u7ED3", "\u62A5\u544A", "\u901A\u77E5"], subjects: ["chinese"] }
+    ],
+    "health-life": [
+      { id: "status", label: "\u73B0\u72B6\u4E86\u89E3", keywords: ["\u73B0\u72B6", "\u8C03\u67E5", "\u7EDF\u8BA1", "\u6570\u636E", "\u6D4B\u91CF", "\u8BB0\u5F55"], subjects: ["math", "biology", "science"] },
+      { id: "knowledge", label: "\u5065\u5EB7\u77E5\u8BC6", keywords: ["\u5065\u5EB7", "\u8425\u517B", "\u996E\u98DF", "\u8FD0\u52A8", "\u7761\u7720", "\u5B89\u5168", "\u75BE\u75C5", "\u4EBA\u4F53", "\u89C6\u529B"], subjects: ["biology", "science"] },
+      { id: "plan", label: "\u8BA1\u5212\u5236\u5B9A", keywords: ["\u8BA1\u5212", "\u65B9\u6848", "\u76EE\u6807", "\u98DF\u8C31", "\u4F5C\u606F", "\u953B\u70BC"], subjects: ["chinese", "math"] },
+      { id: "assess", label: "\u5B9E\u8DF5\u4E0E\u8BC4\u4F30", keywords: ["\u8BB0\u5F55", "\u8BC4\u4F30", "\u5BF9\u6BD4", "\u53CD\u9988", "\u6539\u8FDB", "\u62A5\u544A", "\u5BA3\u4F20", "\u5021\u8BAE"], subjects: ["chinese", "math"] }
+    ],
+    "planting-cultivation": [
+      { id: "taxonomy", label: "\u690D\u7269\u8BC6\u522B\u4E0E\u5206\u7C7B", keywords: ["\u690D\u7269", "\u5206\u7C7B", "\u7279\u5F81", "\u7ED3\u6784", "\u5668\u5B98", "\u7EFF\u8272"], subjects: ["science", "biology"] },
+      { id: "growth", label: "\u751F\u957F\u4E0E\u73AF\u5883", keywords: ["\u751F\u957F", "\u5149\u5408", "\u547C\u5438", "\u79CD\u5B50", "\u840C\u53D1", "\u6839", "\u84B8\u817E", "\u73AF\u5883"], subjects: ["science", "biology"] },
+      { id: "cultivate", label: "\u683D\u57F9\u5B9E\u64CD", keywords: ["\u79CD\u690D", "\u683D\u57F9", "\u571F\u58E4", "\u6D47\u6C34", "\u65BD\u80A5", "\u79FB\u683D", "\u517B\u62A4"], subjects: ["science", "biology"] },
+      { id: "observe", label: "\u89C2\u5BDF\u8BB0\u5F55", keywords: ["\u89C2\u5BDF", "\u8BB0\u5F55", "\u6D4B\u91CF", "\u6570\u636E", "\u56FE\u8868", "\u53D8\u5316"], subjects: ["science", "math", "biology"] },
+      { id: "share", label: "\u79CD\u690D\u65E5\u8BB0", keywords: ["\u65E5\u8BB0", "\u62A5\u544A", "\u603B\u7ED3", "\u5206\u4EAB", "\u8BF4\u660E"], subjects: ["chinese"] }
+    ],
+    "labor-practice": [
+      { id: "prepare", label: "\u8BA4\u8BC6\u4E0E\u51C6\u5907", keywords: ["\u8BA4\u8BC6", "\u51C6\u5907", "\u6750\u6599", "\u5DE5\u5177", "\u539F\u7406", "\u6B65\u9AA4"], subjects: ["science", "biology", "chinese"] },
+      { id: "practice", label: "\u64CD\u4F5C\u5B9E\u8DF5", keywords: ["\u64CD\u4F5C", "\u5236\u4F5C", "\u79CD\u690D", "\u517B\u62A4", "\u70F9\u996A", "\u6B65\u9AA4", "\u5DE5\u827A"], subjects: ["science", "biology"] },
+      { id: "record", label: "\u89C2\u5BDF\u4E0E\u8BB0\u5F55", keywords: ["\u89C2\u5BDF", "\u8BB0\u5F55", "\u6D4B\u91CF", "\u6570\u636E", "\u53D8\u5316", "\u7EDF\u8BA1"], subjects: ["science", "math", "biology"] },
+      { id: "share", label: "\u6210\u679C\u4E0E\u5206\u4EAB", keywords: ["\u6210\u679C", "\u5206\u4EAB", "\u5C55\u793A", "\u603B\u7ED3", "\u62A5\u544A", "\u6539\u8FDB"], subjects: ["chinese"] }
+    ],
+    "general": [
+      { id: "define", label: "\u8C03\u7814\u4E0E\u5B9A\u4E49", keywords: ["\u8C03\u7814", "\u9700\u6C42", "\u5B9A\u4E49", "\u80CC\u666F", "\u5206\u6790"], subjects: ["chinese", "math", "science"] },
+      { id: "design", label: "\u65B9\u6848\u8BBE\u8BA1", keywords: ["\u65B9\u6848", "\u8BBE\u8BA1", "\u89C4\u5212", "\u5206\u5DE5"], subjects: ["math", "science", "chinese"] },
+      { id: "make", label: "\u5B9E\u65BD\u5236\u4F5C", keywords: ["\u5B9E\u65BD", "\u5236\u4F5C", "\u642D\u5EFA", "\u5B9E\u9A8C", "\u6267\u884C"], subjects: ["science", "chemistry", "physics"] },
+      { id: "test", label: "\u6D4B\u8BD5\u4E0E\u5C55\u793A", keywords: ["\u6D4B\u8BD5", "\u8BC4\u4F30", "\u5C55\u793A", "\u4F18\u5316", "\u62A5\u544A"], subjects: ["math", "chinese"] }
+    ]
+  };
+  return map[id] || [];
+}
+__name(genericDomainsForType, "genericDomainsForType");
+function inferProjectDomains(goal) {
+  const g = String(goal || "");
+  if (isChemistryInquiryGoal(g)) {
+    return getChemistryAnalysisProfile(g).mixed ? mixedSolutionChemistryDomains() : directSolutionChemistryDomains();
+  }
+  if (isConsumerDecisionGoal(g)) {
+    return [
+      { id: "needs", label: "\u9700\u6C42\u4E0E\u573A\u666F\u8C03\u7814", keywords: ["\u8C03\u67E5", "\u6570\u636E", "\u7EDF\u8BA1", "\u95EE\u5377", "\u9700\u6C42", "\u5206\u6790", "\u6536\u96C6", "\u6574\u7406", "\u56FE\u8868"], subjects: ["math", "chinese"] },
+      { id: "cost", label: "\u6210\u672C\u4E0E\u6570\u636E\u5EFA\u6A21", keywords: ["\u51FD\u6570", "\u4E00\u6B21\u51FD\u6570", "\u8BA1\u7B97", "\u7EDF\u8BA1", "\u6570\u636E", "\u5E73\u5747\u6570", "\u8D39\u7528", "\u6210\u672C", "\u767E\u5206\u6BD4"], subjects: ["math"] },
+      { id: "energy_compare", label: "\u52A8\u529B\u4E0E\u80FD\u8017\u5DEE\u5F02\uFF08\u79D1\u666E\uFF09", keywords: ["\u5185\u71C3\u673A", "\u70ED\u673A", "\u6548\u7387", "\u7535\u80FD", "\u5316\u5B66\u80FD", "\u80FD\u91CF", "\u70ED\u503C", "\u505A\u529F"], subjects: ["physics", "chemistry"] },
+      { id: "environment", label: "\u73AF\u4FDD\u4E0E\u53EF\u6301\u7EED", keywords: ["\u73AF\u5883", "\u6C61\u67D3", "\u6392\u653E", "\u78B3", "\u6C14\u5019", "\u8D44\u6E90", "\u53EF\u6301\u7EED", "\u6E29\u5BA4"], subjects: ["geography", "chemistry"] },
+      { id: "decision", label: "\u51B3\u7B56\u8BBA\u8BC1\u4E0E\u62A5\u544A", keywords: ["\u8BF4\u660E", "\u62A5\u544A", "\u8BBA\u8BC1", "\u5199\u4F5C", "\u5206\u6790", "\u6BD4\u8F83", "\u8C03\u67E5"], subjects: ["chinese", "math"] }
+    ];
+  }
+  if (/火箭|导弹|发射|弹道|模型火箭|航天/.test(g)) {
+    return [
+      {
+        id: "propulsion",
+        label: "\u63A8\u8FDB\u4E0E\u71C3\u6599",
+        keywords: ["\u71C3\u70E7", "\u6C27\u5316", "\u71C3\u6599", "\u70ED\u503C", "\u5185\u80FD", "\u5316\u5B66\u80FD", "\u80FD\u91CF\u8F6C\u5316", "\u63A8\u8FDB", "\u53CD\u5E94"],
+        subjects: ["chemistry", "physics"]
+      },
+      {
+        id: "aerodynamics",
+        label: "\u7A7A\u6C14\u52A8\u529B\u4E0E\u5F39\u9053",
+        keywords: ["\u629B\u4F53", "\u6D41\u4F53", "\u538B\u5F3A", "\u6D41\u901F", "\u6C14\u52A8", "\u5F39\u9053", "\u629B\u7269", "\u98DE\u884C\u8F68\u8FF9"],
+        subjects: ["physics", "math"]
+      },
+      {
+        id: "dynamics",
+        label: "\u8FD0\u52A8\u5B66\u4E0E\u52A8\u529B\u5B66",
+        keywords: ["\u725B\u987F", "\u52A8\u91CF", "\u51B2\u91CF", "\u53D7\u529B", "\u52A0\u901F\u5EA6", "\u673A\u68B0\u80FD", "\u5B88\u6052", "\u8FD0\u52A8"],
+        subjects: ["physics", "math"]
+      },
+      {
+        id: "structure",
+        label: "\u7ED3\u6784\u4E0E\u6750\u6599",
+        keywords: ["\u7ED3\u6784", "\u6750\u6599", "\u5F3A\u5EA6", "\u538B\u5F3A", "\u8BBE\u8BA1", "\u7A33\u5B9A\u6027"],
+        subjects: ["physics", "chemistry"]
+      },
+      {
+        id: "control",
+        label: "\u63A7\u5236\u3001\u4F20\u611F\u4E0E\u6D4B\u8BD5",
+        keywords: ["\u63A7\u5236", "\u4F20\u611F", "\u7535\u8DEF", "\u7F16\u7A0B", "\u7B97\u6CD5", "\u6570\u636E\u91C7\u96C6", "\u5B9E\u9A8C", "\u8BEF\u5DEE", "\u6D4B\u8BD5"],
+        subjects: ["info-tech", "physics"]
+      }
+    ];
+  }
+  if (/温控|温室|温度|加热|散热|PID|闭环/.test(g)) {
+    return [
+      { id: "modeling", label: "\u6570\u5B66\u5EFA\u6A21", keywords: ["\u51FD\u6570", "\u65B9\u7A0B", "\u5EFA\u6A21", "\u56FE\u50CF"], subjects: ["math"] },
+      { id: "physics", label: "\u70ED\u5B66\u539F\u7406", keywords: ["\u70ED\u4F20\u5BFC", "\u6E29\u5EA6", "\u5185\u80FD", "\u70ED\u91CF"], subjects: ["physics"] },
+      { id: "hardware", label: "\u4F20\u611F\u4E0E\u7535\u8DEF", keywords: ["\u4F20\u611F\u5668", "\u7535\u8DEF", "\u91C7\u96C6"], subjects: ["physics", "info-tech"] },
+      { id: "control", label: "\u63A7\u5236\u7B97\u6CD5", keywords: ["\u63A7\u5236", "\u53CD\u9988", "\u7F16\u7A0B", "\u7B97\u6CD5"], subjects: ["info-tech", "math"] }
+    ];
+  }
+  if (isIndustryInnovationGoal(g)) {
+    return industryInnovationDomains(g);
+  }
+  if (isPlantingCultivationGoal(g)) {
+    return plantingCultivationDomains(g);
+  }
+  if (isFiltrationGoal(g)) {
+    return filtrationDomains();
+  }
+  if (classifyProjectType(g) === "exhibition-redesign") {
+    const subject = parseGoalSubject(g);
+    return [
+      { id: "diagnose", label: "\u73B0\u72B6\u8BCA\u65AD", keywords: [subject, "\u95EE\u9898", "\u8C03\u67E5", "\u8BB0\u5F55", "\u5931\u63A7", "\u9690\u60A3", "\u73B0\u72B6"], subjects: ["chinese", "math"] },
+      { id: "theme", label: "\u4E3B\u9898\u7B56\u5212", keywords: [subject, "\u4E3B\u9898", "\u5929\u6587", "\u592A\u9633\u7CFB", "\u6708\u7403", "\u592A\u7A7A", "\u79D1\u666E", "\u5185\u5BB9"], subjects: ["science", "chinese"] },
+      { id: "design", label: "\u5C55\u9648\u8BBE\u8BA1", keywords: [subject, "\u5E03\u5C40", "\u52A8\u7EBF", "\u5C55\u677F", "\u8BBE\u8BA1", "\u6A21\u578B", "\u4E92\u52A8", "\u5C55\u9648"], subjects: ["info-tech", "chinese", "math"] },
+      { id: "implement", label: "\u5B9E\u65BD\u6574\u6539", keywords: [subject, "\u6574\u6539", "\u5E03\u7F6E", "\u9884\u7B97", "\u5206\u5DE5", "\u5B89\u5168", "\u6E05\u5355", "\u5B9E\u65BD"], subjects: ["math", "chinese"] },
+      { id: "launch", label: "\u5F00\u653E\u9A8C\u6536", keywords: [subject, "\u9A8C\u6536", "\u8BB2\u89E3", "\u5BA3\u4F20", "\u8BF4\u660E", "\u5C55\u793A", "\u53CD\u9988", "\u5F00\u653E"], subjects: ["chinese", "science"] }
+    ];
+  }
+  if (isEnergyEngineeringGoal(g)) {
+    return [
+      { id: "energy", label: "\u80FD\u91CF\u8F6C\u6362\u4E0E\u5B88\u6052", keywords: ["\u80FD\u91CF\u8F6C\u5316", "\u80FD\u91CF\u8F6C\u6362", "\u673A\u68B0\u80FD", "\u5185\u80FD", "\u7535\u80FD", "\u5316\u5B66\u80FD", "\u70ED\u503C", "\u6548\u7387", "\u505A\u529F"], subjects: ["physics", "chemistry"] },
+      { id: "electrochem", label: "\u7535\u5316\u5B66\u4E0E\u7535\u6C60", keywords: ["\u7535\u6C60", "\u539F\u7535\u6C60", "\u7535\u89E3", "\u7535\u89E3\u6C60", "\u6C27\u5316\u8FD8\u539F", "\u7535\u6781", "\u7535\u5316\u5B66", "\u5145\u653E\u7535", "\u50A8\u80FD", "\u71C3\u6599\u7535\u6C60"], subjects: ["chemistry", "physics"] },
+      { id: "circuit", label: "\u7535\u8DEF\u4E0E\u7535\u78C1", keywords: ["\u7535\u8DEF", "\u7535\u6D41", "\u7535\u538B", "\u7535\u963B", "\u7535\u78C1", "\u611F\u5E94", "\u4E32\u8054", "\u5E76\u8054", "\u7535\u78C1\u611F\u5E94", "\u53D1\u7535\u673A"], subjects: ["physics"] },
+      { id: "renewable", label: "\u65B0\u80FD\u6E90\u88C5\u7F6E", keywords: ["\u5149\u4F0F", "\u592A\u9633\u80FD", "\u98CE\u80FD", "\u98CE\u7535", "\u53D1\u7535", "\u65B0\u80FD\u6E90", "\u5149\u80FD", "\u5149\u7535", "\u592A\u9633\u80FD\u7535\u6C60"], subjects: ["physics", "chemistry"] },
+      { id: "system", label: "\u7CFB\u7EDF\u6D4B\u8BD5\u4E0E\u63A7\u5236", keywords: ["\u63A7\u5236", "\u4F20\u611F", "\u4F20\u611F\u5668", "\u91C7\u96C6", "\u5B9E\u9A8C", "\u6D4B\u8BD5", "\u53CD\u9988", "\u8C03\u8BD5", "\u6570\u636E\u91C7\u96C6", "\u8BEF\u5DEE"], subjects: ["info-tech", "physics"] }
+    ];
+  }
+  return genericDomainsForType(classifyProjectType(g));
+}
+__name(inferProjectDomains, "inferProjectDomains");
+function formatDomainHints(domains) {
+  if (!domains.length) return "";
+  return domains.map(
+    (d, i) => `${i + 1}. \u3010${d.label}\u3011\u5FC5\u8986\u76D6\u3002\u68C0\u7D22\u5019\u9009\u65F6\u8BF7\u4F18\u5148\u5339\u914D\u540D\u79F0/\u8BFE\u6807\u63CF\u8FF0\u4E2D\u542B\uFF1A${d.keywords.join("\u3001")}\uFF1B\u5B66\u79D1\u503E\u5411\uFF1A${(d.subjects || []).join("\u3001")}`
+  ).join("\n");
+}
+__name(formatDomainHints, "formatDomainHints");
+var ANTI_VACUUM_BLOCK = `
+### \u53CD\u7A7A\u8BDD\u4E0E\u53CD\u6CDB\u7D20\u517B\uFF08\u786C\u6027\uFF09
+- **\u7981\u6B62** matched\uFF1A\u6279\u5224\u6027\u601D\u7EF4\u3001\u521B\u65B0\u601D\u7EF4\u3001\u56E2\u961F\u534F\u4F5C\u3001\u9879\u76EE\u7BA1\u7406\u3001\u6C9F\u901A\u80FD\u529B\u3001\u6838\u5FC3\u7D20\u517B\u7B49\u7EFC\u5408\u7D20\u517B\u7C7B\u8282\u70B9\uFF08\u9664\u975E\u9898\u76EE\u660E\u786E\u8981\u6C42\u534F\u4F5C/\u7BA1\u7406/\u6C9F\u901A\uFF09
+- projectPhases \u6BCF\u9636\u6BB5 steps \u81F3\u5C11 2 \u6761\uFF0C\u6BCF\u6761 \u226515 \u5B57\uFF0C\u987B\u5199\u6E05\uFF1A\u52A8\u4F5C + \u5BF9\u8C61 + \u65B9\u6CD5/\u5DE5\u5177 + \u68C0\u67E5\u6807\u51C6\uFF1B\u7981\u6B62\u300C\u5B8C\u6210\u63A2\u7A76\u300D\u300C\u8FDB\u884C\u8C03\u7814\u300D\u300C\u8FD0\u7528\u77E5\u8BC6\u70B9\u300D
+- reason \u9664\u300C\u6A21\u5757\uFF1A\u300D\u5916\u987B\u5199\u660E**\u672C\u9636\u6BB5\u600E\u4E48\u7528**\uFF08\u4F8B\uFF1A\u300C\u6A21\u5757\uFF1A\u6570\u636E\u6574\u7406\u3002\u7528\u6761\u5F62\u56FE\u5BF9\u6BD4\u4E24\u65B9\u6848 5 \u5E74\u6210\u672C\uFF0C\u9644\u6570\u636E\u6765\u6E90\u300D\uFF09`;
+function systemPromptMatch(complex, goal) {
+  const base = `\u4F60\u662F\u8D44\u6DF1 PBL\uFF08\u9879\u76EE\u5F0F\u5B66\u4E60\uFF09\u5BFC\u5E08\uFF0C\u7CBE\u901A K12 \u5404\u5B66\u79D1\u8BFE\u6807\uFF0C\u80FD\u4E3A\u5DE5\u7A0B\u5236\u4F5C\u3001\u79D1\u5B66\u63A2\u7A76\u3001\u793E\u4F1A\u8C03\u67E5\u3001\u4EBA\u6587\u521B\u4F5C\u3001\u521B\u610F\u8BBE\u8BA1\u3001\u5546\u4E1A\u5B9E\u8DF5\u3001\u6D88\u8D39\u51B3\u7B56\u3001\u4EA7\u4E1A\u521B\u65B0\u7B49\u591A\u7C7B\u9879\u76EE\u8BBE\u8BA1\u5B66\u4E60\u8DEF\u5F84\u3002
+${formatTopicAnchorBlock(goal)}
+${typeGuardrailBlock(goal)}
+## \u7B2C\u4E00\u6B65\uFF08\u5FC5\u505A\uFF09\uFF1A\u628A\u9879\u76EE\u62C6\u6210\u300C\u5B50\u4EFB\u52A1 / \u6A21\u5757\u300D
+
+\u5728\u9009\u4EFB\u4F55\u5019\u9009 index \u4E4B\u524D\uFF0C\u5148\u56DE\u7B54\uFF1A\u300C\u8981\u505A\u51FA\u672C\u9879\u76EE\u7684\u4EA4\u4ED8\u7269\uFF0C\u5B66\u751F\u5FC5\u987B\u5206\u522B\u89E3\u51B3\u54EA\u51E0\u4E2A**\u72EC\u7ACB\u5B50\u95EE\u9898**\uFF1F\u300D\u4E0D\u540C\u7C7B\u578B\u9879\u76EE\u7684\u6A21\u5757\u4E0D\u540C\uFF1A
+- \u5DE5\u7A0B/\u5236\u4F5C\uFF1A\u539F\u7406 \u2192 \u88C5\u7F6E/\u7ED3\u6784 \u2192 \u7535\u8DEF/\u63A7\u5236 \u2192 \u6D4B\u8BD5\u8FED\u4EE3
+- \u79D1\u5B66\u63A2\u7A76\uFF1A\u95EE\u9898\u5047\u8BBE \u2192 \u53D8\u91CF\u4E0E\u5B9E\u9A8C\u8BBE\u8BA1 \u2192 \u6570\u636E\u91C7\u96C6 \u2192 \u5206\u6790\u7ED3\u8BBA
+- \u793E\u4F1A\u8C03\u67E5\uFF1A\u9009\u9898\u62BD\u6837 \u2192 \u8D44\u6599/\u95EE\u5377\u6536\u96C6 \u2192 \u6574\u7406\u7EDF\u8BA1 \u2192 \u7ED3\u8BBA\u62A5\u544A
+- \u4EBA\u6587/\u5199\u4F5C\uFF1A\u7ACB\u610F\u9009\u6750 \u2192 \u9605\u8BFB\u79EF\u7D2F \u2192 \u7ED3\u6784\u8868\u8FBE \u2192 \u4FEE\u6539\u5C55\u793A
+- \u521B\u610F/\u5A92\u4F53\uFF1A\u521B\u610F\u6784\u601D \u2192 \u8BBE\u8BA1\u8349\u6848 \u2192 \u5236\u4F5C\u5B9E\u73B0 \u2192 \u5C55\u793A\u8BC4\u8BAE
+- \u5546\u4E1A/\u7ECF\u6D4E\uFF1A\u9700\u6C42\u8C03\u7814 \u2192 \u65B9\u6848\u8BBE\u8BA1 \u2192 \u6210\u672C\u5B9A\u4EF7 \u2192 \u8FD0\u8425\u590D\u76D8
+- \u6D88\u8D39\u51B3\u7B56\uFF1A\u9700\u6C42\u8C03\u7814 \u2192 \u5BF9\u6BD4\u7EF4\u5EA6 \u2192 \u6210\u672C\u6D4B\u7B97 \u2192 \u51B3\u7B56\u62A5\u544A
+
+## \u7B2C\u4E8C\u6B65\uFF1A\u4ECE\u5019\u9009\u5217\u8868\u9009\u70B9\uFF08\u76F8\u5173\u6027\u95E8\u7981\uFF09
+
+\u5BF9\u6BCF\u4E2A index\uFF0C\u5FC5\u987B\u901A\u8FC7\u4EE5\u4E0B\u6D4B\u8BD5\u624D\u80FD\u5165\u9009\uFF1A
+1. **\u6A21\u5757\u6D4B\u8BD5**\uFF1A\u5B83\u652F\u6491\u4E0A\u9762\u54EA\u4E00\u4E2A\u6A21\u5757\uFF1Freason \u5FC5\u987B\u4EE5\u300C\u6A21\u5757\uFF1AXXX\u300D\u5F00\u5934
+2. **\u5220\u9664\u6D4B\u8BD5**\uFF1A\u82E5\u5220\u6389\u5B83\uFF0C\u5B66\u751F\u5B8C\u6210\u8BE5\u6A21\u5757\u4F1A\u660E\u663E\u53D7\u963B\u5417\uFF1F\u82E5\u4E0D\u4F1A \u2192 \u4E0D\u9009
+3. **\u8BFE\u6807\u6D4B\u8BD5**\uFF1A\u540D\u79F0\u5FC5\u987B\u6765\u81EA\u5019\u9009\u5217\u8868\u539F\u6587\uFF0C\u7981\u6B62\u7F16\u9020\u5019\u9009\u4E2D\u6CA1\u6709\u7684\u77E5\u8BC6\u70B9
+
+## \u4E09\u5C42\u77E5\u8BC6\u89D2\u8272
+
+- **foundation**\uFF1A\u5B8C\u6210\u67D0\u6A21\u5757\u6240\u9700\u7684\u5DE5\u5177\u6027/\u524D\u7F6E\u77E5\u8BC6
+- **bridge**\uFF1A\u8FDE\u63A5\u57FA\u7840\u4E0E\u4EA7\u51FA\u7684\u5173\u952E\u65B9\u6CD5
+- **core**\uFF1A\u76F4\u63A5\u7528\u4E8E\u52A8\u624B/\u4EA7\u51FA\u73AF\u8282\u7684\u77E5\u8BC6
+
+## \u6700\u9AD8\u4F18\u5148\u7EA7\uFF1A\u8D34\u5408\u4EA4\u4ED8\u7269 > \u5B66\u79D1\u9F50\u5168
+
+- \u9009 matched \u7684\u552F\u4E00\u6807\u51C6\uFF1A\u5220\u6389\u5B83\uFF0C\u9879\u76EE\u67D0\u4E00\u6B65\u5C31\u505A\u4E0D\u4E0B\u53BB
+- **\u5B66\u79D1\u6309\u9879\u76EE\u7C7B\u578B\u81EA\u7136\u9009\u53D6**\uFF1A\u5DE5\u7A0B/\u79D1\u5B66\u7C7B\u591A\u7528\u7406\u79D1\uFF1B\u793E\u4F1A/\u4EBA\u6587/\u521B\u4F5C/\u5546\u4E1A\u7C7B\u8BE5\u7528\u8BED\u6587\u3001\u5386\u53F2\u3001\u5730\u7406\u3001\u82F1\u8BED\u3001\u4FE1\u606F\u6280\u672F\u5C31\u5927\u80C6\u7528\u2014\u2014\u4E0D\u8981\u786C\u585E\u7406\u79D1\uFF0C\u4E5F\u4E0D\u8981\u4E3A\u51D1\u8DE8\u5B66\u79D1\u585E\u65E0\u5173\u8282\u70B9
+- \u5B81\u53EF\u7CBE\u51C6 5-8 \u4E2A\uFF0C\u4E5F\u4E0D\u4E3A\u5B66\u79D1\u9F50\u5168\u51D1\u6570
+
+\u5E38\u89C1\u9519\u8BEF\uFF08\u7EDD\u5BF9\u7981\u6B62\uFF09\uFF1A
+\u274C matched \u540D\u79F0\u4E0D\u5728\u5019\u9009\u5217\u8868\u91CC\uFF08\u7F16\u9020\uFF09
+\u274C \u5DE5\u7A0B/\u5236\u4F5C\u7C7B\u53EA\u5806\u300CXX\u8BA1\u7B97\u300D\u300CXX\u5B88\u6052\u5B9A\u5F8B\u300D\uFF0C\u7F3A\u539F\u7406/\u88C5\u7F6E/\u5B9E\u9A8C\uFF08\u5B9A\u91CF\u8282\u70B9\u226420%\uFF09
+\u274C \u300C\u5BB6\u5EAD\u8D2D\u8F66/\u65B9\u6848\u5BF9\u6BD4\u300D\u5199\u6210\u7814\u53D1\u65B9\u6848\uFF08\u5E94\u662F\u7EDF\u8BA1/\u51FD\u6570/\u79D1\u666E/\u73AF\u5883/\u8BF4\u660E\u6587\uFF0C\u7981\u6B62\u7535\u89E3\u6C60\u3001\u539F\u7535\u6C60\u3001\u7A0B\u5E8F\u63A7\u5236\u3001\u4F20\u611F\u5668\uFF09
+\u274C \u4EBA\u6587\u5199\u4F5C / \u793E\u4F1A\u8C03\u67E5 / \u521B\u610F\u8BBE\u8BA1\u7C7B\u786C\u585E\u7269\u7406\u5316\u5B66\u516C\u5F0F\u6216\u5DE5\u7A0B\u88C5\u7F6E\u8282\u70B9
+\u274C \u4E3A\u51D1\u5B66\u79D1\u6570\u91CF\u9009\u4E0E\u4EA4\u4ED8\u7269\u65E0\u5173\u7684\u8282\u70B9
+\u274C \u7528\u6279\u5224\u6027\u601D\u7EF4/\u56E2\u961F\u534F\u4F5C/\u9879\u76EE\u7BA1\u7406\u7B49\u6CDB\u7D20\u517B\u8282\u70B9\u51D1\u6570
+\u274C projectPhases steps \u53EA\u6709\u300C\u5B8C\u6210\u672C\u9636\u6BB5\u63A2\u7A76\u300D\u300C\u8FDB\u884C\u8C03\u7814\u300D\u7B49\u7A7A\u8BDD
+${ANTI_VACUUM_BLOCK}`;
+  if (!complex) {
+    return `${base}
+
+## \u8F93\u51FA\u8981\u6C42\uFF08\u5E38\u89C4\u9879\u76EE\uFF09
+- matched 8-${PBL_MAX_MATCHED_NORMAL} \u4E2A\uFF0Cfoundation/bridge/core \u5747\u6709\uFF0C\u8986\u76D6\u81F3\u5C11 2 \u4E2A\u6A21\u5757
+- \u6BCF\u4E2A matched \u7684 reason \u4EE5\u300C\u6A21\u5757\uFF1A\u300D\u5F00\u5934
+- dependsOn \u6784\u6210 DAG\uFF1BpathOrder \u6EE1\u8DB3\u4F9D\u8D56\u987A\u5E8F
+- projectPhases 3-5 \u9636\u6BB5\uFF0C\u6BCF\u9636\u6BB5 literacy \u516D\u7EF4\uFF08\u77E5\u8BC6/\u65B9\u6CD5/\u80FD\u529B/\u6001\u5EA6/\u60C5\u611F/\u4EF7\u503C\u89C2\uFF09\u5404 1 \u53E5\uFF0C\u7ED3\u5408\u5B66\u79D1\u4E0E\u9879\u76EE\u7C7B\u578B\uFF0C\u7981\u6B62\u5957\u8BDD
+- knowledgeChain \u7528 \u2192 \u4E32\u8054\u6A21\u5757\u9012\u8FDB
+
+\u53EA\u8FD4\u56DE JSON\uFF0C\u4E0D\u8981 markdown\uFF0C\u4E0D\u8981\u89E3\u91CA\u3002`;
+  }
+  return `${base}
+
+## \u8F93\u51FA\u8981\u6C42\uFF08\u590D\u6742\u9879\u76EE\uFF09
+- matched 5-10 \u4E2A\uFF1B\u8986\u76D6\u81F3\u5C11 3 \u4E2A\u6A21\u5757\uFF0C\u6BCF\u4E2A\u6A21\u5757 1-2 \u4E2A\u8282\u70B9\u5373\u53EF
+- \u8282\u70B9\u4E0D\u591F\u65F6\u5B81\u53EF\u5C11\u9009\uFF0C\u4E0D\u8981\u51D1\u65E0\u5173\u8BFE\u6807
+- foundation 1-2\u3001bridge 2-3\u3001core 2-3
+- knowledgeNames / techRoute \u53EA\u80FD\u51FA\u73B0\u5019\u9009\u5217\u8868\u4E2D\u5B58\u5728\u7684\u540D\u79F0
+
+\u53EA\u8FD4\u56DE JSON\uFF0C\u4E0D\u8981 markdown\uFF0C\u4E0D\u8981\u4EFB\u4F55\u89E3\u91CA\u6587\u5B57\u3002`;
+}
+__name(systemPromptMatch, "systemPromptMatch");
+function systemPromptDecompose(complex, goal) {
+  const p = projectTypeProfile(goal);
+  const depth = complex ? "\u7ED9\u51FA 2-3 \u5957**\u4E0D\u540C\u5B9E\u65BD\u8DEF\u7EBF**\u5E76\u63A8\u8350 1 \u5957\u3002" : "\u81F3\u5C11\u7ED9\u51FA 2 \u5957\u53EF\u884C\u601D\u8DEF\u5E76\u63A8\u8350 1 \u5957\u3002";
+  return `\u4F60\u662F\u8D44\u6DF1 PBL \u4E0E\u8DE8\u5B66\u79D1\u8BFE\u7A0B\u8BBE\u8BA1\u987E\u95EE\uFF0C\u8986\u76D6\u5DE5\u7A0B\u3001\u79D1\u5B66\u63A2\u7A76\u3001\u793E\u4F1A\u8C03\u67E5\u3001\u4EBA\u6587\u521B\u4F5C\u3001\u521B\u610F\u8BBE\u8BA1\u3001\u5546\u4E1A\u5B9E\u8DF5\u3001\u6D88\u8D39\u51B3\u7B56\u3001\u4EA7\u4E1A\u521B\u65B0\u7B49\u5404\u7C7B\u9879\u76EE\u3002
+${formatTopicAnchorBlock(goal)}
+## \u4EFB\u52A1\uFF08\u672C\u9636\u6BB5**\u4E0D\u9009\u8BFE\u6807\u77E5\u8BC6\u70B9**\uFF09
+
+\u5BF9\u7528\u6237\u9879\u76EE\u76EE\u6807\u505A**\u5168\u94FE\u8DEF\u7ED3\u6784\u5316\u62C6\u89E3**\uFF1A
+1. \u5224\u65AD\u9879\u76EE\u7C7B\u578B\uFF08\u5DF2\u521D\u6B65\u8BC6\u522B\uFF1A${p.label}\uFF09\uFF1A
+   - \u5DE5\u7A0B/\u5236\u4F5C\uFF1A\u505A\u51FA\u88C5\u7F6E/\u7CFB\u7EDF/\u539F\u578B
+   - \u79D1\u5B66\u63A2\u7A76\uFF1A\u7528\u5B9E\u9A8C\u56DE\u7B54\u79D1\u5B66\u95EE\u9898
+   - \u793E\u4F1A\u8C03\u67E5\uFF1A\u7528\u8C03\u67E5/\u8BBF\u8C08\u7814\u7A76\u793E\u4F1A\u73B0\u8C61
+   - \u4EBA\u6587/\u6587\u5B66\uFF1A\u9605\u8BFB\u3001\u5199\u4F5C\u3001\u8868\u8FBE\u3001\u6587\u5316\u7406\u89E3
+   - \u521B\u610F/\u5A92\u4F53/\u827A\u672F\uFF1A\u521B\u4F5C\u6D77\u62A5/\u89C6\u9891/\u4F5C\u54C1\u5E76\u5C55\u793A
+   - \u5546\u4E1A/\u7ECF\u6D4E\uFF1A\u8C03\u7814\u2014\u65B9\u6848\u2014\u6210\u672C\u2014\u8FD0\u8425
+   - \u6D88\u8D39\u51B3\u7B56\uFF1A\u5BF9\u6BD4\u65B9\u6848\u505A\u51FA\u6709\u636E\u51B3\u7B56
+   - \u751F\u6D3B\u89C4\u5212/\u6D3B\u52A8\u7B56\u5212\uFF1A\u73ED\u7EA7\u6D3B\u52A8\u3001\u51FA\u6E38\u7814\u5B66\u3001\u65F6\u95F4/\u9884\u7B97\u5B89\u6392
+   - \u5065\u5EB7\u751F\u6D3B\uFF1A\u8425\u517B\u996E\u98DF\u3001\u8FD0\u52A8\u953B\u70BC\u3001\u8FD1\u89C6/\u7761\u7720\u3001\u5B89\u5168\u6025\u6551
+   - \u52B3\u52A8\u5B9E\u8DF5\uFF1A\u79CD\u690D\u517B\u6B96\u3001\u70F9\u996A\u624B\u5DE5\u3001\u6536\u7EB3\u7EF4\u4FEE\u7B49\u52A8\u624B\u4EFB\u52A1
+   - \u4EA7\u4E1A\u521B\u65B0/\u65B0\u5174\u7ECF\u6D4E\uFF1A\u8C03\u7814\u4EA7\u4E1A\u573A\u666F\u3001\u653F\u7B56\u4E0E\u6280\u672F\uFF0C\u63D0\u51FA\u521B\u65B0\u65B9\u6848\u62A5\u544A\uFF08\u975E\u88C5\u7F6E\u5236\u4F5C\uFF09
+2. \u6F84\u6E05\u4EA4\u4ED8\u7269\u3001\u7EA6\u675F\u3001\u9002\u7528\u5B66\u6BB5
+3. \u62C6\u51FA 3-5 \u4E2A\u6A21\u5757\uFF08${p.moduleWord}\uFF09
+4. ${depth}
+5. \u4E3A\u63A8\u8350\u65B9\u6848\u5217\u51FA 4-5 \u4E2A**\u5B9E\u65BD\u9636\u6BB5**\uFF08\u4EFB\u52A1\u6B65\u9AA4\u3001\u4EA7\u51FA\u3001knowledgeHints \u68C0\u7D22\u8BCD\uFF09
+
+## \u53EF\u6267\u884C\u4EFB\u52A1\u6B65\u9AA4\uFF08\u786C\u6027\uFF09
+- \u6BCF\u4E2A phase \u7684 steps \u81F3\u5C11 2 \u6761\uFF0C\u6BCF\u6761 \u226520 \u5B57\uFF0C\u987B\u540C\u65F6\u5305\u542B\uFF1A**\u52A8\u8BCD + \u64CD\u4F5C\u5BF9\u8C61 + \u5DE5\u5177/\u6570\u636E/\u65B9\u6CD5 + \u53EF\u68C0\u67E5\u4EA7\u51FA\uFF08\u542B\u6570\u91CF/\u5C3A\u5BF8/\u6B21\u6570\uFF09**
+- \u7981\u6B62\u7A7A\u8BDD\uFF1A\u300C\u8FDB\u884C\u8C03\u7814\u300D\u300C\u5B8C\u6210\u63A2\u7A76\u300D\u300C\u9009\u62E9\u786C\u4EF6\u7EC4\u4EF6\u300D\u300C\u7F16\u5199\u57FA\u7840\u63A7\u5236\u903B\u8F91\u300D\u300C\u73AF\u5883\u642D\u5EFA\u300D\u300C\u786E\u5B9A\u6750\u6599\u6E05\u5355\u300D\u7B49\u65E0\u9A8C\u6536\u6807\u51C6\u7684\u8868\u8FF0
+- **\u6BCF\u6761 steps \u5FC5\u987B\u51FA\u73B0\u7528\u6237\u76EE\u6807\u4E2D\u7684\u5173\u952E\u540D\u8BCD**\uFF08\u4ECE\u3010\u9879\u76EE\u76EE\u6807\u3011\u539F\u6587\u63D0\u53D6\uFF09\uFF0C\u4E0D\u5F97\u6362\u6210\u65E0\u5173\u9886\u57DF\u4EFB\u52A1\uFF08\u5982\u5BF9\u300C\u9C81\u73ED\u5DE5\u574A\u300D\u5199\u8F6F\u4EF6\u73AF\u5883\u642D\u5EFA\uFF0C\u5BF9\u300C\u7269\u6D41\u673A\u5668\u4EBA\u300D\u5199\u6728\u5DE5\u69AB\u536F\uFF09
+- \u82E5\u9898\u76EE\u662F\u53E3\u53F7/\u54C1\u724C/\u62BD\u8C61\u8868\u8FF0\uFF0C\u5FC5\u987B**\u843D\u5730\u4E3A 1 \u4E2A\u5177\u4F53\u4EA4\u4ED8\u7269**\uFF0Csteps \u5199\u6E05\u8C01\u505A\u4EC0\u4E48\u3001\u7528\u4EC0\u4E48\u8868/\u5DE5\u5177\u3001\u4EA4\u4EC0\u4E48\u7A3F
+
+## \u539F\u5219
+- **\u4E25\u683C\u8D34\u5408\u9898\u76EE\u7C7B\u578B**\uFF1A\u8C03\u67E5/\u5BF9\u6BD4\u7C7B\u7684\u4EA4\u4ED8\u7269\u662F\u62A5\u544A/\u5BF9\u6BD4\u8868/\u7B54\u8FA9\uFF0C\u4E0D\u662F\u7814\u53D1\u539F\u578B\uFF1B\u5199\u4F5C/\u521B\u4F5C\u7C7B\u7684\u4EA4\u4ED8\u7269\u662F\u4F5C\u54C1\uFF0C\u4E0D\u662F\u5B9E\u9A8C\u88C5\u7F6E
+- knowledgeHints \u662F**\u68C0\u7D22\u5173\u952E\u8BCD**\uFF0C\u6309\u9879\u76EE\u7C7B\u578B\u9009\u53D6\uFF08\u7406\u5DE5\u7C7B\u7528\u5B66\u79D1\u6982\u5FF5\uFF0C\u4EBA\u6587/\u793E\u79D1\u7C7B\u7528\u9605\u8BFB/\u5199\u4F5C/\u7EDF\u8BA1/\u8C03\u67E5\u7B49\uFF09\uFF0C\u4E0D\u5199\u8BFE\u6807\u539F\u6587\u8282\u70B9\u540D
+- deliverable \u5FC5\u987B\u662F\u53EF\u68C0\u67E5\u5B9E\u7269\uFF08\u62A5\u544A\u3001\u8868\u683C\u3001\u6D77\u62A5\u3001\u4F5C\u54C1\u3001\u6570\u636E\u8BB0\u5F55\u8868\uFF09\uFF0C\u4E0D\u80FD\u662F\u300C\u63D0\u5347\u7D20\u517B\u300D\u300C\u589E\u5F3A\u80FD\u529B\u300D
+- \u4E0D\u8DD1\u9898\u3001\u4E0D\u786C\u51D1\u5B66\u79D1
+
+\u53EA\u8FD4\u56DE JSON\uFF0C\u4E0D\u8981 markdown\u3002`;
+}
+__name(systemPromptDecompose, "systemPromptDecompose");
+function isFiltrationGoal(goal) {
+  const g = String(goal || "");
+  return /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水|过滤.*水/.test(g);
+}
+__name(isFiltrationGoal, "isFiltrationGoal");
+function isElementaryFiltrationGoal(goal) {
+  const g = String(goal || "");
+  return /小学|四年级|五年级|四至五|家庭|亲子|家长/.test(g);
+}
+__name(isElementaryFiltrationGoal, "isElementaryFiltrationGoal");
+function filtrationDomains() {
+  return [
+    { id: "scope", label: "\u6307\u6807\u4E0E\u5C40\u9650", keywords: ["\u6307\u6807", "\u5C40\u9650", "\u5B89\u5168", "\u5BA3\u79F0", "\u5BF9\u7167", "\u53D8\u91CF", "\u5B9E\u9A8C"], subjects: ["science", "chinese"] },
+    { id: "prefilter", label: "\u7C97\u6EE4\u4FDD\u62A4\u5C42", keywords: ["\u7C97\u6EE4", "\u6EE4\u7F51", "\u6C89\u6DC0", "\u6CE5\u6C99", "\u9897\u7C92", "\u4FDD\u62A4", "\u6EE4\u7EB8"], subjects: ["science", "physics"] },
+    { id: "adsorption", label: "\u5438\u9644\u6539\u5473\u5C42", keywords: ["\u5438\u9644", "\u6D3B\u6027\u70AD", "\u5F02\u5473", "\u989C\u8272", "\u6709\u673A\u7269"], subjects: ["chemistry", "science"] },
+    { id: "membrane", label: "\u819C\u5B54\u5F84\u6838\u5FC3\u5C42", keywords: ["\u819C", "\u5B54\u5F84", "\u6EE4\u82AF", "\u5FAE\u6EE4", "\u8D85\u6EE4", "\u9676\u74F7", "\u62E6\u622A", "\u5FAE\u5851\u6599"], subjects: ["chemistry", "physics", "science"] },
+    { id: "test", label: "\u5BF9\u7167\u6D4B\u8BD5\u4E0E\u8BC4\u4EF7", keywords: ["\u6D4B\u8BD5", "\u5BF9\u7167", "\u6D41\u901F", "\u6570\u636E", "\u5B9E\u9A8C", "\u8BB0\u5F55", "\u51CF\u5C11\u7387", "\u7EDF\u8BA1"], subjects: ["science", "math", "physics"] }
+  ];
+}
+__name(filtrationDomains, "filtrationDomains");
+function filtrationDecomposeHint(goal) {
+  if (!isFiltrationGoal(goal)) return "";
+  const elem = isElementaryFiltrationGoal(goal);
+  return `
+\u3010\u6C34\u4F53\u8FC7\u6EE4\u88C5\u7F6E\u62C6\u89E3 \u2014 \u786C\u6027\u8981\u6C42\uFF08\u673A\u7406\u5BFC\u5411\uFF09\u3011
+- subsystems \u6309\u8FC7\u6EE4\u673A\u7406\u62C6\uFF1A\u7C97\u6EE4\u4FDD\u62A4\u5C42 / \u5438\u9644\u6539\u5473\u5C42 / \u819C\u5B54\u5F84\u6838\u5FC3\u5C42 / \u5BF9\u7167\u6D4B\u8BD5\u8BC4\u4EF7\uFF08**\u7981\u6B62**\u4EE5\u300C\u8FDB\u6C34\u5BFC\u6D41\u300D\u300C\u5916\u58F3\u5BC6\u5C01\u300D\u4F5C\u4E3B\u6A21\u5757\u540D\uFF09
+- \u63A8\u8350\u65B9\u6848\u987B\u4E3A\u300C\u7C97\u6EE4\u2192\u6D3B\u6027\u70AD\u2192\u660E\u786E\u5B54\u5F84\u819C/\u9676\u74F7\u6EE4\u82AF\u300D\u4E09\u7EA7\u7ED3\u6784\uFF0C\u5199\u660E\u5404\u5C42\u804C\u8D23\uFF08\u7C97\u6EE4\u62A4\u540E\u7EA7\u3001\u6D3B\u6027\u70AD\u6539\u5473\u3001\u819C\u5B54\u5F84\u51B3\u5B9A\u62E6\u622A\u80FD\u529B\uFF09
+- \u6D4B\u8BD5\u9636\u6BB5\u987B\u6709 A/B/C \u5BF9\u7167\uFF1A\u539F\u6C34 / \u4EC5\u7C97\u6EE4 / \u5B8C\u6574\u4E09\u7EA7\uFF0C\u56FA\u5B9A\u6C34\u91CF\uFF08\u5982 300mL\uFF09\uFF0C\u8BB0\u5F55\u8FC7\u6EE4\u65F6\u95F4\u4E0E\u9897\u7C92\u53D8\u5316
+- scopeLimits \u81F3\u5C11 2 \u6761\uFF1A\u4E0D\u80FD\u5BA3\u79F0\u996E\u6C34\u5B89\u5168\uFF1B${elem ? "\u6A21\u578B\u9897\u7C92\u5B9E\u9A8C\u7ED3\u679C\u4E0D\u80FD\u5199\u6210\u771F\u5B9E\u5FAE\u5851\u6599\u53BB\u9664\u7387" : "\u8BFE\u5802\u6A21\u62DF\u6DB2\u7ED3\u679C\u4E0D\u80FD\u7B49\u540C\u771F\u5B9E\u5FAE\u5851\u6599\u53BB\u9664\u7387"}
+- successCriteria \u81F3\u5C11 2 \u6761\uFF1A\u6709\u5BF9\u7167\u7EC4\u3001\u8BB0\u5F55\u6D41\u901F\u6216\u9897\u7C92\u6570\u3001\u7ED3\u8BBA\u5199\u660E\u88C5\u7F6E\u5C40\u9650
+- ${elem ? "\u6A21\u62DF\u9897\u7C92\u7528\u80E1\u6912\u7C89/\u8336\u53F6\u788E/\u7EC6\u6C99\u7B49\u5B89\u5168\u66FF\u4EE3\u7269\uFF0C**\u7981\u6B62**\u526A\u5851\u6599\u888B\u3001\u5851\u6599\u5FAE\u73E0\u3001\u4EAE\u7247" : "\u6A21\u62DF\u6DB2\u987B\u5B89\u5168\u53EF\u63A7\uFF0C**\u7981\u6B62**\u8BA9\u5B66\u751F\u526A\u5207\u5851\u6599\u888B\u6216\u6492\u5851\u6599\u788E\u5C51"}
+- knowledgeChain \u793A\u4F8B\uFF1A\u6307\u6807\u4E0E\u5C40\u9650 \u2192 \u9009\u578B\u7EC4\u88C5 \u2192 \u5BF9\u7167\u5B9E\u9A8C \u2192 \u6570\u636E\u5206\u6790 \u2192 \u6539\u8FDB\u6C47\u62A5
+`;
+}
+__name(filtrationDecomposeHint, "filtrationDecomposeHint");
+function chemistryDecomposeHint(goal) {
+  const cap = getChemistryAnalysisProfile(goal);
+  if (!isChemistryInquiryGoal(goal) || !cap.mixed) return "";
+  const sample = cap.sampleLabel;
+  return `
+\u3010\u6DF7\u5408\u6EB6\u6DB2\u6DF1\u5EA6\u62C6\u89E3 \u2014 \u786C\u6027\u8981\u6C42\u3011
+- ${sample}\u5C5E\u4E8E\u6DF7\u5408\u6EB6\u6DB2\uFF0C**\u7981\u6B62**\u4EE5\u300C\u76F4\u63A5\u79F0\u91CF\u6EB6\u8D28+\u8D28\u91CF\u5206\u6570\u300D\u4F5C\u4E3A\u552F\u4E00/\u4E3B\u65B9\u6848
+- schemes \u81F3\u5C11 2 \u5957\uFF1AA **\u785D\u9178\u94F6\u6EF4\u5B9A\u6CD5**\uFF08\u6D4B Cl\u207B/\u76D0\u542B\u91CF\uFF09\uFF1BB **\u7535\u5BFC\u7387\u6CD5**\uFF08\u6807\u51C6\u66F2\u7EBF\u53CD\u63A8\u6D53\u5EA6\uFF09
+- \u6BCF\u9636\u6BB5 steps \u987B\u5199\uFF1A\u53D6\u6837\u6F84\u6E05/\u7A00\u91CA\u3001\u6EF4\u5B9A\u6216\u6D4B\u7535\u5BFC\u7387\u3001\u7269\u8D28\u7684\u91CF\u6D53\u5EA6\u6362\u7B97\u3001\u5E73\u884C\u6D4B\u5B9A\u4E0E\u8BEF\u5DEE
+`;
+}
+__name(chemistryDecomposeHint, "chemistryDecomposeHint");
+function userPromptDecompose(goal, complex) {
+  const domains = inferProjectDomains(goal);
+  const domainBlock = domains.length ? `
+\u3010\u53EF\u53C2\u8003\u7684\u9879\u76EE\u6A21\u5757\u3011
+${formatDomainHints(domains)}
+` : "";
+  const chemHint = chemistryDecomposeHint(goal);
+  const filtHint = filtrationDecomposeHint(goal);
+  const topicBlock = formatTopicAnchorBlock(goal);
+  return `\u3010\u9879\u76EE\u76EE\u6807\u3011
+${goal}
+${topicBlock}${domainBlock}${chemHint}${filtHint}
+\u8FD4\u56DE JSON\uFF08\u4E25\u683C\u9075\u5FAA\u5B57\u6BB5\u540D\uFF09\uFF1A
+{
+  "projectSummary": "\u4E00\u53E5\u8BDD\u6982\u62EC\u9879\u76EE",
+  "deliverable": "\u6700\u7EC8\u4EA4\u4ED8\u7269",
+  "constraints": ["\u65F6\u95F4/\u5B89\u5168/\u5668\u6750\u7B49\u7EA6\u675F"],
+  "scopeLimits": ["\u4E0D\u80FD\u5BA3\u79F0\u7684\u7ED3\u8BBA\u6216\u80FD\u529B\u8FB9\u754C\uFF0C\u81F3\u5C112\u6761"],
+  "successCriteria": ["\u53EF\u68C0\u67E5\u7684\u9A8C\u6536\u6807\u51C6\uFF0C\u81F3\u5C112\u6761"],
+  "subsystems": [
+    {"id": "energy", "name": "\u5B50\u7CFB\u7EDF\u540D", "description": "\u8BE5\u5B50\u7CFB\u7EDF\u8981\u89E3\u51B3\u7684\u95EE\u9898"}
+  ],
+  "schemes": [
+    {
+      "id": "A",
+      "name": "\u65B9\u6848\u540D\u79F0",
+      "summary": "\u6280\u672F\u8DEF\u7EBF\u6982\u8FF0",
+      "pros": ["\u4F18\u70B9"],
+      "cons": ["\u5C40\u9650"],
+      "phases": [
+        {
+          "phase": "\u9636\u6BB5\u540D",
+          "steps": ["\u4EFB\u52A11", "\u4EFB\u52A12"],
+          "deliverable": "\u9636\u6BB5\u4EA7\u51FA",
+          "subsystemIds": ["energy"],
+          "knowledgeHints": ["\u68C0\u7D22\u5173\u952E\u8BCD1", "\u68C0\u7D22\u5173\u952E\u8BCD2"]
+        }
+      ]
+    }
+  ],
+  "recommendedSchemeId": "A",
+  "knowledgeChain": "\u5B50\u7CFB\u7EDF1 \u2192 \u5B50\u7CFB\u7EDF2 \u2192 \u6D4B\u8BD5\u8FED\u4EE3"
+}
+
+\u8981\u6C42\uFF1A
+- schemes \u81F3\u5C11 2 \u5957\uFF0CrecommendedSchemeId \u5FC5\u987B\u662F\u5176\u4E2D\u4E00\u5957\u7684 id
+- \u63A8\u8350\u65B9\u6848 phases 4-5 \u4E2A
+- \u6BCF\u4E2A steps \u6761\u76EE \u226520 \u5B57\uFF0C\u987B\u542B\u53EF\u64CD\u4F5C\u52A8\u8BCD + \u6570\u91CF/\u5C3A\u5BF8/\u6B21\u6570 + \u53EF\u68C0\u67E5\u4EA7\u51FA\uFF1B\u52A8\u8BCD\u5BF9\u8C61\u5FC5\u987B\u6765\u81EA\u7528\u6237\u76EE\u6807\u539F\u6587
+- phases \u7684 phase \u540D\u79F0\u3001deliverable\u3001steps \u987B\u4E0E\u3010\u9879\u76EE\u76EE\u6807\u3011\u540C\u4E00\u9886\u57DF\uFF0C\u7981\u6B62\u8DE8\u57DF\u5957\u6A21\u677F
+- knowledgeHints \u6BCF\u9636\u6BB5 2-5 \u4E2A\uFF0C\u7528\u4E8E\u4E0B\u4E00\u6B65\u8BFE\u6807\u68C0\u7D22\uFF0C\u52FF\u5199\u8BFE\u6807\u539F\u6587\u8282\u70B9\u540D`;
+}
+__name(userPromptDecompose, "userPromptDecompose");
+function formatBlueprintForMatch(blueprint) {
+  if (!blueprint) return "";
+  const scheme = (blueprint.schemes || []).find((s) => s.id === blueprint.recommendedSchemeId) || (blueprint.schemes || [])[0];
+  if (!scheme) return "";
+  const subs = (blueprint.subsystems || []).map((s) => `${s.id}:${s.name}`).join("\uFF1B");
+  const phases = (scheme.phases || []).map((p, i) => {
+    const hints = (p.knowledgeHints || []).join("\u3001");
+    const steps = (p.steps || []).join("\uFF1B");
+    return `  ${i + 1}. \u3010${p.phase}\u3011\u4EFB\u52A1\uFF1A${steps}\uFF1B\u4EA7\u51FA\uFF1A${p.deliverable || "\u9636\u6BB5\u6210\u679C"}\uFF1B\u77E5\u8BC6\u68C0\u7D22\u63D0\u793A\uFF1A${hints}`;
+  }).join("\n");
+  const scope = (blueprint.scopeLimits || []).map((s) => `  - ${s}`).join("\n");
+  const success = (blueprint.successCriteria || []).map((s) => `  - ${s}`).join("\n");
+  return `
+\u3010\u9879\u76EE\u5B9E\u65BD\u84DD\u56FE \u2014 matched \u5FC5\u987B\u5BF9\u9F50\u6B64\u7ED3\u6784\uFF0C\u7981\u6B62\u8DD1\u9898\u3011
+\u9879\u76EE\u6458\u8981\uFF1A${blueprint.projectSummary || ""}
+\u4EA4\u4ED8\u7269\uFF1A${blueprint.deliverable || ""}
+${scope ? `\u4E0D\u80FD\u5BA3\u79F0\uFF1A
+${scope}
+` : ""}${success ? `\u9A8C\u6536\u6807\u51C6\uFF1A
+${success}
+` : ""}\u63A8\u8350\u65B9\u6848\uFF1A${scheme.name}\uFF08${scheme.summary || ""}\uFF09
+\u5B50\u7CFB\u7EDF\uFF1A${subs}
+\u5B9E\u65BD\u9636\u6BB5\uFF1A
+${phases}
+\u77E5\u8BC6\u94FE\uFF1A${blueprint.knowledgeChain || ""}
+`;
+}
+__name(formatBlueprintForMatch, "formatBlueprintForMatch");
+function systemPromptFilter(complex, goal) {
+  const p = projectTypeProfile(goal);
+  const gradeHint = complex ? "grades \u4E00\u822C\u843D\u5728 7-12\uFF1B\u82E5\u9879\u76EE\u660E\u663E\u9762\u5411\u5C0F\u5B66\uFF0C\u53EF\u542B 1-6\u3002" : "";
+  return `\u4F60\u662F PBL \u9879\u76EE\u4E0E\u8BFE\u6807\u5BF9\u9F50\u4E13\u5BB6\uFF0C\u80FD\u628A\u5DE5\u7A0B\u3001\u79D1\u5B66\u63A2\u7A76\u3001\u793E\u4F1A\u8C03\u67E5\u3001\u4EBA\u6587\u521B\u4F5C\u3001\u521B\u610F\u8BBE\u8BA1\u3001\u5546\u4E1A\u5B9E\u8DF5\u3001\u6D88\u8D39\u51B3\u7B56\u3001\u4EA7\u4E1A\u521B\u65B0\u7B49\u5404\u7C7B\u9879\u76EE\u62C6\u89E3\u4E3A\u53EF\u68C0\u7D22\u7684\u5B66\u79D1\u4E0E\u6A21\u5757\u3002
+${formatTopicAnchorBlock(goal)}
+${typeGuardrailBlock(goal)}
+## \u5DE5\u4F5C\u6D41\u7A0B
+1. \u5224\u65AD\u9879\u76EE\u7C7B\u578B\uFF08\u5DF2\u8BC6\u522B\uFF1A${p.label}\uFF09
+2. \u5217\u51FA 3-5 \u4E2A\u6A21\u5757\uFF08${p.moduleWord}\uFF09
+3. \u4E3A\u6BCF\u4E2A\u6A21\u5757\u6620\u5C04\u5B66\u79D1\uFF1Amath / physics / chemistry / biology / science / chinese / english / history / geography / info-tech
+4. \u786E\u5B9A\u9002\u7528 grades \u4E0E systems
+5. \u4ECE\u84DD\u56FE\u4EFB\u52A1\u52A8\u8BCD\u63A8\u65AD Bloom \u8BA4\u77E5\u4E0A\u9650\uFF08bloomCeiling 1-6\uFF09\uFF0C\u8FC7\u9AD8\u9636\u7684\u8BFE\u6807\u8282\u70B9\u5728 match \u9636\u6BB5\u5E94\u6392\u9664
+
+## \u9009\u5B66\u79D1\u539F\u5219\uFF08\u6309\u7C7B\u578B\u81EA\u9002\u5E94\uFF09
+- \u5B66\u79D1\u5FC5\u987B\u80FD\u8986\u76D6\u4E0A\u8FF0\u6A21\u5757\uFF0C**\u6309\u9879\u76EE\u7C7B\u578B\u81EA\u7136\u9009\u53D6**\uFF1A\u7406\u5DE5\u7C7B\u591A\u7528\u7406\u79D1\uFF1B\u793E\u79D1/\u4EBA\u6587/\u521B\u4F5C/\u5546\u4E1A\u7C7B\u5927\u80C6\u7528\u8BED\u6587\u3001\u5386\u53F2\u3001\u5730\u7406\u3001\u82F1\u8BED\u3001\u4FE1\u606F\u6280\u672F
+- \u5DE5\u7A0B/\u706B\u7BAD/\u80FD\u6E90\u7C7B\uFF1A\u4EE5 physics/chemistry/math/info-tech \u4E3A\u4E3B\uFF0C\u907F\u514D\u65E0\u5173\u4EBA\u6587
+- \u6D88\u8D39\u51B3\u7B56\u7C7B\uFF1A\u4EE5 math\uFF08\u7EDF\u8BA1/\u51FD\u6570\uFF09\u4E3A\u4E3B\uFF0C\u8F85\u4EE5\u76F8\u5173\u79D1\u666E\u4E0E\u8BF4\u660E\u6587\u5199\u4F5C
+- \u793E\u4F1A\u8C03\u67E5/\u4EBA\u6587/\u521B\u4F5C\u7C7B\uFF1A\u4EE5 chinese/geography/history/english/info-tech \u4E3A\u4E3B\uFF0C\u4E0D\u5F3A\u884C\u52A0\u7406\u79D1
+- \u4E0D\u8981\u4E3A\u51D1\u5B66\u79D1\u6570\u91CF\u52A0\u5165\u4E0E\u4EA4\u4ED8\u7269\u65E0\u5173\u7684\u5B66\u79D1
+
+${gradeHint}
+
+\u53EA\u8FD4\u56DE JSON\u3002`;
+}
+__name(systemPromptFilter, "systemPromptFilter");
+function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomProfile = null) {
+  const domains = inferProjectDomains(goal);
+  const blueprintBlock = formatBlueprintForMatch(projectBlueprint);
+  const domainBlock = domains.length ? `
+\u3010\u672C\u9879\u76EE\u6A21\u5757\u53C2\u8003\uFF08filter \u7684 subjects \u987B\u80FD\u8986\u76D6\u8FD9\u4E9B\uFF09\u3011
+${formatDomainHints(domains)}
+` : "";
+  const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
+  const bloomBlock = formatBloomHintForFilter(bloom);
+  const gradeHint = complex ? `
+- grades \u4E00\u822C\u843D\u5728 7-12\uFF08\u521D\u4E2D\u3001\u9AD8\u4E2D\uFF09\uFF0C\u9664\u975E\u9879\u76EE\u9762\u5411\u5C0F\u5B66` : "";
+  return `PBL\u9879\u76EE\u76EE\u6807\uFF1A${goal}
+${formatTopicAnchorBlock(goal)}${blueprintBlock}${domainBlock}${bloomBlock}
+\u53EF\u7528\u7684\u77E5\u8BC6\u4F53\u7CFB\uFF1A
+${summaryList}
+
+\u8FD4\u56DE JSON\uFF1A
+{
+  "subjects": ["math", "chinese", "geography"],
+  "systems": ["cn", "ap"],
+  "grades": [7, 8, 9],
+  "projectDomains": ["\u4ECE\u4EA4\u4ED8\u7269\u62C6\u51FA\u7684 3-5 \u4E2A\u6A21\u5757\u540D\u79F0"],
+  "bloomCeiling": 3,
+  "bloomEvidence": ["\u4ECE\u84DD\u56FE steps \u63D0\u53D6\u7684 2-4 \u6761\u4EFB\u52A1"],
+  "actionVerbs": ["\u6D4B\u91CF", "\u7EDF\u8BA1"],
+  "reasoning": "\u8BF4\u660E\u5404\u6A21\u5757\u5BF9\u5E94\u7684\u5B66\u79D1\u4E0E\u5E74\u7EA7"
+}
+
+\u6CE8\u610F\uFF1A
+- subjects \u53D6\u503C\uFF1Amath/physics/chemistry/biology/chinese/english/history/geography/info-tech/science
+- systems\uFF1Acn/ap/cambridge/ib/us
+- projectDomains\uFF1A\u4ECE\u9879\u76EE\u4EA4\u4ED8\u7269\u62C6\u51FA\u7684 3-5 \u4E2A\u6A21\u5757\u540D\u79F0
+- **\u5B66\u79D1\u6309\u9879\u76EE\u7C7B\u578B\u81EA\u7136\u9009\u53D6**\uFF0C\u7406\u5DE5\u7C7B\u7528\u7406\u79D1\u3001\u793E\u79D1\u4EBA\u6587\u521B\u4F5C\u7C7B\u7528\u6587\u79D1/\u4FE1\u606F\u6280\u672F\uFF0C\u4E0D\u8981\u786C\u585E\u65E0\u5173\u5B66\u79D1
+- \u901A\u5E38 2-5 \u4E2A\u5B66\u79D1\u5373\u53EF${gradeHint}`;
+}
+__name(userPromptFilter, "userPromptFilter");
+function typeMatchHints(goal) {
+  switch (classifyProjectType(goal)) {
+    case "consumer-decision":
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u6D88\u8D39\u51B3\u7B56
+- \u4EA4\u4ED8\u7269\u662F\u51B3\u7B56\u62A5\u544A/\u5BF9\u6BD4\u6D4B\u7B97\u8868\uFF1B\u4F18\u5148\u7EDF\u8BA1\u3001\u51FD\u6570/\u767E\u5206\u6BD4\u3001\u76F8\u5173\u79D1\u666E\uFF08\u5982\u5185\u71C3\u673A\u6548\u7387\uFF09\u3001\u73AF\u5883\u6392\u653E\u3001\u8BF4\u660E\u6587\u5199\u4F5C
+- \u7981\u6B62 matched\uFF1A\u7535\u89E3\u6C60\u3001\u539F\u7535\u6C60\u3001\u7A0B\u5E8F\u63A7\u5236\u3001\u7535\u78C1\u611F\u5E94\u3001\u7535\u6C60\u6E29\u5EA6\u3001\u4F20\u611F\u5668\u3001\u6570\u636E\u91C7\u96C6\u7B97\u6CD5
+- external \u793A\u4F8B\uFF1A\u5168\u751F\u547D\u5468\u671F\u7528\u8F66\u6210\u672C\u3001\u8D2D\u7F6E\u8865\u8D34/\u7A0E\u8D39\u653F\u7B56\u3001\u4FDD\u503C\u7387\u8BC4\u4F30\uFF08\u8BFE\u6807\u5916\uFF09`;
+    case "engineering":
+      if (/微塑料|过滤装置|净水|污水处理|废水|水质净化|滤芯|膜过滤|拦截.*塑料/.test(goal)) {
+        return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u6C34\u4F53\u51C0\u5316/\u8FC7\u6EE4\u88C5\u7F6E\u5DE5\u7A0B
+- \u4EA4\u4ED8\u7269\u662F\u53EF\u6D4B\u8BD5\u7684\u8FC7\u6EE4\u88C5\u7F6E\u539F\u578B+\u8FC7\u6EE4\u6548\u7387\u6D4B\u8BD5\u62A5\u544A\uFF0C\u4E0D\u662F\u706B\u7BAD/\u629B\u4F53/\u53D1\u5C04\u7C7B\u9879\u76EE
+- matched \u987B\u8986\u76D6\uFF1A\u6EB6\u6DB2/\u6C89\u6DC0/\u5438\u9644\u3001\u538B\u5F3A\u4E0E\u6D41\u4F53\u3001\u5B9E\u9A8C\u6D4B\u91CF\u4E0E\u6570\u636E\u7EDF\u8BA1\u3001\u73AF\u5883/\u6C61\u67D3\u76F8\u5173
+- **\u7981\u6B62** matched\uFF1A\u53CD\u51B2\u3001\u706B\u7BAD\u3001\u629B\u4F53\u3001\u5F39\u9053\u3001\u53D1\u5C04\u3001\u7A0B\u5E8F\u8BBE\u8BA1\u3001\u7535\u89E3\u6C60\u3001\u539F\u7535\u6C60
+- projectDomains \u7528\uFF1A\u9700\u6C42\u6307\u6807\u3001\u8FDB\u6C34\u5BFC\u6D41\u3001\u591A\u7EA7\u8FC7\u6EE4\u3001\u5438\u9644\u6355\u83B7\u3001\u5BC6\u5C01\u7ED3\u6784\u3001\u6D4B\u8BD5\u8BC4\u4EF7`;
+      }
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u5DE5\u7A0B/\u5236\u4F5C
+- \u8986\u76D6\u539F\u7406\u2192\u88C5\u7F6E\u2192\u5B9E\u9A8C\u2192\u5FC5\u8981\u5B9A\u91CF\uFF1B\u542B\u81F3\u5C11 1 \u4E2A\u88C5\u7F6E/\u5B9E\u9A8C\u7C7B\u8282\u70B9
+- \u6570\u5B66 index \u226425%\uFF1B\u540D\u79F0\u542B\u300C\u8BA1\u7B97/\u6C42\u89E3/\u65B9\u7A0B\u5F0F\u300D\u7684 \u226420%`;
+    case "scientific-inquiry":
+      return isChemistryInquiryGoal(goal) ? getChemistryAnalysisProfile(goal).mixed ? `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u6DF7\u5408\u6EB6\u6DB2\u95F4\u63A5\u6D4B\u5B9A\uFF08\u5982\u98DF\u5802\u6C64\u6C34\u6D4B\u76D0\uFF09
+- \u6837\u54C1\u4E3A**\u6DF7\u5408\u6EB6\u6DB2**\uFF0C\u4E0D\u80FD\u76F4\u63A5\u7528\u300C\u79F0\u91CF\u6EB6\u8D28\u6C42\u8D28\u91CF\u5206\u6570\u300D\uFF1B\u4E3B\u65B9\u6848\u987B\u4E3A**\u785D\u9178\u94F6\u6EF4\u5B9A\u6CD5**\uFF08Ag\u207A+Cl\u207B\u2192AgCl\u2193\uFF09\u548C/\u6216**\u7535\u5BFC\u7387\u6CD5**\uFF08\u6807\u51C6\u66F2\u7EBF\uFF09
+- matched \u4F18\u5148\uFF1A\u79BB\u5B50\u53CD\u5E94\u3001\u6C89\u6DC0\u6EF4\u5B9A\u3001\u7269\u8D28\u7684\u91CF\u6D53\u5EA6\u3001\u7535\u89E3\u8D28\u6EB6\u6DB2/\u7535\u5BFC\u7387\uFF1Bmath \u7528\u4E8E\u6362\u7B97\u4E0E\u8BEF\u5DEE
+- **\u7981\u6B62** matched\uFF1A\u7A0B\u5E8F\u8BBE\u8BA1\u3001\u4EBA\u4F53\u5668\u5B98\u3001\u996E\u98DF\u8425\u517B\u3001\u4EC5\u7528\u5C0F\u5B66\u300C\u6570\u636E\u6536\u96C6/\u63CF\u8FF0\u300D\u7CCA\u5F04
+- projectPhases \u6BCF\u6B65\u5199\u6E05\u53D6\u6837\u3001\u6EF4\u5B9A/\u6D4B\u7535\u5BFC\u7387\u3001\u6362\u7B97\uFF0C\u7981\u6B62\u7A7A\u8BDD` : `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u5316\u5B66\u6EB6\u6DB2/\u6D53\u5EA6\u63A2\u7A76
+- **\u4EE5 chemistry \u4E3A\u4E3B\u7EBF**\uFF08\u6EB6\u6DB2\u3001\u6EB6\u8D28\u6EB6\u5242\u3001\u8D28\u91CF\u5206\u6570\u3001\u6EB6\u89E3\u3001\u914D\u5236\uFF09\uFF1Bmath \u4EC5\u7528\u4E8E\u6570\u636E\u8BB0\u5F55/\u7EDF\u8BA1\u56FE\u8868
+- **\u7981\u6B62** matched\uFF1A\u7A0B\u5E8F\u8BBE\u8BA1\u3001\u4FE1\u606F\u6280\u672F\u3001\u4EBA\u4F53\u5668\u5B98\u7CFB\u7EDF\u3001\u6CDB\u6CDB\u7684\u300C\u996E\u98DF\u8425\u517B\u4E0E\u5065\u5EB7\u300D
+- projectPhases \u4EFB\u52A1\u987B\u5199\u6E05\u5B9E\u9A8C\u6B65\u9AA4\u4E0E\u8BA1\u7B97\uFF0C\u7981\u6B62\u300C\u5B8C\u6210\u8BFE\u4EF6\u300D\u7A7A\u8BDD` : `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u79D1\u5B66\u63A2\u7A76
+- \u5FC5\u542B\u5B9E\u9A8C\u8BBE\u8BA1\u4E0E\u6570\u636E\u5206\u6790\u7C7B\u8282\u70B9\uFF1B\u7406\u8BBA\u4E0E\u5B9E\u9A8C\u5E76\u91CD\uFF0C\u4E0D\u8981\u53EA\u9009\u7EAF\u8BA1\u7B97`;
+    case "social-inquiry":
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u793E\u4F1A\u8C03\u67E5
+- \u56F4\u7ED5\u8C03\u67E5\u65B9\u6CD5\u3001\u7EDF\u8BA1\u5206\u6790\u3001\u62A5\u544A\u5199\u4F5C\uFF1B\u53EF\u7528\u8BED\u6587/\u5730\u7406/\u5386\u53F2/\u6570\u5B66\uFF0C**\u4E0D\u8981\u585E\u7406\u79D1\u516C\u5F0F**`;
+    case "humanities-literary":
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u4EBA\u6587/\u6587\u5B66
+- \u56F4\u7ED5\u9605\u8BFB\u3001\u5199\u4F5C\u3001\u8868\u8FBE\u3001\u6587\u5316\u7406\u89E3\uFF08\u8BED\u6587/\u82F1\u8BED/\u5386\u53F2\uFF09\uFF1B**\u4E0D\u8981\u585E\u7406\u79D1\u6216\u5DE5\u7A0B\u8282\u70B9**`;
+    case "creative-media":
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u521B\u610F/\u5A92\u4F53
+- \u56F4\u7ED5\u521B\u610F\u3001\u8BBE\u8BA1\u3001\u5236\u4F5C\u3001\u5C55\u793A\uFF1B\u4EC5\u5728\u786E\u9700\u6280\u672F\u5B9E\u73B0\u65F6\u5F15\u5165\u4FE1\u606F\u6280\u672F/\u6570\u5B66`;
+    case "business-economics":
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u5546\u4E1A/\u7ECF\u6D4E
+- \u56F4\u7ED5\u8C03\u7814\u3001\u6210\u672C\u5B9A\u4EF7\u6D4B\u7B97\u3001\u65B9\u6848\u4E0E\u8868\u8FBE\uFF08\u6570\u5B66/\u8BED\u6587/\u4FE1\u606F\u6280\u672F\uFF09`;
+    case "life-planning":
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u751F\u6D3B\u89C4\u5212/\u6D3B\u52A8\u7B56\u5212
+- \u56F4\u7ED5\u9700\u6C42\u76EE\u6807\u3001\u65B9\u6848\u65E5\u7A0B\u3001\u9884\u7B97\u5206\u5DE5\u3001\u6267\u884C\u590D\u76D8\uFF08\u6570\u5B66/\u8BED\u6587/\u5730\u7406\uFF09\uFF1B\u4E0D\u8981\u585E\u5DE5\u7A0B\u88C5\u7F6E\u6216\u7EAF\u7406\u79D1\u516C\u5F0F`;
+    case "health-life":
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u5065\u5EB7\u751F\u6D3B
+- \u56F4\u7ED5\u5065\u5EB7\u77E5\u8BC6\u3001\u73B0\u72B6\u76D1\u6D4B\u7EDF\u8BA1\u3001\u884C\u4E3A\u8BA1\u5212\u4E0E\u8BC4\u4F30\uFF08\u751F\u7269/\u79D1\u5B66/\u6570\u5B66/\u8BED\u6587\uFF09\uFF1B\u4E0D\u8981\u5806\u4E0E\u5065\u5EB7\u65E0\u5173\u7684\u5DE5\u7A0B\u6216\u7EAF\u8BA1\u7B97\u8282\u70B9`;
+    case "planting-cultivation": {
+      const t = extractTopicProfile(goal);
+      const crop = t.crop || plantingCropLabel(goal);
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u79CD\u690D\u517B\u6B96/\u56ED\u827A\u683D\u57F9\uFF08${t.coreTopic}\uFF09
+- \u4EA4\u4ED8\u7269\u662F**\u79CD\u690D\u89C2\u5BDF\u65E5\u8BB0**\uFF0C\u4E0D\u662F\u5DE5\u7A0B\u539F\u578B\u6216\u6D78\u6DA6\u5F0F\u573A\u666F\u4EFB\u52A1
+- matched **\u5FC5\u987B**\u8986\u76D6\uFF1A\u690D\u7269\u5206\u7C7B/\u7279\u5F81\u3001\u751F\u957F\u539F\u7406\uFF08\u5149\u5408/\u79CD\u5B50\u840C\u53D1/\u6839\u7CFB\u5438\u6536\uFF09\u3001\u683D\u57F9\u76F8\u5173\u3001\u6570\u636E\u8BB0\u5F55
+- \u4F18\u5148\uFF1A\u690D\u7269\u7684\u4E00\u751F\u3001\u7EFF\u8272\u690D\u7269\u7ED3\u6784\u3001\u79CD\u5B50\u7ED3\u6784\u4E0E\u840C\u53D1\u3001\u5149\u5408\u4F5C\u7528\u3001\u690D\u7269\u5206\u7C7B\u3001\u6761\u5F62/\u6298\u7EBF\u7EDF\u8BA1\u56FE\u3001\u8BF4\u660E\u6587/\u65E5\u8BB0\u5199\u4F5C
+- **\u7981\u6B62** matched\uFF1A\u671D\u82B1\u5915\u62FE\u3001\u6587\u8A00\u3001\u5916\u56FD\u6587\u5B66\u3001\u725B\u987F\u5B9A\u5F8B\u3001\u5316\u5B66\u65B9\u7A0B\u5F0F\u3001\u7A0B\u5E8F\u8BBE\u8BA1\u3001\u673A\u68B0\u73A9\u5177
+- reason \u987B\u5199\u660E\u5982\u4F55\u7528\u4E8E\u300C${crop}\u300D\u79CD\u690D\u7684\u5177\u4F53\u73AF\u8282\uFF08\u5982\u8FA8\u8BA4\u5206\u7C7B\u3001\u7406\u89E3\u751F\u957F\u3001\u8BB0\u5F55\u682A\u9AD8\uFF09`;
+    }
+    case "labor-practice":
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u52B3\u52A8\u5B9E\u8DF5
+- \u56F4\u7ED5\u52A8\u624B\u64CD\u4F5C\u3001\u89C2\u5BDF\u8BB0\u5F55\u3001\u6210\u679C\u5206\u4EAB\uFF08\u79D1\u5B66/\u751F\u7269/\u8BED\u6587/\u6570\u5B66\uFF09\uFF1B\u8D34\u8FD1\u771F\u5B9E\u64CD\u4F5C\uFF0C\u4E0D\u8981\u62D4\u9AD8\u6210\u79D1\u7814\u8BBA\u6587\u6216\u5DE5\u7A0B\u7CFB\u7EDF`;
+    case "industry-innovation": {
+      const t = extractTopicProfile(goal);
+      const topic = t.coreTopic || "\u4E3B\u9898\u4EA7\u4E1A";
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u4EA7\u4E1A\u521B\u65B0/\u65B0\u5174\u7ECF\u6D4E\uFF08${topic}\uFF09
+- \u4EA4\u4ED8\u7269\u662F**${topic}\u521B\u65B0\u65B9\u6848/\u8C03\u7814\u62A5\u544A**\uFF0C\u4E0D\u662F\u88C5\u7F6E\u5236\u4F5C\u6216\u8F6F\u4EF6\u5DE5\u7A0B
+- matched \u987B\u80FD\u652F\u6491\uFF1A\u4EA7\u4E1A\u80CC\u666F\u653F\u7B56\u3001\u5E94\u7528\u573A\u666F\u3001\u6280\u672F\u539F\u7406\uFF08\u5982\u98DE\u884C/\u5BFC\u822A\uFF09\u3001\u6570\u636E\u7EDF\u8BA1\u3001\u65B9\u6848\u8BBA\u8BC1
+- \u4F18\u5148\uFF1A\u4EA4\u901A\u8FD0\u8F93\u5E03\u5C40\u3001\u4EA4\u901A\u4E0E\u533A\u57DF\u53D1\u5C55\u3001\u629B\u4F53/\u725B\u987F\uFF08\u98DE\u884C\u539F\u7406\uFF09\u3001\u7EDF\u8BA1\u8C03\u67E5\u3001\u8BF4\u660E\u6587/\u62A5\u544A\u5199\u4F5C\u3001\u4E2D\u56FD\u7ECF\u6D4E\u5730\u7406
+- **\u7981\u6B62** matched\uFF1A\u73B0\u4EE3\u7269\u6D41\u7BA1\u7406\uFF08\u9664\u975E reason \u660E\u786E\u5199\u300C${topic}\u4F4E\u7A7A\u7269\u6D41\u914D\u9001\u300D\uFF09\u3001\u667A\u6167\u57CE\u5E02\u3001\u7A0B\u5E8F\u8BBE\u8BA1\u3001\u7535\u89E3\u6C60\u3001\u5C0F\u5B66\u6570\u5B66
+- reason \u5FC5\u987B\u5199\u660E\u8BE5\u77E5\u8BC6\u70B9\u5982\u4F55\u7528\u4E8E\u300C${topic}\u300D\u7684\u5177\u4F53\u73AF\u8282\uFF0C\u7981\u6B62\u6CDB\u6CDB\u300C\u4E86\u89E3\u4EA7\u4E1A\u53D1\u5C55\u300D`;
+    }
+    case "exhibition-redesign": {
+      const t = extractTopicProfile(goal);
+      const topic = t.coreTopic || "\u573A\u9986";
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u5C55\u9648\u7A7A\u95F4/\u573A\u9986\u6539\u9020\uFF08${topic}\uFF09
+- \u4EA4\u4ED8\u7269\u662F**${topic}\u6539\u9020\u65B9\u6848\u518C**\uFF08\u73B0\u72B6\u8BCA\u65AD+\u5C55\u9648\u8BBE\u8BA1+\u6574\u6539\u6E05\u5355\uFF09\uFF0C\u4E0D\u662F\u8F6F\u4EF6\u5DE5\u7A0B\u6216\u88C5\u7F6E\u7814\u53D1
+- matched \u987B\u652F\u6491\uFF1A\u73B0\u72B6\u8C03\u67E5\u3001\u5929\u6587/\u592A\u7A7A\u79D1\u666E\u5185\u5BB9\u3001\u5C55\u677F\u8BBE\u8BA1\u3001\u9884\u7B97\u7EDF\u8BA1\u3001\u8BF4\u660E\u6587\u5199\u4F5C
+- \u4F18\u5148\uFF1A\u592A\u9633\u7CFB\u3001\u5730\u7403\u4E0E\u5B87\u5B99\u3001\u8BF4\u660E\u6587\u5199\u4F5C\u3001\u7EDF\u8BA1\u56FE\u8868\u3001\u7B80\u5355\u8BBE\u8BA1/\u4FE1\u606F\u6280\u672F
+- **\u7981\u6B62** matched\uFF1A\u62DB\u751F\u7B80\u7AE0\u3001\u7A0B\u5E8F\u8BBE\u8BA1\u3001\u7535\u89E3\u6C60\u3001\u725B\u987F\u5B9A\u5F8B\uFF08\u9664\u975E\u7528\u4E8E\u79D1\u666E\u8BB2\u89E3\uFF09\u3001\u5916\u56FD\u6587\u5B66\u3001\u5C0F\u5B66\u6570\u5B66
+- reason \u5FC5\u987B\u5199\u660E\u5982\u4F55\u7528\u4E8E\u300C${topic}\u300D\u6539\u9020\u7684\u5177\u4F53\u73AF\u8282`;
+    }
+    default:
+      return `
+### \u7C7B\u578B\u8981\u6C42\uFF1A\u7EFC\u5408\u5B9E\u8DF5
+- \u6BCF\u4E2A\u8282\u70B9\u670D\u52A1\u4EA4\u4ED8\u7269\u67D0\u4E00\u6B65\uFF0C\u5B66\u79D1\u6309\u9700\u81EA\u7136\u9009\u53D6
+- \u82E5\u9898\u76EE\u62BD\u8C61\uFF0C\u5148\u843D\u5730\u4E3A 1 \u4E2A\u53EF\u68C0\u67E5\u4EA4\u4ED8\u7269\uFF0C\u518D\u9009\u8BFE\u6807\uFF1B\u7981\u6B62\u6CDB\u7D20\u517B\u51D1\u6570${ANTI_VACUUM_BLOCK}`;
+  }
+}
+__name(typeMatchHints, "typeMatchHints");
+var GENERIC_COMPLEX_EXAMPLE = `
+\u8FD4\u56DE JSON \u683C\u5F0F\uFF08\u4E25\u683C\u9075\u5FAA\uFF1B\u4E0B\u5217 index \u4EC5\u4E3A**\u683C\u5F0F\u793A\u8303**\uFF0C\u4F60\u5FC5\u987B\u5728\u3010\u5019\u9009\u77E5\u8BC6\u70B9\u3011\u4E2D\u91CD\u65B0\u68C0\u7D22\u5E76\u586B\u5199\u771F\u5B9E index\uFF09\uFF1A
+{
+  "matched": [
+    {"index": 1, "confidence": 0.92, "role": "foundation", "reason": "\u6A21\u5757\uFF1A\u9009\u9898\u4E0E\u8C03\u67E5\u8BBE\u8BA1\u3002\u660E\u786E\u8C03\u67E5\u95EE\u9898\u3001\u5BF9\u8C61\u4E0E\u62BD\u6837\u65B9\u6CD5", "dependsOn": []},
+    {"index": 4, "confidence": 0.90, "role": "bridge", "reason": "\u6A21\u5757\uFF1A\u6574\u7406\u4E0E\u7EDF\u8BA1\u5206\u6790\u3002\u7528\u7EDF\u8BA1\u56FE\u8868\u5448\u73B0\u8C03\u67E5\u6570\u636E", "dependsOn": [1]},
+    {"index": 7, "confidence": 0.88, "role": "core", "reason": "\u6A21\u5757\uFF1A\u7ED3\u8BBA\u4E0E\u62A5\u544A\u3002\u64B0\u5199\u8C03\u67E5\u62A5\u544A\u5E76\u63D0\u51FA\u5EFA\u8BAE", "dependsOn": [4]}
+  ],
+  "pathOrder": [1, 4, 7],
+  "knowledgeChain": "\u8C03\u67E5\u4E0E\u62BD\u6837\u8BBE\u8BA1 \u2192 \u6570\u636E\u6574\u7406\u4E0E\u7EDF\u8BA1\u56FE\u8868 \u2192 \u62A5\u544A\u5199\u4F5C\u4E0E\u8BBA\u8BC1\u8868\u8FBE",
+  "projectPhases": [
+    {
+      "phase": "\u9009\u9898\u4E0E\u8C03\u67E5\u8BBE\u8BA1",
+      "steps": ["\u786E\u5B9A\u8C03\u67E5\u95EE\u9898\u4E0E\u5BF9\u8C61", "\u8BBE\u8BA1\u95EE\u5377/\u8BBF\u8C08\u63D0\u7EB2\u4E0E\u62BD\u6837\u65B9\u6848"],
+      "knowledgeNames": ["\u6570\u636E\u7684\u6536\u96C6"],
+      "deliverable": "\u8C03\u67E5\u65B9\u6848\u4E0E\u95EE\u5377\u521D\u7A3F",
+      "literacy": {
+        "knowledge": "\u7406\u89E3\u62BD\u6837\u4E0E\u8C03\u67E5\u65B9\u6CD5\u7684\u9002\u7528\u6761\u4EF6",
+        "method": "\u7528\u95EE\u5377/\u8BBF\u8C08\u8BBE\u8BA1\u83B7\u53D6\u4E00\u624B\u8D44\u6599",
+        "ability": "\u80FD\u9488\u5BF9\u95EE\u9898\u8BBE\u8BA1\u53EF\u64CD\u4F5C\u7684\u8C03\u67E5\u5DE5\u5177",
+        "attitude": "\u5C0A\u91CD\u53D7\u8BBF\u8005\u3001\u5982\u5B9E\u8BB0\u5F55",
+        "emotion": "\u5BF9\u771F\u5B9E\u793E\u4F1A\u73B0\u8C61\u4EA7\u751F\u63A2\u7A76\u5174\u8DA3",
+        "values": "\u6811\u7ACB\u5B9E\u4E8B\u6C42\u662F\u7684\u8C03\u67E5\u4F26\u7406"
+      }
+    },
+    {
+      "phase": "\u6570\u636E\u6574\u7406\u4E0E\u5206\u6790",
+      "steps": ["\u6574\u7406\u56DE\u6536\u6570\u636E", "\u7528\u7EDF\u8BA1\u56FE\u8868\u5206\u6790\u8D8B\u52BF"],
+      "knowledgeNames": ["\u6761\u5F62\u7EDF\u8BA1\u56FE\u4E0E\u6298\u7EBF\u7EDF\u8BA1\u56FE"],
+      "deliverable": "\u6570\u636E\u5206\u6790\u56FE\u8868",
+      "literacy": {
+        "knowledge": "\u638C\u63E1\u7EDF\u8BA1\u56FE\u8868\u7684\u9009\u62E9\u4E0E\u89E3\u8BFB",
+        "method": "\u7528\u5E73\u5747\u6570/\u767E\u5206\u6BD4\u523B\u753B\u6570\u636E\u7279\u5F81",
+        "ability": "\u80FD\u4ECE\u6570\u636E\u4E2D\u53D1\u73B0\u89C4\u5F8B\u4E0E\u5F02\u5E38",
+        "attitude": "\u5BA2\u89C2\u5BF9\u5F85\u6570\u636E\uFF0C\u4E0D\u81C6\u65AD\u7ED3\u8BBA",
+        "emotion": "\u4F53\u9A8C\u7528\u6570\u636E\u8BF4\u8BDD\u7684\u6210\u5C31\u611F",
+        "values": "\u5C0A\u91CD\u6570\u636E\u3001\u4E0D\u7BE1\u6539\u7ED3\u679C"
+      }
+    },
+    {
+      "phase": "\u7ED3\u8BBA\u4E0E\u62A5\u544A",
+      "steps": ["\u5F52\u7EB3\u7ED3\u8BBA", "\u64B0\u5199\u8C03\u67E5\u62A5\u544A\u5E76\u63D0\u51FA\u5EFA\u8BAE"],
+      "knowledgeNames": ["\u8BF4\u660E\u6587\u5199\u4F5C"],
+      "deliverable": "\u8C03\u67E5\u62A5\u544A\u4E0E\u7B54\u8FA9",
+      "literacy": {
+        "knowledge": "\u7406\u89E3\u8C03\u67E5\u62A5\u544A\u7684\u7ED3\u6784\u4E0E\u8BBA\u8BC1\u65B9\u5F0F",
+        "method": "\u7528\u8BC1\u636E\u652F\u6491\u7ED3\u8BBA\u3001\u5206\u5C42\u8868\u8FBE",
+        "ability": "\u80FD\u6E05\u6670\u4F20\u8FBE\u53D1\u73B0\u5E76\u63D0\u51FA\u53EF\u884C\u5EFA\u8BAE",
+        "attitude": "\u4E25\u8C28\u8BBA\u8BC1\u3001\u8D1F\u8D23\u4EFB\u5730\u53D1\u58F0",
+        "emotion": "\u5728\u5206\u4EAB\u4E2D\u83B7\u5F97\u8868\u8FBE\u81EA\u4FE1",
+        "values": "\u5173\u6CE8\u793E\u4F1A\u8BAE\u9898\u3001\u670D\u52A1\u516C\u5171\u5229\u76CA"
+      }
+    }
+  ],
+  "external": [
+    {"name": "\u95EE\u5377\u4FE1\u6548\u5EA6\u68C0\u9A8C", "reason": "\u8C03\u67E5\u5DE5\u5177\u8D28\u91CF\u4FDD\u969C\u65B9\u6CD5\uFF0C\u8BFE\u6807\u63D0\u53CA\u8F83\u5C11\u4F46\u672C\u9879\u76EE\u5FC5\u9700", "prerequisites": ["\u6570\u636E\u7684\u6536\u96C6"]},
+    {"name": "\u8BBF\u8C08\u4F26\u7406\u4E0E\u77E5\u60C5\u540C\u610F", "reason": "\u7530\u91CE\u8C03\u67E5\u4F26\u7406\u8981\u6C42\uFF0C\u8BFE\u672C\u901A\u5E38\u4E0D\u5355\u72EC\u8BB2\u6388"}
+  ],
+  "techRoute": "\u9636\u6BB5\u4E00\uFF1A\u660E\u786E\u8C03\u67E5\u95EE\u9898\u5E76\u8BBE\u8BA1\u95EE\u5377\u4E0E\u62BD\u6837\uFF1B\u9636\u6BB5\u4E8C\uFF1A\u6574\u7406\u56DE\u6536\u6570\u636E\u5E76\u7528\u7EDF\u8BA1\u56FE\u8868\u5206\u6790\uFF1B\u9636\u6BB5\u4E09\uFF1A\u5F52\u7EB3\u7ED3\u8BBA\u3001\u64B0\u5199\u62A5\u544A\u5E76\u7B54\u8FA9\u3002"
+}`;
+var LOW_ALTITUDE_ECONOMY_EXAMPLE = `
+\u8FD4\u56DE JSON \u683C\u5F0F\uFF08\u4E25\u683C\u9075\u5FAA\uFF1B\u4E0B\u5217 index \u4EC5\u4E3A**\u683C\u5F0F\u793A\u8303**\uFF0C\u4F60\u5FC5\u987B\u5728\u3010\u5019\u9009\u77E5\u8BC6\u70B9\u3011\u4E2D\u91CD\u65B0\u68C0\u7D22\u5E76\u586B\u5199\u771F\u5B9E index\uFF0C\u7981\u6B62\u7167\u6284\u793A\u4F8B\u6570\u5B57\uFF09\uFF1A
+{
+  "matched": [
+    {"index": 2, "confidence": 0.94, "role": "foundation", "reason": "\u6A21\u5757\uFF1A\u4F4E\u7A7A\u7ECF\u6D4E\u80CC\u666F\u4E0E\u653F\u7B56\u3002\u7528\u533A\u57DF\u53D1\u5C55\u4E0E\u4EA4\u901A\u5E03\u5C40\u7406\u89E3\u4F4E\u7A7A\u4EA7\u4E1A\u4E0E\u7A7A\u57DF\u8D44\u6E90\u7684\u7A7A\u95F4\u7EA6\u675F", "dependsOn": []},
+    {"index": 5, "confidence": 0.91, "role": "foundation", "reason": "\u6A21\u5757\uFF1A\u4F4E\u7A7A\u7ECF\u6D4E\u80CC\u666F\u4E0E\u653F\u7B56\u3002\u4ECE\u4E2D\u56FD\u7ECF\u6D4E\u5730\u7406\u628A\u63E1\u4EA7\u4E1A\u653F\u7B56\u4E0E\u8BD5\u70B9\u57CE\u5E02\u5206\u5E03", "dependsOn": []},
+    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "\u6A21\u5757\uFF1A\u5E94\u7528\u573A\u666F\u8C03\u7814\u3002\u7528\u7EDF\u8BA1\u8C03\u67E5\u65B9\u6CD5\u6574\u7406\u65E0\u4EBA\u673A\u914D\u9001/\u5E94\u6025/\u690D\u4FDD\u7B49\u573A\u666F\u9700\u6C42\u6570\u636E", "dependsOn": [2]},
+    {"index": 11, "confidence": 0.89, "role": "bridge", "reason": "\u6A21\u5757\uFF1A\u6280\u672F\u539F\u7406\u652F\u6491\u3002\u7528\u629B\u4F53\u8FD0\u52A8\u5206\u6790\u4F4E\u7A7A\u98DE\u884C\u5668\u8D77\u964D\u4E0E\u822A\u7EBF\u9AD8\u5EA6\u7EA6\u675F", "dependsOn": [8]},
+    {"index": 17, "confidence": 0.92, "role": "core", "reason": "\u6A21\u5757\uFF1A\u6570\u636E\u4E0E\u53EF\u884C\u6027\u5206\u6790\u3002\u7528\u56FE\u8868\u6BD4\u8F83\u4E0D\u540C\u4F4E\u7A7A\u5E94\u7528\u573A\u666F\u7684\u6210\u672C\u6548\u76CA", "dependsOn": [8]},
+    {"index": 23, "confidence": 0.88, "role": "core", "reason": "\u6A21\u5757\uFF1A\u521B\u65B0\u65B9\u6848\u4E0E\u62A5\u544A\u3002\u7528\u8BF4\u660E\u6587\u7ED3\u6784\u64B0\u5199\u4F4E\u7A7A\u7ECF\u6D4E\u521B\u65B0\u65B9\u6848\u4E0E\u8BD5\u70B9\u5EFA\u8BAE", "dependsOn": [17]}
+  ],
+  "pathOrder": [2, 5, 8, 11, 17, 23],
+  "knowledgeChain": "\u4EA7\u4E1A\u653F\u7B56\u4E0E\u533A\u57DF\u4EA4\u901A \u2192 \u573A\u666F\u8C03\u7814\u4E0E\u7EDF\u8BA1 \u2192 \u98DE\u884C\u539F\u7406\u652F\u6491 \u2192 \u53EF\u884C\u6027\u5206\u6790 \u2192 \u521B\u65B0\u65B9\u6848\u62A5\u544A",
+  "projectPhases": [
+    {
+      "phase": "\u4F4E\u7A7A\u7ECF\u6D4E\u80CC\u666F\u4E0E\u653F\u7B56\u68B3\u7406",
+      "steps": ["\u68C0\u7D22\u56FD\u5BB6\u53CA\u672C\u5730\u4F4E\u7A7A\u7ECF\u6D4E\u8BD5\u70B9\u653F\u7B56\u22653\u6761\u5E76\u6458\u5F55\u8981\u70B9", "\u7528\u601D\u7EF4\u5BFC\u56FE\u5F52\u7EB3\u7A7A\u57DF\u3001\u4EA7\u4E1A\u3001\u5B89\u5168\u4E09\u7C7B\u5173\u952E\u8BCD"],
+      "knowledgeNames": ["\u4EA4\u901A\u8FD0\u8F93\u5E03\u5C40", "\u4E2D\u56FD\u7684\u7ECF\u6D4E\u53D1\u5C55"],
+      "deliverable": "\u653F\u7B56\u4E0E\u4EA7\u4E1A\u80CC\u666F\u5BF9\u7167\u8868",
+      "literacy": {
+        "knowledge": "\u7406\u89E3\u4F4E\u7A7A\u7ECF\u6D4E\u662F\u4F4E\u7A7A\u7A7A\u57DF\u98DE\u884C\u6D3B\u52A8\u5E26\u52A8\u7684\u65B0\u5174\u4EA7\u4E1A",
+        "method": "\u7528\u6743\u5A01\u6765\u6E90\u6458\u5F55\u5E76\u6807\u6CE8\u653F\u7B56\u8981\u70B9",
+        "ability": "\u80FD\u8BF4\u660E\u653F\u7B56\u4E0E\u672C\u5730\u573A\u666F\u7684\u5173\u7CFB",
+        "attitude": "\u5C0A\u91CD\u6CD5\u89C4\u3001\u4E0D\u5938\u5927\u653F\u7B56\u7EA2\u5229",
+        "emotion": "\u5BF9\u65B0\u5174\u4EA7\u4E1A\u673A\u9047\u4FDD\u6301\u7406\u6027\u597D\u5947",
+        "values": "\u5173\u6CE8\u516C\u5171\u5B89\u5168\u4E0E\u5408\u89C4\u53D1\u5C55"
+      }
+    },
+    {
+      "phase": "\u5E94\u7528\u573A\u666F\u8C03\u7814",
+      "steps": ["\u9009\u5B9A1\u4E2A\u4F4E\u7A7A\u573A\u666F\uFF08\u914D\u9001/\u5E94\u6025/\u690D\u4FDD/\u51FA\u884C\uFF09\u5E76\u8BBE\u8BA110\u9898\u95EE\u5377", "\u56DE\u6536\u226520\u4EFD\u6709\u6548\u95EE\u5377\u5E76\u5236\u6210\u7EDF\u8BA1\u56FE\u8868"],
+      "knowledgeNames": ["\u6570\u636E\u7684\u6536\u96C6", "\u7EDF\u8BA1\u56FE\u8868"],
+      "deliverable": "\u573A\u666F\u9700\u6C42\u8C03\u7814\u8868\u4E0E\u56FE\u8868",
+      "literacy": {
+        "knowledge": "\u638C\u63E1\u8C03\u67E5\u8BBE\u8BA1\u4E0E\u6570\u636E\u6574\u7406\u65B9\u6CD5",
+        "method": "\u7528\u95EE\u5377\u4E0E\u56FE\u8868\u5448\u73B0\u573A\u666F\u9700\u6C42",
+        "ability": "\u80FD\u4ECE\u6570\u636E\u63D0\u70BC1\u6761\u573A\u666F\u75DB\u70B9",
+        "attitude": "\u5982\u5B9E\u8BB0\u5F55\u3001\u4E0D\u7BE1\u6539\u6570\u636E",
+        "emotion": "\u5728\u5B9E\u5730\u8C03\u7814\u4E2D\u589E\u5F3A\u793E\u4F1A\u89C2\u5BDF\u529B",
+        "values": "\u5C0A\u91CD\u53D7\u8BBF\u8005\u9690\u79C1\u4E0E\u77E5\u60C5\u540C\u610F"
+      }
+    },
+    {
+      "phase": "\u6280\u672F\u539F\u7406\u4E0E\u5B89\u5168\u8981\u70B9",
+      "steps": ["\u67E5\u9605\u65E0\u4EBA\u673A\u98DE\u884C\u9AD8\u5EA6\u3001\u8F7D\u91CD\u3001\u7EED\u822A\u4E09\u7C7B\u53C2\u6570\u5E76\u5236\u5BF9\u6BD4\u8868", "\u7528\u629B\u4F53\u8FD0\u52A8\u793A\u610F\u56FE\u8BF4\u660E\u8D77\u964D\u5B89\u5168\u8DDD\u79BB\u4F30\u7B97\u601D\u8DEF"],
+      "knowledgeNames": ["\u629B\u4F53\u8FD0\u52A8", "\u725B\u987F\u8FD0\u52A8\u5B9A\u5F8B"],
+      "deliverable": "\u6280\u672F\u53C2\u6570\u4E0E\u5B89\u5168\u8981\u70B9\u7B14\u8BB0",
+      "literacy": {
+        "knowledge": "\u7406\u89E3\u98DE\u884C\u9AD8\u5EA6\u4E0E\u8FD0\u52A8\u5B66\u57FA\u672C\u5173\u7CFB",
+        "method": "\u7528\u793A\u610F\u56FE\u8F85\u52A9\u89E3\u91CA\u6280\u672F\u7EA6\u675F",
+        "ability": "\u80FD\u6307\u51FA\u65B9\u6848\u4E2D\u76841\u9879\u5B89\u5168\u98CE\u9669",
+        "attitude": "\u628A\u5B89\u5168\u5408\u89C4\u653E\u5728\u9996\u4F4D",
+        "emotion": "\u4F53\u9A8C\u8DE8\u5B66\u79D1\u7406\u89E3\u6280\u672F\u7684\u6210\u5C31\u611F",
+        "values": "\u6811\u7ACB\u7A7A\u57DF\u5B89\u5168\u4E0E\u516C\u4F17\u5229\u76CA\u610F\u8BC6"
+      }
+    },
+    {
+      "phase": "\u521B\u65B0\u65B9\u6848\u4E0E\u53EF\u884C\u6027\u8BBA\u8BC1",
+      "steps": ["\u63D0\u51FA1\u4E2A\u4F4E\u7A7A\u7ECF\u6D4E\u521B\u65B0\u70B9\u5B50\u5E76\u5199200\u5B57\u573A\u666F\u63CF\u8FF0", "\u7528\u6210\u672C\u6548\u76CA\u7B80\u8868\u8BBA\u8BC1\u53EF\u884C\u6027\u5E76\u5217\u51FA2\u6761\u843D\u5730\u969C\u788D"],
+      "knowledgeNames": ["\u8BF4\u660E\u6587\u5199\u4F5C"],
+      "deliverable": "\u4F4E\u7A7A\u7ECF\u6D4E\u521B\u65B0\u65B9\u6848\u62A5\u544A",
+      "literacy": {
+        "knowledge": "\u638C\u63E1\u521B\u65B0\u65B9\u6848\u62A5\u544A\u7684\u7ED3\u6784\u4E0E\u8BBA\u8BC1\u65B9\u5F0F",
+        "method": "\u7528\u6570\u636E\u4E0E\u653F\u7B56\u4F9D\u636E\u652F\u6491\u5EFA\u8BAE",
+        "ability": "\u80FD\u63D0\u51FA\u53EF\u64CD\u4F5C\u7684\u8BD5\u70B9\u5EFA\u8BAE",
+        "attitude": "\u8BBA\u8BC1\u52A1\u5B9E\u3001\u627F\u8BA4\u5C40\u9650",
+        "emotion": "\u5728\u65B9\u6848\u6253\u78E8\u4E2D\u83B7\u5F97\u8868\u8FBE\u81EA\u4FE1",
+        "values": "\u5E73\u8861\u521B\u65B0\u4E0E\u516C\u5171\u5B89\u5168"
+      }
+    }
+  ],
+  "external": [
+    {"name": "\u4F4E\u7A7A\u7A7A\u57DF\u5206\u7C7B\u4E0E\u7BA1\u7406\u8981\u70B9", "reason": "\u7A7A\u57DF\u5212\u8BBE\u4E0E\u98DE\u884C\u5BA1\u6279\u662F\u4F4E\u7A7A\u7ECF\u6D4E\u843D\u5730\u5173\u952E\uFF0C\u8BFE\u6807\u65E0\u4E13\u9879\u6761\u76EE", "prerequisites": ["\u4EA4\u901A\u8FD0\u8F93\u5E03\u5C40"]},
+    {"name": "\u65E0\u4EBA\u673A\u98DE\u884C\u5B89\u5168\u64CD\u4F5C\u89C4\u8303", "reason": "\u573A\u666F\u8C03\u7814\u540E\u987B\u7406\u89E3\u7981\u98DE\u533A\u4E0E\u64CD\u4F5C\u7EA2\u7EBF\uFF0C\u8BFE\u672C\u8F83\u5C11\u7CFB\u7EDF\u8BB2\u6388", "prerequisites": ["\u629B\u4F53\u8FD0\u52A8"]}
+  ],
+  "techRoute": "\u9636\u6BB5\u4E00\uFF1A\u68B3\u7406\u4F4E\u7A7A\u7ECF\u6D4E\u653F\u7B56\u4E0E\u4EA7\u4E1A\u80CC\u666F\uFF1B\u9636\u6BB5\u4E8C\uFF1A\u8C03\u7814\u5178\u578B\u5E94\u7528\u573A\u666F\u5E76\u7EDF\u8BA1\u9700\u6C42\uFF1B\u9636\u6BB5\u4E09\uFF1A\u8865\u8DB3\u98DE\u884C\u539F\u7406\u4E0E\u5B89\u5168\u8981\u70B9\uFF1B\u9636\u6BB5\u56DB\uFF1A\u64B0\u5199\u521B\u65B0\u65B9\u6848\u5E76\u5B8C\u6210\u53EF\u884C\u6027\u8BBA\u8BC1\u3002"
+}`;
+function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint, bloomProfile = null, archetypeId = null) {
+  const matchedRange = complex ? `5-${Math.min(maxMatched, 8)}` : `8-${maxMatched}`;
+  const externalMax = complex ? 2 : 3;
+  const domains = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
+  const blueprintSection = formatBlueprintForMatch(projectBlueprint);
+  const domainSection = domains.length ? `
+\u3010\u9879\u76EE\u6A21\u5757 \u2014 \u6BCF\u4E2A\u81F3\u5C11 1 \u4E2A matched\uFF0Creason \u5FC5\u987B\u4EE5\u300C\u6A21\u5757\uFF1AXXX\u300D\u5F00\u5934\u3011
+${formatDomainHints(domains)}
+` : "";
+  const projectType = classifyProjectType(goal);
+  const topic = extractTopicProfile(goal);
+  const stemType = ["engineering", "scientific-inquiry"].includes(projectType);
+  const rocketExample = complex ? `
+\u8FD4\u56DE JSON \u683C\u5F0F\uFF08\u4E25\u683C\u9075\u5FAA\uFF1B\u4E0B\u5217 index \u4EC5\u4E3A**\u683C\u5F0F\u793A\u8303**\uFF0C\u4F60\u5FC5\u987B\u5728\u3010\u5019\u9009\u77E5\u8BC6\u70B9\u3011\u4E2D\u91CD\u65B0\u68C0\u7D22\u5E76\u586B\u5199\u771F\u5B9E index\uFF0C\u7981\u6B62\u7167\u6284\u793A\u4F8B\u6570\u5B57\uFF09\uFF1A
+{
+  "matched": [
+    {"index": 2, "confidence": 0.93, "role": "foundation", "reason": "\u5B50\u7CFB\u7EDF\uFF1A\u8FD0\u52A8\u5B66\u4E0E\u52A8\u529B\u5B66\u3002\u5EFA\u7ACB\u53D7\u529B\u4E0E\u52A0\u901F\u5EA6\u5173\u7CFB\uFF0C\u4E3A\u5F39\u9053\u5206\u6790\u6253\u57FA\u7840", "dependsOn": []},
+    {"index": 5, "confidence": 0.91, "role": "foundation", "reason": "\u5B50\u7CFB\u7EDF\uFF1A\u63A8\u8FDB\u4E0E\u71C3\u6599\u3002\u7406\u89E3\u71C3\u70E7\u4E0E\u6C27\u5316\u8FD8\u539F\uFF0C\u89E3\u91CA\u5316\u5B66\u80FD\u8F6C\u5316\u4E3A\u63A8\u8FDB\u52A8\u80FD", "dependsOn": []},
+    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "\u5B50\u7CFB\u7EDF\uFF1A\u7A7A\u6C14\u52A8\u529B\u4E0E\u5F39\u9053\u3002\u5C06\u8FD0\u52A8\u5206\u89E3\u4E3A\u6C34\u5E73\u548C\u7AD6\u76F4\u5206\u91CF\uFF0C\u5206\u6790\u98DE\u884C\u8F68\u8FF9", "dependsOn": [2]},
+    {"index": 11, "confidence": 0.89, "role": "bridge", "reason": "\u5B50\u7CFB\u7EDF\uFF1A\u7A7A\u6C14\u52A8\u529B\u4E0E\u5F39\u9053\u3002\u7406\u89E3\u6C14\u6D41\u4E0E\u538B\u5F3A\u5DEE\uFF0C\u89E3\u91CA\u7BAD\u4F53\u6240\u53D7\u5347\u529B\u4E0E\u963B\u529B", "dependsOn": [8]},
+    {"index": 17, "confidence": 0.92, "role": "core", "reason": "\u5B50\u7CFB\u7EDF\uFF1A\u8FD0\u52A8\u5B66\u4E0E\u52A8\u529B\u5B66\u3002\u7528\u725B\u987F\u5B9A\u5F8B\u5206\u6790\u53D1\u5C04\u77AC\u95F4\u63A8\u529B\u4E0E\u52A0\u901F\u5EA6", "dependsOn": [2, 8]},
+    {"index": 23, "confidence": 0.86, "role": "core", "reason": "\u5B50\u7CFB\u7EDF\uFF1A\u63A7\u5236\u4E0E\u6D4B\u8BD5\u3002\u8BBE\u8BA1\u53D1\u5C04\u5B9E\u9A8C\u3001\u6D4B\u91CF\u98DE\u884C\u9AD8\u5EA6\u4E0E\u843D\u70B9", "dependsOn": [17]}
+  ],
+  "pathOrder": [5, 2, 8, 11, 17, 23],
+  "knowledgeChain": "\u6C27\u5316\u8FD8\u539F\u4E0E\u71C3\u70E7 \u2192 \u725B\u987F\u5B9A\u5F8B \u2192 \u629B\u4F53\u8FD0\u52A8 \u2192 \u6D41\u4F53\u538B\u5F3A\u4E0E\u963B\u529B \u2192 \u53D1\u5C04\u5B9E\u9A8C\u6D4B\u8BD5",
+  "projectPhases": [
+    {
+      "phase": "\u63A8\u8FDB\u539F\u7406\u4E0E\u71C3\u6599\u9009\u578B",
+      "steps": ["\u5206\u6790\u63A8\u8FDB\u5242\u71C3\u70E7\u53CD\u5E94", "\u4F30\u7B97\u5316\u5B66\u80FD\u8F6C\u5316\u4E3A\u52A8\u80FD"],
+      "knowledgeNames": ["\u6C27\u5316\u8FD8\u539F\u53CD\u5E94\u6982\u5FF5", "\u5185\u80FD\u4E0E\u70ED\u91CF"],
+      "deliverable": "\u63A8\u8FDB\u5242\u65B9\u6848\u4E0E\u80FD\u91CF\u4F30\u7B97\u8868",
+      "literacy": {
+        "knowledge": "\u7406\u89E3\u71C3\u70E7\u672C\u8D28\u662F\u6C27\u5316\u8FD8\u539F\u4E0E\u80FD\u91CF\u91CA\u653E",
+        "method": "\u7528\u70ED\u503C\u6570\u636E\u4F30\u7B97\u63A8\u8FDB\u80FD\u91CF",
+        "ability": "\u80FD\u6BD4\u8F83\u4E0D\u540C\u63A8\u8FDB\u65B9\u6848\u7684\u5316\u5B66\u80FD\u8F93\u51FA",
+        "attitude": "\u4E25\u8C28\u5BF9\u5F85\u5316\u5B66\u54C1\u4F7F\u7528\u4E0E\u7528\u91CF\u8BA1\u7B97",
+        "emotion": "\u5BF9\u300C\u4E00\u70B9\u71C3\u6599\u63A8\u52A8\u706B\u7BAD\u300D\u7684\u5316\u5B66\u53CD\u5E94\u611F\u5230\u597D\u5947",
+        "values": "\u6811\u7ACB\u5B9E\u9A8C\u5B89\u5168\u4E0E\u73AF\u4FDD\u610F\u8BC6\uFF0C\u5408\u89C4\u5904\u7F6E\u6B8B\u4F59\u836F\u5242"
+      }
+    },
+    {
+      "phase": "\u5F39\u9053\u4E0E\u7A7A\u6C14\u52A8\u529B\u5206\u6790",
+      "steps": ["\u5EFA\u7ACB\u629B\u4F53\u8FD0\u52A8\u6A21\u578B", "\u8BA8\u8BBA\u6C14\u6D41\u5BF9\u7BAD\u4F53\u7684\u5F71\u54CD"],
+      "knowledgeNames": ["\u629B\u4F53\u8FD0\u52A8", "\u6D41\u4F53\u538B\u5F3A\u4E0E\u6D41\u901F\u5173\u7CFB"],
+      "deliverable": "\u5F39\u9053\u9884\u6D4B\u8349\u56FE\u4E0E\u5173\u952E\u53C2\u6570\u8868",
+      "literacy": {
+        "knowledge": "\u638C\u63E1\u629B\u4F53\u5206\u89E3\u4E0E\u6D41\u4F53\u538B\u5F3A\u57FA\u672C\u539F\u7406",
+        "method": "\u7528\u7269\u7406\u6A21\u578B\u9884\u6D4B\u8F68\u8FF9\u5E76\u6807\u6CE8\u5047\u8BBE\u6761\u4EF6",
+        "ability": "\u80FD\u89E3\u91CA\u53D1\u5C04\u89D2\u5EA6\u4E0E\u5C04\u7A0B\u7684\u5173\u7CFB",
+        "attitude": "\u517B\u6210\u5148\u5EFA\u6A21\u518D\u5B9E\u9A8C\u7684\u79D1\u5B66\u601D\u7EF4",
+        "emotion": "\u4F53\u9A8C\u7528\u516C\u5F0F\u9884\u6D4B\u98DE\u884C\u8F68\u8FF9\u7684\u6210\u5C31\u611F",
+        "values": "\u5C0A\u91CD\u5B9E\u6D4B\u6570\u636E\uFF0C\u4E0D\u5938\u5927\u6A21\u578B\u7CBE\u5EA6"
+      }
+    },
+    {
+      "phase": "\u7ED3\u6784\u8BBE\u8BA1\u4E0E\u5236\u4F5C",
+      "steps": ["\u8BBE\u8BA1\u7BAD\u4F53\u7ED3\u6784", "\u68C0\u67E5\u91CD\u5FC3\u4E0E\u7A33\u5B9A\u6027"],
+      "knowledgeNames": ["\u725B\u987F\u8FD0\u52A8\u5B9A\u5F8B"],
+      "deliverable": "\u6A21\u578B\u706B\u7BAD\u539F\u578B\u4E0E\u7ED3\u6784\u8BF4\u660E",
+      "literacy": {
+        "knowledge": "\u7406\u89E3\u53D7\u529B\u5E73\u8861\u4E0E\u8FD0\u52A8\u72B6\u6001\u6539\u53D8\u6761\u4EF6",
+        "method": "\u7528\u5DE5\u7A0B\u8349\u56FE\u8868\u8FBE\u7ED3\u6784\u5C3A\u5BF8\u4E0E\u8FDE\u63A5\u65B9\u5F0F",
+        "ability": "\u80FD\u6839\u636E\u529B\u5B66\u5206\u6790\u6539\u8FDB\u7ED3\u6784\u8BBE\u8BA1",
+        "attitude": "\u7EC6\u81F4\u68C0\u67E5\u6BCF\u4E2A\u8FDE\u63A5\u90E8\u4F4D",
+        "emotion": "\u4EAB\u53D7\u4ECE\u56FE\u7EB8\u5230\u5B9E\u7269\u7684\u521B\u9020\u8FC7\u7A0B",
+        "values": "\u5F3A\u8C03\u5236\u4F5C\u89C4\u8303\u4E0E\u53D1\u5C04\u5B89\u5168\u8DDD\u79BB"
+      }
+    },
+    {
+      "phase": "\u53D1\u5C04\u6D4B\u8BD5\u4E0E\u8FED\u4EE3",
+      "steps": ["\u5236\u5B9A\u53D1\u5C04\u4E0E\u6D4B\u8DDD\u65B9\u6848", "\u8BB0\u5F55\u6570\u636E\u5E76\u5BF9\u6BD4\u9884\u6D4B"],
+      "knowledgeNames": ["\u629B\u4F53\u8FD0\u52A8"],
+      "deliverable": "\u6D4B\u8BD5\u62A5\u544A\uFF08\u9884\u6D4B vs \u5B9E\u6D4B\uFF09",
+      "literacy": {
+        "knowledge": "\u7EFC\u5408\u8FD0\u7528\u52A8\u529B\u5B66\u4E0E\u5F39\u9053\u77E5\u8BC6\u89E3\u91CA\u504F\u5DEE",
+        "method": "\u63A7\u5236\u53D8\u91CF\u6CD5\u7EC4\u7EC7\u5BF9\u6BD4\u53D1\u5C04\u5B9E\u9A8C",
+        "ability": "\u80FD\u6839\u636E\u6D4B\u8BD5\u6570\u636E\u63D0\u51FA\u6539\u8FDB\u5EFA\u8BAE",
+        "attitude": "\u5BA2\u89C2\u8BB0\u5F55\u5931\u8D25\u53D1\u5C04\u5E76\u5206\u6790\u539F\u56E0",
+        "emotion": "\u5728\u8FED\u4EE3\u4E2D\u4FDD\u6301\u5BF9\u79D1\u5B66\u63A2\u7A76\u7684\u70ED\u60C5",
+        "values": "\u9075\u5B88\u5B89\u5168\u89C4\u7A0B\uFF0C\u5BF9\u4ED6\u4EBA\u4E0E\u573A\u5730\u8D1F\u8D23"
+      }
+    }
+  ],
+  "external": [
+    {"name": "\u6A21\u578B\u706B\u7BAD\u5B89\u5168\u53D1\u5C04\u89C4\u8303", "reason": "\u8BFE\u6807\u4E2D\u65E0\u4E13\u9879\u5B89\u5168\u89C4\u7A0B\uFF0C\u4F46\u53D1\u5C04\u73AF\u8282\u5FC5\u9700", "prerequisites": ["\u53D1\u5C04\u5B9E\u9A8C\u8BBE\u8BA1"]}
+  ],
+  "techRoute": "\u9636\u6BB5\u4E00\uFF1A\u4ECE\u6C27\u5316\u8FD8\u539F\u4E0E\u5185\u80FD/\u70ED\u503C\u7406\u89E3\u63A8\u8FDB\u5242\u80FD\u91CF\uFF1B\u9636\u6BB5\u4E8C\uFF1A\u7528\u629B\u4F53\u8FD0\u52A8\u4E0E\u6D41\u4F53\u538B\u5F3A\u5EFA\u7ACB\u5F39\u9053\u6A21\u578B\uFF1B\u9636\u6BB5\u4E09\uFF1A\u4F9D\u636E\u725B\u987F\u5B9A\u5F8B\u5B8C\u6210\u7ED3\u6784\u53D7\u529B\u8BBE\u8BA1\u4E0E\u5236\u4F5C\uFF1B\u9636\u6BB5\u56DB\uFF1A\u5B9E\u65BD\u53D1\u5C04\u6D4B\u8BD5\uFF0C\u7528\u6570\u636E\u9A8C\u8BC1\u5E76\u8FED\u4EE3\u4F18\u5316\u3002"
+}` : `
+\u8FD4\u56DE JSON \u683C\u5F0F\uFF08\u4E25\u683C\u9075\u5FAA\uFF09\uFF1A
+{
+  "matched": [
+    {"index": 3, "confidence": 0.95, "role": "foundation", "reason": "\u6A21\u5757\uFF1A\u57FA\u7840\u5EFA\u6A21\u3002\u5EFA\u7ACB\u53D8\u91CF\u4E0E\u5173\u7CFB", "dependsOn": []},
+    {"index": 8, "confidence": 0.90, "role": "bridge", "reason": "\u6A21\u5757\uFF1A\u539F\u7406/\u65B9\u6CD5\u63A2\u7A76\u3002\u8FDE\u63A5\u57FA\u7840\u4E0E\u4EA7\u51FA", "dependsOn": [3]}
+  ],
+  "pathOrder": [3, 8],
+  "knowledgeChain": "\u57FA\u7840\u6982\u5FF5 \u2192 \u539F\u7406/\u65B9\u6CD5\u63A2\u7A76 \u2192 \u4EA7\u51FA\u5B9E\u73B0",
+  "projectPhases": [],
+  "external": [
+    {"name": "\u8DE8\u5B66\u79D1\u8D44\u6599\u68C0\u7D22\u4E0E\u5F15\u7528", "reason": "\u6574\u5408\u591A\u6765\u6E90\u4FE1\u606F\uFF0C\u8BFE\u6807\u8F83\u5C11\u7CFB\u7EDF\u8BB2\u6388\u4F46\u9879\u76EE\u843D\u5730\u5FC5\u9700"}
+  ],
+  "techRoute": "\u6309\u6A21\u5757\u9012\u8FDB\u5B9E\u65BD"
+}`;
+  let example = rocketExample;
+  if (topic.coreTopic === "\u4F4E\u7A7A\u7ECF\u6D4E" || projectType === "industry-innovation") {
+    example = LOW_ALTITUDE_ECONOMY_EXAMPLE;
+  } else if (complex && !stemType) {
+    example = GENERIC_COMPLEX_EXAMPLE;
+  }
+  const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
+  const bloomBlock = formatBloomHintForMatch(bloom);
+  const archetype = archetypeId ? resolveArchetype(goal, classifyProjectType(goal), getChemistryAnalysisProfile(goal).mixed) : resolveArchetype(goal, classifyProjectType(goal), getChemistryAnalysisProfile(goal).mixed);
+  const archetypeBlock = formatArchetypeForMatch(archetype, projectBlueprint);
+  const registryBlock = archetype ? formatRegistryForMatch(archetype.id) : "";
+  return `\u3010\u9879\u76EE\u76EE\u6807\u3011
+${goal}
+${formatTopicAnchorBlock(goal)}${blueprintSection}${domainSection}${archetypeBlock}${bloomBlock}${registryBlock}
+\u3010\u5019\u9009\u77E5\u8BC6\u70B9\u3011\uFF08matched \u53EA\u80FD\u9009\u4E0B\u5217 index\uFF1B**\u5148\u5BF9\u9F50\u4E0A\u65B9\u84DD\u56FE\u9636\u6BB5\u4E0E knowledgeHints**\uFF0C\u518D\u6309\u6A21\u5757\u68C0\u7D22\u9009 index\uFF09
+${candidateList}
+
+${example}
+
+## \u786C\u6027\u8981\u6C42
+
+### 0. \u8D34\u5408\u4EA4\u4ED8\u7269\uFF08\u6700\u9AD8\u4F18\u5148\u7EA7\uFF09
+- \u6BCF\u4E2A matched \u7684 reason **\u5FC5\u987B\u4EE5\u300C\u6A21\u5757\uFF1A\u300D\u5F00\u5934**
+- **5-8 \u4E2A\u7CBE\u51C6\u8282\u70B9**\u5373\u53EF\uFF1B\u4E0D\u8981\u4E3A\u4E86\u5B66\u79D1\u9F50\u5168\u51D1\u6570
+- **\u4E25\u7981**\u9009\u4E0E\u4EA4\u4ED8\u7269\u65E0\u5173\u7684 index\uFF08\u7F16\u9020\u3001\u51D1\u6570\u3001\u8DD1\u9898\uFF09
+- \u5B66\u79D1\u6309\u9879\u76EE\u7C7B\u578B\u81EA\u7136\u9009\u53D6\uFF0C\u7406\u5DE5\u7C7B\u7528\u7406\u79D1\u3001\u793E\u79D1\u4EBA\u6587\u521B\u4F5C\u7C7B\u7528\u6587\u79D1/\u4FE1\u606F\u6280\u672F
+${typeMatchHints(goal)}
+
+### 1. \u6570\u91CF\u4E0E\u89D2\u8272
+- matched\uFF1A${matchedRange} \u4E2A\uFF0Cconfidence\u2265${minConf}
+- ${complex ? "foundation 1-2\u3001bridge 2-3\u3001core 2-3\uFF1B\u907F\u514D\u4E0E\u4EA4\u4ED8\u7269\u65E0\u5173\u7684 index" : "\u8986\u76D6\u81F3\u5C11 2 \u4E2A\u6A21\u5757"}
+
+### 2. \u77E5\u8BC6\u94FE
+- dependsOn \u6784\u6210 DAG\uFF1BpathOrder \u6EE1\u8DB3\u4F9D\u8D56
+- knowledgeChain \u4F53\u73B0\u6A21\u5757\u9012\u8FDB\uFF08\u6309\u9879\u76EE\u7C7B\u578B\uFF0C\u5982\uFF1A\u8C03\u67E5\u8BBE\u8BA1 \u2192 \u6570\u636E\u5206\u6790 \u2192 \u62A5\u544A\u8868\u8FBE\uFF09
+
+### 3. projectPhases
+- ${complex ? "4-5" : "3-5"} \u4E2A\u9636\u6BB5\uFF0C\u6309\u6A21\u5757\u7EC4\u7EC7
+- knowledgeNames **\u53EA\u80FD**\u4F7F\u7528\u5019\u9009\u5217\u8868\u4E2D\u51FA\u73B0\u7684\u540D\u79F0\uFF08\u5B57\u9762\u5339\u914D\u6216\u660E\u663E\u5B50\u4E32\uFF09
+- \u6BCF\u9636\u6BB5 literacy \u516D\u7EF4\u5404 1 \u53E5\uFF0C\u7ED3\u5408\u5B66\u79D1\u4E0E\u9879\u76EE\u7C7B\u578B\uFF0C\u7981\u6B62\u5957\u8BDD
+
+### 4. \u8DE8\u5B66\u79D1\uFF08\u53EF\u9009\uFF0C\u4E0D\u5F3A\u5236\uFF09
+- \u56F4\u7ED5\u4EA4\u4ED8\u7269\u81EA\u7136\u8DE8\u5B66\u79D1\u5373\u53EF\uFF1B**\u7981\u6B62**\u4E3A\u51D1\u5B66\u79D1\u5F15\u5165\u4E0E\u9879\u76EE\u65E0\u5173\u7684\u8282\u70B9
+
+### 5. external\uFF08\u8BFE\u6807\u5916\uFF0C\u786C\u6027\u8981\u6C42\uFF09
+- **\u5FC5\u987B**\u8F93\u51FA 1-${externalMax} \u4E2A\u8BFE\u6807\u5916\u77E5\u8BC6\u70B9\uFF0C\u4E0D\u53EF\u4E3A\u7A7A\u6570\u7EC4
+- \u586B\u5199\u5019\u9009\u5217\u8868\u4E2D**\u6CA1\u6709**\u3001\u4F46\u5B8C\u6210\u672C\u9879\u76EE**\u786E\u5B9E\u9700\u8981**\u7684\u4E13\u4E1A/\u5B9E\u8DF5\u6982\u5FF5\uFF08\u5982\u5B89\u5168\u89C4\u8303\u3001\u653F\u7B56\u89E3\u8BFB\u3001\u884C\u4E1A\u65B9\u6CD5\u3001\u5DE5\u5177\u64CD\u4F5C\u7B49\uFF09
+- \u6BCF\u4E2A external \u987B\u6709 name + reason\uFF08\u8BF4\u660E\u4E3A\u4F55\u8BFE\u6807\u672A\u8986\u76D6\u4F46\u9879\u76EE\u5FC5\u9700\uFF09\uFF1B\u53EF\u9009 prerequisites \u586B\u5173\u8054\u7684 matched \u77E5\u8BC6\u70B9\u540D\u79F0
+
+### 6. techRoute
+- \u4E2D\u6587\uFF0C500 \u5B57\u5185\uFF0C\u6309\u6A21\u5757\u4E32\u8054\uFF0C\u4F53\u73B0\u9879\u76EE\u5B9E\u65BD\u7684\u9012\u8FDB\u903B\u8F91`;
+}
+__name(userPromptMatch, "userPromptMatch");
+var SUBJECT_ZH = {
+  math: "\u6570\u5B66",
+  physics: "\u7269\u7406",
+  chemistry: "\u5316\u5B66",
+  biology: "\u751F\u7269",
+  science: "\u79D1\u5B66",
+  "info-tech": "\u4FE1\u606F\u6280\u672F",
+  chinese: "\u8BED\u6587",
+  english: "\u82F1\u8BED",
+  history: "\u5386\u53F2",
+  geography: "\u5730\u7406",
+  engineering: "\u5DE5\u7A0B",
+  "computer-science": "\u8BA1\u7B97\u673A\u79D1\u5B66"
+};
+function buildPBMessages(stage, payload) {
+  const {
+    goal = "",
+    summaryList = "",
+    candidates = [],
+    complex = false,
+    maxMatched = complex ? PBL_MAX_MATCHED_COMPLEX : PBL_MAX_MATCHED_NORMAL,
+    minConf = 0.68,
+    domainHints = null,
+    projectBlueprint = null,
+    bloomProfile = null,
+    archetypeId = null
+  } = payload;
+  if (stage === "decompose") {
+    return [
+      { role: "system", content: systemPromptDecompose(complex, goal) },
+      { role: "user", content: userPromptDecompose(goal, complex) }
+    ];
+  }
+  if (stage === "filter") {
+    const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
+    return [
+      { role: "system", content: systemPromptFilter(complex, goal) },
+      { role: "user", content: userPromptFilter(goal, summaryList, complex, projectBlueprint, bloom) }
+    ];
+  }
+  if (stage === "match") {
+    const candidateList = (candidates || []).map((n, i) => {
+      const gradeStr = n.gradeLabel || (n.grade ? `G${n.grade}` : "\u901A\u8BC6");
+      const subj = SUBJECT_ZH[n.subject] || n.subject || "";
+      const prereq = (n.prerequisiteNames || []).slice(0, 3).join("\u3001") || "\u65E0";
+      const def = String(n.definition || "").replace(/\s+/g, " ").slice(0, 72);
+      const defPart = def ? ` | ${def}` : "";
+      return `[${i}] ${n.name} | ${gradeStr} | ${subj} | \u5148\u4FEE:${prereq}${defPart}`;
+    }).join("\n");
+    const hints = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
+    const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
+    return [
+      { role: "system", content: systemPromptMatch(complex, goal) },
+      {
+        role: "user",
+        content: userPromptMatch(goal, candidateList, complex, maxMatched, minConf, hints, projectBlueprint, bloom, archetypeId)
+      }
+    ];
+  }
+  throw new Error(`Unknown PBL stage: ${stage}`);
+}
+__name(buildPBMessages, "buildPBMessages");
+
+// _lib/pbl-verify-prompts.js
+function buildVerifyDepsMessages(payload) {
+  const { goal = "", edges = [] } = payload;
+  const edgeBlock = edges.map((e, i) => {
+    const official = (e.officialPrereqs || []).length ? e.officialPrereqs.join("\u3001") : "\uFF08\u8BFE\u6807\u6811\u672A\u6807\u6CE8\u5148\u4FEE\uFF09";
+    return `${i + 1}. [${e.id}] ${e.sourceName}\uFF08${e.sourceRole || "node"}\uFF09\u2192 ${e.targetName}\uFF08${e.targetRole || "node"}\uFF09
+   \u8BFE\u6807\u5B98\u65B9\u5148\u4FEE\uFF08target \u8282\u70B9\uFF09\uFF1A${official}`;
+  }).join("\n");
+  const system = `\u4F60\u662F K12 \u8BFE\u6807\u77E5\u8BC6\u4F9D\u8D56\u5173\u7CFB\u5BA1\u6838\u5458\u3002\u4EFB\u52A1\uFF1A\u5224\u65AD PBL \u9879\u76EE\u5B66\u4E60\u8DEF\u5F84\u4E2D\uFF0C\u300C\u5148\u4FEE\u77E5\u8BC6\u70B9\u2192\u540E\u7EED\u77E5\u8BC6\u70B9\u300D\u7684\u4F9D\u8D56\u65B9\u5411\u662F\u5426\u5408\u7406\u3002
+
+## \u5224\u65AD\u6807\u51C6
+1. **valid**\uFF1A\u5B66\u5B8C source \u662F\u5B66\u597D target \u7684\u5408\u7406\u524D\u7F6E\uFF08\u7B26\u5408\u5B66\u79D1\u903B\u8F91\u4E0E PBL \u5B9E\u65BD\u987A\u5E8F\uFF09
+2. **invalid**\uFF1A\u4E24\u8005\u65E0\u5148\u4FEE\u5173\u7CFB\uFF0C\u6216\u5220\u6389 source \u4E0D\u5F71\u54CD target \u7684\u5B66\u4E60
+3. **reversed**\uFF1A\u65B9\u5411\u53CD\u4E86\uFF0C\u5E94\u662F target\u2192source\uFF08\u6216\u5B98\u65B9\u5148\u4FEE\u4E0E\u58F0\u79F0\u65B9\u5411\u77DB\u76FE\uFF09
+
+## \u89D2\u8272\u63D0\u793A
+- foundation \u901A\u5E38\u662F bridge/core \u7684\u524D\u7F6E
+- \u540C\u9636\u6BB5 parallel \u8282\u70B9\u4E00\u822C\u4E0D\u5E94\u4E92\u4E3A\u5148\u4FEE
+- \u5B98\u65B9\u5148\u4FEE\u5217\u8868\u82E5\u5305\u542B source \u540D\u79F0\uFF0C\u503E\u5411 valid\uFF1B\u82E5\u5305\u542B target \u800C\u58F0\u79F0 source\u2192target\uFF0C\u503E\u5411 reversed
+
+\u53EA\u8FD4\u56DE JSON\uFF0C\u4E0D\u8981 markdown\u3002`;
+  const user = `\u3010\u9879\u76EE\u76EE\u6807\u3011${goal}
+
+\u3010\u5F85\u9A8C\u8BC1\u4F9D\u8D56\u8FB9\u3011\u5171 ${edges.length} \u6761
+${edgeBlock}
+
+\u8FD4\u56DE JSON\uFF1A
+{
+  "edges": [
+    {"id": "e1", "verdict": "valid", "reason": "\u4E00\u53E5\u8BDD\u8BF4\u660E"}
+  ]
+}
+
+verdict \u53EA\u80FD\u662F valid / invalid / reversed\u3002\u6BCF\u6761\u8FB9\u5FC5\u987B\u7ED9\u51FA\u5224\u5B9A\u3002`;
+  return [
+    { role: "system", content: system },
+    { role: "user", content: user }
+  ];
+}
+__name(buildVerifyDepsMessages, "buildVerifyDepsMessages");
+
+// _lib/pbl-logger.js
+var MAX_TEXT = 12e4;
+function getDb(env) {
+  return env.TEACHANY_DB || env.DB || null;
+}
+__name(getDb, "getDb");
+async function sha256Hex(text) {
+  const data = new TextEncoder().encode(String(text || ""));
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+__name(sha256Hex, "sha256Hex");
+async function hashIp(ip) {
+  if (!ip || !crypto?.subtle) return "";
+  return (await sha256Hex(ip)).slice(0, 24);
+}
+__name(hashIp, "hashIp");
+function clip(text, max = MAX_TEXT) {
+  const s = String(text ?? "");
+  return s.length > max ? s.slice(0, max) + "\n\u2026[truncated]" : s;
+}
+__name(clip, "clip");
+async function logPBLCall(env, entry) {
+  const db = getDb(env);
+  if (!db) {
+    console.warn("[PBL Log] D1 not configured, skip persist");
+    return null;
+  }
+  const {
+    stage,
+    goal,
+    model = "",
+    backend = "",
+    complex = false,
+    latencyMs = null,
+    error = "",
+    messages = [],
+    responseText = "",
+    request
+  } = entry;
+  const ipHash = request ? await hashIp(request.headers.get("CF-Connecting-IP") || "") : "";
+  const userAgent = request ? String(request.headers.get("User-Agent") || "").slice(0, 500) : "";
+  try {
+    const result = await db.prepare(`
+      INSERT INTO pbl_llm_logs (
+        stage, goal, model, backend, complex, latency_ms, error,
+        messages_json, response_text, user_agent, ip_hash
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      String(stage || "").slice(0, 32),
+      String(goal || "").slice(0, 2e3),
+      String(model || "").slice(0, 120),
+      String(backend || "").slice(0, 64),
+      complex ? 1 : 0,
+      latencyMs == null ? null : Number(latencyMs),
+      String(error || "").slice(0, 2e3),
+      clip(JSON.stringify(messages)),
+      clip(responseText),
+      userAgent,
+      ipHash
+    ).run();
+    return result.meta?.last_row_id || null;
+  } catch (e) {
+    console.error("[PBL Log] insert failed:", e.message);
+    return null;
+  }
+}
+__name(logPBLCall, "logPBLCall");
+function assertLogToken(request, env) {
+  const expected = String(env.PBL_LOG_TOKEN || "").trim();
+  if (!expected) return { ok: true, protected: false };
+  const url = new URL(request.url);
+  const provided = String(
+    url.searchParams.get("token") || request.headers.get("X-PBL-Log-Token") || ""
+  ).trim();
+  if (provided !== expected) {
+    return { ok: false, status: 403, message: "Invalid or missing PBL log token" };
+  }
+  return { ok: true, protected: true };
+}
+__name(assertLogToken, "assertLogToken");
+async function queryPBLLogs(request, env) {
+  const db = getDb(env);
+  if (!db) {
+    return {
+      status: 503,
+      body: {
+        ok: false,
+        error: "D1_NOT_CONFIGURED",
+        message: "PBL \u65E5\u5FD7\u9700\u8981\u7ED1\u5B9A TEACHANY_DB\uFF0C\u5E76\u6267\u884C migrations/0002_pbl_llm_logs.sql"
+      }
+    };
+  }
+  const auth = assertLogToken(request, env);
+  if (!auth.ok) {
+    return { status: auth.status, body: { ok: false, error: "FORBIDDEN", message: auth.message } };
+  }
+  const url = new URL(request.url);
+  const format = url.searchParams.get("format") || "json";
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "50", 10), 1), 500);
+  const stage = url.searchParams.get("stage") || "";
+  const goalLike = url.searchParams.get("goal") || "";
+  let query = `SELECT id, created_at, stage, goal, model, backend, complex, latency_ms, error,
+    substr(messages_json, 1, 8000) AS messages_json,
+    substr(response_text, 1, 8000) AS response_text
+    FROM pbl_llm_logs`;
+  const binds = [];
+  const clauses = [];
+  if (stage) {
+    clauses.push("stage = ?");
+    binds.push(stage);
+  }
+  if (goalLike) {
+    clauses.push("goal LIKE ?");
+    binds.push(`%${goalLike}%`);
+  }
+  if (clauses.length) query += ` WHERE ${clauses.join(" AND ")}`;
+  query += " ORDER BY datetime(created_at) DESC LIMIT ?";
+  binds.push(limit);
+  const result = await db.prepare(query).bind(...binds).all();
+  const rows = result.results || [];
+  if (format === "ndjson" || format === "jsonl") {
+    const lines = rows.map((r) => JSON.stringify(r)).join("\n");
+    return {
+      status: 200,
+      raw: true,
+      headers: {
+        "Content-Type": "application/x-ndjson; charset=utf-8",
+        "Content-Disposition": "attachment; filename=pbl-llm-logs.ndjson"
+      },
+      body: lines + (lines ? "\n" : "")
+    };
+  }
+  return {
+    status: 200,
+    body: { ok: true, count: rows.length, rows }
+  };
+}
+__name(queryPBLLogs, "queryPBLLogs");
+
+// api/pbl/analyze.js
+async function onRequestOptions3() {
+  return new Response(null, { status: 204, headers: CORS2 });
+}
+__name(onRequestOptions3, "onRequestOptions");
+async function onRequestPost2(context) {
+  const { request, env } = context;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Invalid JSON" }, 400);
+  }
+  const stage = body.stage;
+  if (stage !== "decompose" && stage !== "filter" && stage !== "match" && stage !== "verify-deps") {
+    return jsonResponse({ error: "Invalid stage" }, 400);
+  }
+  const goal = String(body.goal || "").trim();
+  if (!goal || goal.length > 2e3) {
+    return jsonResponse({ error: "Invalid goal" }, 400);
+  }
+  if (stage === "match" && (!Array.isArray(body.candidates) || body.candidates.length === 0)) {
+    return jsonResponse({ error: "candidates required" }, 400);
+  }
+  if (stage === "match" && body.candidates.length > 50) {
+    return jsonResponse({ error: "Too many candidates" }, 400);
+  }
+  if (stage === "verify-deps" && (!Array.isArray(body.edges) || body.edges.length === 0)) {
+    return jsonResponse({ error: "edges required" }, 400);
+  }
+  if (stage === "verify-deps" && body.edges.length > 24) {
+    return jsonResponse({ error: "Too many edges" }, 400);
+  }
+  let messages;
+  try {
+    if (stage === "verify-deps") {
+      messages = buildVerifyDepsMessages({ goal, edges: body.edges });
+    } else {
+      messages = buildPBMessages(stage, {
+        goal,
+        summaryList: body.summaryList || "",
+        candidates: body.candidates || [],
+        complex: !!body.complex,
+        maxMatched: body.maxMatched || (body.complex ? 12 : 18),
+        minConf: body.minConf ?? (body.complex ? 0.68 : 0.52),
+        domainHints: body.domainHints || null,
+        projectBlueprint: body.projectBlueprint || null,
+        bloomProfile: body.bloomProfile || null,
+        archetypeId: body.archetypeId || null
+      });
+    }
+  } catch (e) {
+    return jsonResponse({ error: e.message }, 400);
+  }
+  if (body.messagesOnly) {
+    return jsonResponse({
+      messages,
+      model: String(body.model || "").trim()
+    });
+  }
+  const llmOpts = {
+    maxTokens: stage === "match" ? 8e3 : stage === "decompose" ? 4500 : stage === "verify-deps" ? 2500 : 1200,
+    temperature: stage === "match" ? 0.15 : stage === "decompose" ? 0.35 : stage === "verify-deps" ? 0.08 : 0.25
+  };
+  const userModel = String(body.model || "").trim();
+  const providerId = String(body.providerId || "").trim();
+  if (userModel || providerId) {
+    llmOpts.modelChain = buildUserModelChain(env, userModel, providerId);
+  }
+  const t0 = Date.now();
+  try {
+    const { content, model, backendId } = await callBackendLLM(env, messages, llmOpts);
+    const latencyMs = Date.now() - t0;
+    await logPBLCall(env, {
+      stage,
+      goal,
+      model,
+      backend: backendId,
+      complex: !!body.complex,
+      latencyMs,
+      error: "",
+      messages,
+      responseText: content,
+      request
+    });
+    return jsonResponse({ content, model, backend: backendId });
+  } catch (e) {
+    const latencyMs = Date.now() - t0;
+    await logPBLCall(env, {
+      stage,
+      goal,
+      model: "",
+      backend: "",
+      complex: !!body.complex,
+      latencyMs,
+      error: e.message || "LLM failed",
+      messages,
+      responseText: e.body || "",
+      request
+    });
+    const status = e.status && e.status >= 400 && e.status < 600 ? e.status : 502;
+    return jsonResponse({ error: e.message || "LLM failed", detail: e.body || "" }, status);
+  }
+}
+__name(onRequestPost2, "onRequestPost");
+
+// api/pbl/logs.js
+async function onRequestOptions4() {
+  return new Response(null, { status: 204, headers: CORS2 });
+}
+__name(onRequestOptions4, "onRequestOptions");
+async function onRequestGet3(context) {
+  const { request, env } = context;
+  const result = await queryPBLLogs(request, env);
+  if (result.raw) {
+    return new Response(result.body, {
+      status: result.status,
+      headers: { ...CORS2, ...result.headers }
+    });
+  }
+  return new Response(JSON.stringify(result.body, null, 2), {
+    status: result.status,
+    headers: { "Content-Type": "application/json; charset=utf-8", ...CORS2 }
+  });
+}
+__name(onRequestGet3, "onRequestGet");
+
+// api/feedback/index.js
+var CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Cache-Control": "no-store"
+};
+function jsonResponse2(data, status = 200) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: {
+      ...CORS_HEADERS,
+      "Content-Type": "application/json; charset=utf-8"
+    }
+  });
+}
+__name(jsonResponse2, "jsonResponse");
+function csvEscape(value) {
+  if (value === null || value === void 0) return "";
+  const text = String(value);
+  if (/[,"\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+  return text;
+}
+__name(csvEscape, "csvEscape");
+function getDb2(env) {
+  return env.TEACHANY_DB || env.DB || env.FEEDBACK_DB || null;
+}
+__name(getDb2, "getDb");
+async function sha256Hex2(text) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(String(text || ""));
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+__name(sha256Hex2, "sha256Hex");
+async function hashIp2(ip) {
+  if (!ip || !crypto?.subtle) return "";
+  return (await sha256Hex2(ip)).slice(0, 24);
+}
+__name(hashIp2, "hashIp");
+function getFeedbackConfigFromManifest(manifest) {
+  const cfg = manifest?.feedback || {};
+  return {
+    passwordSha256: String(cfg.password_sha256 || manifest?.feedback_password_sha256 || "").trim().toLowerCase(),
+    passwordHint: String(cfg.password_hint || manifest?.feedback_password_hint || "").trim(),
+    requirePassword: Boolean(cfg.require_password || cfg.password_sha256 || manifest?.feedback_password_sha256)
+  };
+}
+__name(getFeedbackConfigFromManifest, "getFeedbackConfigFromManifest");
+async function loadCourseManifest(request, courseId) {
+  if (!courseId) return null;
+  const origin = new URL(request.url).origin;
+  let path = `community/${courseId}`;
+  try {
+    const regRes = await fetch(`${origin}/registry.json`, { cf: { cacheTtl: 60 } });
+    if (regRes.ok) {
+      const registry = await regRes.json();
+      const course = (registry.courses || []).find((item) => item.id === courseId || item.course_id === courseId);
+      if (course && course.path) path = String(course.path).replace(/^\/+|\/+$/g, "");
+    }
+  } catch (error) {
+  }
+  try {
+    const res = await fetch(`${origin}/${path}/manifest.json`, { cf: { cacheTtl: 60 } });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    return null;
+  }
+}
+__name(loadCourseManifest, "loadCourseManifest");
+async function assertFeedbackPassword(request, courseId, body) {
+  const manifest = await loadCourseManifest(request, courseId);
+  const cfg = getFeedbackConfigFromManifest(manifest);
+  if (!cfg.requirePassword || !cfg.passwordSha256) {
+    return { ok: true, passwordProtected: false };
+  }
+  const provided = String(body.feedback_password || body.feedbackPassword || "").trim();
+  if (!provided) {
+    return {
+      ok: false,
+      status: 403,
+      body: {
+        ok: false,
+        error: "FEEDBACK_PASSWORD_REQUIRED",
+        message: cfg.passwordHint ? `\u672C\u8BFE\u4EF6\u9700\u8981\u53CD\u9988\u5BC6\u7801\u3002\u63D0\u793A\uFF1A${cfg.passwordHint}` : "\u672C\u8BFE\u4EF6\u9700\u8981\u53CD\u9988\u5BC6\u7801\uFF0C\u8BF7\u5411\u8001\u5E08\u83B7\u53D6\u3002",
+        password_required: true,
+        password_hint: cfg.passwordHint
+      }
+    };
+  }
+  const actual = await sha256Hex2(provided);
+  if (actual !== cfg.passwordSha256) {
+    return {
+      ok: false,
+      status: 403,
+      body: {
+        ok: false,
+        error: "INVALID_FEEDBACK_PASSWORD",
+        message: "\u53CD\u9988\u5BC6\u7801\u4E0D\u6B63\u786E\uFF0C\u8BF7\u5411\u8001\u5E08\u786E\u8BA4\u540E\u518D\u63D0\u4EA4\u3002",
+        password_required: true,
+        password_hint: cfg.passwordHint
+      }
+    };
+  }
+  return { ok: true, passwordProtected: true };
+}
+__name(assertFeedbackPassword, "assertFeedbackPassword");
+function sanitizeRawBody(body) {
+  const copy = { ...body };
+  delete copy.feedback_password;
+  delete copy.feedbackPassword;
+  return copy;
+}
+__name(sanitizeRawBody, "sanitizeRawBody");
+async function handlePost(request, env) {
+  const db = getDb2(env);
+  if (!db) {
+    return jsonResponse2({
+      ok: false,
+      error: "D1_NOT_CONFIGURED",
+      message: "TeachAny Feedback API \u5DF2\u90E8\u7F72\uFF0C\u4F46\u8FD8\u6CA1\u6709\u7ED1\u5B9A Cloudflare D1 \u6570\u636E\u5E93\u3002\u8BF7\u5728 Pages \u9879\u76EE\u4E2D\u7ED1\u5B9A\u53D8\u91CF\u540D TEACHANY_DB\u3002"
+    }, 503);
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    return jsonResponse2({ ok: false, error: "INVALID_JSON", message: "\u8BF7\u6C42\u4F53\u9700\u8981\u662F JSON\u3002" }, 400);
+  }
+  const courseId = String(body.course_id || body.courseId || "").trim();
+  if (!courseId) {
+    return jsonResponse2({ ok: false, error: "MISSING_COURSE_ID", message: "\u7F3A\u5C11 course_id\u3002" }, 400);
+  }
+  const passwordCheck = await assertFeedbackPassword(request, courseId, body);
+  if (!passwordCheck.ok) return jsonResponse2(passwordCheck.body, passwordCheck.status);
+  const understood = body.understood === true || body.understood === "true" || body.understood === "yes" ? 1 : 0;
+  const ipHash = await hashIp2(request.headers.get("CF-Connecting-IP") || "");
+  const rawJson = JSON.stringify(sanitizeRawBody(body)).slice(0, 12e3);
+  const stmt = db.prepare(`
+    INSERT INTO feedback_entries (
+      course_id, course_name, node_id, subject, grade,
+      learner_name, class_name, understood, difficulty,
+      pre_score, post_score, hardest_part, reflection, contact,
+      user_agent, ip_hash, raw_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    courseId,
+    String(body.course_name || body.courseName || "").slice(0, 200),
+    String(body.node_id || body.nodeId || "").slice(0, 120),
+    String(body.subject || "").slice(0, 80),
+    String(body.grade || "").slice(0, 40),
+    String(body.learner_name || body.learnerName || "").slice(0, 120),
+    String(body.class_name || body.className || "").slice(0, 120),
+    understood,
+    String(body.difficulty || "").slice(0, 40),
+    body.pre_score === "" || body.pre_score === void 0 ? null : Number(body.pre_score),
+    body.post_score === "" || body.post_score === void 0 ? null : Number(body.post_score),
+    String(body.hardest_part || body.hardestPart || "").slice(0, 1e3),
+    String(body.reflection || "").slice(0, 2e3),
+    String(body.contact || "").slice(0, 200),
+    String(request.headers.get("User-Agent") || "").slice(0, 500),
+    ipHash,
+    rawJson
+  );
+  const result = await stmt.run();
+  return jsonResponse2({ ok: true, id: result.meta?.last_row_id || null, password_protected: passwordCheck.passwordProtected });
+}
+__name(handlePost, "handlePost");
+async function handleGet(request, env) {
+  const db = getDb2(env);
+  if (!db) {
+    return jsonResponse2({
+      ok: false,
+      error: "D1_NOT_CONFIGURED",
+      message: "TeachAny Feedback API \u5DF2\u90E8\u7F72\uFF0C\u4F46\u8FD8\u6CA1\u6709\u7ED1\u5B9A Cloudflare D1 \u6570\u636E\u5E93\u3002\u8BF7\u5728 Pages \u9879\u76EE\u4E2D\u7ED1\u5B9A\u53D8\u91CF\u540D TEACHANY_DB\u3002"
+    }, 503);
+  }
+  const url = new URL(request.url);
+  const courseId = url.searchParams.get("course_id") || "";
+  const format = url.searchParams.get("format") || "json";
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "100", 10), 1), 1e3);
+  let query = "SELECT id, created_at, course_id, course_name, node_id, subject, grade, learner_name, class_name, understood, difficulty, pre_score, post_score, hardest_part, reflection, contact FROM feedback_entries";
+  const binds = [];
+  if (courseId) {
+    query += " WHERE course_id = ?";
+    binds.push(courseId);
+  }
+  query += " ORDER BY datetime(created_at) DESC LIMIT ?";
+  binds.push(limit);
+  const result = await db.prepare(query).bind(...binds).all();
+  const rows = result.results || [];
+  if (format === "csv") {
+    const fields = ["id", "created_at", "course_id", "course_name", "node_id", "subject", "grade", "learner_name", "class_name", "understood", "difficulty", "pre_score", "post_score", "hardest_part", "reflection", "contact"];
+    const csv = [fields.join(",")].concat(rows.map((row) => fields.map((field) => csvEscape(row[field])).join(","))).join("\n");
+    return new Response(csv, {
+      headers: {
+        ...CORS_HEADERS,
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": "attachment; filename=teachany-feedback.csv"
+      }
+    });
+  }
+  return jsonResponse2({ ok: true, count: rows.length, rows });
+}
+__name(handleGet, "handleGet");
+async function onRequest(context) {
+  const { request, env } = context;
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (request.method === "POST") return handlePost(request, env);
+  if (request.method === "GET") return handleGet(request, env);
+  return jsonResponse2({ ok: false, error: "METHOD_NOT_ALLOWED" }, 405);
+}
+__name(onRequest, "onRequest");
+
+// ../../../.wrangler/tmp/pages-pLYANA/functionsRoutes-0.8863436335491228.mjs
+var routes = [
+  {
+    routePath: "/api/llm/chat/completions",
+    mountPath: "/api/llm/chat",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet]
+  },
+  {
+    routePath: "/api/llm/chat/completions",
+    mountPath: "/api/llm/chat",
+    method: "OPTIONS",
+    middlewares: [],
+    modules: [onRequestOptions]
+  },
+  {
+    routePath: "/api/llm/chat/completions",
+    mountPath: "/api/llm/chat",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost]
+  },
+  {
+    routePath: "/api/llm/credits",
+    mountPath: "/api/llm",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet2]
+  },
+  {
+    routePath: "/api/llm/credits",
+    mountPath: "/api/llm",
+    method: "OPTIONS",
+    middlewares: [],
+    modules: [onRequestOptions2]
+  },
+  {
+    routePath: "/api/pbl/analyze",
+    mountPath: "/api/pbl",
+    method: "OPTIONS",
+    middlewares: [],
+    modules: [onRequestOptions3]
+  },
+  {
+    routePath: "/api/pbl/analyze",
+    mountPath: "/api/pbl",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost2]
+  },
+  {
+    routePath: "/api/pbl/logs",
+    mountPath: "/api/pbl",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet3]
+  },
+  {
+    routePath: "/api/pbl/logs",
+    mountPath: "/api/pbl",
+    method: "OPTIONS",
+    middlewares: [],
+    modules: [onRequestOptions4]
+  },
+  {
+    routePath: "/api/feedback",
+    mountPath: "/api/feedback",
+    method: "",
+    middlewares: [],
+    modules: [onRequest]
+  }
+];
+
+// ../../../../../../opt/homebrew/lib/node_modules/wrangler/node_modules/path-to-regexp/dist.es2015/index.js
+function lexer(str) {
+  var tokens = [];
+  var i = 0;
+  while (i < str.length) {
+    var char = str[i];
+    if (char === "*" || char === "+" || char === "?") {
+      tokens.push({ type: "MODIFIER", index: i, value: str[i++] });
+      continue;
+    }
+    if (char === "\\") {
+      tokens.push({ type: "ESCAPED_CHAR", index: i++, value: str[i++] });
+      continue;
+    }
+    if (char === "{") {
+      tokens.push({ type: "OPEN", index: i, value: str[i++] });
+      continue;
+    }
+    if (char === "}") {
+      tokens.push({ type: "CLOSE", index: i, value: str[i++] });
+      continue;
+    }
+    if (char === ":") {
+      var name = "";
+      var j = i + 1;
+      while (j < str.length) {
+        var code = str.charCodeAt(j);
+        if (
+          // `0-9`
+          code >= 48 && code <= 57 || // `A-Z`
+          code >= 65 && code <= 90 || // `a-z`
+          code >= 97 && code <= 122 || // `_`
+          code === 95
+        ) {
+          name += str[j++];
+          continue;
+        }
+        break;
+      }
+      if (!name)
+        throw new TypeError("Missing parameter name at ".concat(i));
+      tokens.push({ type: "NAME", index: i, value: name });
+      i = j;
+      continue;
+    }
+    if (char === "(") {
+      var count = 1;
+      var pattern = "";
+      var j = i + 1;
+      if (str[j] === "?") {
+        throw new TypeError('Pattern cannot start with "?" at '.concat(j));
+      }
+      while (j < str.length) {
+        if (str[j] === "\\") {
+          pattern += str[j++] + str[j++];
+          continue;
+        }
+        if (str[j] === ")") {
+          count--;
+          if (count === 0) {
+            j++;
+            break;
+          }
+        } else if (str[j] === "(") {
+          count++;
+          if (str[j + 1] !== "?") {
+            throw new TypeError("Capturing groups are not allowed at ".concat(j));
+          }
+        }
+        pattern += str[j++];
+      }
+      if (count)
+        throw new TypeError("Unbalanced pattern at ".concat(i));
+      if (!pattern)
+        throw new TypeError("Missing pattern at ".concat(i));
+      tokens.push({ type: "PATTERN", index: i, value: pattern });
+      i = j;
+      continue;
+    }
+    tokens.push({ type: "CHAR", index: i, value: str[i++] });
+  }
+  tokens.push({ type: "END", index: i, value: "" });
+  return tokens;
+}
+__name(lexer, "lexer");
+function parse(str, options) {
+  if (options === void 0) {
+    options = {};
+  }
+  var tokens = lexer(str);
+  var _a = options.prefixes, prefixes = _a === void 0 ? "./" : _a, _b = options.delimiter, delimiter = _b === void 0 ? "/#?" : _b;
+  var result = [];
+  var key = 0;
+  var i = 0;
+  var path = "";
+  var tryConsume = /* @__PURE__ */ __name(function(type) {
+    if (i < tokens.length && tokens[i].type === type)
+      return tokens[i++].value;
+  }, "tryConsume");
+  var mustConsume = /* @__PURE__ */ __name(function(type) {
+    var value2 = tryConsume(type);
+    if (value2 !== void 0)
+      return value2;
+    var _a2 = tokens[i], nextType = _a2.type, index = _a2.index;
+    throw new TypeError("Unexpected ".concat(nextType, " at ").concat(index, ", expected ").concat(type));
+  }, "mustConsume");
+  var consumeText = /* @__PURE__ */ __name(function() {
+    var result2 = "";
+    var value2;
+    while (value2 = tryConsume("CHAR") || tryConsume("ESCAPED_CHAR")) {
+      result2 += value2;
+    }
+    return result2;
+  }, "consumeText");
+  var isSafe = /* @__PURE__ */ __name(function(value2) {
+    for (var _i = 0, delimiter_1 = delimiter; _i < delimiter_1.length; _i++) {
+      var char2 = delimiter_1[_i];
+      if (value2.indexOf(char2) > -1)
+        return true;
+    }
+    return false;
+  }, "isSafe");
+  var safePattern = /* @__PURE__ */ __name(function(prefix2) {
+    var prev = result[result.length - 1];
+    var prevText = prefix2 || (prev && typeof prev === "string" ? prev : "");
+    if (prev && !prevText) {
+      throw new TypeError('Must have text between two parameters, missing text after "'.concat(prev.name, '"'));
+    }
+    if (!prevText || isSafe(prevText))
+      return "[^".concat(escapeString(delimiter), "]+?");
+    return "(?:(?!".concat(escapeString(prevText), ")[^").concat(escapeString(delimiter), "])+?");
+  }, "safePattern");
+  while (i < tokens.length) {
+    var char = tryConsume("CHAR");
+    var name = tryConsume("NAME");
+    var pattern = tryConsume("PATTERN");
+    if (name || pattern) {
+      var prefix = char || "";
+      if (prefixes.indexOf(prefix) === -1) {
+        path += prefix;
+        prefix = "";
+      }
+      if (path) {
+        result.push(path);
+        path = "";
+      }
+      result.push({
+        name: name || key++,
+        prefix,
+        suffix: "",
+        pattern: pattern || safePattern(prefix),
+        modifier: tryConsume("MODIFIER") || ""
+      });
+      continue;
+    }
+    var value = char || tryConsume("ESCAPED_CHAR");
+    if (value) {
+      path += value;
+      continue;
+    }
+    if (path) {
+      result.push(path);
+      path = "";
+    }
+    var open = tryConsume("OPEN");
+    if (open) {
+      var prefix = consumeText();
+      var name_1 = tryConsume("NAME") || "";
+      var pattern_1 = tryConsume("PATTERN") || "";
+      var suffix = consumeText();
+      mustConsume("CLOSE");
+      result.push({
+        name: name_1 || (pattern_1 ? key++ : ""),
+        pattern: name_1 && !pattern_1 ? safePattern(prefix) : pattern_1,
+        prefix,
+        suffix,
+        modifier: tryConsume("MODIFIER") || ""
+      });
+      continue;
+    }
+    mustConsume("END");
+  }
+  return result;
+}
+__name(parse, "parse");
+function match(str, options) {
+  var keys = [];
+  var re = pathToRegexp(str, keys, options);
+  return regexpToFunction(re, keys, options);
+}
+__name(match, "match");
+function regexpToFunction(re, keys, options) {
+  if (options === void 0) {
+    options = {};
+  }
+  var _a = options.decode, decode = _a === void 0 ? function(x) {
+    return x;
+  } : _a;
+  return function(pathname) {
+    var m = re.exec(pathname);
+    if (!m)
+      return false;
+    var path = m[0], index = m.index;
+    var params = /* @__PURE__ */ Object.create(null);
+    var _loop_1 = /* @__PURE__ */ __name(function(i2) {
+      if (m[i2] === void 0)
+        return "continue";
+      var key = keys[i2 - 1];
+      if (key.modifier === "*" || key.modifier === "+") {
+        params[key.name] = m[i2].split(key.prefix + key.suffix).map(function(value) {
+          return decode(value, key);
+        });
+      } else {
+        params[key.name] = decode(m[i2], key);
+      }
+    }, "_loop_1");
+    for (var i = 1; i < m.length; i++) {
+      _loop_1(i);
+    }
+    return { path, index, params };
+  };
+}
+__name(regexpToFunction, "regexpToFunction");
+function escapeString(str) {
+  return str.replace(/([.+*?=^!:${}()[\]|/\\])/g, "\\$1");
+}
+__name(escapeString, "escapeString");
+function flags(options) {
+  return options && options.sensitive ? "" : "i";
+}
+__name(flags, "flags");
+function regexpToRegexp(path, keys) {
+  if (!keys)
+    return path;
+  var groupsRegex = /\((?:\?<(.*?)>)?(?!\?)/g;
+  var index = 0;
+  var execResult = groupsRegex.exec(path.source);
+  while (execResult) {
+    keys.push({
+      // Use parenthesized substring match if available, index otherwise
+      name: execResult[1] || index++,
+      prefix: "",
+      suffix: "",
+      modifier: "",
+      pattern: ""
+    });
+    execResult = groupsRegex.exec(path.source);
+  }
+  return path;
+}
+__name(regexpToRegexp, "regexpToRegexp");
+function arrayToRegexp(paths, keys, options) {
+  var parts = paths.map(function(path) {
+    return pathToRegexp(path, keys, options).source;
+  });
+  return new RegExp("(?:".concat(parts.join("|"), ")"), flags(options));
+}
+__name(arrayToRegexp, "arrayToRegexp");
+function stringToRegexp(path, keys, options) {
+  return tokensToRegexp(parse(path, options), keys, options);
+}
+__name(stringToRegexp, "stringToRegexp");
+function tokensToRegexp(tokens, keys, options) {
+  if (options === void 0) {
+    options = {};
+  }
+  var _a = options.strict, strict = _a === void 0 ? false : _a, _b = options.start, start = _b === void 0 ? true : _b, _c = options.end, end = _c === void 0 ? true : _c, _d = options.encode, encode = _d === void 0 ? function(x) {
+    return x;
+  } : _d, _e = options.delimiter, delimiter = _e === void 0 ? "/#?" : _e, _f = options.endsWith, endsWith = _f === void 0 ? "" : _f;
+  var endsWithRe = "[".concat(escapeString(endsWith), "]|$");
+  var delimiterRe = "[".concat(escapeString(delimiter), "]");
+  var route = start ? "^" : "";
+  for (var _i = 0, tokens_1 = tokens; _i < tokens_1.length; _i++) {
+    var token = tokens_1[_i];
+    if (typeof token === "string") {
+      route += escapeString(encode(token));
+    } else {
+      var prefix = escapeString(encode(token.prefix));
+      var suffix = escapeString(encode(token.suffix));
+      if (token.pattern) {
+        if (keys)
+          keys.push(token);
+        if (prefix || suffix) {
+          if (token.modifier === "+" || token.modifier === "*") {
+            var mod = token.modifier === "*" ? "?" : "";
+            route += "(?:".concat(prefix, "((?:").concat(token.pattern, ")(?:").concat(suffix).concat(prefix, "(?:").concat(token.pattern, "))*)").concat(suffix, ")").concat(mod);
+          } else {
+            route += "(?:".concat(prefix, "(").concat(token.pattern, ")").concat(suffix, ")").concat(token.modifier);
+          }
+        } else {
+          if (token.modifier === "+" || token.modifier === "*") {
+            throw new TypeError('Can not repeat "'.concat(token.name, '" without a prefix and suffix'));
+          }
+          route += "(".concat(token.pattern, ")").concat(token.modifier);
+        }
+      } else {
+        route += "(?:".concat(prefix).concat(suffix, ")").concat(token.modifier);
+      }
+    }
+  }
+  if (end) {
+    if (!strict)
+      route += "".concat(delimiterRe, "?");
+    route += !options.endsWith ? "$" : "(?=".concat(endsWithRe, ")");
+  } else {
+    var endToken = tokens[tokens.length - 1];
+    var isEndDelimited = typeof endToken === "string" ? delimiterRe.indexOf(endToken[endToken.length - 1]) > -1 : endToken === void 0;
+    if (!strict) {
+      route += "(?:".concat(delimiterRe, "(?=").concat(endsWithRe, "))?");
+    }
+    if (!isEndDelimited) {
+      route += "(?=".concat(delimiterRe, "|").concat(endsWithRe, ")");
+    }
+  }
+  return new RegExp(route, flags(options));
+}
+__name(tokensToRegexp, "tokensToRegexp");
+function pathToRegexp(path, keys, options) {
+  if (path instanceof RegExp)
+    return regexpToRegexp(path, keys);
+  if (Array.isArray(path))
+    return arrayToRegexp(path, keys, options);
+  return stringToRegexp(path, keys, options);
+}
+__name(pathToRegexp, "pathToRegexp");
+
+// ../../../../../../opt/homebrew/lib/node_modules/wrangler/templates/pages-template-worker.ts
+var escapeRegex = /[.+?^${}()|[\]\\]/g;
+function* executeRequest(request) {
+  const requestPath = new URL(request.url).pathname;
+  for (const route of [...routes].reverse()) {
+    if (route.method && route.method !== request.method) {
+      continue;
+    }
+    const routeMatcher = match(route.routePath.replace(escapeRegex, "\\$&"), {
+      end: false
+    });
+    const mountMatcher = match(route.mountPath.replace(escapeRegex, "\\$&"), {
+      end: false
+    });
+    const matchResult = routeMatcher(requestPath);
+    const mountMatchResult = mountMatcher(requestPath);
+    if (matchResult && mountMatchResult) {
+      for (const handler of route.middlewares.flat()) {
+        yield {
+          handler,
+          params: matchResult.params,
+          path: mountMatchResult.path
+        };
+      }
+    }
+  }
+  for (const route of routes) {
+    if (route.method && route.method !== request.method) {
+      continue;
+    }
+    const routeMatcher = match(route.routePath.replace(escapeRegex, "\\$&"), {
+      end: true
+    });
+    const mountMatcher = match(route.mountPath.replace(escapeRegex, "\\$&"), {
+      end: false
+    });
+    const matchResult = routeMatcher(requestPath);
+    const mountMatchResult = mountMatcher(requestPath);
+    if (matchResult && mountMatchResult && route.modules.length) {
+      for (const handler of route.modules.flat()) {
+        yield {
+          handler,
+          params: matchResult.params,
+          path: matchResult.path
+        };
+      }
+      break;
+    }
+  }
+}
+__name(executeRequest, "executeRequest");
+var pages_template_worker_default = {
+  async fetch(originalRequest, env, workerContext) {
+    let request = originalRequest;
+    const handlerIterator = executeRequest(request);
+    let data = {};
+    let isFailOpen = false;
+    const next = /* @__PURE__ */ __name(async (input, init) => {
+      if (input !== void 0) {
+        let url = input;
+        if (typeof input === "string") {
+          url = new URL(input, request.url).toString();
+        }
+        request = new Request(url, init);
+      }
+      const result = handlerIterator.next();
+      if (result.done === false) {
+        const { handler, params, path } = result.value;
+        const context = {
+          request: new Request(request.clone()),
+          functionPath: path,
+          next,
+          params,
+          get data() {
+            return data;
+          },
+          set data(value) {
+            if (typeof value !== "object" || value === null) {
+              throw new Error("context.data must be an object");
+            }
+            data = value;
+          },
+          env,
+          waitUntil: workerContext.waitUntil.bind(workerContext),
+          passThroughOnException: /* @__PURE__ */ __name(() => {
+            isFailOpen = true;
+          }, "passThroughOnException")
+        };
+        const response = await handler(context);
+        if (!(response instanceof Response)) {
+          throw new Error("Your Pages function should return a Response");
+        }
+        return cloneResponse(response);
+      } else if ("ASSETS") {
+        const response = await env["ASSETS"].fetch(request);
+        return cloneResponse(response);
+      } else {
+        const response = await fetch(request);
+        return cloneResponse(response);
+      }
+    }, "next");
+    try {
+      return await next();
+    } catch (error) {
+      if (isFailOpen) {
+        const response = await env["ASSETS"].fetch(request);
+        return cloneResponse(response);
+      }
+      throw error;
+    }
+  }
+};
+var cloneResponse = /* @__PURE__ */ __name((response) => (
+  // https://fetch.spec.whatwg.org/#null-body-status
+  new Response(
+    [101, 204, 205, 304].includes(response.status) ? null : response.body,
+    response
+  )
+), "cloneResponse");
+export {
+  pages_template_worker_default as default
+};
+
+------formdata-undici-030285254607--
