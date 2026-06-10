@@ -478,7 +478,7 @@ class PBLPathBuilder {
     if (this._loadPromise) return this._loadPromise;
 
     // v8.0.1：缓存 key 升级，修复 systemIndex 恢复 + 推理模型兼容
-    const CACHE_KEY = 'teachany_pbl_unified_index_v9';
+    const CACHE_KEY = 'teachany_pbl_unified_index_v10';
     const CACHE_TTL = 1800000;
     try {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -494,6 +494,7 @@ class PBLPathBuilder {
             }
           });
           this.loaded = true;
+          this._normalizeNodeSourceFlags();
           console.log(`[PBL] ✅ 从缓存恢复: ${this.unifiedIndex.size} 节点, ${this.systemIndex.size} 课标体系`);
           await this._loadKnowledgeGraph();
           return this.unifiedIndex;
@@ -567,7 +568,9 @@ class PBLPathBuilder {
           stageLabel,
           gradeLabel: this._formatGradeLabel(normalizedGrade, sysId, normalizedTreePath, node.stage),
           treePath: normalizedTreePath,
-          isExternal: false
+          isExternal: false,
+          fromCurriculumTree: true,
+          fromK12Graph: false,
         };
         unified = this._normalizeUniversitySubjectNode(unified);
         this.unifiedIndex.set(node.id, unified);
@@ -585,13 +588,25 @@ class PBLPathBuilder {
 
     // 写入缓存
     try {
-      const CACHE_KEY = 'teachany_pbl_unified_index_v9';
+      const CACHE_KEY = 'teachany_pbl_unified_index_v10';
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         ts: Date.now(),
         entries: [...this.unifiedIndex.entries()]
       }));
     } catch (e) { /* 存储满了忽略 */ }
     return this.unifiedIndex;
+  }
+
+  _normalizeNodeSourceFlags() {
+    this.unifiedIndex.forEach((node, id) => {
+      if (node.fromCurriculumTree == null) {
+        const tp = String(node.treePath || '');
+        node.fromCurriculumTree = !!(tp && (tp.includes('/trees/') || tp.startsWith('data/trees')));
+      }
+      if (node.fromK12Graph == null) {
+        node.fromK12Graph = this.k12NodeIds?.has(id) || false;
+      }
+    });
   }
 
   // ─── 全科图谱增强：加载跨学科边数据 ──────────────────────────
@@ -650,6 +665,8 @@ class PBLPathBuilder {
             curriculumLabel: prev?.curriculumLabel || '中国课标',
             stageLabel: n.stageLabel || prev?.stageLabel || this._inferStageLabel(n, 'cn', base.treePath, grade),
             gradeLabel: prev?.gradeLabel || this._formatGradeLabel(grade, 'cn', base.treePath, n.stage),
+            fromCurriculumTree: !!prev?.fromCurriculumTree,
+            fromK12Graph: true,
           };
           this.unifiedIndex.set(n.id, unified);
           if (!this.systemIndex.has('cn')) this.systemIndex.set('cn', new Set());
@@ -684,6 +701,7 @@ class PBLPathBuilder {
       this.universityNodeIds = uniIds;
       this.graphEdges = data.edges || [];
       this.graphLoaded = true;
+      this._normalizeNodeSourceFlags();
       const elapsed = (performance.now() - t0).toFixed(0);
       console.log(`[PBL] 🧬 K12全科图谱就绪: K12=${k12Ids.size}（合并${k12Merged}）, 大学=${uniIds.size}（新增${uniAdded}）, 边=${this.graphEdges.length}, ${elapsed}ms`);
     } catch (e) {
@@ -710,7 +728,22 @@ class PBLPathBuilder {
     return band.explicit && band.minGrade >= 1 && band.maxGrade <= 6;
   }
 
-  /** 节点是否落在用户选定的学段内（小学禁大学/超龄课标） */
+  /** 知识来源门控：课标树 / 全科图谱（可多选） */
+  _passesKnowledgeSourceGate(node, projectSpec = null) {
+    if (!node || node.isExternal || node.layer === 'external') return true;
+    const spec = projectSpec || this._activeProjectSpec;
+    const src = spec?.knowledgeSources || { curriculum: true, k12Graph: true };
+    const wantCurriculum = src.curriculum !== false;
+    const wantGraph = src.k12Graph !== false;
+    if (wantCurriculum && wantGraph) return true;
+    if (!wantCurriculum && !wantGraph) return true;
+    if (node.system !== 'cn') return wantCurriculum;
+    if (wantCurriculum && node.fromCurriculumTree) return true;
+    if (wantGraph && (node.fromK12Graph || this.k12NodeIds?.has(node.id))) return true;
+    return false;
+  }
+
+  /** 节点是否落在用户选定的学段内（默认锁定学段，不选更低学段课） */
   _passesGradeBandGate(node, goal, projectSpec = null) {
     if (!node || node.isExternal || node.layer === 'external') return true;
     const band = this._parseExplicitGradeBand(goal, projectSpec || this._activeProjectSpec);
@@ -719,18 +752,22 @@ class PBLPathBuilder {
     if (band.minGrade === 0 && band.maxGrade === 0) {
       return !!(this._isUniversityNode(node) || node.isUniversity);
     }
+    if (this._isUniversityNode(node) || node.isUniversity) return false;
+    if (band.excludePriorBands && band.bandMin > 0 && node.system === 'cn' && grade > 0 && grade < band.bandMin) {
+      return false;
+    }
+    if (band.selectedGrades?.size && node.system === 'cn' && grade > 0) {
+      return band.selectedGrades.has(grade);
+    }
     if (band.maxGrade <= 6) {
-      if (this._isUniversityNode(node) || node.isUniversity) return false;
       if (node.system === 'cn') return grade >= band.minGrade && grade <= band.maxGrade;
       return false;
     }
     if (band.minGrade >= 7 && band.maxGrade <= 9) {
-      if (this._isUniversityNode(node) || node.isUniversity) return false;
-      if (node.system === 'cn' && grade > 0) return grade >= 7 && grade <= 9;
+      if (node.system === 'cn' && grade > 0) return grade >= band.minGrade && grade <= band.maxGrade;
     }
     if (band.minGrade >= 10 && band.maxGrade <= 12) {
-      if (this._isUniversityNode(node) || node.isUniversity) return false;
-      if (node.system === 'cn' && grade > 0) return grade >= 10 && grade <= 12;
+      if (node.system === 'cn' && grade > 0) return grade >= band.minGrade && grade <= band.maxGrade;
     }
     return true;
   }
@@ -761,6 +798,7 @@ class PBLPathBuilder {
     const adultOrUni = this._isAdultOrUniversityContext(goal);
     if (adultOrUni) return !!(this._isUniversityNode(node) || node.isUniversity);
     if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return false;
+    if (!this._passesKnowledgeSourceGate(node)) return false;
     if (!this._passesGradeBandGate(node, goal)) return false;
     if (this._isPrimarySchoolContext(goal)) return node.system === 'cn';
     if (node.system !== 'cn') return true;
@@ -1407,6 +1445,7 @@ class PBLPathBuilder {
     if (!node) return false;
     if (node.isExternal || node.layer === 'external' || String(node.id || '').startsWith('ext-')) return true;
     if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return false;
+    if (!this._passesKnowledgeSourceGate(node)) return false;
     if (!this._passesGradeBandGate(node, goal)) return false;
     if (archetype && this._isArchetypeBanned(node, archetype)) return false;
     if (!this._isSubjectAllowedForGoal(node, goal, archetype)) return false;
@@ -1445,11 +1484,21 @@ class PBLPathBuilder {
     return subject || g.slice(0, 36);
   }
 
+  _normalizeGradeDetails(spec) {
+    if (!spec) return [];
+    if (Array.isArray(spec.gradeDetails) && spec.gradeDetails.length) {
+      return spec.gradeDetails.map(g => parseInt(g, 10)).filter(g => g >= 1 && g <= 12);
+    }
+    const single = parseInt(spec.gradeDetail, 10);
+    return single >= 1 && single <= 12 ? [single] : [];
+  }
+
   _gradeBandFromProjectSpec(spec) {
     if (!spec || !spec.gradeLevel || spec.gradeLevel === 'any') {
       return { explicit: false, minGrade: 1, maxGrade: 12, label: null };
     }
-    const detail = parseInt(spec.gradeDetail, 10);
+    const lockBand = spec.lockGradeBand !== false;
+    const details = this._normalizeGradeDetails(spec);
     const maps = {
       primary: { min: 1, max: 6, label: '小学' },
       junior: { min: 7, max: 9, label: '初中' },
@@ -1459,19 +1508,47 @@ class PBLPathBuilder {
     };
     const band = maps[spec.gradeLevel];
     if (!band) return { explicit: false, minGrade: 1, maxGrade: 12, label: null };
-    if (spec.gradeLevel === 'primary' && detail >= 1 && detail <= 6) {
-      const slack = detail <= 2 ? 0 : 1;
+    const excludePriorBands = lockBand && band.min > 0;
+    if (details.length) {
+      const inBand = details.filter(g => g >= band.min && g <= band.max);
+      const picked = inBand.length ? inBand : details;
+      const minGrade = Math.min(...picked);
+      const maxGrade = Math.max(...picked);
+      const label = picked.length === 1 ? `${picked[0]}年级` : `${picked.join('、')}年级`;
       return {
         explicit: true,
-        minGrade: Math.max(1, detail - slack),
-        maxGrade: Math.min(6, detail + slack),
-        label: `${detail}年级`,
+        minGrade,
+        maxGrade,
+        label,
+        bandMin: band.min,
+        bandMax: band.max,
+        selectedGrades: new Set(picked),
+        excludePriorBands,
+        lockBand,
       };
     }
-    if (detail >= 1 && detail <= 12) {
-      return { explicit: true, minGrade: detail, maxGrade: detail, label: `${detail}年级` };
+    if (spec.gradeLevel === 'primary' && details.length === 0) {
+      return {
+        explicit: true,
+        minGrade: band.min,
+        maxGrade: band.max,
+        label: band.label,
+        bandMin: band.min,
+        bandMax: band.max,
+        excludePriorBands,
+        lockBand,
+      };
     }
-    return { explicit: true, minGrade: band.min, maxGrade: band.max, label: band.label };
+    return {
+      explicit: true,
+      minGrade: band.min,
+      maxGrade: band.max,
+      label: band.label,
+      bandMin: band.min,
+      bandMax: band.max,
+      excludePriorBands,
+      lockBand,
+    };
   }
 
   _subjectFilterFromProjectSpec(spec) {
@@ -5790,10 +5867,19 @@ class PBLPathBuilder {
     await this._loadKnowledgeGraph();
     await this._ensureArchetypeData();
 
-    // 2. 筛选课标体系
-    const activeSystems = selectedSystems.includes('all')
+    // 2. 筛选课标体系（表单多选优先）
+    const specSystems = this._activeProjectSpec?.curriculumSystems;
+    const systemsInput = (Array.isArray(specSystems) && specSystems.length)
+      ? specSystems
+      : selectedSystems;
+    const activeSystems = systemsInput.includes('all')
       ? Array.from(this.systemIndex.keys())
-      : selectedSystems.filter(s => this.systemIndex.has(s));
+      : systemsInput.filter(s => this.systemIndex.has(s));
+
+    const src = this._activeProjectSpec?.knowledgeSources || { curriculum: true, k12Graph: true };
+    if (src.curriculum === false && src.k12Graph === false) {
+      throw new Error('请至少选择一种知识来源：课标或全科图谱');
+    }
 
     // 3. 构建候选知识点列表（默认锚定 K12 全科图谱子图，大学层按需开启）
     const rawCandidates = [];

@@ -2,6 +2,8 @@
  * @internal PBL 知识点提案 — 模型先列应学课标，再由客户端对齐图谱
  */
 
+import { formatGradeConstraint } from './pbl-grade-constraint.js';
+
 function formatBlueprintPhases(blueprint) {
   if (!blueprint) return '（无拆解蓝图）';
   const scheme = (blueprint.schemes || []).find(s => s.id === blueprint.recommendedSchemeId)
@@ -10,20 +12,6 @@ function formatBlueprintPhases(blueprint) {
     const hints = (p.knowledgeHints || []).slice(0, 5).join('、');
     return `  ${i + 1}. ${p.phase || '阶段'}｜产出：${p.deliverable || '—'}${hints ? `｜线索：${hints}` : ''}`;
   }).join('\n');
-}
-
-function formatGradeConstraint(projectSpec) {
-  if (!projectSpec?.gradeLevel || projectSpec.gradeLevel === 'any') return '';
-  const maps = {
-    primary: '小学 1–6 年级',
-    junior: '初中 7–9 年级',
-    senior: '高中 10–12 年级',
-    university: '大学/高等教育',
-    adult: '成人/在职学习者',
-  };
-  const detail = parseInt(projectSpec.gradeDetail, 10);
-  if (detail >= 1 && detail <= 12) return `${detail} 年级`;
-  return maps[projectSpec.gradeLevel] || projectSpec.gradeLevel;
 }
 
 function isAdultOrUniversity(projectSpec, goal) {

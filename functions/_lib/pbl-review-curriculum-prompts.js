@@ -2,6 +2,8 @@
  * @internal PBL 课标节点二次检讨 — 输出前全图谱课内节点审核
  */
 
+import { formatGradeConstraint } from './pbl-grade-constraint.js';
+
 function formatBlueprintSummary(blueprint) {
   if (!blueprint) return '（无拆解蓝图）';
   const scheme = (blueprint.schemes || []).find(s => s.id === blueprint.recommendedSchemeId)
@@ -23,21 +25,6 @@ function formatBlueprintSummary(blueprint) {
  * @param {string} [payload.deliverable]
  * @param {Array<{index:number,id:string,name:string,subject:string,grade:number,layer:string,reason:string,definition:string}>} payload.nodes
  */
-function formatGradeConstraint(projectSpec) {
-  if (!projectSpec || !projectSpec.gradeLevel || projectSpec.gradeLevel === 'any') return '';
-  const maps = {
-    primary: '小学（1–6 年级）',
-    junior: '初中（7–9 年级）',
-    senior: '高中（10–12 年级）',
-    university: '大学',
-    adult: '成人/在职',
-  };
-  const base = maps[projectSpec.gradeLevel] || projectSpec.gradeLevel;
-  const detail = parseInt(projectSpec.gradeDetail, 10);
-  if (detail >= 1 && detail <= 12) return `${detail} 年级`;
-  return base;
-}
-
 export function buildReviewCurriculumMessages(payload) {
   const {
     goal = '',

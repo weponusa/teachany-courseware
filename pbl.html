@@ -382,6 +382,59 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+.pbl-grade-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 4px;
+}
+.pbl-grade-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.pbl-grade-check input { accent-color: var(--accent); }
+.pbl-src-tag {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--dim);
+  transition: all 0.2s;
+  user-select: none;
+}
+.pbl-src-tag:hover { border-color: #3b82f6; color: var(--text); }
+.pbl-src-tag.active {
+  background: rgba(59,130,246,0.15);
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+.pbl-match-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dim);
+}
+.pbl-match-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.pbl-form-hint-inline {
+  font-size: 12px;
+  color: var(--dimmer);
+}
 .pbl-settings-btn {
   position: absolute;
   top: 16px;
@@ -969,7 +1022,7 @@ body {
       <div class="pbl-field">
         <label for="pblGradeLevel">学段</label>
         <select id="pblGradeLevel" onchange="updatePBLGradeDetailOptions()">
-          <option value="any">跨学段（不限）</option>
+          <option value="any">自动推断（可能跨学段）</option>
           <option value="primary">小学</option>
           <option value="junior">初中</option>
           <option value="senior">高中</option>
@@ -977,9 +1030,14 @@ body {
           <option value="adult">成人/在职</option>
         </select>
       </div>
-      <div class="pbl-field">
-        <label for="pblGradeDetail">具体年级（可选）</label>
-        <select id="pblGradeDetail"><option value="">不限具体年级</option></select>
+      <div class="pbl-field pbl-field-full" id="pblGradeDetailRow">
+        <label>具体年级（可多选）</label>
+        <div id="pblGradeDetailCheckboxes" class="pbl-grade-checks">
+          <span class="pbl-form-hint-inline">选择学段后可勾选多个年级；默认锁定学段，不选更低学段课</span>
+        </div>
+        <div class="pbl-match-options">
+          <label><input type="checkbox" id="pblLockGradeBand" checked onchange="markPBLGoalDirty()"> 锁定当前学段（默认不跨学段选课）</label>
+        </div>
       </div>
       <div class="pbl-field">
         <label for="pblSubject">学科取向</label>
@@ -1035,7 +1093,7 @@ body {
         <input type="text" id="pblConstraints" placeholder="如：预算上限、安全要求、可用设备、必须使用的工具" />
       </div>
     </div>
-    <p class="pbl-form-hint">还可补充：课标体系（下方标签）、合作方式（个人/小组）、评价标准——目前通过「约束条件」或对话提出即可。</p>
+    <p class="pbl-form-hint">拆解时可多选课标体系与知识来源；合作方式、评价标准等可通过「约束条件」或对话补充。</p>
     <div class="pbl-examples">
       <span class="ex-label">示范项目：</span>
       <span class="ex-chip" onclick="fillPBLExample(this)" data-key="water-rocket" data-goal="设计一款水火箭，完成箭体制作、推进测试与安全发射">🚀 水火箭设计</span>
@@ -1060,14 +1118,19 @@ body {
     </div>
     <div class="pbl-actions">
       <button class="pbl-analyze-btn" id="pblAnalyzeBtn" onclick="analyzePBLGoal()">🔍 拆解项目路径</button>
-      <div class="pbl-system-tags">
-        <span class="tag-label">课标体系：</span>
+      <div class="pbl-system-tags" style="width:100%;margin-top:8px">
+        <span class="tag-label">课标体系（可多选）：</span>
         <span class="pbl-sys-tag active" data-system="all" onclick="toggleSystemTag(this)">全部</span>
         <span class="pbl-sys-tag" data-system="cn" onclick="toggleSystemTag(this)">🇨🇳 中国课标</span>
         <span class="pbl-sys-tag" data-system="ap" onclick="toggleSystemTag(this)">🇺🇸 AP</span>
         <span class="pbl-sys-tag" data-system="cambridge" onclick="toggleSystemTag(this)">🇬🇧 Cambridge</span>
         <span class="pbl-sys-tag" data-system="ib" onclick="toggleSystemTag(this)">🌍 IB</span>
         <span class="pbl-sys-tag" data-system="us" onclick="toggleSystemTag(this)">🇺🇸 US CCSS</span>
+      </div>
+      <div class="pbl-system-tags" style="width:100%;margin-top:6px">
+        <span class="tag-label">知识来源（可多选）：</span>
+        <span class="pbl-src-tag active" data-source="curriculum" onclick="toggleKnowledgeSourceTag(this)">📚 课标树</span>
+        <span class="pbl-src-tag active" data-source="k12Graph" onclick="toggleKnowledgeSourceTag(this)">🧬 全科图谱</span>
       </div>
     </div>
   </div>
@@ -1170,10 +1233,10 @@ body {
 </div>
 
 <script src="./assets/scripts/courseware-hub.js"></script>
-<script src="./assets/scripts/pbl-project-form.js?v=20260609-structured"></script>
+<script src="./assets/scripts/pbl-project-form.js?v=20260609-grade-multi"></script>
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260609-pbl-candidate-editor"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260609-grade-multi"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1186,12 +1249,50 @@ let pblCandidateView = [];
 
 function updatePBLGradeDetailOptions() {
   const level = document.getElementById('pblGradeLevel')?.value || 'any';
-  const sel = document.getElementById('pblGradeDetail');
-  if (!sel) return;
+  const box = document.getElementById('pblGradeDetailCheckboxes');
+  if (!box) return;
   const opts = (window.PBLProjectForm?.gradeDetailOptionsFor(level) || []);
-  sel.innerHTML = '<option value="">不限具体年级</option>' + opts.map(o =>
-    `<option value="${o.id}">${o.label}</option>`
+  if (level === 'any' || level === 'university' || level === 'adult' || !opts.length) {
+    box.innerHTML = '<span class="pbl-form-hint-inline">K12 请先选择小学/初中/高中，再勾选年级；默认锁定学段，不选更低学段课</span>';
+    return;
+  }
+  box.innerHTML = opts.map(o =>
+    `<label class="pbl-grade-check"><input type="checkbox" name="pblGradeDetail" value="${o.id}" onchange="markPBLGoalDirty()"> ${o.label}</label>`
   ).join('');
+  markPBLGoalDirty();
+}
+
+function toggleKnowledgeSourceTag(el) {
+  el.classList.toggle('active');
+  const active = document.querySelectorAll('.pbl-src-tag.active').length;
+  if (!active) el.classList.add('active');
+  markPBLGoalDirty();
+}
+
+function fillPBLKnowledgeSourceTags(sources) {
+  const src = sources || { curriculum: true, k12Graph: true };
+  document.querySelectorAll('.pbl-src-tag').forEach(tag => {
+    const key = tag.dataset.source;
+    tag.classList.toggle('active', src[key] !== false);
+  });
+  if (!document.querySelectorAll('.pbl-src-tag.active').length) {
+    document.querySelectorAll('.pbl-src-tag').forEach(t => t.classList.add('active'));
+  }
+}
+
+function fillPBLSystemTags(systems) {
+  if (!systems?.length) return;
+  document.querySelectorAll('.pbl-sys-tag').forEach(t => t.classList.remove('active'));
+  if (systems.includes('all')) {
+    document.querySelector('.pbl-sys-tag[data-system="all"]')?.classList.add('active');
+    return;
+  }
+  systems.forEach(sys => {
+    document.querySelector(`.pbl-sys-tag[data-system="${sys}"]`)?.classList.add('active');
+  });
+  if (!document.querySelectorAll('.pbl-sys-tag.active').length) {
+    document.querySelector('.pbl-sys-tag[data-system="all"]')?.classList.add('active');
+  }
 }
 
 function togglePBLDeliverableCustom() {
@@ -1260,6 +1361,7 @@ async function fillPBLExample(el) {
   const spec = {
     gradeLevel: el.dataset.grade || 'any',
     gradeDetail: el.dataset.gradeDetail || '',
+    gradeDetails: el.dataset.gradeDetails ? el.dataset.gradeDetails.split(',') : (el.dataset.gradeDetail ? [el.dataset.gradeDetail] : []),
     subject: el.dataset.subject || 'cross',
     task: el.dataset.task || el.dataset.goal || '',
     deliverable: el.dataset.deliverable || 'report',

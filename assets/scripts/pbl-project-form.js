@@ -46,18 +46,44 @@
 
   const DELIVERABLE_LABELS = Object.fromEntries(DELIVERABLE_OPTIONS.map(o => [o.id, o.label]));
 
+  function normalizeGradeDetails(s) {
+    if (Array.isArray(s.gradeDetails) && s.gradeDetails.length) {
+      return s.gradeDetails.map(String).filter(Boolean);
+    }
+    if (s.gradeDetail) return [String(s.gradeDetail)];
+    return [];
+  }
+
   function formatGradeLabel(spec) {
     if (!spec || spec.gradeLevel === 'any' || !spec.gradeLevel) return '';
     const base = GRADE_OPTIONS.find(g => g.id === spec.gradeLevel)?.label || spec.gradeLevel;
-    if (spec.gradeDetail) return `${base} · ${spec.gradeDetail}年级`;
+    const details = normalizeGradeDetails(spec);
+    if (details.length === 1) return `${base} · ${details[0]}年级`;
+    if (details.length > 1) {
+      const sorted = details.map(d => parseInt(d, 10)).filter(n => n >= 1 && n <= 12).sort((a, b) => a - b);
+      return `${base} · ${sorted.join('、')}年级`;
+    }
     return base;
+  }
+
+  function normalizeKnowledgeSources(raw) {
+    const src = raw?.knowledgeSources || raw || {};
+    return {
+      curriculum: src.curriculum !== false,
+      k12Graph: src.k12Graph !== false,
+    };
   }
 
   function normalizeProjectSpec(raw) {
     const s = raw || {};
+    const gradeDetails = normalizeGradeDetails(s);
     return {
       gradeLevel: s.gradeLevel || 'any',
-      gradeDetail: s.gradeDetail || '',
+      gradeDetail: gradeDetails[0] || s.gradeDetail || '',
+      gradeDetails,
+      lockGradeBand: s.lockGradeBand !== false,
+      knowledgeSources: normalizeKnowledgeSources(s),
+      curriculumSystems: Array.isArray(s.curriculumSystems) ? s.curriculumSystems : [],
       subject: s.subject || 'cross',
       task: String(s.task || '').trim(),
       deliverable: s.deliverable || 'report',
@@ -89,9 +115,33 @@
     return lines.join('\n');
   }
 
+  function readKnowledgeSourcesFromDOM() {
+    const tags = document.querySelectorAll('.pbl-src-tag.active');
+    const picked = [];
+    tags.forEach(t => picked.push(t.dataset.source));
+    if (!picked.length || picked.includes('all')) {
+      return { curriculum: true, k12Graph: true };
+    }
+    return {
+      curriculum: picked.includes('curriculum'),
+      k12Graph: picked.includes('k12Graph'),
+    };
+  }
+
+  function readCurriculumSystemsFromDOM() {
+    if (typeof getSelectedSystems === 'function') return getSelectedSystems();
+    return ['all'];
+  }
+
+  function readGradeDetailsFromDOM() {
+    const boxes = document.querySelectorAll('input[name="pblGradeDetail"]:checked');
+    return [...boxes].map(el => el.value).filter(Boolean);
+  }
+
   function readProjectSpecFromDOM() {
     const gradeLevel = document.getElementById('pblGradeLevel')?.value || 'any';
-    const gradeDetail = document.getElementById('pblGradeDetail')?.value || '';
+    const gradeDetails = readGradeDetailsFromDOM();
+    const lockGradeBand = document.getElementById('pblLockGradeBand')?.checked !== false;
     const subject = document.getElementById('pblSubject')?.value || 'cross';
     const task = document.getElementById('pblTaskInput')?.value?.trim() || '';
     const deliverable = document.getElementById('pblDeliverable')?.value || 'report';
@@ -100,7 +150,12 @@
     const duration = document.getElementById('pblDuration')?.value?.trim() || '';
     const constraints = document.getElementById('pblConstraints')?.value?.trim() || '';
     return normalizeProjectSpec({
-      gradeLevel, gradeDetail, subject, task, deliverable,
+      gradeLevel,
+      gradeDetails,
+      lockGradeBand,
+      knowledgeSources: readKnowledgeSourcesFromDOM(),
+      curriculumSystems: readCurriculumSystemsFromDOM(),
+      subject, task, deliverable,
       deliverableCustom, audience, duration, constraints,
     });
   }
@@ -109,7 +164,6 @@
     const s = normalizeProjectSpec(spec);
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     set('pblGradeLevel', s.gradeLevel);
-    set('pblGradeDetail', s.gradeDetail);
     set('pblSubject', s.subject);
     set('pblTaskInput', s.task);
     set('pblDeliverable', s.deliverable);
@@ -117,7 +171,19 @@
     set('pblAudience', s.audience);
     set('pblDuration', s.duration);
     set('pblConstraints', s.constraints);
+    const lockEl = document.getElementById('pblLockGradeBand');
+    if (lockEl) lockEl.checked = s.lockGradeBand !== false;
     if (typeof updatePBLGradeDetailOptions === 'function') updatePBLGradeDetailOptions();
+    const details = normalizeGradeDetails(s);
+    document.querySelectorAll('input[name="pblGradeDetail"]').forEach(el => {
+      el.checked = details.includes(el.value);
+    });
+    if (typeof fillPBLKnowledgeSourceTags === 'function') {
+      fillPBLKnowledgeSourceTags(s.knowledgeSources);
+    }
+    if (typeof fillPBLSystemTags === 'function' && s.curriculumSystems?.length) {
+      fillPBLSystemTags(s.curriculumSystems);
+    }
     if (typeof togglePBLDeliverableCustom === 'function') togglePBLDeliverableCustom();
   }
 
@@ -134,6 +200,8 @@
     DELIVERABLE_OPTIONS,
     DELIVERABLE_LABELS,
     formatGradeLabel,
+    normalizeGradeDetails,
+    normalizeKnowledgeSources,
     normalizeProjectSpec,
     composeGoalFromSpec,
     readProjectSpecFromDOM,
