@@ -14,21 +14,19 @@ export function normalizeGradeDetails(projectSpec) {
 export function formatGradeConstraint(projectSpec) {
   if (!projectSpec?.gradeLevel || projectSpec.gradeLevel === 'any') return '';
   const maps = {
-    primary: '小学（1–6 年级）',
-    junior: '初中（7–9 年级）',
-    senior: '高中（10–12 年级）',
-    university: '大学/高等教育',
-    adult: '成人/在职学习者',
+    primary: '小学',
+    junior: '初中',
+    senior: '高中',
+    university: '大学',
+    adult: '成人',
   };
   const base = maps[projectSpec.gradeLevel] || projectSpec.gradeLevel;
   const details = normalizeGradeDetails(projectSpec);
-  if (details.length === 1) {
-    return `${details[0]} 年级（锁定当前学段，不选更低学段课）`;
-  }
+  const lock = projectSpec.lockGradeBand !== false ? '｜锁学段' : '';
+  if (details.length === 1) return `G${details[0]}${lock}`;
   if (details.length > 1) {
     const sorted = [...details].sort((a, b) => a - b);
-    return `${sorted.join('、')} 年级（锁定当前学段，不选更低学段课）`;
+    return `G${sorted.join('/')}(${base})${lock}`;
   }
-  const lock = projectSpec.lockGradeBand !== false ? '（锁定学段，不跨学段、不选更低学段课）' : '';
   return `${base}${lock}`;
 }

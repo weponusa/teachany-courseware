@@ -17,21 +17,9 @@ export function buildVerifyDepsMessages(payload) {
    课标官方先修（target 节点）：${official}`;
   }).join('\n');
 
-  const system = `你是 K12 课标知识依赖关系审核员。任务：判断 PBL 项目学习路径中，「先修知识点→后续知识点」的依赖方向是否合理。
+  const system = `依赖边审核：valid=合理前置；invalid=无先修关系；reversed=方向反了。foundation常为bridge/core前置。只返回JSON。`;
 
-## 判断标准
-1. **valid**：学完 source 是学好 target 的合理前置（符合学科逻辑与 PBL 实施顺序）
-2. **invalid**：两者无先修关系，或删掉 source 不影响 target 的学习
-3. **reversed**：方向反了，应是 target→source（或官方先修与声称方向矛盾）
-
-## 角色提示
-- foundation 通常是 bridge/core 的前置
-- 同阶段 parallel 节点一般不应互为先修
-- 官方先修列表若包含 source 名称，倾向 valid；若包含 target 而声称 source→target，倾向 reversed
-
-只返回 JSON，不要 markdown。`;
-
-  const user = `【项目目标】${goal}
+  const user = `目标:${goal}
 
 【待验证依赖边】共 ${edges.length} 条
 ${edgeBlock}

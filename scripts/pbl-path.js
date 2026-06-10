@@ -1465,23 +1465,83 @@ class PBLPathBuilder {
     return true;
   }
 
+  _stripVerbPrefix(text) {
+    return String(text || '').trim()
+      .replace(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|记录|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*/, '')
+      .replace(/^(?:关于|围绕|有关)\s*/, '')
+      .replace(/[，。；].*$/, '')
+      .trim();
+  }
+
   _parseGoalSubject(goal) {
     const g = String(goal || '').trim();
-    // 处理带【标签】格式的结构化 goal：优先提取【任务】字段
     const taskMatch = g.match(/【任务】\s*(.+?)(?:\n|【|$)/);
     if (taskMatch) {
-      let task = taskMatch[1].trim();
-      // 进一步剥离动词前缀
-      const verbM = task.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|记录|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
-      if (verbM) task = verbM[1].trim();
-      task = task.replace(/^(?:关于|围绕|有关)\s*/, '').replace(/[，。；].*$/, '').slice(0, 36);
-      return task || g.slice(0, 36);
+      const task = this._stripVerbPrefix(taskMatch[1]);
+      return task.slice(0, 36) || g.slice(0, 36);
     }
-    let subject = g;
-    const m = g.match(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析|探寻|探索|研究|调研|记录|重塑|改造|优化|重建|更新|升级|整治|组织|开展|修复|翻新)(?:一个|一款|一份|一组|一次)?\s*(.+)$/);
-    if (m) subject = m[1].trim();
-    subject = subject.replace(/^(?:关于|围绕|有关)\s*/, '').replace(/[，。；].*$/, '').slice(0, 36);
-    return subject || g.slice(0, 36);
+    if (g.includes('｜')) {
+      const parts = g.split('｜').map(s => s.trim()).filter(Boolean);
+      const metaRe = /^(产出|场景|周期|约束):/;
+      const skipRe = /^(小学|初中|高中|大学|成人|跨学科|数学|物理|化学|生物|科学|语文|英语|历史|地理|信息技术|艺术)$/;
+      const taskParts = parts.filter(p => !metaRe.test(p));
+      while (taskParts.length && (skipRe.test(taskParts[0]) || /年级/.test(taskParts[0]))) {
+        taskParts.shift();
+      }
+      if (taskParts.length) {
+        const task = this._stripVerbPrefix(taskParts.join(' '));
+        return task.slice(0, 36) || g.slice(0, 36);
+      }
+    }
+    const subject = this._stripVerbPrefix(g);
+    return subject.slice(0, 36) || g.slice(0, 36);
+  }
+
+  _containsGoalMarkup(text) {
+    return /【[^】]+】/.test(String(text || ''));
+  }
+
+  /** 剥离 AI 误注入的【学科】【任务】等结构化标签与 goal 全文回声 */
+  _stripGoalMarkup(text, goal = '') {
+    let s = String(text || '').trim();
+    if (!s) return '';
+    s = s.replace(/^【学科】[^】]*【任务】[^」\n]*」?\s*/g, '');
+    s = s.replace(/【任务】\s*[^」\n]*」?\s*/g, '');
+    s = s.replace(/【[^】]+】\s*/g, '');
+    const task = this._parseGoalSubject(goal);
+    if (task && task.length >= 4) {
+      const esc = task.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      s = s.replace(new RegExp(esc, 'g'), ' ').trim();
+    }
+    s = s.replace(/\s+/g, ' ').trim();
+    return s;
+  }
+
+  _sanitizeBlueprintText(text, goal) {
+    const s = this._stripGoalMarkup(text, goal);
+    if (!s) return '';
+    if (s.length > 42) {
+      const tail = s.match(/(?:立意|素材|初稿|批注|清单|素材库|诗集|朗诵|修改|阅读|表达|阶段|报告|方案)[^，。；]{0,16}/);
+      if (tail) return tail[0].trim();
+      return s.slice(0, 42);
+    }
+    return s;
+  }
+
+  _sanitizeDeliverableTitle(name, goal) {
+    const art = this._compactProjectLabel(goal);
+    let s = this._stripGoalMarkup(name, goal).replace(/^《+|》+$/g, '').trim();
+    if (!s || this._containsGoalMarkup(s) || s.length > 24) {
+      const hint = s.match(/(?:立意清单|素材库|初稿集|批注集|诗集|朗诵|展示|报告|方案|记录表)/);
+      const short = hint ? hint[0] : (this._cleanPhaseName(s) || '阶段产出');
+      return `《${art}·${short}》`;
+    }
+    if (!s.includes(art)) return `《${art}·${s}》`;
+    return `《${s}》`;
+  }
+
+  _isHumanitiesLiteraryGoal(goal) {
+    return this._classifyProjectType(goal) === 'humanities-literary';
   }
 
   _normalizeGradeDetails(spec) {
@@ -2585,8 +2645,29 @@ class PBLPathBuilder {
     return { ...p, phase, steps, knowledgeHints: hints };
   }
 
+  _sanitizeBlueprintStringsInPlace(bp, goal) {
+    if (!bp) return bp;
+    const clean = (t) => this._sanitizeBlueprintText(t, goal);
+    if (bp.projectSummary) bp.projectSummary = clean(bp.projectSummary);
+    if (bp.deliverable) bp.deliverable = this._sanitizeDeliverableTitle(bp.deliverable, goal);
+    (bp.schemes || []).forEach((s) => {
+      if (s.name) s.name = clean(s.name);
+      if (s.summary) s.summary = clean(s.summary);
+      s.pros = (s.pros || []).map(clean).filter(Boolean);
+      s.cons = (s.cons || []).map(clean).filter(Boolean);
+      s.phases = (s.phases || []).map((p) => ({
+        ...p,
+        phase: this._cleanPhaseName(p.phase, goal),
+        deliverable: p.deliverable ? this._sanitizeDeliverableTitle(p.deliverable, goal) : p.deliverable,
+        steps: (p.steps || []).map(st => this._stripGoalMarkup(st, goal)).filter(Boolean),
+      }));
+    });
+    return bp;
+  }
+
   _sanitizeBlueprintPhasesInPlace(bp, goal) {
     if (!bp?.schemes?.length) return bp;
+    this._sanitizeBlueprintStringsInPlace(bp, goal);
     const profile = this._goalProfile(goal, bp);
     const domains = this._inferProjectDomains(goal);
     bp.schemes.forEach(s => {
@@ -2620,41 +2701,30 @@ class PBLPathBuilder {
     return tokens.some(t => t.length >= 2 && s.includes(t));
   }
 
-  _phaseContext(phase, blueprint) {
+  _phaseContext(phase, blueprint, goal = '') {
     const subIds = phase?.subsystemIds || [];
     const subs = (blueprint?.subsystems || []).filter(s => subIds.includes(s.id));
     return {
-      phaseName: this._cleanPhaseName(String(phase?.phase || phase?.name || '').trim()),
-      deliverable: String(phase?.deliverable || '').trim(),
+      phaseName: this._cleanPhaseName(String(phase?.phase || phase?.name || '').trim(), goal),
+      deliverable: phase?.deliverable
+        ? this._sanitizeDeliverableTitle(phase.deliverable, goal)
+        : '',
       hints: (phase?.knowledgeHints || []).slice(0, 4),
       subsystems: subs.map(s => s.name).filter(Boolean),
       subDesc: subs.map(s => s.description).filter(Boolean).join('；'),
     };
   }
 
-  /** 清洗 phaseName：去除 AI 误注入的 goal 前缀（如【学科】...【任务】...」）和重复冗余 */
-  _cleanPhaseName(raw) {
-    let name = String(raw || '').trim();
-    // 去除【学科】XX【任务】XX」前缀
-    name = name.replace(/^【学科】[^】]*【任务】[^」]*」\s*/, '');
-    // 去除所有残留的【...】标签对（可能有多个连续的：【学段】XX【学科】XX【任务】XX【产出】XX）
-    if (/【/.test(name)) {
-      const taskM = name.match(/【任务】\s*(.+?)(?:\s*【|$)/);
-      if (taskM) {
-        name = taskM[1].trim().replace(/^(?:设计|制作|开发|建造|完成|策划|撰写|探究|调查|分析)(?:一个|一款|一份|一组|一次)?\s*/, '');
-      } else {
-        name = name.replace(/【[^】]*】\s*/g, '').trim();
-      }
-    }
-    // 去除 goal 全文嵌套（如果 phaseName 超过30字且含典型 goal 动词，截取最后的短标题）
-    if (name.length > 30 && /制定|调查|提出|设计|完成|探究/.test(name)) {
+  /** 清洗 phaseName：去除 AI 误注入的 goal 前缀与重复冗余 */
+  _cleanPhaseName(raw, goal = '') {
+    let name = this._stripGoalMarkup(raw, goal);
+    const phaseTail = name.match(/(?:立意|选材|阅读|素材|结构|表达|创作|修改|展示|朗诵|调查|测算|测试|验收|策划|调研)[^，。；]{0,10}阶段?/);
+    if (phaseTail) name = phaseTail[0];
+    else if (name.length > 24) {
       const lastSeg = name.split(/[，,；;、」]/).pop().trim();
-      if (lastSeg && lastSeg.length >= 2 && lastSeg.length <= 20) {
-        name = lastSeg;
-      }
+      if (lastSeg && lastSeg.length >= 2 && lastSeg.length <= 16) name = lastSeg;
     }
-    // 最终限长
-    if (name.length > 20) name = name.slice(0, 20);
+    if (name.length > 16) name = name.slice(0, 16);
     return name || '本阶段';
   }
 
@@ -2719,14 +2789,28 @@ class PBLPathBuilder {
       }
       return `围绕「${artifact}」完成${phaseName}：结合 ${hints} 整理产业资料并产出可核查记录表（≥5条要点+来源标注）`;
     }
-    // 社会/公民调查类模板（垃圾分类、社区环保等）——排除 health-life 类项目
-    const isTrueSocialSurvey = (this._isSocialOrCivicInquiryGoal(goal) || /垃圾|分类|社区|环保|倡议/.test(blob))
-      && !this._isHealthLifeGoal(goal);
+    if (this._isHumanitiesLiteraryGoal(goal) || (profile.domains.writing && /诗|文集|作文|写作|朗诵|文学/.test(String(goal || '')))) {
+      if (/立意|选材|主题|构思/.test(blob)) {
+        return `确定「${artifact}」创作主题：列出≥8条家乡意象选题并标注情感基调，全班票选定稿≥3条`;
+      }
+      if (/阅读|素材|积累|语料/.test(blob)) {
+        return `建立「${artifact}」素材库：摘录≥30条家乡意象语料（视觉/听觉/触觉分类），注明出处或观察场景`;
+      }
+      if (/结构|表达|意象|修辞|创作|初稿|写诗/.test(blob)) {
+        return `完成「${artifact}」诗歌初稿：每人≥1首（≥8行），用意象检查表核对每首≥3个具象家乡元素`;
+      }
+      if (/修改|批注|展示|朗诵|定稿/.test(blob)) {
+        return `完成「${artifact}」修改与展示：同伴互评≥2轮并保留批注，录制朗诵或编排班级诵读活动`;
+      }
+      return `围绕「${artifact}」完成${phaseName}：结合${hints}整理创作资料并产出可核查文稿`;
+    }
+    // 社会/公民调查类模板（仅垃圾分类等明确议题，禁止「分类标签」等误触发）
+    const isTrueSocialSurvey = this._isSocialOrCivicInquiryGoal(goal) && !this._isHealthLifeGoal(goal);
     if (isTrueSocialSurvey) {
       if (/现状|调查|问卷|访谈|勘测|实地|走访/.test(blob)) {
         return `走访≥2处相关点位，填写${phaseName}记录表（观察项≥8条+居民访谈≥5条），附现场照片3张并标注时间与地点`;
       }
-      if (/分类|标准|流程|标识|投放/.test(blob)) {
+      if (/垃圾分类|四类垃圾|垃圾投放|厨余|可回收物|有害垃圾/.test(blob)) {
         return `整理四类垃圾投放标准对照表（可回收/有害/厨余/其他），列举本社区常见误投案例≥6条并注明改正做法`;
       }
       if (/统计|数据|图表|整理|分析/.test(blob)) {
@@ -2788,13 +2872,13 @@ class PBLPathBuilder {
 
   _concretizePhaseSteps(goal, phase, phaseIndex, totalPhases, archetype, blueprint) {
     const profile = this._goalProfile(goal, blueprint);
-    const ctx = this._phaseContext(phase, blueprint);
+    const ctx = this._phaseContext(phase, blueprint, goal);
     const raw = Array.isArray(phase?.steps) ? phase.steps : [];
     const seen = new Set();
     const steps = [];
 
     raw.forEach((st, i) => {
-      const s = String(st || '').trim();
+      const s = this._stripGoalMarkup(st, goal);
       if (!s) return;
       let out = s;
       const actionable = this._stepActionabilityScore(s) >= 4;
@@ -2823,9 +2907,12 @@ class PBLPathBuilder {
 
   _concretizeDeliverable(goal, phaseName, role, fallback, blueprint) {
     const profile = this._goalProfile(goal, blueprint);
-    const phase = String(phaseName || '');
+    const phase = this._cleanPhaseName(phaseName, goal);
     const art = profile.shortLabel || profile.artifact;
-    if (fallback && fallback.length >= 8 && !/阶段成果|探究任务|素养|能力/.test(fallback)) return fallback;
+    if (fallback && fallback.length >= 8 && !/阶段成果|探究任务|素养|能力/.test(fallback)
+      && !this._containsGoalMarkup(fallback)) {
+      return this._sanitizeDeliverableTitle(fallback, goal);
+    }
     if (/算力中心|数据中心|太空算力|卫星计算|轨道计算/.test(String(goal || ''))) {
       if (/需求|约束|原理|调研/.test(phase)) return `「${art}」需求与约束定义表（任务负载+轨道环境+性能指标）`;
       if (/架构|结构|装置|设计|方案/.test(phase)) return `「${art}」系统架构图与方案对比表（含电源/热控/通信/冗余）`;
@@ -4943,7 +5030,7 @@ class PBLPathBuilder {
       };
     };
     return {
-      projectSummary: `围绕「${subject}」：${String(goal).slice(0, 100)}`,
+      projectSummary: `围绕「${subject}」按模块推进，阶段产出可检查验收`,
       deliverable: topic.deliverableHint,
       projectType: this._classifyProjectType(goal),
       constraints: ['紧扣题目关键词', '每阶段产出可检查', '禁止套用无关模板'],

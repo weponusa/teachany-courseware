@@ -97,22 +97,22 @@
   function composeGoalFromSpec(spec) {
     const s = normalizeProjectSpec(spec);
     if (!s.task) return '';
-    const lines = [];
+    const parts = [];
     const grade = formatGradeLabel(s);
-    if (grade) lines.push(`【学段】${grade}`);
+    if (grade) parts.push(grade);
     const subj = s.subject === 'cross'
       ? '跨学科'
       : (SUBJECT_OPTIONS.find(o => o.id === s.subject)?.label || s.subject);
-    lines.push(`【学科】${subj}`);
-    lines.push(`【任务】${s.task}`);
+    parts.push(subj);
+    parts.push(s.task);
     const deliv = s.deliverable === 'other' && s.deliverableCustom
       ? s.deliverableCustom
       : (DELIVERABLE_LABELS[s.deliverable] || s.deliverable);
-    lines.push(`【产出】${deliv}`);
-    if (s.audience) lines.push(`【受众/场景】${s.audience}`);
-    if (s.duration) lines.push(`【周期】${s.duration}`);
-    if (s.constraints) lines.push(`【约束】${s.constraints}`);
-    return lines.join('\n');
+    parts.push(`产出:${deliv}`);
+    if (s.audience) parts.push(`场景:${s.audience}`);
+    if (s.duration) parts.push(`周期:${s.duration}`);
+    if (s.constraints) parts.push(`约束:${s.constraints}`);
+    return parts.join('｜');
   }
 
   function readKnowledgeSourcesFromDOM() {

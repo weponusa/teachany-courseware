@@ -8,6 +8,11 @@ import {
   formatArchetypeForMatch,
   formatRegistryForMatch,
 } from './pbl-archetypes.js';
+import {
+  stripStructuredGoal,
+  buildCompactUserContext,
+  compactBlueprintHeader,
+} from './pbl-context.js';
 
 /**
  * @internal PBL 拆解核心提示词 v6.0 — 仅服务端，勿复制到前端静态资源
@@ -100,7 +105,7 @@ function projectTypeProfile(goal) {
 
 function typeGuardrailBlock(goal) {
   const p = projectTypeProfile(goal);
-  return `\n## 本项目类型识别：${p.label}\n- 模块视角：${p.moduleWord}\n- 学科取向：${p.subjectsHint}\n- 类型红线：${p.redlines}\n`;
+  return `类型：${p.label}｜模块：${p.moduleWord}｜学科：${p.subjectsHint}｜红线：${p.redlines}`;
 }
 
 // ============================================================
@@ -164,7 +169,7 @@ function extractTopicProfile(goal) {
 
 function formatTopicAnchorBlock(goal) {
   const t = extractTopicProfile(goal);
-  return `\n## 本题核心主题（硬性锚点 — 不可替换、不可泛化）\n- 用户目标原文：「${t.rawGoal}」\n- **核心主题：${t.coreTopic}**\n- 主题定义：${t.definition}\n- projectSummary、deliverable、scheme 名称、每个 phase 的名称/steps/deliverable/knowledgeHints **必须直接出现核心主题关键词**\n- knowledgeHints 检索词须含：${t.keywords.join('、')}\n- 建议交付物：${t.deliverableHint}\n- **禁止** scheme 名使用通用模板名（递进式实施、原型驱动迭代等）；禁止交付物写「项目原型」「MVP」「系统演示」等与题目无关的表述\n- **禁止** steps 中出现：${(t.banInSteps || []).join('、')}\n`;
+  return `锚点：「${t.coreTopic}」｜检索词：${t.keywords.slice(0, 8).join('、')}｜交付参考：${t.deliverableHint}｜禁套模板/MVP/环境搭建`;
 }
 
 // ============================================================
@@ -298,101 +303,31 @@ function formatDomainHints(domains) {
 // 五、反空话与红线
 // ============================================================
 
-const ANTI_VACUUM_BLOCK = `
-### 反空话与反泛素养（硬性）
-- **禁止** matched：批判性思维、创新思维、团队协作、项目管理、沟通能力、核心素养等综合素养类节点（除非题目明确要求）
-- projectPhases 每阶段 steps 至少 2 条，每条 ≥15 字，须写清：动作 + 对象 + 方法/工具 + 检查标准；禁止「完成探究」「进行调研」「运用知识点」
-- reason 除「模块：」外须写明**本阶段怎么用**（例：「模块：数据整理。用条形图对比两方案 5 年成本，附数据来源」）`;
+const ANTI_VACUUM_BLOCK = `禁泛素养节点；steps≥2条且≥15字含动作+对象+方法+验收；reason以「模块：」开头并写明怎么用`;
 
 // ============================================================
 // 六、typeMatchHints — 泛化版（通用类型指导，不再硬编码具体节点名）
 // ============================================================
 
 function typeMatchHints(goal) {
-  switch (classifyProjectType(goal)) {
-    case 'consumer-decision':
-      return `\n### 类型要求：消费决策（含技术原理理解）
-- 交付物是决策报告/对比测算表
-- **技术原理必选**（≥2 个 physics/chemistry 节点）：根据项目具体对象，选取与候选方案**核心技术差异**直接相关的原理节点（如动力原理、能量转换、电路功率、材料特性等）
-- 其他优先：统计与函数、环境排放、说明文写作
-- 禁止：与项目对象无关的工业研发节点（电解池、原电池等）、history 学科
-- reason 须写明该知识点如何帮助理解候选方案的技术差异`;
-    case 'engineering':
-      return `\n### 类型要求：工程/制作
-- **必含科学技术原理**（≥2 个 physics/chemistry/biology/science 节点）：解释项目核心装置/系统"为什么这样做能成功"的学科原理（选取与项目**驱动原理、感知机制、运动力学、材料特性、化学反应**直接相关的节点）
-- **必含数学技能**（≥1 个 math 节点）：用于测量、统计、数据分析、计算验证
-- matched 须覆盖项目的**核心技术子系统**（从 goal 中提取）
-- 覆盖原理→装置→实验→必要定量；含至少 1 个装置/实验类节点
-- 数学 index ≤25%；名称含「计算/求解/方程式」的 ≤20%
-- 禁止选择与项目交付物**不同物理域**的节点（如地面项目不选航空、化学项目不选生物医疗）
-- reason 须写明用于项目哪一子系统`;
-    case 'scientific-inquiry':
-      return `\n### 类型要求：科学探究
-- **必含科学技术原理**（≥2 个 physics/chemistry/biology/science 节点）：与实验核心原理直接相关
-- **必含数学技能**（≥1 个 math 节点）：用于数据分析、统计图表、测量计算
-- 必含实验设计与数据分析类节点；理论与实验并重
-- 根据探究对象选取相应学科：化学类选溶液/反应/滴定，物理类选力/热/电，生物类选生态/遗传/生理
-- 禁止选与探究对象无关领域的节点`;
-    case 'social-inquiry':
-      return `\n### 类型要求：社会调查
-- 围绕调查方法、数据统计与报告写作
-- 优先：统计图表、调查方法、说明文/报告写作、地理/环境相关（如题目涉及）
-- 可用：语文/地理/历史/数学，**不要塞理科公式**
-- 禁止：与调查主题无关的理科实验节点、生命科学节点（除非题目明确涉及）
-- reason 须写明用于调查哪一环节`;
-    case 'humanities-literary':
-      return `\n### 类型要求：人文/文学
-- 围绕阅读、写作、表达、文化理解（语文/英语/历史）
-- **不要塞理科或工程节点**`;
-    case 'creative-media':
-      return `\n### 类型要求：创意/媒体
-- 围绕创意、设计、制作、展示；仅在确需技术实现时引入信息技术/数学`;
-    case 'business-economics':
-      return `\n### 类型要求：商业/经济
-- 围绕调研、成本定价测算、方案与表达（数学/语文/信息技术）`;
-    case 'life-planning':
-      return `\n### 类型要求：生活规划/活动策划
-- 围绕需求目标、方案日程、预算分工、执行复盘（数学/语文/地理）；不要塞工程装置或纯理科公式`;
-    case 'health-life':
-      return `\n### 类型要求：健康生活（含科学原理理解）
-- **科学/技术原理必选**（≥2 个 biology/physics/chemistry/science 节点）：根据项目具体健康主题，选取与该健康问题**生理机制、物理/化学原理**直接相关的学科节点（如近视→凸透镜成像+眼球结构+睫状肌调节；营养→消化吸收+食物成分+化学变化；运动→力学+呼吸循环）
-- **禁止只选"调查统计+行为公约"两头**——中间的科学原理层（为什么会近视？晶状体如何变形？凹透镜如何矫正？蓝光对视网膜的影响机制是什么？）必须覆盖
-- 其他优先：数据统计图表、健康知识科普写作/宣传
-- 禁止：与本健康主题无关的工程装置或纯计算节点
-- reason 须写明该知识点如何帮助学生理解该健康问题的**科学本质**`;
-    case 'planting-cultivation':
-      return `\n### 类型要求：种植养殖/园艺栽培
-- 交付物是**种植观察日记**
-- matched **必须**覆盖：植物分类/特征、生长原理（光合/萌发/根系等）、栽培相关、数据记录
-- 优先：植物生长相关科学/生物节点、统计图表、说明文/日记写作
-- 禁止：与种植无关的工程装置、化学方程式、程序设计
-- reason 须写明如何用于种植的具体环节`;
-    case 'labor-practice':
-      return `\n### 类型要求：劳动实践
-- 围绕动手操作、观察记录、成果分享（科学/生物/语文/数学）；贴近真实操作，不要拔高成科研论文或工程系统`;
-    case 'industry-innovation':
-      return `\n### 类型要求：产业创新/新兴经济
-- 交付物是**产业创新方案/调研报告**，不是装置制作或软件工程
-- matched 须能支撑：产业背景政策、应用场景、技术原理（与产业领域相关）、数据统计、方案论证
-- 优先：地理/经济/交通相关、统计调查、说明文/报告写作、与产业技术领域直接相关的物理/信息技术节点
-- 禁止：与主题产业无关的模块
-- reason 必须写明该知识点如何用于本产业的具体环节`;
-    case 'exhibition-redesign':
-      return `\n### 类型要求：展陈空间/场馆改造
-- 交付物是**改造方案册**（现状诊断+展陈设计+整改清单）
-- matched 须支撑：现状调查、科普内容（与展馆主题相关）、展板设计、预算统计、说明文写作
-- 禁止：程序设计、工程装置研发等与展陈无关节点
-- reason 必须写明如何用于改造的具体环节`;
-    case 'maker-workshop':
-      return `\n### 类型要求：工坊/木作/建筑模型
-- 交付物是实体模型+图册+BOM
-- steps 须有尺寸、工具、照片、检查表
-- 禁止空话（「选择组件」「环境搭建」等）`;
-    default:
-      return `\n### 类型要求：综合实践
-- 每个节点服务交付物某一步，学科按需自然选取
-- 若题目抽象，先落地为 1 个可检查交付物，再选课标；禁止泛素养凑数${ANTI_VACUUM_BLOCK}`;
-  }
+  const hints = {
+    'consumer-decision': '消费决策：原理≥2+统计/成本+决策报告；禁无关工业研发',
+    engineering: '工程：原理≥2+数学≥1+装置/实验；禁跨物理域',
+    'scientific-inquiry': '探究：原理≥2+数学≥1+实验设计/数据分析',
+    'social-inquiry': '调查：问卷/统计/报告写作；禁无关理科实验',
+    'humanities-literary': '人文：阅读写作表达；禁理科工程',
+    'creative-media': '创意：设计制作展示；技术按需',
+    'business-economics': '商业：调研+成本定价+方案表达',
+    'life-planning': '策划：日程预算分工复盘；禁工程装置',
+    'health-life': '健康：生理/理化原理≥2+统计+宣传；禁只调查不原理',
+    'planting-cultivation': '种植：生长原理+栽培+观察记录',
+    'labor-practice': '劳动：操作+记录+分享',
+    'industry-innovation': '产业：政策场景+技术+数据+方案报告',
+    'exhibition-redesign': '展陈：诊断+科普+设计+预算',
+    'maker-workshop': '工坊：模型+BOM+尺寸工具验收',
+  };
+  const id = classifyProjectType(goal);
+  return hints[id] ? `\n${hints[id]}` : `\n综合实践：节点服务交付物；${ANTI_VACUUM_BLOCK}`;
 }
 
 // ============================================================
@@ -400,47 +335,11 @@ function typeMatchHints(goal) {
 // ============================================================
 
 function systemPromptMatch(complex, goal) {
-  const base = `你是资深 PBL（项目式学习）导师，精通 K12 各学科课标，能为工程制作、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策、产业创新等多类项目设计学习路径。
-${formatTopicAnchorBlock(goal)}
-${typeGuardrailBlock(goal)}
-## 第一步（必做）：把项目拆成「子任务 / 模块」
+  const base = `PBL 课标路径编排。${formatTopicAnchorBlock(goal)}｜${typeGuardrailBlock(goal)}
 
-在选任何候选 index 之前，先回答：「要做出本项目的交付物，学生必须分别解决哪几个**独立子问题**？」不同类型项目的模块不同：
-- 工程/制作：原理 → 装置/结构 → 电路/控制 → 测试迭代
-- 科学探究：问题假设 → 变量与实验设计 → 数据采集 → 分析结论
-- 社会调查：选题抽样 → 资料/问卷收集 → 整理统计 → 结论报告
-- 人文/写作：立意选材 → 阅读积累 → 结构表达 → 修改展示
-- 创意/媒体：创意构思 → 设计草案 → 制作实现 → 展示评议
-- 商业/经济：需求调研 → 方案设计 → 成本定价 → 运营复盘
-- 消费决策：需求调研 → 对比维度 → 成本测算 → 决策报告
-
-## 第二步：从候选列表选点（相关性门禁）
-
-对每个 index，必须通过以下测试才能入选：
-1. **模块测试**：它支撑上面哪一个模块？reason 必须以「模块：XXX」开头
-2. **删除测试**：若删掉它，学生完成该模块会明显受阻吗？若不会 → 不选
-3. **课标测试**：名称必须来自候选列表原文，禁止编造候选中没有的知识点
-
-## 三层知识角色
-
-- **foundation**：完成某模块所需的工具性/前置知识
-- **bridge**：连接基础与产出的关键方法
-- **core**：直接用于动手/产出环节的知识
-
-## 最高优先级：贴合交付物 > 学科齐全
-
-- 选 matched 的唯一标准：删掉它，项目某一步就做不下去
-- **学科按项目类型自然选取**：工程/科学类多用理科；社会/人文/创作/商业类该用语文、历史、地理、英语、信息技术就大胆用——不要硬塞理科，也不要为凑跨学科塞无关节点
-- 宁可精准 5-8 个，也不为学科齐全凑数
-
-常见错误（绝对禁止）：
-❌ matched 名称不在候选列表里（编造）
-❌ 工程/制作类只堆「XX计算」「XX守恒定律」，缺原理/装置/实验（定量节点≤20%）
-❌ 人文写作 / 社会调查 / 创意设计类硬塞物理化学公式或工程装置节点
-❌ 为凑学科数量选与交付物无关的节点
-❌ 用批判性思维/团队协作/项目管理等泛素养节点凑数
-❌ projectPhases steps 只有「完成本阶段探究」「进行调研」等空话
-${ANTI_VACUUM_BLOCK}`;
+选点门禁：①reason以「模块：」开头 ②删掉会卡住该模块才选 ③名称须来自候选列表。
+角色：foundation/bridge/core。标准：贴合交付物>凑学科；精准5-8个。
+禁：编造节点、泛素养、空话steps、跑题凑数。${ANTI_VACUUM_BLOCK}`;
 
   if (!complex) {
     return `${base}
@@ -472,52 +371,24 @@ ${ANTI_VACUUM_BLOCK}`;
 
 function systemPromptDecompose(complex, goal) {
   const p = projectTypeProfile(goal);
-  const depth = complex
-    ? '给出 2-3 套**不同实施路线**并推荐 1 套。'
-    : '至少给出 2 套可行思路并推荐 1 套。';
-  return `你是资深 PBL 与跨学科课程设计顾问，覆盖工程、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策、产业创新等各类项目。
-${formatTopicAnchorBlock(goal)}
-## 任务（本阶段**不选课标知识点**）
+  const depth = complex ? '2-3套路线并推荐1套' : '≥2套路线并推荐1套';
+  return `PBL 全链路拆解（本阶段不选课标）。${formatTopicAnchorBlock(goal)}｜${typeGuardrailBlock(goal)}
 
-对用户项目目标做**全链路结构化拆解**：
-1. 判断项目类型（已初步识别：${p.label}）
-2. 澄清交付物、约束、适用学段
-3. 拆出 3-5 个模块（${p.moduleWord}）
-4. ${depth}
-5. 为推荐方案列出 4-5 个**实施阶段**（任务步骤、产出、knowledgeHints 检索词）
-
-## 可执行任务步骤（硬性）
-- 每个 phase 的 steps 至少 2 条，每条 ≥20 字，须同时包含：**动词 + 操作对象 + 工具/数据/方法 + 可检查产出（含数量/尺寸/次数）**
-- 禁止空话：「进行调研」「完成探究」「选择硬件组件」「编写基础控制逻辑」「环境搭建」等无验收标准的表述
-- **每条 steps 必须出现用户目标中的关键名词**（从【项目目标】原文提取）
-- 若题目是口号/品牌/抽象表述，必须**落地为 1 个具体交付物**，steps 写清谁做什么、用什么表/工具、交什么稿
-
-## 去重去冗余（硬性）
-- **绝对禁止**同一意思换不同说法重复出现
-- 不同 phase 的 steps 内容之间**零重叠**
-- **steps 与 deliverable/验收项之间不得同义重复**：deliverable 写「产出物名+数量标准」（如"护眼公约 4 条+全班签字确认"），steps 写「达成该产出物的操作过程」（如"组织全班讨论用眼习惯调查结果，票选出 4 项可量化条款"）——禁止 steps 里直接搬运 deliverable 的验收描述
-- **同一操作只出现一次**：若"走访点位"已出现在某 phase 的 steps 中，其他 phase 不得再出现同义表述（"调查走访""实地走访"等）
-- summary / projectSummary / constraints / scopeLimits / successCriteria 各字段之间不得互相复制粘贴
-- pros 每条 ≤15 字，禁止与 summary 重复
-
-## 原则
-- **严格贴合题目类型**：调查/对比类的交付物是报告/对比表，不是研发原型；写作/创作类的交付物是作品，不是实验装置
-- knowledgeHints 是**检索关键词**，按项目类型选取（理工类用学科概念，人文/社科类用阅读/写作/统计/调查等），不写课标原文节点名
-- deliverable 必须是可检查实物（报告、表格、海报、作品、数据记录表），不能是「提升素养」「增强能力」
-- 不跑题、不硬凑学科
-
-只返回 JSON，不要 markdown。`;
+输出：交付物+约束+${depth}+推荐方案4-5阶段（steps/deliverable/knowledgeHints）。
+steps：每阶段≥2条、≥20字，含动词+对象+方法+可验收产出；须含目标关键词；禁空话与套模板。
+禁复述：phase/deliverable/steps/scheme名禁止出现【学科】【任务】或粘贴全文goal；产出名≤16字。
+去重：各phase steps零重叠；steps≠deliverable同义复述；summary/pros/约束字段互不复制。
+knowledgeHints=检索词非课标节点名。只返回JSON。`;
 }
 
 function userPromptDecompose(goal, complex) {
+  const task = stripStructuredGoal(goal);
   const domains = inferProjectDomains(goal);
   const domainBlock = domains.length
-    ? `\n【可参考的项目模块】\n${formatDomainHints(domains)}\n`
+    ? `\n模块参考：${domains.map(d => d.label).join('、')}`
     : '';
-  const topicBlock = formatTopicAnchorBlock(goal);
-  return `【项目目标】
-${goal}
-${topicBlock}${domainBlock}
+  return `${task}${domainBlock}
+
 返回 JSON（严格遵循字段名）：
 {
   "projectSummary": "一句话概括项目",
@@ -550,38 +421,12 @@ ${topicBlock}${domainBlock}
   "knowledgeChain": "子系统1 → 子系统2 → 测试迭代"
 }
 
-要求：
-- schemes 至少 2 套，recommendedSchemeId 必须是其中一套的 id
-- 推荐方案 phases 4-5 个
-- 每个 steps 条目 ≥20 字，须含可操作动词 + 数量/尺寸/次数 + 可检查产出；动词对象必须来自用户目标原文
-- phases 的 phase 名称、deliverable、steps 须与【项目目标】同一领域，禁止跨域套模板
-- knowledgeHints 每阶段 2-5 个，用于下一步课标检索，勿写课标原文节点名
-- **去重**：不同 phase 的 steps、summary、pros、deliverable 之间不得有同义重复段落`;
+要求：schemes≥2；phases 4-5；knowledgeHints每阶段2-5个；各字段去重不复述。`;
 }
 
 function formatBlueprintForMatch(blueprint) {
-  if (!blueprint) return '';
-  const scheme = (blueprint.schemes || []).find(s => s.id === blueprint.recommendedSchemeId)
-    || (blueprint.schemes || [])[0];
-  if (!scheme) return '';
-  const subs = (blueprint.subsystems || []).map(s => `${s.id}:${s.name}`).join('；');
-  const phases = (scheme.phases || []).map((p, i) => {
-    const hints = (p.knowledgeHints || []).join('、');
-    const steps = (p.steps || []).join('；');
-    return `  ${i + 1}. 【${p.phase}】任务：${steps}；产出：${p.deliverable || '阶段成果'}；知识检索提示：${hints}`;
-  }).join('\n');
-  const scope = (blueprint.scopeLimits || []).map(s => `  - ${s}`).join('\n');
-  const success = (blueprint.successCriteria || []).map(s => `  - ${s}`).join('\n');
-  return `
-【项目实施蓝图 — matched 必须对齐此结构，禁止跑题】
-项目摘要：${blueprint.projectSummary || ''}
-交付物：${blueprint.deliverable || ''}
-${scope ? `不能宣称：\n${scope}\n` : ''}${success ? `验收标准：\n${success}\n` : ''}推荐方案：${scheme.name}（${scheme.summary || ''}）
-子系统：${subs}
-实施阶段：
-${phases}
-知识链：${blueprint.knowledgeChain || ''}
-`;
+  const header = compactBlueprintHeader(blueprint);
+  return header ? `\n蓝图：${header}\n` : '';
 }
 
 // ============================================================
@@ -590,46 +435,24 @@ ${phases}
 
 function systemPromptFilter(complex, goal) {
   const p = projectTypeProfile(goal);
-  const gradeHint = complex
-    ? 'grades 一般落在 7-12；若项目明显面向小学，可含 1-6。'
-    : '';
-  return `你是 PBL 项目与课标对齐专家，能把工程、科学探究、社会调查、人文创作、创意设计、商业实践、消费决策、产业创新等各类项目拆解为可检索的学科与模块。
-${formatTopicAnchorBlock(goal)}
-${typeGuardrailBlock(goal)}
-## 工作流程
-1. 判断项目类型（已识别：${p.label}）
-2. 列出 3-5 个模块（${p.moduleWord}）
-3. 为每个模块映射学科：math / physics / chemistry / biology / science / chinese / english / history / geography / info-tech
-4. 确定适用 grades 与 systems
-5. 从蓝图任务动词推断 Bloom 认知上限（bloomCeiling 1-6）
+  const gradeHint = complex ? 'grades通常7-12，小学项目可含1-6。' : '';
+  return `PBL 课标筛选。${formatTopicAnchorBlock(goal)}｜${typeGuardrailBlock(goal)}
 
-## 选学科原则（按类型自适应）
-- 学科必须能覆盖上述模块，**按项目类型自然选取**
-- 工程/科学类：以 physics/chemistry/math/info-tech 为主
-- 消费决策类：以 math（统计/函数）为主，辅以相关科普与说明文写作
-- 社会调查/人文/创作类：以 chinese/geography/history/english/info-tech 为主，不强行加理科
-- 不要为凑学科数量加入与交付物无关的学科
-
-${gradeHint}
-
-只返回 JSON。`;
+输出 subjects/systems/grades/projectDomains/bloomCeiling；学科覆盖模块、按类型自然选取、禁凑无关学科。${gradeHint} 只返回JSON。`;
 }
 
 function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomProfile = null) {
   const domains = inferProjectDomains(goal);
   const blueprintBlock = formatBlueprintForMatch(projectBlueprint);
   const domainBlock = domains.length
-    ? `\n【本项目模块参考（filter 的 subjects 须能覆盖这些）】\n${formatDomainHints(domains)}\n`
+    ? `\n模块：${domains.map(d => d.label).join('、')}`
     : '';
   const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
   const bloomBlock = formatBloomHintForFilter(bloom);
-  const gradeHint = complex
-    ? `\n- grades 一般落在 7-12（初中、高中），除非项目面向小学`
-    : '';
-  return `PBL项目目标：${goal}
-${formatTopicAnchorBlock(goal)}${blueprintBlock}${domainBlock}${bloomBlock}
-可用的知识体系：
-${summaryList}
+  const gradeHint = complex ? '；grades通常7-12' : '';
+  const ctx = buildCompactUserContext({ goal, projectBlueprint, includeBlueprint: false });
+  return `${ctx}${blueprintBlock}${domainBlock}${bloomBlock}
+课标体系：${summaryList}
 
 返回 JSON：
 {
@@ -643,12 +466,7 @@ ${summaryList}
   "reasoning": "说明各模块对应的学科与年级"
 }
 
-注意：
-- subjects 取值：math/physics/chemistry/biology/chinese/english/history/geography/info-tech/science
-- systems：cn/ap/cambridge/ib/us
-- projectDomains：从项目交付物拆出的 3-5 个模块名称
-- **学科按项目类型自然选取**，理工类用理科、社科人文创作类用文科/信息技术，不要硬塞无关学科
-- 通常 2-5 个学科即可${gradeHint}`;
+subjects取值math/physics/chemistry/biology/chinese/english/history/geography/info-tech/science；systems为cn/ap/cambridge/ib/us；通常2-5学科${gradeHint}`;
 }
 
 // ============================================================
@@ -709,7 +527,7 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
   const domains = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
   const blueprintSection = formatBlueprintForMatch(projectBlueprint);
   const domainSection = domains.length
-    ? `\n【项目模块 — 每个至少 1 个 matched，reason 必须以「模块：XXX」开头】\n${formatDomainHints(domains)}\n`
+    ? `\n模块：${domains.map(d => d.label).join('、')}（每模块≥1 matched）\n`
     : '';
 
   const example = complex ? FORMAT_EXAMPLE_COMPLEX : FORMAT_EXAMPLE_NORMAL;
@@ -725,47 +543,13 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
   const archetypeBlock = formatArchetypeForMatch(archetype, projectBlueprint);
   const registryBlock = archetype ? formatRegistryForMatch(archetype.id) : '';
 
-  return `【项目目标】
-${goal}
-${formatTopicAnchorBlock(goal)}${blueprintSection}${domainSection}${archetypeBlock}${bloomBlock}${registryBlock}
-【候选知识点】（matched 只能选下列 index；**先对齐上方蓝图阶段与 knowledgeHints**，再按模块检索选 index）
+  const ctx = buildCompactUserContext({ goal, projectBlueprint });
+  return `${ctx}${blueprintSection}${domainSection}${archetypeBlock}${bloomBlock}${registryBlock}
+候选（matched仅选下列index，先对齐蓝图阶段）：
 ${candidateList}
-
 ${example}
 
-## 硬性要求
-
-### 0. 贴合交付物（最高优先级）
-- 每个 matched 的 reason **必须以「模块：」开头**
-- **5-8 个精准节点**即可；不要为了学科齐全凑数
-- **严禁**选与交付物无关的 index（编造、凑数、跑题）
-- 学科按项目类型自然选取，理工类用理科、社科人文创作类用文科/信息技术
-- **科学/工程/探究类项目必须同时含两类节点**：①科学技术原理（physics/chemistry/biology/science ≥2 个，解释"为什么能成功"）②数学技能（math ≥1 个，用于测量/统计/计算验证）
-${typeMatchHints(goal)}
-
-### 1. 数量与角色
-- matched：${matchedRange} 个，confidence≥${minConf}
-- ${complex ? 'foundation 1-2、bridge 2-3、core 2-3；避免与交付物无关的 index' : '覆盖至少 2 个模块'}
-
-### 2. 知识链
-- dependsOn 构成 DAG；pathOrder 满足依赖
-- knowledgeChain 体现模块递进（按项目类型）
-
-### 3. projectPhases
-- ${complex ? '4-5' : '3-5'} 个阶段，按模块组织
-- knowledgeNames **只能**使用候选列表中出现的名称（字面匹配或明显子串）
-- 每阶段 literacy 六维各 1 句，结合学科与项目类型，禁止套话
-
-### 4. 跨学科（可选，不强制）
-- 围绕交付物自然跨学科即可；**禁止**为凑学科引入与项目无关的节点
-
-### 5. external（课标外，硬性要求）
-- **必须**输出 1-${externalMax} 个课标外知识点，不可为空数组
-- 填写候选列表中**没有**、但完成本项目**确实需要**的专业/实践概念
-- 每个 external 须有 name + reason；可选 prerequisites
-
-### 6. techRoute
-- 中文，500 字内，按模块串联，体现项目实施的递进逻辑`;
+要求：reason以「模块：」开头；matched ${matchedRange}个、conf≥${minConf}；理工类原理≥2+数学≥1；external 1-${externalMax}个；techRoute≤500字。${typeMatchHints(goal)}`;
 }
 
 // ============================================================
