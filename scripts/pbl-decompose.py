@@ -19,16 +19,24 @@ import argparse
 import json
 import re
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
-DEFAULT_BASE = "https://www.teachany.cn/pbl.html"
+DEFAULT_BASE = "https://www.teachany.cn/pbl"
+HANDOFF_API = "https://www.teachany.cn/api/pbl/handoff"
 TIMEOUT_MS = 360_000
 
 
 def slugify(text: str) -> str:
     s = re.sub(r"[^\w\u4e00-\u9fa5]+", "-", (text or "pbl").strip()[:40]).strip("-")
     return s or "pbl-report"
+
+
+def site_origin(base_url: str) -> str:
+    p = urlparse(base_url or DEFAULT_BASE)
+    return f"{p.scheme}://{p.netloc}"
 
 
 def build_pbl_url(args: argparse.Namespace) -> str:
@@ -51,11 +59,12 @@ def build_pbl_url(args: argparse.Namespace) -> str:
         params["duration"] = args.duration
     if args.constraints:
         params["constraints"] = args.constraints
-    base = (args.base_url or DEFAULT_BASE).rstrip("?")
+    base = (args.base_url or DEFAULT_BASE).split("?")[0].rstrip("/")
     return f"{base}?{urlencode(params)}"
 
 
 def build_edit_url(args: argparse.Namespace) -> str:
+    """仅作最后兜底：不含 handoff 时用户需重新拆解。"""
     params = {}
     goal = (args.goal or args.task or "").strip()
     if goal:
@@ -74,8 +83,25 @@ def build_edit_url(args: argparse.Namespace) -> str:
         params["duration"] = args.duration
     if args.constraints:
         params["constraints"] = args.constraints
-    base = (args.base_url or DEFAULT_BASE).split("?")[0]
+    base = (args.base_url or DEFAULT_BASE).split("?")[0].rstrip("/")
     return f"{base}?{urlencode(params)}" if params else base
+
+
+def post_handoff(goal: str, result: dict, spec: dict | None, api_url: str = HANDOFF_API) -> dict:
+    body = json.dumps({"goal": goal, "result": result, "spec": spec}, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        api_url,
+        data=body,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def handoff_edit_url(handoff_id: str, base: str = DEFAULT_BASE) -> str:
+    u = f"{base.split('?')[0].rstrip('/')}?handoff={handoff_id}"
+    return u
 
 
 async def run_decompose(args: argparse.Namespace) -> dict:
@@ -87,7 +113,9 @@ async def run_decompose(args: argparse.Namespace) -> dict:
         raise SystemExit(2)
 
     analyze_url = build_pbl_url(args)
-    edit_url = build_edit_url(args)  # fallback if page handoff fails
+    origin = site_origin(args.base_url or DEFAULT_BASE)
+    handoff_api = f"{origin}/api/pbl/handoff"
+    pbl_base = (args.base_url or DEFAULT_BASE).split("?")[0].rstrip("/")
     out_dir = Path(args.output or ".").resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     png_path = out_dir / f"{slugify(args.goal)}.png"
@@ -96,19 +124,42 @@ async def run_decompose(args: argparse.Namespace) -> dict:
     print(f"🔗 拆解 URL: {analyze_url}")
     print("⏳ 正在拆解（约 1–4 分钟，取决于 LLM 响应）…")
 
+    handoff_error = None
+    handoff_source = None
+    edit_url = None
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page(viewport={"width": 1400, "height": 900})
+        page = await browser.new_page(viewport={"width": 1400, "height": 1200})
         page.set_default_timeout(TIMEOUT_MS)
 
         await page.goto(analyze_url, wait_until="domcontentloaded", timeout=120_000)
 
         await page.wait_for_function(
+            """() => window.__pblLastAnalysisDone?.ok === true""",
+            timeout=TIMEOUT_MS,
+        )
+
+        await page.wait_for_function(
             """() => {
               const r = window.TeachAnyPBLAutomation?.getResult?.();
-              return r && r.graphData && r.graphData.nodes && r.graphData.nodes.length > 0;
+              if (!r?.graphData?.nodes?.length) return false;
+              const st = document.getElementById('pblStatus');
+              if (st && st.style.display !== 'none') return false;
+              const svg = document.querySelector('#pbl-graph-container svg');
+              return !!svg;
             }""",
-            timeout=TIMEOUT_MS,
+            timeout=120_000,
+        )
+        await page.wait_for_timeout(1500)
+
+        payload = await page.evaluate(
+            """() => {
+              const getSnap = window.TeachAnyPBLAutomation?.getSerializableResult;
+              const result = getSnap ? getSnap() : null;
+              const spec = typeof getPBLProjectSpec === 'function' ? getPBLProjectSpec() : null;
+              return { result, spec };
+            }"""
         )
 
         result_summary = await page.evaluate(
@@ -121,30 +172,48 @@ async def run_decompose(args: argparse.Namespace) -> dict:
                 external: (r.external || []).length,
                 nodeCount: nodes.length,
                 systems: r.systems || [],
+                hasBlueprint: !!(r.projectBlueprint && (r.projectBlueprint.schemes || []).length),
+                hasTechRoute: !!(r.techRoute || r.pathPlan?.phases?.length),
               };
             }"""
         )
 
-        edit_url = await page.evaluate(
-            """async () => {
-              const base = window.location.origin + window.location.pathname;
-              if (window.TeachAnyPBLAutomation?.createHandoff) {
-                try {
-                  return await window.TeachAnyPBLAutomation.createHandoff(base);
-                } catch (e) {
-                  console.warn('[PBL] handoff failed, fallback to pbl id', e);
-                }
-              }
-              const runId = window.TeachAnyPBLAutomation?.getRunId?.();
-              const u = new URL(base);
-              u.searchParams.delete('auto');
-              if (runId) {
-                u.searchParams.set('pbl', runId);
-                return u.toString();
-              }
-              return window.TeachAnyPBLAutomation?.getEditUrl?.(base) || base;
-            }"""
-        )
+        snap = payload.get("result") or {}
+        spec = payload.get("spec")
+        goal_text = (snap.get("goal") or result_summary.get("goal") or args.goal or "").strip()
+
+        if snap.get("graphData", {}).get("nodes"):
+            try:
+                h = post_handoff(goal_text, snap, spec, handoff_api)
+                edit_url = handoff_edit_url(h["id"], pbl_base)
+                handoff_source = "python"
+            except (urllib.error.URLError, urllib.error.HTTPError, KeyError, json.JSONDecodeError) as e:
+                handoff_error = str(e)
+                try:
+                    edit_url = await page.evaluate(
+                        """async (base) => {
+                          if (window.TeachAnyPBLAutomation?.createHandoff) {
+                            return await window.TeachAnyPBLAutomation.createHandoff(base);
+                          }
+                          throw new Error('createHandoff unavailable');
+                        }""",
+                        pbl_base,
+                    )
+                    handoff_source = "browser"
+                except Exception as e2:
+                    handoff_error = f"{handoff_error}; browser: {e2}"
+
+        if not edit_url or "handoff=" not in edit_url:
+            run_id = await page.evaluate("() => window.TeachAnyPBLAutomation?.getRunId?.() || null")
+            if run_id:
+                edit_url = f"{pbl_base}?pbl={run_id}"
+                handoff_source = handoff_source or "local-pbl-id"
+            else:
+                edit_url = build_edit_url(args)
+                handoff_source = "goal-fallback"
+                print("⚠️  handoff 失败，编辑链接仅为任务参数（打开后需重新拆解）", file=sys.stderr)
+                if handoff_error:
+                    print(f"   原因: {handoff_error}", file=sys.stderr)
 
         print("🖼️  正在生成长图…")
         png_bytes = await page.evaluate(
@@ -168,6 +237,8 @@ async def run_decompose(args: argparse.Namespace) -> dict:
         "image": str(png_path),
         "edit_url": edit_url,
         "edit_url_fallback": build_edit_url(args),
+        "handoff_source": handoff_source,
+        "handoff_error": handoff_error,
         "summary": result_summary,
     }
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -186,7 +257,7 @@ def main() -> None:
     parser.add_argument("--duration", default="")
     parser.add_argument("--constraints", default="")
     parser.add_argument("-o", "--output", default=".", help="输出目录")
-    parser.add_argument("--base-url", default=DEFAULT_BASE, help="PBL 页面地址（默认线上 teachany.cn）")
+    parser.add_argument("--base-url", default=DEFAULT_BASE, help="PBL 页面地址（默认线上 teachany.cn/pbl）")
     parser.add_argument("--json-only", action="store_true", help="仅打印结果 JSON 到 stdout")
     args = parser.parse_args()
 
@@ -200,7 +271,9 @@ def main() -> None:
         print()
         print("✅ PBL 拆解完成")
         print(f"   长图: {meta['image']}")
-        print(f"   节点: {meta['summary'].get('nodeCount', 0)} 个")
+        s = meta["summary"]
+        print(f"   节点: {s.get('nodeCount', 0)} 个（蓝图: {'有' if s.get('hasBlueprint') else '无'}）")
+        print(f"   交接: {meta.get('handoff_source', '?')}")
         print(f"   继续编辑: {meta['edit_url']}")
 
 

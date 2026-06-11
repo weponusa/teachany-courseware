@@ -1506,7 +1506,8 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
     try {
       if (window.TeachAnyHistory && typeof window.TeachAnyHistory.recordPBL === 'function') {
         const llmCfg = builder.getLLMConfig();
-        const runId = window.TeachAnyHistory.recordPBL(goal, { ...result.graphData, systems: result.systems, techRoute: result.techRoute || '' }, {
+        const snap = serializePBLResult(result);
+        const runId = window.TeachAnyHistory.recordPBL(goal, snap || { ...result.graphData, systems: result.systems, techRoute: result.techRoute || '' }, {
           providerName: llmCfg.providerName,
           model: llmCfg.model || 'auto',
         });
@@ -1645,6 +1646,39 @@ async function applyPBLKnowledgeSelection() {
   renderPBLResult(updated);
 }
 
+function serializePBLResult(result) {
+  if (!result) return null;
+  const gd = result.graphData || {};
+  const nodes = (gd.nodes || []).map(n => {
+    const c = { ...n };
+    delete c.x; delete c.y; delete c.vx; delete c.vy; delete c.fx; delete c.fy; delete c.index;
+    return c;
+  });
+  const links = (gd.links || []).map(l => ({
+    source: typeof l.source === 'object' ? (l.source.id || l.source) : l.source,
+    target: typeof l.target === 'object' ? (l.target.id || l.target) : l.target,
+    type: l.type,
+  }));
+  return {
+    goal: result.goal || '',
+    systems: result.systems || [],
+    techRoute: result.techRoute || '',
+    projectBlueprint: result.projectBlueprint || null,
+    projectPhases: result.projectPhases || [],
+    projectSpec: result.projectSpec || null,
+    moduleChain: result.moduleChain || '',
+    matched: result.matched || [],
+    external: result.external || [],
+    stats: result.stats || null,
+    quality: result.quality || null,
+    relevanceAudit: result.relevanceAudit || null,
+    candidateNodes: result.candidateNodes || [],
+    selectedKnowledgeIds: result.selectedKnowledgeIds || [],
+    chatHistory: result.chatHistory || [],
+    graphData: { nodes, links },
+  };
+}
+
 function renderPBLResult(result) {
   pblResult = result;
   if (window.PBLPathBuilder && typeof window.PBLPathBuilder.buildPathPlanFromResult === 'function') {
@@ -1656,6 +1690,11 @@ function renderPBLResult(result) {
   renderPBLGraph(result);
   const activePhase = document.querySelector('.pbl-path-phase.active') || document.querySelector('.pbl-path-phase');
   if (activePhase) highlightPBLPhase(activePhase);
+  if (result.graphData?.nodes?.length) {
+    document.getElementById('pblChatPanel')?.classList.add('visible');
+    const btn = document.getElementById('pblAnalyzeBtn');
+    if (btn) btn.textContent = '✅ 已拆解（可重新拆解）';
+  }
 }
 
 function getStoredPBLRun(id) {
@@ -1715,10 +1754,17 @@ async function restorePBLFromHandoff(handoffId) {
       if (taskEl) taskEl.value = data.goal;
     }
     const result = { ...data.result, goal: data.goal || data.result.goal || '', restoredFromHandoff: true };
+    if (data.spec) result.projectSpec = data.spec;
     if (window.PBLPathBuilder && typeof window.PBLPathBuilder.loadUnifiedIndex === 'function') {
       try { await window.PBLPathBuilder.loadUnifiedIndex(); } catch (_e) {}
     }
     result.graphData = enrichPBLGraphData(result.graphData);
+    if (!result.matched?.length) result.matched = result.graphData.nodes.filter(n => n.layer === 'matched');
+    if (!result.external?.length) result.external = result.graphData.nodes.filter(n => n.layer === 'external');
+    pblChatHistory = result.chatHistory || [];
+    renderPBLChatMessages(pblChatHistory);
+    const statusEl = document.getElementById('pblStatus');
+    if (statusEl) statusEl.style.display = 'none';
     pblResult = result;
     renderPBLResult(result);
     scrollToPBLOutput();
@@ -1753,7 +1799,11 @@ async function restorePBLRunFromHistory(id) {
     goal: run.goal || '',
     systems: run.systems || [],
     techRoute,
+    projectBlueprint: run.projectBlueprint || null,
     projectPhases: run.projectPhases || [],
+    projectSpec: run.projectSpec || null,
+    moduleChain: run.moduleChain || '',
+    chatHistory: run.chatHistory || [],
     graphData,
     matched: graphData.nodes.filter(n => n.layer === 'matched'),
     external: graphData.nodes.filter(n => n.layer === 'external'),
@@ -2520,20 +2570,26 @@ function applyPBLParamsFromURL(params) {
   return spec;
 }
 
+function pblPublicBaseUrl(baseUrl) {
+  if (baseUrl) return String(baseUrl).split('?')[0].replace(/\/pbl\.html$/i, '/pbl');
+  return `${window.location.origin}/pbl`;
+}
+
 async function createPBLHandoffUrl(baseUrl) {
   if (!pblResult?.graphData?.nodes?.length) throw new Error('尚无拆解结果');
-  const spec = typeof getPBLProjectSpec === 'function' ? getPBLProjectSpec() : null;
+  const spec = typeof getPBLProjectSpec === 'function' ? getPBLProjectSpec() : (pblResult.projectSpec || null);
+  const payload = serializePBLResult(pblResult);
   const res = await fetch('/api/pbl/handoff', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ goal: pblResult.goal || spec?.task || '', result: pblResult, spec }),
+    body: JSON.stringify({ goal: payload.goal || spec?.task || '', result: payload, spec }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || data.error || 'handoff 失败');
-  const base = baseUrl || (window.location.origin + window.location.pathname.replace(/[^/]*$/, 'pbl.html'));
-  const u = new URL(base, window.location.href);
+  const u = new URL(pblPublicBaseUrl(baseUrl));
   u.searchParams.set('handoff', data.id);
   u.searchParams.delete('auto');
+  u.searchParams.delete('goal');
   return u.toString();
 }
 
@@ -2542,7 +2598,9 @@ window.TeachAnyPBLAutomation = {
   getRunId: () => window.__pblRunId || null,
   getEditUrl: (baseUrl) => buildPBLEditUrl(null, baseUrl),
   createHandoff: createPBLHandoffUrl,
+  getSerializableResult: () => serializePBLResult(pblResult),
   getResult: () => pblResult,
+  isAnalysisComplete: () => !!(window.__pblLastAnalysisDone?.ok && pblResult?.graphData?.nodes?.length),
   waitForAnalysis: (timeoutMs = 360000) => new Promise((resolve, reject) => {
     if (pblResult?.graphData?.nodes?.length) {
       resolve(pblResult);
@@ -2585,7 +2643,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (el) el.addEventListener('input', markPBLGoalDirty);
     if (el) el.addEventListener('change', markPBLGoalDirty);
   });
-  if (pblGoalFromURL || urlParams.get('task')) {
+  if (!pblHandoffFromURL && !pblIdFromURL && (pblGoalFromURL || urlParams.get('task'))) {
     applyPBLParamsFromURL(urlParams);
   }
 

@@ -13,43 +13,30 @@ compatibility: Python 3.9+, playwright + chromium, network access to www.teachan
 
 # TeachAny PBL
 
-Turn a **project goal** (+ optional grade/subject/deliverable) into:
+**CRITICAL**: MUST run `scripts/pbl-decompose.py` — NEVER hand-write nodes or use `?goal=` as primary edit link.
 
-1. **PNG long image** — structured breakdown + knowledge-path graph  
-2. **Edit URL** — `https://www.teachany.cn/pbl?handoff=...` opens the **already decomposed** project page
+## Installation
 
-## Installation (recommended)
-
-**WorkBuddy**: [workbuddy.tencent.com](https://workbuddy.tencent.com/) → **官方 Skill 商店** → search **`teachany-pbl`** → install.
-
-Alternatives: [github.com/weponusa/teachany-pbl](https://github.com/weponusa/teachany-pbl) or `teachany-courseware/scripts/pbl-decompose.py`.
+**WorkBuddy**: [workbuddy.tencent.com](https://workbuddy.tencent.com/) → **官方 Skill 商店** → **`teachany-pbl`**
 
 ## Workflow
-
-1. Parse project task and optional fields (see courseware `references/parameters.md` or skill repo).
-2. Run CLI:
 
 ```bash
 python3 scripts/pbl-decompose.py --goal "..." --grade junior -o ./pbl-output
 ```
 
-3. First run: `pip install playwright && playwright install chromium`
-4. Reply with PNG path, node counts, and **edit_url** from JSON (prefer `?handoff=`; no `auto=1` in user links).
-5. If Playwright fails, return teachany.cn/pbl link per fallback — still no `auto=1`.
+- `edit_url` must contain `?handoff=` (completed project page)
+- Show PNG from JSON `image` field — full report, not a self-written summary
+- If handoff fails, retry CLI once before fallback
 
-## Output template
+## Output
 
 ```markdown
 ## PBL 拆解结果
-
 **项目**：{goal}
-
-![PBL 知识路径拆解]({png_path})
-
-- **图谱节点**：{nodeCount}（课标 {matched} · 外部 {external}）
-- **继续编辑**：[在 TeachAny 打开]({edit_url})
+![拆解报告]({png_path})
+- **节点**：{nodeCount}（蓝图 {hasBlueprint}）
+- **继续编辑**：[TeachAny]({edit_url})  ← 必须含 handoff=
 ```
 
-## Additional resources
-
-- Skill package: https://github.com/weponusa/teachany-pbl
+Package: https://github.com/weponusa/teachany-pbl

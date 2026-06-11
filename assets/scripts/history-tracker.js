@@ -288,8 +288,10 @@
     /* ── 4. PBL 路径分析 ─────────────────────────────── */
     recordPBL(goal, graphData, providers) {
       if (!goal || !graphData) return false;
-      const techRoute = graphData.techRoute ? safeText(graphData.techRoute, 2000) : '';
-      const nodes = (graphData.nodes || []).map(n => {
+      const snap = graphData.graphData ? graphData : { graphData: graphData, ...graphData };
+      const gd = snap.graphData || graphData;
+      const techRoute = (snap.techRoute || graphData.techRoute) ? safeText(snap.techRoute || graphData.techRoute, 2000) : '';
+      const nodes = (gd.nodes || graphData.nodes || []).map(n => {
         const base = {
           id: n.id,
           name: n.name,
@@ -307,7 +309,7 @@
         }
         return base;
       });
-      const links = (graphData.links || []).map(l => ({
+      const links = (gd.links || graphData.links || []).map(l => ({
         source: typeof l.source === 'object' ? l.source.id : l.source,
         target: typeof l.target === 'object' ? l.target.id : l.target,
         type: l.type
@@ -316,7 +318,15 @@
         id: shortId(),
         goal: safeText(goal, 1000),
         techRoute,
-        systems: graphData.systems || [],
+        systems: snap.systems || graphData.systems || [],
+        moduleChain: snap.moduleChain ? safeText(snap.moduleChain, 500) : '',
+        projectBlueprint: snap.projectBlueprint || null,
+        projectPhases: snap.projectPhases || [],
+        projectSpec: snap.projectSpec || null,
+        chatHistory: (snap.chatHistory || []).slice(-24).map(m => ({
+          role: m.role === 'user' ? 'user' : 'assistant',
+          text: safeText(m.text || m.content || '', 800),
+        })),
         nodeCount: nodes.length,
         linkCount: links.length,
         matchedCount: nodes.filter(n => n.layer === 'matched').length,
@@ -350,13 +360,11 @@
     importPBLHandoff(payload) {
       if (!payload?.result?.graphData) return false;
       const r = payload.result;
-      const gd = r.graphData || {};
       return this.recordPBL(
         payload.goal || r.goal || '',
         {
-          ...gd,
-          systems: r.systems || [],
-          techRoute: r.techRoute || '',
+          ...r,
+          projectSpec: payload.spec || r.projectSpec || null,
         },
         { providerName: 'handoff', model: '' }
       );
