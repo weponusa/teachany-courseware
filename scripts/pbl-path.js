@@ -189,6 +189,7 @@ class PBLPathBuilder {
   _llmStageOptions(stage) {
     const map = {
       decompose: { maxTokens: 4500, temperature: 0.35 },
+      'review-decompose': { maxTokens: 5000, temperature: 0.12 },
       filter: { maxTokens: 1200, temperature: 0.25 },
       'propose-curriculum': { maxTokens: 3000, temperature: 0.25 },
       'validate-match': { maxTokens: 6000, temperature: 0.1 },
@@ -357,11 +358,16 @@ class PBLPathBuilder {
 
   _validateBlueprint(blueprint, goal, archetype) {
     if (this._archetypeEngine?.validateBlueprint) {
-      return this._archetypeEngine.validateBlueprint(blueprint, archetype);
+      const base = this._archetypeEngine.validateBlueprint(blueprint, archetype);
+      if (!base.valid) return base;
     }
     const issues = [];
     if (!blueprint?.schemes?.length) issues.push('缺少可行方案');
     if (!blueprint?.deliverable) issues.push('缺少交付物');
+    if (this._isGenericBlueprintText(blueprint?.projectSummary)) issues.push('项目概述过于笼统');
+    if (!blueprint?.scopeLimits?.length) issues.push('缺少能力边界说明');
+    if (!blueprint?.successCriteria?.length) issues.push('缺少验收标准');
+    if (this._blueprintStepDepthScore(blueprint) < 2) issues.push('阶段任务可操作性不足');
     return { valid: issues.length === 0, issues };
   }
 
@@ -404,6 +410,15 @@ class PBLPathBuilder {
       }
     }
 
+    if (this._shouldPurgeGeographyClimateForGoal(goal)) {
+      const geoNodes = matched.filter(n => this._isOffTopicGeographyClimateNode(n));
+      if (geoNodes.length) {
+        const pen = Math.min(25, geoNodes.length * 10);
+        score -= pen;
+        breakdown.push({ key: 'geo', label: `无关气候地理节点 ${geoNodes.length} 个`, delta: -pen });
+      }
+    }
+
     const banned = matched.filter(n => this._isGenericTransversalNode(n.name, goal));
     if (banned.length) {
       const pen = Math.min(15, banned.length * 5);
@@ -420,6 +435,17 @@ class PBLPathBuilder {
       const pen = Math.min(20, hollow * 4);
       score -= pen;
       breakdown.push({ key: 'hollow', label: '空话步骤', delta: -pen });
+    }
+
+    if (projectBlueprint && this._isGenericBlueprintText(projectBlueprint.projectSummary)) {
+      score -= 12;
+      breakdown.push({ key: 'summary', label: '项目概述套话', delta: -12 });
+    }
+    const stepDepth = this._blueprintStepDepthScore(projectBlueprint);
+    if (stepDepth > 0 && stepDepth < 2.5) {
+      const pen = Math.min(15, Math.round((2.5 - stepDepth) * 8));
+      score -= pen;
+      breakdown.push({ key: 'depth', label: '任务步骤偏笼统', delta: -pen });
     }
 
     const bpVal = this._validateBlueprint(projectBlueprint, goal, archetype);
@@ -1242,6 +1268,7 @@ class PBLPathBuilder {
 
   _isEnergyEngineeringGoal(goal) {
     const g = String(goal || '');
+    if (this._isEnergyAnalysisGoal(g)) return false;
     if (this._isConsumerDecisionGoal(g)) return false;
     if (/(车|汽车|轿车|SUV|用车)/.test(g) && /新能源|燃油|电动|混动|油电/.test(g) && !/设计|制作|研发|装置|系统开发|搭建|发明|工程化|发电|储能装置/.test(g)) return false;
     if (/对比|比较|选购|购车|买车|选车|家用|家庭/.test(g) && !/设计|制作|研发|装置|系统开发|搭建|发电|储能|并网|逆变/.test(g)) {
@@ -1249,6 +1276,16 @@ class PBLPathBuilder {
     }
     return /新能源|光伏|太阳能|风电|风力|储能|电池|锂电|充电|发电|电能|清洁能源|碳中和|能源车|并网|逆变/.test(g)
       && /设计|制作|研发|装置|系统|搭建|工程|发电|储能|模型|实验|探究/.test(g);
+  }
+
+  /** 光伏/能源收益测算类（数据分析报告，非硬件制作） */
+  _isEnergyAnalysisGoal(goal) {
+    const g = String(goal || '');
+    const topic = this._extractTopicProfile(g);
+    if (topic.kind === 'energy-analysis') return true;
+    return /光伏|太阳能|发电潜力|发电收益|屋顶.*光伏|碳减排/.test(g)
+      && /测算|估算|调查|分析|收益|减排|用电|日照|潜力|效益/.test(g)
+      && !/接线|原型|传感器|水泵|搭建|制作|组装|烧录|GPIO/.test(g);
   }
 
   /** 化学溶液/浓度/厨房化学等探究类（以 chemistry 为主线） */
@@ -1439,6 +1476,13 @@ class PBLPathBuilder {
     if (domainsList.some(d => (d.subjects || []).includes(node.subject))) score += 2;
 
     if (this._shouldPurgeChemistryForGoal(g) && node.subject === 'chemistry' && this._isOffTopicChemistryNode(node)) score -= 45;
+    if (this._isEnergyAnalysisGoal(g)) {
+      if (/光伏|太阳能|光电|电功率|电能|能量转化|能量守恒|欧姆|电路|电流|电压|一次函数|函数模型|统计|百分/.test(`${name} ${text}`)) score += 14;
+      if (node.subject === 'math' && /函数|统计|百分|计算|数据|方程/.test(name)) score += 8;
+      if (node.subject === 'physics' && /能量|电|光|功率|电路|欧姆/.test(name)) score += 8;
+      if (this._isOffTopicGeographyClimateNode(node)) score -= 55;
+      if (node.subject === 'chemistry' && /热化学|焓变|有机/.test(`${name} ${text}`)) score -= 45;
+    }
     if (this._isGenericTransversalNode(name, g)) score -= 40;
     if (!this._shouldAllowUniversityNodes(g) && this._isUniversityNode(node)) score -= 35;
     if (archetype && this._isArchetypeBanned(node, archetype)) score -= 60;
@@ -1568,6 +1612,9 @@ class PBLPathBuilder {
   _sanitizeDeliverableTitle(name, goal) {
     const art = this._compactProjectLabel(goal);
     let s = this._stripGoalMarkup(name, goal).replace(/^《+|》+$/g, '').trim();
+    if (this._isEnergyAnalysisGoal(goal) && /测算|收益|减排|论证|图表|记录表/.test(s) && s.length >= 8) {
+      return s.includes(art) ? s : `${art}：${s}`;
+    }
     if (!s || this._containsGoalMarkup(s) || s.length > 24) {
       const hint = s.match(/(?:立意清单|素材库|初稿集|批注集|诗集|朗诵|展示|报告|方案|记录表)/);
       const short = hint ? hint[0] : (this._cleanPhaseName(s) || '阶段产出');
@@ -1767,6 +1814,17 @@ class PBLPathBuilder {
     return this._inferTopicKind(String(goal || ''), this._parseGoalSubject(goal)) === 'environmental-filtration';
   }
 
+  _photovoltaicAnalysisDomains(goal) {
+    const subject = this._compactProjectLabel(goal) || '校园光伏发电';
+    return [
+      { id: 'resource', label: '太阳能资源', keywords: [subject, '光伏', '太阳能', '日照', '辐射', '光电', '电功率', '能量'], subjects: ['physics', 'science'] },
+      { id: 'electricity', label: '用电与屋顶', keywords: [subject, '用电', '电量', '电费', '调查', '数据', '统计', '校园', '屋顶'], subjects: ['math', 'science', 'geography'] },
+      { id: 'calc', label: '收益测算', keywords: [subject, '函数', '计算', '收益', '成本', '百分比', '统计', '估算', '发电'], subjects: ['math'] },
+      { id: 'carbon', label: '减排效益', keywords: [subject, '碳', '排放', '减排', '环境', '能源', '对比'], subjects: ['geography', 'science'] },
+      { id: 'report', label: '方案论证', keywords: [subject, '说明', '报告', '论证', '建议', '图表'], subjects: ['chinese', 'math'] },
+    ];
+  }
+
   _embeddedIoTDomains(goal) {
     const subject = this._compactProjectLabel(goal) || '智能装置';
     return [
@@ -1824,6 +1882,9 @@ class PBLPathBuilder {
     if (kind === 'environmental-filtration' || /微塑料|过滤|净水|废水|滤芯/.test(g + subject)) {
       base.push('过滤', '沉淀', '吸附', '微塑料', '拦截', '对照', '流速', '孔径', '环境', '污染');
     }
+    if (kind === 'energy-analysis' || this._isEnergyAnalysisGoal(g)) {
+      base.push('光伏', '太阳能', '光电', '电功率', '能量转化', '一次函数', '统计', '百分比', '碳排放', '日照', '发电', '收益', '减排');
+    }
     for (let i = 0; i < subject.length - 1; i++) {
       const w = subject.slice(i, i + 2);
       if (w.length === 2 && !/[的与及了在]$/.test(w)) base.push(w);
@@ -1836,6 +1897,9 @@ class PBLPathBuilder {
   _inferDeliverableHint(goal, subject, kind) {
     if (kind === 'embedded-iot' || this._isEmbeddedOrIoTGoal(goal)) {
       return `可运行的「${subject}」装置原型 + 控制逻辑说明 + 测试记录表`;
+    }
+    if (kind === 'energy-analysis' || this._isEnergyAnalysisGoal(goal)) {
+      return `光伏发电测算表 + 收益与减排分析图表 + 方案论证报告`;
     }
     if (kind === 'exhibition-redesign') return `「${subject}」改造方案册（现状诊断表+展陈设计图+整改实施清单+开放验收表）`;
     if (kind === 'industry-innovation') return `「${subject}」创新方案报告（场景调研+政策要点+可行性论证）`;
@@ -1892,7 +1956,7 @@ class PBLPathBuilder {
         kind: 'environmental-survey',
       },
       {
-        test: /光伏|太阳能发电|屋顶光伏|发电收益|碳减排效益/,
+        test: /光伏|太阳能发电|屋顶.*光伏|发电潜力|发电收益|碳减排效益/,
         coreTopic: '校园光伏发电测算',
         definition: '调查日照与用电数据，估算屋顶光伏发电收益与碳减排效益',
         keywords: ['光伏', '太阳能', '发电', '收益', '碳', '减排', '统计', '函数', '环境', '能源'],
@@ -2035,6 +2099,7 @@ class PBLPathBuilder {
     if (this._isExhibitionRedesignGoal(g)) return 'exhibition-redesign';
     if (this._isIndustryInnovationGoal(g)) return 'industry-innovation';
     if (/工坊|鲁班|榫卯|古典.*风格|木结构|建筑模型|微缩|传统建筑|斗拱|飞檐/.test(g)) return 'maker-workshop';
+    if (this._isEnergyAnalysisGoal(g)) return 'energy-analysis';
     if (/算力中心|数据中心|太空算力|云计算|边缘计算|计算中心|服务器集群|卫星计算|轨道计算/.test(g)) return 'engineering';
     if (/火箭|导弹|发射|机器人|物流机器人|医院.*机器人|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现/.test(g)) return 'engineering';
     if (/无人机|原型/.test(g) && /设计|制作|研发|装置|系统|搭建|开发/.test(g)) return 'engineering';
@@ -2126,6 +2191,13 @@ class PBLPathBuilder {
         { id: 'structure', label: '结构与装置', keywords: ['结构', '装置', '材料', '设计', '搭建', '组装', '电路', '机械'], subjects: ['physics', 'engineering', 'science'] },
         { id: 'control', label: '控制与实现', keywords: ['控制', '传感', '编程', '算法', '电路', '反馈', '调试'], subjects: ['info-tech', 'physics', 'engineering'] },
         { id: 'test', label: '测试与迭代', keywords: ['测试', '实验', '测量', '数据', '误差', '记录', '优化'], subjects: ['math', 'physics', 'science'] },
+      ],
+      'energy-analysis': [
+        { id: 'resource', label: '太阳能资源', keywords: ['光伏', '太阳能', '日照', '辐射', '光电', '电功率', '能量'], subjects: ['physics', 'science'] },
+        { id: 'electricity', label: '用电与屋顶', keywords: ['用电', '电量', '电费', '调查', '数据', '统计', '屋顶', '面积'], subjects: ['math', 'science'] },
+        { id: 'calc', label: '收益测算', keywords: ['函数', '计算', '收益', '成本', '百分比', '统计', '估算', '发电'], subjects: ['math'] },
+        { id: 'carbon', label: '减排效益', keywords: ['碳', '排放', '减排', '环境', '能源', '对比'], subjects: ['geography', 'science'] },
+        { id: 'report', label: '方案论证', keywords: ['说明', '报告', '论证', '建议', '图表'], subjects: ['chinese', 'math'] },
       ],
       'general': [
         { id: 'define', label: '调研与定义', keywords: ['调研', '需求', '定义', '背景', '分析', '资料'], subjects: ['chinese', 'history', 'geography', 'math'] },
@@ -2255,13 +2327,8 @@ class PBLPathBuilder {
         { id: 'report', label: '治理建议', keywords: ['报告', '建议', '治理', '环境', '倡议'], subjects: ['chinese', 'geography'] },
       ];
     }
-    if (/光伏|太阳能发电|屋顶光伏/.test(g)) {
-      return [
-        { id: 'resource', label: '太阳能资源', keywords: ['光伏', '太阳能', '发电', '辐射', '能量'], subjects: ['physics', 'geography'] },
-        { id: 'calc', label: '收益测算', keywords: ['函数', '计算', '统计', '百分比', '成本', '数据'], subjects: ['math'] },
-        { id: 'environment', label: '减排效益', keywords: ['环境', '碳', '排放', '气候', '能源'], subjects: ['geography', 'chemistry'] },
-        { id: 'report', label: '方案论证', keywords: ['说明', '报告', '论证', '建议'], subjects: ['chinese', 'math'] },
-      ];
+    if (this._isEnergyAnalysisGoal(g)) {
+      return this._photovoltaicAnalysisDomains(g);
     }
     if (/斗拱|古建.*模型|古建.*测绘/.test(g)) {
       return [
@@ -2458,6 +2525,7 @@ class PBLPathBuilder {
     if (/化学|溶液|滴定|离子|有机|物质的量|电导率|氧化还原|原电池|电解/.test(g)) return false;
     if (this._isEmbeddedOrIoTGoal(g)) return true;
     if (this._isGroundRoboticsGoal(g)) return true;
+    if (this._isEnergyAnalysisGoal(g)) return true;
     const type = this._classifyProjectType(g);
     if (type === 'engineering' && !/化学|电池|燃料|电解|氧化|蓄电|储能/.test(g)) return true;
     return false;
@@ -2466,7 +2534,22 @@ class PBLPathBuilder {
   _isOffTopicChemistryNode(node) {
     if (!node || node.subject !== 'chemistry') return false;
     const blob = `${String(node.name || '')} ${this._nodeSearchText(node)}`;
-    return /有机合成|有机化合物|烃|离子检验|钠及其化合物|醇|酚|醛|酮|羧酸|酯|胺|硝基|苯|同分异构|官能团|滴定|硝酸银|电导率|物质的量浓度|气体摩尔体积|原电池|电解池/.test(blob);
+    return /有机合成|有机化合物|烃|离子检验|钠及其化合物|醇|酚|醛|酮|羧酸|酯|胺|硝基|苯|同分异构|官能团|滴定|硝酸银|电导率|物质的量浓度|气体摩尔体积|原电池|电解池|热化学|焓变/.test(blob);
+  }
+
+  _isOffTopicGeographyClimateNode(node) {
+    if (!node || node.subject !== 'geography') return false;
+    const blob = `${String(node.name || '')} ${this._nodeSearchText(node)}`;
+    return /大气环流|三圈环流|季风|宇宙环境|洋流|气压带|风带|地球运动|昼夜交替|全球性大气/.test(blob);
+  }
+
+  _shouldPurgeGeographyClimateForGoal(goal) {
+    return this._isEnergyAnalysisGoal(goal);
+  }
+
+  _purgeGeographyClimateNoise(nodes, goal) {
+    if (!this._shouldPurgeGeographyClimateForGoal(goal) || !Array.isArray(nodes)) return nodes;
+    return nodes.filter(n => !this._isOffTopicGeographyClimateNode(n));
   }
 
   _purgeChemistryNoise(nodes, goal) {
@@ -2478,6 +2561,7 @@ class PBLPathBuilder {
     let list = this._purgeBiologyNoise(nodes, goal);
     list = this._purgeOffTopicScienceNoise(list, goal);
     list = this._purgeChemistryNoise(list, goal);
+    list = this._purgeGeographyClimateNoise(list, goal);
     return list;
   }
 
@@ -2499,6 +2583,9 @@ class PBLPathBuilder {
     const blueprint = this._activeBlueprint || null;
     if (this._shouldPurgeChemistryForGoal(goal) && this._isOffTopicChemistryNode(node)) {
       return '工程/IoT目标不宜引入无关化学节点';
+    }
+    if (this._shouldPurgeGeographyClimateForGoal(goal) && this._isOffTopicGeographyClimateNode(node)) {
+      return '光伏测算不宜引入大气环流等气候系统节点';
     }
     const score = this._scoreUniversalRelevance(node, goal, blueprint, domains, archetype);
     if (score < this._relevanceKeepThreshold(false)) return `相关性不足(${score})`;
@@ -2703,7 +2790,7 @@ class PBLPathBuilder {
     if (/^运用[①②③④⑤⑥⑦⑧⑨⑩\d]+「/.test(s) && /完成本阶段|探究任务/.test(s)) return true;
     if (/^(选择|确定|调研|了解|学习|掌握|认识|编写基础|配置|安装).{0,12}(组件|框架|逻辑|特点|风格|方案|软件|环境)$/.test(s)) return true;
     if (/进行.{0,6}(测试|调研|研究|探究|活动)$/.test(s)) return true;
-    if (this._stepActionabilityScore(s) < 3) return true;
+    if (this._stepActionabilityScore(s) < 2) return true;
     return false;
   }
 
@@ -2711,11 +2798,12 @@ class PBLPathBuilder {
     const s = String(step || '');
     if (!s || s.length < 8) return 0;
     let score = 0;
-    if (/\d+(\.\d+)?\s*(cm|mm|m|ml|g|kg|℃|°|分钟|小时|天|次|人|题|页|张|帧|行|列)/.test(s)) score += 3;
+    if (/\d+(\.\d+)?\s*(cm|mm|m|ml|g|kg|℃|°|分钟|小时|天|日|次|人|题|页|张|帧|行|列|条|份|组|点|字|mw|kwh|度)/i.test(s)) score += 3;
     if (/\d+[\-–~至]\d+/.test(s)) score += 2;
     if (/≥|≤|不少于|不超过|精确到|至少|至多/.test(s)) score += 2;
-    if (/表格|清单|记录表|草图|立面|平面|BOM|问卷|提纲|甘特|量规|检查表|数据表|照片|截图|附录/.test(s)) score += 2;
-    if (/填写|绘制|称量|测量|焊接|切割|打磨|组装|编程|调试|访谈|统计|撰写|标注|拍照|导出|打印/.test(s)) score += 1;
+    if (/表格|清单|记录表|草图|立面|平面|BOM|问卷|提纲|甘特|量规|检查表|数据表|照片|截图|附录|折线图|示意图|柱状|扇形|模型|因子|假设|论证|测算表/.test(s)) score += 2;
+    if (/填写|绘制|称量|测量|焊接|切割|打磨|组装|编程|调试|访谈|统计|撰写|标注|拍照|导出|打印|查阅|计算|测绘|调查|分析|整理|录入|估算|对比/.test(s)) score += 1;
+    if (/面积×|效率×|日照|用电|减排|碳排放|收益|电价|辐射|光电|屋顶|碳足迹/.test(s)) score += 1;
     if (PBLPathBuilder.HOLLOW_STEP_RE.test(s)) score -= 4;
     if (/^(选择|确定|了解|学习|掌握|认识|编写基础)/.test(s)) score -= 2;
     return score;
@@ -2751,6 +2839,172 @@ class PBLPathBuilder {
     return (llmSteps || []).slice(0, 4);
   }
 
+  _isGenericBlueprintText(text) {
+    const s = String(text || '').trim();
+    if (!s || s.length < 16) return true;
+    return /按模块推进|阶段产出可检查|可检查验收|主题实施方案|浸润式|递进式|可展示的项目原型|围绕「.+」按模块|紧扣题目关键词|每阶段产出可检查|技术路线概述|方案名称/.test(s);
+  }
+
+  _blueprintStepDepthScore(blueprint) {
+    const scheme = (blueprint?.schemes || []).find(s => s.id === blueprint?.recommendedSchemeId)
+      || blueprint?.schemes?.[0];
+    const phases = scheme?.phases || [];
+    if (!phases.length) return 0;
+    let total = 0;
+    let count = 0;
+    phases.forEach(p => {
+      (p.steps || []).forEach(st => {
+        count++;
+        total += this._stepActionabilityScore(st);
+        if (this._isHollowStep(st)) total -= 3;
+      });
+    });
+    return count ? total / count : 0;
+  }
+
+  _inferDefaultScopeLimits(goal) {
+    const art = this._compactProjectLabel(goal);
+    const type = this._classifyProjectType(goal);
+    const common = [
+      `不能把课堂/简化模型结论直接等同于真实场景下的专业认证结果`,
+      `所有数据须注明来源、假设条件与测量/调查日期，禁止无依据外推`,
+    ];
+    const byType = {
+      'energy-analysis': [`不能把估算发电量写成已并网运行的确定产能`, `减排效益须基于可查碳排放因子，不能宣称「完全零碳」`],
+      engineering: [`不能把原型演示等同于产品级可靠性认证`, `涉及用电/加热/切割等操作须有成人指导与安全预案`],
+      'scientific-inquiry': [`不能把单次课堂实验结论推广为普遍规律`, `样本量过小时须在报告中写明局限`],
+      'social-inquiry': [`不能把班级小样本调查等同于全市/全国结论`, `访谈与问卷须保护受访者隐私`],
+      'consumer-decision': [`车型/产品参数须来自公开资料并标注日期`, `成本测算须列出假设（里程、电价/油价等）`],
+    };
+    return [...(byType[type] || [`不能把「${art}」的初步成果夸大为已规模化落地`]), ...common].slice(0, 4);
+  }
+
+  _inferDefaultSuccessCriteria(goal) {
+    const art = this._compactProjectLabel(goal);
+    const deliverable = this._extractTopicProfile(goal).deliverableHint || art;
+    return [
+      `最终交付物「${deliverable}」齐全：数据表/图表/说明文字可现场核查`,
+      `每阶段至少有 1 份签字或拍照留档的过程记录`,
+      `报告或方案中至少 3 处引用本项目原始数据（附表号或图号）`,
+      `答辩或展示时能回答「数据怎么来的、假设是什么、局限在哪」`,
+    ].slice(0, 4);
+  }
+
+  _inferDefaultConstraints(goal) {
+    const weeks = this._parseExplicitGradeBand(goal).maxGrade <= 6 ? '2-3' : '3-4';
+    return [
+      `建议周期 ${weeks} 周，每周有明确阶段产出`,
+      `材料与工具限于校园/家庭可获取范围，超预算须说明替代方案`,
+      `涉及户外调查、用电、加热、切割等须遵守校方安全规定`,
+    ];
+  }
+
+  /** 按模块 id 生成可执行步骤模板（全项目类型通用） */
+  _domainStepTemplates(dom, artifact, knRef = '本阶段课标知识点') {
+    if (!dom) return [];
+    const label = dom.label || dom.id;
+    const byId = {
+      question: [`围绕「${artifact}」写出 1 条可验证问题与 2 条假设，列出将观察的指标≥3项`, `用 ${knRef} 解释问题背后的科学/社会原理，整理 1 页概念笔记`],
+      design: [`为「${artifact}」绘制${label}流程图，标注变量/对照/测量工具各≥1项`, `编制${label}实施检查表（步骤/负责人/截止日/产出文件）`],
+      data: [`按${label}方案采集原始数据≥10条，录入表格并标注单位与日期`, `用 ${knRef} 绘制≥1种统计图，计算至少 2 项百分比或平均数`],
+      analyze: [`整理${label}数据并写出 3 条基于图表的发现（每条对应 1 张图或 1 组数据）`, `讨论${label}中的误差或局限，列出 2 条改进方向`],
+      conclusion: [`撰写${label}分析小结（≥300字），含结论、证据与 1 条生活联系`, `对照 successCriteria 完成${label}自评表并勾选验收项`],
+      topic: [`确定「${artifact}」调查对象与样本量（如本班/年级抽样≥15人），写出调查问题 1 句`, `设计 8-10 题问卷或访谈提纲（含 2 道开放题），注明发放渠道`],
+      collect: [`完成${label}实地走访或资料收集，填写原始记录表并附照片≥3张`, `整理回收数据，标注缺失值与 2 份异常答卷的处理方式`],
+      report: [`撰写「${artifact}」${label}报告（≥600字）：摘要/方法/发现/建议四段结构`, `制作 1 页答辩要点清单（3 条结论+2 个图表编号+1 条局限说明）`],
+      survey: [`走访≥2处与「${artifact}」相关点位，填写${label}记录表（观察项≥8条）`, `汇总${label}现场照片≥3张并标注时间与地点`],
+      test: [`按检查表完成「${artifact}」${label}测试≥3次，记录成功率/误差并求平均`, `整理测试数据表，写出 1 条现象解释与 1 处改进计划`],
+      build: [`按方案完成「${artifact}」${label}核心工序，填写过程记录表（时间/工具/问题各≥1条）`, `拍摄制作过程照片≥3张，标注关键尺寸或接线点`],
+      principle: [`画出「${artifact}」${label}原理框图，标注输入/输出与关键公式或规律`, `用 ${knRef} 列出器材/工具清单（型号/数量）与 3 项测试指标`],
+      structure: [`绘制「${artifact}」${label}结构草图，标注≥5处关键尺寸`, `编制物料清单（名称/规格/数量/单价），合计预算并附安全注意 2 条`],
+      control: [`实现「${artifact}」${label}功能点 1 个，附测试用例 3 条（输入/预期/实测）`, `保存调试日志或运行截图，记录 1 次故障与修复过程`],
+      resource: [`查阅与「${artifact}」相关的${label}资料≥3条，整理数据来源对照表`, `记录${label}原始数据≥7组，注明采集日期与换算方法`],
+      electricity: [`统计「${artifact}」相关用电量或样本数据，制成折线图/柱状图`, `测绘或估算关键面积/尺寸，绘制示意图并标注假设条件`],
+      calc: [`建立「${artifact}」${label}计算模型，列出假设并完成测算表`, `用 ${knRef} 完成收益/成本/效率中至少 1 项定量计算`],
+      carbon: [`查阅碳排放或环境因子，计算「${artifact}」${label}对比量并制表`, `制作${label}效益对比图表，写出 2 条可核查结论`],
+      define: [`收集「${artifact}」背景资料 3 条（各 50 字摘要+来源），制成优先级表`, `明确 1 个可检查交付物与 3 条验收标准（谁检查、看什么）`],
+      make: [`执行「${artifact}」${label}核心任务，按阶段记录关键数据与过程证据`, `整理${label}中间产出文件（表/图/照片）并编号归档`],
+      theme: [`确定「${artifact}」${label}主题与受众，写 100 字创意/策划简报`, `列出 2 个参考范例并各写 50 字借鉴点`],
+      read: [`建立「${artifact}」${label}素材库：摘录≥20条语料并分类标注`, `用 ${knRef} 完成阅读/资料提纲（中心句+3分论点）`],
+      express: [`完成「${artifact}」${label}初稿（不少于规定字数/件数），标注待改段落`, `按结构/语言两项自评表修改 1 轮，保留修改对照`],
+      revise: [`定稿并排版「${artifact}」${label}成果，附 200 字创作/实施说明`, `准备展示稿与 2 个听众可能提问的回答要点`],
+      research: [`描述「${artifact}」目标用户与 3 个痛点，完成 10 人迷你访谈并汇总`, `用 ${knRef} 列出核心功能与竞品差异表`],
+      cost: [`制作「${artifact}」${label}成本表，用百分比或函数估算盈亏平衡点`, `列出 3 条成本敏感性假设（价格/销量/耗材变动）`],
+      plan: [`制作「${artifact}」${label}日程甘特图或流程表，含物料清单`, `完成关键准备项检查表并勾选负责人与截止日`],
+      assess: [`按方案执行并记录签到/照片，当天填写执行日志`, `撰写 500 字复盘：亮点、问题、费用决算与改进建议`],
+      status: [`调查「${artifact}」${label}现状，回收有效问卷≥15份或访谈≥5人`, `用表格呈现${label}基线数据，计算至少 1 项统计量`],
+      knowledge: [`查阅与「${artifact}」相关的${label}科学资料≥3条并摘录要点`, `制作${label}概念图，标注 5 个关键术语及关系`],
+      cultivate: [`完成「${artifact}」${label}实操步骤，填写操作日志（日期/天气/问题各 1 条）`, `拍摄过程照片≥3张，标注工具与安全防护`],
+      observe: [`每周 2 次测量「${artifact}」${label}指标，录入表格并绘制折线图（≥4点）`, `对比${label}变化趋势，写出 2 条数据发现`],
+      heritage: [`查阅「${artifact}」${label}史料或实地资料≥3条，整理史迹观察表`, `绘制${label}平面示意图，标注尺寸比例与关键构件`],
+      measure: [`测量「${artifact}」${label}关键尺寸≥5处，记录工具与误差`, `按相似比例换算${label}模型尺寸，附计算过程`],
+      diagnose: [`走访「${artifact}」并填写${label}诊断表：问题点位照片≥5张`, `列出≥8条现状问题并标注整改优先级`],
+      implement: [`编制「${artifact}」${label}实施清单（任务/负责人/工期/预算）`, `按清单执行并勾选完成项，附物资表合计`],
+      launch: [`按验收表逐项核查「${artifact}」${label}成果并签字`, `录制 3 分钟讲解视频或撰写 300 字宣传稿`],
+    };
+    if (byId[dom.id]) return byId[dom.id];
+    const hint = (dom.keywords || []).slice(0, 3).join('、') || label;
+    return [
+      `围绕「${artifact}」完成${label}：结合 ${knRef} 与关键词「${hint}」整理资料并产出可核查记录表`,
+      `为${label}编制检查表（步骤/数据/产出文件），完成后附照片或签字确认`,
+    ];
+  }
+
+  _enrichBlueprintMetadata(goal, blueprint) {
+    if (!blueprint) return blueprint;
+    const bp = blueprint;
+    const topic = this._extractTopicProfile(goal);
+    const art = this._compactProjectLabel(goal, topic);
+    const domains = this._inferProjectDomains(goal);
+    const chain = domains.map(d => d.label).join(' → ');
+
+    if (this._isGenericBlueprintText(bp.projectSummary)) {
+      bp.projectSummary = topic.definition
+        || `围绕「${topic.coreTopic || art}」按「${chain}」推进，最终交付${topic.deliverableHint || '可检查成果包'}`;
+    }
+    if (!bp.deliverable || /素养|能力|精神|阶段成果/.test(bp.deliverable) || bp.deliverable.length < 8) {
+      bp.deliverable = topic.deliverableHint || bp.deliverable;
+    }
+    if (!Array.isArray(bp.constraints) || bp.constraints.length < 2 || bp.constraints.every(c => this._isGenericBlueprintText(c))) {
+      bp.constraints = this._inferDefaultConstraints(goal);
+    }
+    if (!Array.isArray(bp.scopeLimits) || bp.scopeLimits.length < 2) {
+      bp.scopeLimits = this._inferDefaultScopeLimits(goal);
+    }
+    if (!Array.isArray(bp.successCriteria) || bp.successCriteria.length < 2) {
+      bp.successCriteria = this._inferDefaultSuccessCriteria(goal);
+    }
+    if (!bp.knowledgeChain && chain) bp.knowledgeChain = chain;
+    if (!Array.isArray(bp.subsystems) || !bp.subsystems.length) {
+      bp.subsystems = domains.map(d => ({
+        id: d.id,
+        name: d.label,
+        description: `围绕「${art}」完成${d.label}相关调查/实验/测算与记录`,
+      }));
+    }
+
+    (bp.schemes || []).forEach((s, si) => {
+      if (this._isGenericBlueprintText(s.summary)) {
+        s.summary = si === 0
+          ? `推荐路线：按「${chain}」分阶段推进，每阶段有可检查产出`
+          : `备选路线 ${s.id}：在材料/周期/深度上与推荐方案形成差异`;
+      }
+      if (!Array.isArray(s.pros) || s.pros.length < 2) {
+        s.pros = ['阶段任务可检查、可评分', '模块与题目关键词对齐', '适合课堂/社团分阶段实施'];
+      }
+      if (!Array.isArray(s.cons) || !s.cons.length) {
+        s.cons = ['需按本校条件微调数据与器材', '部分阶段需校外资料或成人指导'];
+      }
+      (s.phases || []).forEach((p, pi) => {
+        const dom = domains[pi];
+        if (dom && (/基础|实施|阶段|准备|探究/.test(String(p.phase || '')) || String(p.phase || '').length < 3)) {
+          p.phase = dom.label;
+        }
+      });
+    });
+    return bp;
+  }
+
   /** 从用户输入提取交付物锚点 — 一切任务步骤必须围绕此展开，禁止套其他项目模板 */
   _goalProfile(goal, blueprint = null) {
     const g = String(goal || '').trim();
@@ -2767,6 +3021,7 @@ class PBLPathBuilder {
       industry: topic.kind === 'industry-innovation',
       exhibition: topic.kind === 'exhibition-redesign',
       planting: topic.kind === 'planting-cultivation',
+      energyAnalysis: topic.kind === 'energy-analysis' || this._isEnergyAnalysisGoal(g),
     };
 
     const mismatchRes = [];
@@ -2778,6 +3033,9 @@ class PBLPathBuilder {
     }
     if (domains.planting) {
       mismatchRes.push(/原型驱动迭代|浸润式场景|快速原型|MVP|硬件准备|程序设计|牛顿定律|化学方程式|电解池|机械玩具|机器人/);
+    }
+    if (domains.energyAnalysis) {
+      mismatchRes.push(/稳定性测试|接线|组装|原型驱动|MVP|硬件准备|工程安全|故障排查|用户访谈|装置原型|烧录|GPIO|传感器模块|电机驱动/);
     }
     if (topic.matched) {
       mismatchRes.push(/递进式实施|原型驱动迭代|可展示的项目原型/);
@@ -2828,6 +3086,7 @@ class PBLPathBuilder {
     }
     if (this._isConsumerDecisionGoal(goal) && /循迹|巡线|红外传感|电机驱动|PID|避障|小车制作|飞控/.test(h)) return true;
     if (this._isSocialOrCivicInquiryGoal(goal) && /细胞|细胞膜|有丝分裂|减数分裂|抗生素|免疫|基因|DNA|光合|酶|微生物|生物分类/.test(h)) return true;
+    if (this._isEnergyAnalysisGoal(goal) && /大气环流|三圈环流|季风|宇宙环境|热化学|焓变|有机合成|接线|原型测试|稳定性测试/.test(h)) return true;
     return false;
   }
 
@@ -2984,6 +3243,24 @@ class PBLPathBuilder {
       }
       return `围绕「${artifact}」完成${phaseName}：结合 ${hints} 整理展陈资料并产出可核查记录表`;
     }
+    if (profile.domains.energyAnalysis || this._isEnergyAnalysisGoal(goal)) {
+      if (/日照|辐射|太阳能|资源|光电/.test(blob)) {
+        return `查阅本地日照/辐射资料，记录校园≥7日有效日照时数，整理数据来源与光电转化效率说明`;
+      }
+      if (/用电|电费|电量|屋顶|面积|调查/.test(blob)) {
+        return `统计校园近3个月用电量并制成折线图，测绘教学楼屋顶可用面积并绘制平面示意图（标注朝向与遮挡）`;
+      }
+      if (/收益|测算|函数|计算|发电|成本/.test(blob)) {
+        return `建立年发电量估算模型（面积×转换效率×日照时数），完成发电量与年收益测算表并列明假设条件`;
+      }
+      if (/碳|减排|排放|环境|效益/.test(blob)) {
+        return `查阅电力碳排放因子，计算年减排量并与校园用电碳足迹对比，制作分析图表`;
+      }
+      if (/报告|论证|建议|答辩|方案/.test(blob)) {
+        return `撰写「${artifact}」光伏发电方案论证报告（≥600字）：含数据表、图表与3条可行性建议`;
+      }
+      return `围绕「${artifact}」完成${phaseName}：结合${hints}整理测算资料并产出可核查数据表`;
+    }
     if (profile.domains.lowAltitude || profile.domains.industry || /产业|政策|空域|低空|场景/.test(blob)) {
       if (/政策|背景|产业|空域|法规/.test(blob)) {
         return `围绕「${artifact}」梳理${phaseName}：检索≥3条权威政策/行业资料并摘录要点，制成对照表（来源/日期/与项目关系各1列）`;
@@ -3052,15 +3329,24 @@ class PBLPathBuilder {
     if (ctx.subDesc) {
       return `${verb}${artifact}${phaseName}：${ctx.subDesc.slice(0, 80)}，产出「${outName}」并附可核查记录`;
     }
+    const domains = this._inferProjectDomains(goal);
+    const dom = domains[stepIdx] || domains[domains.length - 1];
+    const templated = this._domainStepTemplates(dom, artifact, hints);
+    if (templated[stepIdx % templated.length]) {
+      return templated[stepIdx % templated.length];
+    }
     return `${verb}${artifact}${phaseName}（结合${hints}），交付「${outName}」并附1份签字确认的过程记录表`;
   }
 
-  _phaseStepFillers(goal, phase, profile, ctx, startIdx) {
+  _phaseStepFillers(goal, phase, profile, ctx, phaseIndex) {
     const domains = this._inferProjectDomains(goal);
-    const dom = domains[startIdx] || domains[domains.length - 1];
+    const dom = domains[phaseIndex] || domains[domains.length - 1];
     const label = profile.shortLabel || profile.artifact;
     const phaseName = ctx.phaseName || '本阶段';
     if (!dom) return [];
+    const art = profile.shortLabel || profile.artifact;
+    const knRef = (phase?.knowledgeHints || ctx.hints || []).slice(0, 2).map(h => `「${h}」`).join('、') || '本阶段课标知识点';
+
     if (this._isSocialOrCivicInquiryGoal(goal)) {
       const byId = {
         survey: `设计10题${label}调查问卷，明确样本对象与回收目标≥15份`,
@@ -3077,7 +3363,34 @@ class PBLPathBuilder {
       if (hit) return [hit];
       return [`结合${dom.label}完成${label}${phaseName}记录（要点≥5条+可检查产出）`];
     }
-    return [];
+    if (this._isEnergyAnalysisGoal(goal)) {
+      const byId = {
+        resource: [
+          `查阅日照/辐射资料并记录校园7日有效日照时数（数据来源标注）`,
+          `结合光电转化原理，说明影响发电效率的2个因素并写入原理笔记`,
+        ],
+        electricity: [
+          `统计近3个月校园用电量并绘制折线图`,
+          `测绘教学楼屋顶可用面积，绘制平面示意图并标注朝向与遮挡`,
+        ],
+        calc: [
+          `建立年发电量估算模型（面积×效率×日照时数），完成计算表`,
+          `估算年发电收益与电费节约，列明电价/补贴等假设条件`,
+        ],
+        carbon: [
+          `查阅电力碳排放因子，计算年减排量`,
+          `制作减排效益对比图表，写出2条环境效益结论`,
+        ],
+        report: [
+          `撰写光伏发电方案论证报告（≥600字）`,
+          `整理3分钟答辩要点：关键数据表、图表编号与可行性论证`,
+        ],
+      };
+      const hits = byId[dom.id];
+      if (hits?.length) return hits;
+      return [`结合${dom.label}完成${label}${phaseName}测算记录（数据表+图表）`];
+    }
+    return this._domainStepTemplates(dom, art, knRef);
   }
 
   _concretizePhaseSteps(goal, phase, phaseIndex, totalPhases, archetype, blueprint) {
@@ -3091,9 +3404,11 @@ class PBLPathBuilder {
       const s = this._stripGoalMarkup(st, goal);
       if (!s) return;
       let out = s;
+      const energyStepOk = this._isEnergyAnalysisGoal(goal)
+        && /日照|辐射|用电|屋顶|发电|收益|减排|碳|报告|论证|测算|统计|函数|图表|模型|假设|因子/.test(s);
       const actionable = this._stepActionabilityScore(s) >= 4;
-      const needsRewrite = this._isHollowStep(s) || this._stepDomainMismatch(s, profile)
-        || (!actionable && !this._stepAnchoredToGoal(s, profile));
+      const needsRewrite = !energyStepOk && (this._isHollowStep(s) || this._stepDomainMismatch(s, profile)
+        || (!actionable && !this._stepAnchoredToGoal(s, profile)));
       if (needsRewrite) {
         out = this._expandStepAnchoredToGoal(s, goal, phase, profile, ctx, i);
       }
@@ -3103,7 +3418,7 @@ class PBLPathBuilder {
       }
     });
 
-    const fillers = this._phaseStepFillers(goal, phase, profile, ctx, steps.length);
+    const fillers = this._phaseStepFillers(goal, phase, profile, ctx, phaseIndex);
     fillers.forEach((filler, idx) => {
       if (steps.length >= 2) return;
       const out = filler || this._expandStepAnchoredToGoal('', goal, phase, profile, ctx, steps.length + idx);
@@ -3112,7 +3427,17 @@ class PBLPathBuilder {
         steps.push(out);
       }
     });
-    return steps.slice(0, 4);
+
+    const goodSteps = steps.filter(s => !this._isHollowStep(s));
+    const avgScore = goodSteps.length
+      ? goodSteps.reduce((a, s) => a + this._stepActionabilityScore(s), 0) / goodSteps.length
+      : 0;
+    if (goodSteps.length < 2 || avgScore < 2) {
+      const role = phaseIndex === 0 ? 'foundation' : (phaseIndex < totalPhases - 1 ? 'bridge' : 'core');
+      const suggested = this._suggestPhaseSteps(goal, { role, phase: phase?.phase, nodes: [] }, phase);
+      if (suggested.length) return suggested.slice(0, 4);
+    }
+    return (goodSteps.length ? goodSteps : steps).slice(0, 4);
   }
 
   _concretizeDeliverable(goal, phaseName, role, fallback, blueprint) {
@@ -3122,6 +3447,13 @@ class PBLPathBuilder {
     if (fallback && fallback.length >= 8 && !/阶段成果|探究任务|素养|能力/.test(fallback)
       && !this._containsGoalMarkup(fallback)) {
       return this._sanitizeDeliverableTitle(fallback, goal);
+    }
+    if (this._isEnergyAnalysisGoal(goal)) {
+      if (/资源|日照|太阳能|辐射/.test(phase)) return `「${art}」日照/辐射调查记录表（≥7天数据+来源标注）`;
+      if (/用电|屋顶|调查/.test(phase)) return `「${art}」用电量统计表 + 屋顶面积测算示意图`;
+      if (/收益|测算|计算|函数/.test(phase)) return `「${art}」年发电量与收益测算表（含假设说明）`;
+      if (/减排|碳|环境|效益/.test(phase)) return `${art}碳减排效益分析图表 + 对比说明`;
+      if (/论证|报告/.test(phase)) return `${/光伏/.test(art) ? art : art + '光伏'}发电方案论证报告`;
     }
     if (/算力中心|数据中心|太空算力|卫星计算|轨道计算/.test(String(goal || ''))) {
       if (/需求|约束|原理|调研/.test(phase)) return `「${art}」需求与约束定义表（任务负载+轨道环境+性能指标）`;
@@ -3140,10 +3472,14 @@ class PBLPathBuilder {
   _concretizeBlueprint(goal, blueprint, archetype = null) {
     if (!blueprint?.schemes?.length) return blueprint;
     const profile = this._goalProfile(goal, blueprint);
-    const bp = JSON.parse(JSON.stringify(blueprint));
+    let bp = JSON.parse(JSON.stringify(blueprint));
+    bp = this._enrichBlueprintMetadata(goal, bp);
 
     if (!bp.deliverable || /素养|能力|精神|阶段成果$/.test(bp.deliverable) || bp.deliverable.length < 8) {
       bp.deliverable = profile.blueprintDeliverable || `可交付的「${profile.artifact}」成果包（作品+记录+说明）`;
+    }
+    if (this._isEnergyAnalysisGoal(goal) && /测算表|收益|减排|论证报告/.test(bp.deliverable)) {
+      bp.deliverable = profile.topic?.deliverableHint || bp.deliverable;
     }
 
     if (this._isFiltrationGoal(goal) && (!Array.isArray(bp.scopeLimits) || !bp.scopeLimits.length)) {
@@ -3463,6 +3799,13 @@ class PBLPathBuilder {
 
   /** 按项目类型提供课标外知识点候选池（LLM 未返回时回退） */
   _fallbackExternalPool(goal) {
+    if (this._isEnergyAnalysisGoal(goal)) {
+      return [
+        { name: '光伏发电量估算模型', reason: '面积×转换效率×有效日照时数的简化模型，课本较少系统讲授' },
+        { name: '电力碳排放因子', reason: '减排效益测算需查阅区域电网排放因子，课标外常用数据' },
+        { name: '投资回收期测算', reason: '收益分析中的简易经济评价方法，超出常规课标深度' },
+      ];
+    }
     if (this._isChemistryInquiryGoal(goal)) {
       if (this._getChemistryAnalysisProfile(goal).mixed) {
         return [
@@ -4404,6 +4747,13 @@ class PBLPathBuilder {
   }
 
   _defaultDeliverable(role, goal = '') {
+    if (this._isEnergyAnalysisGoal(goal)) {
+      return ({
+        foundation: '日照/辐射调查记录表 + 太阳能发电原理笔记',
+        bridge: '用电量统计表 + 屋顶面积测算示意图',
+        core: '年发电量收益测算表 + 碳减排分析图表 + 方案论证报告',
+      })[role] || '光伏发电测算阶段成果';
+    }
     if (this._isChemistryInquiryGoal(goal)) {
       const cap = this._getChemistryAnalysisProfile(goal);
       if (cap.mixed) {
@@ -4553,6 +4903,44 @@ class PBLPathBuilder {
         core: [
           `完成终稿并附制作说明（工具、素材来源、时长/尺寸）`,
           `布置展示位或线上发布，准备 1 分钟作品介绍词`,
+        ],
+      };
+      return mk(map[role] || map.core);
+    }
+    if (type === 'energy-analysis' || this._isEnergyAnalysisGoal(goal)) {
+      const phase = String(blueprintPhase?.phase || group.phase || '');
+      if (/资源|日照|太阳能|辐射/.test(phase)) return mk([
+        `查阅本地日照/辐射资料，整理校园≥7日有效日照时数记录表（标注数据来源）`,
+        `结合 ${knRef} 说明光能→电能转化原理，列出屋顶可用面积与遮挡因素`,
+      ]);
+      if (/用电|屋顶|调查/.test(phase)) return mk([
+        `统计校园近3个月用电量，制成月度用电折线图`,
+        `测量或估算教学楼屋顶可用铺设面积，绘制平面示意图并标注朝向`,
+      ]);
+      if (/收益|测算|计算|函数/.test(phase)) return mk([
+        `建立年发电量估算模型（面积×转换效率×日照时数），用 ${knRef} 完成计算表`,
+        `估算年发电收益与电费节约（含电价、补贴假设），计算投资回收期简表`,
+      ]);
+      if (/减排|碳|环境|效益/.test(phase)) return mk([
+        `查阅电力碳排放因子，计算年减排量并与校园用电碳足迹对比`,
+        `制作减排效益对比图表，写出2条环境效益结论`,
+      ]);
+      if (/论证|报告|方案/.test(phase)) return mk([
+        `撰写光伏发电方案论证报告（现状-测算-收益-减排-建议，≥600字）`,
+        `准备3分钟答辩要点：关键数据表、图表编号与3条可行性论证`,
+      ]);
+      const map = {
+        foundation: [
+          `查阅日照资料并整理校园7日日照/辐射记录表，标注数据来源`,
+          `结合 ${knRef} 说明太阳能发电基本原理与光电转化效率影响因素`,
+        ],
+        bridge: [
+          `统计校园月用电量并绘制折线图，测算屋顶可用面积（附平面示意图）`,
+          `建立年发电量估算模型，完成发电量与收益测算表（列明假设条件）`,
+        ],
+        core: [
+          `计算碳减排效益并与用电碳足迹对比，制作分析图表`,
+          `撰写光伏发电方案论证报告并准备答辩要点清单`,
         ],
       };
       return mk(map[role] || map.core);
@@ -5143,6 +5531,31 @@ class PBLPathBuilder {
       this._sanitizeBlueprintPhasesInPlace(grbp, goal);
       return this._concretizeBlueprint(goal, grbp, this._resolvedArchetype);
     }
+    if (this._isEnergyAnalysisGoal(goal)) {
+      let eabp = bp;
+      const topic = this._extractTopicProfile(goal);
+      const label = topic.coreTopic || this._compactProjectLabel(goal);
+      if (!eabp?.schemes?.length) {
+        eabp = this._buildSubjectAnchoredBlueprint(goal, `「${label}」光伏发电测算方案`);
+      } else {
+        eabp = JSON.parse(JSON.stringify(eabp));
+      }
+      eabp.projectType = 'energy-analysis';
+      const badRe = /调研报告|调查报告|稳定性测试|接线|组装|原型驱动|MVP|硬件|工程报告|装置原型|工程安全|故障排查/;
+      if (!eabp.deliverable || badRe.test(eabp.deliverable) || /研究报告|调查报告/.test(eabp.deliverable)) {
+        eabp.deliverable = topic.deliverableHint || '光伏发电测算表 + 收益与减排分析图表 + 方案论证报告';
+      }
+      if (!eabp.projectSummary || eabp.projectSummary.length < 12 || /「\s*」/.test(eabp.projectSummary)) {
+        eabp.projectSummary = `围绕「${label}」调查日照与用电数据，估算年发电收益和碳减排效益`;
+      }
+      eabp.schemes = (eabp.schemes || []).map(s => ({
+        ...s,
+        name: String(s.name || '').replace(/「\s*」/, `「${label}」`),
+        summary: String(s.summary || '').replace(/「\s*」/, `「${label}」`),
+      }));
+      this._sanitizeBlueprintPhasesInPlace(eabp, goal);
+      return this._concretizeBlueprint(goal, eabp, this._resolvedArchetype);
+    }
     if (this._isEmbeddedOrIoTGoal(goal)) {
       let iotbp = bp;
       const topic = this._extractTopicProfile(goal);
@@ -5351,24 +5764,35 @@ class PBLPathBuilder {
         knowledgeHints: dom.keywords.slice(0, 5),
       };
     };
-    return {
-      projectSummary: `围绕「${subject}」按模块推进，阶段产出可检查验收`,
+    const chain = domains.map(d => d.label).join(' → ');
+    const enriched = this._enrichBlueprintMetadata(goal, {
+      projectSummary: topic.definition || `围绕「${subject}」按「${chain}」推进并完成可检查交付物`,
       deliverable: topic.deliverableHint,
       projectType: this._classifyProjectType(goal),
-      constraints: ['紧扣题目关键词', '每阶段产出可检查', '禁止套用无关模板'],
+      constraints: this._inferDefaultConstraints(goal),
+      scopeLimits: this._inferDefaultScopeLimits(goal),
+      successCriteria: this._inferDefaultSuccessCriteria(goal),
       subsystems,
       schemes: [{
         id: 'A',
         name: schemeName || `「${subject}」主题实施方案`,
-        summary: `按模块推进「${subject}」项目，阶段名与任务均锚定题目`,
-        pros: ['贴合题目', '阶段可评价'],
-        cons: ['需按实际条件微调'],
+        summary: `推荐路线：按「${chain}」分阶段完成调查/实验/测算与论证`,
+        pros: ['每阶段有可检查产出', '任务含数据表/图表/记录等验收物', '模块名锚定题目关键词'],
+        cons: ['需按本校器材与课时微调', '部分数据需查阅公开资料或实地调查'],
         phases: domains.map((d, i) => mkPhase(d, i)),
+      }, {
+        id: 'B',
+        name: `「${subject}」精简路线`,
+        summary: `备选：压缩为 3 阶段，适合课时紧张场景（保留核心数据与最终报告）`,
+        pros: ['周期更短', '保留核心交付物'],
+        cons: ['中间过程记录较少', '数据样本量可能偏小'],
+        phases: domains.slice(0, 3).map((d, i) => mkPhase(d, i)),
       }],
       recommendedSchemeId: 'A',
-      knowledgeChain: domains.map(d => d.label).join(' → '),
+      knowledgeChain: chain,
       fallback: true,
-    };
+    });
+    return enriched;
   }
 
   _buildExhibitionRedesignBlueprint(goal) {
@@ -5559,6 +5983,14 @@ class PBLPathBuilder {
         goal
       );
     }
+    if (this._isEnergyAnalysisGoal(goal)) {
+      const topic = this._extractTopicProfile(goal);
+      const label = topic.coreTopic || this._compactProjectLabel(goal);
+      return this._sanitizeBlueprintForGoal(
+        this._buildSubjectAnchoredBlueprint(goal, `「${label}」光伏发电测算方案`),
+        goal
+      );
+    }
     if (this._isConsumerDecisionGoal(goal)) {
       return this._sanitizeBlueprintForGoal({
         projectSummary: String(goal || '').slice(0, 160),
@@ -5657,27 +6089,145 @@ class PBLPathBuilder {
     return this._sanitizeBlueprintForGoal(bp, goal);
   }
 
+  _extractDecomposeData(raw) {
+    const jsonStr = this._extractJsonObject(raw);
+    const data = JSON.parse(jsonStr);
+    if (!data.schemes?.length) return null;
+    if (!data.recommendedSchemeId && data.schemes[0]) {
+      data.recommendedSchemeId = data.schemes[0].id;
+    }
+    return data;
+  }
+
+  _compactBlueprintForReview(blueprint) {
+    const scheme = (blueprint?.schemes || []).find(s => s.id === blueprint?.recommendedSchemeId)
+      || blueprint?.schemes?.[0];
+    if (!scheme) return blueprint;
+    return {
+      projectSummary: blueprint.projectSummary,
+      deliverable: blueprint.deliverable,
+      constraints: blueprint.constraints,
+      scopeLimits: blueprint.scopeLimits,
+      successCriteria: blueprint.successCriteria,
+      subsystems: blueprint.subsystems,
+      knowledgeChain: blueprint.knowledgeChain,
+      recommendedSchemeId: blueprint.recommendedSchemeId,
+      schemes: (blueprint.schemes || []).map(s => ({
+        id: s.id,
+        name: s.name,
+        summary: s.summary,
+        pros: s.pros,
+        cons: s.cons,
+        phases: (s.phases || []).map(p => ({
+          phase: p.phase,
+          steps: (p.steps || []).slice(0, 4),
+          deliverable: p.deliverable,
+          subsystemIds: p.subsystemIds,
+          knowledgeHints: (p.knowledgeHints || []).slice(0, 5),
+        })),
+      })),
+    };
+  }
+
+  _collectDecomposeReviewIssues(goal, blueprint) {
+    if (!blueprint?.schemes?.length) return ['缺少可行方案'];
+    const issues = [];
+    if (this._isGenericBlueprintText(blueprint.projectSummary)) {
+      issues.push('projectSummary 过于套话，需写清谁+方法+交付物+要解决的问题');
+    }
+    if (!blueprint.deliverable || /素养|能力|精神/.test(blueprint.deliverable)) {
+      issues.push('最终 deliverable 不具体或含素养空话');
+    }
+    if (!Array.isArray(blueprint.scopeLimits) || blueprint.scopeLimits.length < 2) {
+      issues.push('scopeLimits 不足 2 条，需写明不能宣称的能力边界');
+    }
+    if (!Array.isArray(blueprint.successCriteria) || blueprint.successCriteria.length < 2) {
+      issues.push('successCriteria 不足 2 条，需有可检查验收标准');
+    }
+    if (!Array.isArray(blueprint.constraints) || blueprint.constraints.length < 2) {
+      issues.push('constraints 不足 2 条');
+    }
+    if ((blueprint.schemes || []).length < 2) issues.push('schemes 不足 2 套');
+    if (!this._blueprintAnchoredToGoal(blueprint, goal)) {
+      issues.push('未锚定题目关键词，步骤/阶段可能跑题或套用无关模板');
+    }
+    const scheme = blueprint.schemes.find(s => s.id === blueprint.recommendedSchemeId) || blueprint.schemes[0];
+    if (this._isGenericBlueprintText(scheme?.summary)) {
+      issues.push('推荐方案 summary 过于笼统，需写清实施路线差异');
+    }
+    (scheme?.phases || []).forEach((p) => {
+      const steps = p.steps || [];
+      if (steps.length < 2) issues.push(`阶段「${p.phase}」steps 不足 2 条`);
+      const hollow = steps.filter(s => this._isHollowStep(s)).length;
+      if (hollow > 0) issues.push(`阶段「${p.phase}」含 ${hollow} 条空话/笼统步骤，需改为可验收任务`);
+      steps.forEach((st, j) => {
+        if (this._stepActionabilityScore(st) < 2) {
+          issues.push(`阶段「${p.phase}」步骤${j + 1}缺少数量/工具/表格等可验收要素`);
+        }
+      });
+      if (!p.deliverable || /阶段成果|素养|能力/.test(p.deliverable) || String(p.deliverable).length < 6) {
+        issues.push(`阶段「${p.phase}」deliverable 不具体`);
+      }
+    });
+    if (this._blueprintStepDepthScore(blueprint) < 2.5) {
+      issues.push('整体步骤可操作性偏低，需补充数据表/图表/记录表/测量次数等');
+    }
+    return [...new Set(issues)].slice(0, 14);
+  }
+
+  _shouldReviewDecompose(goal, blueprint) {
+    if (!blueprint || blueprint.fallback) return false;
+    return this._collectDecomposeReviewIssues(goal, blueprint).length > 0;
+  }
+
+  _finalizeDecomposeBlueprint(goal, data) {
+    if (!data?.schemes?.length) return this._fallbackDecomposeBlueprint(goal);
+    const anchored = this._blueprintAnchoredToGoal(data, goal);
+    const depth = this._blueprintStepDepthScore(data);
+    if (!anchored && depth < 1.5) {
+      console.warn('[PBL] 蓝图未锚定且步骤过浅，使用主题蓝图回退');
+      return this._fallbackDecomposeBlueprint(goal);
+    }
+    if (!anchored) console.warn('[PBL] 蓝图锚定偏弱，客户端加厚 metadata/steps');
+    const sanitized = this._sanitizeBlueprintForGoal(data, goal);
+    return this._concretizeBlueprint(goal, sanitized, this._resolvedArchetype);
+  }
+
   _parseDecomposeResult(raw, goal) {
     try {
-      const jsonStr = this._extractJsonObject(raw);
-      const data = JSON.parse(jsonStr);
-      if (!data.schemes?.length) return this._fallbackDecomposeBlueprint(goal);
-      if (!data.recommendedSchemeId && data.schemes[0]) {
-        data.recommendedSchemeId = data.schemes[0].id;
-      }
-      if (!this._blueprintAnchoredToGoal(data, goal)) {
-        console.warn('[PBL] LLM 蓝图未锚定题目，使用主题蓝图回退');
-        return this._fallbackDecomposeBlueprint(goal);
-      }
-      const sanitized = this._sanitizeBlueprintForGoal(data, goal);
-      return this._concretizeBlueprint(goal, sanitized, this._resolvedArchetype);
+      const data = this._extractDecomposeData(raw);
+      if (!data) return this._fallbackDecomposeBlueprint(goal);
+      return this._finalizeDecomposeBlueprint(goal, data);
     } catch (e) {
       console.warn('[PBL] decompose JSON 解析失败，使用本地蓝图回退:', e.message);
       return this._fallbackDecomposeBlueprint(goal);
     }
   }
 
-  async _llmDecomposeStage(goal) {
+  async _llmReviewDecomposeStage(goal, draftBlueprint, reviewIssues, complex = false) {
+    try {
+      const response = await this._callPBLAnalyzeStage('review-decompose', {
+        goal,
+        projectBlueprint: this._compactBlueprintForReview(draftBlueprint),
+        reviewIssues,
+        complex,
+      });
+      const data = this._extractDecomposeData(response);
+      if (!data) return null;
+      const before = this._collectDecomposeReviewIssues(goal, draftBlueprint).length;
+      const after = this._collectDecomposeReviewIssues(goal, data).length;
+      if (after >= before && this._blueprintStepDepthScore(data) <= this._blueprintStepDepthScore(draftBlueprint)) {
+        console.warn('[PBL] review-decompose 未改善质检分，保留初稿');
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.warn('[PBL] review-decompose 失败，保留初稿:', e.message);
+      return null;
+    }
+  }
+
+  async _llmDecomposeStage(goal, onStatus = null) {
     const profile = this._getPBLGoalProfile(goal);
     let decomposeGoal = goal;
     const rc = this._refinementContext;
@@ -5690,11 +6240,27 @@ class PBLPathBuilder {
       if (rc.addKeywords?.length) decomposeGoal += `\n【须加强】${rc.addKeywords.join('、')}`;
     }
     try {
+      this._reportPBLStatus(onStatus, '第 1/6 步：生成拆解初稿...');
       const response = await this._callPBLAnalyzeStage('decompose', {
         goal: decomposeGoal,
-        complex: profile.complex
+        complex: profile.complex,
       });
-      return this._parseDecomposeResult(response, goal);
+      let data = this._extractDecomposeData(response);
+      if (!data) return this._fallbackDecomposeBlueprint(goal);
+
+      const issues = this._collectDecomposeReviewIssues(goal, data);
+      if (issues.length) {
+        this._reportPBLStatus(onStatus, `第 1/6 步：评审修订蓝图（${issues.length} 项待改）...`);
+        const reviewed = await this._llmReviewDecomposeStage(goal, data, issues, profile.complex);
+        if (reviewed) {
+          data = reviewed;
+          console.info('[PBL] review-decompose 已应用修订稿');
+        } else {
+          console.warn('[PBL] review-decompose 跳过或无效，使用初稿+客户端加厚');
+        }
+      }
+
+      return this._finalizeDecomposeBlueprint(goal, data);
     } catch (e) {
       console.warn('[PBL] decompose 阶段失败，使用本地蓝图:', e.message);
       return this._fallbackDecomposeBlueprint(goal);
@@ -6312,8 +6878,7 @@ class PBLPathBuilder {
     }
 
     // 4. 第零阶段：全链路拆解可行方案（不选课标）
-    this._reportPBLStatus(onStatus, '第 1/6 步：全链路拆解可行方案...');
-    let projectBlueprint = await this._llmDecomposeStage(goal);
+    let projectBlueprint = await this._llmDecomposeStage(goal, onStatus);
     projectBlueprint = this._concretizeBlueprint(goal, projectBlueprint, archetype);
     this._activeBlueprint = projectBlueprint;
     const blueprintPhases = this._blueprintProjectPhases(projectBlueprint, goal);

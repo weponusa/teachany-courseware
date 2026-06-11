@@ -74,6 +74,10 @@ function classifyProjectType(goal) {
   if (/低空经济|通航产业|新兴产业|产业创新/.test(g) || (/探寻|探索|研究|调研/.test(g) && /创新|产业|经济|行业/.test(g))) return 'industry-innovation';
   // 工坊/木作
   if (/工坊|鲁班|榫卯|古典.*风格|木结构|建筑模型|微缩|传统建筑|斗拱|飞檐/.test(g)) return 'maker-workshop';
+  // 能源收益测算（数据分析报告，非硬件制作）
+  if (/光伏|太阳能发电|屋顶.*光伏|发电潜力|发电收益|碳减排/.test(g)
+    && /测算|估算|调查|分析|收益|减排|用电|日照|潜力|效益/.test(g)
+    && !/接线|原型|传感器|水泵|搭建|制作|组装|烧录|GPIO/.test(g)) return 'energy-analysis';
   // 工程/制作
   if (/算力中心|数据中心|太空算力|云计算|边缘计算|计算中心|服务器集群|卫星计算|轨道计算/.test(g)) return 'engineering';
   if (/火箭|导弹|发射|机器人|电路|机械|硬件|装置|App|应用程序|小程序|网站|系统开发|3D打印|传感|智能|温控|储能|光伏|发电|搭建|制作|工程|发明|物联网|编程实现|循迹|小车|无人机|过滤|净水/.test(g)
@@ -106,6 +110,7 @@ const TYPE_PROFILES = {
   'maker-workshop': { label: '工坊/木作/建筑模型', moduleWord: '工序（现场调研 / 风格方案 / 材料BOM / 搭建装饰 / 验收展示）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是实体模型+图册+BOM；须有尺寸、工具、照片、检查表' },
   'industry-innovation': { label: '产业创新/新兴经济探究', moduleWord: '环节（产业背景与政策 / 应用场景调研 / 技术原理支撑 / 数据可行性 / 创新方案报告）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是主题产业创新方案/调研报告；禁止与主题无关的模块' },
   'exhibition-redesign': { label: '展陈空间/场馆改造', moduleWord: '环节（现状诊断 / 主题策划 / 展陈设计 / 实施整改 / 开放验收）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是场馆改造方案册+展陈设计图；禁止与展陈无关的节点' },
+  'energy-analysis': { label: '能源/环境数据测算', moduleWord: '环节（资源调查 / 数据采集 / 模型测算 / 效益分析 / 方案论证）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是测算表+分析图表+论证报告；禁止接线/原型/硬件工程步骤' },
   'general': { label: '综合实践', moduleWord: '项目模块（须按题目自定义，禁止套用通用模块名）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '每个节点都要服务于题目交付物' },
 };
 
@@ -291,6 +296,13 @@ function genericDomainsForType(id, goal = '') {
       { id: 'implement', label: '实施整改', keywords: ['整改', '布置', '预算', '分工', '安全', '清单'], subjects: ['math', 'chinese'] },
       { id: 'launch', label: '开放验收', keywords: ['验收', '讲解', '宣传', '说明', '展示', '反馈'], subjects: ['chinese', 'science'] },
     ],
+    'energy-analysis': [
+      { id: 'resource', label: '资源调查', keywords: ['光伏', '太阳能', '日照', '辐射', '光电', '电功率', '能量'], subjects: ['physics', 'science'] },
+      { id: 'electricity', label: '数据采集', keywords: ['用电', '电量', '电费', '调查', '数据', '统计', '屋顶', '面积'], subjects: ['math', 'science'] },
+      { id: 'calc', label: '模型测算', keywords: ['函数', '计算', '收益', '成本', '百分比', '统计', '估算', '发电'], subjects: ['math'] },
+      { id: 'carbon', label: '效益分析', keywords: ['碳', '排放', '减排', '环境', '能源', '对比'], subjects: ['geography', 'science'] },
+      { id: 'report', label: '方案论证', keywords: ['说明', '报告', '论证', '建议', '图表'], subjects: ['chinese', 'math'] },
+    ],
     'maker-workshop': [
       { id: 'survey', label: '现场调研', keywords: ['调研', '测量', '场地', '历史', '风格', '需求'], subjects: ['history', 'math', 'chinese'] },
       { id: 'design', label: '风格方案', keywords: ['设计', '风格', '结构', '草图', '比例', '方案'], subjects: ['math', 'science', 'chinese'] },
@@ -324,7 +336,16 @@ function formatDomainHints(domains) {
 // 五、反空话与红线
 // ============================================================
 
-const ANTI_VACUUM_BLOCK = `禁泛素养节点；steps≥2条且≥15字含动作+对象+方法+验收；reason以「模块：」开头并写明怎么用`;
+const ANTI_VACUUM_BLOCK = `禁泛素养节点；steps≥2条且≥20字含动作+对象+方法+可验收产出（数量/尺寸/次数）；reason以「模块：」开头并写明怎么用`;
+
+const DECOMPOSE_DEPTH_BLOCK = `## 拆解深度（硬性，违反则视为无效输出）
+- projectSummary：40-80字，须写清「谁+用什么方法+做出什么交付物+解决什么问题」，禁止「按模块推进」「可检查验收」等套话
+- scopeLimits≥2条、successCriteria≥2条、constraints≥2条：须可检查，禁止「注意安全」「认真完成」
+- 每套 scheme 的 summary 必须与 projectSummary 不同，写技术/实施路线差异
+- phases 4-5个，阶段名用模块参考中的 label，禁止「基础准备」「实施阶段」等泛名
+- 每 phase：steps≥2条且互不重复；deliverable 是具体表/图/报告名（≤20字），不是「阶段成果」「方案」
+- steps 示范格式：「统计近3个月用电量并制成折线图，标注数据来源与异常值处理方式」
+- knowledgeHints 是检索词（2-5个/阶段），不是课标节点名`;
 
 // ============================================================
 // 六、typeMatchHints — 泛化版（通用类型指导，不再硬编码具体节点名）
@@ -396,11 +417,13 @@ function systemPromptDecompose(complex, goal) {
   const depth = complex ? '2-3套路线并推荐1套' : '≥2套路线并推荐1套';
   return `PBL 全链路拆解（本阶段不选课标）。${formatTopicAnchorBlock(goal)}｜${typeGuardrailBlock(goal)}
 
-输出：交付物+约束+${depth}+推荐方案4-5阶段（steps/deliverable/knowledgeHints）。
-steps：每阶段≥2条、≥20字，含动词+对象+方法+可验收产出；须含目标关键词；禁空话与套模板。
-禁复述：phase/deliverable/steps/scheme名禁止出现【学科】【任务】或粘贴全文goal；产出名≤16字。
-去重：各phase steps零重叠；steps≠deliverable同义复述；summary/pros/约束字段互不复制。
-knowledgeHints=检索词非课标节点名。只返回JSON。`;
+${DECOMPOSE_DEPTH_BLOCK}
+
+输出：交付物+约束+scopeLimits+successCriteria+subsystems+${depth}+推荐方案 phases（steps/deliverable/knowledgeHints）。
+${ANTI_VACUUM_BLOCK}
+禁复述：phase/deliverable/steps/scheme名禁止出现【学科】【任务】或粘贴全文goal。
+去重：各phase steps零重叠；steps≠deliverable同义复述；summary/pros/cons/约束字段互不复制。
+只返回JSON，不要markdown。`;
 }
 
 function userPromptDecompose(goal, complex) {
@@ -443,7 +466,8 @@ function userPromptDecompose(goal, complex) {
   "knowledgeChain": "子系统1 → 子系统2 → 测试迭代"
 }
 
-要求：schemes≥2；phases 4-5；knowledgeHints每阶段2-5个；各字段去重不复述。`;
+要求：schemes≥2；phases 4-5；knowledgeHints每阶段2-5个；各字段去重不复述。
+阶段 steps 每条须含：动词+操作对象+工具/数据来源+可验收产出（含数量/次数/尺寸之一）。`;
 }
 
 function formatBlueprintForMatch(blueprint) {
@@ -644,4 +668,4 @@ export function buildPBMessages(stage, payload) {
   throw new Error(`Unknown PBL stage: ${stage}`);
 }
 
-export { inferProjectDomains };
+export { inferProjectDomains, projectTypeProfile };

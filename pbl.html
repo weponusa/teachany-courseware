@@ -1971,7 +1971,16 @@ function renderPBLDecomposeHTML(blueprint) {
   if (blueprint.moduleChain) {
     html += `<div><strong>模块主线</strong>：${escapePBLHtml(blueprint.moduleChain)}</div>`;
   }
-  html += `<div>${escapePBLHtml(blueprint.projectSummary || '')}</div></div>`;
+  html += `<div>${escapePBLHtml(blueprint.projectSummary || '')}</div>`;
+  if (blueprint.knowledgeChain) {
+    html += `<div style="margin-top:8px"><strong>知识链</strong>：${escapePBLHtml(blueprint.knowledgeChain)}</div>`;
+  }
+  if (blueprint.constraints?.length) {
+    html += `<div style="margin-top:8px;font-size:13px"><strong>约束条件</strong>：<ul style="margin:4px 0 0 18px;color:var(--dim)">`;
+    blueprint.constraints.forEach(c => { html += `<li>${escapePBLHtml(c)}</li>`; });
+    html += `</ul></div>`;
+  }
+  html += `</div>`;
   if (blueprint.scopeLimits?.length) {
     html += `<div class="pbl-scope-limits" style="margin:10px 0;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px">`;
     html += `<div style="color:#f87171;font-weight:600;margin-bottom:6px">不能宣称</div><ul style="margin:0;padding-left:18px;color:var(--dim)">`;
@@ -2000,12 +2009,23 @@ function renderPBLDecomposeHTML(blueprint) {
     if (s.pros?.length) html += `<p><strong>优点</strong>：${s.pros.map(x => escapePBLHtml(x)).join('；')}</p>`;
     if (s.phases?.length) {
       html += `<ol class="pbl-decompose-phases" style="margin:8px 0 0 18px;font-size:13px;color:var(--dim)">`;
-      s.phases.slice(0, 5).forEach(p => {
-        html += `<li><strong>${escapePBLHtml(p.phase)}</strong>`;
+      s.phases.forEach(p => {
+        html += `<li style="margin-bottom:12px"><strong>${escapePBLHtml(p.phase)}</strong>`;
         html += `<div style="margin:4px 0;color:var(--accent)">产出：${escapePBLHtml(p.deliverable || '')}</div>`;
+        if (p.tools?.length) {
+          html += `<div style="font-size:12px;color:var(--dimmer)">工具/模板：${p.tools.map(t => escapePBLHtml(t)).join('、')}</div>`;
+        }
+        if (p.knowledgeHints?.length) {
+          html += `<div style="font-size:12px;color:var(--dimmer)">课标检索词：${p.knowledgeHints.map(h => escapePBLHtml(h)).join('、')}</div>`;
+        }
         if (p.steps?.length) {
           html += `<ul class="pbl-task-checklist" style="margin:6px 0 0 16px;padding:0;list-style:decimal">`;
-          p.steps.slice(0, 4).forEach(st => { html += `<li style="margin-bottom:6px;line-height:1.6">${escapePBLHtml(st)}</li>`; });
+          p.steps.forEach(st => { html += `<li style="margin-bottom:6px;line-height:1.6">${escapePBLHtml(st)}</li>`; });
+          html += `</ul>`;
+        }
+        if (p.acceptance?.length) {
+          html += `<ul style="margin:6px 0 0 16px;padding:0;list-style:none;font-size:12px;color:var(--dimmer)">`;
+          p.acceptance.forEach(a => { html += `<li style="margin-bottom:3px">${escapePBLHtml(a)}</li>`; });
           html += `</ul>`;
         }
         html += `</li>`;

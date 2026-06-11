@@ -70,7 +70,7 @@ export const PBL_MATCH_MODEL_CHAIN = [
 
 const PBL_STRONG_STAGES = new Set([
   'match', 'propose-curriculum', 'validate-match',
-  'verify-relevance', 'review-curriculum', 'refine',
+  'verify-relevance', 'review-curriculum', 'review-decompose', 'refine',
 ]);
 
 /** @param {Record<string,string>} env */

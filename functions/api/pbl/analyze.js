@@ -3,7 +3,7 @@
  * POST /api/pbl/analyze
  *
  * Body: {
- *   stage: 'decompose' | 'filter' | 'propose-curriculum' | 'validate-match' | 'match' | 'verify-relevance' | 'review-curriculum' | 'verify-deps' | 'refine',
+ *   stage: 'decompose' | 'review-decompose' | 'filter' | 'propose-curriculum' | 'validate-match' | 'match' | 'verify-relevance' | 'review-curriculum' | 'verify-deps' | 'refine',
  *   model?: string,          // 可选：用户自选模型（服务端 Key 调用）
  *   providerId?: string,     // 可选：siliconflow | paratera | openrouter（与 model 配合）
  *   messagesOnly?: boolean,  // 可选：仅返回 messages，供自定义 API 客户端直连
@@ -28,6 +28,7 @@ import { buildVerifyDepsMessages } from '../../_lib/pbl-verify-prompts.js';
 import { buildVerifyRelevanceMessages } from '../../_lib/pbl-verify-relevance-prompts.js';
 import { buildReviewCurriculumMessages } from '../../_lib/pbl-review-curriculum-prompts.js';
 import { buildRefineMessages } from '../../_lib/pbl-refine-prompts.js';
+import { buildReviewDecomposeMessages } from '../../_lib/pbl-review-decompose-prompts.js';
 import { buildProposeCurriculumMessages } from '../../_lib/pbl-propose-curriculum-prompts.js';
 import { buildValidateMatchMessages } from '../../_lib/pbl-validate-match-prompts.js';
 import {
@@ -54,7 +55,7 @@ export async function onRequestPost(context) {
   }
 
   const stage = body.stage;
-  if (stage !== 'decompose' && stage !== 'filter' && stage !== 'match'
+  if (stage !== 'decompose' && stage !== 'review-decompose' && stage !== 'filter' && stage !== 'match'
     && stage !== 'propose-curriculum' && stage !== 'validate-match'
     && stage !== 'verify-relevance' && stage !== 'review-curriculum'
     && stage !== 'verify-deps' && stage !== 'refine') {
@@ -76,6 +77,10 @@ export async function onRequestPost(context) {
 
   if (stage === 'refine' && !String(body.userMessage || '').trim()) {
     return jsonResponse({ error: 'userMessage required' }, 400);
+  }
+
+  if (stage === 'review-decompose' && (!body.projectBlueprint || !body.projectBlueprint.schemes?.length)) {
+    return jsonResponse({ error: 'projectBlueprint with schemes required' }, 400);
   }
 
   if (stage === 'verify-relevance' && (!Array.isArray(body.matched) || body.matched.length === 0)) {
@@ -152,6 +157,13 @@ export async function onRequestPost(context) {
         projectSpec: body.projectSpec || null,
         snapshot: body.snapshot || {},
       });
+    } else if (stage === 'review-decompose') {
+      messages = buildReviewDecomposeMessages({
+        goal,
+        projectBlueprint: body.projectBlueprint,
+        reviewIssues: body.reviewIssues || [],
+        complex: !!body.complex,
+      });
     } else {
       messages = buildPBMessages(stage, {
         goal,
@@ -180,7 +192,7 @@ export async function onRequestPost(context) {
   const llmOpts = {
     maxTokens: stage === 'match' ? 8000
       : (stage === 'validate-match' ? 6000
-        : (stage === 'decompose' ? 4500
+        : (stage === 'decompose' || stage === 'review-decompose' ? 5000
           : (stage === 'propose-curriculum' ? 3000
             : (stage === 'verify-relevance' || stage === 'review-curriculum' ? 3500
               : (stage === 'refine' ? 2500
@@ -188,10 +200,11 @@ export async function onRequestPost(context) {
     temperature: stage === 'match' ? 0.15
       : (stage === 'validate-match' ? 0.1
         : (stage === 'decompose' ? 0.35
-          : (stage === 'propose-curriculum' ? 0.25
-            : (stage === 'verify-relevance' || stage === 'review-curriculum' ? 0.05
-              : (stage === 'refine' ? 0.2
-                : (stage === 'verify-deps' ? 0.08 : 0.25)))))),
+          : (stage === 'review-decompose' ? 0.12
+            : (stage === 'propose-curriculum' ? 0.25
+              : (stage === 'verify-relevance' || stage === 'review-curriculum' ? 0.05
+                : (stage === 'refine' ? 0.2
+                  : (stage === 'verify-deps' ? 0.08 : 0.25))))))),
   };
 
   const userModel = String(body.model || '').trim();

@@ -39,6 +39,7 @@
     { keys: /Wi-?Fi|无线网络|蓝牙|BLE|无线通信|MQTT|TCP/i, subjects: ['info-tech', 'physics'], terms: ['网络', '无线', '通信', '协议', '物联网', '数据传输', '连接'] },
     { keys: /语音|识别|声控|麦克风|唤醒词|ASR/i, subjects: ['info-tech', 'physics'], terms: ['语音', '识别', '信号', '算法', '传感', '交互', '控制'] },
     { keys: /LED|灯控|RGB|彩灯|GPIO|PWM|调光|指示灯/i, subjects: ['physics', 'info-tech', 'science'], terms: ['电路', '电流', '电压', '控制', '程序设计', '输出', '引脚'] },
+    { keys: /光伏|太阳能发电|屋顶.*光伏|发电潜力|发电收益|碳减排|光电|日照|用电数据/, subjects: ['physics', 'math', 'science'], terms: ['光伏', '太阳能', '光电', '电功率', '能量转化', '能量守恒', '一次函数', '统计', '百分比', '碳排放', '日照', '发电', '电路', '电流', '电压'] },
   ];
 
   function uniq(arr) {
