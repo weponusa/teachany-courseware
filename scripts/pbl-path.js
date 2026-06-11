@@ -1208,19 +1208,39 @@ class PBLPathBuilder {
     }
   }
 
+  /** 浅拷贝蓝图（避免 JSON 深拷贝在大蓝图时栈溢出） */
+  _shallowCloneBlueprint(blueprint) {
+    if (!blueprint) return blueprint;
+    return {
+      ...blueprint,
+      constraints: blueprint.constraints ? [...blueprint.constraints] : blueprint.constraints,
+      scopeLimits: blueprint.scopeLimits ? [...blueprint.scopeLimits] : blueprint.scopeLimits,
+      successCriteria: blueprint.successCriteria ? [...blueprint.successCriteria] : blueprint.successCriteria,
+      subsystems: blueprint.subsystems ? blueprint.subsystems.map(s => ({ ...s })) : blueprint.subsystems,
+      schemes: (blueprint.schemes || []).map(s => ({
+        ...s,
+        pros: s.pros ? [...s.pros] : s.pros,
+        cons: s.cons ? [...s.cons] : s.cons,
+        phases: (s.phases || []).map(p => ({
+          ...p,
+          steps: [...(p.steps || [])],
+          knowledgeHints: p.knowledgeHints ? [...p.knowledgeHints] : p.knowledgeHints,
+          tools: p.tools ? [...p.tools] : p.tools,
+          acceptance: p.acceptance ? [...p.acceptance] : p.acceptance,
+          subsystemIds: p.subsystemIds ? [...p.subsystemIds] : p.subsystemIds,
+        })),
+      })),
+    };
+  }
+
   _cloneBlueprint(blueprint) {
     if (!blueprint) return blueprint;
     try {
+      if (typeof structuredClone === 'function') return structuredClone(blueprint);
       return JSON.parse(JSON.stringify(blueprint));
     } catch (e) {
       console.warn('[PBL] 蓝图深拷贝失败，使用浅拷贝:', e.message);
-      return {
-        ...blueprint,
-        schemes: (blueprint.schemes || []).map(s => ({
-          ...s,
-          phases: (s.phases || []).map(p => ({ ...p, steps: [...(p.steps || [])] })),
-        })),
-      };
+      return this._shallowCloneBlueprint(blueprint);
     }
   }
 
@@ -3524,8 +3544,9 @@ class PBLPathBuilder {
 
   _concretizeBlueprint(goal, blueprint, archetype = null) {
     if (!blueprint?.schemes?.length) return blueprint;
+    if (blueprint._concretized) return blueprint;
     const profile = this._goalProfile(goal, blueprint);
-    let bp = this._cloneBlueprint(blueprint);
+    let bp = this._shallowCloneBlueprint(blueprint);
     bp = this._enrichBlueprintMetadata(goal, bp);
 
     if (!bp.deliverable || /素养|能力|精神|阶段成果$/.test(bp.deliverable) || bp.deliverable.length < 8) {
@@ -3561,6 +3582,7 @@ class PBLPathBuilder {
         return { ...p, steps, deliverable, tools, acceptance };
       }),
     }));
+    bp._concretized = true;
     return bp;
   }
 
@@ -5561,7 +5583,7 @@ class PBLPathBuilder {
   _sanitizeBlueprintForGoal(blueprint, goal) {
     let bp = blueprint;
     if (bp?.schemes?.length) {
-      bp = JSON.parse(JSON.stringify(bp));
+      bp = this._shallowCloneBlueprint(bp);
       this._sanitizeBlueprintPhasesInPlace(bp, goal);
     }
     if (this._isGroundRoboticsGoal(goal)) {
@@ -5570,7 +5592,7 @@ class PBLPathBuilder {
         const topic = this._extractTopicProfile(goal);
         grbp = this._buildSubjectAnchoredBlueprint(goal, `「${topic.coreTopic}」自动驾驶小车实施方案`);
       } else {
-        grbp = JSON.parse(JSON.stringify(grbp));
+        grbp = this._shallowCloneBlueprint(grbp);
       }
       grbp.projectType = 'engineering';
       const topic = this._extractTopicProfile(goal);
@@ -5582,7 +5604,7 @@ class PBLPathBuilder {
         grbp.projectSummary = `围绕「${topic.coreTopic}」完成地面小车结构搭建、传感驱动、控制调试与测试验收`;
       }
       this._sanitizeBlueprintPhasesInPlace(grbp, goal);
-      return this._concretizeBlueprint(goal, grbp, this._resolvedArchetype);
+      return grbp;
     }
     if (this._isEnergyAnalysisGoal(goal)) {
       let eabp = bp;
@@ -5591,7 +5613,7 @@ class PBLPathBuilder {
       if (!eabp?.schemes?.length) {
         eabp = this._buildSubjectAnchoredBlueprint(goal, `「${label}」光伏发电测算方案`);
       } else {
-        eabp = JSON.parse(JSON.stringify(eabp));
+        eabp = this._shallowCloneBlueprint(eabp);
       }
       eabp.projectType = 'energy-analysis';
       const badRe = /调研报告|调查报告|稳定性测试|接线|组装|原型驱动|MVP|硬件|工程报告|装置原型|工程安全|故障排查/;
@@ -5607,7 +5629,7 @@ class PBLPathBuilder {
         summary: String(s.summary || '').replace(/「\s*」/, `「${label}」`),
       }));
       this._sanitizeBlueprintPhasesInPlace(eabp, goal);
-      return this._concretizeBlueprint(goal, eabp, this._resolvedArchetype);
+      return eabp;
     }
     if (this._isEmbeddedOrIoTGoal(goal)) {
       let iotbp = bp;
@@ -5616,7 +5638,7 @@ class PBLPathBuilder {
       if (!iotbp?.schemes?.length) {
         iotbp = this._buildSubjectAnchoredBlueprint(goal, `「${label}」智能装置实施方案`);
       } else {
-        iotbp = JSON.parse(JSON.stringify(iotbp));
+        iotbp = this._shallowCloneBlueprint(iotbp);
       }
       iotbp.projectType = 'engineering';
       const badRe = /调研报告|调查报告|问卷|有机合成|离子检验|原型驱动迭代|MVP|快速原型/;
@@ -5632,7 +5654,7 @@ class PBLPathBuilder {
         summary: String(s.summary || '').replace(/「\s*」/, `「${label}」`),
       }));
       this._sanitizeBlueprintPhasesInPlace(iotbp, goal);
-      return this._concretizeBlueprint(goal, iotbp, this._resolvedArchetype);
+      return iotbp;
     }
     if (this._isSocialOrCivicInquiryGoal(goal)) {
       let sbp = bp;
@@ -5640,7 +5662,7 @@ class PBLPathBuilder {
         const label = this._compactProjectLabel(goal);
         sbp = this._buildSubjectAnchoredBlueprint(goal, `「${label}」社会调查实施方案`);
       } else {
-        sbp = JSON.parse(JSON.stringify(sbp));
+        sbp = this._shallowCloneBlueprint(sbp);
       }
       sbp.projectType = 'social-inquiry';
       const topic = this._extractTopicProfile(goal);
@@ -5651,7 +5673,7 @@ class PBLPathBuilder {
         sbp.projectSummary = `围绕「${topic.coreTopic}」开展现状调查、数据分析与改进宣传策划`;
       }
       this._sanitizeBlueprintPhasesInPlace(sbp, goal);
-      return this._concretizeBlueprint(goal, sbp, this._resolvedArchetype);
+      return sbp;
     }
     if (bp && this._isChemistryInquiryGoal(goal) && this._getChemistryAnalysisProfile(goal).mixed) {
       const cap = this._getChemistryAnalysisProfile(goal);
@@ -5676,10 +5698,10 @@ class PBLPathBuilder {
           }
         });
       });
-      return this._concretizeBlueprint(goal, bp, this._resolvedArchetype);
+      return bp;
     }
     if (this._isPlantingCultivationGoal(goal)) {
-      let pbp = bp ? JSON.parse(JSON.stringify(bp)) : null;
+      let pbp = bp ? this._shallowCloneBlueprint(bp) : null;
       if (!pbp?.schemes?.length) pbp = this._buildPlantingCultivationBlueprint(goal);
       pbp.projectType = 'planting-cultivation';
       const topic = this._extractTopicProfile(goal);
@@ -5697,10 +5719,10 @@ class PBLPathBuilder {
           knowledgeHints: [...new Set([...(p.knowledgeHints || []), '植物', '分类', '光合', '种子', '萌发', '栽培', '生长', topic.crop || '月季'].filter(Boolean))].slice(0, 6),
         })).filter(p => (p.steps || []).length > 0),
       }));
-      return this._concretizeBlueprint(goal, pbp, this._resolvedArchetype);
+      return pbp;
     }
     if (this._isExhibitionRedesignGoal(goal)) {
-      let ebp = bp ? JSON.parse(JSON.stringify(bp)) : null;
+      let ebp = bp ? this._shallowCloneBlueprint(bp) : null;
       if (!ebp?.schemes?.length) ebp = this._buildExhibitionRedesignBlueprint(goal);
       ebp.projectType = 'exhibition-redesign';
       const topic = this._extractTopicProfile(goal);
@@ -5716,10 +5738,10 @@ class PBLPathBuilder {
           steps: (p.steps || []).filter(st => !engRe.test(String(st))),
         })).filter(p => (p.steps || []).length > 0);
       });
-      return this._concretizeBlueprint(goal, ebp, this._resolvedArchetype);
+      return ebp;
     }
     if (this._isIndustryInnovationGoal(goal)) {
-      let ibp = bp ? JSON.parse(JSON.stringify(bp)) : null;
+      let ibp = bp ? this._shallowCloneBlueprint(bp) : null;
       if (!ibp?.schemes?.length) ibp = this._buildIndustryInnovationBlueprint(goal);
       ibp.projectType = 'industry-innovation';
       const topic = this._extractTopicProfile(goal);
@@ -5746,10 +5768,10 @@ class PBLPathBuilder {
           return p;
         }).filter(p => (p.steps || []).length > 0 || (p.phase && !engRe.test(p.phase)));
       });
-      return this._concretizeBlueprint(goal, ibp, this._resolvedArchetype);
+      return ibp;
     }
     if (!bp || !this._isConsumerDecisionGoal(goal)) {
-      return this._concretizeBlueprint(goal, bp || blueprint, this._resolvedArchetype);
+      return bp || blueprint;
     }
     bp = { ...bp, schemes: (bp.schemes || []).map(s => ({ ...s })) };
     bp.projectType = 'consumer-decision';
@@ -5776,7 +5798,22 @@ class PBLPathBuilder {
         });
       }
     });
-    return this._concretizeBlueprint(goal, bp, this._resolvedArchetype);
+    return bp;
+  }
+
+  _applyBlueprintPipeline(goal, blueprint) {
+    if (!blueprint?.schemes?.length) return this._fallbackDecomposeBlueprint(goal);
+    try {
+      const sanitized = this._sanitizeBlueprintForGoal(blueprint, goal);
+      return this._concretizeBlueprint(goal, sanitized, this._resolvedArchetype);
+    } catch (e) {
+      if (/stack|too much recursion/i.test(String(e.message || ''))) {
+        console.warn('[PBL] 蓝图加厚栈溢出，返回裁剪蓝图:', e.message);
+        const pruned = this._pruneDecomposeBlueprint(this._shallowCloneBlueprint(blueprint));
+        if (pruned?.schemes?.length) return pruned;
+      }
+      throw e;
+    }
   }
 
   _blueprintAnchoredToGoal(blueprint, goal) {
@@ -6011,41 +6048,41 @@ class PBLPathBuilder {
 
   _fallbackDecomposeBlueprint(goal) {
     if (this._isPlantingCultivationGoal(goal)) {
-      return this._sanitizeBlueprintForGoal(this._buildPlantingCultivationBlueprint(goal), goal);
+      return this._applyBlueprintPipeline(goal, this._buildPlantingCultivationBlueprint(goal));
     }
     if (this._isFiltrationGoal(goal)) {
-      return this._sanitizeBlueprintForGoal(this._buildFiltrationBlueprint(goal), goal);
+      return this._applyBlueprintPipeline(goal, this._buildFiltrationBlueprint(goal));
     }
     if (this._isExhibitionRedesignGoal(goal)) {
-      return this._sanitizeBlueprintForGoal(this._buildExhibitionRedesignBlueprint(goal), goal);
+      return this._applyBlueprintPipeline(goal, this._buildExhibitionRedesignBlueprint(goal));
     }
     if (this._isIndustryInnovationGoal(goal)) {
-      return this._sanitizeBlueprintForGoal(this._buildIndustryInnovationBlueprint(goal), goal);
+      return this._applyBlueprintPipeline(goal, this._buildIndustryInnovationBlueprint(goal));
     }
     if (this._isGroundRoboticsGoal(goal)) {
       const topic = this._extractTopicProfile(goal);
-      return this._sanitizeBlueprintForGoal(
-        this._buildSubjectAnchoredBlueprint(goal, `「${topic.coreTopic}」自动驾驶小车实施方案`),
-        goal
+      return this._applyBlueprintPipeline(
+        goal,
+        this._buildSubjectAnchoredBlueprint(goal, `「${topic.coreTopic}」自动驾驶小车实施方案`)
       );
     }
     if (this._isSocialOrCivicInquiryGoal(goal)) {
       const label = this._compactProjectLabel(goal);
-      return this._sanitizeBlueprintForGoal(
-        this._buildSubjectAnchoredBlueprint(goal, `「${label}」社会调查实施方案`),
-        goal
+      return this._applyBlueprintPipeline(
+        goal,
+        this._buildSubjectAnchoredBlueprint(goal, `「${label}」社会调查实施方案`)
       );
     }
     if (this._isEnergyAnalysisGoal(goal)) {
       const topic = this._extractTopicProfile(goal);
       const label = topic.coreTopic || this._compactProjectLabel(goal);
-      return this._sanitizeBlueprintForGoal(
-        this._buildSubjectAnchoredBlueprint(goal, `「${label}」光伏发电测算方案`),
-        goal
+      return this._applyBlueprintPipeline(
+        goal,
+        this._buildSubjectAnchoredBlueprint(goal, `「${label}」光伏发电测算方案`)
       );
     }
     if (this._isConsumerDecisionGoal(goal)) {
-      return this._sanitizeBlueprintForGoal({
+      return this._applyBlueprintPipeline(goal, {
         projectSummary: String(goal || '').slice(0, 160),
         deliverable: '家庭购车对比决策报告（含调研表、全成本测算表与推荐结论）',
         projectType: 'consumer-decision',
@@ -6089,14 +6126,14 @@ class PBLPathBuilder {
         recommendedSchemeId: 'A',
         knowledgeChain: '需求调研 → 对比框架 → 科学原理 → 成本测算 → 购车建议',
         fallback: true
-      }, goal);
+      });
     }
 
     if (this._isChemistryInquiryGoal(goal)) {
       if (this._getChemistryAnalysisProfile(goal).mixed) {
-        return this._buildMixedSolutionChemistryBlueprint(goal);
+        return this._applyBlueprintPipeline(goal, this._buildMixedSolutionChemistryBlueprint(goal));
       }
-      return {
+      return this._applyBlueprintPipeline(goal, {
         projectSummary: String(goal || '').slice(0, 160),
         deliverable: '厨房食盐溶液浓度探究报告（含实验方案、数据记录表、浓度计算与生活应用分析）',
         projectType: 'scientific-inquiry',
@@ -6123,23 +6160,23 @@ class PBLPathBuilder {
         recommendedSchemeId: 'A',
         knowledgeChain: '溶液概念 → 实验设计 → 数据记录 → 浓度计算 → 生活应用',
         fallback: true
-      };
+      });
     }
 
     const topic = this._extractTopicProfile(goal);
     const subject = topic.coreTopic || this._compactProjectLabel(goal) || this._parseGoalSubject(goal);
     const isEng = this._classifyProjectType(goal) === 'engineering' || this._isEnergyProjectGoal(goal) || this._isEmbeddedOrIoTGoal(goal);
     if (!isEng) {
-      return this._sanitizeBlueprintForGoal(
-        this._buildSubjectAnchoredBlueprint(goal, `「${subject}」主题实施方案`),
-        goal
+      return this._applyBlueprintPipeline(
+        goal,
+        this._buildSubjectAnchoredBlueprint(goal, `「${subject}」主题实施方案`)
       );
     }
     const domains = this._inferProjectDomains(goal);
     const subsystems = domains.map(d => ({ id: d.id, name: d.label, description: `完成「${subject}」${d.label}` }));
     const bp = this._buildSubjectAnchoredBlueprint(goal, `「${subject}」工程实施方案`);
     bp.deliverable = `可展示的「${subject}」工程作品+测试数据+说明文档`;
-    return this._sanitizeBlueprintForGoal(bp, goal);
+    return this._applyBlueprintPipeline(goal, bp);
   }
 
   _extractDecomposeData(raw) {
@@ -6243,8 +6280,7 @@ class PBLPathBuilder {
       return this._fallbackDecomposeBlueprint(goal);
     }
     if (!anchored) console.warn('[PBL] 蓝图锚定偏弱，客户端加厚 metadata/steps');
-    // _sanitizeBlueprintForGoal 各分支已含 _concretizeBlueprint，勿重复加厚（曾导致栈溢出）
-    return this._sanitizeBlueprintForGoal(data, goal);
+    return this._applyBlueprintPipeline(goal, data);
   }
 
   _parseDecomposeResult(raw, goal) {

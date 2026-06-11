@@ -1295,7 +1295,7 @@ body {
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260609-topic-recall"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260609-stack-fix2"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1473,7 +1473,18 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
 
   try {
     const builder = window.PBLPathBuilder;
-    await builder.loadUnifiedIndex();
+    try {
+      await builder.loadUnifiedIndex();
+    } catch (idxErr) {
+      if (/stack/i.test(String(idxErr.message || ''))) {
+        try { localStorage.removeItem('teachany_pbl_unified_index_v10'); } catch (_e) { /* ignore */ }
+        builder.loaded = false;
+        builder._loadPromise = null;
+        await builder.loadUnifiedIndex();
+      } else {
+        throw idxErr;
+      }
+    }
 
     let result;
     try {
@@ -1534,7 +1545,12 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
     document.dispatchEvent(new CustomEvent('teachany-pbl-done', { detail: { result } }));
   } catch (error) {
     console.error('[PBL] 分析失败:', error);
-    statusText.textContent = '❌ ' + error.message;
+    const msg = String(error.message || error);
+    if (/stack/i.test(msg)) {
+      statusText.textContent = '❌ 浏览器内存/缓存异常，请硬刷新后重试（或清除 teachany_pbl_unified_index_v10 缓存）';
+    } else {
+      statusText.textContent = '❌ ' + msg;
+    }
     statusEl.querySelector('.pulse').style.background = '#ef4444';
     window.__pblLastAnalysisDone = { ok: false, error: error.message, ts: Date.now() };
     document.dispatchEvent(new CustomEvent('teachany-pbl-done', { detail: { error: error.message } }));
@@ -1720,11 +1736,7 @@ function ensurePBLBlueprint(result) {
   if (!builder || typeof builder._fallbackDecomposeBlueprint !== 'function') return result;
   try {
     const goal = result.goal || '';
-    let bp = builder._fallbackDecomposeBlueprint(goal);
-    const archetype = builder._resolveArchetype?.(goal) || builder._resolvedArchetype || null;
-    if (bp && typeof builder._concretizeBlueprint === 'function') {
-      bp = builder._concretizeBlueprint(goal, bp, archetype);
-    }
+    const bp = builder._fallbackDecomposeBlueprint(goal);
     if ((bp?.schemes || []).length) {
       if (bp.schemes.length === 1) bp = appendAlternateScheme(bp);
       result.projectBlueprint = bp;
