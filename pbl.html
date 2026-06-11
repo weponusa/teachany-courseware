@@ -155,9 +155,37 @@ body {
 }
 .pbl-form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 12px 16px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
+}
+.pbl-form-grid .pbl-field-task { grid-column: 1 / -1; }
+.pbl-form-more {
+  grid-column: 1 / -1;
+  margin: 2px 0 4px;
+}
+.pbl-form-more summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dim);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+.pbl-form-more summary::-webkit-details-marker { display: none; }
+.pbl-form-more[open] summary { margin-bottom: 10px; color: var(--accent); }
+.pbl-form-more-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+}
+.pbl-match-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 .pbl-field { display: flex; flex-direction: column; gap: 6px; }
 .pbl-field label {
@@ -326,11 +354,12 @@ body {
 .pbl-refine-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .pbl-actions {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
   margin-top: 14px;
-  flex-wrap: wrap;
 }
+.pbl-actions .pbl-analyze-btn { align-self: flex-start; }
 .pbl-analyze-btn {
   padding: 12px 28px;
   border-radius: 10px;
@@ -951,6 +980,7 @@ body {
   .nav-links { flex-wrap: wrap; justify-content: center; }
   .header h1 { font-size: 28px; }
   .pbl-section { padding: 20px; }
+  .pbl-form-grid, .pbl-form-more-grid { grid-template-columns: 1fr; }
   .how-it-works { grid-template-columns: 1fr; }
   .node-detail-panel { width: 100%; right: -100%; }
 }
@@ -988,8 +1018,8 @@ body {
     <div class="how-step">
       <div class="step-icon">📝</div>
       <div class="step-num">Step 1</div>
-      <div class="step-title">结构化描述项目</div>
-      <div class="step-desc">填写学段、学科、任务与产出类型，AI 据此精准匹配课标</div>
+      <div class="step-title">描述项目任务</div>
+      <div class="step-desc">填写任务与产出类型，AI 自动匹配课标与知识图谱</div>
     </div>
     <div class="how-step">
       <div class="step-icon">🤖</div>
@@ -1016,28 +1046,12 @@ body {
     <div class="pbl-title">🧭 PBL 项目式学习路径发现</div>
     <button type="button" class="pbl-settings-btn" id="pblSettingsBtn" onclick="toggleSettings()" title="TeachAny 服务端默认 · Qwen3 Next 80B">⚙️ 服务端默认</button>
     <div class="pbl-desc">
-      覆盖 TeachAny <b>全科知识图谱</b>：从项目目标自动匹配课内知识点，梳理前置、核心与扩展关系，生成交互式学习路径；图谱节点可一键跳转<a href="knowledge-map.html">全科图谱</a>或生成课件。
+      描述项目任务即可拆解学习路径；学段由 AI 从任务中自动推断。可跳转<a href="knowledge-map.html">全科图谱</a>或一键生成课件。
     </div>
     <div class="pbl-form-grid">
-      <div class="pbl-field">
-        <label for="pblGradeLevel">学段</label>
-        <select id="pblGradeLevel" onchange="updatePBLGradeDetailOptions()">
-          <option value="any">自动推断（可能跨学段）</option>
-          <option value="primary">小学</option>
-          <option value="junior">初中</option>
-          <option value="senior">高中</option>
-          <option value="university">大学</option>
-          <option value="adult">成人/在职</option>
-        </select>
-      </div>
-      <div class="pbl-field pbl-field-full" id="pblGradeDetailRow">
-        <label>具体年级（可多选）</label>
-        <div id="pblGradeDetailCheckboxes" class="pbl-grade-checks">
-          <span class="pbl-form-hint-inline">选择学段后可勾选多个年级；默认锁定学段，不选更低学段课</span>
-        </div>
-        <div class="pbl-match-options">
-          <label><input type="checkbox" id="pblLockGradeBand" checked onchange="markPBLGoalDirty()"> 锁定当前学段（默认不跨学段选课）</label>
-        </div>
+      <div class="pbl-field pbl-field-task">
+        <label for="pblTaskInput">项目任务 <span style="color:var(--accent)">*</span></label>
+        <textarea id="pblTaskInput" class="pbl-textarea" placeholder="描述要做什么，如：为校园写一组家乡主题现代诗并编成诗集"></textarea>
       </div>
       <div class="pbl-field">
         <label for="pblSubject">学科取向</label>
@@ -1076,24 +1090,24 @@ body {
         <label for="pblDeliverableCustom">自定义产出说明</label>
         <input type="text" id="pblDeliverableCustom" placeholder="如：家庭购车对比决策报告（含全成本表）" />
       </div>
-      <div class="pbl-field pbl-field-full">
-        <label for="pblTaskInput">任务描述 <span style="color:var(--accent)">*</span></label>
-        <textarea id="pblTaskInput" class="pbl-textarea" placeholder="用自然语言描述要做什么，如：对比新能源与燃油家用轿车，从需求、全成本、环保等维度给出购车建议"></textarea>
-      </div>
-      <div class="pbl-field">
-        <label for="pblAudience">受众/场景（可选）</label>
-        <input type="text" id="pblAudience" placeholder="如：高一班级、家庭决策、社区调研" />
-      </div>
-      <div class="pbl-field">
-        <label for="pblDuration">周期（可选）</label>
-        <input type="text" id="pblDuration" placeholder="如：4 周、8 课时" />
-      </div>
-      <div class="pbl-field pbl-field-full">
-        <label for="pblConstraints">约束条件（可选）</label>
-        <input type="text" id="pblConstraints" placeholder="如：预算上限、安全要求、可用设备、必须使用的工具" />
-      </div>
+      <details class="pbl-form-more">
+        <summary>＋ 更多选项（受众、周期、约束）</summary>
+        <div class="pbl-form-more-grid">
+          <div class="pbl-field">
+            <label for="pblAudience">受众/场景</label>
+            <input type="text" id="pblAudience" placeholder="如：班级展示、家庭决策" />
+          </div>
+          <div class="pbl-field">
+            <label for="pblDuration">周期</label>
+            <input type="text" id="pblDuration" placeholder="如：4 周、8 课时" />
+          </div>
+          <div class="pbl-field pbl-field-full">
+            <label for="pblConstraints">约束条件</label>
+            <input type="text" id="pblConstraints" placeholder="如：预算、设备、评价标准" />
+          </div>
+        </div>
+      </details>
     </div>
-    <p class="pbl-form-hint">拆解时可多选课标体系与知识来源；合作方式、评价标准等可通过「约束条件」或对话补充。</p>
     <div class="pbl-examples">
       <span class="ex-label">示范项目：</span>
       <span class="ex-chip" onclick="fillPBLExample(this)" data-key="water-rocket" data-goal="设计一款水火箭，完成箭体制作、推进测试与安全发射">🚀 水火箭设计</span>
@@ -1118,19 +1132,21 @@ body {
     </div>
     <div class="pbl-actions">
       <button class="pbl-analyze-btn" id="pblAnalyzeBtn" onclick="analyzePBLGoal()">🔍 拆解项目路径</button>
-      <div class="pbl-system-tags" style="width:100%;margin-top:8px">
-        <span class="tag-label">课标体系（可多选）：</span>
-        <span class="pbl-sys-tag active" data-system="all" onclick="toggleSystemTag(this)">全部</span>
-        <span class="pbl-sys-tag" data-system="cn" onclick="toggleSystemTag(this)">🇨🇳 中国课标</span>
-        <span class="pbl-sys-tag" data-system="ap" onclick="toggleSystemTag(this)">🇺🇸 AP</span>
-        <span class="pbl-sys-tag" data-system="cambridge" onclick="toggleSystemTag(this)">🇬🇧 Cambridge</span>
-        <span class="pbl-sys-tag" data-system="ib" onclick="toggleSystemTag(this)">🌍 IB</span>
-        <span class="pbl-sys-tag" data-system="us" onclick="toggleSystemTag(this)">🇺🇸 US CCSS</span>
-      </div>
-      <div class="pbl-system-tags" style="width:100%;margin-top:6px">
-        <span class="tag-label">知识来源（可多选）：</span>
-        <span class="pbl-src-tag active" data-source="curriculum" onclick="toggleKnowledgeSourceTag(this)">📚 课标树</span>
-        <span class="pbl-src-tag active" data-source="k12Graph" onclick="toggleKnowledgeSourceTag(this)">🧬 全科图谱</span>
+      <div class="pbl-match-bar">
+        <div class="pbl-system-tags">
+          <span class="tag-label">课标：</span>
+          <span class="pbl-sys-tag active" data-system="all" onclick="toggleSystemTag(this)">全部</span>
+          <span class="pbl-sys-tag" data-system="cn" onclick="toggleSystemTag(this)">🇨🇳 中国</span>
+          <span class="pbl-sys-tag" data-system="ap" onclick="toggleSystemTag(this)">AP</span>
+          <span class="pbl-sys-tag" data-system="cambridge" onclick="toggleSystemTag(this)">Cambridge</span>
+          <span class="pbl-sys-tag" data-system="ib" onclick="toggleSystemTag(this)">IB</span>
+          <span class="pbl-sys-tag" data-system="us" onclick="toggleSystemTag(this)">US</span>
+        </div>
+        <div class="pbl-system-tags">
+          <span class="tag-label">来源：</span>
+          <span class="pbl-src-tag active" data-source="curriculum" onclick="toggleKnowledgeSourceTag(this)">课标树</span>
+          <span class="pbl-src-tag active" data-source="k12Graph" onclick="toggleKnowledgeSourceTag(this)">全科图谱</span>
+        </div>
       </div>
     </div>
   </div>
@@ -1233,7 +1249,7 @@ body {
 </div>
 
 <script src="./assets/scripts/courseware-hub.js"></script>
-<script src="./assets/scripts/pbl-project-form.js?v=20260609-grade-multi"></script>
+<script src="./assets/scripts/pbl-project-form.js?v=20260609-form-simple"></script>
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-path.js?v=20260609-grade-multi"></script>
@@ -1246,21 +1262,6 @@ let pblResult = null;
 let pblChatHistory = [];
 let pblKnowledgeSelection = new Set();
 let pblCandidateView = [];
-
-function updatePBLGradeDetailOptions() {
-  const level = document.getElementById('pblGradeLevel')?.value || 'any';
-  const box = document.getElementById('pblGradeDetailCheckboxes');
-  if (!box) return;
-  const opts = (window.PBLProjectForm?.gradeDetailOptionsFor(level) || []);
-  if (level === 'any' || level === 'university' || level === 'adult' || !opts.length) {
-    box.innerHTML = '<span class="pbl-form-hint-inline">K12 请先选择小学/初中/高中，再勾选年级；默认锁定学段，不选更低学段课</span>';
-    return;
-  }
-  box.innerHTML = opts.map(o =>
-    `<label class="pbl-grade-check"><input type="checkbox" name="pblGradeDetail" value="${o.id}" onchange="markPBLGoalDirty()"> ${o.label}</label>`
-  ).join('');
-  markPBLGoalDirty();
-}
 
 function toggleKnowledgeSourceTag(el) {
   el.classList.toggle('active');
@@ -1359,9 +1360,7 @@ function markPBLGoalDirty() {
 async function fillPBLExample(el) {
   const key = el.dataset.key;
   const spec = {
-    gradeLevel: el.dataset.grade || 'any',
-    gradeDetail: el.dataset.gradeDetail || '',
-    gradeDetails: el.dataset.gradeDetails ? el.dataset.gradeDetails.split(',') : (el.dataset.gradeDetail ? [el.dataset.gradeDetail] : []),
+    gradeLevel: 'any',
     subject: el.dataset.subject || 'cross',
     task: el.dataset.task || el.dataset.goal || '',
     deliverable: el.dataset.deliverable || 'report',
@@ -2384,9 +2383,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.target === e.currentTarget) toggleSettings();
   });
 
-  updatePBLGradeDetailOptions();
   togglePBLDeliverableCustom();
-  ['pblTaskInput', 'pblGradeLevel', 'pblSubject', 'pblDeliverable'].forEach(id => {
+  ['pblTaskInput', 'pblSubject', 'pblDeliverable'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', markPBLGoalDirty);
     if (el) el.addEventListener('change', markPBLGoalDirty);

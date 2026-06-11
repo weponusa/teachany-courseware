@@ -139,9 +139,6 @@
   }
 
   function readProjectSpecFromDOM() {
-    const gradeLevel = document.getElementById('pblGradeLevel')?.value || 'any';
-    const gradeDetails = readGradeDetailsFromDOM();
-    const lockGradeBand = document.getElementById('pblLockGradeBand')?.checked !== false;
     const subject = document.getElementById('pblSubject')?.value || 'cross';
     const task = document.getElementById('pblTaskInput')?.value?.trim() || '';
     const deliverable = document.getElementById('pblDeliverable')?.value || 'report';
@@ -150,9 +147,9 @@
     const duration = document.getElementById('pblDuration')?.value?.trim() || '';
     const constraints = document.getElementById('pblConstraints')?.value?.trim() || '';
     return normalizeProjectSpec({
-      gradeLevel,
-      gradeDetails,
-      lockGradeBand,
+      gradeLevel: 'any',
+      gradeDetails: [],
+      lockGradeBand: false,
       knowledgeSources: readKnowledgeSourcesFromDOM(),
       curriculumSystems: readCurriculumSystemsFromDOM(),
       subject, task, deliverable,
@@ -161,9 +158,8 @@
   }
 
   function fillProjectSpecToDOM(spec) {
-    const s = normalizeProjectSpec(spec);
+    const s = normalizeProjectSpec({ ...spec, gradeLevel: 'any', gradeDetails: [], lockGradeBand: false });
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-    set('pblGradeLevel', s.gradeLevel);
     set('pblSubject', s.subject);
     set('pblTaskInput', s.task);
     set('pblDeliverable', s.deliverable);
@@ -171,13 +167,6 @@
     set('pblAudience', s.audience);
     set('pblDuration', s.duration);
     set('pblConstraints', s.constraints);
-    const lockEl = document.getElementById('pblLockGradeBand');
-    if (lockEl) lockEl.checked = s.lockGradeBand !== false;
-    if (typeof updatePBLGradeDetailOptions === 'function') updatePBLGradeDetailOptions();
-    const details = normalizeGradeDetails(s);
-    document.querySelectorAll('input[name="pblGradeDetail"]').forEach(el => {
-      el.checked = details.includes(el.value);
-    });
     if (typeof fillPBLKnowledgeSourceTags === 'function') {
       fillPBLKnowledgeSourceTags(s.knowledgeSources);
     }
