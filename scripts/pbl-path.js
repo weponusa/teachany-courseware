@@ -1519,10 +1519,13 @@ class PBLPathBuilder {
     return /历史背景|朝代|元代|元朝|宋朝|宋代|唐朝|隋唐|明清|西汉|东汉|蒙古|丝绸之路|世界大战|资产阶级|革命|改革开放|秦始皇|工业革命|文艺复兴|冷战|新航路|殖民|封建|帝国|奴隶社会|封建社会|通史|古代史|近代史|现代史/.test(name);
   }
 
-  /** 学科限制：仅用户表单显式指定时生效；否则不限学科，由筛选/匹配阶段按题目延展选取 */
+  /** 学科限制：表单显式指定优先；光伏/能源测算等类型锁定物理+数学+地学，避免「能量」误召回生物 */
   _getAllowedSubjects(goal, archetype = null) {
     const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
     if (specSubjects?.length) return new Set(specSubjects);
+    if (this._isEnergyAnalysisGoal(goal)) {
+      return new Set(['physics', 'math', 'science', 'geography', 'chinese', 'info-tech']);
+    }
     return null;
   }
 
@@ -1618,6 +1621,7 @@ class PBLPathBuilder {
       if (node.subject === 'physics' && /能量|电|光|功率|电路|欧姆/.test(name)) score += 8;
       if (this._isOffTopicGeographyClimateNode(node)) score -= 55;
       if (node.subject === 'chemistry' && /热化学|焓变|有机/.test(`${name} ${text}`)) score -= 45;
+      if (this._isBiologyHealthNode(node) || node.subject === 'biology') score -= 80;
     }
     if (this._isGenericTransversalNode(name, g)) score -= 40;
     if (!this._shouldAllowUniversityNodes(g) && this._isUniversityNode(node)) score -= 35;
@@ -1953,10 +1957,10 @@ class PBLPathBuilder {
   _photovoltaicAnalysisDomains(goal) {
     const subject = this._compactProjectLabel(goal) || '校园光伏发电';
     return [
-      { id: 'resource', label: '太阳能资源', keywords: [subject, '光伏', '太阳能', '日照', '辐射', '光电', '电功率', '能量'], subjects: ['physics', 'science'] },
+      { id: 'resource', label: '太阳能资源', keywords: [subject, '光伏', '太阳能', '日照', '辐射', '光电', '电功率', '能量守恒', '电能', '电流', '电压'], subjects: ['physics', 'science'] },
       { id: 'electricity', label: '用电与屋顶', keywords: [subject, '用电', '电量', '电费', '调查', '数据', '统计', '校园', '屋顶'], subjects: ['math', 'science', 'geography'] },
       { id: 'calc', label: '收益测算', keywords: [subject, '函数', '计算', '收益', '成本', '百分比', '统计', '估算', '发电'], subjects: ['math'] },
-      { id: 'carbon', label: '减排效益', keywords: [subject, '碳', '排放', '减排', '环境', '能源', '对比'], subjects: ['geography', 'science'] },
+      { id: 'carbon', label: '减排效益', keywords: [subject, '碳', '排放', '减排', '环境', '对比', '可持续'], subjects: ['geography', 'science'] },
       { id: 'report', label: '方案论证', keywords: [subject, '说明', '报告', '论证', '建议', '图表'], subjects: ['chinese', 'math'] },
     ];
   }
@@ -2606,6 +2610,7 @@ class PBLPathBuilder {
 
   /** 非生物项目：硬性剔除生物噪声 */
   _shouldPurgeBiologyForGoal(goal) {
+    if (this._isEnergyAnalysisGoal(goal)) return true;
     if (this._isConsumerDecisionGoal(goal)) return true;
     if (this._isSocialOrCivicInquiryGoal(goal)) return true;
     if (this._isGroundRoboticsGoal(goal)) return true;
@@ -2722,6 +2727,9 @@ class PBLPathBuilder {
     }
     if (this._shouldPurgeGeographyClimateForGoal(goal) && this._isOffTopicGeographyClimateNode(node)) {
       return '光伏测算不宜引入大气环流等气候系统节点';
+    }
+    if (this._isEnergyAnalysisGoal(goal) && (this._isBiologyHealthNode(node) || node.subject === 'biology')) {
+      return '光伏/能源测算不宜引入细胞/生物膜等生物学节点';
     }
     const score = this._scoreUniversalRelevance(node, goal, blueprint, domains, archetype);
     if (score < this._relevanceKeepThreshold(false)) return `相关性不足(${score})`;

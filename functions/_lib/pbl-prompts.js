@@ -110,7 +110,7 @@ const TYPE_PROFILES = {
   'maker-workshop': { label: '工坊/木作/建筑模型', moduleWord: '工序（现场调研 / 风格方案 / 材料BOM / 搭建装饰 / 验收展示）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是实体模型+图册+BOM；须有尺寸、工具、照片、检查表' },
   'industry-innovation': { label: '产业创新/新兴经济探究', moduleWord: '环节（产业背景与政策 / 应用场景调研 / 技术原理支撑 / 数据可行性 / 创新方案报告）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是主题产业创新方案/调研报告；禁止与主题无关的模块' },
   'exhibition-redesign': { label: '展陈空间/场馆改造', moduleWord: '环节（现状诊断 / 主题策划 / 展陈设计 / 实施整改 / 开放验收）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是场馆改造方案册+展陈设计图；禁止与展陈无关的节点' },
-  'energy-analysis': { label: '能源/环境数据测算', moduleWord: '环节（资源调查 / 数据采集 / 模型测算 / 效益分析 / 方案论证）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是测算表+分析图表+论证报告；禁止接线/原型/硬件工程步骤' },
+  'energy-analysis': { label: '能源/环境数据测算', moduleWord: '环节（资源调查 / 数据采集 / 模型测算 / 效益分析 / 方案论证）', subjectsHint: '物理、数学、地理/科学、语文（报告）；禁止生物学', redlines: '交付物是测算表+分析图表+论证报告；禁止接线/原型/硬件工程步骤；禁止细胞/细胞膜/细胞呼吸/光合作用等生物学节点（能量指物理电能非细胞代谢）' },
   'general': { label: '综合实践', moduleWord: '项目模块（须按题目自定义，禁止套用通用模块名）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '每个节点都要服务于题目交付物' },
 };
 
@@ -297,10 +297,10 @@ function genericDomainsForType(id, goal = '') {
       { id: 'launch', label: '开放验收', keywords: ['验收', '讲解', '宣传', '说明', '展示', '反馈'], subjects: ['chinese', 'science'] },
     ],
     'energy-analysis': [
-      { id: 'resource', label: '资源调查', keywords: ['光伏', '太阳能', '日照', '辐射', '光电', '电功率', '能量'], subjects: ['physics', 'science'] },
+      { id: 'resource', label: '资源调查', keywords: ['光伏', '太阳能', '日照', '辐射', '光电', '电功率', '能量守恒', '电能', '电路'], subjects: ['physics', 'science'] },
       { id: 'electricity', label: '数据采集', keywords: ['用电', '电量', '电费', '调查', '数据', '统计', '屋顶', '面积'], subjects: ['math', 'science'] },
       { id: 'calc', label: '模型测算', keywords: ['函数', '计算', '收益', '成本', '百分比', '统计', '估算', '发电'], subjects: ['math'] },
-      { id: 'carbon', label: '效益分析', keywords: ['碳', '排放', '减排', '环境', '能源', '对比'], subjects: ['geography', 'science'] },
+      { id: 'carbon', label: '效益分析', keywords: ['碳', '排放', '减排', '环境', '对比', '可持续'], subjects: ['geography', 'science'] },
       { id: 'report', label: '方案论证', keywords: ['说明', '报告', '论证', '建议', '图表'], subjects: ['chinese', 'math'] },
     ],
     'maker-workshop': [
