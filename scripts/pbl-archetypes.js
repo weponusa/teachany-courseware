@@ -372,6 +372,34 @@
       return out;
     }
 
+    /** 按题目技术关键词直接注入课外节点（Wi-Fi/蓝牙/语音/LED 等），不限原型类型 */
+    getGoalTriggeredExternals(goal, matchedNames, limit = 6) {
+      if (!this.registryData?.entries?.length) return [];
+      const g = String(goal || '');
+      const names = new Set((matchedNames || []).map(n => norm(n).toLowerCase()));
+      const out = [];
+      for (const e of this.registryData.entries) {
+        if (out.length >= limit) break;
+        const patterns = e.goalPatterns || [];
+        if (!patterns.length) continue;
+        const hit = patterns.some(p => {
+          try { return new RegExp(p, 'i').test(g); } catch { return g.includes(p); }
+        });
+        if (!hit) continue;
+        if (names.has(norm(e.name).toLowerCase())) continue;
+        out.push({
+          name: e.name,
+          reason: e.reason,
+          moduleId: e.moduleId,
+          taskSnippet: e.taskSnippet || '',
+          prerequisites: e.prerequisites || [],
+          _registryId: e.id,
+          _goalTriggered: true,
+        });
+      }
+      return out;
+    }
+
     tagMatchedModules(matched, archetype, blueprint, scoreFn) {
       const modules = archetype
         ? this._modulesFor(archetype, blueprint)

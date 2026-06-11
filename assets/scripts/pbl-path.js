@@ -3360,7 +3360,7 @@ class PBLPathBuilder {
 
   /** 课标外知识点：优先工程注册表按模块绑定，禁止通用套话兜底 */
   _ensureExternalNodes(external, goal, matched, projectBlueprint, archetype = null) {
-    const max = PBLPathBuilder.PBL_MAX_EXTERNAL;
+    const max = this._externalLimit(goal);
     let list = this._mapExternalEntries(external);
     const seen = new Set(list.map(e => String(e.name).toLowerCase()));
     const matchedNames = matched.map(n => n.name);
@@ -3381,10 +3381,16 @@ class PBLPathBuilder {
       if (item.moduleId) {
         node.moduleId = item.moduleId;
         node.matchReason = `模块：${item.moduleId}。${item.reason || ''}${item.taskSnippet ? `；任务：${item.taskSnippet}` : ''}`;
+      } else if (item._goalTriggered) {
+        node.matchReason = `技术节点：${item.reason || ''}${item.taskSnippet ? `；任务：${item.taskSnippet}` : ''}`;
       }
       list.push(node);
       seen.add(name.toLowerCase());
     };
+
+    if (this._archetypeEngine?.getGoalTriggeredExternals) {
+      this._archetypeEngine.getGoalTriggeredExternals(goal, matchedNames, max).forEach(addItem);
+    }
 
     if (archetype && this._archetypeEngine) {
       this._archetypeEngine.getRegistryExternals(archetype, projectBlueprint, matchedNames, max)
@@ -4644,10 +4650,21 @@ class PBLPathBuilder {
   static PBL_MAX_GRAPH_NODES = 22;
   static PBL_MIN_EXTERNAL = 1;
   static PBL_MAX_EXTERNAL = 3;
+  static PBL_MAX_EXTERNAL_IOT = 6;
   static PBL_MAX_MATCHED_COMPLEX = 10;
   static PBL_MIN_MATCHED_COMPLEX = 5;
   static PBL_MIN_CURRICULUM_CORE = 5;
   static PBL_MIN_GRADE_COMPLEX = 7;
+
+  _isEmbeddedOrIoTGoal(goal) {
+    return /物联网|IoT|智能设备|智能家居|智能硬件|嵌入式|单片机|Arduino|树莓派|ESP32|STM32|传感|GPIO|Wi-?Fi|蓝牙|BLE|LED|语音识别|语音控制|无线通信|模块|硬件|电路|烧录|串口/i.test(String(goal || ''));
+  }
+
+  _externalLimit(goal) {
+    return this._isEmbeddedOrIoTGoal(goal)
+      ? PBLPathBuilder.PBL_MAX_EXTERNAL_IOT
+      : PBLPathBuilder.PBL_MAX_EXTERNAL;
+  }
 
   _getMinMatchedFloor(archetype) {
     return Math.max(
@@ -5575,10 +5592,11 @@ class PBLPathBuilder {
     return routeText;
   }
 
-  _capGraphNodes(graphData, maxNodes = PBLPathBuilder.PBL_MAX_GRAPH_NODES) {
+  _capGraphNodes(graphData, maxNodes = PBLPathBuilder.PBL_MAX_GRAPH_NODES, goal = '') {
     const nodes = graphData.nodes || [];
     if (nodes.length <= maxNodes) return graphData;
-    const extKeep = nodes.filter(n => n.layer === 'external').slice(0, PBLPathBuilder.PBL_MAX_EXTERNAL);
+    const extCap = this._externalLimit(goal);
+    const extKeep = nodes.filter(n => n.layer === 'external').slice(0, extCap);
     const others = nodes.filter(n => n.layer !== 'external');
     const budget = Math.max(maxNodes - extKeep.length, Math.floor(maxNodes * 0.75));
     const layerScore = { matched: 1000, external: 850, advanced: 750, parallel: 400, prerequisite: 600 };
@@ -5648,11 +5666,11 @@ class PBLPathBuilder {
       meta.pathOrderIds || [],
       goal,
       meta.dependsOnLinks || [],
-      external.slice(0, PBLPathBuilder.PBL_MAX_EXTERNAL)
+      external.slice(0, this._externalLimit(goal))
     );
-    graphData = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES);
+    graphData = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES, goal);
     const mainline = this._getMainlinePath(graphData);
-    const extOut = external.slice(0, PBLPathBuilder.PBL_MAX_EXTERNAL);
+    const extOut = external.slice(0, this._externalLimit(goal));
     return {
       complex,
       matched: mainline.length ? mainline : core,
@@ -5927,9 +5945,9 @@ class PBLPathBuilder {
     if (!selected.length) throw new Error('所选知识点不在当前图谱索引中');
 
     const external = (previousResult.external || previousResult.graphData?.nodes?.filter(n => n.layer === 'external') || [])
-      .slice(0, PBLPathBuilder.PBL_MAX_EXTERNAL);
+      .slice(0, this._externalLimit(goal));
     let graphData = this._buildRichMainlineGraph(selected, ids, goal, [], external);
-    graphData = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES);
+    graphData = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES, goal);
     const matched = this._getMainlinePath(graphData);
     const blueprintPhases = previousResult.projectBlueprint
       ? this._blueprintProjectPhases(previousResult.projectBlueprint, goal)

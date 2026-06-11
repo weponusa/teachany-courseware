@@ -1506,10 +1506,18 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
     try {
       if (window.TeachAnyHistory && typeof window.TeachAnyHistory.recordPBL === 'function') {
         const llmCfg = builder.getLLMConfig();
-        window.TeachAnyHistory.recordPBL(goal, { ...result.graphData, systems: result.systems, techRoute: result.techRoute || '' }, {
+        const runId = window.TeachAnyHistory.recordPBL(goal, { ...result.graphData, systems: result.systems, techRoute: result.techRoute || '' }, {
           providerName: llmCfg.providerName,
           model: llmCfg.model || 'auto',
         });
+        if (runId) {
+          window.__pblRunId = runId;
+          const u = new URL(window.location.href);
+          u.searchParams.delete('auto');
+          u.searchParams.delete('handoff');
+          u.searchParams.set('pbl', runId);
+          history.replaceState(null, '', u.pathname + u.search);
+        }
       }
     } catch (_e) { /* ignore */ }
 
@@ -1660,7 +1668,16 @@ function getStoredPBLRun(id) {
 }
 
 function enrichPBLNode(node) {
-  if (!node || node.isExternal) return node;
+  if (!node) return node;
+  if (node.isExternal || node.layer === 'external') {
+    return {
+      ...node,
+      layer: node.layer || 'external',
+      isExternal: true,
+      matchReason: node.matchReason || node.definition || node.reason || '',
+      taskSnippet: node.taskSnippet || '',
+    };
+  }
   const full = window.PBLPathBuilder && window.PBLPathBuilder.unifiedIndex
     ? window.PBLPathBuilder.unifiedIndex.get(node.id) : null;
   if (!full) return node;
@@ -1681,6 +1698,45 @@ function enrichPBLGraphData(graphData) {
     nodes: (graphData.nodes || []).map(enrichPBLNode),
     links: (graphData.links || []).map(l => ({ ...l }))
   };
+}
+
+async function restorePBLFromHandoff(handoffId) {
+  const id = String(handoffId || '').trim();
+  if (!id) return false;
+  try {
+    const res = await fetch(`/api/pbl/handoff?id=${encodeURIComponent(id)}`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data?.result?.graphData?.nodes?.length) return false;
+    if (data.spec && window.PBLProjectForm?.fillProjectSpecToDOM) {
+      window.PBLProjectForm.fillProjectSpecToDOM(data.spec);
+    } else if (data.goal) {
+      const taskEl = document.getElementById('pblTaskInput');
+      if (taskEl) taskEl.value = data.goal;
+    }
+    const result = { ...data.result, goal: data.goal || data.result.goal || '', restoredFromHandoff: true };
+    if (window.PBLPathBuilder && typeof window.PBLPathBuilder.loadUnifiedIndex === 'function') {
+      try { await window.PBLPathBuilder.loadUnifiedIndex(); } catch (_e) {}
+    }
+    result.graphData = enrichPBLGraphData(result.graphData);
+    pblResult = result;
+    renderPBLResult(result);
+    scrollToPBLOutput();
+    if (window.TeachAnyHistory?.importPBLHandoff) {
+      const runId = window.TeachAnyHistory.importPBLHandoff(data);
+      if (runId) {
+        window.__pblRunId = runId;
+        const u = new URL(window.location.href);
+        u.searchParams.delete('handoff');
+        u.searchParams.set('pbl', runId);
+        history.replaceState(null, '', u.pathname + u.search);
+      }
+    }
+    return true;
+  } catch (e) {
+    console.warn('[PBL] handoff restore failed:', e);
+    return false;
+  }
 }
 
 async function restorePBLRunFromHistory(id) {
@@ -2420,11 +2476,15 @@ function saveSettings() {
 }
 
 function buildPBLEditUrl(spec, baseUrl) {
+  const base = baseUrl || (window.location.origin + window.location.pathname.replace(/[^/]*$/, 'pbl.html'));
+  const u = new URL(base, window.location.href);
+  if (window.__pblRunId) {
+    u.searchParams.set('pbl', window.__pblRunId);
+    return u.toString();
+  }
   const s = window.PBLProjectForm?.normalizeProjectSpec
     ? window.PBLProjectForm.normalizeProjectSpec(spec || {})
     : (spec || {});
-  const base = baseUrl || (window.location.origin + window.location.pathname.replace(/[^/]*$/, 'pbl.html'));
-  const u = new URL(base, window.location.href);
   const task = String(s.task || '').trim();
   if (task) u.searchParams.set('goal', task);
   if (s.gradeLevel && s.gradeLevel !== 'any') u.searchParams.set('grade', s.gradeLevel);
@@ -2460,8 +2520,28 @@ function applyPBLParamsFromURL(params) {
   return spec;
 }
 
+async function createPBLHandoffUrl(baseUrl) {
+  if (!pblResult?.graphData?.nodes?.length) throw new Error('尚无拆解结果');
+  const spec = typeof getPBLProjectSpec === 'function' ? getPBLProjectSpec() : null;
+  const res = await fetch('/api/pbl/handoff', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ goal: pblResult.goal || spec?.task || '', result: pblResult, spec }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || 'handoff 失败');
+  const base = baseUrl || (window.location.origin + window.location.pathname.replace(/[^/]*$/, 'pbl.html'));
+  const u = new URL(base, window.location.href);
+  u.searchParams.set('handoff', data.id);
+  u.searchParams.delete('auto');
+  return u.toString();
+}
+
 window.TeachAnyPBLAutomation = {
   buildEditUrl: buildPBLEditUrl,
+  getRunId: () => window.__pblRunId || null,
+  getEditUrl: (baseUrl) => buildPBLEditUrl(null, baseUrl),
+  createHandoff: createPBLHandoffUrl,
   getResult: () => pblResult,
   waitForAnalysis: (timeoutMs = 360000) => new Promise((resolve, reject) => {
     if (pblResult?.graphData?.nodes?.length) {
@@ -2486,6 +2566,7 @@ window.TeachAnyPBLAutomation = {
 // ─── 页面初始化 ─────────────────────────────────
 const urlParams = new URLSearchParams(window.location.search);
 const pblIdFromURL = urlParams.get('pbl');
+const pblHandoffFromURL = urlParams.get('handoff');
 const pblGoalFromURL = urlParams.get('goal');
 const pblAutoFromURL = urlParams.get('auto') === '1';
 const makeNodeFromURL = urlParams.get('make');
@@ -2519,6 +2600,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 从知识地图跳转：?make=nodeId&name=节点名 → 打开制作课件模块
   if (makeNodeFromURL && typeof window.generateCourseware === 'function') {
     generateCourseware(makeNodeFromURL, makeNameFromURL || makeNodeFromURL);
+  }
+
+  // 跨会话交接：?handoff=UUID → 直接恢复完整拆解结果
+  if (pblHandoffFromURL) {
+    const restoredHandoff = await restorePBLFromHandoff(pblHandoffFromURL);
+    if (!restoredHandoff) {
+      const statusText = document.getElementById('pblStatusText');
+      const statusEl = document.getElementById('pblStatus');
+      if (statusEl && statusText) {
+        statusEl.style.display = 'block';
+        statusText.textContent = '交接链接无效或已过期，请重新拆解或联系分享方。';
+      }
+    }
+    return;
   }
 
   // 如果 URL 有 PBL 历史参数，恢复已保存的图谱

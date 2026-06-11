@@ -288,15 +288,25 @@
     /* ── 4. PBL 路径分析 ─────────────────────────────── */
     recordPBL(goal, graphData, providers) {
       if (!goal || !graphData) return false;
-      const nodes = (graphData.nodes || []).map(n => ({
-        id: n.id,
-        name: n.name,
-        layer: n.layer,
-        system: n.system,
-        systemTag: n.systemTag,
-        confidence: n.confidence || null,
-        isExternal: !!n.isExternal
-      }));
+      const techRoute = graphData.techRoute ? safeText(graphData.techRoute, 2000) : '';
+      const nodes = (graphData.nodes || []).map(n => {
+        const base = {
+          id: n.id,
+          name: n.name,
+          layer: n.layer,
+          system: n.system,
+          systemTag: n.systemTag,
+          confidence: n.confidence || null,
+          isExternal: !!n.isExternal || n.layer === 'external',
+        };
+        if (base.isExternal) {
+          base.matchReason = safeText(n.matchReason || n.reason || '', 600);
+          base.taskSnippet = safeText(n.taskSnippet || '', 400);
+          base.definition = safeText(n.definition || n.reason || '', 400);
+          base.moduleId = n.moduleId || '';
+        }
+        return base;
+      });
       const links = (graphData.links || []).map(l => ({
         source: typeof l.source === 'object' ? l.source.id : l.source,
         target: typeof l.target === 'object' ? l.target.id : l.target,
@@ -305,6 +315,7 @@
       const item = {
         id: shortId(),
         goal: safeText(goal, 1000),
+        techRoute,
         systems: graphData.systems || [],
         nodeCount: nodes.length,
         linkCount: links.length,
@@ -333,7 +344,22 @@
           item.truncated = true;
         }
       } catch {}
-      return appendItem('pbl_runs', item);
+      return appendItem('pbl_runs', item) ? item.id : false;
+    },
+
+    importPBLHandoff(payload) {
+      if (!payload?.result?.graphData) return false;
+      const r = payload.result;
+      const gd = r.graphData || {};
+      return this.recordPBL(
+        payload.goal || r.goal || '',
+        {
+          ...gd,
+          systems: r.systems || [],
+          techRoute: r.techRoute || '',
+        },
+        { providerName: 'handoff', model: '' }
+      );
     },
 
     /* ── 5. 制作课件 ─────────────────────────────────── */

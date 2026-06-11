@@ -87,7 +87,7 @@ async def run_decompose(args: argparse.Namespace) -> dict:
         raise SystemExit(2)
 
     analyze_url = build_pbl_url(args)
-    edit_url = build_edit_url(args)
+    edit_url = build_edit_url(args)  # fallback if page handoff fails
     out_dir = Path(args.output or ".").resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     png_path = out_dir / f"{slugify(args.goal)}.png"
@@ -125,6 +125,27 @@ async def run_decompose(args: argparse.Namespace) -> dict:
             }"""
         )
 
+        edit_url = await page.evaluate(
+            """async () => {
+              const base = window.location.origin + window.location.pathname;
+              if (window.TeachAnyPBLAutomation?.createHandoff) {
+                try {
+                  return await window.TeachAnyPBLAutomation.createHandoff(base);
+                } catch (e) {
+                  console.warn('[PBL] handoff failed, fallback to pbl id', e);
+                }
+              }
+              const runId = window.TeachAnyPBLAutomation?.getRunId?.();
+              const u = new URL(base);
+              u.searchParams.delete('auto');
+              if (runId) {
+                u.searchParams.set('pbl', runId);
+                return u.toString();
+              }
+              return window.TeachAnyPBLAutomation?.getEditUrl?.(base) || base;
+            }"""
+        )
+
         print("🖼️  正在生成长图…")
         png_bytes = await page.evaluate(
             """async () => {
@@ -146,6 +167,7 @@ async def run_decompose(args: argparse.Namespace) -> dict:
         "constraints": args.constraints,
         "image": str(png_path),
         "edit_url": edit_url,
+        "edit_url_fallback": build_edit_url(args),
         "summary": result_summary,
     }
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
