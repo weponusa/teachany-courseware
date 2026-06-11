@@ -323,6 +323,7 @@
         projectBlueprint: snap.projectBlueprint || null,
         projectPhases: snap.projectPhases || [],
         projectSpec: snap.projectSpec || null,
+        pathPlan: snap.pathPlan || null,
         chatHistory: (snap.chatHistory || []).slice(-24).map(m => ({
           role: m.role === 'user' ? 'user' : 'assistant',
           text: safeText(m.text || m.content || '', 800),
@@ -338,21 +339,26 @@
         model: providers && providers.model ? providers.model : '',
         ts: now()
       };
-      // 单条 PBL 可能很大，超 100KB 时砍掉 nodes/links 的细节再写
+      // 单条 PBL 可能很大：优先删聊天/候选，再缩图谱；永不删除 projectBlueprint/pathPlan
       try {
-        const size = JSON.stringify(item).length;
-        if (size > MAX_BYTES_PER_ITEM) {
+        const shrink = () => {
+          let size = JSON.stringify(item).length;
+          if (size <= MAX_BYTES_PER_ITEM) return;
+          item.chatHistory = (item.chatHistory || []).slice(-8);
+          item.truncated = true;
+          size = JSON.stringify(item).length;
+          if (size <= MAX_BYTES_PER_ITEM) return;
           item.nodes = item.nodes.slice(0, 60);
           item.links = item.links.slice(0, 120);
           item.graphData = { nodes: item.nodes, links: item.links };
-          item.truncated = true;
-        }
-        while (JSON.stringify(item).length > MAX_BYTES_PER_ITEM && item.nodes.length > 20) {
-          item.nodes = item.nodes.slice(0, Math.floor(item.nodes.length * 0.75));
-          item.links = item.links.filter(l => item.nodes.some(n => n.id === l.source) && item.nodes.some(n => n.id === l.target)).slice(0, Math.max(30, Math.floor(item.links.length * 0.75)));
-          item.graphData = { nodes: item.nodes, links: item.links };
-          item.truncated = true;
-        }
+          while (JSON.stringify(item).length > MAX_BYTES_PER_ITEM && item.nodes.length > 20) {
+            item.nodes = item.nodes.slice(0, Math.floor(item.nodes.length * 0.75));
+            item.links = item.links.filter(l => item.nodes.some(n => n.id === l.source) && item.nodes.some(n => n.id === l.target))
+              .slice(0, Math.max(30, Math.floor(item.links.length * 0.75)));
+            item.graphData = { nodes: item.nodes, links: item.links };
+          }
+        };
+        shrink();
       } catch {}
       return appendItem('pbl_runs', item) ? item.id : false;
     },

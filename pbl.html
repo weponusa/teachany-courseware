@@ -1659,6 +1659,7 @@ function serializePBLResult(result) {
     target: typeof l.target === 'object' ? (l.target.id || l.target) : l.target,
     type: l.type,
   }));
+  // handoff 优先保留蓝图/路径，省略大体积候选池与审计明细以防裁剪丢方案
   return {
     goal: result.goal || '',
     systems: result.systems || [],
@@ -1667,19 +1668,43 @@ function serializePBLResult(result) {
     projectPhases: result.projectPhases || [],
     projectSpec: result.projectSpec || null,
     moduleChain: result.moduleChain || '',
-    matched: result.matched || [],
-    external: result.external || [],
+    pathPlan: result.pathPlan || null,
     stats: result.stats || null,
-    quality: result.quality || null,
-    relevanceAudit: result.relevanceAudit || null,
-    candidateNodes: result.candidateNodes || [],
+    quality: result.quality
+      ? { score: result.quality.score, grade: result.quality.grade, breakdown: result.quality.breakdown }
+      : null,
     selectedKnowledgeIds: result.selectedKnowledgeIds || [],
-    chatHistory: result.chatHistory || [],
+    chatHistory: (result.chatHistory || []).slice(-16),
     graphData: { nodes, links },
   };
 }
 
+function ensurePBLBlueprint(result) {
+  if (!result || (result.projectBlueprint?.schemes || []).length) return result;
+  const builder = window.PBLPathBuilder;
+  if (!builder || typeof builder._fallbackDecomposeBlueprint !== 'function') return result;
+  try {
+    const goal = result.goal || '';
+    let bp = builder._fallbackDecomposeBlueprint(goal);
+    const archetype = builder._resolveArchetype?.(goal) || builder._resolvedArchetype || null;
+    if (bp && typeof builder._concretizeBlueprint === 'function') {
+      bp = builder._concretizeBlueprint(goal, bp, archetype);
+    }
+    if ((bp?.schemes || []).length) {
+      result.projectBlueprint = bp;
+      if (!result.moduleChain && builder._archetypeEngine?.moduleChainFromBlueprint) {
+        result.moduleChain = builder._archetypeEngine.moduleChainFromBlueprint(bp);
+      }
+      console.warn('[PBL] 已本地补全结构化拆解蓝图');
+    }
+  } catch (e) {
+    console.warn('[PBL] 蓝图补全失败:', e);
+  }
+  return result;
+}
+
 function renderPBLResult(result) {
+  result = ensurePBLBlueprint(result);
   pblResult = result;
   if (window.PBLPathBuilder && typeof window.PBLPathBuilder.buildPathPlanFromResult === 'function') {
     result.pathPlan = window.PBLPathBuilder.buildPathPlanFromResult(result);
@@ -1753,8 +1778,9 @@ async function restorePBLFromHandoff(handoffId) {
       const taskEl = document.getElementById('pblTaskInput');
       if (taskEl) taskEl.value = data.goal;
     }
-    const result = { ...data.result, goal: data.goal || data.result.goal || '', restoredFromHandoff: true };
+    let result = { ...data.result, goal: data.goal || data.result.goal || '', restoredFromHandoff: true };
     if (data.spec) result.projectSpec = data.spec;
+    if (data.result?.truncated) result.handoffTruncated = true;
     if (window.PBLPathBuilder && typeof window.PBLPathBuilder.loadUnifiedIndex === 'function') {
       try { await window.PBLPathBuilder.loadUnifiedIndex(); } catch (_e) {}
     }
@@ -1802,6 +1828,7 @@ async function restorePBLRunFromHistory(id) {
     projectBlueprint: run.projectBlueprint || null,
     projectPhases: run.projectPhases || [],
     projectSpec: run.projectSpec || null,
+    pathPlan: run.pathPlan || null,
     moduleChain: run.moduleChain || '',
     chatHistory: run.chatHistory || [],
     graphData,

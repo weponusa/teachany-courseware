@@ -7,30 +7,55 @@ function getDb(env) {
   return env.TEACHANY_DB || env.DB || null;
 }
 
+/** 裁剪时永远保留方案蓝图与实施路径，只缩图谱节点 */
 function clipJson(obj, max = MAX_PAYLOAD) {
-  let s = JSON.stringify(obj);
+  const base = {
+    goal: obj.goal,
+    spec: obj.spec || null,
+    result: {
+      goal: obj.result?.goal || obj.goal || '',
+      systems: obj.result?.systems || [],
+      techRoute: obj.result?.techRoute || '',
+      moduleChain: obj.result?.moduleChain || '',
+      projectBlueprint: obj.result?.projectBlueprint || null,
+      projectPhases: obj.result?.projectPhases || [],
+      projectSpec: obj.result?.projectSpec || null,
+      pathPlan: obj.result?.pathPlan || null,
+      stats: obj.result?.stats || null,
+      quality: obj.result?.quality
+        ? { score: obj.result.quality.score, grade: obj.result.quality.grade }
+        : null,
+      chatHistory: (obj.result?.chatHistory || []).slice(-12),
+      graphData: obj.result?.graphData || { nodes: [], links: [] },
+      truncated: false,
+    },
+  };
+
+  let s = JSON.stringify(base);
   if (s.length <= max) return s;
-  const trimmed = { ...obj };
-  if (trimmed.result?.graphData) {
-    const gd = trimmed.result.graphData;
-    trimmed.result = {
-      ...trimmed.result,
-      graphData: {
-        nodes: (gd.nodes || []).slice(0, 40),
-        links: (gd.links || []).slice(0, 80),
-      },
-      truncated: true,
+
+  const gd = base.result.graphData;
+  const tiers = [60, 45, 35, 28, 22];
+  for (const n of tiers) {
+    base.result.graphData = {
+      nodes: (gd.nodes || []).slice(0, n),
+      links: (gd.links || []).slice(0, Math.min(n * 2, (gd.links || []).length)),
     };
-    s = JSON.stringify(trimmed);
+    base.result.truncated = true;
+    s = JSON.stringify(base);
+    if (s.length <= max) return s;
   }
-  if (s.length > max) {
-    return JSON.stringify({
-      goal: trimmed.goal || '',
-      result: { goal: trimmed.goal || '', graphData: trimmed.result?.graphData || { nodes: [], links: [] }, truncated: true },
-      spec: trimmed.spec || null,
-    });
-  }
-  return s;
+
+  base.result.chatHistory = [];
+  s = JSON.stringify(base);
+  if (s.length <= max) return s;
+
+  // 最后手段：仍保留 projectBlueprint / pathPlan，仅留极简图谱
+  base.result.graphData = {
+    nodes: (gd.nodes || []).slice(0, 15),
+    links: (gd.links || []).slice(0, 30),
+  };
+  return JSON.stringify(base);
 }
 
 function addDaysIso(days) {
@@ -60,7 +85,7 @@ export async function createPBLHandoff(env, payload) {
     'INSERT INTO pbl_handoffs (id, expires_at, goal, payload_json) VALUES (?, ?, ?, ?)'
   ).bind(id, expiresAt, goal.slice(0, 2000), json).run();
 
-  return { ok: true, status: 200, body: { id, expiresAt, goal } };
+  return { ok: true, status: 200, body: { id, expiresAt, goal, hasBlueprint: !!payload.result?.projectBlueprint?.schemes?.length } };
 }
 
 /**
