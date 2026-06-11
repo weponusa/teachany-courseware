@@ -9,7 +9,8 @@
 | `archetypes.json` | 14 个项目原型：工程、化学、消费决策、社会调查、人文写作、应用文、研学、商业、健康、劳动、创意媒体、通用兜底 |
 | `engineering-registry.json` | 课外工程/实践知识点，按 `archetype + moduleId` 绑定，含可执行 `taskSnippet` |
 | `node-pbl-tags.json` | 全局 ban 名单、语文写作子类型规则、小学节点 ban、能力锚点 |
-| `benchmark-seed.json` | 12 条黄金评测用例，供本地/线上自测 |
+| `benchmark-seed.json` | 黄金评测用例，供本地/线上自测 |
+| `cross-discipline-seed.json` | 10 个经典跨学科 PBL 任务（`--suite=cross`） |
 
 ## 流水线（4 步）
 

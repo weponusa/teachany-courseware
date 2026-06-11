@@ -1753,7 +1753,13 @@ class PBLPathBuilder {
     if (/探寻|探索|研究|调研/.test(g) && /创新|产业|经济|行业/.test(g)) return 'industry-innovation';
     if (/种植|栽培|养花|月季|花卉|玫瑰|蔬菜|种菜|盆栽|园艺|养殖|养蚕|花坛|绿化|阳台种/.test(g)) return 'planting-cultivation';
     if (/微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水|过滤.*水/.test(g)) return 'environmental-filtration';
+    if (/智能温室|温室温控|气象.*看板|温湿度风速/.test(g)) return 'embedded-iot';
     if (/自动浇花|浇花系统|浇水系统|智能灌溉|土壤湿度|微型水泵|自动灌溉/.test(g)) return 'embedded-iot';
+    if (/河流水质|pH.*溶解氧|水质调查/.test(g)) return 'environmental-survey';
+    if (/光伏|太阳能发电|碳减排/.test(g)) return 'energy-analysis';
+    if (/纸桥|承重.*桥/.test(g)) return 'structure-engineering';
+    if (/斗拱|古建.*模型/.test(g)) return 'heritage-maker';
+    if (/碳足迹|减排行动/.test(g)) return 'social-civic-survey';
     return 'subject-anchored';
   }
 
@@ -1859,6 +1865,15 @@ class PBLPathBuilder {
         kind: 'social-civic-survey',
       },
       {
+        test: /智能温室|温室温控|温湿度传感.*(?:通风|补光)|温控系统.*(?:温室|作物)/,
+        coreTopic: '智能温室温控系统',
+        definition: '用温湿度传感器监测温室环境，自动控制通风与补光，保持适宜作物生长',
+        keywords: ['温室', '温湿度', '传感', '控制', '通风', '补光', '程序', '阈值', '节能', '作物', '数据'],
+        banInSteps: ['有机合成', '离子检验', '调研报告', '问卷', '原型驱动迭代', 'MVP'],
+        deliverableHint: '智能温室温控原型 + 阈值参数表 + 环境测试记录',
+        kind: 'embedded-iot',
+      },
+      {
         test: /自动浇花|浇花系统|浇水系统|智能灌溉|土壤湿度.*(?:传感|检测|判断)|微型水泵|自动灌溉/,
         coreTopic: '自动浇花系统',
         definition: '设计基于土壤湿度传感的自动浇花装置：采集湿度→判断阈值→驱动微型水泵灌溉，并完成接线、控制逻辑与测试验收',
@@ -1866,6 +1881,60 @@ class PBLPathBuilder {
         banInSteps: ['有机合成', '离子检验', '烃', '钠化合物', '调研报告', '问卷调查', '原型驱动迭代', 'MVP', '快速原型'],
         deliverableHint: '自动浇花装置原型 + 湿度阈值控制说明 + 浇水测试记录表',
         kind: 'embedded-iot',
+      },
+      {
+        test: /河流水质|水质调查|pH.*溶解氧|溶解氧.*浊度|水体污染.*治理/,
+        coreTopic: '河流水质调查',
+        definition: '采集河流 pH、溶解氧、浊度等指标，评估污染程度并提出治理建议',
+        keywords: ['河流', '水质', 'pH', '溶解氧', '浊度', '污染', '环境', '采样', '实验', '统计', '治理'],
+        banInSteps: ['有机合成', '火箭', '程序设计', '原型驱动迭代', 'MVP'],
+        deliverableHint: '水质采样记录表 + 指标分析图表 + 治理建议报告',
+        kind: 'environmental-survey',
+      },
+      {
+        test: /光伏|太阳能发电|屋顶光伏|发电收益|碳减排效益/,
+        coreTopic: '校园光伏发电测算',
+        definition: '调查日照与用电数据，估算屋顶光伏发电收益与碳减排效益',
+        keywords: ['光伏', '太阳能', '发电', '收益', '碳', '减排', '统计', '函数', '环境', '能源'],
+        banInSteps: ['有机合成', '细胞', '诗词', '原型驱动迭代'],
+        deliverableHint: '光伏发电测算表 + 收益与减排分析 + 方案论证报告',
+        kind: 'energy-analysis',
+      },
+      {
+        test: /纸桥|承重.*桥|桥梁模型.*承载|结构.*承载力/,
+        coreTopic: '承重纸桥模型',
+        definition: '设计制作纸桥模型，探究结构与材料对承载力的影响并完成加载测试',
+        keywords: ['纸桥', '承重', '结构', '受力', '压强', '材料', '平衡', '实验', '测量', '数据'],
+        banInSteps: ['有机合成', '离子检验', '细胞', '原型驱动迭代', 'MVP'],
+        deliverableHint: '纸桥模型 + 加载测试记录表 + 结构分析说明',
+        kind: 'structure-engineering',
+      },
+      {
+        test: /斗拱|古建.*模型|古建.*测绘|木构.*模型|遗产.*研学/,
+        coreTopic: '古建斗拱模型',
+        definition: '调研古建斗拱结构，测绘关键尺寸比例并制作微缩木构模型，撰写研学报告',
+        keywords: ['古建', '斗拱', '历史', '比例', '测绘', '结构', '受力', '模型', '研学', '报告'],
+        banInSteps: ['有机合成', '程序设计', '原型驱动迭代', 'MVP'],
+        deliverableHint: '斗拱微缩模型 + 测绘记录表 + 研学报告',
+        kind: 'heritage-maker',
+      },
+      {
+        test: /气象.*看板|气象数据.*可视化|温湿度风速.*(?:采集|展示)/,
+        coreTopic: '校园气象看板',
+        definition: '采集校园温度、湿度、风速数据并可视化展示一周变化趋势',
+        keywords: ['气象', '温度', '湿度', '风速', '数据', '图表', '采集', '传感', '程序', '统计'],
+        banInSteps: ['有机合成', '离子检验', '原型驱动迭代', 'MVP'],
+        deliverableHint: '气象数据看板 + 一周趋势图表 + 采集说明文档',
+        kind: 'embedded-iot',
+      },
+      {
+        test: /碳足迹|减排行动|用电用水出行.*统计/,
+        coreTopic: '班级碳足迹测算',
+        definition: '分类统计班级一周用电、用水、出行数据，测算碳足迹并提出减排行动方案',
+        keywords: ['碳', '排放', '能源', '统计', '调查', '环境', '数据', '倡议', '减排', '用电'],
+        banInSteps: ['有机合成', '牛顿定律', '电解池', '原型驱动迭代'],
+        deliverableHint: '碳账本统计表 + 减排倡议方案 + 行动清单',
+        kind: 'social-civic-survey',
       },
       {
         test: /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/,
@@ -2170,7 +2239,39 @@ class PBLPathBuilder {
         }
       ];
     }
-    if (this._isEmbeddedOrIoTGoal(g) && /浇花|浇水|灌溉|土壤湿度|水泵|湿度传感/.test(g)) {
+    if (/纸桥|承重.*桥|桥梁模型/.test(g)) {
+      return [
+        { id: 'design', label: '方案与结构', keywords: ['结构', '受力', '压强', '材料', '设计', '平衡', '力'], subjects: ['physics', 'math'] },
+        { id: 'build', label: '制作组装', keywords: ['制作', '组装', '材料', '加工', '搭建', '桥'], subjects: ['science', 'physics'] },
+        { id: 'test', label: '加载测试', keywords: ['测试', '测量', '数据', '实验', '误差', '记录', '统计'], subjects: ['physics', 'math', 'science'] },
+        { id: 'report', label: '分析说明', keywords: ['报告', '分析', '说明', '结论', '改进'], subjects: ['chinese', 'physics'] },
+      ];
+    }
+    if (/河流水质|pH.*溶解氧|水质调查/.test(g)) {
+      return [
+        { id: 'sample', label: '采样与指标', keywords: ['采样', 'pH', '溶解氧', '浊度', '水质', '测量', '实验'], subjects: ['science', 'chemistry'] },
+        { id: 'environment', label: '河流环境', keywords: ['河流', '污染', '环境', '水源', '生态', '地理'], subjects: ['geography', 'science'] },
+        { id: 'data', label: '数据处理', keywords: ['统计', '图表', '数据', '分析', '记录'], subjects: ['math', 'science'] },
+        { id: 'report', label: '治理建议', keywords: ['报告', '建议', '治理', '环境', '倡议'], subjects: ['chinese', 'geography'] },
+      ];
+    }
+    if (/光伏|太阳能发电|屋顶光伏/.test(g)) {
+      return [
+        { id: 'resource', label: '太阳能资源', keywords: ['光伏', '太阳能', '发电', '辐射', '能量'], subjects: ['physics', 'geography'] },
+        { id: 'calc', label: '收益测算', keywords: ['函数', '计算', '统计', '百分比', '成本', '数据'], subjects: ['math'] },
+        { id: 'environment', label: '减排效益', keywords: ['环境', '碳', '排放', '气候', '能源'], subjects: ['geography', 'chemistry'] },
+        { id: 'report', label: '方案论证', keywords: ['说明', '报告', '论证', '建议'], subjects: ['chinese', 'math'] },
+      ];
+    }
+    if (/斗拱|古建.*模型|古建.*测绘/.test(g)) {
+      return [
+        { id: 'heritage', label: '古建调研', keywords: ['古建', '斗拱', '历史', '文物', '建筑', '遗产'], subjects: ['history', 'chinese'] },
+        { id: 'measure', label: '测绘比例', keywords: ['比例', '测量', '尺寸', '相似', '图形'], subjects: ['math', 'physics'] },
+        { id: 'structure', label: '结构受力', keywords: ['结构', '受力', '稳定', '材料', '力', '平衡'], subjects: ['physics', 'science'] },
+        { id: 'report', label: '研学报告', keywords: ['报告', '说明', '记录', '展示'], subjects: ['chinese', 'history'] },
+      ];
+    }
+    if (this._isEmbeddedOrIoTGoal(g) && /浇花|浇水|灌溉|土壤湿度|水泵|湿度传感|温室|气象/.test(g)) {
       return this._embeddedIoTDomains(g);
     }
     if (this._isEmbeddedOrIoTGoal(g)) {
@@ -4741,7 +4842,7 @@ class PBLPathBuilder {
   static PBL_MIN_GRADE_COMPLEX = 7;
 
   _isEmbeddedOrIoTGoal(goal) {
-    return /物联网|IoT|智能设备|智能家居|智能硬件|嵌入式|单片机|Arduino|树莓派|ESP32|STM32|传感|GPIO|Wi-?Fi|蓝牙|BLE|LED|语音识别|语音控制|无线通信|模块|硬件|电路|烧录|串口|自动浇花|浇花系统|浇水系统|智能灌溉|土壤湿度|微型水泵|自动灌溉|湿度传感/i.test(String(goal || ''));
+    return /物联网|IoT|智能设备|智能家居|智能硬件|嵌入式|单片机|Arduino|树莓派|ESP32|STM32|传感|GPIO|Wi-?Fi|蓝牙|BLE|LED|语音识别|语音控制|无线通信|模块|硬件|电路|烧录|串口|自动浇花|浇花系统|浇水系统|智能灌溉|土壤湿度|微型水泵|自动灌溉|湿度传感|智能温室|温室温控|气象.*看板|温湿度/i.test(String(goal || ''));
   }
 
   _externalLimit(goal) {

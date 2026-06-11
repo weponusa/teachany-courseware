@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * PBL 原型层全量 benchmark 自测 — 本地候选检索 + 可选线上 match
- * Usage: node scripts/pbl-self-test.mjs [--live] [--id=water-rocket]
+ * Usage: node scripts/pbl-self-test.mjs [--live] [--id=water-rocket] [--suite=gold|cross|all]
  */
 import fs from 'fs';
 import path from 'path';
@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const LIVE = process.argv.includes('--live');
 const ID_FILTER = process.argv.find(a => a.startsWith('--id='))?.split('=')[1];
+const SUITE = process.argv.find(a => a.startsWith('--suite='))?.split('=')[1] || 'gold';
 const API = 'https://www.teachany.cn/api/pbl/analyze';
 
 function loadJson(p) {
@@ -120,7 +121,7 @@ function isBanned(node, archetype, tagsData) {
   return false;
 }
 
-function moduleNodeOk(archetype, mod, node) {
+function moduleNodeOk(archetype, mod, node, goal = '') {
   if (!archetype) return true;
   const t = `${node.name} ${node.definition || ''}`;
   if (archetype.id === 'mixed-solution-chemistry') {
@@ -137,10 +138,17 @@ function moduleNodeOk(archetype, mod, node) {
     if (mod.id === 'taxonomy' && !/植物|绿色|分类|种子|动物|生物/.test(t)) return false;
     if (mod.id === 'growth' && !/光合|萌发|生长|种子|根|蒸腾|绿色|植物|呼吸/.test(t)) return false;
   }
+  if (archetype.id === 'maker-engineering') {
+    if (/有机合成|有机化合物|烃|离子检验|醇|酚|醛|酮|羧酸|细胞膜|原子结构|化学平衡|生态系统结构|生物膜/.test(node.name)) return false;
+    if (node.subject === 'biology' && !/纸桥|植物|生物|生态/.test(goal)) return false;
+    if (mod.id === 'design' && !/结构|受力|压强|摩擦|平衡|材料|设计|制作|实验|测量|力|杠杆|机械|桥梁|承重/.test(t)) return false;
+    if (mod.id === 'build' && !/制作|组装|电路|结构|材料|加工|搭建|实验|机械|桥/.test(t)) return false;
+    if (mod.id === 'test' && !/测试|测量|实验|数据|误差|记录|统计|力|压强/.test(t)) return false;
+  }
   return true;
 }
 
-function scoreModule(node, mod, goal, archetype) {
+function scoreModule(node, mod, goal, archetype, caseMinGrade = 1) {
   let s = 0;
   const t = `${node.name} ${node.definition || ''}`.toLowerCase();
   const name = node.name.toLowerCase();
@@ -156,24 +164,26 @@ function scoreModule(node, mod, goal, archetype) {
   }
   const anchors = inferTopicKnowledgeAnchors(goal);
   s += scoreNodeAgainstAnchors(node, anchors);
-  const minG = archetype?.minGrade || 1;
+  const minG = Math.max(archetype?.minGrade || 1, caseMinGrade || 1);
   const grade = parseInt(node.grade, 10) || 0;
   if (grade > 0 && grade < minG) s -= 24;
+  else if (grade > 0 && grade >= minG) s += Math.min(6, grade - minG);
   return s;
 }
 
-function pickByBlueprint(pool, blueprint, goal, tagsData, archetype = null, max = 24) {
+function pickByBlueprint(pool, blueprint, goal, tagsData, archetype = null, max = 24, caseMinGrade = 1) {
   const modules = blueprintModules(blueprint);
   const picked = [];
   const seen = new Set();
   for (const mod of modules) {
+    const floorGrade = Math.max(archetype?.minGrade || 1, caseMinGrade || 1);
     const ranked = pool
       .filter(n => !seen.has(n.id))
       .filter(n => !isBanned(n, archetype, tagsData))
-      .filter(n => (parseInt(n.grade, 10) || 0) >= (archetype?.minGrade || 1) || !n.grade)
+      .filter(n => (parseInt(n.grade, 10) || 0) >= floorGrade || !n.grade)
       .filter(n => !mod.subjects?.length || mod.subjects.includes(n.subject))
-      .filter(n => moduleNodeOk(archetype, mod, n))
-      .map(n => ({ n, s: scoreModule(n, mod, goal, archetype) }))
+      .filter(n => moduleNodeOk(archetype, mod, n, goal))
+      .map(n => ({ n, s: scoreModule(n, mod, goal, archetype, caseMinGrade) }))
       .filter(x => x.s > 0)
       .sort((a, b) => b.s - a.s);
     ranked.slice(0, mod.topK || 2).forEach(x => {
@@ -260,16 +270,25 @@ async function liveMatch(caseDef, candidates, archetype) {
   return matched.map(n => n.name);
 }
 
+function loadCases() {
+  const gold = loadJson(path.join(ROOT, 'data/pbl/benchmark-seed.json')).cases || [];
+  const cross = loadJson(path.join(ROOT, 'data/pbl/cross-discipline-seed.json')).cases || [];
+  let cases = [];
+  if (SUITE === 'cross') cases = cross;
+  else if (SUITE === 'all') cases = [...gold, ...cross];
+  else cases = gold;
+  return cases.filter(c => !ID_FILTER || c.id === ID_FILTER);
+}
+
 async function main() {
   const archetypeData = loadJson(path.join(ROOT, 'data/pbl/archetypes.json'));
   const registry = loadJson(path.join(ROOT, 'data/pbl/engineering-registry.json'));
   const tagsData = loadJson(path.join(ROOT, 'data/pbl/node-pbl-tags.json'));
-  const benchmark = loadJson(path.join(ROOT, 'data/pbl/benchmark-seed.json'));
-  const cases = (benchmark.cases || []).filter(c => !ID_FILTER || c.id === ID_FILTER);
+  const cases = loadCases();
   const allNodes = buildCnIndex();
 
   console.log(`CN 索引: ${allNodes.length} 节点`);
-  console.log(`Benchmark: ${cases.length} 用例${LIVE ? ' (+线上 match)' : ''}\n`);
+  console.log(`Benchmark[${SUITE}]: ${cases.length} 用例${LIVE ? ' (+线上 match)' : ''}\n`);
 
   let failCount = 0;
   const summary = [];
@@ -277,11 +296,12 @@ async function main() {
   for (const c of cases) {
     const blueprint = blueprintFixture(c, archetypeData);
     const archetype = (archetypeData.archetypes || []).find(x => x.id === c.archetypeId) || null;
+    const floorGrade = Math.max(archetype?.minGrade || 1, c.minGrade || 1);
     const pool = allNodes.filter(n => {
-      if (archetype && (parseInt(n.grade, 10) || 0) > 0 && (parseInt(n.grade, 10) || 0) < archetype.minGrade) return false;
+      if ((parseInt(n.grade, 10) || 0) > 0 && (parseInt(n.grade, 10) || 0) < floorGrade) return false;
       return !isBanned(n, archetype, tagsData);
     });
-    const picked = pickByBlueprint(pool, blueprint, c.goal, tagsData, archetype);
+    const picked = pickByBlueprint(pool, blueprint, c.goal, tagsData, archetype, 24, c.minGrade || 1);
     const issues = evaluate(c, picked, archetype);
     const ext = archetype
       ? (registry.entries || []).filter(e => e.archetypes?.includes(archetype.id))
