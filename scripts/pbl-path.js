@@ -521,8 +521,9 @@ class PBLPathBuilder {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
-        const { ts, entries } = JSON.parse(cached);
-        if (Date.now() - ts < CACHE_TTL) {
+        const parsed = this._safeJsonParse(cached);
+        const { ts, entries } = parsed || {};
+        if (parsed && Date.now() - ts < CACHE_TTL && Array.isArray(entries)) {
           entries.forEach(([k, v]) => {
             this.unifiedIndex.set(k, v);
             // 同步恢复 systemIndex（修复缓存命中时 systemIndex 为空导致 candidates=0 的 bug）
@@ -538,7 +539,10 @@ class PBLPathBuilder {
           return this.unifiedIndex;
         }
       }
-    } catch (e) { /* 缓存失败忽略 */ }
+    } catch (e) {
+      console.warn('[PBL] 索引缓存损坏，将重新加载:', e.message);
+      try { localStorage.removeItem(CACHE_KEY); } catch (_e) { /* ignore */ }
+    }
 
     this._loadPromise = this._doLoad();
     return this._loadPromise;
@@ -1191,6 +1195,55 @@ class PBLPathBuilder {
     const end = raw.lastIndexOf('}');
     if (start >= 0 && end > start) return raw.slice(start, end + 1);
     return raw;
+  }
+
+  _safeJsonParse(text, fallback = null) {
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      if (/stack/i.test(String(e.message || ''))) {
+        console.warn('[PBL] JSON 嵌套过深，已跳过解析:', e.message);
+      }
+      return fallback;
+    }
+  }
+
+  _cloneBlueprint(blueprint) {
+    if (!blueprint) return blueprint;
+    try {
+      return JSON.parse(JSON.stringify(blueprint));
+    } catch (e) {
+      console.warn('[PBL] 蓝图深拷贝失败，使用浅拷贝:', e.message);
+      return {
+        ...blueprint,
+        schemes: (blueprint.schemes || []).map(s => ({
+          ...s,
+          phases: (s.phases || []).map(p => ({ ...p, steps: [...(p.steps || [])] })),
+        })),
+      };
+    }
+  }
+
+  /** 限制 LLM 蓝图体量，避免异常 JSON/重复加厚导致栈溢出 */
+  _pruneDecomposeBlueprint(data) {
+    if (!data || typeof data !== 'object') return data;
+    const bp = { ...data };
+    bp.schemes = (bp.schemes || []).slice(0, 3).map(s => ({
+      ...s,
+      pros: (s.pros || []).slice(0, 4),
+      cons: (s.cons || []).slice(0, 4),
+      phases: (s.phases || []).slice(0, 6).map(p => ({
+        ...p,
+        steps: (p.steps || []).slice(0, 5).map(st => String(st).slice(0, 280)),
+        knowledgeHints: (p.knowledgeHints || []).slice(0, 6),
+      })),
+    }));
+    if (typeof bp.projectSummary === 'string') bp.projectSummary = bp.projectSummary.slice(0, 320);
+    if (typeof bp.deliverable === 'string') bp.deliverable = bp.deliverable.slice(0, 120);
+    bp.constraints = (bp.constraints || []).slice(0, 6);
+    bp.scopeLimits = (bp.scopeLimits || []).slice(0, 6);
+    bp.successCriteria = (bp.successCriteria || []).slice(0, 6);
+    return bp;
   }
 
   /** 中文 PBL 目标分词：无空格时不能用 split，否则候选排序与关键词降级都会失效 */
@@ -3472,7 +3525,7 @@ class PBLPathBuilder {
   _concretizeBlueprint(goal, blueprint, archetype = null) {
     if (!blueprint?.schemes?.length) return blueprint;
     const profile = this._goalProfile(goal, blueprint);
-    let bp = JSON.parse(JSON.stringify(blueprint));
+    let bp = this._cloneBlueprint(blueprint);
     bp = this._enrichBlueprintMetadata(goal, bp);
 
     if (!bp.deliverable || /素养|能力|精神|阶段成果$/.test(bp.deliverable) || bp.deliverable.length < 8) {
@@ -6091,12 +6144,13 @@ class PBLPathBuilder {
 
   _extractDecomposeData(raw) {
     const jsonStr = this._extractJsonObject(raw);
-    const data = JSON.parse(jsonStr);
-    if (!data.schemes?.length) return null;
-    if (!data.recommendedSchemeId && data.schemes[0]) {
-      data.recommendedSchemeId = data.schemes[0].id;
+    const data = this._safeJsonParse(jsonStr);
+    if (!data?.schemes?.length) return null;
+    const pruned = this._pruneDecomposeBlueprint(data);
+    if (!pruned.recommendedSchemeId && pruned.schemes[0]) {
+      pruned.recommendedSchemeId = pruned.schemes[0].id;
     }
-    return data;
+    return pruned;
   }
 
   _compactBlueprintForReview(blueprint) {
@@ -6189,8 +6243,8 @@ class PBLPathBuilder {
       return this._fallbackDecomposeBlueprint(goal);
     }
     if (!anchored) console.warn('[PBL] 蓝图锚定偏弱，客户端加厚 metadata/steps');
-    const sanitized = this._sanitizeBlueprintForGoal(data, goal);
-    return this._concretizeBlueprint(goal, sanitized, this._resolvedArchetype);
+    // _sanitizeBlueprintForGoal 各分支已含 _concretizeBlueprint，勿重复加厚（曾导致栈溢出）
+    return this._sanitizeBlueprintForGoal(data, goal);
   }
 
   _parseDecomposeResult(raw, goal) {
@@ -6878,8 +6932,7 @@ class PBLPathBuilder {
     }
 
     // 4. 第零阶段：全链路拆解可行方案（不选课标）
-    let projectBlueprint = await this._llmDecomposeStage(goal, onStatus);
-    projectBlueprint = this._concretizeBlueprint(goal, projectBlueprint, archetype);
+    const projectBlueprint = await this._llmDecomposeStage(goal, onStatus);
     this._activeBlueprint = projectBlueprint;
     const blueprintPhases = this._blueprintProjectPhases(projectBlueprint, goal);
     const bloomProfile = this._inferBloomProfile(projectBlueprint);
