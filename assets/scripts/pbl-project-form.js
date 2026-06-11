@@ -139,6 +139,7 @@
   }
 
   function readProjectSpecFromDOM() {
+    const gradeLevel = document.getElementById('pblGradeLevel')?.value || 'any';
     const subject = document.getElementById('pblSubject')?.value || 'cross';
     const task = document.getElementById('pblTaskInput')?.value?.trim() || '';
     const deliverable = document.getElementById('pblDeliverable')?.value || 'report';
@@ -147,9 +148,9 @@
     const duration = document.getElementById('pblDuration')?.value?.trim() || '';
     const constraints = document.getElementById('pblConstraints')?.value?.trim() || '';
     return normalizeProjectSpec({
-      gradeLevel: 'any',
+      gradeLevel,
       gradeDetails: [],
-      lockGradeBand: false,
+      lockGradeBand: gradeLevel !== 'any',
       knowledgeSources: readKnowledgeSourcesFromDOM(),
       curriculumSystems: readCurriculumSystemsFromDOM(),
       subject, task, deliverable,
@@ -158,8 +159,9 @@
   }
 
   function fillProjectSpecToDOM(spec) {
-    const s = normalizeProjectSpec({ ...spec, gradeLevel: 'any', gradeDetails: [], lockGradeBand: false });
+    const s = normalizeProjectSpec({ ...spec, gradeDetails: [] });
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    set('pblGradeLevel', s.gradeLevel || 'any');
     set('pblSubject', s.subject);
     set('pblTaskInput', s.task);
     set('pblDeliverable', s.deliverable);

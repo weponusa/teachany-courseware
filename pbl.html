@@ -155,7 +155,7 @@ body {
 }
 .pbl-form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px 16px;
   margin-bottom: 10px;
 }
@@ -1019,7 +1019,7 @@ body {
       <div class="step-icon">📝</div>
       <div class="step-num">Step 1</div>
       <div class="step-title">描述项目任务</div>
-      <div class="step-desc">填写任务与产出类型，AI 自动匹配课标与知识图谱</div>
+      <div class="step-desc">填写学段、任务与产出类型，AI 匹配课标与知识图谱</div>
     </div>
     <div class="how-step">
       <div class="step-icon">🤖</div>
@@ -1046,12 +1046,23 @@ body {
     <div class="pbl-title">🧭 PBL 项目式学习路径发现</div>
     <button type="button" class="pbl-settings-btn" id="pblSettingsBtn" onclick="toggleSettings()" title="TeachAny 服务端默认 · Qwen3 Next 80B">⚙️ 服务端默认</button>
     <div class="pbl-desc">
-      描述项目任务即可拆解学习路径；学段由 AI 从任务中自动推断。可跳转<a href="knowledge-map.html">全科图谱</a>或一键生成课件。
+      选择学段并描述项目任务，即可拆解学习路径；无需指定具体年级。可跳转<a href="knowledge-map.html">全科图谱</a>或一键生成课件。
     </div>
     <div class="pbl-form-grid">
       <div class="pbl-field pbl-field-task">
         <label for="pblTaskInput">项目任务 <span style="color:var(--accent)">*</span></label>
         <textarea id="pblTaskInput" class="pbl-textarea" placeholder="描述要做什么，如：为校园写一组家乡主题现代诗并编成诗集"></textarea>
+      </div>
+      <div class="pbl-field">
+        <label for="pblGradeLevel">学段</label>
+        <select id="pblGradeLevel">
+          <option value="any">自动推断</option>
+          <option value="primary">小学</option>
+          <option value="junior">初中</option>
+          <option value="senior">高中</option>
+          <option value="university">大学</option>
+          <option value="adult">成人/在职</option>
+        </select>
       </div>
       <div class="pbl-field">
         <label for="pblSubject">学科取向</label>
@@ -1249,7 +1260,7 @@ body {
 </div>
 
 <script src="./assets/scripts/courseware-hub.js"></script>
-<script src="./assets/scripts/pbl-project-form.js?v=20260609-form-simple"></script>
+<script src="./assets/scripts/pbl-project-form.js?v=20260609-grade-band"></script>
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-path.js?v=20260609-grade-multi"></script>
@@ -1360,7 +1371,7 @@ function markPBLGoalDirty() {
 async function fillPBLExample(el) {
   const key = el.dataset.key;
   const spec = {
-    gradeLevel: 'any',
+    gradeLevel: el.dataset.grade || 'any',
     subject: el.dataset.subject || 'cross',
     task: el.dataset.task || el.dataset.goal || '',
     deliverable: el.dataset.deliverable || 'report',
@@ -2384,7 +2395,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   togglePBLDeliverableCustom();
-  ['pblTaskInput', 'pblSubject', 'pblDeliverable'].forEach(id => {
+  ['pblTaskInput', 'pblGradeLevel', 'pblSubject', 'pblDeliverable'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', markPBLGoalDirty);
     if (el) el.addEventListener('change', markPBLGoalDirty);
