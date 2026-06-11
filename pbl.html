@@ -1518,10 +1518,14 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
     }
     const refineInput = document.getElementById('pblRefineInput');
     if (refineInput) refineInput.value = '';
+    window.__pblLastAnalysisDone = { ok: true, result, ts: Date.now() };
+    document.dispatchEvent(new CustomEvent('teachany-pbl-done', { detail: { result } }));
   } catch (error) {
     console.error('[PBL] 分析失败:', error);
     statusText.textContent = '❌ ' + error.message;
     statusEl.querySelector('.pulse').style.background = '#ef4444';
+    window.__pblLastAnalysisDone = { ok: false, error: error.message, ts: Date.now() };
+    document.dispatchEvent(new CustomEvent('teachany-pbl-done', { detail: { error: error.message } }));
   } finally {
     btn.disabled = false;
   }
@@ -1981,17 +1985,15 @@ function loadHtml2Canvas() {
   });
 }
 
-async function exportPBLAsImage() {
-  if (!pblResult) { alert('请先完成项目拆解'); return; }
-  const btn = document.getElementById('pblExportImgBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ 生成长图...'; }
+async function renderPBLExportImageBlob() {
+  if (!pblResult) throw new Error('请先完成项目拆解');
+  const html2canvas = await loadHtml2Canvas();
+  const { html } = collectPBLExportSections();
+  const preview = document.createElement('div');
+  preview.className = 'pbl-export-preview';
+  preview.innerHTML = html;
+  document.body.appendChild(preview);
   try {
-    const html2canvas = await loadHtml2Canvas();
-    const { html } = collectPBLExportSections();
-    const preview = document.createElement('div');
-    preview.className = 'pbl-export-preview';
-    preview.innerHTML = html;
-    document.body.appendChild(preview);
     const canvas = await html2canvas(preview, {
       backgroundColor: '#0f172a',
       scale: 2,
@@ -2002,19 +2004,26 @@ async function exportPBLAsImage() {
       windowWidth: preview.scrollWidth,
       windowHeight: preview.scrollHeight
     });
-    document.body.removeChild(preview);
-    const goal = pblResult.goal || 'pbl';
-    await new Promise((resolve, reject) => {
-      canvas.toBlob(blob => {
-        if (!blob) { reject(new Error('图片生成失败')); return; }
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${pblExportSlug(goal)}.png`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-        resolve();
-      }, 'image/png');
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(b => (b ? resolve(b) : reject(new Error('图片生成失败'))), 'image/png');
     });
+    return { blob, goal: pblResult.goal || 'pbl', slug: pblExportSlug(pblResult.goal) };
+  } finally {
+    document.body.removeChild(preview);
+  }
+}
+
+async function exportPBLAsImage() {
+  if (!pblResult) { alert('请先完成项目拆解'); return; }
+  const btn = document.getElementById('pblExportImgBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 生成长图...'; }
+  try {
+    const { blob, goal, slug } = await renderPBLExportImageBlob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${slug}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   } catch (e) {
     console.error('[PBL] 长图导出失败:', e);
     alert('长图导出失败：' + e.message);
@@ -2409,10 +2418,75 @@ function saveSettings() {
   toggleSettings();
 }
 
+function buildPBLEditUrl(spec, baseUrl) {
+  const s = window.PBLProjectForm?.normalizeProjectSpec
+    ? window.PBLProjectForm.normalizeProjectSpec(spec || {})
+    : (spec || {});
+  const base = baseUrl || (window.location.origin + window.location.pathname.replace(/[^/]*$/, 'pbl.html'));
+  const u = new URL(base, window.location.href);
+  const task = String(s.task || '').trim();
+  if (task) u.searchParams.set('goal', task);
+  if (s.gradeLevel && s.gradeLevel !== 'any') u.searchParams.set('grade', s.gradeLevel);
+  if (s.subject && s.subject !== 'cross') u.searchParams.set('subject', s.subject);
+  if (s.deliverable && s.deliverable !== 'report') u.searchParams.set('deliverable', s.deliverable);
+  if (s.deliverableCustom) u.searchParams.set('deliverableCustom', s.deliverableCustom);
+  if (s.audience) u.searchParams.set('audience', s.audience);
+  if (s.duration) u.searchParams.set('duration', s.duration);
+  if (s.constraints) u.searchParams.set('constraints', s.constraints);
+  return u.toString();
+}
+
+function applyPBLParamsFromURL(params) {
+  const p = params || new URLSearchParams(window.location.search);
+  const task = p.get('goal') || p.get('task') || '';
+  const spec = {
+    task,
+    gradeLevel: p.get('grade') || 'any',
+    subject: p.get('subject') || 'cross',
+    deliverable: p.get('deliverable') || 'report',
+    deliverableCustom: p.get('deliverableCustom') || '',
+    audience: p.get('audience') || '',
+    duration: p.get('duration') || '',
+    constraints: p.get('constraints') || '',
+  };
+  if (window.PBLProjectForm?.fillProjectSpecToDOM) {
+    window.PBLProjectForm.fillProjectSpecToDOM(spec);
+  } else if (task) {
+    const taskEl = document.getElementById('pblTaskInput');
+    if (taskEl) taskEl.value = task;
+  }
+  markPBLGoalDirty();
+  return spec;
+}
+
+window.TeachAnyPBLAutomation = {
+  buildEditUrl: buildPBLEditUrl,
+  getResult: () => pblResult,
+  waitForAnalysis: (timeoutMs = 360000) => new Promise((resolve, reject) => {
+    if (pblResult?.graphData?.nodes?.length) {
+      resolve(pblResult);
+      return;
+    }
+    const timer = setTimeout(() => {
+      document.removeEventListener('teachany-pbl-done', onDone);
+      reject(new Error('PBL 拆解超时'));
+    }, timeoutMs);
+    function onDone(ev) {
+      clearTimeout(timer);
+      document.removeEventListener('teachany-pbl-done', onDone);
+      if (ev.detail?.error) reject(new Error(ev.detail.error));
+      else resolve(ev.detail?.result || pblResult);
+    }
+    document.addEventListener('teachany-pbl-done', onDone);
+  }),
+  exportImageBlob: () => renderPBLExportImageBlob(),
+};
+
 // ─── 页面初始化 ─────────────────────────────────
 const urlParams = new URLSearchParams(window.location.search);
 const pblIdFromURL = urlParams.get('pbl');
 const pblGoalFromURL = urlParams.get('goal');
+const pblAutoFromURL = urlParams.get('auto') === '1';
 const makeNodeFromURL = urlParams.get('make');
 const makeNameFromURL = urlParams.get('name');
 
@@ -2429,10 +2503,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (el) el.addEventListener('input', markPBLGoalDirty);
     if (el) el.addEventListener('change', markPBLGoalDirty);
   });
-  if (pblGoalFromURL) {
-    const taskEl = document.getElementById('pblTaskInput');
-    if (taskEl) taskEl.value = pblGoalFromURL;
-    markPBLGoalDirty();
+  if (pblGoalFromURL || urlParams.get('task')) {
+    applyPBLParamsFromURL(urlParams);
   }
 
   // 点击图谱外部关闭详情面板
@@ -2458,6 +2530,16 @@ window.addEventListener('DOMContentLoaded', async () => {
         statusEl.style.display = 'block';
         statusText.textContent = '未找到这条 PBL 历史图谱，请重新点击「拆解项目路径」。';
       }
+    }
+    return;
+  }
+
+  // Skill / CLI 自动化：?auto=1 且已填任务 → 自动拆解
+  if (pblAutoFromURL && getPBLProjectSpec().task) {
+    try {
+      await analyzePBLGoal();
+    } catch (e) {
+      console.error('[PBL] auto analyze failed:', e);
     }
   }
 });

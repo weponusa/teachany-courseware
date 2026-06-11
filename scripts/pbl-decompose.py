@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""
+TeachAny PBL 拆解 CLI — 供 Cursor Skill / 自动化调用
+
+输入 PBL 任务基本信息 → 调用线上 PBL 引擎拆解 → 输出长图 PNG + 可继续编辑的 TeachAny 链接
+
+依赖（首次使用）:
+    pip install playwright
+    playwright install chromium
+
+示例:
+    python3 scripts/pbl-decompose.py --goal "设计一款水火箭并完成安全发射"
+    python3 scripts/pbl-decompose.py --goal "家庭购车对比" --grade senior --deliverable decision-table -o ./out
+    python3 scripts/pbl-decompose.py --goal "研学路线规划" --grade junior --subject geography --duration "4周"
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+from urllib.parse import urlencode
+
+DEFAULT_BASE = "https://www.teachany.cn/pbl.html"
+TIMEOUT_MS = 360_000
+
+
+def slugify(text: str) -> str:
+    s = re.sub(r"[^\w\u4e00-\u9fa5]+", "-", (text or "pbl").strip()[:40]).strip("-")
+    return s or "pbl-report"
+
+
+def build_pbl_url(args: argparse.Namespace) -> str:
+    params = {"auto": "1"}
+    goal = (args.goal or args.task or "").strip()
+    if not goal:
+        raise SystemExit("缺少 --goal / --task")
+    params["goal"] = goal
+    if args.grade and args.grade != "any":
+        params["grade"] = args.grade
+    if args.subject and args.subject != "cross":
+        params["subject"] = args.subject
+    if args.deliverable and args.deliverable != "report":
+        params["deliverable"] = args.deliverable
+    if args.deliverable_custom:
+        params["deliverableCustom"] = args.deliverable_custom
+    if args.audience:
+        params["audience"] = args.audience
+    if args.duration:
+        params["duration"] = args.duration
+    if args.constraints:
+        params["constraints"] = args.constraints
+    base = (args.base_url or DEFAULT_BASE).rstrip("?")
+    return f"{base}?{urlencode(params)}"
+
+
+def build_edit_url(args: argparse.Namespace) -> str:
+    params = {}
+    goal = (args.goal or args.task or "").strip()
+    if goal:
+        params["goal"] = goal
+    if args.grade and args.grade != "any":
+        params["grade"] = args.grade
+    if args.subject and args.subject != "cross":
+        params["subject"] = args.subject
+    if args.deliverable and args.deliverable != "report":
+        params["deliverable"] = args.deliverable
+    if args.deliverable_custom:
+        params["deliverableCustom"] = args.deliverable_custom
+    if args.audience:
+        params["audience"] = args.audience
+    if args.duration:
+        params["duration"] = args.duration
+    if args.constraints:
+        params["constraints"] = args.constraints
+    base = (args.base_url or DEFAULT_BASE).split("?")[0]
+    return f"{base}?{urlencode(params)}" if params else base
+
+
+async def run_decompose(args: argparse.Namespace) -> dict:
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError:
+        print("⛔ 未安装 playwright。请运行：", file=sys.stderr)
+        print("   pip install playwright && playwright install chromium", file=sys.stderr)
+        raise SystemExit(2)
+
+    analyze_url = build_pbl_url(args)
+    edit_url = build_edit_url(args)
+    out_dir = Path(args.output or ".").resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    png_path = out_dir / f"{slugify(args.goal)}.png"
+    meta_path = out_dir / f"{slugify(args.goal)}.json"
+
+    print(f"🔗 拆解 URL: {analyze_url}")
+    print("⏳ 正在拆解（约 1–4 分钟，取决于 LLM 响应）…")
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page(viewport={"width": 1400, "height": 900})
+        page.set_default_timeout(TIMEOUT_MS)
+
+        await page.goto(analyze_url, wait_until="domcontentloaded", timeout=120_000)
+
+        await page.wait_for_function(
+            """() => {
+              const r = window.TeachAnyPBLAutomation?.getResult?.();
+              return r && r.graphData && r.graphData.nodes && r.graphData.nodes.length > 0;
+            }""",
+            timeout=TIMEOUT_MS,
+        )
+
+        result_summary = await page.evaluate(
+            """() => {
+              const r = window.TeachAnyPBLAutomation.getResult();
+              const nodes = r.graphData?.nodes || [];
+              return {
+                goal: r.goal || '',
+                matched: (r.matched || []).length,
+                external: (r.external || []).length,
+                nodeCount: nodes.length,
+                systems: r.systems || [],
+              };
+            }"""
+        )
+
+        print("🖼️  正在生成长图…")
+        png_bytes = await page.evaluate(
+            """async () => {
+              const { blob } = await window.TeachAnyPBLAutomation.exportImageBlob();
+              const buf = await blob.arrayBuffer();
+              return Array.from(new Uint8Array(buf));
+            }"""
+        )
+        await browser.close()
+
+    png_path.write_bytes(bytes(png_bytes))
+    meta = {
+        "goal": args.goal,
+        "grade": args.grade,
+        "subject": args.subject,
+        "deliverable": args.deliverable,
+        "audience": args.audience,
+        "duration": args.duration,
+        "constraints": args.constraints,
+        "image": str(png_path),
+        "edit_url": edit_url,
+        "summary": result_summary,
+    }
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return meta
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="TeachAny PBL 拆解 → 长图 + 编辑链接")
+    parser.add_argument("--goal", "--task", dest="goal", required=True, help="PBL 项目任务描述（必填）")
+    parser.add_argument("--grade", default="any", choices=["any", "primary", "junior", "senior", "university", "adult"])
+    parser.add_argument("--subject", default="cross")
+    parser.add_argument("--deliverable", default="report")
+    parser.add_argument("--deliverable-custom", dest="deliverable_custom", default="")
+    parser.add_argument("--audience", default="")
+    parser.add_argument("--duration", default="")
+    parser.add_argument("--constraints", default="")
+    parser.add_argument("-o", "--output", default=".", help="输出目录")
+    parser.add_argument("--base-url", default=DEFAULT_BASE, help="PBL 页面地址（默认线上 teachany.cn）")
+    parser.add_argument("--json-only", action="store_true", help="仅打印结果 JSON 到 stdout")
+    args = parser.parse_args()
+
+    import asyncio
+
+    meta = asyncio.run(run_decompose(args))
+
+    if args.json_only:
+        print(json.dumps(meta, ensure_ascii=False, indent=2))
+    else:
+        print()
+        print("✅ PBL 拆解完成")
+        print(f"   长图: {meta['image']}")
+        print(f"   节点: {meta['summary'].get('nodeCount', 0)} 个")
+        print(f"   继续编辑: {meta['edit_url']}")
+
+
+if __name__ == "__main__":
+    main()
