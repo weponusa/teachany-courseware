@@ -52,7 +52,7 @@ export function formatArchetypeForMatch(archetype, blueprint) {
 【项目原型：${archetype.label}（${archetype.id}）— 硬性约束】
 - 主课标体系：${archetype.primarySystem || 'cn'}（优先 CN 节点，AP/IB 仅作拓展）
 - 学段：${(archetype.gradeBand || []).join('-')}，最低 grade ${archetype.minGrade || 7}
-- 学科：${(archetype.subjects || []).join('、')}
+- 学科参考（非硬性限制，按题目延展选取）：${(archetype.subjects || []).join('、') || '不限'}
 - 禁止 matched 名称含：${bans}
 ${chinese ? `- ${chinese}` : ''}
 - 每个模块至少 1 个 matched，reason 必须以本原型模块名开头（如「模块：成本测算。」），**禁止**用科学探究套话（问题与假设/变量设计）

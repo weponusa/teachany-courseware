@@ -13,6 +13,10 @@ import {
   buildCompactUserContext,
   compactBlueprintHeader,
 } from './pbl-context.js';
+import {
+  inferTopicKnowledgeAnchors,
+  formatTopicAnchorHint,
+} from './pbl-topic-anchors.js';
 
 /**
  * @internal PBL 拆解核心提示词 v6.0 — 仅服务端，勿复制到前端静态资源
@@ -34,7 +38,7 @@ const PBL_MAX_MATCHED_NORMAL = 18;
 /**
  * 项目类型分类（自适应多场景）：
  * consumer-decision / creative-media / humanities-literary / business-economics /
- * health-life / planting-cultivation / labor-practice / life-planning /
+ * health-life / planting-cultivation / labor-practice / study-trip / life-planning /
  * social-inquiry / engineering / scientific-inquiry / industry-innovation /
  * exhibition-redesign / maker-workshop / general
  */
@@ -60,8 +64,10 @@ function classifyProjectType(goal) {
   if (/种植|栽培|养花|花卉|蔬菜|种菜|盆栽|园艺|养殖|养蚕|花坛|绿化|阳台种/.test(g)) return 'planting-cultivation';
   // 劳动实践
   if (/烹饪|烘焙|美食|菜谱|料理|手工|编织|缝纫|收纳|整理|维修|清洁|打扫|劳动/.test(g)) return 'labor-practice';
+  // 研学旅行/人文地理考察
+  if (/研学|游学|研学旅行|研学路线|红色研学|文化研学|文化考察|实地考察|field.?trip|遗址|博物馆|人文史迹|古迹|古村|世界遗产/.test(g)) return 'study-trip';
   // 活动策划/生活规划
-  if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|研学|游学|路线规划|时间管理|班级布置|嘉年华|游园/.test(g)) return 'life-planning';
+  if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|路线规划|时间管理|班级布置|嘉年华|游园/.test(g)) return 'life-planning';
   // 社会调查
   if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|居民|乡土|口述史|垃圾分类|垃圾治理|环保.*调查/.test(g)) return 'social-inquiry';
   // 产业创新
@@ -81,22 +87,26 @@ function classifyProjectType(goal) {
 // 二、TYPE_PROFILES — 每种大类型的通用描述
 // ============================================================
 
+/** 学科不限于项目类型；由题目延展思考后在 filter/match 阶段选取 */
+const OPEN_SUBJECTS_HINT = '按题目与交付物延展思考后自然选取，可跨各学科；禁为凑学科引入无关节点';
+
 const TYPE_PROFILES = {
-  'engineering': { label: '工程研发/制作', moduleWord: '工程子系统（原理 / 装置结构 / 控制实现 / 测试迭代）', subjectsHint: '以 physics、chemistry、math、info-tech 为主，按需含其他', redlines: '覆盖原理→装置→实验→必要定量；定量计算节点≤20%' },
-  'scientific-inquiry': { label: '科学探究/实验', moduleWord: '探究环节（问题假设 / 变量设计 / 数据采集 / 分析结论）', subjectsHint: 'physics、chemistry、biology、science、math 为主', redlines: '必须含实验设计与数据分析类节点；理论与实验并重' },
-  'consumer-decision': { label: '消费决策/方案对比', moduleWord: '决策环节（需求调研 / 技术原理对比 / 成本测算 / 决策报告）', subjectsHint: '根据对象自然选科：涉及机械/能源用 physics+math，涉及材料/化学品用 chemistry+math，辅以 geography/chinese', redlines: '交付物是决策报告/对比表；必须含与对象相关的技术原理节点（≥2）；禁止工业研发节点' },
-  'social-inquiry': { label: '社会调查/田野研究', moduleWord: '调查环节（选题抽样 / 资料收集 / 整理统计 / 结论报告）', subjectsHint: 'chinese、geography、history、math（统计）按需组合', redlines: '核心是调查方法、数据统计与报告写作；不要硬塞物理化学公式' },
-  'humanities-literary': { label: '人文/文学/语言', moduleWord: '创作环节（立意选材 / 阅读积累 / 结构表达 / 修改展示）', subjectsHint: 'chinese、english、history 为主', redlines: '围绕阅读、写作、表达、文化理解；不要塞理科公式或工程装置节点' },
-  'creative-media': { label: '创意设计/媒体/艺术', moduleWord: '创作环节（创意构思 / 设计草案 / 制作实现 / 展示评议）', subjectsHint: '结合 info-tech、chinese 及相关学科', redlines: '围绕创意表达与制作；只在确需技术实现时引入理科节点' },
-  'business-economics': { label: '商业/创业/经济实践', moduleWord: '运营环节（需求调研 / 方案设计 / 成本定价 / 运营复盘）', subjectsHint: 'math（统计/比例/函数）、chinese（策划/表达）为主', redlines: '围绕调研、测算、方案与表达' },
-  'life-planning': { label: '生活规划/活动策划', moduleWord: '策划环节（需求目标 / 方案日程 / 预算分工 / 执行复盘）', subjectsHint: 'math（预算/时间/统计）、chinese（策划/通知/总结）、geography（路线）按需', redlines: '围绕目标、方案、预算分工与执行复盘' },
-  'health-life': { label: '健康生活/运动安全', moduleWord: '健康环节（现状调查 / 科学原理与生理机制 / 预防干预原理 / 方案制定 / 实践评估）', subjectsHint: 'biology、physics、chemistry、science（原理机制必选≥2）、math（统计监测）、chinese（宣传倡议）', redlines: '必须覆盖科学原理层（生理机制+物理/化学原理），不能只有"调查统计"和"行为公约"两头；理/化/生原理节点≥2' },
-  'planting-cultivation': { label: '种植养殖/园艺栽培', moduleWord: '环节（植物识别分类 / 生长与环境 / 栽培实操 / 观察记录 / 种植日记）', subjectsHint: 'science、biology 为主线，辅以 math（数据图表）、chinese（日记）', redlines: '交付物是种植观察日记；必须含生长原理与栽培步骤' },
-  'labor-practice': { label: '劳动实践/制作', moduleWord: '实践环节（认识准备 / 操作实践 / 观察记录 / 成果分享）', subjectsHint: 'biology、science、chinese、math 按需', redlines: '围绕动手操作、观察记录与成果分享' },
-  'maker-workshop': { label: '工坊/木作/建筑模型', moduleWord: '工序（现场调研 / 风格方案 / 材料BOM / 搭建装饰 / 验收展示）', subjectsHint: 'science、physics、math、history、chinese 按需', redlines: '交付物是实体模型+图册+BOM；须有尺寸、工具、照片、检查表' },
-  'industry-innovation': { label: '产业创新/新兴经济探究', moduleWord: '环节（产业背景与政策 / 应用场景调研 / 技术原理支撑 / 数据可行性 / 创新方案报告）', subjectsHint: 'geography、chinese、math、physics、history、info-tech 按需', redlines: '交付物是主题产业创新方案/调研报告；禁止与主题无关的模块' },
-  'exhibition-redesign': { label: '展陈空间/场馆改造', moduleWord: '环节（现状诊断 / 主题策划 / 展陈设计 / 实施整改 / 开放验收）', subjectsHint: 'science（科普内容）、chinese（说明/讲解）、math（预算/统计）、info-tech 按需', redlines: '交付物是场馆改造方案册+展陈设计图；禁止程序设计、工程原型等无关节点' },
-  'general': { label: '综合实践', moduleWord: '项目模块（须按题目自定义，禁止套用通用模块名）', subjectsHint: '按交付物自然选取所需学科', redlines: '每个节点都要服务于题目交付物' },
+  'engineering': { label: '工程研发/制作', moduleWord: '工程子系统（原理 / 装置结构 / 控制实现 / 测试迭代）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '覆盖原理→装置→实验→必要定量；定量计算节点≤20%' },
+  'scientific-inquiry': { label: '科学探究/实验', moduleWord: '探究环节（问题假设 / 变量设计 / 数据采集 / 分析结论）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '必须含实验设计与数据分析类节点；理论与实验并重' },
+  'consumer-decision': { label: '消费决策/方案对比', moduleWord: '决策环节（需求调研 / 技术原理对比 / 成本测算 / 决策报告）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是决策报告/对比表；须含与对象相关的原理/测算节点；禁止工业研发节点' },
+  'social-inquiry': { label: '社会调查/田野研究', moduleWord: '调查环节（选题抽样 / 资料收集 / 整理统计 / 结论报告）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '核心是调查方法、数据统计与报告写作；节点须服务交付物' },
+  'humanities-literary': { label: '人文/文学/语言', moduleWord: '创作环节（立意选材 / 阅读积累 / 结构表达 / 修改展示）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '围绕阅读、写作、表达、文化理解；题目涉及时可自然引入相关学科' },
+  'creative-media': { label: '创意设计/媒体/艺术', moduleWord: '创作环节（创意构思 / 设计草案 / 制作实现 / 展示评议）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '围绕创意表达与制作；按实现需要自然引入相关学科' },
+  'business-economics': { label: '商业/创业/经济实践', moduleWord: '运营环节（需求调研 / 方案设计 / 成本定价 / 运营复盘）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '围绕调研、测算、方案与表达' },
+  'study-trip': { label: '研学旅行/人文地理考察', moduleWord: '研学环节（目的地调研 / 人文史迹 / 路线预算 / 研学报告）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '围绕目的地、史迹、路线预算与研学报告；题目提及史地则优先匹配，但不限学科' },
+  'life-planning': { label: '生活规划/活动策划', moduleWord: '策划环节（需求目标 / 方案日程 / 预算分工 / 执行复盘）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '围绕目标、方案、预算分工与执行复盘' },
+  'health-life': { label: '健康生活/运动安全', moduleWord: '健康环节（现状调查 / 科学原理与生理机制 / 预防干预原理 / 方案制定 / 实践评估）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '须覆盖与主题相关的科学原理层，不能只有调查统计与行为公约' },
+  'planting-cultivation': { label: '种植养殖/园艺栽培', moduleWord: '环节（植物识别分类 / 生长与环境 / 栽培实操 / 观察记录 / 种植日记）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是种植观察日记；须含生长原理与栽培步骤' },
+  'labor-practice': { label: '劳动实践/制作', moduleWord: '实践环节（认识准备 / 操作实践 / 观察记录 / 成果分享）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '围绕动手操作、观察记录与成果分享' },
+  'maker-workshop': { label: '工坊/木作/建筑模型', moduleWord: '工序（现场调研 / 风格方案 / 材料BOM / 搭建装饰 / 验收展示）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是实体模型+图册+BOM；须有尺寸、工具、照片、检查表' },
+  'industry-innovation': { label: '产业创新/新兴经济探究', moduleWord: '环节（产业背景与政策 / 应用场景调研 / 技术原理支撑 / 数据可行性 / 创新方案报告）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是主题产业创新方案/调研报告；禁止与主题无关的模块' },
+  'exhibition-redesign': { label: '展陈空间/场馆改造', moduleWord: '环节（现状诊断 / 主题策划 / 展陈设计 / 实施整改 / 开放验收）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '交付物是场馆改造方案册+展陈设计图；禁止与展陈无关的节点' },
+  'general': { label: '综合实践', moduleWord: '项目模块（须按题目自定义，禁止套用通用模块名）', subjectsHint: OPEN_SUBJECTS_HINT, redlines: '每个节点都要服务于题目交付物' },
 };
 
 function projectTypeProfile(goal) {
@@ -135,7 +145,9 @@ function buildTopicKeywords(goal, subject) {
   for (const w of extra.slice(0, 8)) {
     if (!base.includes(w) && !/^(设计|制作|开发|一个|关于|围绕|项目|方案|报告)$/.test(w)) base.push(w);
   }
-  return [...new Set(base)].slice(0, 12);
+  const anchors = inferTopicKnowledgeAnchors(g);
+  (anchors.recallTerms || []).slice(0, 12).forEach(t => base.push(t));
+  return [...new Set(base)].slice(0, 20);
 }
 
 function inferDeliverableHint(goal, subject, kind) {
@@ -143,6 +155,7 @@ function inferDeliverableHint(goal, subject, kind) {
   if (kind === 'exhibition-redesign') return `「${subject}」改造方案册（现状诊断+展陈设计+整改实施+验收）`;
   if (kind === 'industry-innovation') return `「${subject}」创新方案报告（场景调研+政策要点+可行性论证）`;
   if (kind === 'planting-cultivation') return `「${subject}」种植观察日记（分类笔记+栽培记录+生长数据+总结）`;
+  if (kind === 'study-trip') return `「${subject}」研学方案册（区域地理调研+人文史迹记录+路线预算+安全预案+研学报告）`;
   if (/报告|调查|论文|倡议|方案/.test(g)) return `「${subject}」专题报告（含调研数据与可检查结论）`;
   if (/设计|制作|开发|建造/.test(g)) return `可展示的「${subject}」作品+过程记录+说明文档`;
   return `「${subject}」项目成果包（可展示交付物+过程记录+说明）`;
@@ -169,7 +182,9 @@ function extractTopicProfile(goal) {
 
 function formatTopicAnchorBlock(goal) {
   const t = extractTopicProfile(goal);
-  return `锚点：「${t.coreTopic}」｜检索词：${t.keywords.slice(0, 8).join('、')}｜交付参考：${t.deliverableHint}｜禁套模板/MVP/环境搭建`;
+  const anchorHint = formatTopicAnchorHint(goal);
+  const anchorPart = anchorHint ? `｜${anchorHint}` : '';
+  return `锚点：「${t.coreTopic}」｜检索词：${t.keywords.slice(0, 10).join('、')}｜交付参考：${t.deliverableHint}${anchorPart}｜禁套模板/MVP/环境搭建`;
 }
 
 // ============================================================
@@ -216,6 +231,12 @@ function genericDomainsForType(id, goal = '') {
       { id: 'plan', label: '方案与产品设计', keywords: ['方案', '产品', '设计', '策划', '创意'], subjects: ['chinese', 'info-tech'] },
       { id: 'cost', label: '成本与定价测算', keywords: ['成本', '定价', '利润', '预算', '函数', '百分比', '统计'], subjects: ['math'] },
       { id: 'operate', label: '运营与复盘', keywords: ['运营', '推广', '复盘', '反馈', '报告'], subjects: ['chinese', 'math'] },
+    ],
+    'study-trip': [
+      { id: 'destination', label: '目的地调研', keywords: ['目的地', '调研', '区域', '地图', '地形', '气候', '资源', '区位', '交通', '地理'], subjects: ['geography', 'history'] },
+      { id: 'heritage', label: '人文史迹', keywords: ['历史', '文物', '遗址', '博物馆', '革命', '朝代', '遗产', '人文', '古迹', '文化'], subjects: ['history', 'chinese'] },
+      { id: 'route', label: '路线预算', keywords: ['路线', '日程', '行程', '预算', '费用', '统计', '成本', '分工', '安全'], subjects: ['math', 'geography', 'chinese'] },
+      { id: 'report', label: '研学报告', keywords: ['报告', '总结', '记录', '说明', '展示', '复盘', '观察', '日记'], subjects: ['chinese', 'history', 'geography'] },
     ],
     'life-planning': [
       { id: 'goal', label: '需求与目标', keywords: ['需求', '目标', '调查', '问卷', '场景', '人数'], subjects: ['chinese', 'math'] },
@@ -295,7 +316,7 @@ function inferProjectDomains(goal) {
 function formatDomainHints(domains) {
   if (!domains.length) return '';
   return domains.map((d, i) =>
-    `${i + 1}. 【${d.label}】必覆盖。检索候选时请优先匹配名称/课标描述中含：${d.keywords.join('、')}；学科倾向：${(d.subjects || []).join('、')}`
+    `${i + 1}. 【${d.label}】必覆盖。检索候选时请优先匹配名称/课标描述中含：${d.keywords.join('、')}；模块参考学科（非限制）：${(d.subjects || []).join('、') || '不限'}`
   ).join('\n');
 }
 
@@ -311,15 +332,16 @@ const ANTI_VACUUM_BLOCK = `禁泛素养节点；steps≥2条且≥15字含动作
 
 function typeMatchHints(goal) {
   const hints = {
-    'consumer-decision': '消费决策：原理≥2+统计/成本+决策报告；禁无关工业研发',
-    engineering: '工程：原理≥2+数学≥1+装置/实验；禁跨物理域',
-    'scientific-inquiry': '探究：原理≥2+数学≥1+实验设计/数据分析',
-    'social-inquiry': '调查：问卷/统计/报告写作；禁无关理科实验',
-    'humanities-literary': '人文：阅读写作表达；禁理科工程',
-    'creative-media': '创意：设计制作展示；技术按需',
+    'consumer-decision': '消费决策：覆盖调研/原理/成本/决策报告；禁无关工业研发',
+    engineering: '工程：原理+装置/实验+必要定量；节点服务交付物',
+    'scientific-inquiry': '探究：实验设计+数据采集+分析结论',
+    'social-inquiry': '调查：问卷/统计/报告写作；可按题目跨学科',
+    'humanities-literary': '人文：阅读写作表达；可按题目跨学科',
+    'creative-media': '创意：设计制作展示；按实现需要选节点',
     'business-economics': '商业：调研+成本定价+方案表达',
-    'life-planning': '策划：日程预算分工复盘；禁工程装置',
-    'health-life': '健康：生理/理化原理≥2+统计+宣传；禁只调查不原理',
+    'study-trip': '研学：目的地+史迹+路线预算+报告；按题目自然选科',
+    'life-planning': '策划：日程预算分工复盘',
+    'health-life': '健康：原理+调查+方案+评估；禁只调查不原理',
     'planting-cultivation': '种植：生长原理+栽培+观察记录',
     'labor-practice': '劳动：操作+记录+分享',
     'industry-innovation': '产业：政策场景+技术+数据+方案报告',
@@ -438,7 +460,7 @@ function systemPromptFilter(complex, goal) {
   const gradeHint = complex ? 'grades通常7-12，小学项目可含1-6。' : '';
   return `PBL 课标筛选。${formatTopicAnchorBlock(goal)}｜${typeGuardrailBlock(goal)}
 
-输出 subjects/systems/grades/projectDomains/bloomCeiling；学科覆盖模块、按类型自然选取、禁凑无关学科。${gradeHint} 只返回JSON。`;
+输出 subjects/systems/grades/projectDomains/bloomCeiling；根据题目地点/时代/主题延展思考后选取学科（可跨全科，不限项目类型），如「英国研学」须含英国地理与世界/欧洲史相关检索方向。subjects 可留空[]表示不限。${gradeHint} 只返回JSON。`;
 }
 
 function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomProfile = null) {
@@ -456,7 +478,7 @@ function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomPro
 
 返回 JSON：
 {
-  "subjects": ["math", "chinese", "geography"],
+  "subjects": [],
   "systems": ["cn", "ap"],
   "grades": [7, 8, 9],
   "projectDomains": ["从交付物拆出的 3-5 个模块名称"],
@@ -466,7 +488,7 @@ function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomPro
   "reasoning": "说明各模块对应的学科与年级"
 }
 
-subjects取值math/physics/chemistry/biology/chinese/english/history/geography/info-tech/science；systems为cn/ap/cambridge/ib/us；通常2-5学科${gradeHint}`;
+subjects取值math/physics/chemistry/biology/chinese/english/history/geography/info-tech/science；按题目需要填写2-5科，无需限制时可返回[]；systems为cn/ap/cambridge/ib/us${gradeHint}`;
 }
 
 // ============================================================

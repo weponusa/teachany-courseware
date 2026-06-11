@@ -338,10 +338,6 @@ class PBLPathBuilder {
     if (this._archetypeEngine) {
       out = this._archetypeEngine.applySystemLock(out, archetype, activeSystems);
     }
-    if (archetype.subjects?.length) {
-      const subjFiltered = out.filter(n => archetype.subjects.includes(n.subject));
-      if (subjFiltered.length >= Math.min(6, out.length * 0.4)) out = subjFiltered;
-    }
     return out;
   }
 
@@ -1181,7 +1177,38 @@ class PBLPathBuilder {
       const cjk = g.replace(/[^\u4e00-\u9fff]/g, '');
       for (let i = 0; i < cjk.length - 1; i++) terms.add(cjk.slice(i, i + 2));
     }
-    return [...terms].filter(t => t.length >= 2).slice(0, 32);
+    if (typeof PBLTopicAnchors !== 'undefined') {
+      (PBLTopicAnchors.inferTopicKnowledgeAnchors(goal).recallTerms || [])
+        .slice(0, 20).forEach(t => terms.add(t));
+    }
+    return [...terms].filter(t => t.length >= 2).slice(0, 40);
+  }
+
+  /** 题目语义锚点：地点/时代/主题 → 召回词与学科倾向（不限项目类型） */
+  _getTopicAnchors(goal) {
+    const key = String(goal || '');
+    if (!this._topicAnchorCache) this._topicAnchorCache = new Map();
+    if (!this._topicAnchorCache.has(key)) {
+      const empty = { recallTerms: [], subjects: [], places: [], periods: [], hints: '', strong: false };
+      const anchors = (typeof PBLTopicAnchors !== 'undefined' && PBLTopicAnchors.inferTopicKnowledgeAnchors)
+        ? PBLTopicAnchors.inferTopicKnowledgeAnchors(key)
+        : empty;
+      this._topicAnchorCache.set(key, anchors);
+    }
+    return this._topicAnchorCache.get(key);
+  }
+
+  _scoreTopicAnchorRelevance(node, goal) {
+    const anchors = this._getTopicAnchors(goal);
+    if (!anchors?.strong) return 0;
+    if (typeof PBLTopicAnchors !== 'undefined' && PBLTopicAnchors.scoreNodeAgainstAnchors) {
+      return PBLTopicAnchors.scoreNodeAgainstAnchors(node, anchors, (n) => this._nodeSearchText(n));
+    }
+    return 0;
+  }
+
+  _nodeMatchesTopicAnchors(node, goal, minScore = 6) {
+    return this._scoreTopicAnchorRelevance(node, goal) >= minScore;
   }
 
   /** 消费决策/调查对比类（购车选型、方案比选），非工程研发 */
@@ -1303,29 +1330,10 @@ class PBLPathBuilder {
     return /历史背景|朝代|元代|元朝|宋朝|宋代|唐朝|隋唐|明清|西汉|东汉|蒙古|丝绸之路|世界大战|资产阶级|革命|改革开放|秦始皇|工业革命|文艺复兴|冷战|新航路|殖民|封建|帝国|奴隶社会|封建社会|通史|古代史|近代史|现代史/.test(name);
   }
 
-  /** 项目允许学科白名单（表单单学科 > 原型 > 类型推断） */
+  /** 学科限制：仅用户表单显式指定时生效；否则不限学科，由筛选/匹配阶段按题目延展选取 */
   _getAllowedSubjects(goal, archetype = null) {
     const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
     if (specSubjects?.length) return new Set(specSubjects);
-    if (archetype?.subjects?.length) return new Set(archetype.subjects);
-    if (this._isPrimaryCommerceGoal(goal)) return new Set(['math', 'chinese']);
-    if (this._isConsumerDecisionGoal(goal)) {
-      return new Set(['math', 'physics', 'chemistry', 'geography', 'chinese']);
-    }
-    const type = this._classifyProjectType(goal);
-    const typeSubjects = {
-      'business-economics': ['math', 'chinese'],
-      'humanities-literary': ['chinese', 'english', 'history'],
-      'social-inquiry': ['chinese', 'math', 'geography', 'history'],
-      'life-planning': ['chinese', 'math', 'geography'],
-      'creative-media': ['chinese', 'info-tech'],
-      'health-life': ['biology', 'science', 'math', 'chinese'],
-      'planting-cultivation': ['science', 'biology', 'math', 'chinese'],
-    };
-    if (typeSubjects[type]) return new Set(typeSubjects[type]);
-    const domains = this._inferProjectDomains(goal);
-    const fromDomains = domains.flatMap(d => d.subjects || []);
-    if (fromDomains.length) return new Set(fromDomains);
     return null;
   }
 
@@ -1394,10 +1402,13 @@ class PBLPathBuilder {
     const g = String(goal || '');
     const domainsList = domains?.length ? domains : this._inferProjectDomains(g);
     const goalTerms = this._tokenizeGoalTerms(g);
+    const anchors = this._getTopicAnchors(g);
     const hints = this._collectBlueprintHints(blueprint, archetype);
     const text = this._nodeSearchText(node);
     const name = String(node.name || '');
     let score = 0;
+
+    score += this._scoreTopicAnchorRelevance(node, g);
 
     goalTerms.forEach(t => {
       if (t.length < 2) return;
@@ -1416,14 +1427,19 @@ class PBLPathBuilder {
     if (archetype && this._isArchetypeBanned(node, archetype)) score -= 60;
     if (this._isK12Node(node)) score += 2;
 
-    const contextBlob = `${g} ${hints.join(' ')} ${domainsList.map(d => `${d.label} ${(d.keywords || []).join('')}`).join(' ')}`;
+    const anchorBlob = (anchors.recallTerms || []).join(' ');
+    const contextBlob = `${g} ${hints.join(' ')} ${anchorBlob} ${domainsList.map(d => `${d.label} ${(d.keywords || []).join('')}`).join(' ')}`;
+    const subjectExpected = new Set(anchors.subjects || []);
     const subjectSignals = {
-      history: /历史|朝代|文物|革命|战争|史|考古/,
+      history: /历史|朝代|文物|革命|战争|史|考古|中世纪|中古|欧洲|英国|文明/,
       biology: /生物|细胞|遗传|生态|光合|酶|器官|人体|病毒|细菌/,
-      geography: /地理|环境|气候|污染|排放|地图|区域|资源|地形|区位/,
+      geography: /地理|环境|气候|污染|排放|地图|区域|资源|地形|区位|国家|世界/,
     };
     const sig = subjectSignals[node.subject];
-    if (sig && !sig.test(contextBlob) && !sig.test(name) && !sig.test(text)) score -= 10;
+    if (sig && !sig.test(contextBlob) && !sig.test(name) && !sig.test(text)) {
+      if (!subjectExpected.has(node.subject) && this._scoreTopicAnchorRelevance(node, g) < 4) score -= 10;
+    }
+    if (subjectExpected.has(node.subject) && this._nodeMatchesTopicAnchors(node, g, 4)) score += 4;
 
     if (this._isPrimarySchoolContext(g)) {
       const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
@@ -1773,7 +1789,9 @@ class PBLPathBuilder {
       const w = subject.slice(i, i + 2);
       if (w.length === 2 && !/[的与及了在]$/.test(w)) base.push(w);
     }
-    return [...new Set(base)].slice(0, 12);
+    const anchors = this._getTopicAnchors(g);
+    (anchors.recallTerms || []).slice(0, 12).forEach(t => base.push(t));
+    return [...new Set(base)].slice(0, 20);
   }
 
   _inferDeliverableHint(goal, subject, kind) {
@@ -1897,7 +1915,8 @@ class PBLPathBuilder {
     if (/健康|营养|饮食|食谱|减脂|减肥|健身|锻炼|运动会?|近视|视力|护眼|睡眠|作息|心理|情绪|压力|安全|急救|防溺水|防火|防疫|卫生|疾病|人体|体重|身高/.test(g)) return 'health-life';
     if (this._isPlantingCultivationGoal(g)) return 'planting-cultivation';
     if (/烹饪|烘焙|美食|菜谱|料理|手工|编织|缝纫|收纳|整理|维修|清洁|打扫|劳动/.test(g)) return 'labor-practice';
-    if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|研学|游学|路线规划|时间管理|班级布置|布置教室|嘉年华|游园/.test(g)) return 'life-planning';
+    if (/研学|游学|研学旅行|研学路线|红色研学|文化研学|文化考察|实地考察|field.?trip|遗址|博物馆|人文史迹|古迹|古村|世界遗产/.test(g)) return 'study-trip';
+    if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|路线规划|时间管理|班级布置|布置教室|嘉年华|游园/.test(g)) return 'life-planning';
     if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|公众.{0,4}认知|居民|乡土|口述史/.test(g)) return 'social-inquiry';
     if (this._isExhibitionRedesignGoal(g)) return 'exhibition-redesign';
     if (this._isIndustryInnovationGoal(g)) return 'industry-innovation';
@@ -1942,6 +1961,12 @@ class PBLPathBuilder {
         { id: 'plan', label: '方案与产品设计', keywords: ['方案', '产品', '设计', '策划', '创意'], subjects: ['chinese', 'info-tech'] },
         { id: 'cost', label: '成本与定价测算', keywords: ['成本', '定价', '利润', '预算', '函数', '百分比', '统计'], subjects: ['math'] },
         { id: 'operate', label: '运营与复盘', keywords: ['运营', '推广', '复盘', '反馈', '报告'], subjects: ['chinese', 'math'] },
+      ],
+      'study-trip': [
+        { id: 'destination', label: '目的地调研', keywords: ['目的地', '调研', '区域', '地图', '地形', '气候', '资源', '区位', '交通', '地理'], subjects: ['geography', 'history'] },
+        { id: 'heritage', label: '人文史迹', keywords: ['历史', '文物', '遗址', '博物馆', '革命', '朝代', '遗产', '人文', '古迹', '文化', '史迹'], subjects: ['history', 'chinese'] },
+        { id: 'route', label: '路线预算', keywords: ['路线', '日程', '行程', '预算', '费用', '统计', '成本', '分工', '安全', '预案'], subjects: ['math', 'geography', 'chinese'] },
+        { id: 'report', label: '研学报告', keywords: ['报告', '总结', '记录', '说明', '展示', '复盘', '观察', '日记', '写作'], subjects: ['chinese', 'history', 'geography'] },
       ],
       'life-planning': [
         { id: 'goal', label: '需求与目标', keywords: ['需求', '目标', '调查', '问卷', '场景', '人数'], subjects: ['chinese', 'math'] },
@@ -2225,7 +2250,7 @@ class PBLPathBuilder {
     if (this._isGroundRoboticsGoal(goal)) return true;
     const g = String(goal || '');
     const type = this._classifyProjectType(g);
-    if (['humanities-literary', 'business-economics', 'life-planning', 'creative-media'].includes(type)) return true;
+    if (['humanities-literary', 'business-economics', 'study-trip', 'life-planning', 'creative-media'].includes(type)) return true;
     if (type === 'general' && !/生物|细胞|人体|健康|植物|种植|动物|光合|消化|器官/.test(g)) return true;
     if (/(车|汽车)/.test(g) && /新能源|燃油|电动|混动|油电/.test(g) && !/生物|细胞|生态|光合|酶|遗传|植物|动物/.test(g)) return true;
     if (this._isEngineeringGoal(goal) && !/健康|营养|生物|人体|疾病|医学/.test(g)) return true;
@@ -2248,7 +2273,7 @@ class PBLPathBuilder {
     const g = String(goal || '');
     if (/生物|人体|消化|器官|健康|植物|种植|动物|光合|生态/.test(g)) return false;
     const type = this._classifyProjectType(g);
-    if (['business-economics', 'humanities-literary', 'social-inquiry', 'life-planning', 'creative-media'].includes(type)) return true;
+    if (['business-economics', 'humanities-literary', 'social-inquiry', 'study-trip', 'life-planning', 'creative-media'].includes(type)) return true;
     if (this._isPrimaryCommerceGoal(g)) return true;
     if (type === 'general' && !/实验|工程|制作|搭建|装置|电路|化学|物理|测量|滴定/.test(g)) return true;
     return false;
@@ -3304,6 +3329,11 @@ class PBLPathBuilder {
         { name: '盈亏平衡与现金流', reason: '简易商业测算模型，课本通常不单独讲授' },
         { name: '品牌定位与卖点提炼', reason: '营销策划中的定位方法，需课外补充' },
       ],
+      'study-trip': [
+        { name: '遗址博物馆田野观察记录法', reason: '研学需结构化记录文物史迹观察，课标写作较少专项训练' },
+        { name: '目的地自然人文概况调研框架', reason: '研学路线设计需整合区域地理与人文背景，课本分散讲授' },
+        { name: '研学行程风险评估表', reason: '研学活动中的风险管理，课标无专项条目' },
+      ],
       'life-planning': [
         { name: '行程风险与应急预案', reason: '活动策划中的风险管理，课标无专项条目' },
         { name: '团队协作与分工机制', reason: '项目分工与协作方法，课本较少系统讲授' },
@@ -4285,6 +4315,23 @@ class PBLPathBuilder {
       };
       return mk(map[role] || map.core);
     }
+    if (type === 'study-trip') {
+      const map = {
+        foundation: [
+          `调研目的地区域地理：地形气候、交通区位，整理 1 页概况表`,
+          `查阅 ${knRef} 相关人文史迹资料，列出 3 处必访点及史料线索`,
+        ],
+        bridge: [
+          `绘制研学路线图与日程表，标注各站点史地学习任务`,
+          `测算交通食宿门票等费用，制作预算表与安全预案检查表`,
+        ],
+        core: [
+          `按路线完成田野观察记录（史迹+地理现象各≥3条）`,
+          `撰写研学报告：区域地理发现、人文史迹收获、费用决算与改进建议`,
+        ],
+      };
+      return mk(map[role] || map.core);
+    }
     if (type === 'life-planning') {
       const map = {
         foundation: [
@@ -4662,7 +4709,55 @@ class PBLPathBuilder {
         return bm - am;
       });
     }
+    list = this._ensureTopicAnchorRecall(list, goal, effectivePool, archetype, limit);
     return this._assignCoreRoles(list.slice(0, limit), min);
+  }
+
+  /**
+   * 语义锚点保底：题目含明确地点/时代时，召回对应学科课标节点（如英国研学→地理+历史）
+   */
+  _ensureTopicAnchorRecall(matched, goal, pool, archetype, limit) {
+    const anchors = this._getTopicAnchors(goal);
+    if (!anchors.strong || !anchors.subjects.length) return matched;
+
+    const list = [...matched];
+    const seen = new Set(list.map(n => n.id));
+    const basePool = (pool?.length ? pool : this._getK12Pool(goal))
+      .filter(n => this._passesHardNodeGate(n, goal, archetype));
+
+    anchors.subjects.forEach(subj => {
+      const hasStrong = list.some(n => n.subject === subj && this._nodeMatchesTopicAnchors(n, goal, 6));
+      if (hasStrong) return;
+
+      const ranked = basePool
+        .filter(n => n.subject === subj)
+        .filter(n => !seen.has(n.id))
+        .map(n => ({
+          ...n,
+          _anchorScore: this._scoreTopicAnchorRelevance(n, goal)
+            + this._scoreUniversalRelevance(n, goal, null, this._inferProjectDomains(goal), archetype) * 0.3,
+        }))
+        .filter(n => n._anchorScore >= 6)
+        .sort((a, b) => b._anchorScore - a._anchorScore);
+
+      const pick = ranked[0];
+      if (!pick) return;
+      seen.add(pick.id);
+      list.push({
+        ...pick,
+        confidence: Math.max(0.68, pick.confidence || 0.68),
+        matchReason: `语义召回：${(anchors.places || []).join('、') || (anchors.periods || []).join('、') || '主题'}相关${subj}课标`,
+        pblRole: 'bridge',
+      });
+    });
+
+    if (anchors.subjects.length) {
+      const recalled = list.filter(n => anchors.subjects.includes(n.subject) && this._nodeMatchesTopicAnchors(n, goal, 4));
+      if (recalled.length) {
+        console.warn('[PBL] 语义锚点召回:', recalled.map(n => `${n.name}(${n.subject})`).join('、'));
+      }
+    }
+    return list.slice(0, limit);
   }
 
   _getPBLGoalProfile(goal) {
@@ -6250,49 +6345,12 @@ class PBLPathBuilder {
     filter.bloomCeiling = mergedBloom.ceiling;
     filter.bloomEvidence = mergedBloom.evidence;
     filter.actionVerbs = mergedBloom.actionVerbs;
-    const domains = this._inferProjectDomains(goal);
-
-    const projectType = this._classifyProjectType(goal);
 
     const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
     if (specSubjects?.length) {
       filter.subjects = specSubjects;
-    } else if (archetype?.subjects?.length) {
-      filter.subjects = archetype.subjects;
-      if (archetype.primarySystem) filter.systems = [archetype.primarySystem, ...(archetype.extensionSystems || [])];
-    } else if (this._isConsumerDecisionGoal(goal)) {
-      filter.subjects = ['math', 'physics', 'chemistry', 'geography', 'chinese'];
-    } else if (this._isChemistryInquiryGoal(goal)) {
-      filter.subjects = this._getChemistryAnalysisProfile(goal).mixed
-        ? ['chemistry', 'physics', 'math']
-        : ['chemistry', 'science', 'math'];
-    } else if (this._isGroundRoboticsGoal(goal)) {
-      filter.subjects = ['physics', 'info-tech', 'math', 'science'];
-    } else if (projectType === 'business-economics' || this._isPrimaryCommerceGoal(goal)) {
-      filter.subjects = ['math', 'chinese'];
-    } else if (projectType === 'humanities-literary') {
-      filter.subjects = ['chinese', 'english', 'history'];
-    } else if (projectType === 'social-inquiry') {
-      filter.subjects = ['chinese', 'math', 'geography', 'history'];
-    } else if (this._isStemProjectGoal(goal) && profile.complex) {
-      // STEM/工程/科学探究类：锁定主线学科，禁止人文学科渗入候选池
-      if (/火箭|导弹|发射|弹道|模型火箭/.test(goal)) {
-        filter.subjects = ['physics', 'chemistry', 'math', 'info-tech'];
-      } else if (this._isEnergyProjectGoal(goal)) {
-        filter.subjects = ['physics', 'chemistry', 'math', 'info-tech'];
-      } else {
-        const subj = ['physics'];
-        if (/燃料|燃烧|化学|材料|氧化|电池|电化学/.test(goal)) subj.push('chemistry');
-        if (/模型|函数|计算|数据|弹道|抛体|效率/.test(goal)) subj.push('math');
-        if (/控制|传感|编程|电路|数据|算法/.test(goal)) subj.push('info-tech');
-        if (projectType === 'scientific-inquiry') { subj.push('chemistry', 'biology', 'science', 'math'); }
-        if (subj.length === 1) subj.push('math');
-        filter.subjects = [...new Set(subj)];
-      }
-    } else if (domains.length && !filter.subjects?.length) {
-      // 生活化/人文/社科/创意/商业等：学科取项目模块的并集，不强行套理科
-      filter.subjects = [...new Set(domains.flatMap(d => d.subjects || []))];
     }
+    // 其余情况信任 filter 阶段 LLM 返回的 subjects；空数组表示不限学科
 
     // 根据筛选条件过滤候选集（未写明年级时跨学段，不因年级挡候选）
     const minGrade = profile.explicitGrade ? profile.minGrade : 1;

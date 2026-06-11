@@ -6,6 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { inferTopicKnowledgeAnchors, scoreNodeAgainstAnchors } from '../functions/_lib/pbl-topic-anchors.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -153,6 +154,11 @@ function scoreModule(node, mod, goal, archetype) {
   for (const p of archetype?.preferNamePatterns || []) {
     if (node.name.includes(p)) s += 6;
   }
+  const anchors = inferTopicKnowledgeAnchors(goal);
+  s += scoreNodeAgainstAnchors(node, anchors);
+  const minG = archetype?.minGrade || 1;
+  const grade = parseInt(node.grade, 10) || 0;
+  if (grade > 0 && grade < minG) s -= 24;
   return s;
 }
 
@@ -272,7 +278,6 @@ async function main() {
     const blueprint = blueprintFixture(c, archetypeData);
     const archetype = (archetypeData.archetypes || []).find(x => x.id === c.archetypeId) || null;
     const pool = allNodes.filter(n => {
-      if (archetype?.subjects?.length && !archetype.subjects.includes(n.subject)) return false;
       if (archetype && (parseInt(n.grade, 10) || 0) > 0 && (parseInt(n.grade, 10) || 0) < archetype.minGrade) return false;
       return !isBanned(n, archetype, tagsData);
     });
