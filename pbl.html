@@ -1295,7 +1295,7 @@ body {
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260609-stack-fix2"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260609-stack-fix3"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1471,15 +1471,18 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
   statusEl.querySelector('.pulse').style.background = '';
   statusText.textContent = refine ? '正在根据修改要求调整…' : '正在加载多课标知识点索引...';
 
+  const builder = window.PBLPathBuilder;
   try {
-    const builder = window.PBLPathBuilder;
     try {
       await builder.loadUnifiedIndex();
     } catch (idxErr) {
       if (/stack/i.test(String(idxErr.message || ''))) {
-        try { localStorage.removeItem('teachany_pbl_unified_index_v10'); } catch (_e) { /* ignore */ }
+        ['teachany_pbl_unified_index_v10', 'teachany_pbl_unified_index_v11'].forEach((k) => {
+          try { localStorage.removeItem(k); } catch (_e) { /* ignore */ }
+        });
         builder.loaded = false;
         builder._loadPromise = null;
+        builder._skipIndexCache = true;
         await builder.loadUnifiedIndex();
       } else {
         throw idxErr;
@@ -1541,13 +1544,28 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
     }
     const refineInput = document.getElementById('pblRefineInput');
     if (refineInput) refineInput.value = '';
+    window.__pblStackRetried = false;
     window.__pblLastAnalysisDone = { ok: true, result, ts: Date.now() };
     document.dispatchEvent(new CustomEvent('teachany-pbl-done', { detail: { result } }));
   } catch (error) {
     console.error('[PBL] 分析失败:', error);
     const msg = String(error.message || error);
+    if (/stack/i.test(msg) && !window.__pblStackRetried) {
+      window.__pblStackRetried = true;
+      ['teachany_pbl_unified_index_v10', 'teachany_pbl_unified_index_v11'].forEach((k) => {
+        try { localStorage.removeItem(k); } catch (_e) { /* ignore */ }
+      });
+      if (builder) {
+        builder.loaded = false;
+        builder._loadPromise = null;
+        builder._skipIndexCache = true;
+      }
+      statusText.textContent = '检测到缓存异常，正在自动清缓存并重试…';
+      setTimeout(() => runPBLAnalysis({ refine, userMessage }), 400);
+      return;
+    }
     if (/stack/i.test(msg)) {
-      statusText.textContent = '❌ 浏览器内存/缓存异常，请硬刷新后重试（或清除 teachany_pbl_unified_index_v10 缓存）';
+      statusText.textContent = '❌ 分析过程内存溢出，请硬刷新页面后重试';
     } else {
       statusText.textContent = '❌ ' + msg;
     }
@@ -1795,16 +1813,18 @@ function ensurePBLQuality(result) {
 }
 
 function renderPBLResult(result) {
-  result = ensurePBLBlueprint(result);
-  if (window.PBLPathBuilder && typeof window.PBLPathBuilder.buildPathPlanFromResult === 'function') {
-    result.pathPlan = result.pathPlan || window.PBLPathBuilder.buildPathPlanFromResult(result);
-    if (result.pathPlan?.phases) result.projectPhases = result.projectPhases?.length ? result.projectPhases : result.pathPlan.phases;
-  }
-  result = ensurePBLQuality(result);
+  try { result = ensurePBLBlueprint(result); } catch (e) { console.warn('[PBL] 蓝图补全降级:', e); }
+  try {
+    if (window.PBLPathBuilder && typeof window.PBLPathBuilder.buildPathPlanFromResult === 'function') {
+      result.pathPlan = result.pathPlan || window.PBLPathBuilder.buildPathPlanFromResult(result);
+      if (result.pathPlan?.phases) result.projectPhases = result.projectPhases?.length ? result.projectPhases : result.pathPlan.phases;
+    }
+  } catch (e) { console.warn('[PBL] 路径计划降级:', e); }
+  try { result = ensurePBLQuality(result); } catch (e) { console.warn('[PBL] 质量分降级:', e); }
   pblResult = result;
-  renderPBLCandidatePanel(result);
-  renderPBLStats(result);
-  renderPBLGraph(result);
+  try { renderPBLCandidatePanel(result); } catch (e) { console.warn('[PBL] 候选面板降级:', e); }
+  try { renderPBLStats(result); } catch (e) { console.warn('[PBL] 统计面板降级:', e); }
+  try { renderPBLGraph(result); } catch (e) { console.warn('[PBL] 图谱渲染降级:', e); }
   const activePhase = document.querySelector('.pbl-path-phase.active') || document.querySelector('.pbl-path-phase');
   if (activePhase) highlightPBLPhase(activePhase);
   if (result.graphData?.nodes?.length) {

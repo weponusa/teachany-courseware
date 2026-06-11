@@ -262,7 +262,7 @@ class PBLPathBuilder {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: ac.signal,
-        body: JSON.stringify(body),
+        body: this._safeStringify(body, 'PBL messages'),
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(data.error || `PBL API ${resp.status}`);
@@ -515,34 +515,39 @@ class PBLPathBuilder {
     if (this.loaded) return this.unifiedIndex;
     if (this._loadPromise) return this._loadPromise;
 
-    // v8.0.1：缓存 key 升级，修复 systemIndex 恢复 + 推理模型兼容
-    const CACHE_KEY = 'teachany_pbl_unified_index_v10';
+    const CACHE_KEY = PBLPathBuilder.PBL_INDEX_CACHE_KEY;
+    const LEGACY_CACHE_KEYS = ['teachany_pbl_unified_index_v10'];
     const CACHE_TTL = 1800000;
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const parsed = this._safeJsonParse(cached);
-        const { ts, entries } = parsed || {};
-        if (parsed && Date.now() - ts < CACHE_TTL && Array.isArray(entries)) {
-          entries.forEach(([k, v]) => {
-            this.unifiedIndex.set(k, v);
-            // 同步恢复 systemIndex（修复缓存命中时 systemIndex 为空导致 candidates=0 的 bug）
-            if (v.system) {
-              if (!this.systemIndex.has(v.system)) this.systemIndex.set(v.system, new Set());
-              this.systemIndex.get(v.system).add(k);
-            }
-          });
-          this.loaded = true;
-          this._normalizeNodeSourceFlags();
-          console.log(`[PBL] ✅ 从缓存恢复: ${this.unifiedIndex.size} 节点, ${this.systemIndex.size} 课标体系`);
-          await this._loadKnowledgeGraph();
-          return this.unifiedIndex;
+    if (!this._skipIndexCache) {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const parsed = this._safeJsonParse(cached);
+          const { ts, entries, v } = parsed || {};
+          if (parsed && v === 11 && Date.now() - ts < CACHE_TTL && Array.isArray(entries)) {
+            entries.forEach(([k, vNode]) => {
+              if (!k || !vNode) return;
+              this.unifiedIndex.set(k, vNode);
+              if (vNode.system) {
+                if (!this.systemIndex.has(vNode.system)) this.systemIndex.set(vNode.system, new Set());
+                this.systemIndex.get(vNode.system).add(k);
+              }
+            });
+            this.loaded = true;
+            this._normalizeNodeSourceFlags();
+            console.log(`[PBL] ✅ 从缓存恢复: ${this.unifiedIndex.size} 节点, ${this.systemIndex.size} 课标体系`);
+            await this._loadKnowledgeGraph();
+            return this.unifiedIndex;
+          }
         }
+      } catch (e) {
+        console.warn('[PBL] 索引缓存损坏，将重新加载:', e.message);
+        try { localStorage.removeItem(CACHE_KEY); } catch (_e) { /* ignore */ }
       }
-    } catch (e) {
-      console.warn('[PBL] 索引缓存损坏，将重新加载:', e.message);
-      try { localStorage.removeItem(CACHE_KEY); } catch (_e) { /* ignore */ }
     }
+    LEGACY_CACHE_KEYS.forEach((k) => {
+      try { localStorage.removeItem(k); } catch (_e) { /* ignore */ }
+    });
 
     this._loadPromise = this._doLoad();
     return this._loadPromise;
@@ -628,14 +633,7 @@ class PBLPathBuilder {
 
     await this._loadKnowledgeGraph();
 
-    // 写入缓存
-    try {
-      const CACHE_KEY = 'teachany_pbl_unified_index_v10';
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        ts: Date.now(),
-        entries: [...this.unifiedIndex.entries()]
-      }));
-    } catch (e) { /* 存储满了忽略 */ }
+    this._persistUnifiedIndexCache();
     return this.unifiedIndex;
   }
 
@@ -1205,6 +1203,71 @@ class PBLPathBuilder {
         console.warn('[PBL] JSON 嵌套过深，已跳过解析:', e.message);
       }
       return fallback;
+    }
+  }
+
+  static PBL_INDEX_CACHE_KEY = 'teachany_pbl_unified_index_v11';
+
+  _slimNodeForCache(node) {
+    if (!node) return node;
+    return {
+      id: node.id,
+      name: node.name,
+      name_en: node.name_en,
+      subject: node.subject,
+      domain: node.domain,
+      domainColor: node.domainColor,
+      grade: node.grade,
+      difficulty: node.difficulty,
+      definition: typeof node.definition === 'string' ? node.definition.slice(0, 400) : '',
+      key_concepts: (node.key_concepts || []).slice(0, 8),
+      prerequisites: (node.prerequisites || []).slice(0, 8),
+      extends: (node.extends || []).slice(0, 4),
+      parallel: (node.parallel || []).slice(0, 4),
+      status: node.status,
+      courses: (node.courses || []).slice(0, 3),
+      curriculum_points: (node.curriculum_points || []).slice(0, 4),
+      system: node.system,
+      systemTag: node.systemTag,
+      systemLabel: node.systemLabel,
+      curriculumLabel: node.curriculumLabel,
+      stageLabel: node.stageLabel,
+      gradeLabel: node.gradeLabel,
+      treePath: node.treePath,
+      isExternal: !!node.isExternal,
+      fromCurriculumTree: !!node.fromCurriculumTree,
+      fromK12Graph: !!node.fromK12Graph,
+      isUniversity: !!node.isUniversity,
+      isK12: !!node.isK12,
+    };
+  }
+
+  _safeStringify(value, label = 'payload') {
+    try {
+      return JSON.stringify(value);
+    } catch (e) {
+      if (!/stack|too much recursion/i.test(String(e.message || ''))) throw e;
+      console.warn(`[PBL] ${label} 序列化栈溢出，已裁剪后重试`);
+      const slim = { ...value };
+      if (slim.projectBlueprint) slim.projectBlueprint = this._compactBlueprintForReview(slim.projectBlueprint);
+      if (Array.isArray(slim.candidates)) slim.candidates = slim.candidates.slice(0, 36).map(n => this._enrichCandidateForMatch(n));
+      return JSON.stringify(slim);
+    }
+  }
+
+  _persistUnifiedIndexCache() {
+    if (this._skipIndexCache) return;
+    const CACHE_KEY = PBLPathBuilder.PBL_INDEX_CACHE_KEY;
+    try {
+      const entries = [];
+      for (const [k, v] of this.unifiedIndex.entries()) {
+        entries.push([k, this._slimNodeForCache(v)]);
+        if (entries.length >= 10000) break;
+      }
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), v: 11, entries }));
+    } catch (e) {
+      console.warn('[PBL] 索引缓存写入跳过:', e.message);
+      try { localStorage.removeItem(CACHE_KEY); } catch (_e) { /* ignore */ }
     }
   }
 
@@ -6394,7 +6457,7 @@ class PBLPathBuilder {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: ac.signal,
-        body: JSON.stringify(body),
+        body: this._safeStringify(body, `PBL ${stage}`),
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
@@ -6920,6 +6983,22 @@ class PBLPathBuilder {
   }
 
   async analyzePBLGoal(goal, selectedSystems = ['all'], onStatus = null, options = {}) {
+    try {
+      return await this._analyzePBLGoalBody(goal, selectedSystems, onStatus, options);
+    } catch (e) {
+      if (/stack|too much recursion/i.test(String(e.message || ''))) {
+        console.warn('[PBL] 分析栈溢出，降级关键词模式:', e.message);
+        const result = await this.searchByKeywords(goal, selectedSystems);
+        result.projectBlueprint = this._fallbackDecomposeBlueprint(goal);
+        result.projectSpec = options.projectSpec || null;
+        result.goal = goal;
+        return result;
+      }
+      throw e;
+    }
+  }
+
+  async _analyzePBLGoalBody(goal, selectedSystems = ['all'], onStatus = null, options = {}) {
     this._activeProjectSpec = options.projectSpec || null;
     this._refinementContext = options.refinementContext || null;
     const chatHistory = options.chatHistory || [];
@@ -7189,6 +7268,7 @@ class PBLPathBuilder {
 
   async _llmFilterStage(goal, candidates, projectBlueprint = null, bloomProfile = null, archetype = null, activeSystems = []) {
     const profile = this._getPBLGoalProfile(goal);
+    const domains = this._inferProjectDomains(goal);
     const ruleBloom = bloomProfile || this._inferBloomProfile(projectBlueprint);
     if (archetype) {
       profile.maxMatched = archetype.maxMatched || profile.maxMatched;
