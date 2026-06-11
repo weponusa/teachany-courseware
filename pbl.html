@@ -1295,7 +1295,7 @@ body {
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260609-energy-no-bio"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260611-topic-profile-fix"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -2765,9 +2765,14 @@ window.TeachAnyPBLAutomation = {
   createHandoff: createPBLHandoffUrl,
   getSerializableResult: () => serializePBLResult(pblResult),
   getResult: () => pblResult,
-  isAnalysisComplete: () => !!(window.__pblLastAnalysisDone?.ok && pblResult?.graphData?.nodes?.length),
+  isAnalysisComplete: () => {
+    if (!window.__pblLastAnalysisDone?.ok || !pblResult) return false;
+    const hasGraph = (pblResult.graphData?.nodes?.length || 0) > 0;
+    const hasBlueprint = (pblResult.projectBlueprint?.schemes || []).length > 0;
+    return hasGraph || hasBlueprint;
+  },
   waitForAnalysis: (timeoutMs = 360000) => new Promise((resolve, reject) => {
-    if (pblResult?.graphData?.nodes?.length) {
+    if (window.TeachAnyPBLAutomation.isAnalysisComplete()) {
       resolve(pblResult);
       return;
     }

@@ -16,6 +16,7 @@ TeachAny PBL 拆解 CLI — 供 Cursor Skill / 自动化调用
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import re
 import sys
@@ -135,19 +136,38 @@ async def run_decompose(args: argparse.Namespace) -> dict:
 
         await page.goto(analyze_url, wait_until="domcontentloaded", timeout=120_000)
 
-        await page.wait_for_function(
-            """() => window.__pblLastAnalysisDone?.ok === true""",
-            timeout=TIMEOUT_MS,
-        )
+        deadline = asyncio.get_event_loop().time() + TIMEOUT_MS / 1000
+        while asyncio.get_event_loop().time() < deadline:
+            state = await page.evaluate(
+                """() => {
+                  const d = window.__pblLastAnalysisDone;
+                  const r = window.TeachAnyPBLAutomation?.getResult?.();
+                  return {
+                    doneOk: !!(d && d.ok),
+                    doneErr: d && d.ok === false ? (d.error || 'PBL 拆解失败') : null,
+                    nodes: r?.graphData?.nodes?.length || 0,
+                    blueprint: (r?.projectBlueprint?.schemes || []).length,
+                  };
+                }"""
+            )
+            if state.get("doneErr"):
+                raise RuntimeError(state["doneErr"])
+            if state.get("doneOk"):
+                break
+            await asyncio.sleep(2)
+        else:
+            raise TimeoutError(f"PBL 拆解超时（{TIMEOUT_MS // 1000}s 无响应）")
 
         await page.wait_for_function(
             """() => {
               const r = window.TeachAnyPBLAutomation?.getResult?.();
-              if (!r?.graphData?.nodes?.length) return false;
+              const hasGraph = (r?.graphData?.nodes?.length || 0) > 0;
+              const hasBlueprint = (r?.projectBlueprint?.schemes || []).length > 0;
+              if (!hasGraph && !hasBlueprint) return false;
               const st = document.getElementById('pblStatus');
               if (st && st.style.display !== 'none') return false;
-              const svg = document.querySelector('#pbl-graph-container svg');
-              return !!svg;
+              if (!hasGraph) return true;
+              return !!document.querySelector('#pbl-graph-container svg');
             }""",
             timeout=120_000,
         )
@@ -260,8 +280,6 @@ def main() -> None:
     parser.add_argument("--base-url", default=DEFAULT_BASE, help="PBL 页面地址（默认线上 teachany.cn/pbl）")
     parser.add_argument("--json-only", action="store_true", help="仅打印结果 JSON 到 stdout")
     args = parser.parse_args()
-
-    import asyncio
 
     meta = asyncio.run(run_decompose(args))
 

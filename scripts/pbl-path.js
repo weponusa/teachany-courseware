@@ -22,6 +22,7 @@ class PBLPathBuilder {
     // Tooltip 延迟隐藏：允许鼠标从节点移动到弹窗内点击课程链接
     this._tooltipHideTimer = null;
     this._tooltipHovered = false;
+    this._topicProfileCache = new Map();
 
     // LLM 服务商：服务端预设 + 可选模型；custom 走客户端自带 Key
     this.providers = [
@@ -1414,14 +1415,21 @@ class PBLPathBuilder {
       && /设计|制作|研发|装置|系统|搭建|工程|发电|储能|模型|实验|探究/.test(g);
   }
 
+  /** 校园建筑能耗调查与节能改造建议（非光伏测算） */
+  _isCampusEnergyEfficiencyGoal(goal) {
+    const g = String(goal || '');
+    return /校园节能|节能建议|建筑能耗|能耗调查|用电调查|节能改造|教学楼.*节能|教室.*节能|空调.*节能|照明.*节能/.test(g)
+      || (/节能|能耗/.test(g) && /校园|教学楼|教室|建议|方案|改造|调查|用电|用水|空调|照明/.test(g));
+  }
+
   /** 光伏/能源收益测算类（数据分析报告，非硬件制作） */
   _isEnergyAnalysisGoal(goal) {
     const g = String(goal || '');
-    const topic = this._extractTopicProfile(g);
-    if (topic.kind === 'energy-analysis') return true;
-    return /光伏|太阳能|发电潜力|发电收益|屋顶.*光伏|碳减排/.test(g)
+    if (this._isCampusEnergyEfficiencyGoal(g)) return false;
+    if (/光伏|太阳能|发电潜力|发电收益|屋顶.*光伏|碳减排效益/.test(g)
       && /测算|估算|调查|分析|收益|减排|用电|日照|潜力|效益/.test(g)
-      && !/接线|原型|传感器|水泵|搭建|制作|组装|烧录|GPIO/.test(g);
+      && !/接线|原型|传感器|水泵|搭建|制作|组装|烧录|GPIO/.test(g)) return true;
+    return false;
   }
 
   /** 化学溶液/浓度/厨房化学等探究类（以 chemistry 为主线） */
@@ -1888,8 +1896,7 @@ class PBLPathBuilder {
 
   /** 步骤展示用短标签，避免长目标全文重复嵌套 */
   _compactProjectLabel(goal, topic = null) {
-    const t = topic || this._extractTopicProfile(goal);
-    let label = String(t.coreTopic || this._parseGoalSubject(goal) || '').trim();
+    let label = String(topic?.coreTopic || this._parseGoalSubject(goal) || '').trim();
     // 防护：如果 label 仍含【标签】格式（上游未完全剥离），从中提取任务核心
     if (/【/.test(label)) {
       const taskM = label.match(/【任务】\s*(.+?)(?:\s*【|$)/);
@@ -1952,6 +1959,17 @@ class PBLPathBuilder {
 
   _isFiltrationGoal(goal) {
     return this._inferTopicKind(String(goal || ''), this._parseGoalSubject(goal)) === 'environmental-filtration';
+  }
+
+  _campusEnergyEfficiencyDomains(goal) {
+    const subject = this._parseGoalSubject(goal) || '校园节能建议';
+    return [
+      { id: 'audit', label: '能耗调查', keywords: [subject, '用电', '用水', '能耗', '调查', '记录', '数据', '统计', '空调', '照明'], subjects: ['science', 'math'] },
+      { id: 'behavior', label: '使用行为', keywords: [subject, '行为', '时段', '空置', '浪费', '观察', '访谈'], subjects: ['chinese', 'science'] },
+      { id: 'analysis', label: '问题分析', keywords: [subject, '分析', '图表', '对比', '高耗能', '原因', '函数', '统计'], subjects: ['math', 'science'] },
+      { id: 'proposal', label: '节能建议', keywords: [subject, '建议', '改造', '方案', 'LED', '温控', '习惯', '倡议'], subjects: ['science', 'chinese'] },
+      { id: 'report', label: '提案论证', keywords: [subject, '报告', '论证', '可行性', '说明', '展示'], subjects: ['chinese', 'math'] },
+    ];
   }
 
   _photovoltaicAnalysisDomains(goal) {
@@ -2022,8 +2040,11 @@ class PBLPathBuilder {
     if (kind === 'environmental-filtration' || /微塑料|过滤|净水|废水|滤芯/.test(g + subject)) {
       base.push('过滤', '沉淀', '吸附', '微塑料', '拦截', '对照', '流速', '孔径', '环境', '污染');
     }
-    if (kind === 'energy-analysis' || this._isEnergyAnalysisGoal(g)) {
+    if (kind === 'energy-analysis') {
       base.push('光伏', '太阳能', '光电', '电功率', '能量转化', '一次函数', '统计', '百分比', '碳排放', '日照', '发电', '收益', '减排');
+    }
+    if (kind === 'energy-efficiency') {
+      base.push('节能', '能耗', '用电', '用水', '空调', '照明', '调查', '统计', '数据', '建议', '改造', '环境', '能源');
     }
     for (let i = 0; i < subject.length - 1; i++) {
       const w = subject.slice(i, i + 2);
@@ -2035,11 +2056,14 @@ class PBLPathBuilder {
   }
 
   _inferDeliverableHint(goal, subject, kind) {
-    if (kind === 'embedded-iot' || this._isEmbeddedOrIoTGoal(goal)) {
+    if (kind === 'embedded-iot') {
       return `可运行的「${subject}」装置原型 + 控制逻辑说明 + 测试记录表`;
     }
-    if (kind === 'energy-analysis' || this._isEnergyAnalysisGoal(goal)) {
+    if (kind === 'energy-analysis') {
       return `光伏发电测算表 + 收益与减排分析图表 + 方案论证报告`;
+    }
+    if (kind === 'energy-efficiency') {
+      return `校园节能改造提案（能耗调查表+问题分析图表+节能建议清单+可行性说明）`;
     }
     if (kind === 'exhibition-redesign') return `「${subject}」改造方案册（现状诊断表+展陈设计图+整改实施清单+开放验收表）`;
     if (kind === 'industry-innovation') return `「${subject}」创新方案报告（场景调研+政策要点+可行性论证）`;
@@ -2058,7 +2082,17 @@ class PBLPathBuilder {
   /** 从用户目标提取核心主题（与服务端 extractTopicProfile 对齐，任何题目都必须锚定） */
   _extractTopicProfile(goal) {
     const g = String(goal || '').trim();
+    if (this._topicProfileCache?.has(g)) return this._topicProfileCache.get(g);
     const presets = [
+      {
+        test: /校园节能|节能建议|建筑能耗|能耗调查|教学楼.*节能|空调.*节能|照明.*节能/,
+        coreTopic: '校园节能建议',
+        definition: '调查校园用电用水与空调照明运行数据，分析高能耗时段与空间，提出可落地的节能改造建议',
+        keywords: ['节能', '能耗', '用电', '用水', '空调', '照明', '校园', '调查', '数据', '统计', '建议', '改造', '环境', '能源'],
+        banInSteps: ['有机合成', '细胞', '原型驱动迭代', 'MVP', '光伏接线', '发电收益'],
+        deliverableHint: '校园节能改造提案（能耗调查表+问题分析图表+节能建议清单+可行性说明）',
+        kind: 'energy-efficiency',
+      },
       {
         test: /垃圾分类|垃圾治理|垃圾处理|废弃物|固体废物|社区.*垃圾|环保.*调查|回收.*调查/,
         coreTopic: '社区垃圾分类',
@@ -2160,9 +2194,13 @@ class PBLPathBuilder {
       },
     ];
     for (const p of presets) {
-      if (p.test.test(g)) return { ...p, rawGoal: g, matched: true };
+      if (p.test.test(g)) {
+        const hit = { ...p, rawGoal: g, matched: true };
+        this._topicProfileCache.set(g, hit);
+        return hit;
+      }
     }
-    const subject = this._parseGoalSubject(g) || this._compactProjectLabel(g) || g.slice(0, 24);
+    const subject = this._parseGoalSubject(g) || g.slice(0, 24);
     const kind = this._inferTopicKind(g, subject);
     const banCommon = ['原型驱动迭代', 'MVP', '快速原型', '递进式实施', '浸润式场景', '硬件准备', '环境搭建', '工程设计思维', '招生简章', '现代物流管理', '智慧城市'];
     if (kind === 'industry-innovation') {
@@ -2186,21 +2224,25 @@ class PBLPathBuilder {
     }
     if (kind === 'planting-cultivation') {
       const crop = this._plantingCropLabel(g);
-      return {
+      const profile = {
         rawGoal: g, matched: true, coreTopic: subject, kind, crop,
         definition: `围绕「${subject}」学习植物分类与生长原理，完成${crop}栽培并持续观察记录`,
         keywords: this._buildTopicKeywords(g, subject, kind),
         banInSteps: [...banCommon, '程序设计', '牛顿', '化学方程式', '电解池'],
         deliverableHint: this._inferDeliverableHint(g, subject, kind),
       };
+      this._topicProfileCache.set(g, profile);
+      return profile;
     }
-    return {
+    const profile = {
       rawGoal: g, matched: true, coreTopic: subject, kind: 'subject-anchored',
       definition: `本项目必须围绕「${subject}」展开，不得替换为其他主题`,
       keywords: this._buildTopicKeywords(g, subject, kind),
       banInSteps: banCommon,
       deliverableHint: this._inferDeliverableHint(g, subject, kind),
     };
+    this._topicProfileCache.set(g, profile);
+    return profile;
   }
 
   _isIndustryInnovationGoal(goal) {
@@ -2466,6 +2508,9 @@ class PBLPathBuilder {
         { id: 'data', label: '数据处理', keywords: ['统计', '图表', '数据', '分析', '记录'], subjects: ['math', 'science'] },
         { id: 'report', label: '治理建议', keywords: ['报告', '建议', '治理', '环境', '倡议'], subjects: ['chinese', 'geography'] },
       ];
+    }
+    if (this._isCampusEnergyEfficiencyGoal(g)) {
+      return this._campusEnergyEfficiencyDomains(g);
     }
     if (this._isEnergyAnalysisGoal(g)) {
       return this._photovoltaicAnalysisDomains(g);
