@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="./scripts/history-tracker.css">
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="./scripts/courseware-importer.js" defer></script>
+<script src="./scripts/community-submit-browser.js" defer></script>
 <script src="./scripts/history-tracker.js" defer></script>
 </head>
 <body>
@@ -35,7 +36,7 @@
     <div>
       <h1>我的学习历程</h1>
       <div class="subtitle">把你在本机的全部 TeachAny 学习行为汇集到一处：制作的课件、学过的课件、答题、AI 学伴对话、PBL 路径分析。所有数据只存在你的浏览器里。</div>
-      <span class="privacy-tip">🔒 全部数据仅存本机，不上传任何服务器</span>
+      <span class="privacy-tip">🔒 学习记录仅存本机；已完成的课件可在「导入的」中自愿提交到社区 Gallery</span>
     </div>
     <div class="stat-chips" id="statChips">
       <div class="stat-chip"><div class="num" id="statViewed">—</div><div class="lbl">📚 学过课件</div></div>
@@ -374,15 +375,27 @@ function renderCreated(grid, items) {
     return;
   }
   items.sort((a, b) => (b.updatedAt || b.ts || 0) - (a.updatedAt || a.ts || 0));
-  grid.innerHTML = items.map(it => {
+  const draftCount = items.filter(it => it.status === 'draft' && !it.publishedUrl).length;
+  const guide = draftCount
+    ? '<div class="publish-guide-banner">'
+      + '<b>📌 制作意图 ≠ 已发布</b>：复制提示词后，请在 AI 助手里生成课件并确认发布；'
+      + '或将 .teachany 导入到「导入的」Tab，再点「提交到社区」。'
+      + ' <a href="index.html" onclick="event.stopPropagation()">去 Gallery 看用户共创 →</a>'
+      + '</div>'
+    : '';
+  grid.innerHTML = guide + items.map(it => {
     const sourceMap = { skill: 'SKILL', pbl: 'PBL', import: 'IMPORT', manual: 'MANUAL', 'knowledge-graph': 'KG' };
     const sourceClass = it.source === 'skill' ? 'skill' : it.source === 'pbl' ? 'pbl' : it.source === 'import' ? 'import' : 'unknown';
     const sourceLabel = sourceMap[it.source] || it.source || '本机';
     const url = getCreatedItemUrl(it);
+    const statusPill = it.status === 'published' || it.publishedUrl
+      ? '<span class="pill success">已发布</span>'
+      : (it.status === 'draft' ? '<span class="pill warning">待生成/发布</span>' : '');
     return '<a class="history-card" href="' + url + '" target="_blank" rel="noopener">'
       + '<span class="source-tag ' + sourceClass + '">' + sourceLabel + '</span>'
       + '<h3>' + escapeHtml(it.name || it.courseId) + '</h3>'
       + '<div class="meta-row">'
+      + statusPill
       + (it.subject ? '<span class="pill info">' + escapeHtml(it.subject) + '</span>' : '')
       + (it.grade ? '<span class="pill">' + escapeHtml(it.grade) + '</span>' : '')
       + (it.node ? '<span class="pill">' + escapeHtml(it.node) + '</span>' : '')
@@ -638,10 +651,14 @@ function renderImported(grid) {
     return;
   }
   imported.sort((a, b) => (b.importedAt || '').localeCompare(a.importedAt || ''));
-  grid.innerHTML = imported.map(c => {
+  grid.innerHTML = '<div class="publish-guide-banner">'
+    + '<b>🌐 提交到社区</b>：导入完整的 .teachany 课件后，可一键提交；通过自动质检后会出现在 Gallery「用户共创」筛选中。'
+    + '</div>'
+    + imported.map(c => {
     const m = c.manifest || {};
     const url = c.viewerUrl || ('imported-course.html?id=' + encodeURIComponent(c.id));
-    return '<a class="history-card" href="' + url + '" target="_blank" rel="noopener">'
+    return '<div class="history-card history-card-actions">'
+      + '<a class="history-card-main" href="' + url + '" target="_blank" rel="noopener">'
       + '<span class="source-tag import">IMPORT</span>'
       + '<h3>' + escapeHtml(m.name || c.fileName || c.id) + '</h3>'
       + '<div class="meta-row">'
@@ -650,8 +667,38 @@ function renderImported(grid) {
       + (m.node_id ? '<span class="pill">' + escapeHtml(m.node_id) + '</span>' : '')
       + '</div>'
       + '<div class="footer-row"><span>导入 ' + formatTime(Date.parse(c.importedAt || '') || 0) + '</span><span>' + escapeHtml(c.fileName || '') + '</span></div>'
-      + '</a>';
+      + '</a>'
+      + '<button type="button" class="submit-community-btn" data-course-id="' + escapeHtml(c.id) + '">🌐 提交到社区</button>'
+      + '</div>';
   }).join('');
+
+  grid.querySelectorAll('.submit-community-btn').forEach(btn => {
+    btn.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const courseId = btn.getAttribute('data-course-id');
+      if (!courseId) return;
+      if (!window.TeachAnyCommunitySubmit) {
+        showToast('提交模块未加载', 'error');
+        return;
+      }
+      if (!window.confirm('确认将这份课件提交到 TeachAny 社区？提交后将进入自动质检流程。')) return;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '⏳ 提交中…';
+      try {
+        const result = await TeachAnyCommunitySubmit.submitImportedCourse(courseId, {
+          onProgress: (_phase, msg) => { btn.textContent = '⏳ ' + msg; },
+        });
+        showToast(result.message || '提交成功', 'success');
+        btn.textContent = '✅ 已提交';
+      } catch (err) {
+        showToast(err.message || '提交失败', 'error');
+        btn.textContent = original;
+        btn.disabled = false;
+      }
+    });
+  });
 }
 
 /* ── 主流程 ──────────────────────────────────────────── */

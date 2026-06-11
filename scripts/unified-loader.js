@@ -37,7 +37,36 @@ const REGISTRY_URL = SITE_BASE_URL + '/registry.json';
 const COMMUNITY_INDEX_URL = SITE_BASE_URL + '/community/index.json';
 const COURSEWARE_BASE_URL = SITE_BASE_URL; // 课件实体跟随当前站点域名，兼容 Cloudflare Pages / GitHub Pages
 const SELF_BASE_URL = SITE_BASE_URL;       // hero fallback 跟随当前站点域名
-const CACHE_KEY = 'teachany_registry_v3_20'; // v3.20: normalize GitHub course links to current domain
+const CACHE_KEY = 'teachany_registry_v3_21'; // v3.21: user-created filter + approved_at sort
+
+/** 批量/官方作者 — 非用户共创 */
+const BATCH_AUTHORS = new Set(['teachany', 'weponusa', 'learning-path', '']);
+
+function isUserCreatedCourse(course) {
+  if (!course || course.status === 'official') return false;
+  const author = String(course.author || '').trim();
+  if (!author) return false;
+  if (BATCH_AUTHORS.has(author.toLowerCase())) return false;
+  if (author === 'TeachAny') return false;
+  return true;
+}
+
+function courseSortTime(course) {
+  const t = course.approved_at || course.updated || course.created || '';
+  const ms = Date.parse(t);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function sortCoursesForGallery(courses, preferUserFirst) {
+  return courses.slice().sort((a, b) => {
+    if (preferUserFirst) {
+      const au = isUserCreatedCourse(a) ? 1 : 0;
+      const bu = isUserCreatedCourse(b) ? 1 : 0;
+      if (bu !== au) return bu - au;
+    }
+    return courseSortTime(b) - courseSortTime(a);
+  });
+}
 
 function normalizeCoursewareUrl(url) {
   if (!url) return '';
@@ -323,6 +352,9 @@ function renderCourseCard(course) {
   if (course.has_video) extraBadges.push('<span class="tag tag-cyan">🎬 Video</span>');
   if (course.has_en) extraBadges.push('<span class="tag tag-pink">🌐 EN</span>');
   if (isOfficial) extraBadges.push('<span class="tag tag-red">⭐ 官方</span>');
+  if (isUserCreatedCourse(course)) {
+    extraBadges.push('<span class="tag tag-user">👤 用户共创</span>');
+  }
   // TeachAny 版本徽章（v5.27 新增：显示课件制作时使用的 TeachAny SKILL 版本）
   if (course.teachany_version) {
     extraBadges.push(`<span class="tag tag-teachany" title="制作时使用的 TeachAny 版本">⚡ TeachAny v${escapeHtml(course.teachany_version)}</span>`);
@@ -360,7 +392,9 @@ function renderCourseCard(course) {
     heroCover = `<div class="card-cover-emoji">${escapeHtml(course.emoji || '📚')}</div>`;
   }
 
-  return `<a href="${escapeHtml(url)}" class="course-card" data-subject="${escapeHtml(course.subject)}" data-course-id="${escapeHtml(course.id)}" data-grade="${course.grade || ''}" data-level="${level}" data-status="${course.status || 'community'}" data-curriculum="${escapeHtml(course.curriculum || 'cn-national')}" data-course-name="${escapeHtml(courseName)}" data-course-desc="${escapeHtml(courseDesc)}">
+  const userCreated = isUserCreatedCourse(course);
+  const sourceType = isOfficial ? 'official' : (userCreated ? 'user' : 'batch');
+  return `<a href="${escapeHtml(url)}" class="course-card" data-subject="${escapeHtml(course.subject)}" data-course-id="${escapeHtml(course.id)}" data-grade="${course.grade || ''}" data-level="${level}" data-status="${course.status || 'community'}" data-curriculum="${escapeHtml(course.curriculum || 'cn-national')}" data-source-type="${sourceType}" data-user-created="${userCreated ? '1' : '0'}" data-approved-at="${escapeHtml(course.approved_at || course.updated || '')}" data-course-name="${escapeHtml(courseName)}" data-course-desc="${escapeHtml(courseDesc)}">
       ${heroCover}
       <div class="card-header">
         <h3 class="card-title">${escapeHtml(courseName)}</h3>
@@ -468,12 +502,16 @@ async function initGallery() {
       console.log(`[TeachAny] ✓ 渲染 ${official.length} 个官方课件`);
     }
 
-    // 渲染社区课件
+    // 渲染社区课件（用户共创优先，再按发布时间倒序）
     const communityGrid = document.getElementById('communityGrid');
     if (communityGrid) {
       const addCard = communityGrid.querySelector('.course-card-add');
-      renderCourses(communityGrid, community, addCard);
-      console.log(`[TeachAny] ✓ 渲染 ${community.length} 个社区课件`);
+      const sortedCommunity = sortCoursesForGallery(community, true);
+      renderCourses(communityGrid, sortedCommunity, addCard);
+      const userCount = community.filter(isUserCreatedCourse).length;
+      console.log(`[TeachAny] ✓ 渲染 ${community.length} 个社区课件（用户共创 ${userCount}）`);
+      const userCountEl = document.getElementById('communityUserCount');
+      if (userCountEl) userCountEl.textContent = String(userCount);
     }
 
     // 渲染其他知识课件（来自 other/user-generated.json 图谱）

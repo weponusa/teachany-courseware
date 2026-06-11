@@ -245,6 +245,7 @@ body {
 .tag-pink { background: rgba(236,72,153,0.15); color: #f472b6; }
 .tag-cyan { background: rgba(6,182,212,0.15); color: #22d3ee; }
 .tag-red { background: rgba(239,68,68,0.15); color: #f87171; }
+.tag-user { background: rgba(245,158,11,0.18); color: #fbbf24; }
 .tag-teachany {
   background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(236,72,153,0.2));
   color: #c7d2fe;
@@ -659,6 +660,12 @@ footer a { color: var(--primary); text-decoration: none; }
       <button class="filter-btn" onclick="filterGallery('level','middle',this)">📘 初中 Middle School</button>
       <button class="filter-btn" onclick="filterGallery('level','high',this)">🎓 高中 High School</button>
     </div>
+    <div class="filter-row" id="sourceFilterRow">
+      <span class="filter-row-label">来源 Source</span>
+      <button class="filter-btn active" onclick="filterGallery('source','all',this)">全部 All</button>
+      <button class="filter-btn" onclick="filterGallery('source','user',this)">👤 用户共创 User-created</button>
+      <button class="filter-btn" onclick="filterGallery('source','batch',this)">🤖 官方批量 Batch</button>
+    </div>
     <div class="filter-row" id="subjectFilterRow">
       <span class="filter-row-label">学科 Subject</span>
       <button class="filter-btn active" onclick="filterGallery('subject','all',this)">全部 All</button>
@@ -690,6 +697,7 @@ footer a { color: var(--primary); text-decoration: none; }
     <div class="gallery-section-header">
       <h2 class="gallery-section-title">🌐 社区课件 · Community Coursewares</h2>
       <span class="gallery-section-count" id="communityCount">0 个课件</span>
+      <span style="font-size:12px;color:var(--dimmer);margin-left:8px;">含 <b id="communityUserCount">0</b> 份用户共创 · 默认按最新上传排序</span>
     </div>
     <div class="course-grid" id="communityGrid"></div>
     <div class="gallery-section-empty" id="communityEmpty">😅 当前筛选条件下暂无社区课件 · No community coursewares match current filters</div>
@@ -774,7 +782,7 @@ footer a { color: var(--primary); text-decoration: none; }
 </footer>
 
 <script src="./scripts/export-courseware.js"></script>
-<script src="./scripts/unified-loader.js?v=20"></script>
+<script src="./scripts/unified-loader.js?v=21"></script>
 <script src="./scripts/stats-calculator.js?v=9"></script>
 <script src="./scripts/history-tracker.js" defer></script>
 <script src="./scripts/learning-path.js"></script>
@@ -792,6 +800,7 @@ function gradeToLevel(grade) {
 let activeLevel = 'all';
 let activeSubject = 'all';
 let activeCurriculum = 'all';   // v5.30 新增
+let activeSource = 'all';
 let activeSearchQuery = '';
 
 /* ─── 搜索功能 ─── */
@@ -829,6 +838,10 @@ function applyFilters() {
       const matchLevel = activeLevel === 'all' || card.dataset.level === activeLevel;
       const matchSubject = activeSubject === 'all' || card.dataset.subject === activeSubject;
       const matchCurriculum = activeCurriculum === 'all' || (card.dataset.curriculum || 'cn-national') === activeCurriculum;
+      const sourceType = card.dataset.sourceType || 'batch';
+      const matchSource = activeSource === 'all'
+        || (activeSource === 'user' && sourceType === 'user')
+        || (activeSource === 'batch' && (sourceType === 'batch' || sourceType === 'official'));
 
       // 搜索匹配：课件名称或描述包含搜索词
       let matchSearch = true;
@@ -838,7 +851,7 @@ function applyFilters() {
         matchSearch = name.includes(activeSearchQuery) || desc.includes(activeSearchQuery);
       }
 
-      if (matchLevel && matchSubject && matchCurriculum && matchSearch) {
+      if (matchLevel && matchSubject && matchCurriculum && matchSource && matchSearch) {
         card.style.display = 'block';
         visible++;
       } else {
@@ -869,6 +882,11 @@ function filterGallery(dimension, value, btnEl) {
   } else if (dimension === 'curriculum') {
     activeCurriculum = value;
     document.querySelectorAll('#curriculumFilterRow .filter-btn').forEach(b => b.classList.remove('active'));
+  } else if (dimension === 'source') {
+    activeSource = value;
+    document.querySelectorAll('#sourceFilterRow .filter-btn').forEach(b => b.classList.remove('active'));
+    // 用户共创筛选时自动展开社区区，避免被默认折叠隐藏
+    if (value === 'user') communityExpanded = true;
   }
   if (btnEl) btnEl.classList.add('active');
 
@@ -908,7 +926,7 @@ function applyCommunityCollapse() {
     totalVisible++;
   });
   // Re-pass: apply collapse
-  if (!communityExpanded && totalVisible > COMMUNITY_DEFAULT_SHOW) {
+  if (!communityExpanded && activeSource !== 'user' && totalVisible > COMMUNITY_DEFAULT_SHOW) {
     let idx = 0;
     cards.forEach(card => {
       if (card.style.display === 'none') return;
