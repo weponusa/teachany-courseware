@@ -324,6 +324,10 @@
         projectPhases: snap.projectPhases || [],
         projectSpec: snap.projectSpec || null,
         pathPlan: snap.pathPlan || null,
+        quality: snap.quality || null,
+        relevanceAudit: snap.relevanceAudit || null,
+        archetype: snap.archetype || null,
+        stats: snap.stats || null,
         chatHistory: (snap.chatHistory || []).slice(-24).map(m => ({
           role: m.role === 'user' ? 'user' : 'assistant',
           text: safeText(m.text || m.content || '', 800),

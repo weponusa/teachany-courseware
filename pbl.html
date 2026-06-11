@@ -1670,17 +1670,50 @@ function serializePBLResult(result) {
     moduleChain: result.moduleChain || '',
     pathPlan: result.pathPlan || null,
     stats: result.stats || null,
-    quality: result.quality
-      ? { score: result.quality.score, grade: result.quality.grade, breakdown: result.quality.breakdown }
+    quality: result.quality || null,
+    relevanceAudit: result.relevanceAudit
+      ? {
+          intake: result.relevanceAudit.intake || null,
+          postFilter: result.relevanceAudit.postFilter || null,
+          output: result.relevanceAudit.output || null,
+        }
       : null,
+    archetype: result.archetype || null,
     selectedKnowledgeIds: result.selectedKnowledgeIds || [],
     chatHistory: (result.chatHistory || []).slice(-16),
     graphData: { nodes, links },
   };
 }
 
+function appendAlternateScheme(blueprint) {
+  if (!blueprint || (blueprint.schemes || []).length >= 2) return blueprint;
+  const a = blueprint.schemes[0];
+  if (!a) return blueprint;
+  const b = {
+    id: 'B',
+    name: '备选：调研验证—迭代实施',
+    summary: '先小范围调研或原型验证关键假设，再按证据调整后续阶段',
+    pros: ['风险更低', '便于用数据调方案', '适合证据导向评价'],
+    cons: ['前期需额外调研时间'],
+    phases: (a.phases || []).map((p, i) => (i === 0 ? {
+      ...p,
+      phase: '调研与问题界定',
+      steps: ['列出待验证的关键问题', '设计小样本调研或测试', ...(p.steps || []).slice(0, 2)],
+      deliverable: p.deliverable || '调研小结',
+    } : { ...p })),
+  };
+  return { ...blueprint, schemes: [a, b], recommendedSchemeId: blueprint.recommendedSchemeId || 'A' };
+}
+
 function ensurePBLBlueprint(result) {
-  if (!result || (result.projectBlueprint?.schemes || []).length) return result;
+  const hadBlueprint = !!(result?.projectBlueprint?.schemes?.length);
+  if (!result || hadBlueprint) {
+    if (hadBlueprint && result.projectBlueprint.schemes.length === 1
+      && (result.restoredFromHandoff || result.handoffTruncated || result.projectBlueprint.fallback)) {
+      result.projectBlueprint = appendAlternateScheme({ ...result.projectBlueprint });
+    }
+    return result;
+  }
   const builder = window.PBLPathBuilder;
   if (!builder || typeof builder._fallbackDecomposeBlueprint !== 'function') return result;
   try {
@@ -1691,6 +1724,7 @@ function ensurePBLBlueprint(result) {
       bp = builder._concretizeBlueprint(goal, bp, archetype);
     }
     if ((bp?.schemes || []).length) {
+      if (bp.schemes.length === 1) bp = appendAlternateScheme(bp);
       result.projectBlueprint = bp;
       if (!result.moduleChain && builder._archetypeEngine?.moduleChainFromBlueprint) {
         result.moduleChain = builder._archetypeEngine.moduleChainFromBlueprint(bp);
@@ -1703,13 +1737,57 @@ function ensurePBLBlueprint(result) {
   return result;
 }
 
+function ensurePBLQuality(result) {
+  if (!result) return result;
+  const builder = window.PBLPathBuilder;
+  const needsScore = result.quality?.score == null && result.stats?.qualityScore == null;
+  if (!needsScore) {
+    if (!result.quality?.score && result.stats?.qualityScore != null) {
+      result.quality = {
+        score: result.stats.qualityScore,
+        grade: result.stats.qualityGrade || '',
+        breakdown: result.quality?.breakdown || [],
+      };
+    }
+    return result;
+  }
+  if (!builder?.computeQualityScore) return result;
+  const nodes = result.graphData?.nodes || [];
+  const matched = result.matched?.length
+    ? result.matched
+    : nodes.filter(n => n.layer === 'matched' || (n.pblRole && n.pblRole !== 'external'));
+  const external = result.external?.length
+    ? result.external
+    : nodes.filter(n => n.layer === 'external' || n.isExternal);
+  try {
+    result.quality = builder.computeQualityScore({
+      goal: result.goal || '',
+      matched,
+      external,
+      projectBlueprint: result.projectBlueprint,
+      graphData: result.graphData,
+      pathPlan: result.pathPlan,
+      archetype: result.archetype || null,
+    });
+    result.stats = {
+      ...(result.stats || {}),
+      qualityScore: result.quality.score,
+      qualityGrade: result.quality.grade,
+    };
+  } catch (e) {
+    console.warn('[PBL] 质量分重算失败:', e);
+  }
+  return result;
+}
+
 function renderPBLResult(result) {
   result = ensurePBLBlueprint(result);
-  pblResult = result;
   if (window.PBLPathBuilder && typeof window.PBLPathBuilder.buildPathPlanFromResult === 'function') {
-    result.pathPlan = window.PBLPathBuilder.buildPathPlanFromResult(result);
-    if (result.pathPlan && result.pathPlan.phases) result.projectPhases = result.pathPlan.phases;
+    result.pathPlan = result.pathPlan || window.PBLPathBuilder.buildPathPlanFromResult(result);
+    if (result.pathPlan?.phases) result.projectPhases = result.projectPhases?.length ? result.projectPhases : result.pathPlan.phases;
   }
+  result = ensurePBLQuality(result);
+  pblResult = result;
   renderPBLCandidatePanel(result);
   renderPBLStats(result);
   renderPBLGraph(result);
@@ -1834,11 +1912,17 @@ async function restorePBLRunFromHistory(id) {
     graphData,
     matched: graphData.nodes.filter(n => n.layer === 'matched'),
     external: graphData.nodes.filter(n => n.layer === 'external'),
+    quality: run.quality || null,
+    relevanceAudit: run.relevanceAudit || null,
+    archetype: run.archetype || null,
     stats: {
+      ...(run.stats || {}),
       graphNodes: graphData.nodes.length,
       graphLinks: graphData.links.length,
       matchedCount: run.matchedCount || graphData.nodes.filter(n => n.layer === 'matched').length,
-      externalCount: run.externalCount || graphData.nodes.filter(n => n.layer === 'external').length
+      externalCount: run.externalCount || graphData.nodes.filter(n => n.layer === 'external').length,
+      qualityScore: run.stats?.qualityScore ?? run.quality?.score,
+      qualityGrade: run.stats?.qualityGrade ?? run.quality?.grade,
     },
     restoredFromHistory: true
   };

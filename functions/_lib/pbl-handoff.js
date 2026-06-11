@@ -22,9 +22,9 @@ function clipJson(obj, max = MAX_PAYLOAD) {
       projectSpec: obj.result?.projectSpec || null,
       pathPlan: obj.result?.pathPlan || null,
       stats: obj.result?.stats || null,
-      quality: obj.result?.quality
-        ? { score: obj.result.quality.score, grade: obj.result.quality.grade }
-        : null,
+      quality: obj.result?.quality || null,
+      relevanceAudit: obj.result?.relevanceAudit || null,
+      archetype: obj.result?.archetype || null,
       chatHistory: (obj.result?.chatHistory || []).slice(-12),
       graphData: obj.result?.graphData || { nodes: [], links: [] },
       truncated: false,
