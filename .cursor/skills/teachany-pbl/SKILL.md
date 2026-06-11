@@ -1,12 +1,12 @@
 ---
-name: teachany-pbl-decompose
+name: teachany-pbl
 description: >-
   将 PBL 项目任务拆解为知识路径图谱并导出长图，返回 TeachAny 可继续编辑的链接。
-  用于用户提到 PBL 拆解、项目式学习路径、知识图谱拆解、TeachAny PBL、
+  用于用户提到 PBL 拆解、项目式学习路径、知识图谱拆解、TeachAny PBL、teachany-pbl、
   「帮我拆这个项目」「研学/水火箭/购车」类跨学科任务规划时。
 ---
 
-# TeachAny PBL 拆解 Skill
+# TeachAny PBL Skill
 
 用户只需提供 **项目任务** 和少量可选信息，即可得到：
 1. **拆解长图**（PNG，含结构化拆解 + 知识路径图谱）
@@ -58,7 +58,7 @@ playwright install chromium
 ✅ PBL 拆解完成
    长图: /path/to/研学路线规划.png
    节点: 18 个
-   继续编辑: https://www.teachany.cn/pbl.html?goal=...
+   继续编辑: https://www.teachany.cn/pbl?goal=...
 ```
 
 同目录还有 `{slug}.json` 元数据（`edit_url`、`summary`）。
@@ -90,7 +90,7 @@ playwright install chromium
 手动拼编辑链接（不含 `auto=1`）：
 
 ```
-https://www.teachany.cn/pbl.html?goal={urlencode(task)}&grade={grade}&subject={subject}
+https://www.teachany.cn/pbl?goal={urlencode(task)}&grade={grade}&subject={subject}
 ```
 
 告知用户打开后点击 **「拆解项目路径」**，完成后可导出长图。
@@ -112,6 +112,6 @@ python3 scripts/pbl-decompose.py --goal "..." \
 
 ## 参考
 
-- 拆解页面：`pbl.html`
+- 拆解页面：`pbl.html` / `https://www.teachany.cn/pbl`
 - 自动化 API：`window.TeachAnyPBLAutomation`
 - CLI 源码：`scripts/pbl-decompose.py`
