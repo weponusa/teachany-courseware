@@ -388,6 +388,22 @@ class PBLPathBuilder {
       breakdown.push({ key: 'irrelevant', label: `无关节点 ${irrelevant.length} 个`, delta: -pen });
     }
 
+    const fallbackNodes = matched.filter(n => /主线关键词回退|K12全科图谱检索回退/.test(String(n.matchReason || '')));
+    if (fallbackNodes.length >= 2) {
+      const pen = Math.min(25, fallbackNodes.length * 5);
+      score -= pen;
+      breakdown.push({ key: 'fallback', label: `检索回退节点 ${fallbackNodes.length} 个`, delta: -pen });
+    }
+
+    if (this._shouldPurgeChemistryForGoal(goal)) {
+      const chemNodes = matched.filter(n => n.subject === 'chemistry');
+      if (chemNodes.length) {
+        const pen = Math.min(30, chemNodes.length * 8);
+        score -= pen;
+        breakdown.push({ key: 'chem', label: `无关化学节点 ${chemNodes.length} 个`, delta: -pen });
+      }
+    }
+
     const banned = matched.filter(n => this._isGenericTransversalNode(n.name, goal));
     if (banned.length) {
       const pen = Math.min(15, banned.length * 5);
@@ -1422,6 +1438,7 @@ class PBLPathBuilder {
     score += this._scoreNodeForDomains(node, domainsList);
     if (domainsList.some(d => (d.subjects || []).includes(node.subject))) score += 2;
 
+    if (this._shouldPurgeChemistryForGoal(g) && node.subject === 'chemistry' && this._isOffTopicChemistryNode(node)) score -= 45;
     if (this._isGenericTransversalNode(name, g)) score -= 40;
     if (!this._shouldAllowUniversityNodes(g) && this._isUniversityNode(node)) score -= 35;
     if (archetype && this._isArchetypeBanned(node, archetype)) score -= 60;
@@ -1524,6 +1541,10 @@ class PBLPathBuilder {
     s = s.replace(/^【学科】[^】]*【任务】[^」\n]*」?\s*/g, '');
     s = s.replace(/【任务】\s*[^」\n]*」?\s*/g, '');
     s = s.replace(/【[^】]+】\s*/g, '');
+    // 短蓝图脚手架（「主题」锚点）勿剥离核心主题词，否则会留下空「 」
+    if (s.length <= 96 && /「[^」]{1,28}」/.test(s)) {
+      return s.replace(/\s+/g, ' ').trim();
+    }
     const task = this._parseGoalSubject(goal);
     if (task && task.length >= 4) {
       const esc = task.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1732,11 +1753,23 @@ class PBLPathBuilder {
     if (/探寻|探索|研究|调研/.test(g) && /创新|产业|经济|行业/.test(g)) return 'industry-innovation';
     if (/种植|栽培|养花|月季|花卉|玫瑰|蔬菜|种菜|盆栽|园艺|养殖|养蚕|花坛|绿化|阳台种/.test(g)) return 'planting-cultivation';
     if (/微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水|过滤.*水/.test(g)) return 'environmental-filtration';
+    if (/自动浇花|浇花系统|浇水系统|智能灌溉|土壤湿度|微型水泵|自动灌溉/.test(g)) return 'embedded-iot';
     return 'subject-anchored';
   }
 
   _isFiltrationGoal(goal) {
     return this._inferTopicKind(String(goal || ''), this._parseGoalSubject(goal)) === 'environmental-filtration';
+  }
+
+  _embeddedIoTDomains(goal) {
+    const subject = this._compactProjectLabel(goal) || '智能装置';
+    return [
+      { id: 'needs', label: '需求与指标', keywords: [subject, '需求', '指标', '湿度', '阈值', '植物', '浇水', '安全', '局限'], subjects: ['science', 'info-tech', 'chinese'] },
+      { id: 'sense', label: '传感与采集', keywords: [subject, '传感', '湿度', '土壤', '信号', '采样', '标定', '数据', '模拟量'], subjects: ['physics', 'info-tech', 'science'] },
+      { id: 'control', label: '控制逻辑', keywords: [subject, '控制', '程序', '分支', '循环', '阈值', '逻辑', '算法', '反馈', '判断'], subjects: ['info-tech', 'math'] },
+      { id: 'actuation', label: '执行与驱动', keywords: [subject, '水泵', '电路', '驱动', '继电器', '电机', '供电', '接线', '开关'], subjects: ['physics', 'info-tech', 'science'] },
+      { id: 'test', label: '测试与迭代', keywords: [subject, '测试', '对照', '记录', '数据', '误差', '优化', '验收', '干湿度'], subjects: ['science', 'math', 'info-tech'] },
+    ];
   }
 
   _filtrationDomains() {
@@ -1795,6 +1828,9 @@ class PBLPathBuilder {
   }
 
   _inferDeliverableHint(goal, subject, kind) {
+    if (kind === 'embedded-iot' || this._isEmbeddedOrIoTGoal(goal)) {
+      return `可运行的「${subject}」装置原型 + 控制逻辑说明 + 测试记录表`;
+    }
     if (kind === 'exhibition-redesign') return `「${subject}」改造方案册（现状诊断表+展陈设计图+整改实施清单+开放验收表）`;
     if (kind === 'industry-innovation') return `「${subject}」创新方案报告（场景调研+政策要点+可行性论证）`;
     if (kind === 'planting-cultivation') return `「${subject}」种植观察日记（植物分类笔记+栽培记录表+生长数据图表+总结）`;
@@ -1823,6 +1859,15 @@ class PBLPathBuilder {
         kind: 'social-civic-survey',
       },
       {
+        test: /自动浇花|浇花系统|浇水系统|智能灌溉|土壤湿度.*(?:传感|检测|判断)|微型水泵|自动灌溉/,
+        coreTopic: '自动浇花系统',
+        definition: '设计基于土壤湿度传感的自动浇花装置：采集湿度→判断阈值→驱动微型水泵灌溉，并完成接线、控制逻辑与测试验收',
+        keywords: ['自动浇花', '土壤湿度', '传感器', '水泵', '灌溉', '控制', '程序', '电路', '阈值', '测试', '数据', '植物', '水分', '物联网', '采集'],
+        banInSteps: ['有机合成', '离子检验', '烃', '钠化合物', '调研报告', '问卷调查', '原型驱动迭代', 'MVP', '快速原型'],
+        deliverableHint: '自动浇花装置原型 + 湿度阈值控制说明 + 浇水测试记录表',
+        kind: 'embedded-iot',
+      },
+      {
         test: /微塑料|过滤装置|净水|污水处理|废水处理|水质净化|过滤系统|滤芯|膜过滤|拦截.*塑料|洗衣.*废水/,
         coreTopic: '微塑料过滤装置',
         definition: '设计可测试的三级水体过滤装置：粗滤保护层、活性炭吸附改味层、明确孔径的膜/陶瓷核心层，并通过 A/B/C 对照实验验证模型颗粒变化',
@@ -1844,7 +1889,7 @@ class PBLPathBuilder {
     for (const p of presets) {
       if (p.test.test(g)) return { ...p, rawGoal: g, matched: true };
     }
-    const subject = this._parseGoalSubject(g);
+    const subject = this._parseGoalSubject(g) || this._compactProjectLabel(g) || g.slice(0, 24);
     const kind = this._inferTopicKind(g, subject);
     const banCommon = ['原型驱动迭代', 'MVP', '快速原型', '递进式实施', '浸润式场景', '硬件准备', '环境搭建', '工程设计思维', '招生简章', '现代物流管理', '智慧城市'];
     if (kind === 'industry-innovation') {
@@ -2125,6 +2170,18 @@ class PBLPathBuilder {
         }
       ];
     }
+    if (this._isEmbeddedOrIoTGoal(g) && /浇花|浇水|灌溉|土壤湿度|水泵|湿度传感/.test(g)) {
+      return this._embeddedIoTDomains(g);
+    }
+    if (this._isEmbeddedOrIoTGoal(g)) {
+      return [
+        { id: 'needs', label: '需求与指标', keywords: ['需求', '指标', '场景', '约束', '安全', '功能'], subjects: ['science', 'info-tech', 'chinese'] },
+        { id: 'sense', label: '传感与采集', keywords: ['传感', '采集', '信号', '数据', '接口', '标定'], subjects: ['physics', 'info-tech', 'science'] },
+        { id: 'control', label: '控制与实现', keywords: ['控制', '程序', '算法', '逻辑', '分支', '循环', '反馈', '调试'], subjects: ['info-tech', 'math', 'engineering'] },
+        { id: 'actuation', label: '执行与驱动', keywords: ['电路', '驱动', '电机', '继电器', '供电', '接线', '执行'], subjects: ['physics', 'info-tech', 'science'] },
+        { id: 'test', label: '测试与迭代', keywords: ['测试', '记录', '数据', '误差', '优化', '验收', '对照'], subjects: ['science', 'math', 'info-tech'] },
+      ];
+    }
     if (this._isGroundRoboticsGoal(g)) {
       return [
         { id: 'mechanics', label: '结构与运动', keywords: ['结构', '受力', '摩擦', '轮', '电机', '传动', '力', '平衡', '运动', '速度', '杠杆'], subjects: ['physics', 'science', 'engineering'] },
@@ -2293,9 +2350,33 @@ class PBLPathBuilder {
     return nodes.filter(n => !this._isOffTopicScienceNoiseNode(n));
   }
 
+  _shouldPurgeChemistryForGoal(goal) {
+    if (this._isChemistryInquiryGoal(goal)) return false;
+    if (this._isFiltrationGoal(goal)) return false;
+    const g = String(goal || '');
+    if (/化学|溶液|滴定|离子|有机|物质的量|电导率|氧化还原|原电池|电解/.test(g)) return false;
+    if (this._isEmbeddedOrIoTGoal(g)) return true;
+    if (this._isGroundRoboticsGoal(g)) return true;
+    const type = this._classifyProjectType(g);
+    if (type === 'engineering' && !/化学|电池|燃料|电解|氧化|蓄电|储能/.test(g)) return true;
+    return false;
+  }
+
+  _isOffTopicChemistryNode(node) {
+    if (!node || node.subject !== 'chemistry') return false;
+    const blob = `${String(node.name || '')} ${this._nodeSearchText(node)}`;
+    return /有机合成|有机化合物|烃|离子检验|钠及其化合物|醇|酚|醛|酮|羧酸|酯|胺|硝基|苯|同分异构|官能团|滴定|硝酸银|电导率|物质的量浓度|气体摩尔体积|原电池|电解池/.test(blob);
+  }
+
+  _purgeChemistryNoise(nodes, goal) {
+    if (!this._shouldPurgeChemistryForGoal(goal) || !Array.isArray(nodes)) return nodes;
+    return nodes.filter(n => !this._isOffTopicChemistryNode(n));
+  }
+
   _purgeCurriculumNoise(nodes, goal) {
     let list = this._purgeBiologyNoise(nodes, goal);
     list = this._purgeOffTopicScienceNoise(list, goal);
+    list = this._purgeChemistryNoise(list, goal);
     return list;
   }
 
@@ -2315,6 +2396,9 @@ class PBLPathBuilder {
       return '泛素养或硬门禁';
     }
     const blueprint = this._activeBlueprint || null;
+    if (this._shouldPurgeChemistryForGoal(goal) && this._isOffTopicChemistryNode(node)) {
+      return '工程/IoT目标不宜引入无关化学节点';
+    }
     const score = this._scoreUniversalRelevance(node, goal, blueprint, domains, archetype);
     if (score < this._relevanceKeepThreshold(false)) return `相关性不足(${score})`;
     return null;
@@ -4657,7 +4741,7 @@ class PBLPathBuilder {
   static PBL_MIN_GRADE_COMPLEX = 7;
 
   _isEmbeddedOrIoTGoal(goal) {
-    return /物联网|IoT|智能设备|智能家居|智能硬件|嵌入式|单片机|Arduino|树莓派|ESP32|STM32|传感|GPIO|Wi-?Fi|蓝牙|BLE|LED|语音识别|语音控制|无线通信|模块|硬件|电路|烧录|串口/i.test(String(goal || ''));
+    return /物联网|IoT|智能设备|智能家居|智能硬件|嵌入式|单片机|Arduino|树莓派|ESP32|STM32|传感|GPIO|Wi-?Fi|蓝牙|BLE|LED|语音识别|语音控制|无线通信|模块|硬件|电路|烧录|串口|自动浇花|浇花系统|浇水系统|智能灌溉|土壤湿度|微型水泵|自动灌溉|湿度传感/i.test(String(goal || ''));
   }
 
   _externalLimit(goal) {
@@ -4958,6 +5042,31 @@ class PBLPathBuilder {
       this._sanitizeBlueprintPhasesInPlace(grbp, goal);
       return this._concretizeBlueprint(goal, grbp, this._resolvedArchetype);
     }
+    if (this._isEmbeddedOrIoTGoal(goal)) {
+      let iotbp = bp;
+      const topic = this._extractTopicProfile(goal);
+      const label = topic.coreTopic || this._compactProjectLabel(goal);
+      if (!iotbp?.schemes?.length) {
+        iotbp = this._buildSubjectAnchoredBlueprint(goal, `「${label}」智能装置实施方案`);
+      } else {
+        iotbp = JSON.parse(JSON.stringify(iotbp));
+      }
+      iotbp.projectType = 'engineering';
+      const badRe = /调研报告|调查报告|问卷|有机合成|离子检验|原型驱动迭代|MVP|快速原型/;
+      if (!iotbp.deliverable || badRe.test(iotbp.deliverable) || /研究报告|调查报告/.test(iotbp.deliverable)) {
+        iotbp.deliverable = topic.deliverableHint || `可运行的「${label}」装置原型 + 控制逻辑说明 + 测试记录表`;
+      }
+      if (!iotbp.projectSummary || iotbp.projectSummary.length < 12 || /「\s*」/.test(iotbp.projectSummary)) {
+        iotbp.projectSummary = `围绕「${label}」完成传感采集、控制逻辑、水泵驱动与测试验收`;
+      }
+      iotbp.schemes = (iotbp.schemes || []).map(s => ({
+        ...s,
+        name: String(s.name || '').replace(/「\s*」/, `「${label}」`),
+        summary: String(s.summary || '').replace(/「\s*」/, `「${label}」`),
+      }));
+      this._sanitizeBlueprintPhasesInPlace(iotbp, goal);
+      return this._concretizeBlueprint(goal, iotbp, this._resolvedArchetype);
+    }
     if (this._isSocialOrCivicInquiryGoal(goal)) {
       let sbp = bp;
       if (!sbp?.schemes?.length) {
@@ -5123,7 +5232,7 @@ class PBLPathBuilder {
 
   _buildSubjectAnchoredBlueprint(goal, schemeName) {
     const topic = this._extractTopicProfile(goal);
-    const subject = topic.coreTopic;
+    const subject = topic.coreTopic || this._compactProjectLabel(goal) || this._parseGoalSubject(goal);
     const domains = this._inferProjectDomains(goal);
     const subsystems = domains.map(d => ({
       id: d.id,
@@ -5432,8 +5541,8 @@ class PBLPathBuilder {
     }
 
     const topic = this._extractTopicProfile(goal);
-    const subject = topic.coreTopic;
-    const isEng = this._classifyProjectType(goal) === 'engineering' || this._isEnergyProjectGoal(goal);
+    const subject = topic.coreTopic || this._compactProjectLabel(goal) || this._parseGoalSubject(goal);
+    const isEng = this._classifyProjectType(goal) === 'engineering' || this._isEnergyProjectGoal(goal) || this._isEmbeddedOrIoTGoal(goal);
     if (!isEng) {
       return this._sanitizeBlueprintForGoal(
         this._buildSubjectAnchoredBlueprint(goal, `「${subject}」主题实施方案`),
