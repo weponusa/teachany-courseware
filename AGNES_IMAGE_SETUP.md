@@ -64,6 +64,8 @@ curl -s "https://www.teachany.cn/api/images/quota?course_id=demo-linear-function
 
 部署完成且配置 `AGNES_API_KEY` 后，`agnes_configured` 应为 `true`。
 
+若刚在 Pages 添加/修改 `AGNES_API_KEY` 仍显示 `false`，向 `main` 推送任意提交即可触发 Cloudflare Pages 重新部署（GitHub 已连接时自动构建）。
+
 ## 限制说明
 
 - **每课件 3 张**：按 `course_id` 计数，含 hero + 所有章节插图
