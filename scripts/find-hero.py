@@ -383,13 +383,17 @@ def generate_l3_hint(course_dir: Path, meta: dict) -> dict:
         'target_cdn_file': target_cdn_file,
         'subject': subject,
         'grade': grade,
+        'agnes_cmd': (
+            f'python3 scripts/agnes-image-gen.py --course-id {course_id} '
+            f'--prompt "{prompt}" --out assets/{course_id}-hero.png --slot hero'
+        ),
         'steps': [
-            f'1. 调用 image_gen 生成 hero 图（prompt: {prompt[:80]}...）',
-            f'2. 上传到 teachany-images: git add {target_cdn_file} && git commit && git push',
-            f'3. 注册索引: python3 scripts/image_resolver.py register --id {subj_dir}-{keyword_slug}-hero --file {target_cdn_file} --subject {subj_dir} --slot hero --match-nodes {node_id}',
-            f'4. HTML 引用: <img src="{target_cdn_url}">',
+            f'1. 查额度: python3 scripts/agnes-image-gen.py --course-id {course_id} --quota',
+            f'2. 服务端中转生图（无需用户 Key，每课件≤3张）: python3 scripts/agnes-image-gen.py --course-id {course_id} --prompt "{prompt[:60]}..." --out assets/{course_id}-hero.png --slot hero',
+            f'3. HTML 引用本地: <img src="./assets/{course_id}-hero.png" alt="{title}">',
+            f'4. （可选）维护者上传 CDN: {target_cdn_file}',
         ],
-        'fallback_note': '若会话无 image_gen 工具，请加 --gen-svg 参数走 L3-b SVG 兜底（v7.9.12 永不降级）',
+        'fallback_note': '额度用尽或中转不可用时：--gen-svg 走 L3-b SVG；或宿主 image_gen 工具',
     }
 
 

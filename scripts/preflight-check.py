@@ -542,9 +542,28 @@ def check_map_cdn():
 
 
 def check_image_gen():
-    head("AI 生图（image_gen 工具）")
-    # image_gen 是 IDE 侧工具，Python 脚本无法直接调用；
-    # 我们用一个"配置文件"约定来强制 AI 自己填写探针结果
+    head("AI 生图（TeachAny 中转 / image_gen）")
+    # 优先：TeachAny 官方 Agnes 中转（agnes-image-gen.py，用户无 Key）
+    try:
+        import urllib.request
+        api_base = os.environ.get("TEACHANY_API_BASE", "https://www.teachany.cn").rstrip("/")
+        with urllib.request.urlopen(f"{api_base}/api/images/quota", timeout=12) as resp:
+            svc = json.loads(resp.read().decode("utf-8"))
+        if svc.get("ok") and svc.get("agnes_configured") and svc.get("d1_configured"):
+            log("TeachAny 生图中转可用（agnes-image-gen.py，每课件默认 3 张）", "ok")
+            record("image_gen", "ok", source="teachany-agnes-proxy", per_course_limit=svc.get("per_course_limit"))
+            REPORT["capabilities"]["image_gen"] = True
+            REPORT["capabilities"]["teachany_image_proxy"] = True
+            return
+        if svc.get("ok"):
+            log(
+                f"生图中转已部署但未就绪：agnes={svc.get('agnes_configured')} d1={svc.get('d1_configured')}",
+                "warn",
+            )
+    except Exception as e:
+        log(f"TeachAny 生图中转不可达（将回退 image_gen 探针）：{e}", "warn")
+
+    # 回退：IDE 侧 image_gen 工具探针文件
     probe_file = Path(".teachany-image-gen-probe.json")
     if probe_file.exists():
         try:
