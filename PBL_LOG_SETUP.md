@@ -45,6 +45,23 @@ GET /api/pbl/logs?format=ndjson   # 导出 NDJSON 日志文件
 
 若配置了 `PBL_LOG_TOKEN`，请求需带 `?token=...` 或头 `X-PBL-Log-Token`。
 
+### PBL_LOG_TOKEN 在哪设置
+
+令牌**不会**写在仓库里，只在 Cloudflare Pages 项目 `teachany-courseware` 中配置：
+
+1. Cloudflare Dashboard → **Workers & Pages** → **teachany-courseware**
+2. **Settings** → **Environment variables** → **Production**
+3. 变量名 `PBL_LOG_TOKEN`，类型 Text 或 Encrypted，值为自定义口令（如 `PBL`）
+4. **保存后必须重新部署**（Retry deployment 或向 `main` 推送 commit），新值才会生效
+
+验证：
+
+```bash
+curl "https://www.teachany.cn/api/pbl/logs?limit=5&token=你的口令&format=json"
+```
+
+返回 `"ok": true` 即配置成功。未配置 `PBL_LOG_TOKEN` 时，日志 API 对所有人开放；配置后无 token 会返回 403。
+
 ### 教师看板
 
 ```text
