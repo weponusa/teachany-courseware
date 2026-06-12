@@ -7946,8 +7946,16 @@ class PBLGraphRenderer {
         const node = (window.PBLPathBuilder && window.PBLPathBuilder.unifiedIndex && window.PBLPathBuilder.unifiedIndex.get(id))
           || (Array.isArray(nodes) ? nodes.find(n => n.id === id) : null);
         if (node && typeof onNodeClick === 'function') onNodeClick(node);
-        if (node && typeof window.generateCourseware === 'function') {
-          window.generateCourseware(node.id, node.name || node.id);
+        if (node && window.TeachAnyMakeCourse && typeof window.TeachAnyMakeCourse.open === 'function') {
+          window.TeachAnyMakeCourse.open({
+            nodeId: node.id,
+            nodeName: node.name || node.id,
+            source: 'pbl-graph',
+            meta: node,
+            pblNode: node
+          });
+        } else if (node && typeof window.generateCourseware === 'function') {
+          window.generateCourseware(node.id, node.name || node.id, { pblNode: node, source: 'pbl-graph' });
         }
         this._scheduleTooltipHide(80);
       });
@@ -8339,9 +8347,7 @@ class PBLGraphRenderer {
       html += `</div>`;
     }
 
-    if (!d.isExternal) {
-      html += `<button type="button" data-pbl-make-course="${this._escapeHtml(d.id)}" style="display:block;width:100%;margin-top:10px;padding:8px 12px;border:none;border-radius:8px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:13px;font-weight:700;cursor:pointer;pointer-events:auto;">✨ 制作新课件</button>`;
-    }
+    html += `<button type="button" data-pbl-make-course="${this._escapeHtml(d.id)}" style="display:block;width:100%;margin-top:10px;padding:8px 12px;border:none;border-radius:8px;background:linear-gradient(135deg,#10b981,#059669);color:white;font-size:13px;font-weight:700;cursor:pointer;pointer-events:auto;">✨ 制作新课件${d.isExternal ? '（项目补充）' : ''}</button>`;
 
     tooltip.innerHTML = html;
     tooltip.classList.add('visible');
