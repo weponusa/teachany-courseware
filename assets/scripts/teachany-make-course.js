@@ -299,7 +299,7 @@
       phase0,
       '2. Phase 1：问题锚点 + ABT 叙事；若来自 PBL，导入必须回扣项目任务与交付物',
       '3. Phase 2：复制 templates/course-skeleton-v2.html + manifest-template.json；body 使用 ' + stageHint,
-      '4. Hero：find-hero.py --cdn；未命中则 agnes-image-gen.py（服务端中转，每课件≤3 张，无需用户 Key）',
+      '4. Hero：find-hero.py --cdn → agnes-image-gen.py（优先）；仅额度用尽/失败时用 gen-hero-svg.py（v8 知识全景，须从 manifest/学习目标生成，禁止空壳四字卡）',
       '5. 插图：章节情境图用 agnes-image-gen.py；数学/坐标类用 SVG 叠字，避免 AI 乱码',
       '6. 数理化：必读 tech/iframe-resources.md，嵌入 ≥1 个 PhET/GeoGebra/Desmos 等真实互动',
       '7. 五件套：AI 学伴、TTS（≥3 条 mp3）、section hints、知识图谱、导师卡片 + 悬浮坞',
