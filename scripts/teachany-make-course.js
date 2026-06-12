@@ -157,8 +157,9 @@
     ];
     if (external) {
       lines.push('- 节点类型：PBL 课标外补充（ext-*）');
-      lines.push('- 挂树位置：data/trees/other/user-generated.json（Gallery「其他知识」）');
-      lines.push('- 禁止：不得冒充正式课标节点；不得用 free_mode 代替 ext 挂树');
+      lines.push('- 挂树位置：仅 data/trees/other/user-generated.json（Gallery「其他知识 / Other Knowledge」）');
+      lines.push('- 禁止：不得挂到数学/语文/物理等正式课标树；不得改用课标 node_id；不得用 free_mode 代替 ext 挂树');
+      lines.push('- 发布注册：rebuild-index 见 manifest.node_id 为 ext-* 后自动写入「其他知识」树，不会出现在学科课标树');
     } else {
       lines.push('- 节点类型：课标/图谱正式知识点');
       lines.push('- 挂树：用 find_nodes.py / check_node_id.py 校验后挂到对应学科课标树');
@@ -229,7 +230,8 @@
       lines.push('- 教学目标：只教「完成项目下一步所需的最小可用知识」，不做无关拓展或百科式铺陈');
       lines.push('- 情境锚定：导入、例题、练习、互动必须引用项目任务与交付物（测什么、算什么、写什么、做什么）');
       lines.push('- 证据产出：课件结束处明确「学完本节后，学生在项目中能完成的具体动作/产出」');
-      lines.push('- 挂树：node_id 保持 ' + nodeId + '，发布到 user-generated；标题可写「' + nodeName + '（项目补充）」');
+      lines.push('- 挂树：node_id 必须保持 ' + nodeId + '（与 PBL 拆解 hash 一致，禁止另造）');
+      lines.push('- 发布注册：发布后只进「其他知识」树，标题可写「' + nodeName + '（项目补充）」');
       lines.push('- 衔接：在总结区写清「回到项目主线的下一步」及与前后路径节点的关系');
     } else if (gn.layer === 'prerequisite') {
       lines.push('【基础前置节点 · 专项逻辑】');
@@ -249,14 +251,52 @@
     return lines.join('\n');
   }
 
-  function buildDeliverableSection(meta, source) {
+  function buildOtherKnowledgePublishSection(nodeId, nodeName, meta, pblCtx) {
+    if (!isExternalNode(nodeId, meta)) return '';
+
+    var pblGoal = pblCtx && pblCtx.goal ? clip(pblCtx.goal, 200) : '';
+    var lines = [
+      '【发布注册 · 必须挂入「其他知识」树（硬性）】',
+      '- node_id：' + nodeId + '（manifest.node_id 与 <meta name="teachany-node"> 必须完全相同）',
+      '- 树位置：data/trees/other/user-generated.json → 网站知识树「其他知识 / Other Knowledge」入口',
+      '- 机制：publish 后 rebuild-index.py 识别 ext-* node_id，自动写入「其他知识」，不会挂到任何正式课标学科树',
+      '- 禁止：hang_tree register 到 math/chinese/physics 等课标树；禁止把 node_id 改成 phy-* / math-* 等课标 id',
+      '- 禁止：manifest.free_mode 代替 ext 挂树（ext-* 本身即进入其他知识）',
+      '',
+      'manifest 必填核对：',
+      '- "node_id": "' + nodeId + '"',
+      '- "name" / "title"：建议含「（项目补充）」便于与课标课区分',
+      '- "subject"：可写项目相关学科（展示用），但不影响挂树目标——仍以 ext-* 进「其他知识」',
+      pblGoal ? '- 可在 description 注明来源 PBL 项目：' + pblGoal : '',
+      '',
+      '发布前校验：',
+      '- python3 scripts/check_node_id.py --node-id ' + nodeId,
+      '  （应提示：PBL 外部知识点 → 挂入 other/user-generated.json）',
+      '',
+      '发布命令（用户确认后）：',
+      '- TEACHANY_UPLOAD_CONFIRMED=1 python3 scripts/hang_tree.py publish <course-id> --course-dir <课件目录>',
+      '- 发布后验证：知识树打开「其他知识」可见本节点；学科课标树中不应出现 ' + nodeId
+    ];
+    return lines.filter(function (l) { return l !== ''; }).join('\n');
+  }
+
+  function buildDeliverableSection(nodeId, meta, source) {
     var grade = meta.grade;
+    var external = isExternalNode(nodeId, meta);
     var stageHint = (grade != null && grade <= 6) ? 'teachany-elementary'
       : (grade != null && grade <= 9) ? 'teachany-middle' : 'teachany-high';
 
+    var phase0 = external
+      ? '1. Phase 0：python3 scripts/check_node_id.py --node-id ' + nodeId + '（确认 ext → 其他知识）；preflight-check.py 通过'
+      : '1. Phase 0：python3 scripts/find_nodes.py + check_node_id.py 校验课标 node_id；preflight-check.py 通过';
+
+    var phasePublish = external
+      ? '9. Phase 3.5：询问反馈密码 + 是否发布；hang_tree.py publish 后确认节点出现在「其他知识」树（非学科课标树）'
+      : '9. Phase 3.5：询问反馈密码 + 是否发布；发布走 hang_tree.py publish，挂到对应课标学科树';
+
     return [
       '【TeachAny Skill 交付清单 · 完整模式，禁止简版】',
-      '1. Phase 0：python3 scripts/find_nodes.py + check_node_id.py 校验 node_id；preflight-check.py 通过',
+      phase0,
       '2. Phase 1：问题锚点 + ABT 叙事；若来自 PBL，导入必须回扣项目任务与交付物',
       '3. Phase 2：复制 templates/course-skeleton-v2.html + manifest-template.json；body 使用 ' + stageHint,
       '4. Hero：find-hero.py --cdn；未命中则 agnes-image-gen.py（服务端中转，每课件≤3 张，无需用户 Key）',
@@ -264,13 +304,13 @@
       '6. 数理化：必读 tech/iframe-resources.md，嵌入 ≥1 个 PhET/GeoGebra/Desmos 等真实互动',
       '7. 五件套：AI 学伴、TTS（≥3 条 mp3）、section hints、知识图谱、导师卡片 + 悬浮坞',
       '8. Phase 3：validate-courseware / 浏览器自测闭环',
-      '9. Phase 3.5：询问反馈密码 + 是否发布；发布走 hang_tree.py publish',
+      phasePublish,
       '10. 本页不会自动上传；完成后由用户在 AI 助手确认发布到 Gallery',
       '',
       '【本课最低质量】',
       '- 至少 1 个真实可操作互动（非静态图冒充）',
       '- 学习目标、前测、讲解、练习、总结迁移闭环完整',
-      '- manifest 与 HTML meta 的 node_id、学科、学段信息一致'
+      '- manifest 与 HTML meta 的 node_id 一致' + (external ? '（ext-* → 仅其他知识树）' : '，学科学段与课标节点一致')
     ].join('\n');
   }
 
@@ -300,8 +340,14 @@
       parts.push(pblSec);
     }
 
+    var publishSec = buildOtherKnowledgePublishSection(id, name, meta, pblCtx);
+    if (publishSec) {
+      parts.push('');
+      parts.push(publishSec);
+    }
+
     parts.push('');
-    parts.push(buildDeliverableSection(meta, source));
+    parts.push(buildDeliverableSection(id, meta, source));
 
     return parts.join('\n');
   }
@@ -366,7 +412,7 @@
       '  <h3 id="tmc-title">✨ 制作课件</h3>',
       '  <div class="tmc-meta" id="tmc-meta"></div>',
       '  <div class="tmc-hint">推荐在 <b>WorkBuddy</b> 中加载 <b>TeachAny Skill</b>；也兼容 <b>CodeBuddy</b>、<b>Cursor</b>、<b>Claude Code</b>。复制下方提示词粘贴给 AI 即可。</div>',
-      '  <div class="tmc-publish-note">📌 本页<strong>不会自动上传</strong>。生成后请在 AI 助手里确认发布（或到「我的 → 导入的」提交社区），通过后才会出现在 Gallery。</div>',
+      '  <div class="tmc-publish-note" id="tmc-publish-note">📌 本页<strong>不会自动上传</strong>。生成后请在 AI 助手里确认发布（或到「我的 → 导入的」提交社区），通过后才会出现在 Gallery。</div>',
       '  <div class="tmc-prompt" id="tmc-prompt"></div>',
       '  <div class="tmc-actions">',
       '    <button type="button" class="tmc-copy" id="tmc-copy-btn">📋 复制提示词</button>',
@@ -421,6 +467,7 @@
     var metaEl = overlay.querySelector('#tmc-meta');
     var promptEl = overlay.querySelector('#tmc-prompt');
     var pblLink = overlay.querySelector('#tmc-pbl-link');
+    var publishNote = overlay.querySelector('#tmc-publish-note');
     if (title) title.textContent = '✨ 制作课件 · ' + (nodeName || nodeId);
     if (metaEl) {
       var bits = ['知识点 ID：' + nodeId];
@@ -434,6 +481,13 @@
       metaEl.textContent = bits.join(' · ');
     }
     if (promptEl) promptEl.textContent = prompt;
+    if (publishNote) {
+      if (isExternalNode(nodeId, meta)) {
+        publishNote.innerHTML = '📌 本课为 <strong>PBL 课标外补充（ext-*）</strong>。发布后由 rebuild-index 自动注册到知识树 <strong>「其他知识」</strong>，不会挂到数学/语文等正式课标树。请在 AI 助手确认 publish 并核对挂树位置。';
+      } else {
+        publishNote.innerHTML = '📌 本页<strong>不会自动上传</strong>。生成后请在 AI 助手里确认发布（或到「我的 → 导入的」提交社区），通过后才会出现在 Gallery。';
+      }
+    }
     if (pblLink) {
       pblLink.href = './pbl.html?make=' + encodeURIComponent(nodeId) + '&name=' + encodeURIComponent(nodeName || nodeId);
     }
