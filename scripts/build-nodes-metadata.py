@@ -99,6 +99,11 @@ def extract_nodes(tree: dict, graph_path: str, fallback_subject: str):
                 else:
                     diff = 0
 
+            # 课件列表（挂树核心字段）
+            courses = list(n.get('courses') or [])
+            # 节点状态（placeholder/active 等）
+            node_status = n.get('status') or ('active' if courses else 'placeholder')
+
             out.append({
                 'id': nid,
                 'name': name,
@@ -112,6 +117,8 @@ def extract_nodes(tree: dict, graph_path: str, fallback_subject: str):
                 'related_nodes': related,
                 'key_concepts': key_concepts,
                 'difficulty': diff,
+                'courses': courses,
+                'status': node_status,
             })
     return out
 
