@@ -18,18 +18,29 @@ def load_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _course_id(c):
+    """courses[] 项归一化为字符串 id（兼容历史 dict 脏数据）。"""
+    if isinstance(c, str):
+        return c
+    if isinstance(c, dict):
+        return c.get("id") or c.get("course_id") or c.get("node_id")
+    return None
+
+
 def collect_tree_courses():
     out: dict[str, list[str]] = {}
     for tf in sorted(TREES_DIR.rglob("*.json")):
         if tf.name.startswith("_"):
             continue
         data = load_json(tf)
+        if not isinstance(data, dict):
+            continue
         for dom in data.get("domains") or []:
             for node in dom.get("nodes") or []:
                 nid = node.get("id")
                 if not nid:
                     continue
-                cids = list(node.get("courses") or [])
+                cids = [cid for cid in (_course_id(c) for c in (node.get("courses") or [])) if cid]
                 if cids:
                     out[nid] = sorted(set(out.get(nid, []) + cids))
     return out
