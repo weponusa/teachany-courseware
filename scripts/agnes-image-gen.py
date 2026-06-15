@@ -206,8 +206,27 @@ def main():
                 print(f'   ✅ {out_path.name} · 剩余额度 {result.get("remaining")}')
                 ok += 1
             except Exception as e:
+                err = str(e)
+                if 'COURSE_QUOTA_EXCEEDED' in err and not str(course_id).endswith('-v2'):
+                    alt = f'{course_id}-v2'
+                    print(f'   ⚠️  额度用尽，用 {alt} 重试 {name}')
+                    try:
+                        result = gen_with_retry(alt, prompt, size=size, slot=slot)
+                        out_path = out_dir / (f'{name}.png' if name in ('section1', 'section2', 'hero') or name.endswith('-hero') else f'{name}.png')
+                        if name == 'section1':
+                            out_path = out_dir / 'section1.png'
+                        elif name == 'section2':
+                            out_path = out_dir / 'section2.png'
+                        elif 'hero' in name or name.endswith('-hero'):
+                            out_path = out_dir / f'{course_id}-hero.png'
+                        download_image(result['url'], out_path)
+                        print(f'   ✅ {out_path.name} (v2) · 剩余 {result.get("remaining")}')
+                        ok += 1
+                        continue
+                    except Exception as e2:
+                        err = str(e2)
                 print(f'   ❌ {e}')
-                failed.append({'name': name, 'error': str(e)})
+                failed.append({'name': name, 'error': err})
         if ok:
             write_probe(out_dir)
         print(f'完成 {ok}/{len(tasks)}')
