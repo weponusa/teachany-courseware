@@ -42,6 +42,11 @@ from pathlib import Path
 DEFAULT_API_BASE = 'https://www.teachany.cn'
 DEFAULT_SIZE = '1280x768'
 MIN_BYTES = 20 * 1024  # 与 validate-courseware 占位图阈值一致
+NOTEXT_SUFFIX = (
+    " STRICTLY NO TEXT of any kind: no Chinese characters, no English letters, "
+    "no numbers, no labels, no captions, no typography, no watermarks. "
+    "Pure visual icons and scenes only."
+)
 
 
 def api_base() -> str:
@@ -139,7 +144,8 @@ def main():
     ap.add_argument('--batch', help='批量 JSON 文件')
     ap.add_argument('--out-dir', help='批量输出目录')
     ap.add_argument('--quota', action='store_true', help='仅查询本课件剩余额度')
-    ap.add_argument('--api-base', default='', help='覆盖 TEACHANY_API_BASE（调试用）')
+    ap.add_argument('--no-notext-suffix', action='store_true',
+                    help='不自动追加无汉字/无文字约束（默认追加）')
     args = ap.parse_args()
 
     if args.api_base:
@@ -156,10 +162,13 @@ def main():
         return
 
     if args.prompt and args.out:
+        prompt = args.prompt
+        if not args.no_notext_suffix and NOTEXT_SUFFIX.strip() not in prompt:
+            prompt = prompt.rstrip() + NOTEXT_SUFFIX
         print(f'🎨 TeachAny 中转生图 · {course_id} · {args.size}')
-        print(f'   prompt: {args.prompt[:100]}{"…" if len(args.prompt) > 100 else ""}')
+        print(f'   prompt: {prompt[:100]}{"…" if len(prompt) > 100 else ""}')
         t0 = time.time()
-        result = gen_with_retry(course_id, args.prompt, size=args.size, slot=args.slot)
+        result = gen_with_retry(course_id, prompt, size=args.size, slot=args.slot)
         dt = time.time() - t0
         out_path = Path(args.out)
         size_b = download_image(result['url'], out_path)
@@ -183,6 +192,8 @@ def main():
         for i, task in enumerate(tasks, 1):
             name = task.get('name', f'img_{i:03d}')
             prompt = task['prompt']
+            if not args.no_notext_suffix and NOTEXT_SUFFIX.strip() not in prompt:
+                prompt = prompt.rstrip() + NOTEXT_SUFFIX
             size = task.get('size', args.size)
             slot = task.get('slot', name)
             print(f'[{i}/{len(tasks)}] {name}')
