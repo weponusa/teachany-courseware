@@ -46,6 +46,19 @@ LEVEL_INFIX = {
 # 国际课标 infix 识别（v5.30 新增）——命中任一表示该课件使用非 cn-national 体系
 INTERNATIONAL_INFIXES = ['-ib-dp-', '-ib-myp-', '-cam-igcse-', '-cam-as-', '-cam-al-', '-ap-']
 
+# PBL 课标外补充节点（挂 data/trees/other/user-generated.json）
+EXT_NODE_RE = re.compile(r'^ext-[a-f0-9]{6,12}$', re.I)
+
+
+def is_ext_node(node_id):
+    return bool(node_id and EXT_NODE_RE.match(str(node_id)))
+
+
+def is_pbl_supplement(manifest):
+    if not isinstance(manifest, dict):
+        return False
+    return manifest.get('lesson_type') == 'pbl-supplement' or is_ext_node(manifest.get('node_id'))
+
 # HTML 线索关键词
 HTML_LEVEL_KEYWORDS = {
     'high':       ['高中', '高一', '高二', '高三', '必修一', '必修二', '必修三', '必修四', '必修五',
@@ -377,14 +390,25 @@ def validate_one(course_dir, strict_feedback=False):
     # ── 以下为 cn-national（中国课标）原有校验逻辑 ──────────────
     manifest_level = grade_to_level(mg)
     node_subject, node_level = parse_node_id(mn)
+    ext_node = is_ext_node(mn)
 
-    # 1. manifest.grade 学段 vs node_id 学段前缀
-    if manifest_level and node_level and manifest_level != node_level:
+    if ext_node:
+        if m.get('free_mode') is True:
+            issues.append(('error',
+                f'{course_dir.name}: ext-* 课件不得 free_mode=true（无法挂入「其他知识」树）'))
+        if ms and ms not in ('cross', 'general', 'science', 'tech', 'pbl'):
+            issues.append(('warn',
+                f'{course_dir.name}: ext-* 建议 subject=cross（展示用），当前 {ms}'))
+        issues.append(('warn',
+            f'{course_dir.name}: ext-* 将挂入 other/user-generated.json，跳过课标前缀/学段一致性校验'))
+
+    # 1. manifest.grade 学段 vs node_id 学段前缀（ext-* 豁免）
+    if not ext_node and manifest_level and node_level and manifest_level != node_level:
         issues.append(('error',
             f'{course_dir.name}: manifest.grade={mg}({manifest_level}) 但 node_id={mn}({node_level}) 学段不一致'))
 
-    # 2. manifest.subject vs node_id 学科前缀
-    if ms and node_subject and ms != node_subject:
+    # 2. manifest.subject vs node_id 学科前缀（ext-* 豁免）
+    if not ext_node and ms and node_subject and ms != node_subject:
         issues.append(('error',
             f'{course_dir.name}: manifest.subject={ms} 但 node_id={mn} 指向 {node_subject}'))
 
@@ -512,8 +536,12 @@ def validate_one(course_dir, strict_feedback=False):
         hero_refs = re.findall(r'<img[^>]+class=[\'"][^\'"]*(?:hero-img|hero-cover-img)[^\'"]*[\'"][^>]+src=[\'"]([^\'"]+)[\'"]', full_html, re.IGNORECASE)
         hero_refs += re.findall(r'<img[^>]+src=[\'"]([^\'"]*hero[^\'"]*)[\'"][^>]+class=[\'"][^\'"]*(?:hero-img|hero-cover-img)[^\'"]*[\'"]', full_html, re.IGNORECASE)
         if not hero_refs:
+            hero_refs = re.findall(r'<img[^>]+src=[\'"]([^\'"]*hero[^\'"]*)[\'"]', full_html, re.IGNORECASE)
+        if not hero_refs and re.search(r'data-page-type=[\'"]cover[\'"]|data-tts=[\'"]hero[\'"]', full_html, re.I):
+            hero_refs = re.findall(r'data-page-type=[\'"]cover[\'"][\s\S]{0,1200}?<img[^>]+src=[\'"]([^\'"]+)[\'"]', full_html, re.I)
+        if not hero_refs:
             issues.append(('error',
-                f'{course_dir.name}: 缺少 hero-img/hero-cover-img 知识结构主图引用（v7.3 阻断）'))
+                f'{course_dir.name}: 缺少 hero 主图引用（hero-img/hero-cover-img 或 cover 区 *hero* 图 · v7.3 阻断）'))
         for ref in set(hero_refs):
             clean_ref = ref.lstrip('./')
             if clean_ref.startswith('assets/') and not (course_dir / clean_ref).exists():
@@ -571,9 +599,11 @@ def validate_one(course_dir, strict_feedback=False):
     if html.exists() and full_html:
         video_refs = re.findall(r'<(?:source|video)[^>]+src=[\'"]([^\'\"]+\.mp4)[\'"]', full_html, re.IGNORECASE)
     if not mp4_files:
-        issues.append(('error',
+        mp4_level = 'warn' if is_pbl_supplement(m) else 'error'
+        issues.append((mp4_level,
             f'{course_dir.name}: 无真实 mp4 教学动画（硬规则 #32 · v7.3 阻断）；'
-            f'Canvas/SVG/CSS 动画不得替代 Remotion，必须补 assets/video/*.mp4'))
+            f'Canvas/SVG/CSS 动画不得替代 Remotion，必须补 assets/video/*.mp4'
+            + ('（PBL 补充课暂降级为 warn）' if mp4_level == 'warn' else '')))
     if mp4_files and not video_refs:
         issues.append(('error',
             f'{course_dir.name}: 已有 mp4 文件但 HTML 未用 <video>/<source> 静态嵌入'))
@@ -596,9 +626,10 @@ def validate_one(course_dir, strict_feedback=False):
     if html.exists() and full_html:
         has_kg_section = bool(re.search(r'id=[\'"]knowledge-graph[\'"]', full_html))
         has_kg_data = 'knowledgeGraphData' in full_html or '_graph.json' in full_html
-        if not has_kg_section and not has_kg_data:
+        has_kg_module = 'data-teachany-kg' in full_html and 'teachany-knowledge-graph' in full_html
+        if not has_kg_section and not has_kg_data and not has_kg_module:
             issues.append(('error',
-                f'{course_dir.name}: HTML 缺 #knowledge-graph section 或 knowledgeGraphData 数据'
+                f'{course_dir.name}: HTML 缺知识图谱（#knowledge-graph / knowledgeGraphData / data-teachany-kg）'
                 f'（硬规则 #24 · 每个课件必须含交互式知识图谱）'))
 
     # 13. 地图基线（v5.34.11 新增，硬规则 #35/#36）

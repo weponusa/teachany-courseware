@@ -269,7 +269,9 @@
       '- "subject"：可写项目相关学科（展示用），但不影响挂树目标——仍以 ext-* 进「其他知识」',
       pblGoal ? '- 可在 description 注明来源 PBL 项目：' + pblGoal : '',
       '',
-      '发布前校验：',
+      '发布前校验（Phase 3.5c · 避免上传/挂树失败）：',
+      '- python3 scripts/set-feedback-password.py --check <课件目录>/manifest.json',
+      '- python3 scripts/preflight-publish.py <课件目录>',
       '- python3 scripts/check_node_id.py --node-id ' + nodeId,
       '  （应提示：PBL 外部知识点 → 挂入 other/user-generated.json）',
       '',
@@ -291,8 +293,8 @@
       : '1. Phase 0：python3 scripts/find_nodes.py + check_node_id.py 校验课标 node_id；preflight-check.py 通过';
 
     var phasePublish = external
-      ? '9. Phase 3.5：询问反馈密码 + 是否发布；hang_tree.py publish 后确认节点出现在「其他知识」树（非学科课标树）'
-      : '9. Phase 3.5：询问反馈密码 + 是否发布；发布走 hang_tree.py publish，挂到对应课标学科树';
+      ? '9. Phase 3.5：3.5a 反馈密码 → 3.5c preflight-publish.py → 3.5b 用户同意后 hang_tree publish；确认节点在「其他知识」树'
+      : '9. Phase 3.5：3.5a 反馈密码 → 3.5c preflight-publish.py → 3.5b 同意后 hang_tree publish，挂课标学科树';
 
     return [
       '【TeachAny Skill 交付清单 · 完整模式，禁止简版】',
@@ -303,7 +305,8 @@
       '5. 插图：章节情境图用 agnes-image-gen.py；数学/坐标类用 SVG 叠字，避免 AI 乱码',
       '6. 数理化：必读 tech/iframe-resources.md，嵌入 ≥1 个 PhET/GeoGebra/Desmos 等真实互动',
       '7. 五件套：AI 学伴、TTS（≥3 条 mp3）、section hints、知识图谱、导师卡片 + 悬浮坞',
-      '8. Phase 3：validate-courseware / 浏览器自测闭环',
+      '8. Phase 3 收尾（强制）：python3 scripts/finalize-courseware.py <课件目录> — 自动补齐 AI 学伴/音频/知识图谱 + 为每个 data-tts 段落生成真实分段 mp3（漏写也会补全）',
+      '8b. Phase 3：validate-courseware / 浏览器自测闭环',
       phasePublish,
       '10. 本页不会自动上传；完成后由用户在 AI 助手确认发布到 Gallery',
       '',

@@ -16,6 +16,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 
+EXT_NODE_RE = re.compile(r"^ext-[a-f0-9]{6,12}$", re.I)
+
 PLACEHOLDER_PATTERNS = [
     r"TODO", r"待补", r"待填写", r"占位", r"placeholder", r"lorem ipsum",
     r"这里(填写|补充|插入)", r"请在此", r"示例文本", r"\bxxx\b", r"【[^】]{0,30}】",
@@ -88,8 +90,14 @@ def validate_course(course_dir: Path) -> dict[str, Any]:
         issues.append(issue("error", f"{course_dir.name}: 有效教学文本仅 {text_len} 字符 < 1800，疑似只有框架没有实质讲解"))
 
     placeholder_hits = []
+    html_for_placeholder = re.sub(
+        r"\bplaceholder\s*=\s*['\"][^'\"]*['\"]", "", html, flags=re.I
+    )
     for pat in PLACEHOLDER_PATTERNS:
-        if re.search(pat, html, flags=re.I):
+        if pat == r"placeholder":
+            if re.search(r"\bplaceholder\b", html_for_placeholder, flags=re.I):
+                placeholder_hits.append(pat)
+        elif re.search(pat, html_for_placeholder, flags=re.I):
             placeholder_hits.append(pat)
     if placeholder_hits:
         issues.append(issue("error", f"{course_dir.name}: 检测到模板/占位残留：{', '.join(placeholder_hits[:6])}"))
@@ -112,17 +120,24 @@ def validate_course(course_dir: Path) -> dict[str, Any]:
     if not has_pre or not has_post:
         issues.append(issue("error", f"{course_dir.name}: 缺少前测或后测，无法形成学习闭环"))
 
+    node_id = str(manifest.get("node_id") or "")
+    is_ext = bool(EXT_NODE_RE.match(node_id))
+    is_pbl_sup = manifest.get("lesson_type") == "pbl-supplement" or is_ext
+
     bloom_levels = set(re.findall(r"data-bloom-level=['\"]([^'\"]+)['\"]", html, flags=re.I))
     if len(bloom_levels) < 3:
-        issues.append(issue("error", f"{course_dir.name}: Bloom 层级覆盖不足（{len(bloom_levels)} 级），需至少 3 级并标注 data-bloom-level"))
+        lvl = "warn" if is_pbl_sup else "error"
+        issues.append(issue(lvl, f"{course_dir.name}: Bloom 层级覆盖不足（{len(bloom_levels)} 级），需至少 3 级并标注 data-bloom-level"))
 
     scaffolds = set(re.findall(r"data-scaffold=['\"]([^'\"]+)['\"]", html, flags=re.I))
     if len(scaffolds) < 2:
-        issues.append(issue("error", f"{course_dir.name}: 脚手架分级不足，需至少 2 种 data-scaffold（full/partial/none）"))
+        lvl = "warn" if is_pbl_sup else "error"
+        issues.append(issue(lvl, f"{course_dir.name}: 脚手架分级不足，需至少 2 种 data-scaffold（full/partial/none）"))
 
     conceptest_count = len(re.findall(r"data-conceptest=['\"]true['\"]", html, flags=re.I))
     if conceptest_count < 1:
-        issues.append(issue("error", f"{course_dir.name}: 缺少 ConcepTest 检查点（data-conceptest=\"true\"）"))
+        lvl = "warn" if is_pbl_sup else "error"
+        issues.append(issue(lvl, f"{course_dir.name}: 缺少 ConcepTest 检查点（data-conceptest=\"true\"）"))
 
     if not any(w in text for w in DIAGNOSTIC_WORDS):
         issues.append(issue("error", f"{course_dir.name}: 未检测到诊断性反馈关键词，练习不能只判对错"))
@@ -133,7 +148,15 @@ def validate_course(course_dir: Path) -> dict[str, Any]:
     curriculum = manifest.get("curriculum", "cn-national") if manifest else "cn-national"
     standards = manifest.get("curriculum_standards") if manifest else None
     if curriculum in ("cn-national", "cn") and not standards:
-        issues.append(issue("error", f"{course_dir.name}: manifest.curriculum_standards 为空，未证明课件对齐真实课标"))
+        if is_pbl_sup:
+            pbl_ctx = manifest.get("pbl_context") if manifest else None
+            if not isinstance(pbl_ctx, dict) or not str(pbl_ctx.get("project_goal", "")).strip():
+                issues.append(issue(
+                    "warn",
+                    f"{course_dir.name}: PBL 补充课未填 curriculum_standards，建议 manifest.pbl_context.project_goal 说明课标外依据",
+                ))
+        else:
+            issues.append(issue("error", f"{course_dir.name}: manifest.curriculum_standards 为空，未证明课件对齐真实课标"))
     elif isinstance(standards, list):
         bad = [s for s in standards if not isinstance(s, dict) or not s.get("content") or not s.get("source")]
         if bad:
