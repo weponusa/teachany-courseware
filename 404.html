@@ -17,12 +17,13 @@
       }
     })();
   </script>
-  <style>body{margin:0;background:#07111f;color:#e5f2ff;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;display:grid;min-height:100vh;place-items:center;text-align:center;line-height:1.8}a{color:#7dd3fc}</style>
+  <style>body{margin:0;background:#07111f;color:#e5f2ff;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;display:grid;min-height:100vh;place-items:center;text-align:center;line-height:1.8;padding:24px}a{color:#7dd3fc;word-break:break-all}#status{opacity:.85;font-size:14px;margin-top:8px}</style>
 </head>
 <body>
   <main>
-    <p>正在打开课件，请稍候…</p>
-    <p><a id="new-url" href="https://www.teachany.cn/">如果没有自动打开，点这里</a></p>
+    <p>课件正在同步到 CDN，请稍候…</p>
+    <p id="status">首次打开新课件可能需要 1–5 分钟，页面会自动重试。</p>
+    <p><a id="new-url" href="https://www.teachany.cn/">如果没有自动打开，点这里重试</a></p>
   </main>
   <script>
     (function () {
@@ -30,24 +31,44 @@
       var search = location.search || '';
       var hash = location.hash || '';
       var link = document.getElementById('new-url');
-      // 旧 GitHub Pages 前缀 /teachany/community/... → 主站
+      var status = document.getElementById('status');
       var rest = path.replace(/^\/teachany\//, '');
+      var target = '';
       if (/^(community|examples)\//.test(rest)) {
-        var url = 'https://www.teachany.cn/' + rest + search + hash;
-        if (link) link.href = url;
-        // 部署刚完成时可能短暂 404，3 秒后自动重试同一路径
-        setTimeout(function () { location.replace(url); }, 3000);
-        return;
+        target = 'https://www.teachany.cn/' + rest + search + hash;
+      } else if (/^\/community\//.test(path) || /^\/examples\//.test(path)) {
+        target = 'https://www.teachany.cn' + path + search + hash;
       }
-      // 已在 www.teachany.cn 上的课件路径：点这里应回到同一路径而非首页
-      if (/^\/community\//.test(path) || /^\/examples\//.test(path)) {
-        var same = 'https://www.teachany.cn' + path + search + hash;
-        if (link) {
-          link.href = same;
-          link.textContent = '如果没有自动打开，点这里重试';
+      if (!target) return;
+      if (link) {
+        link.href = target;
+        link.textContent = '点这里打开：' + target.replace('https://www.teachany.cn', '');
+      }
+      var waits = [3000, 7000, 15000, 30000, 60000];
+      var step = 0;
+      function setMsg(msg) { if (status) status.textContent = msg; }
+      function probe() {
+        fetch(target, { method: 'HEAD', cache: 'no-store' })
+          .then(function (res) {
+            if (res.ok) {
+              setMsg('课件已就绪，正在打开…');
+              location.replace(target);
+              return;
+            }
+            schedule();
+          })
+          .catch(schedule);
+      }
+      function schedule() {
+        if (step >= waits.length) {
+          setMsg('同步时间较长，请点上方链接手动重试，或稍后再打开。请确认使用 www.teachany.cn');
+          return;
         }
-        setTimeout(function () { location.replace(same); }, 3000);
+        var sec = Math.round(waits[step] / 1000);
+        setMsg('第 ' + (step + 1) + ' 次重试，' + sec + ' 秒后检测…（大课件部署可达 5 分钟）');
+        setTimeout(probe, waits[step++]);
       }
+      probe();
     })();
   </script>
 </body>
