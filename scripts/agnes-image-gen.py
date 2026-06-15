@@ -144,6 +144,8 @@ def main():
     ap.add_argument('--batch', help='批量 JSON 文件')
     ap.add_argument('--out-dir', help='批量输出目录')
     ap.add_argument('--quota', action='store_true', help='仅查询本课件剩余额度')
+    ap.add_argument('--api-base', dest='api_base', default='',
+                    help='覆盖 TEACHANY_API_BASE（默认 https://www.teachany.cn）')
     ap.add_argument('--no-notext-suffix', action='store_true',
                     help='不自动追加无汉字/无文字约束（默认追加）')
     args = ap.parse_args()
