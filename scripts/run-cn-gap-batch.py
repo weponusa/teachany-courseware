@@ -112,6 +112,15 @@ def main() -> int:
             failed.append(nid)
             print(f"❌ failed: {nid}")
 
+    if ok and not args.skip_finalize:
+        qc_targets = [str(ROOT / "community" / g["node_id"]) for g in gaps if g["node_id"] not in failed]
+        if qc_targets:
+            print("\n🔍 Running batch QC…")
+            qc_cmd = [sys.executable, str(SCRIPTS / "qc-cn-batch.py"), *qc_targets]
+            if subprocess.run(qc_cmd, cwd=ROOT).returncode != 0:
+                print("❌ Batch QC failed — fix before push")
+                return 1
+
     print(f"\nDone {ok}/{len(gaps)}")
     if failed:
         print("Failed:", ", ".join(failed))
