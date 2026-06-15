@@ -25,11 +25,30 @@
     <p><a id="new-url" href="https://www.teachany.cn/">如果没有自动打开，点这里</a></p>
   </main>
   <script>
-    var rest = location.pathname.replace(/^\/teachany\//, '');
-    if (/^(community|examples)\//.test(rest)) {
-      var url = 'https://www.teachany.cn/' + rest + location.search + location.hash;
-      document.getElementById('new-url').href = url;
-    }
+    (function () {
+      var path = location.pathname || '';
+      var search = location.search || '';
+      var hash = location.hash || '';
+      var link = document.getElementById('new-url');
+      // 旧 GitHub Pages 前缀 /teachany/community/... → 主站
+      var rest = path.replace(/^\/teachany\//, '');
+      if (/^(community|examples)\//.test(rest)) {
+        var url = 'https://www.teachany.cn/' + rest + search + hash;
+        if (link) link.href = url;
+        // 部署刚完成时可能短暂 404，3 秒后自动重试同一路径
+        setTimeout(function () { location.replace(url); }, 3000);
+        return;
+      }
+      // 已在 www.teachany.cn 上的课件路径：点这里应回到同一路径而非首页
+      if (/^\/community\//.test(path) || /^\/examples\//.test(path)) {
+        var same = 'https://www.teachany.cn' + path + search + hash;
+        if (link) {
+          link.href = same;
+          link.textContent = '如果没有自动打开，点这里重试';
+        }
+        setTimeout(function () { location.replace(same); }, 3000);
+      }
+    })();
   </script>
 </body>
 </html>
