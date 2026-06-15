@@ -33,6 +33,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from html import unescape
 from pathlib import Path
 
@@ -45,6 +46,14 @@ VOICE_BY_SUBJECT = {
     "chinese": "zh-CN-XiaoyiNeural",
 }
 DEFAULT_VOICE = "zh-CN-XiaoxiaoNeural"
+
+
+def voice_for_text(subject: str, text: str) -> str:
+    """按旁白文本语言选音色，避免英语课中文 hero 段用英文 Neural 语音合成失败。"""
+    if re.search(r"[\u4e00-\u9fff]", text):
+        return VOICE_BY_SUBJECT.get("chinese", DEFAULT_VOICE)
+    subj = (subject or "").lower()
+    return VOICE_BY_SUBJECT.get(subj, DEFAULT_VOICE)
 
 # 标准模块文件（self-contained 时复制到课件 assets/scripts/，确保挂树后必可加载）
 STANDARD_MODULES = [
@@ -169,21 +178,47 @@ def find_tts_sections(html: str) -> list[dict]:
     return sections
 
 
-def synthesize_mp3(text: str, voice: str, out_path: Path) -> tuple[bool, str]:
+def section_mp3_path(tts_dir: Path, idx: int, sec: dict) -> Path:
+    slug = re.sub(r"[^a-z0-9]+", "-", sec["tts"].lower()).strip("-") or f"sec{idx}"
+    return tts_dir / f"s{idx:02d}-{slug}.mp3"
+
+
+def sections_audio_complete(course_dir: Path, html: str) -> bool:
+    sections = find_tts_sections(html)
+    if not sections:
+        return count_real_mp3(course_dir) >= 3
+    tts_dir = course_dir / "tts"
+    for idx, sec in enumerate(sections, 1):
+        out = section_mp3_path(tts_dir, idx, sec)
+        if not out.is_file() or out.stat().st_size < MIN_MP3:
+            return False
+    return True
+
+
+def synthesize_mp3(text: str, voice: str, out_path: Path, *, retries: int = 3) -> tuple[bool, str]:
     engine = SCRIPT_DIR / "tts-engine.py"
     if not engine.exists():
         return False, "tts-engine.py 不存在"
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        r = subprocess.run(
-            [sys.executable, str(engine), "--text", text, "--voice", voice,
-             "--output", str(out_path)],
-            capture_output=True, text=True, timeout=120,
-        )
-    except subprocess.TimeoutExpired:
-        return False, "tts 超时"
-    ok = out_path.exists() and out_path.stat().st_size >= MIN_MP3
-    return ok, (r.stdout or r.stderr or "").strip()[:120]
+    msg = ""
+    for attempt in range(retries):
+        if out_path.exists() and out_path.stat().st_size < MIN_MP3:
+            out_path.unlink()
+        try:
+            r = subprocess.run(
+                [sys.executable, str(engine), "--text", text, "--voice", voice,
+                 "--output", str(out_path)],
+                capture_output=True, text=True, timeout=120,
+            )
+        except subprocess.TimeoutExpired:
+            msg = "tts 超时"
+        else:
+            msg = (r.stdout or r.stderr or "").strip()[:120]
+        if out_path.exists() and out_path.stat().st_size >= MIN_MP3:
+            return True, msg
+        if attempt < retries - 1:
+            time.sleep(2 * (attempt + 1))
+    return False, msg
 
 
 def count_real_mp3(course_dir: Path) -> int:
@@ -198,39 +233,37 @@ def count_real_mp3(course_dir: Path) -> int:
 def generate_audio(course_dir: Path, manifest: dict, html: str) -> dict:
     """为每个 data-tts 段落生成 mp3，写 tts/manifest.json。返回报告。
 
-    重要：已有 data-teachany-audio-playlist 或已有 ≥3 个真实 mp3 时**不重新生成**，
-    避免破坏作者已精心录制/命名的音频（命名规则不同会被误判为缺失）。
+    重要：仅当每个 data-tts 段落都有有效 mp3（≥ MIN_MP3）时才跳过生成，
+    避免 playlist 已注入但部分音频失败时被误判为齐全。
     """
     report = {"generated": [], "reused": [], "failed": [], "sections": 0, "skipped": False}
 
-    has_playlist = "data-teachany-audio-playlist" in html
-    existing = count_real_mp3(course_dir)
-    if has_playlist or existing >= 3:
+    sections = find_tts_sections(html)
+    if sections_audio_complete(course_dir, html):
         report["skipped"] = True
-        report["reused"] = [f"已有音频（playlist={has_playlist}, mp3={existing}），跳过生成"]
+        existing = count_real_mp3(course_dir)
+        report["reused"] = [f"已有完整音频（sections={len(sections) or 'n/a'}, mp3={existing}），跳过生成"]
         return report
 
-    sections = find_tts_sections(html)
     report["sections"] = len(sections)
     if not sections:
         return report
 
     subject = (manifest.get("subject") or "").lower()
-    voice = VOICE_BY_SUBJECT.get(subject, DEFAULT_VOICE)
     tts_dir = course_dir / "tts"
     tts_dir.mkdir(parents=True, exist_ok=True)
 
     manifest_entries = []
     for idx, sec in enumerate(sections, 1):
-        slug = re.sub(r"[^a-z0-9]+", "-", sec["tts"].lower()).strip("-") or f"sec{idx}"
-        fname = f"s{idx:02d}-{slug}.mp3"
-        out = tts_dir / fname
+        out = section_mp3_path(tts_dir, idx, sec)
+        fname = out.name
         if out.exists() and out.stat().st_size >= MIN_MP3:
             report["reused"].append(fname)
         else:
             text = sec["text"]
             if len(text) < 10:
                 text = f"{manifest.get('name') or '本节'}。{sec['label']}。"
+            voice = voice_for_text(subject, text)
             ok, msg = synthesize_mp3(text, voice, out)
             if ok:
                 report["generated"].append(fname)
@@ -238,7 +271,7 @@ def generate_audio(course_dir: Path, manifest: dict, html: str) -> dict:
                 report["failed"].append(f"{fname}: {msg}")
                 continue
         manifest_entries.append({
-            "id": f"s{idx:02d}-{slug}",
+            "id": out.stem,
             "file": fname,
             "section": sec["tts"],
             "label": sec["label"],
@@ -246,11 +279,12 @@ def generate_audio(course_dir: Path, manifest: dict, html: str) -> dict:
         })
 
     if manifest_entries:
+        voices = sorted({voice_for_text(subject, sec["text"]) for sec in sections})
         (tts_dir / "manifest.json").write_text(
             json.dumps({
                 "tts_files": manifest_entries,
                 "engine": "tts-engine (multi)",
-                "voice": voice,
+                "voice": voices[0] if len(voices) == 1 else voices,
             }, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
