@@ -260,6 +260,15 @@ def build_html(spec: dict) -> str:
     sm = spec["summary"]
     items = "".join(f'      <div class="summary-item"><span class="num">{i+1}</span><div>{s}</div></div>\n'
                     for i, s in enumerate(sm["items"]))
+    pages.append(slide("kg", idx, "concept", "knowledge-graph", "知识图谱",
+        card(
+            f'<section class="section" id="knowledge-graph">'
+            f'<h2 class="section-title">🧠 知识图谱：{esc(spec["title"])}</h2>'
+            f'<div data-teachany-kg="{esc(nid)}"></div></section>',
+            glow=True),
+        data_bloom_level="2", data_scaffold="full"))
+    idx += 1
+
     pages.append(slide("sum", idx, "summary", "summary", "总结迁移",
         card(f'<div class="section-header"><span class="phase-tag" data-variant="success">Summary</span>'
              f'<h2>这节课我们学会了</h2></div>\n{items}'

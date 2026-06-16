@@ -294,6 +294,10 @@ section.course-section h2 {
   .evidence-grid { grid-template-columns: 1fr; }
 }
 </style>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="./assets/scripts/teachany-historical-map.css">
+
+  <link rel="stylesheet" href="./assets/scripts/teachany-floating-dock.css">
 </head>
 <body>
   <header class="hero">
@@ -387,6 +391,100 @@ section.course-section h2 {
     </div>
   </div>
 </section>
+<!-- ⭐ 标准 Leaflet 历史地图模块（双平台资源：teachany.cn + GitHub）-->
+<section class="ta-standard-section" id="teachany-historical-map">
+  <h2 style="text-align:center;margin-bottom:16px;">🗺️ 地球的形状与大小 · 区域地图</h2>
+  <p style="text-align:center;color:#64748b;margin-bottom:18px;">点击时代按钮切换疆域版图；悬停高亮边界；点击红色城市标记查看详情。</p>
+  <div data-teachany-map="thm-community-geography-earth-shape-size"
+       data-teachany-map-scope="china"
+       data-teachany-map-title="地球的形状与大小 · 区域地图">
+    <script type="application/json" data-teachany-map-config>
+{
+  "eras": [
+    {
+      "id": "era",
+      "label": "中国疆域",
+      "file": "chrono-cn/010-tang-dynasty.geojson",
+      "fill": "#22c55e",
+      "stroke": "#22c55e",
+      "desc": "<strong>地球的形状与大小</strong>：运用地图阅读区域位置、范围与空间联系。",
+      "cities": [
+        [
+          39.9,
+          116.4,
+          "北京",
+          "Beijing",
+          "首都"
+        ],
+        [
+          31.23,
+          121.47,
+          "上海",
+          "Shanghai",
+          "东部沿海"
+        ],
+        [
+          34.34,
+          108.94,
+          "西安",
+          "Xi'an",
+          "西北枢纽"
+        ],
+        [
+          23.13,
+          113.26,
+          "广州",
+          "Guangzhou",
+          "南方门户"
+        ]
+      ]
+    }
+  ],
+  "center": [
+    35,
+    105
+  ],
+  "zoom": 4,
+  "fitBounds": [
+    [
+      18,
+      73
+    ],
+    [
+      54,
+      135
+    ]
+  ],
+  "minZoom": 2,
+  "maxZoom": 8,
+  "overlays": [
+    {
+      "id": "provinces",
+      "label": "省界",
+      "file": "political/admin-boundaries/china-provinces.json",
+      "style": {
+        "color": "#3b82f6",
+        "weight": 1
+      },
+      "visible": true
+    },
+    {
+      "id": "rivers",
+      "label": "河流",
+      "file": "details/rivers-historical.geojson",
+      "style": {
+        "color": "#0ea5e9",
+        "weight": 2
+      },
+      "visible": false
+    }
+  ],
+  "terrain": true
+}
+    </script>
+  </div>
+</section>
+
 
 <!-- ═══ 前测 ═══ -->
 <section id="pretest" class="course-section" data-scaffold="none">
@@ -903,107 +1001,14 @@ document.addEventListener('click', function(e) {
 </script>
 
 <!-- ═══ 知识图谱 ═══ -->
-<section id="knowledge-graph" class="course-section" data-tts="knowledge-graph">
-  <h2>🧠 知识图谱</h2>
-  <p style="color:var(--text-dim);margin-bottom:20px;font-size:14px">看看「地球的形状与大小」在整个地理知识体系中的位置</p>
-
-  <div class="kg-container" id="kgCanvas"></div>
-  <div class="kg-links">
-    <span class="kg-node-link current">📍 地球的形状与大小</span>
-    <span class="kg-node-link missing" title="课件制作中">🌐 地球仪与经纬网</span>
-    <span class="kg-node-link missing" title="课件制作中">🌏 海陆分布</span>
-    <span class="kg-node-link missing" title="课件制作中">🔄 地球的运动</span>
+<!-- v7.7.4 标准知识图谱模块 -->
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;">
+  <h2 class="section-title">🗺️ 知识图谱：地球的形状与大小</h2>
+  <div data-teachany-kg="geo-m-earth-shape-size">
+    <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布占位" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
   </div>
-
-  <script>
-  /* ═══ D3 知识图谱 ═══ */
-  (function(){
-    if (typeof d3 === 'undefined') {
-      const s = document.createElement('script');
-      s.src = 'https://d3js.org/d3.v7.min.js';
-      s.onload = initKG;
-      document.head.appendChild(s);
-    } else { initKG(); }
-
-    function initKG() {
-      const container = document.getElementById('kgCanvas');
-      const W = container.clientWidth, H = container.clientHeight;
-
-      const nodes = [
-        {id:'earth-shape', label:'地球的形状\n与大小', group:'current', bloom:'记忆·理解'},
-        {id:'globe', label:'地球仪\n与经纬网', group:'next', bloom:'理解·应用'},
-        {id:'land-sea', label:'海陆分布', group:'next', bloom:'记忆·理解'},
-        {id:'earth-move', label:'地球的运动', group:'next', bloom:'理解·分析'},
-        {id:'solar', label:'太阳系与\n地球的位置', group:'context', bloom:'记忆'},
-        {id:'map-reading', label:'地图的阅读', group:'context', bloom:'应用'},
-      ];
-
-      const links = [
-        {source:'earth-shape', target:'globe', type:'leads_to'},
-        {source:'earth-shape', target:'land-sea', type:'related'},
-        {source:'earth-shape', target:'earth-move', type:'leads_to'},
-        {source:'earth-shape', target:'solar', type:'context'},
-        {source:'earth-shape', target:'map-reading', type:'context'},
-      ];
-
-      const svg = d3.select('#kgCanvas').append('svg')
-        .attr('width', W).attr('height', H);
-
-      const sim = d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links).id(d => d.id).distance(150))
-        .force('charge', d3.forceManyBody().strength(-400))
-        .force('center', d3.forceCenter(W/2, H/2))
-        .force('collision', d3.forceCollide(60));
-
-      const defs = svg.append('defs');
-
-      const gLink = svg.append('g').selectAll('line')
-        .data(links).join('line')
-        .attr('stroke', '#334155').attr('stroke-width', 1.5)
-        .attr('stroke-dasharray', d => d.type==='context' ? '5,5' : 'none');
-
-      const gNode = svg.append('g').selectAll('g')
-        .data(nodes).join('g').call(d3.drag()
-          .on('start', (e,d) => { if(!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
-          .on('drag', (e,d) => { d.fx = e.x; d.fy = e.y; })
-          .on('end', (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
-
-      gNode.append('rect')
-        .attr('x', d => d.group==='current' ? -80 : -60)
-        .attr('y', -28)
-        .attr('width', d => d.group==='current' ? 160 : 120)
-        .attr('height', 56)
-        .attr('rx', 14)
-        .attr('fill', d => d.group==='current' ? 'url(#grad)' : d.group==='next' ? '#1e293b' : '#0f172a')
-        .attr('stroke', d => d.group==='current' ? '#8b5cf6' : d.group==='next' ? '#3b82f6' : '#334155')
-        .attr('stroke-width', d => d.group==='current' ? 3 : 1.5);
-
-      defs.append('linearGradient').attr('id','grad')
-        .attr('x1','0%').attr('y1','0%').attr('x2','100%').attr('y2','100%');
-      d3.select('#grad').append('stop').attr('offset','0%').attr('stop-color','#3b82f6');
-      d3.select('#grad').append('stop').attr('offset','100%').attr('stop-color','#8b5cf6');
-
-      gNode.append('text')
-        .attr('text-anchor','middle').attr('dy','-0.2em')
-        .attr('fill', d => d.group==='current' ? '#fff' : '#94a3b8')
-        .attr('font-size','13px').attr('font-weight','600')
-        .selectAll('tspan').data(d => d.label.split('\n')).join('tspan')
-        .attr('x',0).attr('dy', (d,i) => i===0?'0em':'1.2em').text(d=>d);
-
-      gNode.append('text')
-        .attr('text-anchor','middle').attr('dy','2.8em')
-        .attr('fill','#64748b').attr('font-size','10px')
-        .text(d => d.bloom);
-
-      sim.on('tick', () => {
-        gLink.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
-             .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
-        gNode.attr('transform', d => `translate(${d.x},${d.y})`);
-      });
-    }
-  })();
-  </script>
 </section>
+
 
 <!-- ═══ 总结 ═══ -->
 <section id="summary" class="course-section" data-tts="summary">
@@ -1051,7 +1056,7 @@ document.addEventListener('click', function(e) {
 </script>
 
 <!-- TeachAny AI 学伴 + TTS -->
-<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="./assets/scripts/ai-tutor.js"></script>
 <script>
 (function initCourse() {
   /* 进度追踪 */
@@ -1133,9 +1138,82 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 })();
 </script>
 
-<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
-<section class="ta-standard-section" id="teachany-knowledge-graph"><h2>知识图谱</h2><div data-teachany-kg="geography-earth-shape-size"></div></section>
-<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="./assets/scripts/teachany-tutor-card.js" defer></script>
+<section class="ta-standard-section" id="teachany-knowledge-graph"><h2>知识图谱</h2><div data-teachany-kg="geo-m-earth-shape-size"></div></section>
+<script src="./assets/scripts/teachany-historical-map.js" defer></script>
+<script src="./assets/scripts/teachany-knowledge-graph.js" defer></script>
 <script src="/assets/scripts/feedback-widget.js" defer></script>
+
+<script src="./assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="./assets/scripts/teachany-section-hints.js" defer></script>
+<script src="./assets/scripts/teachany-audio-player.js" defer></script>
+
+<!-- v7.20 标准连续音频配置（apply-standard-modules 自动补齐） -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "conceptest",
+    "section": "",
+    "src": "./tts/conceptest.mp3",
+    "label": "讲解 1"
+  },
+  {
+    "id": "hero",
+    "section": "",
+    "src": "./tts/hero.mp3",
+    "label": "讲解 2"
+  },
+  {
+    "id": "knowledge-graph",
+    "section": "",
+    "src": "./tts/knowledge-graph.mp3",
+    "label": "讲解 3"
+  },
+  {
+    "id": "mod1",
+    "section": "",
+    "src": "./tts/mod1.mp3",
+    "label": "讲解 4"
+  },
+  {
+    "id": "mod2",
+    "section": "",
+    "src": "./tts/mod2.mp3",
+    "label": "讲解 5"
+  },
+  {
+    "id": "mod3",
+    "section": "",
+    "src": "./tts/mod3.mp3",
+    "label": "讲解 6"
+  },
+  {
+    "id": "objectives",
+    "section": "",
+    "src": "./tts/objectives.mp3",
+    "label": "讲解 7"
+  },
+  {
+    "id": "posttest",
+    "section": "",
+    "src": "./tts/posttest.mp3",
+    "label": "讲解 8"
+  },
+  {
+    "id": "practice",
+    "section": "",
+    "src": "./tts/practice.mp3",
+    "label": "讲解 9"
+  },
+  {
+    "id": "summary",
+    "section": "",
+    "src": "./tts/summary.mp3",
+    "label": "讲解 10"
+  }
+]
+  </script>
+</div>
 </body>
 </html>

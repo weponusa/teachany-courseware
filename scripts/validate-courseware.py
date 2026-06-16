@@ -723,7 +723,7 @@ def main():
         scan_dirs.extend(sorted(examples.iterdir()))
     if community.exists():
         for d in sorted(community.iterdir()):
-            if d.name in ('drafts', 'pending', 'README.md'):
+            if d.name in ('drafts', 'pending', 'README.md', 'archive'):
                 continue
             scan_dirs.append(d)
 

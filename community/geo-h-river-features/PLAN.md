@@ -1,30 +1,7 @@
-# PLAN.md — 河流特征与开发利用：从空间格局到成因机制
+# geo-h-river-features · 河流特征与开发利用（高中地理 G10）
 
-- course_id: `geo-h-river-features`
-- node_id: `geo-h-river-features`
-- 模式：TeachAny v7.14 完整模式
-- 课型：experiment / geography-map-lab
-
-## Phase 0 定义与检索
-- 学段：高中 10 年级
-- 学科：地理
-- 课标节点：河流特征与开发利用
-- 课标摘录：绘制示意图，解释各类陆地水体之间的相互关系。；运用世界洋流分布图，说明世界洋流的分布规律，并举例说明洋流对地理环境和人类活动的影响。；运用示意图，说明水循环的过程及其地理意义。
-
-## Phase 1 教学骨架
-- 问题锚点：怎样用地图、图表和过程证据解释河流特征与开发利用的空间格局与成因？
-- ABT：
-  - And：你已经能在地图或材料中看到河流特征与开发利用相关的现象，比如位置差异、区域分布或时间变化。
-  - But：高质量地理分析不能只描述“哪里多、哪里少”，还要解释为什么这样分布、条件改变后会怎样变化。
-  - Therefore：所以本课要用“定位—读图—找因果—评估人地影响”的路径，建立河流特征与开发利用的可迁移分析方法。
-- 真实互动：地图图层 Canvas + 投影变形提示 + 前后测反馈
-- 评估闭环：前测 → 读图检查表 → 概念拆解 → 地图互动 → 后测 → 迁移任务
-
-## Phase 2 标准模块
-- 已挂载 AI 学伴、导师卡片、TTS narrator、section hints、知识图谱、连续音频播放器。
-- 地理互动：使用地图图层 Canvas，显式提示等距圆柱投影高纬面积变形。
-
-## Phase 3 验证计划
-- `node scripts/validate-courseware.cjs community/geo-h-river-features`
-- `python3 scripts/validate-courseware.py geo-h-river-features`
-- `python3 scripts/rebuild-index.py`
+- 课型：概念探究
+- 闭环：问题锚点→前测→河流特征与开发利用：课标核心是什么？→怎样学好河流特征与开发利用？→拖拽互动→练习→后测→总结迁移
+- 互动：分一分：河流特征与开发利用学习要素归类
+- 三模块由 finalize-courseware.py self-contained 注入
+- 反馈密码：features+2026

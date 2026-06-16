@@ -8,9 +8,21 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+_map_path = SCRIPT_DIR / "cn-map-config.py"
+if _map_path.is_file():
+    _spec = importlib.util.spec_from_file_location("cn_map_config", _map_path)
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    default_map_config = _mod.default_map_config
+else:
+    def default_map_config(_spec):  # type: ignore
+        return None
 
 ROOT = Path(__file__).resolve().parents[1]
 KP_ROOT = ROOT / "data" / "kp"
@@ -261,6 +273,9 @@ def build_spec(node_id: str) -> dict:
             "transfer": f"找一道与「{name}」相关的练习题或生活情境，用本课方法完整解答一遍。",
         },
     }
+    if subject in ("history", "geography"):
+        spec["map_config"] = default_map_config(spec)
+    return spec
 
 
 def agnes_batch(spec: dict) -> list[dict]:

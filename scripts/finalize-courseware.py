@@ -65,6 +65,39 @@ STANDARD_MODULES = [
     "teachany-audio-player.css", "teachany-audio-player.js",
     "teachany-floating-dock.css",
 ]
+MAP_MODULES = ["teachany-historical-map.css", "teachany-historical-map.js"]
+LEAFLET_CSS = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">'
+LEAFLET_JS = '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>'
+
+
+def modules_for_html(html: str) -> list[str]:
+    mods = list(STANDARD_MODULES)
+    if "data-teachany-map" in html:
+        mods.extend(MAP_MODULES)
+    return mods
+
+
+def ensure_map_assets(html: str) -> tuple[str, list[str]]:
+    if "data-teachany-map" not in html:
+        return html, []
+    actions: list[str] = []
+    if "leaflet@1.9.4" not in html and "</head>" in html:
+        html = html.replace("</head>", f"{LEAFLET_CSS}\n</head>", 1)
+        actions.append("leaflet-css")
+    hist_css = "./assets/scripts/teachany-historical-map.css"
+    if hist_css not in html and "teachany-historical-map.css" not in html and "</head>" in html:
+        html = html.replace("</head>", f'  <link rel="stylesheet" href="{hist_css}">\n</head>', 1)
+        actions.append("historical-map-css")
+    if "leaflet@1.9.4/dist/leaflet.js" not in html:
+        marker = '<script src="./assets/scripts/teachany-knowledge-graph.js"'
+        hist_js = f'{LEAFLET_JS}\n<script src="./assets/scripts/teachany-historical-map.js" defer></script>\n'
+        if marker in html:
+            html = html.replace(marker, hist_js + marker, 1)
+            actions.append("historical-map-js")
+        elif "</body>" in html:
+            html = html.replace("</body>", hist_js + "</body>", 1)
+            actions.append("historical-map-js")
+    return html, actions
 
 
 def find_module_source(course_dir: Path) -> Path | None:
@@ -94,7 +127,7 @@ def make_self_contained(course_dir: Path, html: str) -> tuple[str, dict]:
     dest = course_dir / "assets" / "scripts"
     dest.mkdir(parents=True, exist_ok=True)
     import shutil
-    for name in STANDARD_MODULES:
+    for name in modules_for_html(html):
         s = src / name
         d = dest / name
         if not s.is_file():
@@ -104,9 +137,89 @@ def make_self_contained(course_dir: Path, html: str) -> tuple[str, dict]:
             report["copied"].append(name)
 
     # 引用路径统一改为课件本地 ./assets/scripts/
-    new_html, n = re.subn(r'(?:\.\./)+assets/scripts/', './assets/scripts/', html)
-    report["rewrote"] = n
+    new_html, n1 = re.subn(r'(?:\.\./)+assets/scripts/', './assets/scripts/', html)
+    new_html, n2 = re.subn(r'(?:\.\./)+scripts/', './assets/scripts/', new_html)
+    report["rewrote"] = n1 + n2
     return new_html, report
+
+
+def _load_apply_maps():
+    path = SCRIPT_DIR / "apply-historical-maps.py"
+    spec = importlib.util.spec_from_file_location("apply_maps", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+FALLBACK_KG_NODES = {
+    "sci-e-3d-printing-blender": "sci-e-design-process",
+}
+
+
+def normalize_kg_node_id(course_dir: Path, html: str, manifest: dict) -> tuple[str, str | None]:
+    """Align all data-teachany-kg ids with manifest node_id when missing from KG manifest."""
+    ids = re.findall(r'data-teachany-kg=["\']([^"\']+)["\']', html, re.I)
+    if not ids:
+        return html, None
+    src_root = find_module_source(course_dir)
+    if not src_root:
+        return html, None
+    mf = src_root / "teachany-kg-manifest.json"
+    if not mf.is_file():
+        return html, None
+    try:
+        kg = json.loads(mf.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return html, None
+    nodes = kg.get("nodes") or {}
+    if all(i in nodes for i in set(ids)):
+        return html, None
+
+    target = manifest.get("node_id") or manifest.get("id") or manifest.get("courseId")
+    if not target or target not in nodes:
+        cid = course_dir.name
+        for nid, node in nodes.items():
+            for c in node.get("courses") or []:
+                if c.get("id") == cid or c.get("path", "").endswith(cid):
+                    target = nid
+                    break
+            if target and target in nodes:
+                break
+    if not target or target not in nodes:
+        fb = FALLBACK_KG_NODES.get(course_dir.name)
+        if fb and fb in nodes:
+            target = fb
+    if not target or target not in nodes:
+        return html, None
+
+    fixes = []
+    for kid in sorted(set(ids)):
+        if kid in nodes:
+            continue
+        html = html.replace(f'data-teachany-kg="{kid}"', f'data-teachany-kg="{target}"')
+        html = html.replace(f"data-teachany-kg='{kid}'", f"data-teachany-kg='{target}'")
+        fixes.append(f"{kid}->{target}")
+    return html, ", ".join(fixes) if fixes else None
+
+
+def ensure_kg_manifest(course_dir: Path, html: str) -> tuple[str, list[str]]:
+    """Copy teachany-kg-manifest.json into course assets/scripts for self-contained KG."""
+    if "data-teachany-kg" not in html:
+        return html, []
+    src_root = find_module_source(course_dir)
+    if not src_root:
+        return html, []
+    manifest_src = src_root / "teachany-kg-manifest.json"
+    if not manifest_src.is_file():
+        return html, []
+    import shutil
+    dest_dir = course_dir / "assets" / "scripts"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / "teachany-kg-manifest.json"
+    if (not dest.exists()) or dest.stat().st_size != manifest_src.stat().st_size:
+        shutil.copy2(manifest_src, dest)
+        return html, ["kg-manifest"]
+    return html, []
 
 
 def _load_apply_modules():
@@ -326,6 +439,24 @@ def finalize(course_dir: Path, do_audio: bool = True, self_contained: bool = Tru
     else:
         actions["kg"] = "skipped-no-node-id"
 
+    html, map_actions = ensure_map_assets(html)
+    if map_actions:
+        actions["map_modules"] = map_actions
+
+    maps_mod = _load_apply_maps()
+    if maps_mod and "data-teachany-map" in html:
+        html, map_sync = maps_mod.sync_map_config_in_html(course_dir, html)
+        if map_sync.get("changed"):
+            actions["map_config_sync"] = map_sync
+
+    html, kg_norm = normalize_kg_node_id(course_dir, html, manifest)
+    if kg_norm:
+        actions["kg_node_id"] = kg_norm
+
+    _, kg_manifest_actions = ensure_kg_manifest(course_dir, html)
+    if kg_manifest_actions:
+        actions["kg_manifest"] = kg_manifest_actions
+
     audio_report = {"sections": 0, "generated": [], "reused": [], "failed": []}
     if do_audio:
         audio_report = generate_audio(course_dir, manifest, html)
@@ -390,6 +521,13 @@ def main() -> int:
         print("  ✚ AI 学伴配置 __TEACHANY_TUTOR_CONFIG__")
     if a.get("kg") and a["kg"] not in ("unchanged",):
         print(f"  ✚ 知识图谱：{a['kg']}")
+    if a.get("map_config_sync") and a["map_config_sync"].get("changed"):
+        ms = a["map_config_sync"]
+        print(f"  ✚ 地图配置同步：eras={ms.get('copied_eras', 0)} overlays={ms.get('copied_overlays', 0)}")
+    if a.get("kg_node_id"):
+        print(f"  ✚ 知识图谱 node_id 对齐：{a['kg_node_id']}")
+    if a.get("kg_manifest"):
+        print("  ✚ 知识图谱 manifest 自包含复制")
     au = report["audio"]
     if au.get("skipped"):
         print("  🔊 音频：已有 playlist/mp3，保留作者原音频（未重新生成）")

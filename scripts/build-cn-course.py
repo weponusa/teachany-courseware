@@ -13,12 +13,21 @@ from __future__ import annotations
 import argparse
 import hashlib
 import html
+import importlib.util
 import json
+import re
 import sys
 from datetime import date
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+_map_mod = importlib.util.spec_from_file_location("cn_map_config", SCRIPT_DIR / "cn-map-config.py")
+_cn_map = importlib.util.module_from_spec(_map_mod)
+_map_mod.loader.exec_module(_cn_map)
+default_map_config = _cn_map.default_map_config
+_maps_spec = importlib.util.spec_from_file_location("apply_maps", SCRIPT_DIR / "apply-historical-maps.py")
+_apply_maps = importlib.util.module_from_spec(_maps_spec)
+_maps_spec.loader.exec_module(_apply_maps)
 REPO_ROOT = SCRIPT_DIR.parent
 COMMUNITY = REPO_ROOT / "community"
 STAGE_LABEL = {"elementary": "小学", "middle": "初中", "high": "高中"}
@@ -53,48 +62,88 @@ THEMES = {
     },
 }
 
+# 学段视觉：中学/高中不用小学糖果色全屏模板
+STAGE_THEMES = {
+    "middle": {
+        "bg": "#f8fafc", "text": "#1e293b", "cover_grad": "#cbd5e1", "h1": "#1e3a8a",
+        "card_border": "#cbd5e1", "accent": "#3b82f6", "header": "#1e3a8a",
+        "tag_bg": "#dbeafe", "tag_fg": "#1d4ed8", "obj_bg": "#f1f5f9", "choice_border": "#94a3b8",
+        "choice_bg": "#f8fafc", "input_bg": "#ffffff", "caption": "#64748b", "num": "#2563eb",
+        "canvas_bg": "#f1f5f9", "drag_dash": "#94a3b8", "drag_chip_bg": "#e2e8f0", "shadow": "30,58,138",
+        "radius": "14px", "cover_h1": "clamp(26px,4.8vw,42px)", "body_class_extra": "teachany-middle-pro",
+    },
+    "high": {
+        "bg": "#0f172a", "text": "#e2e8f0", "cover_grad": "#334155", "h1": "#93c5fd",
+        "card_border": "rgba(148,163,184,0.25)", "accent": "#60a5fa", "header": "#f1f5f9",
+        "tag_bg": "rgba(96,165,250,0.15)", "tag_fg": "#93c5fd", "obj_bg": "rgba(30,41,59,0.55)",
+        "choice_border": "rgba(148,163,184,0.35)", "choice_bg": "rgba(30,41,59,0.65)",
+        "input_bg": "rgba(15,23,42,0.8)", "caption": "#94a3b8", "num": "#60a5fa",
+        "canvas_bg": "rgba(30,41,59,0.55)", "drag_dash": "rgba(148,163,184,0.4)",
+        "drag_chip_bg": "rgba(51,65,85,0.8)", "shadow": "15,23,42",
+        "radius": "12px", "cover_h1": "clamp(24px,4.2vw,38px)", "body_class_extra": "teachany-high-pro",
+    },
+}
+
 
 def esc(s: str) -> str:
     return html.escape(str(s), quote=True)
 
 
+def resolve_theme(spec: dict) -> dict:
+    stage = spec.get("stage", "elementary")
+    if stage in STAGE_THEMES:
+        t = dict(STAGE_THEMES[stage])
+        accent = THEMES.get(spec.get("theme_color", "blue"), {}).get("accent")
+        if accent and stage == "middle":
+            t["accent"] = accent
+            t["num"] = accent
+        return t
+    return THEMES[spec.get("theme_color", "blue")]
+
+
 def css(theme: dict) -> str:
     t = theme
     s = t["shadow"]
+    radius = t.get("radius", "18px")
+    cover_h1 = t.get("cover_h1", "clamp(28px,5.5vw,48px)")
+    card_bg = "#fff" if t.get("bg", "#fff") != "#0f172a" else "rgba(30,41,59,0.65)"
     return f"""<style>
 *{{box-sizing:border-box}}html,body{{margin:0}}
 body{{background:{t['bg']};color:{t['text']};font-family:-apple-system,"PingFang SC",sans-serif;line-height:1.8}}
 .slide-container{{height:100dvh;overflow-y:auto;scroll-snap-type:y proximity}}
 .slide-page{{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;scroll-snap-align:start}}
-.slide-inner{{max-width:860px;width:100%;margin:0 auto}}
+.slide-inner{{max-width:900px;width:100%;margin:0 auto}}
 .slide-page[data-page-type=cover]{{text-align:center;background:radial-gradient(ellipse at 30% 20%,{t['cover_grad']},transparent 55%)}}
-.slide-page[data-page-type=cover] h1{{font-size:clamp(28px,5.5vw,48px);color:{t['h1']};margin:0 0 14px}}
-.card{{background:#fff;border:1px solid {t['card_border']};border-radius:18px;padding:24px;box-shadow:0 6px 24px rgba({s},.08)}}
+.slide-page[data-page-type=cover] h1{{font-size:{cover_h1};color:{t['h1']};margin:0 0 14px;font-weight:800}}
+.card{{background:{card_bg};border:1px solid {t['card_border']};border-radius:{radius};padding:24px;box-shadow:0 6px 24px rgba({s},.08)}}
 .card-accent{{border-top:4px solid {t['accent']}}}.card-glow{{box-shadow:0 6px 30px rgba({s},.18)}}
 .section-header{{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}}
-.section-header h2{{font-size:clamp(20px,4vw,26px);margin:0;color:{t['header']}}}
+.section-header h2{{font-size:clamp(20px,3.6vw,24px);margin:0;color:{t['header']};font-weight:700}}
 .phase-tag{{background:{t['tag_bg']};color:{t['tag_fg']};border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700}}
 .phase-tag[data-variant=success]{{background:#dcfce7;color:#15803d}}.phase-tag[data-variant=purple]{{background:#ede9fe;color:#6d28d9}}.phase-tag[data-variant=warn]{{background:#fef3c7;color:#b45309}}
 .grid{{display:grid;gap:10px}}
 .objectives{{list-style:none;padding:0;margin:0;display:grid;gap:10px}}
 .objectives li{{background:{t['obj_bg']};border:1px solid {t['card_border']};border-radius:12px;padding:12px 16px}}
 .choice{{width:100%;text-align:left;border:1px solid {t['choice_border']};border-radius:12px;background:{t['choice_bg']};color:{t['text']};padding:14px 18px;cursor:pointer;font-size:15px;min-height:44px}}
-.choice:hover{{opacity:.92}}.choice.correct{{border-color:#22c55e;background:#dcfce7}}.choice.wrong{{border-color:#ef4444;background:#fee2e2}}
-input,textarea{{width:100%;border:1px solid {t['choice_border']};border-radius:10px;padding:12px;font-size:15px;background:{t['input_bg']};min-height:44px}}
-.result{{padding:14px 18px;border-radius:12px;background:#dcfce7;border:1px solid #bbf7d0;margin-top:10px}}
-.result.warn{{background:#fef3c7;border-color:#fde68a}}
-.ta-standard-figure{{margin:18px auto;max-width:600px}}.ta-standard-figure img{{width:100%;border-radius:12px;border:1px solid {t['card_border']}}}
+.choice:hover{{opacity:.92}}.choice.correct{{border-color:#22c55e;background:#dcfce7;color:#14532d}}.choice.wrong{{border-color:#ef4444;background:#fee2e2;color:#7f1d1d}}
+input,textarea{{width:100%;border:1px solid {t['choice_border']};border-radius:10px;padding:12px;font-size:15px;background:{t['input_bg']};color:{t['text']};min-height:44px}}
+.result{{padding:14px 18px;border-radius:12px;background:#dcfce7;border:1px solid #bbf7d0;margin-top:10px;color:#14532d}}
+.result.warn{{background:#fef3c7;border-color:#fde68a;color:#78350f}}
+.ta-standard-figure{{margin:18px auto;max-width:640px}}.ta-standard-figure img{{width:100%;border-radius:12px;border:1px solid {t['card_border']}}}
 .ta-standard-figure figcaption{{text-align:center;color:{t['caption']};font-size:14px;margin-top:8px}}
 .summary-item{{display:flex;gap:10px;padding:12px 16px;border:1px solid {t['card_border']};border-radius:12px;margin-bottom:8px}}
 .summary-item .num{{font-weight:800;color:{t['num']}}}
-.subtitle{{color:{t['tag_fg']};font-size:clamp(16px,3vw,20px);max-width:640px;margin:0 auto}}
+.subtitle{{color:{t['tag_fg']};font-size:clamp(15px,2.8vw,18px);max-width:640px;margin:0 auto}}
 .canvas-wrap{{overflow:auto;background:{t['canvas_bg']};border:1px solid {t['card_border']};border-radius:12px;padding:12px;min-height:120px;text-align:center;color:{t['caption']}}}
 .phet-wrap{{position:relative;padding-top:62.5%;border-radius:12px;overflow:hidden;background:{t['canvas_bg']};border:1px solid {t['card_border']}}}
 .phet-wrap iframe{{position:absolute;top:0;left:0;width:100%;height:100%;border:0}}
 .drag-pool,.drop-zone{{display:flex;flex-wrap:wrap;gap:8px;min-height:56px;padding:10px;border:2px dashed {t['drag_dash']};border-radius:12px;background:{t['choice_bg']}}}
 .drop-zone{{border-style:solid;min-height:80px;flex-direction:column;align-items:stretch}}
-.drag-chip{{display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border-radius:10px;background:{t['drag_chip_bg']};border:2px solid {t['drag_dash']};cursor:grab;font-size:14px;touch-action:none;user-select:none}}
+.drag-chip{{display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border-radius:10px;background:{t['drag_chip_bg']};border:2px solid {t['drag_dash']};cursor:grab;font-size:14px;touch-action:none;user-select:none;color:{t['text']}}}
 .drag-chip.dragging{{opacity:.55;cursor:grabbing}}.drop-zone h4{{margin:0 0 8px;font-size:14px;color:{t['header']}}}
+.map-host{{min-height:360px;border-radius:12px;overflow:hidden;border:1px solid {t['card_border']}}}
+#knowledge-graph .section-title{{font-size:clamp(20px,3.6vw,24px);margin:0 0 12px;color:{t['header']}}}
+#knowledge-graph [data-teachany-kg]{{min-height:180px}}
 </style>"""
 
 
@@ -127,10 +176,49 @@ def quiz_choices(choices: list, correct: int) -> str:
     return "\n".join(lines)
 
 
+def map_config_for(spec: dict) -> dict | None:
+    return spec.get("map_config") or default_map_config(spec)
+
+
+def build_map_inner(spec: dict, cfg: dict) -> str:
+    nid = spec["node_id"]
+    map_id = "thm-" + re.sub(r"[^a-z0-9-]+", "-", nid.lower())[:40]
+    config_json = json.dumps({
+        "eras": cfg["eras"],
+        "center": cfg.get("center", [34, 108]),
+        "zoom": cfg.get("zoom", 4),
+        "fitBounds": cfg.get("fitBounds"),
+        "minZoom": cfg.get("minZoom", 2),
+        "maxZoom": cfg.get("maxZoom", 8),
+        **({"overlays": cfg["overlays"]} if cfg.get("overlays") else {}),
+        **({"terrain": cfg.get("terrain", True)} if cfg.get("terrain") is not False else {}),
+    }, ensure_ascii=False, indent=2)
+    scope = cfg.get("scope", "china")
+    hint = "点击时代/图层按钮切换地图；悬停边界，点击城市标记查看说明。" if scope == "china" else "点击时代按钮切换世界格局；结合本课主题观察空间分布。"
+    return (
+        f'<div class="section-header"><span class="phase-tag" data-variant="success">Map</span>'
+        f'<h2>{esc(cfg["title"])}</h2></div>'
+        f'<p style="margin:0 0 12px;color:inherit;opacity:.85">{esc(hint)}</p>'
+        f'<div class="map-host" data-teachany-map="{map_id}" data-teachany-map-scope="{esc(scope)}" '
+        f'data-teachany-map-title="{esc(cfg["title"])}">'
+        f'<script type="application/json" data-teachany-map-config>\n{config_json}\n</script>'
+        f'</div>'
+    )
+
+
+def prepare_map_assets(course_dir: Path, cfg: dict) -> dict:
+    """Resolve geojson paths and copy map assets before embedding config in HTML."""
+    cfg = json.loads(json.dumps(cfg))
+    _apply_maps.ensure_map_projection_defaults(cfg)
+    _apply_maps.copy_geojson_files(course_dir, cfg.get("scope", "china"), cfg["eras"])
+    _apply_maps.copy_overlay_files(course_dir, cfg.get("overlays", []))
+    return cfg
+
+
 def build_html(spec: dict) -> str:
     nid = spec["node_id"]
     grade = spec["grade"]
-    theme = THEMES[spec.get("theme_color", "blue")]
+    theme = resolve_theme(spec)
     hero = f"./assets/{nid}-hero.png"
     pages: list[str] = []
     idx = 0
@@ -192,6 +280,13 @@ def build_html(spec: dict) -> str:
             card(f'<div class="section-header"><span class="phase-tag">{tag if si == 0 else "Examples"}</span>'
                  f'<h2>{esc(sec["title"])}</h2></div>{paras}{img_block}',
                  accent=(si == 0)), data_bloom_level=str(min(si + 2, 4)), data_scaffold="full" if si == 0 else "partial"))
+        idx += 1
+
+    map_cfg = map_config_for(spec)
+    if map_cfg:
+        pages.append(slide("map", idx, "interactive", "map-explore", "地图探究",
+            card(build_map_inner(spec, map_cfg), glow=True),
+            data_bloom_level="3", data_scaffold="partial"))
         idx += 1
 
     # PhET
@@ -266,6 +361,16 @@ def build_html(spec: dict) -> str:
     sm = spec["summary"]
     items = "".join(f'      <div class="summary-item"><span class="num">{i+1}</span><div>{s}</div></div>\n'
                     for i, s in enumerate(sm["items"]))
+
+    pages.append(slide("kg", idx, "concept", "knowledge-graph", "知识图谱",
+        card(
+            f'<section class="section" id="knowledge-graph">'
+            f'<h2 class="section-title">🧠 知识图谱：{esc(spec["title"])}</h2>'
+            f'<div data-teachany-kg="{esc(nid)}"></div></section>',
+            glow=True),
+        data_bloom_level="2", data_scaffold="full"))
+    idx += 1
+
     pages.append(slide("sum", idx, "summary", "summary", "总结迁移",
         card(f'<div class="section-header"><span class="phase-tag" data-variant="success">Summary</span>'
              f'<h2>这节课我们学会了</h2></div>\n{items}'
@@ -358,7 +463,12 @@ def build_html(spec: dict) -> str:
     stage_cn = STAGE_LABEL.get(stage, stage)
     subj_cn = SUBJECT_LABEL.get(subject, subject)
     lesson = spec.get("lesson_type", "concept-inquiry")
-    body_cls = f"teachany-{stage}" if stage else "teachany-cn"
+    body_cls = f"teachany-{stage}"
+    if theme.get("body_class_extra"):
+        body_cls += f" {theme['body_class_extra']}"
+    head_map = ""
+    if map_cfg:
+        head_map = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">\n'
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -376,9 +486,9 @@ def build_html(spec: dict) -> str:
 <meta name="teachany-stage" content="{esc(stage)}">
 <meta name="teachany-lesson-type" content="{esc(lesson)}">
 <meta name="teachany-version" content="{TEACHANY_VERSION}">
-<meta name="teachany-template-version" content="2.0">
+<meta name="teachany-template-version" content="2.1">
 {css(theme)}
-</head>
+{head_map}</head>
 <body class="{body_cls}">
 <div class="slide-container" id="slide-container">
 {chr(10).join(pages)}
@@ -452,6 +562,9 @@ def main() -> int:
     nid = spec["node_id"]
     out = COMMUNITY / nid
     out.mkdir(parents=True, exist_ok=True)
+    map_cfg = map_config_for(spec)
+    if map_cfg:
+        spec["map_config"] = prepare_map_assets(out, map_cfg)
     (out / "index.html").write_text(build_html(spec), encoding="utf-8")
     (out / "manifest.json").write_text(json.dumps(build_manifest(spec), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (out / "PLAN.md").write_text(build_plan(spec), encoding="utf-8")

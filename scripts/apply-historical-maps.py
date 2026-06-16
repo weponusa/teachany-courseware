@@ -97,6 +97,20 @@ def _load_map_manifest():
             if key:
                 index[key] = path
                 index[key + ".geojson"] = path
+                index[key + ".json"] = path
+    # 历史裸名别名（cn-map-config 旧 key → MANIFEST path）
+    for legacy, key in (
+        ("ce-1815.geojson", "ce-1815-vienna"),
+        ("ce-1914.geojson", "ce-1914-wwi"),
+        ("ce-1700.geojson", "ce-1700"),
+        ("ce-1880.geojson", "ce-1880"),
+        ("ce-2000.geojson", "ce-2000"),
+        ("bce-500.geojson", "bce-500"),
+    ):
+        if key in index:
+            index[legacy] = index[key]
+        elif key + ".geojson" in index:
+            index[legacy] = index[key + ".geojson"]
     _MANIFEST_INDEX = index
     return index
 
@@ -108,9 +122,12 @@ def resolve_relpath(file_name):
     idx = _load_map_manifest()
     if file_name in idx:
         return idx[file_name]
-    key = file_name.replace(".geojson", "")
+    key = file_name.replace(".geojson", "").replace(".json", "")
     if key in idx:
         return idx[key]
+    # 已是 manifest 相对路径（如 chrono-cn/010-tang-dynasty.geojson）
+    if "/" in file_name and _use_local() and (LOCAL_MAPS_DIR / file_name).exists():
+        return file_name
     return None
 
 
@@ -185,6 +202,54 @@ def ensure_map_projection_defaults(cfg):
     cfg.pop("hillshade", None)
     if cfg.get("terrain") is None:
         cfg["terrain"] = True
+
+
+def sync_map_config_in_html(course_dir: Path, html: str) -> tuple[str, dict]:
+    """Resolve geojson paths, copy assets, rewrite embedded map config JSON in HTML."""
+    report = {"changed": False, "copied_eras": 0, "copied_overlays": 0}
+    pat = re.compile(
+        r'(<script type="application/json" data-teachany-map-config>\s*)([\s\S]*?)(\s*</script>)',
+        re.I,
+    )
+    m = pat.search(html)
+    if not m:
+        return html, report
+    try:
+        cfg = json.loads(m.group(2))
+    except json.JSONDecodeError:
+        report["error"] = "invalid-json"
+        return html, report
+
+    scope_m = re.search(
+        r'data-teachany-map-scope=["\']([^"\']+)["\']',
+        html[max(0, m.start() - 800) : m.start()],
+        re.I,
+    )
+    scope = scope_m.group(1) if scope_m else cfg.get("scope", "china")
+    ensure_map_projection_defaults(cfg)
+    report["copied_eras"] = copy_geojson_files(course_dir, scope, cfg.get("eras", []))
+    report["copied_overlays"] = copy_overlay_files(course_dir, cfg.get("overlays", []))
+
+    config_dict = {
+        "eras": cfg.get("eras", []),
+        "center": cfg.get("center", [34, 108]),
+        "zoom": cfg.get("zoom", 4),
+        "fitBounds": cfg.get("fitBounds"),
+        "minZoom": cfg.get("minZoom", 2),
+        "maxZoom": cfg.get("maxZoom", 8),
+    }
+    if cfg.get("overlays"):
+        config_dict["overlays"] = cfg["overlays"]
+    if cfg.get("terrain") is not False:
+        config_dict["terrain"] = cfg.get("terrain", True)
+
+    new_json = json.dumps(config_dict, ensure_ascii=False, indent=2)
+    if new_json.strip() == m.group(2).strip():
+        report["changed"] = report["copied_eras"] > 0 or report["copied_overlays"] > 0
+        return html, report
+    new_html = html[: m.start(2)] + new_json + html[m.end(2) :]
+    report["changed"] = True
+    return new_html, report
 
 
 def inject_head(html):
