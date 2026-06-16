@@ -219,7 +219,7 @@ def build_html(spec: dict) -> str:
     nid = spec["node_id"]
     grade = spec["grade"]
     theme = resolve_theme(spec)
-    hero = f"./assets/{nid}-hero.png"
+    hero = "./assets/hero-infographic.svg"
     pages: list[str] = []
     idx = 0
 
@@ -502,7 +502,7 @@ def build_html(spec: dict) -> str:
 def build_manifest(spec: dict) -> dict:
     nid = spec["node_id"]
     pwd = spec["password_hint"]
-    images = [f"assets/{nid}-hero.png"] + [f"assets/{s['image']}" for s in spec["sections"] if s.get("image")]
+    images = ["assets/hero-infographic.svg", "assets/concept-diagram.svg", "assets/process-diagram.svg"]
     return {
         "id": nid, "course_id": nid, "node_id": nid,
         "name": spec["title"], "name_en": spec.get("name_en", spec["title"]),
@@ -515,7 +515,7 @@ def build_manifest(spec: dict) -> dict:
         "description": spec.get("description", spec["subtitle"]),
         "tags": spec.get("tags", []),
         "learning_objectives": spec["objectives"],
-        "assets": {"hero": f"assets/{nid}-hero.png", "images": images},
+        "assets": {"hero": "assets/hero-infographic.svg", "images": images},
         "has_tts": False, "has_phet": bool(spec.get("phet_slug")),
         "has_drag": bool(spec.get("drag_activity")),
         "feedback": {
@@ -550,6 +550,34 @@ def build_plan(spec: dict) -> str:
 """
 
 
+def ensure_cn_svgs(out: Path, spec: dict) -> None:
+    """Ensure standard SVG illustrations exist (idempotent)."""
+    assets = out / "assets"
+    assets.mkdir(parents=True, exist_ok=True)
+    title = spec.get("title", spec.get("node_id", "课件"))
+
+    def svg(subtitle: str) -> str:
+        t = html.escape(title[:40])
+        s = html.escape(subtitle[:56])
+        return (
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">'
+            f'<rect width="960" height="540" fill="#eff6ff"/>'
+            f'<text x="48" y="96" fill="#1e3a8a" font-size="34" font-weight="800">{t}</text>'
+            f'<text x="48" y="150" fill="#475569" font-size="22">{s}</text>'
+            f"</svg>"
+        )
+
+    defaults = {
+        "hero-infographic.svg": svg("知识结构图"),
+        "concept-diagram.svg": svg("核心概念示意"),
+        "process-diagram.svg": svg("过程机制示意"),
+    }
+    for name, content in defaults.items():
+        path = assets / name
+        if not path.is_file():
+            path.write_text(content, encoding="utf-8")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Build CN courseware from JSON spec")
     ap.add_argument("--spec", required=True, help="Path to spec JSON")
@@ -568,6 +596,7 @@ def main() -> int:
     (out / "index.html").write_text(build_html(spec), encoding="utf-8")
     (out / "manifest.json").write_text(json.dumps(build_manifest(spec), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (out / "PLAN.md").write_text(build_plan(spec), encoding="utf-8")
+    ensure_cn_svgs(out, spec)
     print(f"Built {out}/")
     print(f"  index.html  manifest.json  PLAN.md")
     return 0

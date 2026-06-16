@@ -228,7 +228,7 @@ def build_spec(node_id: str) -> dict:
                     f"<strong>{name}</strong>是{stage_cn}{subj_cn}的重要内容。{t1}",
                     t2,
                 ],
-                "image": "section1.png",
+                "image": "concept-diagram.svg",
                 "caption": f"{name}核心概念示意",
             },
             {
@@ -240,7 +240,7 @@ def build_spec(node_id: str) -> dict:
                     f"学习路径：<strong>明确概念</strong>→<strong>掌握方法</strong>→<strong>情境练习</strong>→<strong>反思纠错</strong>。",
                     t3,
                 ],
-                "image": "section2.png",
+                "image": "process-diagram.svg",
                 "caption": f"{name}方法与应用",
             },
         ],
