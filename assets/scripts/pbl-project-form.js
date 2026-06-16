@@ -45,6 +45,30 @@
   ];
 
   const DELIVERABLE_LABELS = Object.fromEntries(DELIVERABLE_OPTIONS.map(o => [o.id, o.label]));
+  const SUBJECT_LABEL_MAP = Object.fromEntries(SUBJECT_OPTIONS.map(o => [o.id, o.label]));
+
+  function normalizeSubjects(raw) {
+    const s = raw || {};
+    if (Array.isArray(s.subjects) && s.subjects.length) {
+      const ids = [...new Set(s.subjects.map(String).filter(id => id && id !== 'cross'))];
+      if (!ids.length) return { subject: 'cross', subjects: [] };
+      return {
+        subject: ids.length === 1 ? ids[0] : 'cross',
+        subjects: ids,
+      };
+    }
+    if (s.subject && s.subject !== 'cross') {
+      return { subject: s.subject, subjects: [s.subject] };
+    }
+    return { subject: 'cross', subjects: [] };
+  }
+
+  function formatSubjectLabel(spec) {
+    const { subjects } = normalizeSubjects(spec);
+    if (!subjects.length) return '跨学科';
+    if (subjects.length === 1) return SUBJECT_LABEL_MAP[subjects[0]] || subjects[0];
+    return subjects.map(id => SUBJECT_LABEL_MAP[id] || id).join('、');
+  }
 
   function normalizeGradeDetails(s) {
     if (Array.isArray(s.gradeDetails) && s.gradeDetails.length) {
@@ -84,7 +108,7 @@
       lockGradeBand: s.lockGradeBand !== false,
       knowledgeSources: normalizeKnowledgeSources(s),
       curriculumSystems: Array.isArray(s.curriculumSystems) ? s.curriculumSystems : [],
-      subject: s.subject || 'cross',
+      ...normalizeSubjects(s),
       task: String(s.task || '').trim(),
       deliverable: s.deliverable || 'report',
       deliverableCustom: String(s.deliverableCustom || '').trim(),
@@ -100,10 +124,7 @@
     const parts = [];
     const grade = formatGradeLabel(s);
     if (grade) parts.push(grade);
-    const subj = s.subject === 'cross'
-      ? '跨学科'
-      : (SUBJECT_OPTIONS.find(o => o.id === s.subject)?.label || s.subject);
-    parts.push(subj);
+    parts.push(formatSubjectLabel(s));
     parts.push(s.task);
     const deliv = s.deliverable === 'other' && s.deliverableCustom
       ? s.deliverableCustom
@@ -138,9 +159,60 @@
     return [...boxes].map(el => el.value).filter(Boolean);
   }
 
+  function readSubjectsFromDOM() {
+    const crossTag = document.querySelector('.pbl-subject-tag[data-subject="cross"].active');
+    const picked = [...document.querySelectorAll('.pbl-subject-tag.active:not([data-subject="cross"])')]
+      .map(el => el.dataset.subject)
+      .filter(Boolean);
+    if (crossTag || !picked.length) return { subject: 'cross', subjects: [] };
+    return normalizeSubjects({ subjects: picked });
+  }
+
+  function renderSubjectTags(containerId = 'pblSubjectTags') {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const disciplines = SUBJECT_OPTIONS.filter(o => o.id !== 'cross');
+    container.innerHTML = [
+      '<span class="pbl-sys-tag pbl-subject-tag active" data-subject="cross" onclick="togglePBLSubjectTag(this)">🔗 跨学科（默认）</span>',
+      ...disciplines.map(o => (
+        `<span class="pbl-sys-tag pbl-subject-tag" data-subject="${o.id}" onclick="togglePBLSubjectTag(this)">${o.label}</span>`
+      )),
+    ].join('');
+  }
+
+  function fillSubjectTagsToDOM(spec) {
+    const { subjects } = normalizeSubjects(spec);
+    const crossMode = !subjects.length;
+    document.querySelectorAll('.pbl-subject-tag').forEach(tag => {
+      const id = tag.dataset.subject;
+      if (id === 'cross') tag.classList.toggle('active', crossMode);
+      else tag.classList.toggle('active', !crossMode && subjects.includes(id));
+    });
+  }
+
+  function togglePBLSubjectTag(el) {
+    if (!el) return;
+    const id = el.dataset.subject;
+    if (id === 'cross') {
+      document.querySelectorAll('.pbl-subject-tag').forEach(tag => {
+        tag.classList.toggle('active', tag.dataset.subject === 'cross');
+      });
+    } else {
+      el.classList.toggle('active');
+      const crossTag = document.querySelector('.pbl-subject-tag[data-subject="cross"]');
+      if (crossTag) crossTag.classList.remove('active');
+      const activeDisc = document.querySelectorAll('.pbl-subject-tag.active:not([data-subject="cross"])');
+      if (!activeDisc.length) {
+        const cross = document.querySelector('.pbl-subject-tag[data-subject="cross"]');
+        if (cross) cross.classList.add('active');
+      }
+    }
+    if (typeof markPBLGoalDirty === 'function') markPBLGoalDirty();
+  }
+
   function readProjectSpecFromDOM() {
     const gradeLevel = document.getElementById('pblGradeLevel')?.value || 'any';
-    const subject = document.getElementById('pblSubject')?.value || 'cross';
+    const subjectPick = readSubjectsFromDOM();
     const task = document.getElementById('pblTaskInput')?.value?.trim() || '';
     const deliverable = document.getElementById('pblDeliverable')?.value || 'report';
     const deliverableCustom = document.getElementById('pblDeliverableCustom')?.value?.trim() || '';
@@ -153,7 +225,8 @@
       lockGradeBand: gradeLevel !== 'any',
       knowledgeSources: readKnowledgeSourcesFromDOM(),
       curriculumSystems: readCurriculumSystemsFromDOM(),
-      subject, task, deliverable,
+      ...subjectPick,
+      task, deliverable,
       deliverableCustom, audience, duration, constraints,
     });
   }
@@ -162,7 +235,6 @@
     const s = normalizeProjectSpec({ ...spec, gradeDetails: [] });
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     set('pblGradeLevel', s.gradeLevel || 'any');
-    set('pblSubject', s.subject);
     set('pblTaskInput', s.task);
     set('pblDeliverable', s.deliverable);
     set('pblDeliverableCustom', s.deliverableCustom);
@@ -175,6 +247,7 @@
     if (typeof fillPBLSystemTags === 'function' && s.curriculumSystems?.length) {
       fillPBLSystemTags(s.curriculumSystems);
     }
+    fillSubjectTagsToDOM(s);
     if (typeof togglePBLDeliverableCustom === 'function') togglePBLDeliverableCustom();
   }
 
@@ -193,10 +266,16 @@
     formatGradeLabel,
     normalizeGradeDetails,
     normalizeKnowledgeSources,
+    normalizeSubjects,
+    formatSubjectLabel,
     normalizeProjectSpec,
     composeGoalFromSpec,
     readProjectSpecFromDOM,
     fillProjectSpecToDOM,
+    renderSubjectTags,
+    fillSubjectTagsToDOM,
+    togglePBLSubjectTag,
     gradeDetailOptionsFor,
   };
+  global.togglePBLSubjectTag = togglePBLSubjectTag;
 })(typeof window !== 'undefined' ? window : globalThis);

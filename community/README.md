@@ -12,11 +12,11 @@ TeachAny 社区课件允许用户把自己制作的互动课件发布到 `commun
 用户确认发布
   ↓
 python3 scripts/submit-to-community.py <course-id>
-  或浏览器：我的 → 导入的 → 「提交到社区」
+  或浏览器：导入课件 → 我的 → 导入的 → 「提交到社区」
   ↓
 POST https://teachany-community.pages.dev/api/submit
   ↓
-GitHub Actions 开 PR → 自动质检 → 自动合并
+GitHub Actions 开 PR → v7.3 质检 → 自动合并
   ↓
 community-publish.yml 解包 → rebuild-index → Gallery 可见
 ```
@@ -25,12 +25,24 @@ community-publish.yml 解包 → rebuild-index → Gallery 可见
 
 ## 浏览器提交（无需 Python）
 
-1. 将完成的 `.teachany` 课件导入到本站（Gallery 拖入或「我的」页）
-2. 打开 [我的 → 导入的](../my.html#imported)
-3. 点击课件卡片上的 **「提交到社区」**
-4. 填写作者名，等待自动质检合并
+### 1. 导入课件（三选一）
 
-要求：课件包须含 `index.html`、`manifest.json`，且 `manifest` 含 `node_id` / `name` / `subject` / `grade`；整包 ≤ 5 MB。
+| 入口 | 操作 |
+|------|------|
+| [Gallery](../index.html) | 拖入 `.teachany` / `.zip` / `.html`，或点社区区「➕ 添加我的课件」 |
+| [我的 → 导入的](../my.html#imported) | 点「📦 导入课件」 |
+| [知识地图](../tree.html) | 点击节点 →「📦 上传课件」 |
+
+导入后课件保存在**本机浏览器**（IndexedDB），不会自动上传。
+
+### 2. 提交到社区
+
+1. 打开 [我的 → 导入的](../my.html#imported)
+2. 点击课件卡片上的 **「🌐 提交到社区」**
+3. 填写作者名；浏览器会先跑 **v7.3 教学质量预检**（与 CLI 相同规则）
+4. 等待 GitHub Actions 二次质检并自动合并
+
+**要求**：课件包须含 `index.html`、`manifest.json`，且 `manifest` 含 `node_id` / `name` / `subject` / `grade`；整包 ≤ 5 MB；须通过 v7.3 教学质量闸门（有效讲解文本、前测后测、课标对齐等）。
 
 ## 命令行提交
 
@@ -38,11 +50,30 @@ community-publish.yml 解包 → rebuild-index → Gallery 可见
 # 课件在 community/<course-id>/ 或 community/drafts/<course-id>/
 python3 scripts/submit-to-community.py <course-id> --author "张老师" --message "欢迎审阅"
 
+# 仅打包预览，不提交
+python3 scripts/submit-to-community.py <course-id> --dry-run
+
 # 高级：直连 GitHub（绕过 Worker）
 TEACHANY_DIRECT_TOKEN=ghp_xxx python3 scripts/submit-to-community.py <course-id>
 ```
 
-Worker 地址（默认）：`https://teachany-community.pages.dev/api/submit`
+提交 API（默认，国内可访问）：`https://teachany-community.pages.dev/api/submit`
+
+> 旧地址 `teachany-submit.weponusa.workers.dev` 已弃用（中国大陆 SNI 阻断）。
+
+## 质检规则（CLI / 浏览器 / CI 统一）
+
+三层校验，规则对齐 `scripts/validate-teaching-quality.py`：
+
+1. **浏览器提交前**：`community-quality-gate.js` 预检（阻止明显不合格课件）
+2. **CLI 提交前**：`submit-to-community.py` 运行同一 Python 闸门 + WebP 压缩
+3. **PR 合并前**：`community-review.yml` 解包后再次运行 Python 闸门 + 假占位资产检测
+
+本地自测：
+
+```bash
+python3 scripts/validate-teaching-quality.py community/<course-id>
+```
 
 ## 在 Gallery 中查看用户课件
 
@@ -108,6 +139,7 @@ community/
 
 ## 相关文档
 
-- [社区提交部署说明](../docs/COMMUNITY_SUBMIT_SETUP.md) — Worker 一次性部署
+- [社区提交部署说明](../docs/COMMUNITY_SUBMIT_SETUP.md) — Pages Functions 部署
 - [scripts/submit-to-community.py](../scripts/submit-to-community.py) — 命令行提交工具
 - [scripts/community-submit-browser.js](../scripts/community-submit-browser.js) — 浏览器提交
+- [scripts/community-quality-gate.js](../scripts/community-quality-gate.js) — 浏览器 v7.3 预检

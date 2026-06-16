@@ -240,6 +240,17 @@ body {
 }
 .pbl-textarea::placeholder,
 .pbl-field input::placeholder { color: var(--dimmer); }
+.pbl-field-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dimmer);
+}
+.pbl-subject-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .pbl-form-hint {
   font-size: 12px;
   color: var(--dimmer);
@@ -1094,22 +1105,10 @@ body {
           <option value="adult">成人/在职</option>
         </select>
       </div>
-      <div class="pbl-field">
-        <label for="pblSubject">学科取向</label>
-        <select id="pblSubject">
-          <option value="cross">跨学科（默认）</option>
-          <option value="math">数学</option>
-          <option value="physics">物理</option>
-          <option value="chemistry">化学</option>
-          <option value="biology">生物</option>
-          <option value="science">科学</option>
-          <option value="chinese">语文</option>
-          <option value="english">英语</option>
-          <option value="history">历史</option>
-          <option value="geography">地理</option>
-          <option value="info-tech">信息技术</option>
-          <option value="art">艺术</option>
-        </select>
+      <div class="pbl-field pbl-field-full">
+        <label>学科取向</label>
+        <div class="pbl-subject-tags" id="pblSubjectTags"></div>
+        <p class="pbl-field-hint">默认跨学科；点选下方具体学科可多选，将按所选学科筛选知识点。</p>
       </div>
       <div class="pbl-field">
         <label for="pblDeliverable">产出类型</label>
@@ -1292,7 +1291,7 @@ body {
 </div>
 
 <script src="./assets/scripts/courseware-hub.js"></script>
-<script src="./assets/scripts/pbl-project-form.js?v=20260609-grade-band"></script>
+<script src="./assets/scripts/pbl-project-form.js?v=20260616-subjects"></script>
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
@@ -2705,7 +2704,11 @@ function buildPBLEditUrl(spec, baseUrl) {
   const task = String(s.task || '').trim();
   if (task) u.searchParams.set('goal', task);
   if (s.gradeLevel && s.gradeLevel !== 'any') u.searchParams.set('grade', s.gradeLevel);
-  if (s.subject && s.subject !== 'cross') u.searchParams.set('subject', s.subject);
+  const subjects = Array.isArray(s.subjects) && s.subjects.length
+    ? s.subjects
+    : (s.subject && s.subject !== 'cross' ? [s.subject] : []);
+  if (subjects.length) u.searchParams.set('subjects', subjects.join(','));
+  else if (s.subject && s.subject !== 'cross') u.searchParams.set('subject', s.subject);
   if (s.deliverable && s.deliverable !== 'report') u.searchParams.set('deliverable', s.deliverable);
   if (s.deliverableCustom) u.searchParams.set('deliverableCustom', s.deliverableCustom);
   if (s.audience) u.searchParams.set('audience', s.audience);
@@ -2717,10 +2720,15 @@ function buildPBLEditUrl(spec, baseUrl) {
 function applyPBLParamsFromURL(params) {
   const p = params || new URLSearchParams(window.location.search);
   const task = p.get('goal') || p.get('task') || '';
+  const subjectsParam = p.get('subjects') || '';
+  const subjects = subjectsParam
+    ? subjectsParam.split(',').map(s => s.trim()).filter(Boolean)
+    : (p.get('subject') && p.get('subject') !== 'cross' ? [p.get('subject')] : []);
   const spec = {
     task,
     gradeLevel: p.get('grade') || 'any',
-    subject: p.get('subject') || 'cross',
+    subject: subjects.length === 1 ? subjects[0] : 'cross',
+    subjects,
     deliverable: p.get('deliverable') || 'report',
     deliverableCustom: p.get('deliverableCustom') || '',
     audience: p.get('audience') || '',
@@ -2810,7 +2818,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   togglePBLDeliverableCustom();
-  ['pblTaskInput', 'pblGradeLevel', 'pblSubject', 'pblDeliverable'].forEach(id => {
+  if (window.PBLProjectForm?.renderSubjectTags) {
+    window.PBLProjectForm.renderSubjectTags();
+  }
+  ['pblTaskInput', 'pblGradeLevel', 'pblDeliverable'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', markPBLGoalDirty);
     if (el) el.addEventListener('change', markPBLGoalDirty);

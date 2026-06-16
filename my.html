@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="./scripts/history-tracker.css">
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="./scripts/courseware-importer.js" defer></script>
+<script src="./scripts/community-quality-gate.js" defer></script>
 <script src="./scripts/community-submit-browser.js" defer></script>
 <script src="./scripts/history-tracker.js" defer></script>
 </head>
@@ -639,6 +640,19 @@ function renderPBLThumb(el, run) {
     .attr('opacity', 0.85);
 }
 
+function openImportCoursewareDialog() {
+  if (!window.TeachAnyImporter || typeof TeachAnyImporter.createImportDialog !== 'function') {
+    showToast('导入模块未加载，请刷新页面', 'error');
+    return;
+  }
+  TeachAnyImporter.createImportDialog({
+    onImported: () => {
+      renderImported($('#grid-imported'));
+      showToast('课件已导入，可在下方提交到社区', 'success');
+    },
+  });
+}
+
 function renderImported(grid) {
   // 复用 courseware-importer.js 的本地课件索引（如果存在）
   let imported = getImportedCoursesForMy();
@@ -646,13 +660,22 @@ function renderImported(grid) {
   $('#cnt-imported').textContent = imported.length;
 
   if (!imported.length) {
-    grid.innerHTML = emptyState('imported', '📦', '还没有导入的课件',
-      '把 .zip / .json 课件包拖到 Gallery 主页就能导入到本地浏览器。',
-      '去 Gallery 导入', 'index.html');
+    grid.innerHTML = '<div class="empty-state">'
+      + '<div class="icon">📦</div>'
+      + '<h2>还没有导入的课件</h2>'
+      + '<p>导入 .teachany / .zip / .html 课件包后，可在此一键提交到社区 Gallery。</p>'
+      + '<button type="button" class="cta" id="btnImportCourseware">📦 导入课件</button>'
+      + '<p style="margin-top:14px;font-size:13px;color:var(--dim)">也可在 <a href="index.html" style="color:var(--primary)">Gallery</a> 拖入文件，或在 <a href="tree.html" style="color:var(--primary)">知识地图</a> 节点上传</p>'
+      + '</div>';
+    const btn = document.getElementById('btnImportCourseware');
+    if (btn) btn.addEventListener('click', openImportCoursewareDialog);
     return;
   }
   imported.sort((a, b) => (b.importedAt || '').localeCompare(a.importedAt || ''));
-  grid.innerHTML = '<div class="publish-guide-banner">'
+  grid.innerHTML = '<div class="import-toolbar">'
+    + '<button type="button" class="import-courseware-btn" id="btnImportMore">➕ 导入更多课件</button>'
+    + '</div>'
+    + '<div class="publish-guide-banner">'
     + '<b>🌐 提交到社区</b>：导入完整的 .teachany 课件后，可一键提交；通过自动质检后会出现在 Gallery「用户共创」筛选中。'
     + '</div>'
     + imported.map(c => {
@@ -673,6 +696,9 @@ function renderImported(grid) {
       + '</div>';
   }).join('');
 
+  const importMoreBtn = document.getElementById('btnImportMore');
+  if (importMoreBtn) importMoreBtn.addEventListener('click', openImportCoursewareDialog);
+
   grid.querySelectorAll('.submit-community-btn').forEach(btn => {
     btn.addEventListener('click', async (ev) => {
       ev.preventDefault();
@@ -683,7 +709,7 @@ function renderImported(grid) {
         showToast('提交模块未加载', 'error');
         return;
       }
-      if (!window.confirm('确认将这份课件提交到 TeachAny 社区？提交后将进入自动质检流程。')) return;
+      if (!window.confirm('确认提交？浏览器会先运行 v7.3 教学质量预检，通过后才会上传。')) return;
       const original = btn.textContent;
       btn.disabled = true;
       btn.textContent = '⏳ 提交中…';
