@@ -63,18 +63,40 @@ jobs:
           echo "Approx publish size:"
           du -sh _site
 
-      # 直接使用 git 命令部署，绕过 peaceiris 的任何隐含行为
-      - name: Deploy to gh-pages via git
+      # 增量部署到 gh-pages：先 clone 现有分支，rsync 更新，只 push 差异
+      - name: Deploy to gh-pages (incremental)
         run: |
-          cd _site
-          git init
+          set -euo pipefail
+          REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+
+          # 尝试 clone 已有的 gh-pages 分支（shallow clone 减少传输量）
+          if git clone --depth 1 --branch gh-pages "$REPO_URL" _deploy 2>/dev/null; then
+            echo "✅ Cloned existing gh-pages branch"
+          else
+            echo "⚠️ gh-pages branch not found, creating fresh"
+            mkdir _deploy && cd _deploy && git init && cd ..
+          fi
+
+          cd _deploy
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 同步 _site 内容到 _deploy（删除不再存在的文件）
+          rsync -a --delete --exclude='.git/' ../_site/ ./
+
+          touch .nojekyll
           git add -A
-          echo "Staged files count: $(git status --short | wc -l)"
-          echo "Top-level staged entries:"
-          git status --short | head -20
-          git commit -m "deploy: ${{ github.event.head_commit.message }}"
-          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages
+          CHANGES=$(git status --short | wc -l | tr -d ' ')
+          echo "Changed files: $CHANGES"
+
+          if [ "$CHANGES" -eq 0 ]; then
+            echo "✅ No changes to deploy"
+            exit 0
+          fi
+
+          git status --short | head -30
+          git commit -m "deploy: ${{ github.event.head_commit.message || 'manual deploy' }}"
+          git push origin HEAD:gh-pages
+          echo "✅ Deployed successfully ($CHANGES files changed)"
 
       # teachany.cn 由 Cloudflare Pages 连接 gh-pages 分支提供静态文件（非 main 直出）
