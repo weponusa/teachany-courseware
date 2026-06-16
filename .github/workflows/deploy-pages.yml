@@ -17,6 +17,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,8 +28,8 @@ jobs:
         run: |
           mkdir -p _site
 
-          # 1. 复制课件目录（官方课件已经内置运行时模块）
-          rsync -a --exclude='remotion/' community/ _site/community/
+          # 1. 复制课件目录（运行时模块走站点根 /assets/scripts/，不重复打包每课副本）
+          rsync -a --exclude='remotion/' --exclude='*/assets/scripts/' community/ _site/community/
 
           # 2. 复制静态资源。顶层 physical 大底图未被课件直接引用，排除以避免 Pages 超限。
           rsync -a --exclude='maps/physical/' assets/ _site/assets/
@@ -66,4 +67,4 @@ jobs:
           git commit -m "deploy: ${{ github.event.head_commit.message }}"
           git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages
 
-      # Cloudflare Pages 直接连接 main 分支自动部署；无需额外同步触发。
+      # teachany.cn 由 Cloudflare Pages 连接 gh-pages 分支提供静态文件（非 main 直出）
