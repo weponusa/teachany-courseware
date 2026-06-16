@@ -1844,7 +1844,12 @@ class PBLPathBuilder {
   }
 
   _subjectFilterFromProjectSpec(spec) {
-    if (!spec || !spec.subject || spec.subject === 'cross') return null;
+    if (!spec) return null;
+    if (Array.isArray(spec.subjects) && spec.subjects.length) {
+      const ids = spec.subjects.filter(id => id && id !== 'cross');
+      return ids.length ? ids : null;
+    }
+    if (!spec.subject || spec.subject === 'cross') return null;
     return [spec.subject];
   }
 

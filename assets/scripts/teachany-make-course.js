@@ -200,7 +200,13 @@
     var spec = pblCtx.projectSpec || {};
     if (spec.task) lines.push('- 项目任务：' + clip(spec.task, 300));
     if (spec.gradeLevel || spec.grade) lines.push('- 项目学段：' + (spec.gradeLevel || spec.grade));
-    if (spec.subject) lines.push('- 项目学科：' + spec.subject);
+    if (window.PBLProjectForm?.formatSubjectLabel) {
+      lines.push('- 项目学科：' + window.PBLProjectForm.formatSubjectLabel(spec));
+    } else if (Array.isArray(spec.subjects) && spec.subjects.length) {
+      lines.push('- 项目学科：' + spec.subjects.join('、'));
+    } else if (spec.subject) {
+      lines.push('- 项目学科：' + spec.subject);
+    }
     if (spec.deliverable) lines.push('- 项目交付物：' + spec.deliverable);
     if (pblCtx.archetype) lines.push('- 项目类型：' + pblCtx.archetype);
     if (pblCtx.schemeName) lines.push('- 推荐方案：' + pblCtx.schemeName + (pblCtx.schemeSummary ? '（' + clip(pblCtx.schemeSummary, 120) + '）' : ''));

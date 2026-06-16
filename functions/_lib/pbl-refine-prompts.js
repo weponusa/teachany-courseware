@@ -4,6 +4,14 @@
 
 import { stripStructuredGoal } from './pbl-context.js';
 
+function formatSubjectToken(projectSpec) {
+  if (!projectSpec) return 'cross';
+  if (Array.isArray(projectSpec.subjects) && projectSpec.subjects.length) {
+    return projectSpec.subjects.join('+');
+  }
+  return projectSpec.subject || 'cross';
+}
+
 /**
  * @param {object} payload
  */
@@ -17,7 +25,7 @@ export function buildRefineMessages(payload) {
 
   const task = projectSpec?.task || stripStructuredGoal(goal);
   const specLine = projectSpec
-    ? `${projectSpec.gradeLevel || 'any'}/${projectSpec.subject || 'cross'}｜${task}｜产出:${projectSpec.deliverable || ''}`
+    ? `${projectSpec.gradeLevel || 'any'}/${formatSubjectToken(projectSpec)}｜${task}｜产出:${projectSpec.deliverable || ''}`
     : task;
 
   const matched = (snapshot.matchedNames || []).slice(0, 15).join('、') || '无';
