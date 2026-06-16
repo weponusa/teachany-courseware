@@ -1285,6 +1285,15 @@ function injectImporterStyles() {
     .course-card-add .add-label { font-size: 16px; font-weight: 600; color: #3b82f6; }
     .course-card-add .add-hint { font-size: 13px; color: #64748b; margin-top: 8px; }
 
+    body.ta-page-dragover::after {
+      content: '📦 松开即可导入课件';
+      position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 700; color: #f8fafc;
+      background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(4px);
+      border: 3px dashed rgba(59, 130, 246, 0.65);
+    }
+
     .user-badge {
       display: inline-block; padding: 2px 8px; border-radius: 10px;
       font-size: 11px; font-weight: 600;
@@ -1563,7 +1572,59 @@ function createImportDialog(options = {}) {
     }
   };
 
+  if (options.initialFiles && options.initialFiles.length) {
+    const list = Array.from(options.initialFiles);
+    const hasRelative = list.some((f) => f.webkitRelativePath);
+    if (hasRelative || list.length > 1) {
+      handleFolder(list);
+    } else {
+      handleFile(list[0]);
+    }
+  }
+
   return { close };
+}
+
+function initPageDropImport(options = {}) {
+  if (document.body.dataset.taPageDropInit === '1') return;
+  document.body.dataset.taPageDropInit = '1';
+  injectImporterStyles();
+
+  let dragDepth = 0;
+
+  document.addEventListener('dragenter', (event) => {
+    if (!event.dataTransfer?.types?.includes('Files')) return;
+    dragDepth += 1;
+    document.body.classList.add('ta-page-dragover');
+  });
+
+  document.addEventListener('dragleave', () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) document.body.classList.remove('ta-page-dragover');
+  });
+
+  document.addEventListener('dragover', (event) => {
+    if (event.dataTransfer?.types?.includes('Files')) event.preventDefault();
+  });
+
+  document.addEventListener('drop', (event) => {
+    dragDepth = 0;
+    document.body.classList.remove('ta-page-dragover');
+    if (!event.dataTransfer?.files?.length) return;
+    event.preventDefault();
+
+    const onImported = () => {
+      if (options.gridSelector) initGalleryImporter(options.gridSelector);
+      if (typeof options.onImported === 'function') options.onImported();
+    };
+
+    createImportDialog({
+      targetNodeId: options.targetNodeId,
+      targetNodeName: options.targetNodeName,
+      initialFiles: event.dataTransfer.files,
+      onImported,
+    });
+  });
 }
 
 /* ─── Gallery 集成 ───────────────────────────── */
@@ -1613,6 +1674,9 @@ function renderUserCourses(grid) {
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
     card.dataset.subject = manifest.subject || 'custom';
+    card.dataset.sourceType = 'user';
+    const g = parseInt(manifest.grade, 10);
+    card.dataset.level = (g >= 1 && g <= 6) ? 'elementary' : (g >= 7 && g <= 9) ? 'middle' : (g >= 10 && g <= 12) ? 'high' : 'other';
     card.style.position = 'relative';
 
     const colors = ['tag-blue', 'tag-purple', 'tag-green', 'tag-yellow', 'tag-pink', 'tag-cyan'];
@@ -1881,6 +1945,7 @@ window.TeachAnyImporter = {
   removeUserCourse,
   createImportDialog,
   initGalleryImporter,
+  initPageDropImport,
   addTreeUploadButton,
   getCourseLaunchUrl,
   getUserCourseRecord,

@@ -64,8 +64,56 @@ jobs:
             if [ -f "$tmp/manifest.json" ]; then
               python3 -m json.tool "$tmp/manifest.json" >/dev/null || { echo "❌ 包内 manifest.json 不合法" | tee -a "$report"; errors=$((errors+1)); }
             fi
+
+            struct_ok=1
+            [ -f "$tmp/index.html" ] && [ -f "$tmp/manifest.json" ] || struct_ok=0
+
+            if [ "$struct_ok" -eq 1 ]; then
+              echo "🔍 运行 v7.3 教学质量闸门…" >> "$report"
+              if python3 scripts/validate-teaching-quality.py "$tmp" >> "$report" 2>&1; then
+                echo "✅ 教学质量闸门通过" >> "$report"
+              else
+                echo "❌ 教学质量闸门未通过" | tee -a "$report"
+                errors=$((errors+1))
+              fi
+
+              if python3 - "$tmp" <<'PY' >> "$report" 2>&1
+import sys
+from pathlib import Path
+
+tmp = Path(sys.argv[1])
+MIN_IMAGE = 5 * 1024
+MIN_AUDIO = 5 * 1024
+fake = []
+for folder, exts, min_bytes, label in (
+    (tmp / "assets", (".png", ".jpg", ".jpeg", ".webp"), MIN_IMAGE, "图片"),
+    (tmp / "tts", (".mp3", ".wav", ".ogg", ".m4a"), MIN_AUDIO, "音频"),
+):
+    if not folder.exists():
+        continue
+    for f in folder.iterdir():
+        if not f.is_file():
+            continue
+        if f.suffix.lower() in exts and f.stat().st_size < min_bytes:
+            fake.append(f"{label} {f.name}（{f.stat().st_size} 字节，疑似占位）")
+if fake:
+    print("❌ 假占位资产检测未通过：")
+    for item in fake:
+        print(f"   - {item}")
+    sys.exit(1)
+print("✅ 资产真实性检查通过")
+PY
+              then
+                :
+              else
+                errors=$((errors+1))
+              fi
+            fi
+
             rm -rf "$tmp"
-            echo "✅ 包结构通过，大小 $((size/1024))KB" >> "$report"
+            if [ "$struct_ok" -eq 1 ]; then
+              echo "📦 包大小 $((size/1024))KB" >> "$report"
+            fi
             echo >> "$report"
           done
 
@@ -74,7 +122,7 @@ jobs:
             echo "❌ 质检失败：$errors 个错误" | tee -a "$report"
             exit 1
           fi
-          echo "✅ 全部 pending 课件通过基础质检" | tee -a "$report"
+          echo "✅ 全部 pending 课件通过结构 + v7.3 质检" | tee -a "$report"
 
       - name: Comment review result
         if: always()

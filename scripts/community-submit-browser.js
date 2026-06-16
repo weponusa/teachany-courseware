@@ -107,9 +107,38 @@
     return { manifest, packageBase64, sizeBytes: zipBlob.size };
   }
 
+  async function runQualityGate(courseId, options) {
+    const Importer = global.TeachAnyImporter;
+    if (!Importer || typeof Importer.getUserCourseRecord !== 'function') {
+      throw new Error('课件导入模块未加载，请刷新页面后重试');
+    }
+    if (!global.TeachAnyQualityGate || typeof global.TeachAnyQualityGate.validateImportedCourse !== 'function') {
+      return;
+    }
+    const record = await Importer.getUserCourseRecord(courseId);
+    if (!record) throw new Error('未找到课件完整数据，可能已被删除');
+    const qc = await global.TeachAnyQualityGate.validateImportedCourse(record);
+    if (!qc.ok) {
+      throw new Error(
+        'v7.3 教学质量未通过，请先完善课件再提交：\n' + qc.errors.slice(0, 6).join('\n')
+        + (qc.errors.length > 6 ? `\n…共 ${qc.errors.length} 项` : '')
+        + '\n\n提示：命令行 python3 scripts/submit-to-community.py 使用相同规则。'
+      );
+    }
+    if (qc.warnings.length && !options.skipWarnings) {
+      const proceed = global.confirm(
+        '质检警告（可继续提交，但建议完善后重试）：\n' + qc.warnings.join('\n') + '\n\n仍要提交？'
+      );
+      if (!proceed) throw new Error('已取消提交');
+    }
+  }
+
   async function submitImportedCourse(courseId, options) {
     options = options || {};
     const onProgress = typeof options.onProgress === 'function' ? options.onProgress : () => {};
+
+    onProgress('validating', '正在校验课件质量…');
+    await runQualityGate(courseId, options);
 
     onProgress('packing', '正在打包课件…');
     const { manifest, packageBase64, sizeBytes } = await packImportedCourse(courseId);
@@ -176,6 +205,7 @@
     SUBMIT_API,
     MAX_PACKAGE_MB,
     packImportedCourse,
+    runQualityGate,
     submitImportedCourse,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

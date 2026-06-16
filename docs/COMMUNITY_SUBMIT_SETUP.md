@@ -1,21 +1,24 @@
 # TeachAny 社区提交 Worker 部署指南
 
 > **一次性部署，15 分钟完成。** 部署后所有 TeachAny 用户无需任何配置，就能把自己做的课件自动提交到社区，质检通过后自动合并并注册到 Gallery。
+>
+> **2026-04 更新**：官方公共端点已迁移至 **Cloudflare Pages Functions**  
+> `https://teachany-community.pages.dev/api/submit`（国内可访问）。  
+> 自建时仍可用 Workers，但请优先 Pages Functions 以避免 `*.workers.dev` SNI 阻断。
 
 ## 🎯 架构概览
 
 ```
 用户做完课件
-  ↓ AI 调 submit-to-community.py
-  ↓ POST https://teachany-submit.<你>.workers.dev/api/submit
-Cloudflare Worker
+  ↓ AI 调 submit-to-community.py 或浏览器 my.html 提交
+  ↓ POST https://teachany-community.pages.dev/api/submit
+Cloudflare Pages Functions
   ↓ 限频 + 校验
   ↓ 用 Bot Token 调 GitHub API
 GitHub Actions
-  ↓ community-submit.yml 创建 PR
-  ↓ validate.yml 自动跑 validate-courseware.py
-  ↓ 0 错误 → 打 passed-validation 标签
-  ↓ auto-merge.yml 检测到标签 → 自动合并
+  ↓ 创建 PR（community/pending）
+  ↓ community-review.yml：结构 + v7.3 教学质量闸门
+  ↓ 0 错误 → 自动合并
   ↓ community-publish.yml 注册到 Gallery
 ```
 
