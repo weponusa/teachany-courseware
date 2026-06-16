@@ -22,57 +22,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 构建纯净的发布目录 _site/。
-      # 注意：不要发布顶层 scripts/，GitHub Pages 对该路径构建失败；官方课件改用本地 assets/scripts 或课件根目录脚本。
+      # 构建发布目录（scripts/build-publish-site.sh，含 19000 文件门禁）
       - name: Build publish directory
-        run: |
-          mkdir -p _site
-
-          # 1. 复制课件目录（排除 remotion 源码、per-course scripts 副本、以及与根目录重复的 reading-academy）
-          rsync -a \
-            --exclude='remotion/' \
-            --exclude='*/assets/scripts/' \
-            --exclude='reading-academy/' \
-            community/ _site/community/
-
-          # 2. 复制静态资源。顶层 physical 大底图未被课件直接引用，排除以避免 Pages 超限。
-          rsync -a --exclude='maps/physical/' assets/ _site/assets/
-
-          # 3. 复制数据目录，并移除本地 Python 虚拟环境、断链符号链接与 kp 备份（避免 Pages 2 万文件上限）
-          rsync -a --exclude='.venv/' --exclude='history' --exclude='geography' --exclude='kp/_backups/' data/ _site/data/
-
-          # 4. 复制根级文件
-          touch _site/.nojekyll
-          cp 404.html _site/ 2>/dev/null || true
-          cp index.html _site/ 2>/dev/null || true
-          cp courseware-registry.json _site/ 2>/dev/null || true
-          cp registry.json _site/ 2>/dev/null || true
-          cp registry-v2.json _site/ 2>/dev/null || true
-          cp commercial-license.html _site/ 2>/dev/null || true
-          cp pbl.html _site/ 2>/dev/null || true
-          cp tree.html _site/ 2>/dev/null || true
-          cp knowledge-map.html _site/ 2>/dev/null || true
-          cp path.html _site/ 2>/dev/null || true
-          cp my.html _site/ 2>/dev/null || true
-          cp license.html _site/ 2>/dev/null || true
-          cp imported-course.html _site/ 2>/dev/null || true
-          cp reading.html _site/ 2>/dev/null || true
-
-          # 5. 复制阅读学院
-          rsync -a reading-academy/ _site/reading-academy/
-
-          echo "✅ _site/ built successfully"
-          echo "Top-level:"
-          ls _site/
-          FILE_COUNT=$(find _site -type f | wc -l | tr -d ' ')
-          echo "Total files: $FILE_COUNT (Cloudflare Pages limit: 20,000)"
-          if [ "$FILE_COUNT" -gt 20000 ]; then
-            echo "❌ ERROR: File count $FILE_COUNT exceeds Cloudflare Pages 20,000 limit!"
-            find _site -type f | sed 's|_site/||' | cut -d/ -f1-2 | sort | uniq -c | sort -rn | head -10
-            exit 1
-          fi
-          echo "Approx publish size:"
-          du -sh _site
+        run: bash scripts/build-publish-site.sh _site
 
       # 增量部署到 gh-pages：先 clone 现有分支，rsync 更新，只 push 差异
       - name: Deploy to gh-pages (incremental)

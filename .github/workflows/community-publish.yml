@@ -144,30 +144,7 @@ PY
       - name: Build publish directory
         if: steps.unpack.outputs.published == 'true'
         shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf _site
-          mkdir -p _site
-
-          # 课件目录：排除 Remotion 工程源码/中间产物，保留运行时 assets/video 等资源。
-          rsync -a --exclude='remotion/' --exclude='*/assets/scripts/' community/ _site/community/
-
-          # 静态资源：根级 physical 大底图当前未被课件直接引用，排除以避免 GitHub Pages 超限。
-          rsync -a --exclude='maps/physical/' assets/ _site/assets/
-
-          # 数据目录：排除本地 venv、断链符号链接与 kp 备份（避免 Pages 2 万文件上限）。
-          rsync -a --exclude='.venv/' --exclude='history' --exclude='geography' --exclude='kp/_backups/' data/ _site/data/
-
-          touch _site/.nojekyll
-          cp 404.html _site/ 2>/dev/null || true
-          cp index.html _site/ 2>/dev/null || true
-          cp courseware-registry.json _site/ 2>/dev/null || true
-          cp registry.json _site/ 2>/dev/null || true
-          cp registry-v2.json _site/ 2>/dev/null || true
-          cp commercial-license.html _site/ 2>/dev/null || true
-
-          echo "✅ _site built"
-          du -sh _site
+        run: bash scripts/build-publish-site.sh _site
 
       - name: Deploy updated site to gh-pages
         if: steps.unpack.outputs.published == 'true'
