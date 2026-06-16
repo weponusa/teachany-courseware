@@ -102,7 +102,11 @@ def main() -> int:
                     sys.executable, str(SCRIPTS / "set-feedback-password.py"),
                     f"community/{nid}/manifest.json", "--password", pwd, "--hint", pwd,
                 ])
-                run([sys.executable, str(SCRIPTS / "finalize-courseware.py"), f"community/{nid}"])
+                run([sys.executable, str(SCRIPTS / "finalize-courseware.py"), f"community/{nid}", "--no-audio"])
+                run([
+                    sys.executable, str(SCRIPTS / "qc-runtime-modules.py"),
+                    f"community/{nid}",
+                ])
                 run([
                     sys.executable, str(SCRIPTS / "preflight-publish.py"),
                     f"community/{nid}", "--no-finalize",

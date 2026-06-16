@@ -310,6 +310,10 @@ def ensure_kg_section(html: str, node_id: str, heading: str) -> tuple[str, str]:
             return html, "unchanged"
         return html[:start] + block.lstrip("\n") + html[end:], "replaced"
 
+    # 没有 KG section：幻灯片课件插入 slide-page；否则追加到 body 末尾
+    if 'id="slide-container"' in html and 'data-tts="knowledge-graph"' not in html:
+        return html, "deferred-to-finalize-slide"
+
     # 没有 KG section：追加到 body 末尾，在 tutor-card 之后（若存在）
     if "</body>" in html:
         return html.replace("</body>", block + "</body>", 1), "added"

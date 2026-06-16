@@ -16,6 +16,7 @@
 
   var SVG_NS = "http://www.w3.org/2000/svg";
   var BASE_PATH_CANDIDATES = [
+    "/assets/scripts/teachany-kg-manifest.json",
     "./assets/scripts/teachany-kg-manifest.json",
     "assets/scripts/teachany-kg-manifest.json",
     "../../assets/scripts/teachany-kg-manifest.json",

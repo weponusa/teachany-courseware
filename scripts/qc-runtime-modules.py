@@ -67,9 +67,10 @@ def check_one(course_dir: Path) -> list[str]:
     kg_ids = KG_ID_RE.findall(html)
     if kg_ids:
         mf = course_dir / "assets/scripts/teachany-kg-manifest.json"
-        if not mf.is_file():
-            errors.append(f"{nid}: missing local teachany-kg-manifest.json")
-        else:
+        uses_cdn_manifest = "/assets/scripts/teachany-knowledge-graph" in html
+        if not mf.is_file() and not uses_cdn_manifest:
+            errors.append(f"{nid}: missing local teachany-kg-manifest.json and no CDN KG script path")
+        elif mf.is_file():
             try:
                 manifest = json.loads(mf.read_text(encoding="utf-8"))
                 nodes = manifest.get("nodes") or {}

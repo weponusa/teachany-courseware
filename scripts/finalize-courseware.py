@@ -34,7 +34,7 @@ import re
 import subprocess
 import sys
 import time
-from html import unescape
+from html import escape as html_escape, unescape
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -136,11 +136,108 @@ def make_self_contained(course_dir: Path, html: str) -> tuple[str, dict]:
             shutil.copy2(s, d)
             report["copied"].append(name)
 
-    # 引用路径统一改为课件本地 ./assets/scripts/
+    # 引用路径：先统一为课件相对路径，再改为 teachany.cn 站点根 /assets/scripts/（CDN 必达）
     new_html, n1 = re.subn(r'(?:\.\./)+assets/scripts/', './assets/scripts/', html)
     new_html, n2 = re.subn(r'(?:\.\./)+scripts/', './assets/scripts/', new_html)
-    report["rewrote"] = n1 + n2
+    new_html, n3 = re.subn(r'\./assets/scripts/', '/assets/scripts/', new_html)
+    report["rewrote"] = n1 + n2 + n3
     return new_html, report
+
+
+ORPHAN_KG_RE = re.compile(
+    r"\n<!-- v7\.7\.4 标准知识图谱模块 -->\s*"
+    r'<section class="section" id="knowledge-graph"[^>]*>[\s\S]*?</section>\s*',
+    re.I,
+)
+
+
+def needs_kg_slide(html: str) -> bool:
+    return 'id="slide-container"' in html and 'data-tts="knowledge-graph"' not in html
+
+
+def patch_kg_slide(html: str, node_id: str, title: str) -> tuple[str, bool]:
+    if not needs_kg_slide(html) or not node_id:
+        return html, False
+    safe_title = html_escape(title, quote=True)
+    safe_nid = html_escape(node_id, quote=True)
+    slide = (
+        f'  <section class="slide-page" data-page-type="concept" data-page-index="98" '
+        f'data-tts="knowledge-graph" data-tsh="知识图谱" data-bloom-level="2" data-scaffold="full">\n'
+        f'    <div class="slide-inner"><div class="card card-glow">'
+        f'<section class="section" id="knowledge-graph">'
+        f'<h2 class="section-title">🧠 知识图谱：{safe_title}</h2>'
+        f'<div data-teachany-kg="{safe_nid}"></div>'
+        f'</section></div></div>\n  </section>\n'
+    )
+    m = re.search(r'<section class="slide-page"[^>]*\bdata-tts="summary"', html)
+    if m:
+        html = html[: m.start()] + slide + html[m.start() :]
+    else:
+        anchor = html.find('id="slide-container"')
+        close = html.find("</div>", anchor) if anchor != -1 else -1
+        while close != -1:
+            tail = html[close : close + 200]
+            if "<script" in tail[:20] or '<section class="slide-page"' in tail:
+                close = html.find("</div>", close + 6)
+                continue
+            html = html[:close] + "\n" + slide + html[close:]
+            break
+    if 'data-tts="knowledge-graph"' in html:
+        html = ORPHAN_KG_RE.sub("\n", html, count=1)
+    return html, True
+
+
+def ensure_hist_geo_map(course_dir: Path, html: str, manifest: dict, maps_mod, map_mod) -> tuple[str, str | None]:
+    subj = (manifest.get("subject") or "").lower()
+    if subj not in ("history", "geography"):
+        return html, None
+    if "data-teachany-map" in html:
+        return html, None
+    if re.search(r"L\.tileLayer\s*\(", html) and re.search(r"fitBounds|setView", html):
+        return html, None
+    hist_manifest_path = SCRIPT_DIR / "historical-maps-manifest.json"
+    hist_manifest = {}
+    if hist_manifest_path.is_file():
+        hist_manifest = json.loads(hist_manifest_path.read_text(encoding="utf-8"))
+    rel = f"community/{course_dir.name}"
+    cfg = hist_manifest.get(rel) or hist_manifest.get(f"examples/{course_dir.name}")
+    if cfg and cfg.get("skip"):
+        return html, None
+    if not cfg:
+        pseudo = {
+            "node_id": manifest.get("node_id") or course_dir.name,
+            "title": manifest.get("name") or course_dir.name,
+            "subject": subj,
+            "stage": manifest.get("stage") or "middle",
+            "grade": manifest.get("grade") or 8,
+        }
+        cfg = map_mod.default_map_config(pseudo)
+    if not cfg:
+        return html, None
+    cfg = json.loads(json.dumps(cfg))
+    maps_mod.ensure_map_projection_defaults(cfg)
+    maps_mod.copy_geojson_files(course_dir, cfg.get("scope", "china"), cfg["eras"])
+    maps_mod.copy_overlay_files(course_dir, cfg.get("overlays", []))
+    html = maps_mod.inject_head(html)
+    html = maps_mod.inject_script_bottom(html)
+    block = maps_mod.build_section(rel, cfg)
+    injected = False
+    if 'id="slide-container"' in html:
+        m = re.search(r'<section class="slide-page"[^>]*\bdata-tts="summary"', html)
+        if m:
+            map_slide = (
+                f'  <section class="slide-page" data-page-type="interactive" data-page-index="97" '
+                f'data-tts="map-explore" data-tsh="地图探究">\n'
+                f'    <div class="slide-inner"><div class="card card-glow">{block.strip()}</div></div>\n'
+                f'  </section>\n'
+            )
+            html = html[: m.start()] + map_slide + html[m.start() :]
+            injected = True
+    if not injected:
+        html, injected = maps_mod.inject_section(html, block)
+    if injected:
+        return html, "map-injected"
+    return html, None
 
 
 def _load_apply_maps():
@@ -202,23 +299,16 @@ def normalize_kg_node_id(course_dir: Path, html: str, manifest: dict) -> tuple[s
     return html, ", ".join(fixes) if fixes else None
 
 
+def _load_cn_map_config():
+    path = SCRIPT_DIR / "cn-map-config.py"
+    spec = importlib.util.spec_from_file_location("cn_map_config", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def ensure_kg_manifest(course_dir: Path, html: str) -> tuple[str, list[str]]:
-    """Copy teachany-kg-manifest.json into course assets/scripts for self-contained KG."""
-    if "data-teachany-kg" not in html:
-        return html, []
-    src_root = find_module_source(course_dir)
-    if not src_root:
-        return html, []
-    manifest_src = src_root / "teachany-kg-manifest.json"
-    if not manifest_src.is_file():
-        return html, []
-    import shutil
-    dest_dir = course_dir / "assets" / "scripts"
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / "teachany-kg-manifest.json"
-    if (not dest.exists()) or dest.stat().st_size != manifest_src.stat().st_size:
-        shutil.copy2(manifest_src, dest)
-        return html, ["kg-manifest"]
+    """KG manifest 走站点根 /assets/scripts/（CDN），不再复制 300KB+ 副本进每课目录。"""
     return html, []
 
 
@@ -427,6 +517,19 @@ def finalize(course_dir: Path, do_audio: bool = True, self_contained: bool = Tru
     node_id = manifest.get("node_id")
     heading = manifest.get("name") or course_dir.name
 
+    maps_mod = _load_apply_maps()
+    map_mod = _load_cn_map_config()
+
+    if node_id:
+        html, kg_patched = patch_kg_slide(html, node_id, heading)
+        if kg_patched:
+            actions["kg_slide"] = True
+
+    if maps_mod and map_mod:
+        html, map_inj = ensure_hist_geo_map(course_dir, html, manifest, maps_mod, map_mod)
+        if map_inj:
+            actions["map_inject"] = map_inj
+
     html, links = asm.ensure_head_links(html)
     html, scripts = asm.ensure_tail_scripts(html)
     html, card = asm.ensure_tutor_card_section(html)
@@ -443,7 +546,6 @@ def finalize(course_dir: Path, do_audio: bool = True, self_contained: bool = Tru
     if map_actions:
         actions["map_modules"] = map_actions
 
-    maps_mod = _load_apply_maps()
     if maps_mod and "data-teachany-map" in html:
         html, map_sync = maps_mod.sync_map_config_in_html(course_dir, html)
         if map_sync.get("changed"):
@@ -521,6 +623,10 @@ def main() -> int:
         print("  ✚ AI 学伴配置 __TEACHANY_TUTOR_CONFIG__")
     if a.get("kg") and a["kg"] not in ("unchanged",):
         print(f"  ✚ 知识图谱：{a['kg']}")
+    if a.get("kg_slide"):
+        print("  ✚ 知识图谱页插入幻灯片流")
+    if a.get("map_inject"):
+        print(f"  ✚ 历史/地理地图：{a['map_inject']}")
     if a.get("map_config_sync") and a["map_config_sync"].get("changed"):
         ms = a["map_config_sync"]
         print(f"  ✚ 地图配置同步：eras={ms.get('copied_eras', 0)} overlays={ms.get('copied_overlays', 0)}")

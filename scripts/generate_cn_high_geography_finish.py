@@ -398,6 +398,10 @@ def generate_course(course_id: str, node: dict, domain: dict):
     html_text = re.sub(r'<!--.*?-->', '', html_text, flags=re.S)
     html_text = html_text.replace(' placeholder="把你卡住的问题写在这里"', ' aria-label="把你卡住的问题写在这里"').replace('aria-label="知识图谱互动画布占位"', 'aria-label="知识图谱互动画布"').replace('placeholder', '提示输入').replace('占位', '备用')
     (course_dir / "index.html").write_text(html_text, encoding="utf-8")
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "finalize-courseware.py"), str(course_dir), "--no-audio"],
+        check=True,
+    )
     print(f"✅ generated {course_id}")
 
 
