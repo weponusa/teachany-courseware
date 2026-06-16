@@ -28,8 +28,12 @@ jobs:
         run: |
           mkdir -p _site
 
-          # 1. 复制课件目录（运行时模块走站点根 /assets/scripts/，不重复打包每课副本）
-          rsync -a --exclude='remotion/' --exclude='*/assets/scripts/' community/ _site/community/
+          # 1. 复制课件目录（排除 remotion 源码、per-course scripts 副本、以及与根目录重复的 reading-academy）
+          rsync -a \
+            --exclude='remotion/' \
+            --exclude='*/assets/scripts/' \
+            --exclude='reading-academy/' \
+            community/ _site/community/
 
           # 2. 复制静态资源。顶层 physical 大底图未被课件直接引用，排除以避免 Pages 超限。
           rsync -a --exclude='maps/physical/' assets/ _site/assets/
@@ -60,6 +64,13 @@ jobs:
           echo "✅ _site/ built successfully"
           echo "Top-level:"
           ls _site/
+          FILE_COUNT=$(find _site -type f | wc -l | tr -d ' ')
+          echo "Total files: $FILE_COUNT (Cloudflare Pages limit: 20,000)"
+          if [ "$FILE_COUNT" -gt 20000 ]; then
+            echo "❌ ERROR: File count $FILE_COUNT exceeds Cloudflare Pages 20,000 limit!"
+            find _site -type f | sed 's|_site/||' | cut -d/ -f1-2 | sort | uniq -c | sort -rn | head -10
+            exit 1
+          fi
           echo "Approx publish size:"
           du -sh _site
 
