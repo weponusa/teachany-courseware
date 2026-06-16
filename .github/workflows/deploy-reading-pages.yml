@@ -1,0 +1,63 @@
+name: Deploy Reading Academy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'reading-academy/**'
+      - 'scripts/build-reading-site.sh'
+      - '.github/workflows/deploy-reading-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "reading-pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build reading academy site
+        run: bash scripts/build-reading-site.sh _reading_site
+
+      - name: Deploy to gh-pages-reading (incremental)
+        run: |
+          set -euo pipefail
+          REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+
+          if git clone --depth 1 --branch gh-pages-reading "$REPO_URL" _deploy 2>/dev/null; then
+            echo "✅ Cloned existing gh-pages-reading branch"
+          else
+            echo "⚠️ gh-pages-reading branch not found, creating fresh"
+            mkdir _deploy && cd _deploy && git init && cd ..
+          fi
+
+          cd _deploy
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          rsync -a --delete --exclude='.git/' ../_reading_site/ ./
+
+          touch .nojekyll
+          git add -A
+          CHANGES=$(git diff --cached --numstat | wc -l | tr -d ' ')
+          echo "Changed files: $CHANGES"
+
+          if [ "$CHANGES" -eq 0 ]; then
+            echo "✅ No changes to deploy"
+            exit 0
+          fi
+
+          git diff --cached --stat | tail -5 || true
+          git commit -m "deploy-reading: ${{ github.event.head_commit.message || 'manual deploy' }}"
+          git push origin HEAD:gh-pages-reading
+          echo "✅ Reading academy deployed ($CHANGES files changed)"
+
+      # read.teachany.cn 由 Cloudflare Pages 连接 gh-pages-reading 分支（独立项目）

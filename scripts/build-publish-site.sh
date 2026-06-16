@@ -47,8 +47,10 @@ do
   fi
 done
 
-# 5. 阅读学院（顶层 canonical 路径；不含 community/ 下重复副本）
-rsync -a "$ROOT/reading-academy/" "$OUT/reading-academy/"
+# 5. Cloudflare 重定向（阅读学院已迁至 read.teachany.cn）
+if [ -f "$ROOT/_redirects" ]; then
+  cp "$ROOT/_redirects" "$OUT/"
+fi
 
 FILE_COUNT="$(find "$OUT" -type f | wc -l | tr -d ' ')"
 SIZE="$(du -sh "$OUT" | cut -f1)"
@@ -63,7 +65,7 @@ if [ "$FILE_COUNT" -gt "$MAX_FILES" ]; then
   echo "   请排除更多非运行时目录，或迁移大资源到 R2/CDN。"
   echo ""
   echo "文件数 TOP 目录："
-  for d in community assets data reading-academy; do
+  for d in community assets data; do
     if [ -d "$OUT/$d" ]; then
       c="$(find "$OUT/$d" -type f | wc -l | tr -d ' ')"
       echo "   $d: $c"
