@@ -102,13 +102,15 @@ function updatePreview() {
   updatePracticeLink(game);
 }
 
+const PRACTICE_BASE = 'https://www.teachany.cn/community/mw-zici-word-practice/practice.html';
+
 function updatePracticeLink(game) {
   const params = new URLSearchParams({
-    grade: GRADE_CN[game.grade] || String(game.grade),
-    volume: game.volume.includes('上') ? '上' : '下',
+    grade: String(game.grade),
+    volume: game.volume.includes('上') ? '上册' : '下册',
     lesson: game.title
   });
-  els.practiceBtn.href = `../明湾生字工具/语文生字练习.html?${params.toString()}`;
+  els.practiceBtn.href = `${PRACTICE_BASE}?${params.toString()}`;
 }
 
 async function openCurrentReader() {
