@@ -1,0 +1,2875 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PBL 项目拆解 - TeachAny</title>
+<link rel="icon" href="data:,">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script>
+if (!window.d3) {
+  document.write('<script src="https://unpkg.com/d3@7/dist/d3.min.js"><\/script>');
+}
+</script>
+<style>
+:root {
+  --bg: #0f172a;
+  --bg2: #1e293b;
+  --card: rgba(30, 41, 59, 0.8);
+  --border: rgba(148, 163, 184, 0.15);
+  --text: #f8fafc;
+  --dim: #94a3b8;
+  --dimmer: #64748b;
+  --primary: #3b82f6;
+  --secondary: #8b5cf6;
+  --accent: #f59e0b;
+  --success: #10b981;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'PingFang SC', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+/* Top Bar */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.top-bar h1 {
+  font-size: 20px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.nav-links { display: flex; gap: 8px; }
+.nav-links a {
+  color: var(--dim);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.nav-links a:hover, .nav-links a.active {
+  color: var(--text);
+  background: rgba(59,130,246,0.15);
+}
+
+/* Header */
+.header {
+  text-align: center;
+  padding: 60px 24px 40px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(139,92,246,0.06));
+}
+.header h1 {
+  font-size: 42px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+}
+.header p {
+  font-size: 16px;
+  color: var(--dim);
+  max-width: 700px;
+  margin: 0 auto;
+}
+.header-philosophy {
+  max-width: 720px;
+  margin: 20px auto 0;
+  padding: 16px 20px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--dim);
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.18);
+  border-radius: 12px;
+}
+.header-philosophy strong { color: var(--text); font-weight: 600; }
+.header-philosophy .usage-title {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Container */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+/* ─── PBL Section ─────────────────────────────── */
+.pbl-section {
+  background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(139,92,246,0.04));
+  border: 2px solid rgba(245,158,11,0.2);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 32px;
+  position: relative;
+}
+.pbl-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.pbl-desc {
+  font-size: 13px;
+  color: var(--dim);
+  line-height: 1.8;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: rgba(245,158,11,0.05);
+  border-radius: 8px;
+  border-left: 3px solid rgba(245,158,11,0.3);
+}
+.pbl-desc b { color: var(--text); font-weight: 600; }
+.pbl-examples {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 10px;
+}
+.pbl-examples .ex-label {
+  font-size: 12px;
+  color: var(--dimmer);
+  flex-shrink: 0;
+}
+.ex-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--dim);
+  transition: all 0.2s;
+  user-select: none;
+}
+.ex-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(245,158,11,0.08);
+  transform: translateY(-1px);
+}
+.pbl-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 16px;
+  margin-bottom: 10px;
+}
+.pbl-form-grid .pbl-field-task { grid-column: 1 / -1; }
+.pbl-form-more {
+  grid-column: 1 / -1;
+  margin: 2px 0 4px;
+}
+.pbl-form-more summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dim);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+.pbl-form-more summary::-webkit-details-marker { display: none; }
+.pbl-form-more[open] summary { margin-bottom: 10px; color: var(--accent); }
+.pbl-form-more-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+}
+.pbl-match-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.pbl-field { display: flex; flex-direction: column; gap: 6px; }
+.pbl-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dim);
+}
+.pbl-field select,
+.pbl-field input,
+.pbl-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.pbl-field select:focus,
+.pbl-field input:focus,
+.pbl-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.pbl-field-full { grid-column: 1 / -1; }
+.pbl-textarea {
+  min-height: 88px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.pbl-textarea::placeholder,
+.pbl-field input::placeholder { color: var(--dimmer); }
+.pbl-form-hint {
+  font-size: 12px;
+  color: var(--dimmer);
+  margin: -4px 0 12px;
+  line-height: 1.6;
+}
+.pbl-chat-panel {
+  display: none;
+  margin: 24px 0;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(59,130,246,0.25);
+  background: rgba(30,41,59,0.6);
+}
+.pbl-chat-panel.visible { display: block; }
+.pbl-candidate-panel {
+  display: none;
+  margin: 18px 0;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(245,158,11,0.28);
+  background: rgba(15,23,42,0.72);
+}
+.pbl-candidate-panel.visible { display: block; }
+.pbl-candidate-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 10px 0 12px;
+}
+.pbl-candidate-toolbar input {
+  flex: 1;
+  min-width: 220px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.pbl-candidate-btn {
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(245,158,11,0.35);
+  background: rgba(245,158,11,0.12);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+}
+.pbl-candidate-btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--secondary));
+  color: #fff;
+  border: none;
+}
+.pbl-candidate-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.pbl-candidate-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 9px 10px;
+  border: 1px solid rgba(148,163,184,0.18);
+  border-radius: 10px;
+  background: rgba(30,41,59,0.45);
+  font-size: 13px;
+}
+.pbl-candidate-name { font-weight: 650; color: var(--text); line-height: 1.45; }
+.pbl-candidate-meta { margin-top: 3px; color: var(--dimmer); font-size: 12px; }
+.pbl-selected-summary { color: var(--dim); font-size: 12px; margin: 6px 0 10px; }
+.pbl-chat-header {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+.pbl-chat-messages {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.pbl-chat-msg {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 92%;
+}
+.pbl-chat-msg.user {
+  align-self: flex-end;
+  background: rgba(59,130,246,0.18);
+  border: 1px solid rgba(59,130,246,0.25);
+}
+.pbl-chat-msg.assistant {
+  align-self: flex-start;
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.2);
+}
+.pbl-chat-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.pbl-chat-input-row textarea {
+  flex: 1;
+  min-height: 56px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  resize: vertical;
+}
+.pbl-refine-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pbl-refine-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pbl-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin-top: 14px;
+}
+.pbl-actions .pbl-analyze-btn { align-self: flex-start; }
+.pbl-analyze-btn {
+  padding: 12px 28px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--secondary));
+  color: white;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.pbl-analyze-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+}
+.pbl-analyze-btn:active { transform: scale(0.98); }
+.pbl-analyze-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.pbl-system-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.pbl-system-tags .tag-label {
+  font-size: 12px;
+  color: var(--dimmer);
+  margin-right: 4px;
+}
+.pbl-sys-tag {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--dim);
+  transition: all 0.2s;
+  user-select: none;
+}
+.pbl-sys-tag:hover { border-color: var(--accent); color: var(--text); }
+.pbl-sys-tag.active {
+  background: rgba(245,158,11,0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pbl-grade-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 4px;
+}
+.pbl-grade-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.pbl-grade-check input { accent-color: var(--accent); }
+.pbl-src-tag {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--dim);
+  transition: all 0.2s;
+  user-select: none;
+}
+.pbl-src-tag:hover { border-color: #3b82f6; color: var(--text); }
+.pbl-src-tag.active {
+  background: rgba(59,130,246,0.15);
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+.pbl-match-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dim);
+}
+.pbl-match-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.pbl-form-hint-inline {
+  font-size: 12px;
+  color: var(--dimmer);
+}
+.pbl-settings-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--dim);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pbl-settings-btn:hover { border-color: var(--accent); color: var(--text); }
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.settings-overlay.open { display: flex; }
+.settings-modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.settings-modal h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+.settings-modal label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dim);
+  margin-bottom: 6px;
+  margin-top: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.settings-modal select,
+.settings-modal input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+.settings-modal select:focus,
+.settings-modal input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.settings-modal .btn-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+.settings-modal .btn-row button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.settings-modal .btn-save {
+  background: var(--accent);
+  color: white;
+  border: none;
+}
+.settings-modal .btn-save:hover { background: #d97706; }
+.settings-modal .btn-cancel {
+  background: var(--bg);
+  color: var(--dim);
+  border: 1px solid var(--border);
+}
+.settings-modal .btn-cancel:hover { color: var(--text); }
+.settings-modal .hint {
+  font-size: 12px;
+  color: var(--dimmer);
+  margin-top: 4px;
+}
+.settings-modal .custom-model-row { display: none; margin-top: 8px; }
+.settings-modal .custom-model-row.visible { display: block; }
+
+/* ─── PBL Status ──────────────────────────────── */
+.pbl-status {
+  text-align: center;
+  padding: 40px 24px;
+  margin-top: 16px;
+}
+.pbl-status .pulse {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 8px;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.pbl-status .status-text {
+  font-size: 16px;
+  color: var(--dim);
+}
+
+/* ─── PBL Stats Cards ─────────────────────────── */
+.pbl-export-bar {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.pbl-export-bar.visible { display: flex; }
+.pbl-export-label { font-size: 13px; color: var(--dim); margin-right: auto; }
+.pbl-export-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.pbl-export-btn:hover { background: rgba(59, 130, 246, 0.22); }
+.pbl-export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pbl-export-preview {
+  position: fixed;
+  left: -99999px;
+  top: 0;
+  width: 1200px;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 24px;
+  z-index: -1;
+}
+.pbl-export-preview .pbl-export-header h1 { font-size: 28px; margin-bottom: 8px; }
+.pbl-export-preview .pbl-export-header .goal { font-size: 15px; color: #94a3b8; margin-bottom: 6px; }
+.pbl-export-preview .pbl-export-section { margin-top: 20px; }
+.pbl-export-preview .pbl-export-section h2 { font-size: 18px; margin-bottom: 10px; color: #f8fafc; }
+.pbl-export-preview .pbl-export-graph svg { max-width: 100%; height: auto; }
+.pbl-export-node-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.pbl-export-node-table th, .pbl-export-node-table td {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.pbl-export-node-table th { background: rgba(59, 130, 246, 0.15); }
+
+.pbl-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.pbl-stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.pbl-stat-card .val {
+  font-size: 28px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.pbl-stat-card .lbl {
+  font-size: 12px;
+  color: var(--dimmer);
+  margin-top: 4px;
+}
+.pbl-stat-card.quality-a .val { background: linear-gradient(135deg, #10b981, #3b82f6); -webkit-background-clip: text; }
+.pbl-stat-card.quality-b .val { background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; }
+.pbl-stat-card.quality-c .val { background: linear-gradient(135deg, #f59e0b, #ef4444); -webkit-background-clip: text; }
+.pbl-stat-card.quality-d .val { background: linear-gradient(135deg, #ef4444, #dc2626); -webkit-background-clip: text; }
+.pbl-quality-hint { font-size: 11px; color: var(--dimmer); margin-top: 6px; grid-column: 1 / -1; text-align: center; }
+
+/* PBL 项目拆解蓝图 */
+.pbl-decompose-panel {
+  margin: 16px 0 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(59,130,246,0.1));
+  border: 1px solid rgba(245,158,11,0.35);
+  overflow: hidden;
+}
+.pbl-decompose-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+}
+.pbl-decompose-body { padding: 0 20px 18px; font-size: 14px; line-height: 1.75; }
+#pblDecompose.collapsed .pbl-decompose-body { display: none; }
+.pbl-decompose-summary { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
+.pbl-scheme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.pbl-scheme-card {
+  border: 1px solid rgba(148,163,184,0.2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(15,23,42,0.28);
+}
+.pbl-scheme-card.recommended { border-color: rgba(245,158,11,0.55); background: rgba(245,158,11,0.08); }
+.pbl-scheme-card h4 { font-size: 14px; margin-bottom: 6px; }
+.pbl-scheme-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(245,158,11,0.2);
+  color: var(--accent);
+  margin-left: 6px;
+}
+.pbl-subsystem-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.pbl-subsystem-chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(59,130,246,0.35);
+  color: var(--dim);
+}
+
+/* PBL 技术路线分析 */
+.pbl-tech-route-panel,
+#pblTechRoute {
+  margin: 16px 0 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.14), rgba(139,92,246,0.12));
+  border: 1px solid rgba(59,130,246,0.35);
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(59,130,246,0.12);
+}
+.pbl-tech-route-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  user-select: none;
+  transition: background 0.2s;
+}
+.pbl-tech-route-header:hover { background: rgba(148,163,184,0.06); }
+.pbl-tech-route-toggle { font-size: 12px; color: var(--dim); font-weight: 400; }
+#pblTechRoute.collapsed .pbl-tech-route-body { display: none; }
+#pblTechRoute.collapsed .pbl-tech-route-toggle::after { content: '展开 ▼'; }
+#pblTechRoute:not(.collapsed) .pbl-tech-route-toggle::after { content: '收起 ▲'; }
+.pbl-tech-route-toggle::after { content: '收起 ▲'; }
+.pbl-tech-route-hint {
+  margin: 0;
+  padding: 0 20px 8px;
+  font-size: 12px;
+  color: var(--dim);
+  line-height: 1.5;
+}
+#pblTechRoute.collapsed .pbl-tech-route-hint { display: none; }
+.pbl-tech-route-body {
+  padding: 0 20px 18px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text);
+  min-height: 48px;
+}
+.pbl-path-chain {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: rgba(15,23,42,0.35);
+  font-size: 13px;
+  color: var(--dim);
+}
+.pbl-path-phases { display: flex; flex-direction: column; gap: 10px; }
+.pbl-path-phase {
+  border: 1px solid rgba(148,163,184,0.18);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(15,23,42,0.25);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.pbl-path-phase:hover, .pbl-path-phase.active {
+  border-color: rgba(59,130,246,0.55);
+  background: rgba(59,130,246,0.08);
+}
+.pbl-path-phase header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pbl-phase-idx {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.pbl-phase-graph { display: inline-flex; gap: 4px; }
+.pbl-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 999px;
+  border: 1.5px solid var(--primary);
+  font-size: 12px;
+  font-weight: 800;
+  color: #f8fafc;
+  background: rgba(239,68,68,0.15);
+}
+.pbl-phase-title { font-weight: 700; font-size: 15px; }
+.pbl-phase-row { margin: 4px 0; font-size: 13px; line-height: 1.65; }
+.pbl-phase-row .lbl {
+  display: inline-block;
+  min-width: 52px;
+  color: var(--dim);
+  margin-right: 6px;
+}
+.pbl-phase-literacy {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(139,92,246,0.08);
+  font-size: 12px;
+  color: var(--dim);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ─── PBL Graph Container ─────────────────────── */
+#pbl-graph-container {
+  min-height: 600px;
+  max-height: 85vh;
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+
+/* ─── Node Detail Panel ───────────────────────── */
+.node-detail-panel {
+  position: fixed;
+  top: 0;
+  right: -420px;
+  width: 400px;
+  height: 100vh;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.3);
+  z-index: 1000;
+  transition: right 0.3s ease;
+  overflow-y: auto;
+  padding: 24px;
+}
+.node-detail-panel.open { right: 0; }
+.node-detail-panel .close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--dim);
+  cursor: pointer;
+  font-size: 14px;
+}
+.node-detail-panel .close-btn:hover { color: var(--text); }
+.node-detail-panel h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+  padding-right: 40px;
+}
+.node-detail-panel .meta-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.node-detail-panel .meta-tag {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: rgba(59,130,246,0.1);
+  color: var(--primary);
+}
+.node-detail-panel .definition {
+  font-size: 14px;
+  color: var(--dim);
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+.node-detail-panel .prereq-list {
+  margin-bottom: 16px;
+}
+.node-detail-panel .prereq-list h4 {
+  font-size: 13px;
+  color: var(--dimmer);
+  margin-bottom: 8px;
+}
+.node-detail-panel .prereq-item {
+  padding: 6px 12px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 13px;
+  color: var(--dim);
+}
+.generate-cw-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--success), #059669);
+  color: white;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  margin-top: 20px;
+}
+.generate-cw-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(16,185,129,0.3);
+}
+
+/* ─── How it works ────────────────────────────── */
+.how-it-works {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+.how-step {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+.how-step .step-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+.how-step .step-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.how-step .step-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.how-step .step-desc {
+  font-size: 12px;
+  color: var(--dim);
+  line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .top-bar { flex-direction: column; gap: 12px; }
+  .nav-links { flex-wrap: wrap; justify-content: center; }
+  .header h1 { font-size: 28px; }
+  .pbl-section { padding: 20px; }
+  .pbl-form-grid, .pbl-form-more-grid { grid-template-columns: 1fr; }
+  .how-it-works { grid-template-columns: 1fr; }
+  .node-detail-panel { width: 100%; right: -100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1 style="display:flex;align-items:center;gap:8px;">
+    <img src="assets/teachany-icon.png" alt="TeachAny" style="height:32px;width:32px;vertical-align:middle;">
+    TeachAny
+  </h1>
+  <div class="nav-links">
+    <a href="index.html">📋 Gallery / 课件库</a>
+    <a href="tree.html">🗺️ Knowledge Map / 知识地图</a>
+    <a href="knowledge-map.html">🧬 全科图谱</a>
+    <a href="path.html">🛤️ Learning Path / 学习路径</a>
+    <a href="pbl.html" class="active">🧩 PBL 项目拆解</a>
+    <a href="reading.html">📖 阅读学院</a>
+    <a href="my.html">👤 我的</a>
+    <a href="commercial-license.html">💼 商业授权</a>
+  </div>
+</div>
+
+<div class="header">
+  <h1>🧩 PBL 项目拆解引擎</h1>
+  <p>将项目式学习目标自动拆解为知识网络，匹配全球五大课标，生成可落地的学习路径图谱。</p>
+  <div class="header-philosophy">
+    <p style="margin:0">
+      我们认为，在 AI 时代，<strong>项目式学习不应再是体系化课堂的补充，而应成为学习的主体</strong>。
+      本工具帮助教师、家长与学生，在<strong>真实项目</strong>与<strong>传统体系化课程</strong>之间架起桥梁——从日常中发现课题，把「想做什么」落到「需要学什么」。
+    </p>
+    <span class="usage-title">推荐用法</span>
+    <p style="margin:8px 0 0">
+      教师或家长陪学生一起，从日常生活中找到感兴趣的课题，共同商量、共同拆解路径。
+      成人角色很重要，但重心是<strong>陪伴与审核</strong>（把关方向、安全与质量），而不是代替 AI 或课堂去完成知识传递。
+      图谱中的知识点仍可一键生成课件，作为项目推进中的按需补给。
+    </p>
+  </div>
+</div>
+
+<div class="container">
+  <!-- How it works -->
+  <div class="how-it-works">
+    <div class="how-step">
+      <div class="step-icon">📝</div>
+      <div class="step-num">Step 1</div>
+      <div class="step-title">描述项目任务</div>
+      <div class="step-desc">填写学段、任务与产出类型，AI 匹配课标与知识图谱</div>
+    </div>
+    <div class="how-step">
+      <div class="step-icon">🤖</div>
+      <div class="step-num">Step 2</div>
+      <div class="step-title">AI 拆解知识网络</div>
+      <div class="step-desc">AI 从五大课标体系中匹配所需知识点，并生成「项目实施路径说明」（约 500 字，可指导分阶段落地）</div>
+    </div>
+    <div class="how-step">
+      <div class="step-icon">🗺️</div>
+      <div class="step-num">Step 3</div>
+      <div class="step-title">可视化图谱</div>
+      <div class="step-desc">生成交互式知识图谱，看清学习路径的全貌，点击节点查看详情</div>
+    </div>
+    <div class="how-step">
+      <div class="step-icon">✨</div>
+      <div class="step-num">Step 4</div>
+      <div class="step-title">一键生成课件</div>
+      <div class="step-desc">图谱中的每个知识点都可一键生成 TeachAny 互动课件</div>
+    </div>
+  </div>
+
+  <!-- PBL 项目式学习路径发现 -->
+  <div class="pbl-section">
+    <div class="pbl-title">🧭 PBL 项目式学习路径发现</div>
+    <button type="button" class="pbl-settings-btn" id="pblSettingsBtn" onclick="toggleSettings()" title="TeachAny 服务端默认 · Qwen3 Next 80B">⚙️ 服务端默认</button>
+    <div class="pbl-desc">
+      选择学段并描述项目任务，即可拆解学习路径；无需指定具体年级。可跳转<a href="knowledge-map.html">全科图谱</a>或一键生成课件。
+    </div>
+    <div class="pbl-form-grid">
+      <div class="pbl-field pbl-field-task">
+        <label for="pblTaskInput">项目任务 <span style="color:var(--accent)">*</span></label>
+        <textarea id="pblTaskInput" class="pbl-textarea" placeholder="描述要做什么，如：为校园写一组家乡主题现代诗并编成诗集"></textarea>
+      </div>
+      <div class="pbl-field">
+        <label for="pblGradeLevel">学段</label>
+        <select id="pblGradeLevel">
+          <option value="any">自动推断</option>
+          <option value="primary">小学</option>
+          <option value="junior">初中</option>
+          <option value="senior">高中</option>
+          <option value="university">大学</option>
+          <option value="adult">成人/在职</option>
+        </select>
+      </div>
+      <div class="pbl-field">
+        <label for="pblSubject">学科取向</label>
+        <select id="pblSubject">
+          <option value="cross">跨学科（默认）</option>
+          <option value="math">数学</option>
+          <option value="physics">物理</option>
+          <option value="chemistry">化学</option>
+          <option value="biology">生物</option>
+          <option value="science">科学</option>
+          <option value="chinese">语文</option>
+          <option value="english">英语</option>
+          <option value="history">历史</option>
+          <option value="geography">地理</option>
+          <option value="info-tech">信息技术</option>
+          <option value="art">艺术</option>
+        </select>
+      </div>
+      <div class="pbl-field">
+        <label for="pblDeliverable">产出类型</label>
+        <select id="pblDeliverable" onchange="togglePBLDeliverableCustom()">
+          <option value="report">研究报告 / 调查报告</option>
+          <option value="decision-table">决策对比表 / 方案比选</option>
+          <option value="engineering-prototype">工程作品 / 可运行原型</option>
+          <option value="experiment-report">实验报告 / 探究记录</option>
+          <option value="design-proposal">设计方案 / 策划案</option>
+          <option value="presentation">演示文稿 / 展板 / 讲解</option>
+          <option value="app-software">应用 / 程序 / 网站</option>
+          <option value="handwork-model">手工作品 / 实体模型</option>
+          <option value="portfolio">作品集 / 创作集</option>
+          <option value="plan-schedule">计划书 / 路线与预算</option>
+          <option value="other">其他（自定义）</option>
+        </select>
+      </div>
+      <div class="pbl-field pbl-field-full" id="pblDeliverableCustomRow" style="display:none">
+        <label for="pblDeliverableCustom">自定义产出说明</label>
+        <input type="text" id="pblDeliverableCustom" placeholder="如：家庭购车对比决策报告（含全成本表）" />
+      </div>
+      <details class="pbl-form-more">
+        <summary>＋ 更多选项（受众、周期、约束）</summary>
+        <div class="pbl-form-more-grid">
+          <div class="pbl-field">
+            <label for="pblAudience">受众/场景</label>
+            <input type="text" id="pblAudience" placeholder="如：班级展示、家庭决策" />
+          </div>
+          <div class="pbl-field">
+            <label for="pblDuration">周期</label>
+            <input type="text" id="pblDuration" placeholder="如：4 周、8 课时" />
+          </div>
+          <div class="pbl-field pbl-field-full">
+            <label for="pblConstraints">约束条件</label>
+            <input type="text" id="pblConstraints" placeholder="如：预算、设备、评价标准" />
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="pbl-examples">
+      <span class="ex-label">跨学科经典：</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="xd-greenhouse" data-subject="cross" data-deliverable="prototype" data-task="设计智能温室温控系统，用温湿度传感器监测环境，自动控制通风和补光，保持适宜作物生长">🏡 智能温室温控</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="xd-watering" data-subject="cross" data-deliverable="prototype" data-task="设计自动浇花系统，通过土壤湿度传感器判断是否需要浇水，用微型水泵自动灌溉">🌱 自动浇花系统</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="xd-river-quality" data-subject="cross" data-deliverable="report" data-task="调查本地河流水质，采集pH值、溶解氧、浊度数据，评估污染程度并提出治理建议">💧 河流水质调查</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="xd-solar-roof" data-subject="cross" data-deliverable="report" data-task="测算校园屋顶光伏发电潜力，调查日照与用电数据，估算年发电收益和碳减排效益">☀️ 校园光伏测算</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="xd-paper-bridge" data-subject="cross" data-deliverable="prototype" data-task="设计并制作一座承重纸桥模型，探究结构与材料对承载力的影响，完成加载测试">🌉 承重纸桥模型</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="xd-traffic" data-subject="cross" data-deliverable="report" data-task="分析学校周边交通拥堵，统计高峰时段车流量，用图表呈现规律并提出优化建议">🚦 交通拥堵分析</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="xd-nutrition" data-subject="cross" data-deliverable="report" data-task="为中学生设计一周营养午餐方案，调查饮食习惯、计算营养素比例并撰写说明">🥗 营养午餐设计</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="xd-heritage-model" data-subject="cross" data-deliverable="prototype" data-task="调研本地古建斗拱结构，测绘关键尺寸比例并制作微缩木构模型，撰写研学报告">🏯 古建斗拱模型</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="xd-weather-board" data-subject="cross" data-deliverable="prototype" data-task="制作校园气象数据看板，采集温度湿度风速并可视化展示一周变化趋势">📊 校园气象看板</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="xd-carbon" data-subject="cross" data-deliverable="report" data-task="测算班级一周碳足迹，分类统计用电用水出行数据，提出可执行的减排行动方案">🌍 班级碳足迹</span>
+    </div>
+    <div class="pbl-examples" style="margin-top:8px">
+      <span class="ex-label">更多示范：</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="water-rocket" data-goal="设计一款水火箭，完成箭体制作、推进测试与安全发射">🚀 水火箭设计</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="canteen-soup" data-goal="食堂菜汤的盐含量测定，比较滴定法与电导率法并撰写报告">🥣 食堂汤水测定</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="car-purchase"
+        data-grade="senior" data-subject="cross" data-deliverable="decision-table"
+        data-task="家庭购车方案，对比新能源和传统燃油，从需求、全成本、环保等维度给出购车建议">🚙 家庭购车对比</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="study-trip" data-goal="设计一次班级研学旅行路线和预算，包含人文史迹调研、区域地理分析、日程安排、费用测算与安全预案">🎒 研学路线规划</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="garbage-survey" data-goal="调查社区垃圾分类现状并提出改进建议，设计问卷、统计数据并撰写调查报告">♻️ 垃圾分类调查</span>
+      <span class="ex-chip" onclick="fillPBLExample(this)" data-key="microplastic-filter" data-goal="设计一款微塑料过滤装置，模拟拦截洗衣废水中的微塑料颗粒">🔬 微塑料过滤</span>
+    </div>
+    <div class="pbl-actions">
+      <button class="pbl-analyze-btn" id="pblAnalyzeBtn" onclick="analyzePBLGoal()">🔍 拆解项目路径</button>
+      <div class="pbl-match-bar">
+        <div class="pbl-system-tags">
+          <span class="tag-label">课标：</span>
+          <span class="pbl-sys-tag active" data-system="all" onclick="toggleSystemTag(this)">全部</span>
+          <span class="pbl-sys-tag" data-system="cn" onclick="toggleSystemTag(this)">🇨🇳 中国</span>
+          <span class="pbl-sys-tag" data-system="ap" onclick="toggleSystemTag(this)">AP</span>
+          <span class="pbl-sys-tag" data-system="cambridge" onclick="toggleSystemTag(this)">Cambridge</span>
+          <span class="pbl-sys-tag" data-system="ib" onclick="toggleSystemTag(this)">IB</span>
+          <span class="pbl-sys-tag" data-system="us" onclick="toggleSystemTag(this)">US</span>
+        </div>
+        <div class="pbl-system-tags">
+          <span class="tag-label">来源：</span>
+          <span class="pbl-src-tag active" data-source="curriculum" onclick="toggleKnowledgeSourceTag(this)">课标树</span>
+          <span class="pbl-src-tag active" data-source="k12Graph" onclick="toggleKnowledgeSourceTag(this)">全科图谱</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PBL 分析状态 -->
+  <div id="pblStatus" style="display:none" class="pbl-status">
+    <span class="pulse"></span>
+    <span class="status-text" id="pblStatusText">正在分析项目目标...</span>
+  </div>
+
+  <!-- 多轮对话调整 -->
+  <div id="pblChatPanel" class="pbl-chat-panel" aria-live="polite">
+    <div class="pbl-chat-header">💬 继续调整拆解结果</div>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:10px">例如：「去掉历史课标」「增加统计与函数」「产出改成演示文稿」「面向初二学生简化」</p>
+    <div class="pbl-chat-messages" id="pblChatMessages"></div>
+    <div class="pbl-chat-input-row">
+      <textarea id="pblRefineInput" placeholder="描述你想如何修改当前拆解…"></textarea>
+      <button type="button" class="pbl-refine-btn" id="pblRefineBtn" onclick="refinePBLGoal()">应用修改</button>
+    </div>
+  </div>
+
+  <!-- 候选知识点编辑 -->
+  <div id="pblCandidatePanel" class="pbl-candidate-panel" aria-live="polite">
+    <div class="pbl-chat-header">候选知识点与图谱重设</div>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:8px">勾选要进入学习图谱主线的知识点；可从候选列表增减，也可从全科图谱模糊检索补充。点击重设后，图谱和实施路径会同步更新。</p>
+    <div class="pbl-candidate-toolbar">
+      <input id="pblKnowledgeSearchInput" type="text" placeholder="搜索全科图谱，如：任务调度、热控、通信链路" onkeydown="if(event.key==='Enter') searchPBLKnowledgeCandidates()" />
+      <button type="button" class="pbl-candidate-btn" onclick="searchPBLKnowledgeCandidates()">检索补充</button>
+      <button type="button" class="pbl-candidate-btn primary" onclick="applyPBLKnowledgeSelection()">一键重设学习图谱和实施路径</button>
+    </div>
+    <div class="pbl-selected-summary" id="pblSelectedSummary"></div>
+    <div class="pbl-candidate-list" id="pblCandidateList"></div>
+  </div>
+
+  <!-- 导出 -->
+  <div id="pblExportBar" class="pbl-export-bar" aria-live="polite">
+    <span class="pbl-export-label">拆解结果可离线保存或分享</span>
+    <button type="button" class="pbl-export-btn" id="pblExportHtmlBtn" onclick="exportPBLAsHtml()">💾 保存为网页</button>
+    <button type="button" class="pbl-export-btn" id="pblExportImgBtn" onclick="exportPBLAsImage()">🖼️ 保存为长图</button>
+  </div>
+
+  <!-- PBL 统计 -->
+  <div id="pblStatsContainer" style="display:none">
+    <div class="pbl-stats" id="pblStats"></div>
+  </div>
+
+  <!-- 项目全链路拆解（方案 → 阶段，先于课标匹配） -->
+  <div id="pblDecompose" class="pbl-decompose-panel" style="display:none" aria-live="polite">
+    <div class="pbl-decompose-header" onclick="this.parentElement.classList.toggle('collapsed')">
+      <span>🧩 项目结构化拆解（可行方案）</span>
+      <span class="pbl-tech-route-toggle">收起 ▲</span>
+    </div>
+    <div class="pbl-decompose-body" id="pblDecomposeBody"></div>
+  </div>
+
+  <!-- 项目实施路径说明（独立区块，避免被统计区折叠遮挡） -->
+  <div id="pblTechRoute" class="pbl-tech-route-panel" style="display:none" aria-live="polite">
+    <div class="pbl-tech-route-header" onclick="this.parentElement.classList.toggle('collapsed')">
+      <span>🛤️ 项目实施路径说明</span>
+      <span class="pbl-tech-route-toggle">收起 ▲</span>
+    </div>
+    <p class="pbl-tech-route-hint">路径按图谱序号 ①②③… 分阶段拆解：每阶段列出对应知识点、任务与产出；点击阶段可高亮图谱节点</p>
+    <div class="pbl-tech-route-body" id="pblTechRouteBody"></div>
+  </div>
+
+  <!-- PBL 知识图谱容器 -->
+  <div id="pbl-graph-container"></div>
+</div>
+
+<!-- 节点详情侧边面板 -->
+<div class="node-detail-panel" id="nodeDetailPanel">
+  <button class="close-btn" onclick="closeNodeDetail()">✕</button>
+  <div id="nodeDetailContent"></div>
+</div>
+
+<!-- API 设置弹窗 -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-modal">
+    <h2>⚙️ LLM 模型设置</h2>
+    <label for="providerSelect">服务商</label>
+    <select id="providerSelect" onchange="onProviderChange()"></select>
+    <label for="modelSelect">模型</label>
+    <select id="modelSelect" onchange="onModelSelectChange()"></select>
+    <div class="custom-model-row" id="customModelRow">
+      <label for="customModelInput">自定义模型名</label>
+      <input type="text" id="customModelInput" placeholder="如 qwen/qwen3-next-80b-a3b-instruct 或 gpt-4o-mini" />
+    </div>
+    <div id="customApiFields">
+      <label for="apiKeyInput">API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-..." />
+      <div class="hint" id="keyHint"></div>
+      <label for="baseUrlInput">Base URL</label>
+      <input type="text" id="baseUrlInput" placeholder="https://api.example.com/v1" />
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn-cancel" onclick="toggleSettings()">取消</button>
+      <button type="button" class="btn-save" onclick="saveSettings()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="./assets/scripts/courseware-hub.js"></script>
+<script src="./assets/scripts/pbl-project-form.js?v=20260609-grade-band"></script>
+<script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
+<script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
+<script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260611-topic-profile-fix"></script>
+<script src="./assets/scripts/history-tracker.js" defer></script>
+<script src="./assets/scripts/teachany-make-course.js"></script>
+<script>
+// ─── 全局状态 ──────────────────────────────────
+let pblRenderer = null;
+let pblResult = null;
+let pblChatHistory = [];
+let pblKnowledgeSelection = new Set();
+let pblCandidateView = [];
+
+function toggleKnowledgeSourceTag(el) {
+  el.classList.toggle('active');
+  const active = document.querySelectorAll('.pbl-src-tag.active').length;
+  if (!active) el.classList.add('active');
+  markPBLGoalDirty();
+}
+
+function fillPBLKnowledgeSourceTags(sources) {
+  const src = sources || { curriculum: true, k12Graph: true };
+  document.querySelectorAll('.pbl-src-tag').forEach(tag => {
+    const key = tag.dataset.source;
+    tag.classList.toggle('active', src[key] !== false);
+  });
+  if (!document.querySelectorAll('.pbl-src-tag.active').length) {
+    document.querySelectorAll('.pbl-src-tag').forEach(t => t.classList.add('active'));
+  }
+}
+
+function fillPBLSystemTags(systems) {
+  if (!systems?.length) return;
+  document.querySelectorAll('.pbl-sys-tag').forEach(t => t.classList.remove('active'));
+  if (systems.includes('all')) {
+    document.querySelector('.pbl-sys-tag[data-system="all"]')?.classList.add('active');
+    return;
+  }
+  systems.forEach(sys => {
+    document.querySelector(`.pbl-sys-tag[data-system="${sys}"]`)?.classList.add('active');
+  });
+  if (!document.querySelectorAll('.pbl-sys-tag.active').length) {
+    document.querySelector('.pbl-sys-tag[data-system="all"]')?.classList.add('active');
+  }
+}
+
+function togglePBLDeliverableCustom() {
+  const v = document.getElementById('pblDeliverable')?.value;
+  const row = document.getElementById('pblDeliverableCustomRow');
+  if (row) row.style.display = v === 'other' ? 'block' : 'none';
+}
+
+function getPBLProjectSpec() {
+  return window.PBLProjectForm?.readProjectSpecFromDOM?.() || { task: '' };
+}
+
+function buildPBLGoalFromForm() {
+  const spec = getPBLProjectSpec();
+  if (!spec.task) return '';
+  return window.PBLProjectForm?.composeGoalFromSpec(spec) || spec.task;
+}
+
+function renderPBLChatMessages(history) {
+  const box = document.getElementById('pblChatMessages');
+  const panel = document.getElementById('pblChatPanel');
+  if (!box || !panel) return;
+  if (!history?.length) {
+    box.innerHTML = '';
+    panel.classList.remove('visible');
+    return;
+  }
+  panel.classList.add('visible');
+  box.innerHTML = history.map(m =>
+    `<div class="pbl-chat-msg ${m.role}">${escapePBLHtml(m.content)}</div>`
+  ).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+// ─── PBL 相关函数 ─────────────────────────────────
+
+function toggleSystemTag(el) {
+  const system = el.dataset.system;
+  if (system === 'all') {
+    document.querySelectorAll('.pbl-sys-tag').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  } else {
+    document.querySelector('.pbl-sys-tag[data-system="all"]').classList.remove('active');
+    el.classList.toggle('active');
+    const anyActive = document.querySelectorAll('.pbl-sys-tag.active:not([data-system="all"])').length > 0;
+    if (!anyActive) {
+      document.querySelector('.pbl-sys-tag[data-system="all"]').classList.add('active');
+    }
+  }
+}
+
+function getSelectedSystems() {
+  const tags = document.querySelectorAll('.pbl-sys-tag.active');
+  const systems = [];
+  tags.forEach(t => systems.push(t.dataset.system));
+  return systems.includes('all') ? ['all'] : systems;
+}
+
+function markPBLGoalDirty() {
+  const btn = document.getElementById('pblAnalyzeBtn');
+  if (btn) btn.textContent = '🔍 拆解项目路径';
+}
+
+async function fillPBLExample(el) {
+  const key = el.dataset.key;
+  const spec = {
+    gradeLevel: el.dataset.grade || 'any',
+    subject: el.dataset.subject || 'cross',
+    task: el.dataset.task || el.dataset.goal || '',
+    deliverable: el.dataset.deliverable || 'report',
+    deliverableCustom: el.dataset.deliverableCustom || '',
+    audience: el.dataset.audience || '',
+    duration: el.dataset.duration || '',
+    constraints: el.dataset.constraints || '',
+  };
+  if (window.PBLProjectForm?.fillProjectSpecToDOM) {
+    window.PBLProjectForm.fillProjectSpecToDOM(spec);
+  } else {
+    const taskEl = document.getElementById('pblTaskInput');
+    if (taskEl) taskEl.value = spec.task;
+  }
+  const goal = buildPBLGoalFromForm();
+
+  if (key) {
+    const demoUrl = `./data/pbl-demos/${key}.json`;
+    const statusEl = document.getElementById('pblStatus');
+    const statusText = document.getElementById('pblStatusText');
+
+    try {
+      statusEl.style.display = 'block';
+      statusText.textContent = '加载示范案例分析结果...';
+
+      const resp = await fetch(demoUrl);
+      if (resp.ok) {
+        const result = await resp.json();
+        const builder = window.PBLPathBuilder;
+        try { await builder.loadUnifiedIndex(); } catch (_e) {}
+        if (window.PBLPathBuilder && typeof window.PBLPathBuilder.resolveTechRouteText === 'function') {
+          result.techRoute = window.PBLPathBuilder.resolveTechRouteText(result);
+        }
+        pblResult = result;
+        statusText.textContent = '渲染知识路径图谱...';
+        renderPBLResult(result);
+        statusEl.style.display = 'none';
+        scrollToPBLOutput();
+        return;
+      }
+    } catch (_e) {
+      console.warn('[PBL] 预制结果加载失败，回退到实时分析:', _e.message);
+    }
+    statusEl.style.display = 'none';
+  }
+
+  await analyzePBLGoal();
+}
+
+async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
+  const spec = getPBLProjectSpec();
+  const goal = buildPBLGoalFromForm();
+  if (!spec.task) {
+    alert('请填写任务描述');
+    return;
+  }
+
+  const systems = getSelectedSystems();
+  const btn = refine ? document.getElementById('pblRefineBtn') : document.getElementById('pblAnalyzeBtn');
+  const statusEl = document.getElementById('pblStatus');
+  const statusText = document.getElementById('pblStatusText');
+
+  btn.disabled = true;
+  statusEl.style.display = 'block';
+  statusEl.querySelector('.pulse').style.background = '';
+  statusText.textContent = refine ? '正在根据修改要求调整…' : '正在加载多课标知识点索引...';
+
+  const builder = window.PBLPathBuilder;
+  try {
+    try {
+      await builder.loadUnifiedIndex();
+    } catch (idxErr) {
+      if (/stack/i.test(String(idxErr.message || ''))) {
+        ['teachany_pbl_unified_index_v10', 'teachany_pbl_unified_index_v11'].forEach((k) => {
+          try { localStorage.removeItem(k); } catch (_e) { /* ignore */ }
+        });
+        builder.loaded = false;
+        builder._loadPromise = null;
+        builder._skipIndexCache = true;
+        await builder.loadUnifiedIndex();
+      } else {
+        throw idxErr;
+      }
+    }
+
+    let result;
+    try {
+      if (refine && pblResult) {
+        result = await builder.refinePBLResult(
+          pblResult, userMessage, spec, systems,
+          (msg) => { if (statusText && msg) statusText.textContent = msg; },
+          pblChatHistory
+        );
+      } else {
+        result = await builder.analyzePBLGoal(goal, systems, (msg) => {
+          if (statusText && msg) statusText.textContent = msg;
+        }, { projectSpec: spec, chatHistory: pblChatHistory });
+      }
+    } catch (llmError) {
+      console.warn('[PBL] LLM 调用失败，降级为关键词搜索:', llmError.message);
+      statusText.textContent = 'LLM 不可用，降级为关键词搜索...';
+      result = await builder.searchByKeywords(goal, systems);
+      if (builder._fallbackDecomposeBlueprint) {
+        result.projectBlueprint = builder._fallbackDecomposeBlueprint(goal);
+      }
+      result.projectSpec = spec;
+    }
+
+    pblResult = result;
+    pblChatHistory = result.chatHistory || pblChatHistory;
+    renderPBLChatMessages(pblChatHistory);
+    statusText.textContent = '正在渲染知识路径图谱...';
+    renderPBLResult(result);
+    scrollToPBLOutput();
+
+    try {
+      if (window.TeachAnyHistory && typeof window.TeachAnyHistory.recordPBL === 'function') {
+        const llmCfg = builder.getLLMConfig();
+        const snap = serializePBLResult(result);
+        const runId = window.TeachAnyHistory.recordPBL(goal, snap || { ...result.graphData, systems: result.systems, techRoute: result.techRoute || '' }, {
+          providerName: llmCfg.providerName,
+          model: llmCfg.model || 'auto',
+        });
+        if (runId) {
+          window.__pblRunId = runId;
+          const u = new URL(window.location.href);
+          u.searchParams.delete('auto');
+          u.searchParams.delete('handoff');
+          u.searchParams.set('pbl', runId);
+          history.replaceState(null, '', u.pathname + u.search);
+        }
+      }
+    } catch (_e) { /* ignore */ }
+
+    statusEl.style.display = 'none';
+    if (!refine) {
+      document.getElementById('pblChatPanel')?.classList.add('visible');
+    }
+    const refineInput = document.getElementById('pblRefineInput');
+    if (refineInput) refineInput.value = '';
+    window.__pblStackRetried = false;
+    window.__pblLastAnalysisDone = { ok: true, result, ts: Date.now() };
+    document.dispatchEvent(new CustomEvent('teachany-pbl-done', { detail: { result } }));
+  } catch (error) {
+    console.error('[PBL] 分析失败:', error);
+    const msg = String(error.message || error);
+    if (/stack/i.test(msg) && !window.__pblStackRetried) {
+      window.__pblStackRetried = true;
+      ['teachany_pbl_unified_index_v10', 'teachany_pbl_unified_index_v11'].forEach((k) => {
+        try { localStorage.removeItem(k); } catch (_e) { /* ignore */ }
+      });
+      if (builder) {
+        builder.loaded = false;
+        builder._loadPromise = null;
+        builder._skipIndexCache = true;
+      }
+      statusText.textContent = '检测到缓存异常，正在自动清缓存并重试…';
+      setTimeout(() => runPBLAnalysis({ refine, userMessage }), 400);
+      return;
+    }
+    if (/stack/i.test(msg)) {
+      statusText.textContent = '❌ 分析过程内存溢出，请硬刷新页面后重试';
+    } else {
+      statusText.textContent = '❌ ' + msg;
+    }
+    statusEl.querySelector('.pulse').style.background = '#ef4444';
+    window.__pblLastAnalysisDone = { ok: false, error: error.message, ts: Date.now() };
+    document.dispatchEvent(new CustomEvent('teachany-pbl-done', { detail: { error: error.message } }));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function analyzePBLGoal() {
+  pblChatHistory = [];
+  renderPBLChatMessages([]);
+  await runPBLAnalysis({ refine: false });
+}
+
+async function refinePBLGoal() {
+  if (!pblResult) {
+    alert('请先完成一次「拆解项目路径」');
+    return;
+  }
+  const msg = document.getElementById('pblRefineInput')?.value?.trim();
+  if (!msg) {
+    alert('请输入修改要求');
+    return;
+  }
+  await runPBLAnalysis({ refine: true, userMessage: msg });
+}
+
+function getPBLMainlineNodes(result) {
+  const nodes = result?.graphData?.nodes || [];
+  return nodes.filter(n => n && n.pathStep).sort((a, b) => (a.pathStep || 99) - (b.pathStep || 99));
+}
+
+function ensurePBLCandidateState(result) {
+  const mainline = getPBLMainlineNodes(result);
+  const selectedIds = result?.selectedKnowledgeIds?.length
+    ? result.selectedKnowledgeIds
+    : mainline.map(n => n.id).filter(Boolean);
+  pblKnowledgeSelection = new Set(selectedIds);
+  const merged = [
+    ...(mainline || []),
+    ...(result?.candidateNodes || []),
+    ...(result?.graphData?.nodes || []).filter(n => n && !n.isExternal),
+  ];
+  const seen = new Set();
+  pblCandidateView = merged.filter(n => n && n.id && !seen.has(n.id) && (seen.add(n.id) || true)).slice(0, 120);
+}
+
+function renderPBLCandidatePanel(result) {
+  const panel = document.getElementById('pblCandidatePanel');
+  const list = document.getElementById('pblCandidateList');
+  const summary = document.getElementById('pblSelectedSummary');
+  if (!panel || !list || !summary || !result) return;
+  ensurePBLCandidateState(result);
+  panel.classList.add('visible');
+  renderPBLCandidateList();
+}
+
+function renderPBLCandidateList(nodes = pblCandidateView) {
+  const list = document.getElementById('pblCandidateList');
+  const summary = document.getElementById('pblSelectedSummary');
+  if (!list || !summary) return;
+  const items = nodes || [];
+  summary.textContent = `已选择 ${pblKnowledgeSelection.size} 个主线知识点；当前列表 ${items.length} 个候选。`;
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--dim);font-size:13px">暂无候选，请先检索或重新拆解项目。</div>';
+    return;
+  }
+  list.innerHTML = items.map(n => {
+    const id = encodeURIComponent(n.id);
+    const checked = pblKnowledgeSelection.has(n.id) ? 'checked' : '';
+    const meta = [n.systemTag || n.system || '', n.subject || '', n.gradeLabel || (n.grade > 0 ? `G${n.grade}` : (n.stage || ''))].filter(Boolean).join(' · ');
+    return `<label class="pbl-candidate-item">
+      <input type="checkbox" ${checked} onchange="togglePBLKnowledgeCandidate('${id}', this.checked)" />
+      <span><span class="pbl-candidate-name">${escapePBLHtml(n.name || n.id)}</span><span class="pbl-candidate-meta">${escapePBLHtml(meta || '知识点')}</span></span>
+    </label>`;
+  }).join('');
+}
+
+function togglePBLKnowledgeCandidate(encodedId, checked) {
+  const id = decodeURIComponent(encodedId || '');
+  if (!id) return;
+  if (checked) pblKnowledgeSelection.add(id);
+  else pblKnowledgeSelection.delete(id);
+  const summary = document.getElementById('pblSelectedSummary');
+  if (summary) summary.textContent = `已选择 ${pblKnowledgeSelection.size} 个主线知识点；当前列表 ${pblCandidateView.length} 个候选。`;
+}
+
+async function searchPBLKnowledgeCandidates() {
+  if (!pblResult) { alert('请先完成一次项目拆解'); return; }
+  const input = document.getElementById('pblKnowledgeSearchInput');
+  const q = input?.value?.trim();
+  if (!q) { alert('请输入检索关键词'); return; }
+  const builder = window.PBLPathBuilder;
+  if (!builder || typeof builder.searchKnowledgeCandidates !== 'function') return;
+  await builder.loadUnifiedIndex();
+  const results = builder.searchKnowledgeCandidates(q, pblResult.goal || buildPBLGoalFromForm(), pblResult.systems || getSelectedSystems(), 40);
+  const seen = new Set();
+  pblCandidateView = [...results, ...pblCandidateView].filter(n => n && n.id && !seen.has(n.id) && (seen.add(n.id) || true)).slice(0, 160);
+  pblResult.candidateNodes = pblCandidateView;
+  renderPBLCandidateList(results.length ? pblCandidateView : []);
+}
+
+async function applyPBLKnowledgeSelection() {
+  if (!pblResult) { alert('请先完成一次项目拆解'); return; }
+  if (!pblKnowledgeSelection.size) { alert('请至少选择 1 个知识点'); return; }
+  const builder = window.PBLPathBuilder;
+  if (!builder || typeof builder.redesignPBLWithSelectedKnowledge !== 'function') return;
+  await builder.loadUnifiedIndex();
+  const updated = builder.redesignPBLWithSelectedKnowledge(pblResult, [...pblKnowledgeSelection]);
+  pblResult = updated;
+  renderPBLResult(updated);
+}
+
+function serializePBLResult(result) {
+  if (!result) return null;
+  const gd = result.graphData || {};
+  const nodes = (gd.nodes || []).map(n => {
+    const c = { ...n };
+    delete c.x; delete c.y; delete c.vx; delete c.vy; delete c.fx; delete c.fy; delete c.index;
+    return c;
+  });
+  const links = (gd.links || []).map(l => ({
+    source: typeof l.source === 'object' ? (l.source.id || l.source) : l.source,
+    target: typeof l.target === 'object' ? (l.target.id || l.target) : l.target,
+    type: l.type,
+  }));
+  // handoff 优先保留蓝图/路径，省略大体积候选池与审计明细以防裁剪丢方案
+  return {
+    goal: result.goal || '',
+    systems: result.systems || [],
+    techRoute: result.techRoute || '',
+    projectBlueprint: result.projectBlueprint || null,
+    projectPhases: result.projectPhases || [],
+    projectSpec: result.projectSpec || null,
+    moduleChain: result.moduleChain || '',
+    pathPlan: result.pathPlan || null,
+    stats: result.stats || null,
+    quality: result.quality || null,
+    relevanceAudit: result.relevanceAudit
+      ? {
+          intake: result.relevanceAudit.intake || null,
+          postFilter: result.relevanceAudit.postFilter || null,
+          output: result.relevanceAudit.output || null,
+        }
+      : null,
+    archetype: result.archetype || null,
+    selectedKnowledgeIds: result.selectedKnowledgeIds || [],
+    chatHistory: (result.chatHistory || []).slice(-16),
+    graphData: { nodes, links },
+  };
+}
+
+function appendAlternateScheme(blueprint) {
+  if (!blueprint || (blueprint.schemes || []).length >= 2) return blueprint;
+  const a = blueprint.schemes[0];
+  if (!a) return blueprint;
+  const b = {
+    id: 'B',
+    name: '备选：调研验证—迭代实施',
+    summary: '先小范围调研或原型验证关键假设，再按证据调整后续阶段',
+    pros: ['风险更低', '便于用数据调方案', '适合证据导向评价'],
+    cons: ['前期需额外调研时间'],
+    phases: (a.phases || []).map((p, i) => (i === 0 ? {
+      ...p,
+      phase: '调研与问题界定',
+      steps: ['列出待验证的关键问题', '设计小样本调研或测试', ...(p.steps || []).slice(0, 2)],
+      deliverable: p.deliverable || '调研小结',
+    } : { ...p })),
+  };
+  return { ...blueprint, schemes: [a, b], recommendedSchemeId: blueprint.recommendedSchemeId || 'A' };
+}
+
+function ensurePBLBlueprint(result) {
+  const hadBlueprint = !!(result?.projectBlueprint?.schemes?.length);
+  if (!result || hadBlueprint) {
+    if (hadBlueprint && result.projectBlueprint.schemes.length === 1
+      && (result.restoredFromHandoff || result.handoffTruncated || result.projectBlueprint.fallback)) {
+      result.projectBlueprint = appendAlternateScheme({ ...result.projectBlueprint });
+    }
+    return result;
+  }
+  const builder = window.PBLPathBuilder;
+  if (!builder || typeof builder._fallbackDecomposeBlueprint !== 'function') return result;
+  try {
+    const goal = result.goal || '';
+    const bp = builder._fallbackDecomposeBlueprint(goal);
+    if ((bp?.schemes || []).length) {
+      if (bp.schemes.length === 1) bp = appendAlternateScheme(bp);
+      result.projectBlueprint = bp;
+      if (!result.moduleChain && builder._archetypeEngine?.moduleChainFromBlueprint) {
+        result.moduleChain = builder._archetypeEngine.moduleChainFromBlueprint(bp);
+      }
+      console.warn('[PBL] 已本地补全结构化拆解蓝图');
+    }
+  } catch (e) {
+    console.warn('[PBL] 蓝图补全失败:', e);
+  }
+  return result;
+}
+
+function ensurePBLQuality(result) {
+  if (!result) return result;
+  const builder = window.PBLPathBuilder;
+  const needsScore = result.quality?.score == null && result.stats?.qualityScore == null;
+  if (!needsScore) {
+    if (!result.quality?.score && result.stats?.qualityScore != null) {
+      result.quality = {
+        score: result.stats.qualityScore,
+        grade: result.stats.qualityGrade || '',
+        breakdown: result.quality?.breakdown || [],
+      };
+    }
+    return result;
+  }
+  if (!builder?.computeQualityScore) return result;
+  const nodes = result.graphData?.nodes || [];
+  const matched = result.matched?.length
+    ? result.matched
+    : nodes.filter(n => n.layer === 'matched' || (n.pblRole && n.pblRole !== 'external'));
+  const external = result.external?.length
+    ? result.external
+    : nodes.filter(n => n.layer === 'external' || n.isExternal);
+  try {
+    result.quality = builder.computeQualityScore({
+      goal: result.goal || '',
+      matched,
+      external,
+      projectBlueprint: result.projectBlueprint,
+      graphData: result.graphData,
+      pathPlan: result.pathPlan,
+      archetype: result.archetype || null,
+    });
+    result.stats = {
+      ...(result.stats || {}),
+      qualityScore: result.quality.score,
+      qualityGrade: result.quality.grade,
+    };
+  } catch (e) {
+    console.warn('[PBL] 质量分重算失败:', e);
+  }
+  return result;
+}
+
+function renderPBLResult(result) {
+  try { result = ensurePBLBlueprint(result); } catch (e) { console.warn('[PBL] 蓝图补全降级:', e); }
+  try {
+    if (window.PBLPathBuilder && typeof window.PBLPathBuilder.buildPathPlanFromResult === 'function') {
+      result.pathPlan = result.pathPlan || window.PBLPathBuilder.buildPathPlanFromResult(result);
+      if (result.pathPlan?.phases) result.projectPhases = result.projectPhases?.length ? result.projectPhases : result.pathPlan.phases;
+    }
+  } catch (e) { console.warn('[PBL] 路径计划降级:', e); }
+  try { result = ensurePBLQuality(result); } catch (e) { console.warn('[PBL] 质量分降级:', e); }
+  pblResult = result;
+  try { renderPBLCandidatePanel(result); } catch (e) { console.warn('[PBL] 候选面板降级:', e); }
+  try { renderPBLStats(result); } catch (e) { console.warn('[PBL] 统计面板降级:', e); }
+  try { renderPBLGraph(result); } catch (e) { console.warn('[PBL] 图谱渲染降级:', e); }
+  const activePhase = document.querySelector('.pbl-path-phase.active') || document.querySelector('.pbl-path-phase');
+  if (activePhase) highlightPBLPhase(activePhase);
+  if (result.graphData?.nodes?.length) {
+    document.getElementById('pblChatPanel')?.classList.add('visible');
+    const btn = document.getElementById('pblAnalyzeBtn');
+    if (btn) btn.textContent = '✅ 已拆解（可重新拆解）';
+  }
+}
+
+function getStoredPBLRun(id) {
+  try {
+    const runs = JSON.parse(localStorage.getItem('teachany_history_v1_pbl_runs') || '[]');
+    return Array.isArray(runs) ? runs.find(r => r && r.id === id) : null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+function enrichPBLNode(node) {
+  if (!node) return node;
+  if (node.isExternal || node.layer === 'external') {
+    return {
+      ...node,
+      layer: node.layer || 'external',
+      isExternal: true,
+      matchReason: node.matchReason || node.definition || node.reason || '',
+      taskSnippet: node.taskSnippet || '',
+    };
+  }
+  const full = window.PBLPathBuilder && window.PBLPathBuilder.unifiedIndex
+    ? window.PBLPathBuilder.unifiedIndex.get(node.id) : null;
+  if (!full) return node;
+  return {
+    ...node,
+    ...full,
+    layer: node.layer || full.layer,
+    confidence: node.confidence ?? full.confidence,
+    matchReason: node.matchReason ?? full.matchReason,
+    isExternal: !!node.isExternal
+  };
+}
+
+function enrichPBLGraphData(graphData) {
+  if (!graphData) return { nodes: [], links: [] };
+  return {
+    ...graphData,
+    nodes: (graphData.nodes || []).map(enrichPBLNode),
+    links: (graphData.links || []).map(l => ({ ...l }))
+  };
+}
+
+async function restorePBLFromHandoff(handoffId) {
+  const id = String(handoffId || '').trim();
+  if (!id) return false;
+  try {
+    const res = await fetch(`/api/pbl/handoff?id=${encodeURIComponent(id)}`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data?.result?.graphData?.nodes?.length) return false;
+    if (data.spec && window.PBLProjectForm?.fillProjectSpecToDOM) {
+      window.PBLProjectForm.fillProjectSpecToDOM(data.spec);
+    } else if (data.goal) {
+      const taskEl = document.getElementById('pblTaskInput');
+      if (taskEl) taskEl.value = data.goal;
+    }
+    let result = { ...data.result, goal: data.goal || data.result.goal || '', restoredFromHandoff: true };
+    if (data.spec) result.projectSpec = data.spec;
+    if (data.result?.truncated) result.handoffTruncated = true;
+    if (window.PBLPathBuilder && typeof window.PBLPathBuilder.loadUnifiedIndex === 'function') {
+      try { await window.PBLPathBuilder.loadUnifiedIndex(); } catch (_e) {}
+    }
+    result.graphData = enrichPBLGraphData(result.graphData);
+    if (!result.matched?.length) result.matched = result.graphData.nodes.filter(n => n.layer === 'matched');
+    if (!result.external?.length) result.external = result.graphData.nodes.filter(n => n.layer === 'external');
+    pblChatHistory = result.chatHistory || [];
+    renderPBLChatMessages(pblChatHistory);
+    const statusEl = document.getElementById('pblStatus');
+    if (statusEl) statusEl.style.display = 'none';
+    pblResult = result;
+    renderPBLResult(result);
+    scrollToPBLOutput();
+    if (window.TeachAnyHistory?.importPBLHandoff) {
+      const runId = window.TeachAnyHistory.importPBLHandoff(data);
+      if (runId) {
+        window.__pblRunId = runId;
+        const u = new URL(window.location.href);
+        u.searchParams.delete('handoff');
+        u.searchParams.set('pbl', runId);
+        history.replaceState(null, '', u.pathname + u.search);
+      }
+    }
+    return true;
+  } catch (e) {
+    console.warn('[PBL] handoff restore failed:', e);
+    return false;
+  }
+}
+
+async function restorePBLRunFromHistory(id) {
+  const run = getStoredPBLRun(id);
+  if (!run) return false;
+  if (window.PBLPathBuilder && typeof window.PBLPathBuilder.loadUnifiedIndex === 'function') {
+    try { await window.PBLPathBuilder.loadUnifiedIndex(); } catch (_e) {}
+  }
+  const graphData = enrichPBLGraphData(run.graphData || { nodes: run.nodes || [], links: run.links || [] });
+  if (!graphData.nodes || !graphData.nodes.length) return false;
+  const builder = window.PBLPathBuilder;
+  let techRoute = run.techRoute || '';
+  const result = {
+    goal: run.goal || '',
+    systems: run.systems || [],
+    techRoute,
+    projectBlueprint: run.projectBlueprint || null,
+    projectPhases: run.projectPhases || [],
+    projectSpec: run.projectSpec || null,
+    pathPlan: run.pathPlan || null,
+    moduleChain: run.moduleChain || '',
+    chatHistory: run.chatHistory || [],
+    graphData,
+    matched: graphData.nodes.filter(n => n.layer === 'matched'),
+    external: graphData.nodes.filter(n => n.layer === 'external'),
+    quality: run.quality || null,
+    relevanceAudit: run.relevanceAudit || null,
+    archetype: run.archetype || null,
+    stats: {
+      ...(run.stats || {}),
+      graphNodes: graphData.nodes.length,
+      graphLinks: graphData.links.length,
+      matchedCount: run.matchedCount || graphData.nodes.filter(n => n.layer === 'matched').length,
+      externalCount: run.externalCount || graphData.nodes.filter(n => n.layer === 'external').length,
+      qualityScore: run.stats?.qualityScore ?? run.quality?.score,
+      qualityGrade: run.stats?.qualityGrade ?? run.quality?.grade,
+    },
+    restoredFromHistory: true
+  };
+  if (builder && typeof builder.resolveTechRouteText === 'function') {
+    result.techRoute = builder.resolveTechRouteText(result);
+  }
+  if (result.projectSpec && window.PBLProjectForm?.fillProjectSpecToDOM) {
+    window.PBLProjectForm.fillProjectSpecToDOM(result.projectSpec);
+  } else {
+    const taskEl = document.getElementById('pblTaskInput');
+    if (taskEl) taskEl.value = result.goal || '';
+  }
+  pblChatHistory = result.chatHistory || [];
+  renderPBLChatMessages(pblChatHistory);
+  const statusEl = document.getElementById('pblStatus');
+  if (statusEl) statusEl.style.display = 'none';
+  renderPBLResult(result);
+  scrollToPBLOutput();
+  return true;
+}
+
+function resolvePBLTechRouteText(result) {
+  const builder = window.PBLPathBuilder;
+  if (builder && typeof builder.resolveTechRouteText === 'function') {
+    return builder.resolveTechRouteText(result);
+  }
+  return (result && result.techRoute) ? String(result.techRoute).trim() : '';
+}
+
+function escapePBLHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function formatPBLLiteracyRows() {
+  return '';
+}
+
+function renderPBLDecomposeHTML(blueprint) {
+  if (!blueprint) return '';
+  const schemes = blueprint.schemes || [];
+  const recId = blueprint.recommendedSchemeId;
+  let html = `<div class="pbl-decompose-summary">`;
+  html += `<div><strong>交付物</strong>：${escapePBLHtml(blueprint.deliverable || '—')}</div>`;
+  if (blueprint.moduleChain) {
+    html += `<div><strong>模块主线</strong>：${escapePBLHtml(blueprint.moduleChain)}</div>`;
+  }
+  html += `<div>${escapePBLHtml(blueprint.projectSummary || '')}</div>`;
+  if (blueprint.knowledgeChain) {
+    html += `<div style="margin-top:8px"><strong>知识链</strong>：${escapePBLHtml(blueprint.knowledgeChain)}</div>`;
+  }
+  if (blueprint.constraints?.length) {
+    html += `<div style="margin-top:8px;font-size:13px"><strong>约束条件</strong>：<ul style="margin:4px 0 0 18px;color:var(--dim)">`;
+    blueprint.constraints.forEach(c => { html += `<li>${escapePBLHtml(c)}</li>`; });
+    html += `</ul></div>`;
+  }
+  html += `</div>`;
+  if (blueprint.scopeLimits?.length) {
+    html += `<div class="pbl-scope-limits" style="margin:10px 0;padding:10px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);font-size:13px">`;
+    html += `<div style="color:#f87171;font-weight:600;margin-bottom:6px">不能宣称</div><ul style="margin:0;padding-left:18px;color:var(--dim)">`;
+    blueprint.scopeLimits.forEach(s => { html += `<li style="margin-bottom:4px">${escapePBLHtml(s)}</li>`; });
+    html += `</ul></div>`;
+  }
+  if (blueprint.successCriteria?.length) {
+    html += `<div class="pbl-success-criteria" style="margin:0 0 10px;padding:10px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);font-size:13px">`;
+    html += `<div style="color:#34d399;font-weight:600;margin-bottom:6px">验收标准</div><ul style="margin:0;padding-left:18px;color:var(--dim)">`;
+    blueprint.successCriteria.forEach(s => { html += `<li style="margin-bottom:4px">${escapePBLHtml(s)}</li>`; });
+    html += `</ul></div>`;
+  }
+  if ((blueprint.subsystems || []).length) {
+    html += `<div class="pbl-subsystem-list">`;
+    blueprint.subsystems.forEach(s => {
+      html += `<span class="pbl-subsystem-chip">${escapePBLHtml(s.name)}</span>`;
+    });
+    html += `</div>`;
+  }
+  html += `<div class="pbl-scheme-grid">`;
+  schemes.forEach(s => {
+    const rec = s.id === recId;
+    html += `<div class="pbl-scheme-card${rec ? ' recommended' : ''}">`;
+    html += `<h4>${escapePBLHtml(s.name)}${rec ? '<span class="pbl-scheme-tag">推荐</span>' : ''}</h4>`;
+    html += `<p>${escapePBLHtml(s.summary || '')}</p>`;
+    if (s.pros?.length) html += `<p><strong>优点</strong>：${s.pros.map(x => escapePBLHtml(x)).join('；')}</p>`;
+    if (s.phases?.length) {
+      html += `<ol class="pbl-decompose-phases" style="margin:8px 0 0 18px;font-size:13px;color:var(--dim)">`;
+      s.phases.forEach(p => {
+        html += `<li style="margin-bottom:12px"><strong>${escapePBLHtml(p.phase)}</strong>`;
+        html += `<div style="margin:4px 0;color:var(--accent)">产出：${escapePBLHtml(p.deliverable || '')}</div>`;
+        if (p.tools?.length) {
+          html += `<div style="font-size:12px;color:var(--dimmer)">工具/模板：${p.tools.map(t => escapePBLHtml(t)).join('、')}</div>`;
+        }
+        if (p.knowledgeHints?.length) {
+          html += `<div style="font-size:12px;color:var(--dimmer)">课标检索词：${p.knowledgeHints.map(h => escapePBLHtml(h)).join('、')}</div>`;
+        }
+        if (p.steps?.length) {
+          html += `<ul class="pbl-task-checklist" style="margin:6px 0 0 16px;padding:0;list-style:decimal">`;
+          p.steps.forEach(st => { html += `<li style="margin-bottom:6px;line-height:1.6">${escapePBLHtml(st)}</li>`; });
+          html += `</ul>`;
+        }
+        if (p.acceptance?.length) {
+          html += `<ul style="margin:6px 0 0 16px;padding:0;list-style:none;font-size:12px;color:var(--dimmer)">`;
+          p.acceptance.forEach(a => { html += `<li style="margin-bottom:3px">${escapePBLHtml(a)}</li>`; });
+          html += `</ul>`;
+        }
+        html += `</li>`;
+      });
+      html += `</ol>`;
+    }
+    html += `</div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function showPBLDecompose(result) {
+  const el = document.getElementById('pblDecompose');
+  const body = document.getElementById('pblDecomposeBody');
+  if (!el || !body) return;
+  const bp = result.projectBlueprint ? { ...result.projectBlueprint } : null;
+  if (bp && result.moduleChain) bp.moduleChain = result.moduleChain;
+  const html = renderPBLDecomposeHTML(bp);
+  if (!html) { el.style.display = 'none'; return; }
+  body.innerHTML = html;
+  el.style.display = 'block';
+  el.classList.remove('collapsed');
+}
+
+function renderPBLPathPlanHTML(pathPlan) {
+  if (!pathPlan || !pathPlan.phases || !pathPlan.phases.length) return '';
+  const roleColor = { foundation: '#10b981', bridge: '#8b5cf6', core: '#ef4444' };
+  const chainLabel = pathPlan.knowledgeChain || '';
+  let html = `<div class="pbl-path-chain"><strong>模块主线 / 知识链</strong>：${escapePBLHtml(chainLabel)}</div><div class="pbl-path-phases">`;
+  pathPlan.phases.forEach((p, idx) => {
+    const color = roleColor[p.role] || '#ef4444';
+    const knowledgeList = (p.knowledgeNames || []).filter(Boolean);
+    const badges = knowledgeList.length ? (p.pathStepLabels || []).slice(0, knowledgeList.length).map((l, bi) =>
+      `<span class="pbl-step-badge" style="border-color:${color}" title="${escapePBLHtml(knowledgeList[bi] || '')}">${l}</span>`).join('') : '';
+    const kn = knowledgeList.map(n => `「${escapePBLHtml(n)}」`).join('、');
+    const stepsHtml = (p.steps || []).map((s, si) =>
+      `<li style="margin-bottom:6px"><span style="color:var(--accent);font-weight:600">${si + 1}.</span> ${escapePBLHtml(s)}</li>`
+    ).join('');
+    const lit = '';
+    const tools = (p.tools || []).map(t => escapePBLHtml(t)).join('、');
+    html += `<article class="pbl-path-phase${idx === 0 ? ' active' : ''}" data-steps="${(p.pathSteps || []).join(',')}" onclick="highlightPBLPhase(this)">`;
+    html += `<header><span class="pbl-phase-idx">阶段 ${p.phaseIndex}</span>`;
+    html += `<span class="pbl-phase-graph">${badges}</span>`;
+    html += `<span class="pbl-phase-title">${escapePBLHtml(p.phase)}</span></header>`;
+    if (kn) html += `<div class="pbl-phase-row"><span class="lbl">知识点</span>${kn}</div>`;
+    if (tools) html += `<div class="pbl-phase-row"><span class="lbl">工具</span>${tools}</div>`;
+    html += `<div class="pbl-phase-row"><span class="lbl">任务</span><ol style="margin:0;padding-left:18px">${stepsHtml}</ol></div>`;
+    if (lit) html += `<div class="pbl-phase-literacy"><span class="lbl">素养</span>${lit}</div>`;
+    html += `<div class="pbl-phase-row"><span class="lbl">产出</span>${escapePBLHtml(p.deliverable)}</div></article>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+function highlightPBLPhase(el) {
+  if (!el) return;
+  document.querySelectorAll('.pbl-path-phase').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const steps = (el.dataset.steps || '').split(',').map(n => parseInt(n, 10)).filter(n => Number.isInteger(n) && n > 0);
+  if (pblRenderer && typeof pblRenderer.highlightPathSteps === 'function') {
+    pblRenderer.highlightPathSteps(steps);
+  }
+}
+
+function showPBLTechRoute(result) {
+  const techRouteEl = document.getElementById('pblTechRoute');
+  const techRouteBody = document.getElementById('pblTechRouteBody');
+  if (!techRouteEl || !techRouteBody) return;
+  const nodeCount = result && result.graphData && result.graphData.nodes ? result.graphData.nodes.length : 0;
+  const builder = window.PBLPathBuilder;
+  const pathPlan = builder && typeof builder.buildPathPlanFromResult === 'function'
+    ? builder.buildPathPlanFromResult(result) : null;
+  const routeText = resolvePBLTechRouteText(result);
+  if (pathPlan && pathPlan.phases && pathPlan.phases.length) {
+    result.pathPlan = pathPlan;
+    techRouteBody.innerHTML = renderPBLPathPlanHTML(pathPlan);
+    techRouteEl.style.display = 'block';
+    techRouteEl.classList.remove('collapsed');
+    return;
+  }
+  if (routeText || nodeCount > 0) {
+    techRouteBody.textContent = routeText || '请按下方知识图谱序号依次完成各节点课件与阶段任务。';
+    techRouteEl.style.display = 'block';
+    techRouteEl.classList.remove('collapsed');
+  } else {
+    techRouteEl.style.display = 'none';
+  }
+}
+
+function togglePBLExportBar(show) {
+  const bar = document.getElementById('pblExportBar');
+  if (!bar) return;
+  bar.classList.toggle('visible', !!show);
+}
+
+function pblExportSlug(text) {
+  const s = String(text || 'pbl').trim().slice(0, 40).replace(/[^\w\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '');
+  return s || 'pbl-report';
+}
+
+function getPBLExportStyles() {
+  const styleEl = document.querySelector('style');
+  return styleEl ? styleEl.textContent : '';
+}
+
+const PBL_LAYER_LABELS = {
+  prerequisite: '基础前置', matched: '核心必需', advanced: '扩展高级', parallel: '平行关联', external: '外部补充'
+};
+
+function renderPBLExportNodeTableHTML(nodes) {
+  if (!nodes || !nodes.length) return '';
+  const rows = nodes.map((n, i) => {
+    const layer = PBL_LAYER_LABELS[n.layer] || n.layer || '';
+    const meta = [n.systemTag || n.systemLabel || '', n.subject || '', n.gradeLabel || n.grade || ''].filter(Boolean).join(' · ');
+    const mod = n._moduleLabel ? `【${n._moduleLabel}】` : '';
+    const task = (n.layer === 'external' && n.taskSnippet) ? ` 任务：${n.taskSnippet}` : '';
+    const reason = mod + (n.matchReason || n.definition || '') + task;
+    return `<tr><td>${i + 1}</td><td>${escapePBLHtml(n.name || '')}</td><td>${escapePBLHtml(layer)}</td><td>${escapePBLHtml(meta)}</td><td>${escapePBLHtml(reason)}</td></tr>`;
+  }).join('');
+  return `<table class="pbl-export-node-table"><thead><tr><th>#</th><th>知识点</th><th>层级</th><th>体系/学科</th><th>本阶段怎么用</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function collectPBLExportSections() {
+  const goal = (pblResult && pblResult.goal) || buildPBLGoalFromForm();
+  const sections = [];
+  sections.push(`<header class="pbl-export-header"><h1>🧩 PBL 项目拆解报告</h1><p class="goal"><strong>项目目标</strong>：${escapePBLHtml(goal)}</p><p class="goal" style="font-size:13px">导出时间：${escapePBLHtml(new Date().toLocaleString('zh-CN'))} · TeachAny PBL</p></header>`);
+
+  const stats = document.getElementById('pblStats');
+  if (stats && stats.innerHTML.trim()) {
+    sections.push(`<section class="pbl-export-section"><h2>📊 统计概览</h2><div class="pbl-stats">${stats.innerHTML}</div></section>`);
+  }
+
+  const decoBody = document.getElementById('pblDecomposeBody');
+  if (decoBody && decoBody.innerHTML.trim()) {
+    sections.push(`<section class="pbl-export-section"><h2>🧩 项目结构化拆解</h2>${decoBody.innerHTML}</section>`);
+  }
+
+  const routeBody = document.getElementById('pblTechRouteBody');
+  if (routeBody && routeBody.innerHTML.trim()) {
+    sections.push(`<section class="pbl-export-section"><h2>🛤️ 项目实施路径</h2>${routeBody.innerHTML}</section>`);
+  }
+
+  const svg = document.querySelector('#pbl-graph-container svg');
+  if (svg) {
+    const clone = svg.cloneNode(true);
+    const bbox = svg.getBoundingClientRect();
+    if (bbox.width) clone.setAttribute('width', String(Math.ceil(bbox.width)));
+    if (bbox.height) clone.setAttribute('height', String(Math.ceil(bbox.height)));
+    sections.push(`<section class="pbl-export-section"><h2>🗺️ 知识路径图谱</h2><div class="pbl-export-graph">${clone.outerHTML}</div></section>`);
+  }
+
+  const nodes = pblResult && pblResult.graphData && pblResult.graphData.nodes ? pblResult.graphData.nodes : [];
+  if (nodes.length) {
+    sections.push(`<section class="pbl-export-section"><h2>📋 知识点清单</h2>${renderPBLExportNodeTableHTML(nodes)}</section>`);
+  }
+  return { goal, html: sections.join('\n') };
+}
+
+function buildPBLExportHtmlDocument() {
+  const { goal, html } = collectPBLExportSections();
+  const css = getPBLExportStyles();
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PBL 拆解报告 - ${escapePBLHtml(goal).slice(0, 60)}</title>
+<style>${css}</style>
+</head>
+<body style="background:#0f172a;color:#f8fafc;padding:24px;max-width:1200px;margin:0 auto">
+${html}
+<footer style="margin-top:32px;padding-top:16px;border-top:1px solid rgba(148,163,184,0.2);font-size:12px;color:#64748b">由 <a href="https://www.teachany.cn/pbl" style="color:#3b82f6">TeachAny PBL</a> 导出</footer>
+</body>
+</html>`;
+}
+
+function exportPBLAsHtml() {
+  if (!pblResult) { alert('请先完成项目拆解'); return; }
+  const doc = buildPBLExportHtmlDocument();
+  const blob = new Blob([doc], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${pblExportSlug(pblResult.goal)}.html`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+function loadHtml2Canvas() {
+  if (window.html2canvas) return Promise.resolve(window.html2canvas);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    s.onload = () => resolve(window.html2canvas);
+    s.onerror = () => reject(new Error('html2canvas 加载失败'));
+    document.head.appendChild(s);
+  });
+}
+
+async function renderPBLExportImageBlob() {
+  if (!pblResult) throw new Error('请先完成项目拆解');
+  const html2canvas = await loadHtml2Canvas();
+  const { html } = collectPBLExportSections();
+  const preview = document.createElement('div');
+  preview.className = 'pbl-export-preview';
+  preview.innerHTML = html;
+  document.body.appendChild(preview);
+  try {
+    const canvas = await html2canvas(preview, {
+      backgroundColor: '#0f172a',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      width: preview.scrollWidth,
+      height: preview.scrollHeight,
+      windowWidth: preview.scrollWidth,
+      windowHeight: preview.scrollHeight
+    });
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(b => (b ? resolve(b) : reject(new Error('图片生成失败'))), 'image/png');
+    });
+    return { blob, goal: pblResult.goal || 'pbl', slug: pblExportSlug(pblResult.goal) };
+  } finally {
+    document.body.removeChild(preview);
+  }
+}
+
+async function exportPBLAsImage() {
+  if (!pblResult) { alert('请先完成项目拆解'); return; }
+  const btn = document.getElementById('pblExportImgBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 生成长图...'; }
+  try {
+    const { blob, goal, slug } = await renderPBLExportImageBlob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${slug}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) {
+    console.error('[PBL] 长图导出失败:', e);
+    alert('长图导出失败：' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🖼️ 保存为长图'; }
+  }
+}
+
+function scrollToPBLOutput() {
+  const deco = document.getElementById('pblDecompose');
+  if (deco && deco.style.display !== 'none') {
+    deco.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  const tech = document.getElementById('pblTechRoute');
+  if (tech && tech.style.display !== 'none') {
+    tech.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  const stats = document.getElementById('pblStatsContainer');
+  if (stats && stats.style.display !== 'none') {
+    stats.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  const graph = document.getElementById('pbl-graph-container');
+  if (graph) graph.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderPBLStats(result) {
+  const container = document.getElementById('pblStatsContainer');
+  const statsEl = document.getElementById('pblStats');
+  const nodes = (result.graphData && result.graphData.nodes) ? result.graphData.nodes : [];
+  const hasDecompose = !!(result.projectBlueprint && (result.projectBlueprint.schemes || []).length);
+  const hasOutput = nodes.length > 0 || hasDecompose;
+  container.style.display = nodes.length ? 'block' : 'none';
+  togglePBLExportBar(hasOutput);
+  showPBLDecompose(result);
+
+  const layerCounts = { prerequisite: 0, matched: 0, advanced: 0, parallel: 0, external: 0 };
+  nodes.forEach(n => { layerCounts[n.layer] = (layerCounts[n.layer] || 0) + 1; });
+  if (!nodes.length) {
+    showPBLTechRoute(result);
+    return;
+  }
+
+  const q = result.quality || {};
+  const qScore = q.score ?? result.stats?.qualityScore;
+  const qGrade = q.grade ?? result.stats?.qualityGrade ?? '';
+  const qClass = qGrade ? `quality-${qGrade.toLowerCase()}` : '';
+  let html = '';
+  if (qScore != null) {
+    html += `<div class="pbl-stat-card ${qClass}"><div class="val">${qScore}</div><div class="lbl">质量分${qGrade ? ' · ' + qGrade : ''}</div></div>`;
+  }
+  html += `
+    <div class="pbl-stat-card"><div class="val">${result.graphData.nodes.length}</div><div class="lbl">知识点总数</div></div>
+    <div class="pbl-stat-card"><div class="val">${layerCounts.prerequisite}</div><div class="lbl">基础前置（需先学）</div></div>
+    <div class="pbl-stat-card"><div class="val">${layerCounts.matched}</div><div class="lbl">核心必需</div></div>
+    <div class="pbl-stat-card"><div class="val">${layerCounts.advanced}</div><div class="lbl">扩展高级</div></div>
+    <div class="pbl-stat-card"><div class="val">${layerCounts.external}</div><div class="lbl">课外补充</div></div>
+    <div class="pbl-stat-card"><div class="val">${result.graphData.links.length}</div><div class="lbl">关联路径</div></div>
+  `;
+  if (q.breakdown?.length) {
+    html += `<div class="pbl-quality-hint">待改进：${q.breakdown.map(b => b.label).join('、')}</div>`;
+  }
+  const ra = result.relevanceAudit;
+  if (ra?.output?.removedTotal > 0) {
+    const names = (ra.output.removedSamples || []).slice(0, 3).map(r => r.name).join('、');
+    html += `<div class="pbl-quality-hint">输出核实已剔除 ${ra.output.removedTotal} 个无关节点${names ? '（如 ' + names + '）' : ''}</div>`;
+  } else if (ra?.intake?.removed > 0 || ra?.postFilter?.removed > 0) {
+    html += `<div class="pbl-quality-hint">入口核实：候选池剔除 ${ra.intake?.removed || 0} · 筛选后剔除 ${ra.postFilter?.removed || 0}</div>`;
+  }
+  statsEl.innerHTML = html;
+
+  showPBLTechRoute(result);
+}
+
+function renderPBLGraph(result) {
+  const container = document.getElementById('pbl-graph-container');
+  if (pblRenderer) pblRenderer.destroy();
+  const nodes = (result.graphData && result.graphData.nodes) ? result.graphData.nodes : [];
+  if (!nodes.length) {
+    if (container) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--dim)">课标匹配为空，但上方「项目结构化拆解」仍可指导实施；请重试或写清学科/年级/交付物。</div>';
+    }
+    return;
+  }
+  pblRenderer = new window.PBLGraphRenderer('pbl-graph-container');
+  result.graphData = enrichPBLGraphData(result.graphData);
+  pblRenderer.render(result.graphData, onPBLNodeClick);
+}
+
+function onPBLNodeClick(node) {
+  node = enrichPBLNode(node);
+  window._pblDetailNodeForMake = node;
+  const panel = document.getElementById('nodeDetailPanel');
+  const content = document.getElementById('nodeDetailContent');
+
+  const layerColors = {
+    prerequisite: '#10b981', matched: '#ef4444', advanced: '#8b5cf6', parallel: '#3b82f6', external: '#eab308', university: '#6366f1'
+  };
+  const layerLabels = {
+    prerequisite: '基础前置', matched: '核心必需', advanced: '扩展高级', parallel: '平行关联', external: '外部补充', university: '大学延伸'
+  };
+
+  const gradeLabel = (nodeOrGrade) => {
+    if (nodeOrGrade && typeof nodeOrGrade === 'object') {
+      if (nodeOrGrade.gradeLabel) return nodeOrGrade.gradeLabel;
+      nodeOrGrade = nodeOrGrade.grade;
+    }
+    const g = parseInt(nodeOrGrade) || 0;
+    if (!g || g === 0) return '大学';
+    if (g <= 6) return `小学${g}年级`;
+    if (g <= 9) return `初中${g-6}年级`;
+    if (g <= 12) return `高中${g-9}年级`;
+    return `G${g}`;
+  };
+  const metaTag = (text) => text ? `<span class="meta-tag">${text}</span>` : '';
+
+  // 检查课件
+  let hasCourseware = (node.status === 'active' && node.courses && node.courses.length) ||
+    (window.TeachAnyHub && typeof TeachAnyHub.getAllCoursesForNode === 'function' && TeachAnyHub.getAllCoursesForNode(node.id).length > 0) ||
+    (window.TeachAnyImporter && typeof TeachAnyImporter.getTopCoursesForTreeNode === 'function' && TeachAnyImporter.getTopCoursesForTreeNode(node.id).length > 0);
+  let keywordHits = [];
+  if (!hasCourseware && node.isExternal && node.name && window.TeachAnyHub && typeof TeachAnyHub.searchByKeyword === 'function') {
+    keywordHits = TeachAnyHub.searchByKeyword(node.name);
+    if (keywordHits.length > 0) hasCourseware = true;
+  }
+
+  // 课件列表 HTML
+  let coursewareHtml = '';
+  if (hasCourseware) {
+    let allCourses = [];
+    const hubCourses = (window.TeachAnyHub && typeof TeachAnyHub.getAllCoursesForNode === 'function')
+      ? TeachAnyHub.getAllCoursesForNode(node.id) : [];
+    allCourses.push(...hubCourses);
+    if (keywordHits.length > 0) {
+      keywordHits.forEach(h => {
+        if (!allCourses.some(c => c.id === h.id)) allCourses.push(h);
+      });
+    }
+    if (allCourses.length > 0) {
+      coursewareHtml = `<div class="prereq-list"><h4>📖 已有课件</h4>` +
+        allCourses.map(c => {
+          const sourceIcon = { official: '📋', community_registry: '🔖', community_shared: '🌐', user: '📂' }[c.source] || '📚';
+          const courseUrl = c.url || (c.path ? `./${c.path}/index.html` : '');
+          return courseUrl ? `<a href="${courseUrl}" target="_blank" style="display:block;padding:6px 12px;margin:3px 0;font-size:13px;color:var(--text);text-decoration:none;background:rgba(148,163,184,0.08);">${sourceIcon} ${c.name || c.id}</a>` : '';
+        }).join('') + `</div>`;
+    } else if (node.courses && node.courses.length) {
+      coursewareHtml = `<div class="prereq-list"><h4>📖 已有课件</h4>` +
+        node.courses.map(cid => {
+          const isStr = typeof cid === 'string';
+          let url = '';
+          if (window.TeachAnyHub && typeof TeachAnyHub.getCourseById === 'function') {
+            const hit = TeachAnyHub.getCourseById(cid);
+            if (hit && hit.url) url = hit.url;
+          }
+          if (!url && isStr) url = cid.startsWith('examples/') || cid.startsWith('community/') ? `/teachany-courseware/${cid}/index.html` : `/teachany-courseware/community/${cid}/index.html`;
+          return `<a href="${url}" target="_blank" style="display:block;padding:6px 12px;margin:3px 0;font-size:13px;color:var(--text);text-decoration:none;background:rgba(148,163,184,0.08);">📋 ${isStr ? cid.split('/').pop() : cid}</a>`;
+        }).join('') + `</div>`;
+    }
+  }
+
+  // 课标内容
+  const points = Array.isArray(node.curriculum_points) ? node.curriculum_points : [];
+  let curriculumHtml = '';
+  if (points.length) {
+    curriculumHtml = `<div style="margin-top:12px;padding:8px 10px;background:rgba(59,130,246,0.08);border-left:3px solid rgba(59,130,246,0.5);font-size:12px;">
+      <div style="font-weight:600;margin-bottom:6px;">📖 课标原文要点</div>
+      ${points.map(p => `<div style="margin:4px 0;padding:4px 6px;background:rgba(148,163,184,0.05);color:var(--dim);line-height:1.5;">${p}</div>`).join('')}
+    </div>`;
+  }
+
+  content.innerHTML = `
+    <h3>${node.name}</h3>
+    ${node.name_en ? `<p style="font-size:13px;color:var(--dimmer);margin-bottom:10px">${node.name_en}</p>` : ''}
+    <div class="meta-row">
+      <span class="meta-tag" style="background:${layerColors[node.layer]}22;color:${layerColors[node.layer]}">${layerLabels[node.layer]}</span>
+      <span class="meta-tag">${node.systemTag || ''} ${node.curriculumLabel || node.systemLabel || ''}</span>
+      ${metaTag(node.stageLabel)}
+      ${metaTag(gradeLabel(node))}
+      ${metaTag(node.subject)}
+      ${metaTag(node.domain)}
+      ${node.confidence ? `<span class="meta-tag" style="background:rgba(245,158,11,0.15);color:var(--accent)">置信度 ${(node.confidence * 100).toFixed(0)}%</span>` : ''}
+      ${hasCourseware ? '<span class="meta-tag" style="background:rgba(16,185,129,0.15);color:var(--success)">✅ 有课件</span>' : '<span class="meta-tag" style="background:rgba(239,68,68,0.15);color:#f87171">📝 待创建</span>'}
+    </div>
+    ${node._moduleLabel ? `<p style="font-size:13px;color:var(--secondary);margin-top:10px">模块主线：${node._moduleLabel}</p>` : ''}
+    ${node.matchReason ? `<p style="font-size:13px;color:var(--accent);margin-top:10px">匹配理由：${node.matchReason}</p>` : ''}
+    ${node.taskSnippet ? `<p style="font-size:13px;color:var(--success);margin-top:8px">可执行任务：${node.taskSnippet}</p>` : ''}
+    ${node.definition ? `<p class="definition">${node.definition}</p>` : ''}
+    ${curriculumHtml}
+    ${node.prerequisites && node.prerequisites.length > 0 ? `
+      <div class="prereq-list">
+        <h4>📚 前置知识</h4>
+        ${node.prerequisites.map(pid => {
+          const pn = window.PBLPathBuilder && window.PBLPathBuilder.unifiedIndex ? window.PBLPathBuilder.unifiedIndex.get(pid) : null;
+          return `<div class="prereq-item">${pn ? pn.name : pid}</div>`;
+        }).join('')}
+      </div>
+    ` : ''}
+    ${node.extends && node.extends.length > 0 ? `
+      <div class="prereq-list">
+        <h4>🚀 扩展方向</h4>
+        ${node.extends.map(eid => {
+          const en = window.PBLPathBuilder && window.PBLPathBuilder.unifiedIndex ? window.PBLPathBuilder.unifiedIndex.get(eid) : null;
+          return `<div class="prereq-item">${en ? en.name : eid}</div>`;
+        }).join('')}
+      </div>
+    ` : ''}
+    ${(() => {
+      // 全科图谱增强：跨学科关系与大学延伸
+      if (!window.PBLPathBuilder || !window.PBLPathBuilder.graphLoaded) return '';
+      const nb = window.PBLPathBuilder.getGraphNeighbors(node.id, 1);
+      let crossHtml = '';
+      if (nb.crossSubject.length > 0) {
+        const crossItems = nb.crossSubject.slice(0, 6).map(id => {
+          const cn = window.PBLPathBuilder.unifiedIndex.get(id);
+          if (!cn) return '';
+          return `<div class="prereq-item" style="border-left:3px solid #f59e0b;padding-left:8px;">${cn.name} <span style="font-size:11px;color:#f59e0b;">(${cn.subject})</span></div>`;
+        }).join('');
+        if (crossItems) crossHtml = `<div class="prereq-list"><h4>🔗 跨学科关联</h4>${crossItems}</div>`;
+      }
+      const bridges = window.PBLPathBuilder.getUniversityBridges(node.id);
+      let uniHtml = '';
+      if (bridges.length > 0) {
+        const uniItems = bridges.slice(0, 4).map(id => {
+          const un = window.PBLPathBuilder.unifiedIndex.get(id);
+          if (!un) return '';
+          return `<div class="prereq-item" style="border-left:3px solid #6366f1;padding-left:8px;">🎓 ${un.name} <span style="font-size:11px;color:#6366f1;">(${un.subject})</span></div>`;
+        }).join('');
+        if (uniItems) uniHtml = `<div class="prereq-list"><h4>🎓 大学延伸方向</h4>${uniItems}</div>`;
+      }
+      return crossHtml + uniHtml;
+    })()}
+    ${coursewareHtml}
+    <button class="generate-cw-btn" onclick="event.stopPropagation();event.preventDefault();generateCourseware('${node.id}', '${node.name.replace(/'/g, "\\'")}')">
+      ✨ 制作新课件
+    </button>
+  `;
+
+  panel.classList.add('open');
+}
+
+function closeNodeDetail() {
+  document.getElementById('nodeDetailPanel').classList.remove('open');
+}
+
+// generateCourseware / TeachAnyMakeCourse 见 assets/scripts/teachany-make-course.js
+
+// ─── 设置面板 ────────────────────────────────────
+
+function updateModelBadge() {
+  const btn = document.getElementById('pblSettingsBtn');
+  const builder = window.PBLPathBuilder;
+  if (!btn || !builder?.getLLMConfig) return;
+  const cfg = builder.getLLMConfig();
+  const label = cfg.displayLabel || cfg.model || '自动';
+  btn.textContent = `⚙️ ${label}`;
+  btn.title = cfg.usesServerDefault
+    ? `${cfg.providerName} · ${cfg.displayDetail || 'Qwen3 Next 80B'}`
+    : `${cfg.providerName} · ${cfg.model || label}`;
+}
+
+function toggleSettings() {
+  const overlay = document.getElementById('settingsOverlay');
+  const isOpen = overlay.classList.contains('open');
+  if (isOpen) {
+    overlay.classList.remove('open');
+  } else {
+    populateSettingsForm();
+    overlay.classList.add('open');
+  }
+}
+
+function populateSettingsForm() {
+  const builder = window.PBLPathBuilder;
+  const cfg = builder.getLLMConfig();
+  const saved = builder._llmConfig || {};
+
+  const providerSel = document.getElementById('providerSelect');
+  providerSel.innerHTML = builder.providers.map(p =>
+    `<option value="${p.id}" ${p.id === cfg.providerId ? 'selected' : ''}>${p.name}</option>`
+  ).join('');
+
+  onProviderChange();
+
+  const provider = builder.providers.find(p => p.id === cfg.providerId);
+  const modelVal = saved.model ?? cfg.model ?? '';
+
+  if (provider?.clientLlm) {
+    document.getElementById('customModelInput').value = modelVal || saved.customModel || '';
+  } else if (saved.model === '__custom__' || (modelVal && !(provider?.models || []).includes(modelVal))) {
+    document.getElementById('modelSelect').value = '__custom__';
+    document.getElementById('customModelInput').value = saved.customModel || modelVal || '';
+  } else if (modelVal !== undefined) {
+    const modelSel = document.getElementById('modelSelect');
+    if ([...modelSel.options].some(o => o.value === modelVal)) {
+      modelSel.value = modelVal;
+    }
+  }
+
+  document.getElementById('apiKeyInput').value = saved.apiKey || '';
+  document.getElementById('baseUrlInput').value = saved.baseUrl || '';
+  onModelSelectChange();
+}
+
+function onProviderChange() {
+  const builder = window.PBLPathBuilder;
+  const providerId = document.getElementById('providerSelect').value;
+  const provider = builder.providers.find(p => p.id === providerId) || builder.providers[0];
+
+  const modelSel = document.getElementById('modelSelect');
+  const customApiFields = document.getElementById('customApiFields');
+
+  const showOpenRouterKey = providerId === 'openrouter';
+  const showClientFields = provider.clientLlm || showOpenRouterKey;
+  if (provider.clientLlm) {
+    modelSel.innerHTML = '<option value="">在下方填写模型名</option>';
+    modelSel.style.display = 'none';
+    document.getElementById('customModelRow').classList.add('visible');
+    document.getElementById('baseUrlInput').value = provider.baseUrl || document.getElementById('baseUrlInput').value;
+    document.getElementById('keyHint').textContent = '填写 OpenAI 兼容 API 的 Base URL、Key 与模型名；提示词仍由 TeachAny 服务端生成。';
+  } else {
+    modelSel.style.display = 'block';
+    const models = provider.models || [];
+    const labels = provider.modelLabels || {};
+    modelSel.innerHTML = models.map(m => {
+      let label = labels[m] || m;
+      if (m === '') label = '服务端默认（Qwen3 Next 80B）';
+      if (m === '__custom__') label = '自定义模型名…';
+      const selected = m === provider.model ? 'selected' : '';
+      return `<option value="${m}" ${selected}>${label}</option>`;
+    }).join('');
+    const hints = {
+      preset: 'TeachAny 服务端中转，默认 OpenRouter 付费 Qwen3 Next 80B；无需填 Key。',
+      siliconflow: '通过 TeachAny 服务端调用硅基流动（服务端 Key）；可选列表内模型或自定义模型名。',
+      paratera: '通过 TeachAny 服务端调用并行超算（服务端 Key）。',
+      openrouter: 'Key 留空：走 TeachAny 服务端 OpenRouter（默认 Qwen3 Next 80B）。填写 Key：浏览器直连所选模型，提示词仍由服务端生成。',
+    };
+    document.getElementById('keyHint').textContent = hints[providerId] || '';
+    if (showOpenRouterKey && !document.getElementById('baseUrlInput').value) {
+      document.getElementById('baseUrlInput').value = provider.baseUrl || 'https://openrouter.ai/api/v1';
+    }
+  }
+  customApiFields.style.display = showClientFields ? 'block' : 'none';
+
+  onModelSelectChange();
+}
+
+function onModelSelectChange() {
+  const model = document.getElementById('modelSelect').value;
+  const row = document.getElementById('customModelRow');
+  const providerId = document.getElementById('providerSelect').value;
+  const isCustomProvider = providerId === 'custom';
+  const isServerDefault = providerId === 'preset' && !model;
+  if ((model === '__custom__' || isCustomProvider) && !isServerDefault) {
+    row.classList.add('visible');
+  } else {
+    row.classList.remove('visible');
+  }
+}
+
+function saveSettings() {
+  const builder = window.PBLPathBuilder;
+  const providerId = document.getElementById('providerSelect').value;
+  const model = document.getElementById('modelSelect').value;
+  const customModel = document.getElementById('customModelInput').value.trim();
+  const apiKey = document.getElementById('apiKeyInput').value.trim();
+  const baseUrl = document.getElementById('baseUrlInput').value.trim();
+
+  if (providerId === 'custom') {
+    if (!baseUrl) { alert('请填写 Base URL'); return; }
+    if (!apiKey) { alert('请填写 API Key'); return; }
+    if (!customModel) { alert('请填写模型名称'); return; }
+  } else if (model === '__custom__' && !customModel) {
+    alert('请填写自定义模型名');
+    return;
+  }
+
+  const resolvedModel = providerId === 'custom'
+    ? customModel
+    : (model === '__custom__' ? customModel : model);
+  builder.setLLMConfig({
+    providerId,
+    model: resolvedModel,
+    customModel,
+    apiKey: (providerId === 'custom' || providerId === 'openrouter') ? apiKey : '',
+    baseUrl: providerId === 'custom'
+      ? baseUrl
+      : (providerId === 'openrouter' && apiKey ? (baseUrl || 'https://openrouter.ai/api/v1') : ''),
+  });
+
+  updateModelBadge();
+  toggleSettings();
+}
+
+function buildPBLEditUrl(spec, baseUrl) {
+  const base = baseUrl || (window.location.origin + window.location.pathname.replace(/[^/]*$/, 'pbl.html'));
+  const u = new URL(base, window.location.href);
+  if (window.__pblRunId) {
+    u.searchParams.set('pbl', window.__pblRunId);
+    return u.toString();
+  }
+  const s = window.PBLProjectForm?.normalizeProjectSpec
+    ? window.PBLProjectForm.normalizeProjectSpec(spec || {})
+    : (spec || {});
+  const task = String(s.task || '').trim();
+  if (task) u.searchParams.set('goal', task);
+  if (s.gradeLevel && s.gradeLevel !== 'any') u.searchParams.set('grade', s.gradeLevel);
+  if (s.subject && s.subject !== 'cross') u.searchParams.set('subject', s.subject);
+  if (s.deliverable && s.deliverable !== 'report') u.searchParams.set('deliverable', s.deliverable);
+  if (s.deliverableCustom) u.searchParams.set('deliverableCustom', s.deliverableCustom);
+  if (s.audience) u.searchParams.set('audience', s.audience);
+  if (s.duration) u.searchParams.set('duration', s.duration);
+  if (s.constraints) u.searchParams.set('constraints', s.constraints);
+  return u.toString();
+}
+
+function applyPBLParamsFromURL(params) {
+  const p = params || new URLSearchParams(window.location.search);
+  const task = p.get('goal') || p.get('task') || '';
+  const spec = {
+    task,
+    gradeLevel: p.get('grade') || 'any',
+    subject: p.get('subject') || 'cross',
+    deliverable: p.get('deliverable') || 'report',
+    deliverableCustom: p.get('deliverableCustom') || '',
+    audience: p.get('audience') || '',
+    duration: p.get('duration') || '',
+    constraints: p.get('constraints') || '',
+  };
+  if (window.PBLProjectForm?.fillProjectSpecToDOM) {
+    window.PBLProjectForm.fillProjectSpecToDOM(spec);
+  } else if (task) {
+    const taskEl = document.getElementById('pblTaskInput');
+    if (taskEl) taskEl.value = task;
+  }
+  markPBLGoalDirty();
+  return spec;
+}
+
+function pblPublicBaseUrl(baseUrl) {
+  if (baseUrl) return String(baseUrl).split('?')[0].replace(/\/pbl\.html$/i, '/pbl');
+  return `${window.location.origin}/pbl`;
+}
+
+async function createPBLHandoffUrl(baseUrl) {
+  if (!pblResult?.graphData?.nodes?.length) throw new Error('尚无拆解结果');
+  const spec = typeof getPBLProjectSpec === 'function' ? getPBLProjectSpec() : (pblResult.projectSpec || null);
+  const payload = serializePBLResult(pblResult);
+  const res = await fetch('/api/pbl/handoff', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ goal: payload.goal || spec?.task || '', result: payload, spec }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || 'handoff 失败');
+  const u = new URL(pblPublicBaseUrl(baseUrl));
+  u.searchParams.set('handoff', data.id);
+  u.searchParams.delete('auto');
+  u.searchParams.delete('goal');
+  return u.toString();
+}
+
+window.TeachAnyPBLAutomation = {
+  buildEditUrl: buildPBLEditUrl,
+  getRunId: () => window.__pblRunId || null,
+  getEditUrl: (baseUrl) => buildPBLEditUrl(null, baseUrl),
+  createHandoff: createPBLHandoffUrl,
+  getSerializableResult: () => serializePBLResult(pblResult),
+  getResult: () => pblResult,
+  isAnalysisComplete: () => {
+    if (!window.__pblLastAnalysisDone?.ok || !pblResult) return false;
+    const hasGraph = (pblResult.graphData?.nodes?.length || 0) > 0;
+    const hasBlueprint = (pblResult.projectBlueprint?.schemes || []).length > 0;
+    return hasGraph || hasBlueprint;
+  },
+  waitForAnalysis: (timeoutMs = 360000) => new Promise((resolve, reject) => {
+    if (window.TeachAnyPBLAutomation.isAnalysisComplete()) {
+      resolve(pblResult);
+      return;
+    }
+    const timer = setTimeout(() => {
+      document.removeEventListener('teachany-pbl-done', onDone);
+      reject(new Error('PBL 拆解超时'));
+    }, timeoutMs);
+    function onDone(ev) {
+      clearTimeout(timer);
+      document.removeEventListener('teachany-pbl-done', onDone);
+      if (ev.detail?.error) reject(new Error(ev.detail.error));
+      else resolve(ev.detail?.result || pblResult);
+    }
+    document.addEventListener('teachany-pbl-done', onDone);
+  }),
+  exportImageBlob: () => renderPBLExportImageBlob(),
+};
+
+// ─── 页面初始化 ─────────────────────────────────
+const urlParams = new URLSearchParams(window.location.search);
+const pblIdFromURL = urlParams.get('pbl');
+const pblHandoffFromURL = urlParams.get('handoff');
+const pblGoalFromURL = urlParams.get('goal');
+const pblAutoFromURL = urlParams.get('auto') === '1';
+const makeNodeFromURL = urlParams.get('make');
+const makeNameFromURL = urlParams.get('name');
+
+window.addEventListener('DOMContentLoaded', async () => {
+  updateModelBadge();
+
+  document.getElementById('settingsOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) toggleSettings();
+  });
+
+  togglePBLDeliverableCustom();
+  ['pblTaskInput', 'pblGradeLevel', 'pblSubject', 'pblDeliverable'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', markPBLGoalDirty);
+    if (el) el.addEventListener('change', markPBLGoalDirty);
+  });
+  if (!pblHandoffFromURL && !pblIdFromURL && (pblGoalFromURL || urlParams.get('task'))) {
+    applyPBLParamsFromURL(urlParams);
+  }
+
+  // 点击图谱外部关闭详情面板
+  document.addEventListener('mousedown', (e) => {
+    const panel = document.getElementById('nodeDetailPanel');
+    if (panel.classList.contains('open') && !panel.contains(e.target) && !e.target.closest('svg')) {
+      closeNodeDetail();
+    }
+  });
+
+  // 从知识地图跳转：?make=nodeId&name=节点名 → 打开制作课件模块
+  if (makeNodeFromURL && typeof window.generateCourseware === 'function') {
+    generateCourseware(makeNodeFromURL, makeNameFromURL || makeNodeFromURL);
+  }
+
+  // 跨会话交接：?handoff=UUID → 直接恢复完整拆解结果
+  if (pblHandoffFromURL) {
+    const restoredHandoff = await restorePBLFromHandoff(pblHandoffFromURL);
+    if (!restoredHandoff) {
+      const statusText = document.getElementById('pblStatusText');
+      const statusEl = document.getElementById('pblStatus');
+      if (statusEl && statusText) {
+        statusEl.style.display = 'block';
+        statusText.textContent = '交接链接无效或已过期，请重新拆解或联系分享方。';
+      }
+    }
+    return;
+  }
+
+  // 如果 URL 有 PBL 历史参数，恢复已保存的图谱
+  if (pblIdFromURL) {
+    const restored = await restorePBLRunFromHistory(pblIdFromURL);
+    if (!restored) {
+      const statusText = document.getElementById('pblStatusText');
+      const statusEl = document.getElementById('pblStatus');
+      if (statusEl && statusText) {
+        statusEl.style.display = 'block';
+        statusText.textContent = '未找到这条 PBL 历史图谱，请重新点击「拆解项目路径」。';
+      }
+    }
+    return;
+  }
+
+  // Skill / CLI 自动化：?auto=1 且已填任务 → 自动拆解
+  if (pblAutoFromURL && getPBLProjectSpec().task) {
+    try {
+      await analyzePBLGoal();
+    } catch (e) {
+      console.error('[PBL] auto analyze failed:', e);
+    }
+  }
+});
+</script>
+
+</body>
+</html>

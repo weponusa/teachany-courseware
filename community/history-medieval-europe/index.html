@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="course-id" content="history-medieval-europe">
+<meta name="course-node" content="medieval-europe">
+<meta name="course-subject" content="history">
+<meta name="course-title" content="中世纪欧洲">
+<meta name="course-prereqs" content="hist-m-greece-rome">
+<meta name="course-next" content="hist-m-renaissance,hist-h-age-of-exploration">
+<meta name="teachany-node" content="hist-m-medieval-europe">
+<title>中世纪欧洲 历史课件 · 初中 · 历史 · G9 · TeachAny vv7.2</title>
+
+<!-- Leaflet for historical map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  :root {
+    --bg: #f8fafc;
+    --primary: #7c3aed;
+    --secondary: #6366f1;
+    --accent: #d97706;
+    --card: #ffffff;
+    --text: #1e293b;
+    --text-secondary: #64748b;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --medieval-gold: #b45309;
+    --medieval-stone: #78716c;
+    --medieval-dark: #1c1917;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.8; font-size: 15px;
+  }
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1c1917 0%, #44403c 50%, #7c3aed 100%);
+    color: white; padding: 60px 24px 48px; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .hero h1 { font-size: 2.4em; margin-bottom: 8px; position: relative; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .hero p { opacity: 0.85; font-size: 1.05em; margin-bottom: 4px; position: relative; }
+  .hero .meta { display: flex; justify-content: center; gap: 16px; margin-top: 16px; flex-wrap: wrap; position: relative; }
+  .hero .meta span { background: rgba(255,255,255,0.15); border-radius: 20px; padding: 4px 14px; font-size: 0.85em; }
+  /* Nav */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(8px);
+    border-bottom: 1px solid #e2e8f0; padding: 10px 24px; display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .nav a {
+    color: var(--text-secondary); text-decoration: none; padding: 6px 14px;
+    border-radius: 8px; font-size: 0.9em; transition: all 0.2s;
+  }
+  .nav a:hover, .nav a.active { background: var(--primary); color: white; }
+  /* Container */
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+  /* Section */
+  .section { margin-bottom: 48px; }
+  .section-title {
+    font-size: 1.4em; font-weight: 700;
+    border-left: 4px solid var(--primary); padding-left: 14px; margin-bottom: 20px;
+  }
+  /* Card */
+  .card {
+    background: var(--card); border-radius: 14px; padding: 24px; margin-bottom: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-top: 3px solid var(--primary);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+  .card h3 { font-size: 1.1em; margin-bottom: 12px; color: var(--primary); }
+  .card p, .card li { color: var(--text); font-size: 0.95em; line-height: 1.85; }
+  .card ul, .card ol { padding-left: 20px; margin-top: 8px; }
+  .card li { margin-bottom: 6px; }
+  /* ABT Intro */
+  .abt-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .abt-box { padding: 18px; border-radius: 12px; text-align: center; }
+  .abt-box.and { background: #f0fdf4; border: 1px solid #22c55e; }
+  .abt-box.but { background: #fef2f2; border: 1px solid #ef4444; }
+  .abt-box.therefore { background: #f5f3ff; border: 1px solid #7c3aed; }
+  .abt-box .label { font-weight: 700; font-size: 0.85em; margin-bottom: 6px; }
+  .abt-box.and .label { color: #16a34a; }
+  .abt-box.but .label { color: #dc2626; }
+  .abt-box.therefore .label { color: #6d28d9; }
+  /* Timeline */
+  .timeline { position: relative; padding-left: 32px; margin: 20px 0; }
+  .timeline::before {
+    content: ''; position: absolute; left: 10px; top: 0; bottom: 0;
+    width: 3px; background: linear-gradient(to bottom, var(--primary), var(--secondary)); border-radius: 2px;
+  }
+  .tl-item { position: relative; margin-bottom: 24px; }
+  .tl-dot {
+    position: absolute; left: -26px; top: 4px; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--primary); border: 3px solid white; box-shadow: 0 0 0 2px var(--primary);
+  }
+  .tl-year {
+    display: inline-block; background: var(--primary); color: white;
+    padding: 2px 10px; border-radius: 6px; font-size: 0.85em; font-weight: 600; margin-bottom: 4px;
+  }
+  .tl-content { color: var(--text); font-size: 0.95em; line-height: 1.7; }
+  .tl-content strong { color: var(--primary); }
+  /* Map */
+  .map-container {
+    width: 100%; height: 500px; background: #0c1526;
+    border-radius: 12px; margin: 20px 0; overflow: hidden; position: relative;
+  }
+  .leaflet-container { background: #0c1526; }
+  .leaflet-popup-content-wrapper { background: #1e293b; color: #f8fafc; border-radius: 8px; }
+  .leaflet-popup-tip { background: #1e293b; }
+  .leaflet-popup-content { margin: 10px 14px; font-size: 12px; line-height: 1.6; }
+  .leaflet-popup-content b { color: #fbbf24; }
+  .leaflet-control-attribution { background: rgba(30,41,59,0.85) !important; color: #94a3b8 !important; font-size: 10px !important; }
+  .map-era-btns { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .map-era-btn {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid #64748b;
+    background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 0.85em;
+    transition: all 0.2s;
+  }
+  .map-era-btn:hover, .map-era-btn.active {
+    background: var(--primary); color: white; border-color: var(--primary);
+  }
+  /* Map era description panel */
+  .map-era-desc {
+    background: linear-gradient(135deg, #1e293b, #334155); color: #e2e8f0;
+    border-radius: 10px; padding: 16px 20px; margin-top: 12px;
+    font-size: 14px; line-height: 1.7; border-left: 4px solid var(--accent);
+  }
+  .map-era-desc strong { color: #fbbf24; }
+  .map-era-desc .era-year-tag {
+    display: inline-block; background: var(--primary); color: white;
+    padding: 2px 10px; border-radius: 6px; font-size: 0.8em; font-weight: 600;
+    margin-right: 8px; vertical-align: middle;
+  }
+  /* Map legend */
+  .map-legend {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px;
+    padding: 10px 14px; background: #f8fafc; border-radius: 8px; font-size: 12px;
+  }
+  .map-legend-item { display: flex; align-items: center; gap: 6px; }
+  .map-legend-dot {
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  }
+  .map-legend-line {
+    width: 20px; height: 2px; flex-shrink: 0;
+  }
+  /* City marker custom style */
+  .city-marker-icon {
+    width: 8px; height: 8px; border-radius: 50%; border: 2px solid #fff;
+    box-shadow: 0 0 4px rgba(0,0,0,0.5);
+  }
+  .city-marker-label {
+    background: rgba(30,41,59,0.9); color: #f8fafc; padding: 2px 7px;
+    border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  /* Feudal Hierarchy SVG */
+  .feudal-svg-wrap {
+    background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%);
+    border: 2px solid #fbbf24; border-radius: 14px; padding: 20px; margin: 16px 0;
+    text-align: center;
+  }
+  .feudal-svg-wrap svg { max-width: 100%; height: auto; }
+  .feudal-node { cursor: pointer; transition: filter 0.2s; }
+  .feudal-node:hover { filter: brightness(1.1); }
+  /* Source card */
+  .source-card {
+    background: #fefce8; border-left: 4px solid var(--accent);
+    padding: 16px; border-radius: 0 10px 10px 0; margin: 12px 0;
+    font-size: 0.9em; color: #92400e;
+  }
+  .source-card .source-title { font-weight: 700; margin-bottom: 6px; }
+  /* Comparison table */
+  .compare-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9em; }
+  .compare-table th { background: var(--primary); color: white; padding: 10px 12px; text-align: left; }
+  .compare-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+  .compare-table tr:nth-child(even) { background: #f8fafc; }
+  /* Tag */
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 600; margin-right: 6px; }
+  .tag-purple { background: #f3e8ff; color: #6b21a8; }
+  .tag-green { background: #dcfce7; color: #166534; }
+  .tag-amber { background: #fefce8; color: #92400e; }
+  .tag-red { background: #fee2e2; color: #991b1b; }
+  .tag-blue { background: #dbeafe; color: #1e40af; }
+  /* Sort game */
+  .sort-game { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 20px; }
+  .sort-zone {
+    border: 2px dashed #cbd5e1; border-radius: 10px; padding: 16px; min-height: 140px; background: #f8fafc;
+  }
+  .sort-zone.politics { border-color: #7c3aed; background: #f5f3ff; }
+  .sort-zone.economy { border-color: #d97706; background: #fffbeb; }
+  .sort-zone.culture { border-color: #0891b2; background: #ecfeff; }
+  .sort-zone h4 { margin: 0 0 12px 0; font-size: 0.95em; }
+  .sort-pool {
+    display: flex; flex-wrap: wrap; gap: 8px; padding: 12px;
+    background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 10px; margin-top: 16px;
+  }
+  .sort-chip {
+    padding: 6px 14px; background: white; border: 1px solid #e2e8f0;
+    border-radius: 999px; font-size: 0.9em; cursor: pointer; transition: all .2s; user-select: none;
+  }
+  .sort-chip:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .sort-chip.placed-politics { background: #f3e8ff; border-color: #7c3aed; }
+  .sort-chip.placed-economy { background: #fefce8; border-color: #d97706; }
+  .sort-chip.placed-culture { background: #ecfeff; border-color: #0891b2; }
+  .sort-feedback { margin-top: 12px; font-weight: 600; font-size: 0.95em; }
+  .sort-feedback.correct { color: var(--success); }
+  .sort-feedback.wrong { color: var(--danger); }
+  /* Quiz */
+  .quiz-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .quiz-q { font-weight: 600; margin-bottom: 12px; font-size: 1em; }
+  .quiz-opts { display: flex; flex-direction: column; gap: 8px; }
+  .quiz-opt {
+    padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;
+    background: white; cursor: pointer; transition: all 0.2s; font-size: 0.95em;
+  }
+  .quiz-opt:hover { border-color: var(--primary); background: #f5f3ff; }
+  .quiz-opt.selected { border-color: var(--primary); background: #ede9fe; }
+  .quiz-opt.correct { border-color: var(--success); background: #dcfce7; }
+  .quiz-opt.wrong { border-color: var(--danger); background: #fee2e2; }
+  .quiz-feedback { margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 0.9em; display: none; }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct { background: #dcfce7; color: #166534; }
+  .quiz-feedback.wrong { background: #fee2e2; color: #991b1b; }
+  /* Button */
+  .btn {
+    display: inline-block; padding: 10px 24px; border-radius: 10px;
+    border: none; cursor: pointer; font-size: 0.95em; font-weight: 600; transition: all 0.2s;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #6d28d9; }
+  .btn-secondary { background: #e2e8f0; color: var(--text); }
+  .btn-secondary:hover { background: #cbd5e1; }
+  /* Progress */
+  .progress-wrap { background: #e2e8f0; border-radius: 8px; height: 8px; margin: 24px 0 8px; overflow: hidden; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 8px; transition: width 0.5s; width: 0%; }
+  .progress-text { font-size: 0.85em; color: var(--text-secondary); margin-bottom: 20px; }
+  /* Knowledge map */
+  .km-grid { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 20px; align-items: center; margin: 32px 0; }
+  .km-col { text-align: center; }
+  .km-col h4 { color: var(--text-secondary); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 10px 0; }
+  .km-node {
+    display: inline-block; padding: 12px 18px; border: 2px solid #e2e8f0;
+    border-radius: 12px; background: white; color: var(--text); text-decoration: none;
+    font-size: 14px; transition: all .2s; margin: 4px;
+  }
+  .km-node:hover { border-color: var(--primary); transform: translateY(-2px); }
+  .km-node.current {
+    background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white;
+    border-color: transparent; font-size: 16px; font-weight: 700; padding: 16px 24px;
+    box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+  }
+  /* TTS highlight 迁移到 teachany-tts-narrator.css —— 统一用 .tts-narrator-active */
+  /* Legacy #ai-assistant / #tts-controller 样式已删除，统一走标准模块 */
+  /* hero-cover */
+  .hero-cover-img {
+    display: block; width: 100%; max-width: 640px; height: auto;
+    margin: 16px auto 20px; border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12); object-fit: contain;
+  }
+  /* Responsive */
+  @media (max-width: 640px) {
+    .abt-grid { grid-template-columns: 1fr; }
+    .km-grid { grid-template-columns: 1fr; }
+    .sort-game { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 1.6em; }
+  }
+  /* Feudal interactive info panel */
+  .feudal-info-panel {
+    background: #1e293b; color: #f8fafc; padding: 16px 20px;
+    border-radius: 10px; font-size: 14px; line-height: 1.7; max-width: 640px;
+    margin: 12px auto 0; text-align: left;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: none;
+    transition: all 0.3s;
+  }
+  .feudal-info-panel.show { display: block; }
+  .feudal-info-panel .info-level { color: #fbbf24; font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .feudal-node.active rect { stroke: #fbbf24; stroke-width: 3; filter: drop-shadow(0 0 6px rgba(251,191,36,0.5)); }
+  /* ConcepTest */
+  .concept-test {
+    background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 2px solid #7c3aed;
+    border-radius: 14px; padding: 24px; margin: 20px 0;
+  }
+  .concept-test h4 { color: #6d28d9; margin-bottom: 12px; }
+  .concept-test .reveal { background: white; border-radius: 8px; padding: 14px; margin-top: 12px; display: none; }
+  .concept-test .reveal.show { display: block; }
+</style>
+
+<link rel="stylesheet" href="/assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-tutor-card.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="/assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-floating-dock.css">
+</head>
+<body>
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+
+<!-- Hero -->
+<div class="hero" data-tts="hero">
+  <h1>🏰 中世纪欧洲</h1>
+  <p>初中历史 · 世界古代史</p>
+  <p>九年级 · 课标匹配</p>
+  <div class="meta">
+    <span>📖 新授课</span>
+    <span>⏱️ 约 35 分钟</span>
+    <span>🎯 识记 · 理解 · 分析 · 评价</span>
+  </div>
+</div>
+<img class="hero-cover-img"
+     src="https://cdn.jsdelivr.net/gh/weponusa/teachany-images@main/history/medieval-europe-hero.png"
+     onerror="this.style.display='none'"
+     alt="《中世纪欧洲》课件封面">
+
+<!-- Nav -->
+<div class="nav" id="mainNav">
+  <a href="#objectives">目标</a>
+  <a href="#intro">引入</a>
+  <a href="#module1">封建制度</a>
+  <a href="#module2">基督教会</a>
+  <a href="#module3">拜占庭</a>
+  <a href="#module4">城市兴起</a>
+  <a href="#game">互动</a>
+  <a href="#quiz">测试</a>
+  <a href="#knowledge-map-section">图谱</a>
+</div>
+
+<div class="container">
+
+  <!-- ═══ Learning Objectives ═══ -->
+  <div class="section" id="objectives" data-tts="objectives">
+    <div class="section-title">📋 本课学习目标</div>
+    <div class="card" style="border-top-color:var(--accent)">
+      <p>学完本课后，你应该能够：</p>
+      <ul>
+        <li><strong>识记</strong>：西罗马帝国灭亡的标志和封建制度的核心特征</li>
+        <li><strong>理解</strong>：基督教会为什么能成为中世纪欧洲最有权势的力量</li>
+        <li><strong>分析</strong>：拜占庭帝国与西欧封建社会的不同发展道路</li>
+        <li><strong>评价</strong>：城市兴起对中世纪欧洲走向近代的意义</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══ ABT Introduction ═══ -->
+  <div class="section" id="intro" data-tts="introduction">
+    <div class="section-title">📖 引入：被误解的"黑暗时代"</div>
+    <div class="abt-grid">
+      <div class="abt-box and">
+        <div class="label">AND</div>
+        <p>西罗马帝国灭亡后，欧洲进入了封建割据、教会主导的时代</p>
+      </div>
+      <div class="abt-box but">
+        <div class="label">BUT</div>
+        <p>中世纪并非一片黑暗——城市在兴起，大学在诞生，古典文明在拜占庭被保存</p>
+      </div>
+      <div class="abt-box therefore">
+        <div class="label">THEREFORE</div>
+        <p>中世纪是近代欧洲的孵化器，理解它才能理解文艺复兴为何爆发</p>
+      </div>
+    </div>
+    <div class="card" style="border-top-color:#8b5cf6">
+      <h3>公元 476 年：一个时代的落幕</h3>
+      <p>西罗马帝国最后一个皇帝被日耳曼雇佣军首领废黜。曾经统治地中海世界的庞大帝国，就这样悄无声息地落幕了。但罗马真的消失了吗？没有。它的法律、语言、宗教——特别是基督教，全部被中世纪欧洲继承了。</p>
+      <p style="margin-top:12px"><strong>核心问题</strong>：西罗马灭亡后，欧洲靠什么维持秩序？</p>
+    </div>
+    <!-- Source card -->
+    <div class="source-card">
+      <div class="source-title">📜 史料阅读</div>
+      <p>"罗马城被哥特人攻陷的消息传到帝国各地，人们感到震惊，却并不意外——因为衰败早已蔓延到了帝国的每一个角落。"<br>——圣哲罗姆《书信集》，5 世纪初</p>
+    </div>
+  </div>
+
+  <!-- ═══ Module 1: Feudal System ═══ -->
+  <div class="section" id="module1" data-tts="module1">
+    <div class="section-title">🏗️ 模块一：封君封臣与庄园制度</div>
+
+    <div class="card" style="border-top-color:var(--medieval-gold)">
+      <h3>封君封臣：以土地为纽带的契约关系</h3>
+      <p>封建制度的核心可以用三个关键词概括：<span class="tag tag-purple">封君封臣</span><span class="tag tag-amber">庄园</span><span class="tag tag-red">农奴</span></p>
+      <p style="margin-top:10px">封君赐予封臣土地（采邑），封臣为封君提供军事效忠。这跟中国古代的郡县制<strong>完全不同</strong>——中国是皇帝直接派官员治理地方，欧洲则是层层分封、各自为政。</p>
+    </div>
+
+    <!-- Feudal Hierarchy Interactive SVG -->
+    <div class="feudal-svg-wrap" style="position:relative">
+      <h4 style="margin-bottom:12px;color:#92400e">🏛️ 点击各层级，了解封建等级关系</h4>
+      <svg viewBox="0 0 700 340" xmlns="http://www.w3.org/2000/svg" id="feudalSvg">
+        <!-- King -->
+        <g class="feudal-node" data-level="king" transform="translate(300,20)">
+          <rect x="0" y="0" width="100" height="50" rx="8" fill="#7c3aed" stroke="#5b21b6" stroke-width="2"/>
+          <text x="50" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="bold">国王</text>
+          <line x1="50" y1="50" x2="150" y2="100" stroke="#a78bfa" stroke-width="2"/>
+          <line x1="50" y1="50" x2="350" y2="100" stroke="#a78bfa" stroke-width="2"/>
+          <line x1="50" y1="50" x2="550" y2="100" stroke="#a78bfa" stroke-width="2"/>
+        </g>
+        <!-- Lords -->
+        <g class="feudal-node" data-level="lord" transform="translate(100,100)">
+          <rect x="0" y="0" width="100" height="50" rx="8" fill="#8b5cf6" stroke="#6d28d9" stroke-width="2"/>
+          <text x="50" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="bold">大领主</text>
+          <line x1="50" y1="50" x2="80" y2="180" stroke="#c4b5fd" stroke-width="1.5"/>
+          <line x1="50" y1="50" x2="180" y2="180" stroke="#c4b5fd" stroke-width="1.5"/>
+        </g>
+        <g class="feudal-node" data-level="lord" transform="translate(300,100)">
+          <rect x="0" y="0" width="100" height="50" rx="8" fill="#8b5cf6" stroke="#6d28d9" stroke-width="2"/>
+          <text x="50" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="bold">主教</text>
+          <line x1="50" y1="50" x2="280" y2="180" stroke="#c4b5fd" stroke-width="1.5"/>
+          <line x1="50" y1="50" x2="380" y2="180" stroke="#c4b5fd" stroke-width="1.5"/>
+        </g>
+        <g class="feudal-node" data-level="lord" transform="translate(500,100)">
+          <rect x="0" y="0" width="100" height="50" rx="8" fill="#8b5cf6" stroke="#6d28d9" stroke-width="2"/>
+          <text x="50" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="bold">伯爵</text>
+          <line x1="50" y1="50" x2="480" y2="180" stroke="#c4b5fd" stroke-width="1.5"/>
+          <line x1="50" y1="50" x2="580" y2="180" stroke="#c4b5fd" stroke-width="1.5"/>
+        </g>
+        <!-- Knights -->
+        <g class="feudal-node" data-level="knight" transform="translate(30,180)">
+          <rect x="0" y="0" width="100" height="50" rx="8" fill="#a78bfa" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="50" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="bold">骑士</text>
+        </g>
+        <g class="feudal-node" data-level="knight" transform="translate(140,180)">
+          <rect x="0" y="0" width="100" height="50" rx="8" fill="#a78bfa" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="50" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="bold">骑士</text>
+        </g>
+        <g class="feudal-node" data-level="knight" transform="translate(250,180)">
+          <rect x="0" y="0" width="100" height="50" rx="8" fill="#a78bfa" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="50" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="bold">骑士</text>
+        </g>
+        <g class="feudal-node" data-level="knight" transform="translate(360,180)">
+          <rect x="0" y="0" width="100" height="50" rx="8" fill="#a78bfa" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="50" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="bold">骑士</text>
+        </g>
+        <g class="feudal-node" data-level="knight" transform="translate(470,180)">
+          <rect x="0" y="0" width="100" height="50" rx="8" fill="#a78bfa" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="50" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="bold">骑士</text>
+        </g>
+        <g class="feudal-node" data-level="knight" transform="translate(580,180)">
+          <rect x="0" y="0" width="100" height="50" rx="8" fill="#a78bfa" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="50" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="bold">骑士</text>
+        </g>
+        <!-- Serfs -->
+        <g transform="translate(100,270)">
+          <rect x="0" y="0" width="500" height="50" rx="8" fill="#78716c" stroke="#57534e" stroke-width="2"/>
+          <text x="250" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="bold">农奴 — 被束缚在土地上，只有义务没有权利</text>
+        </g>
+        <line x1="350" y1="230" x2="350" y2="270" stroke="#a8a29e" stroke-width="2" stroke-dasharray="4"/>
+      </svg>
+      <div class="feudal-info-panel" id="feudalInfoPanel">
+        <div class="info-level" id="feudalInfoLevel"></div>
+        <div id="feudalInfoText"></div>
+      </div>
+    </div>
+
+    <!-- ConcepTest -->
+    <div class="concept-test">
+      <h4>🤔 思考题：封君封臣制 vs 郡县制</h4>
+      <p>中国秦朝实行郡县制，欧洲中世纪实行封君封臣制。两者最本质的区别是什么？</p>
+      <button class="btn btn-primary" style="margin-top:12px" onclick="this.nextElementSibling.classList.toggle('show')">查看分析</button>
+      <div class="reveal">
+        <p><strong>核心区别</strong>：权力是否可以层层下放且不可收回。</p>
+        <p>郡县制：皇帝派官员管理地方，官员不可世袭，皇帝随时可以撤换——权力<strong>自上而下且集中</strong>。</p>
+        <p>封君封臣制：领主把土地分给封臣，封臣的权力是世袭的，国王很难收回——权力<strong>层层分散且固化</strong>。</p>
+        <p>这就是为什么中世纪欧洲长期四分五裂，而中国大部分时间能保持大一统。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>庄园：自给自足的经济单元</h3>
+      <p>庄园是封建制度的经济基础。每个庄园就像一个小世界：</p>
+      <ul>
+        <li><strong>领主自营地</strong>：由农奴耕种，收成归领主</li>
+        <li><strong>农奴份地</strong>：农奴耕种维持生计，但要缴纳劳役和实物租</li>
+        <li><strong>公共用地</strong>：林地、牧场，农奴有使用权</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══ Module 2: Christian Church ═══ -->
+  <div class="section" id="module2" data-tts="module2">
+    <div class="section-title">⛪ 模块二：基督教会的世俗权力</div>
+
+    <div class="card" style="border-top-color:#dc2626">
+      <h3>教会的三大权力支柱</h3>
+      <p>如果说封建制度管的是世俗秩序，那基督教管的就是精神秩序。中世纪的教会权力有多大？</p>
+      <ol>
+        <li><strong>精神权威</strong>：教皇可以废黜国王——1077 年"卡诺莎之辱"，皇帝在雪地跪了三天求教皇宽恕</li>
+        <li><strong>知识垄断</strong>：修道院是唯一有书的地方，教士是唯一识字的人</li>
+        <li><strong>经济实力</strong>：什一税——每个人收入的十分之一要交给教会</li>
+      </ol>
+    </div>
+
+    <!-- Source card: Canossa -->
+    <div class="source-card">
+      <div class="source-title">📜 史料阅读：卡诺莎之辱（1077）</div>
+      <p>"亨利赤足立于城堡门前，严寒之中，不进饮食，苦苦哀求教皇格列高利七世的宽恕。三日之后，教皇终于解除开除教籍的惩罚。"<br>——兰伯特《编年史》</p>
+    </div>
+
+    <!-- Comparison: Church vs State -->
+    <div class="card">
+      <h3>教会 vs 世俗政权</h3>
+      <table class="compare-table">
+        <tr><th>维度</th><th>教会</th><th>世俗领主</th></tr>
+        <tr><td>权力来源</td><td>神授（教皇=上帝在人间的代表）</td><td>封地世袭</td></tr>
+        <tr><td>组织结构</td><td>层级严密，教皇→主教→神父</td><td>分散割据，领主各自为政</td></tr>
+        <tr><td>经济来源</td><td>什一税 + 土地收入 + 赎罪券</td><td>庄园地租 + 关税</td></tr>
+        <tr><td>文化控制</td><td>垄断教育、书籍、审判权</td><td>几乎无文化职能</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ Module 3: Byzantine Empire ═══ -->
+  <div class="section" id="module3" data-tts="module3">
+    <div class="section-title">🏛️ 模块三：拜占庭帝国——罗马的另一种命运</div>
+
+    <div class="card" style="border-top-color:#0891b2">
+      <h3>东西罗马：同源异途</h3>
+      <p>当西欧在封建割据中徘徊时，东边的拜占庭帝国走出了一条完全不同的路。拜占庭就是东罗马帝国的延续，首都<strong>君士坦丁堡</strong>扼守欧亚咽喉，贸易繁荣，文化灿烂。</p>
+    </div>
+
+    <!-- Historical Map: Byzantine & Medieval Europe -->
+    <div class="card">
+      <h3>🗺️ 中世纪欧洲疆域演变</h3>
+      <p style="margin-bottom:10px">点击不同时代按钮，观察欧洲政治版图的变化：</p>
+      <div class="map-era-btns">
+        <button class="map-era-btn active" data-era="ce-500">500 年</button>
+        <button class="map-era-btn" data-era="ce-800">800 年</button>
+        <button class="map-era-btn" data-era="ce-1000">1000 年</button>
+        <button class="map-era-btn" data-era="ce-1200">1200 年</button>
+        <button class="map-era-btn" data-era="ce-1300">1300 年</button>
+      </div>
+      <div class="map-container" id="medievalMap"></div>
+      <div class="map-era-desc" id="mapEraDesc">
+        <!-- JS 动态填充 -->
+      </div>
+      <div class="map-legend">
+        <div class="map-legend-item"><div class="city-marker-icon" style="background:#ef4444"></div>重要城市</div>
+        <div class="map-legend-item"><div class="map-legend-line" style="background:#6366f1;border-radius:1px;"></div>疆域边界</div>
+        <div class="map-legend-item"><i style="font-style:normal;color:#94a3b8">点击城市标记查看详情，悬停区域高亮</i></div>
+      </div>
+    </div>
+
+    <!-- Byzantine vs Western Europe -->
+    <div class="card">
+      <h3>拜占庭 vs 西欧：两条发展道路</h3>
+      <table class="compare-table">
+        <tr><th>维度</th><th>拜占庭帝国</th><th>西欧封建社会</th></tr>
+        <tr><td>政治体制</td><td>中央集权的皇帝制</td><td>封君封臣、四分五裂</td></tr>
+        <tr><td>经济形态</td><td>商业繁荣，国际贸易</td><td>庄园自给自足</td></tr>
+        <tr><td>法律遗产</td><td>《查士丁尼法典》系统整理罗马法</td><td>习惯法，无统一法典</td></tr>
+        <tr><td>文化传承</td><td>保存古希腊罗马典籍</td><td>文化水平低，修道院垄断知识</td></tr>
+        <tr><td>最终命运</td><td>1453 年被奥斯曼灭亡</td><td>走向文艺复兴和近代</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>拜占庭的遗产</h3>
+      <ul>
+        <li><strong>《查士丁尼法典》</strong>：系统整理了罗马法，成为欧洲大陆法系的基础</li>
+        <li><strong>文化保存</strong>：西欧人几乎忘了怎么读书时，拜占庭学者还在研究亚里士多德</li>
+        <li><strong>灭亡的冲击</strong>：1453 年奥斯曼攻陷君士坦丁堡，大量学者西迁，推动了文艺复兴</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══ Module 4: Rise of Cities ═══ -->
+  <div class="section" id="module4" data-tts="module4">
+    <div class="section-title">🌆 模块四：城市兴起——中世纪的转折点</div>
+
+    <div class="card" style="border-top-color:var(--success)">
+      <h3>三件改变欧洲的大事</h3>
+      <p>中世纪不是一成不变的。从 11 世纪开始，三件大事改变了欧洲的面貌：</p>
+    </div>
+
+    <!-- Interactive Timeline -->
+    <div class="card">
+      <h3>🕐 中世纪关键时间轴</h3>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">476 年</div>
+          <div class="tl-content">西罗马帝国灭亡，中世纪开始</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">800 年</div>
+          <div class="tl-content">查理曼加冕为罗马人的皇帝，法兰克王国达到鼎盛</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1054 年</div>
+          <div class="tl-content">东西教会大分裂——天主教与东正教正式分道扬镳</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1077 年</div>
+          <div class="tl-content">卡诺莎之辱——教皇权力达到顶峰</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">11-13 世纪</div>
+          <div class="tl-content"><strong>农业革命</strong>：三圃制和重型犁推广，粮食产量大增，人口翻倍</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1088 年</div>
+          <div class="tl-content"><strong>博洛尼亚大学</strong>成立——欧洲第一所大学</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1204 年</div>
+          <div class="tl-content">第四次十字军东征攻陷君士坦丁堡，拜占庭遭受重创</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1215 年</div>
+          <div class="tl-content">英国《大宪章》签署——限制王权的起点</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1453 年</div>
+          <div class="tl-content">奥斯曼攻陷君士坦丁堡，拜占庭灭亡，中世纪正式结束</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>城市：金钱换自由</h3>
+      <p>剩余的农产品催生了商业，商人聚集形成城市。城市用<strong>金钱换取自治特许状</strong>——"城市的空气使人自由"，一个农奴只要在城里住满一年零一天，就成为自由人。</p>
+    </div>
+
+    <div class="card">
+      <h3>大学：知识走出修道院</h3>
+      <p>博洛尼亚大学（1088）、巴黎大学（1150）、牛津大学（1167）相继成立。大学使用拉丁语授课，学生来自全欧洲——这是第一次，知识不再被锁在修道院的高墙内。</p>
+    </div>
+
+    <!-- ConcepTest -->
+    <div class="concept-test">
+      <h4>🤔 思考题：中世纪是"黑暗时代"吗？</h4>
+      <p>有人说中世纪是"黑暗时代"，什么都不行。你怎么看？</p>
+      <button class="btn btn-primary" style="margin-top:12px" onclick="this.nextElementSibling.classList.toggle('show')">查看分析</button>
+      <div class="reveal">
+        <p><strong>关键判断</strong>：中世纪不是黑暗时代，而是近代欧洲的孵化器。</p>
+        <p>① 农业革命养活了更多人口；② 城市兴起催生了商业和市民阶层；③ 大学诞生让知识不再被教会独占；④ 大宪章开启了限制王权的传统。</p>
+        <p>文艺复兴不是凭空爆发的——它站在中世纪一千年的积累之上。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Interactive Game: Sort ═══ -->
+  <div class="section" id="game" data-tts="game">
+    <div class="section-title">🎮 互动：中世纪概念分类</div>
+    <div class="card">
+      <p>把下面的概念拖到正确的类别中（点击概念，再点击目标分类区）：</p>
+      <div class="sort-pool" id="sortPool">
+        <span class="sort-chip" data-answer="politics">封君封臣</span>
+        <span class="sort-chip" data-answer="politics">卡诺莎之辱</span>
+        <span class="sort-chip" data-answer="economy">庄园</span>
+        <span class="sort-chip" data-answer="economy">什一税</span>
+        <span class="sort-chip" data-answer="economy">自治特许状</span>
+        <span class="sort-chip" data-answer="culture">修道院</span>
+        <span class="sort-chip" data-answer="culture">博洛尼亚大学</span>
+        <span class="sort-chip" data-answer="culture">查士丁尼法典</span>
+      </div>
+      <div class="sort-game">
+        <div class="sort-zone politics" id="zonePolitics">
+          <h4>🏛️ 政治制度</h4>
+        </div>
+        <div class="sort-zone economy" id="zoneEconomy">
+          <h4>💰 经济形态</h4>
+        </div>
+        <div class="sort-zone culture" id="zoneCulture">
+          <h4>📚 文化宗教</h4>
+        </div>
+      </div>
+      <div class="sort-feedback" id="sortFeedback"></div>
+      <button class="btn btn-secondary" style="margin-top:12px" onclick="checkSort()">检查答案</button>
+      <button class="btn btn-secondary" style="margin-top:12px" onclick="resetSort()">重新开始</button>
+    </div>
+  </div>
+
+  <!-- ═══ Quiz ═══ -->
+  <div class="section" id="quiz" data-tts="quiz">
+    <div class="section-title">📝 综合测验</div>
+    <div class="progress-wrap"><div class="progress-bar" id="quizProgress"></div></div>
+    <div class="progress-text" id="quizProgressText">0 / 5 完成</div>
+
+    <div class="quiz-card" id="q1">
+      <div class="quiz-q">1. 西罗马帝国灭亡的标志性事件是？</div>
+      <div class="quiz-opts">
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">A. 君士坦丁堡陷落</div>
+        <div class="quiz-opt" data-correct="true" onclick="selectOpt(this)">B. 日耳曼人废黜西罗马末代皇帝</div>
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">C. 查理曼帝国分裂</div>
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">D. 十字军东征</div>
+      </div>
+      <div class="quiz-feedback">476 年，日耳曼雇佣军首领奥多亚克废黜了西罗马末代皇帝罗慕路斯·奥古斯都，标志着西罗马帝国灭亡和中世纪的开始。</div>
+    </div>
+
+    <div class="quiz-card" id="q2">
+      <div class="quiz-q">2. 封君封臣制与郡县制的本质区别是？</div>
+      <div class="quiz-opts">
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">A. 一个有法律，一个没有法律</div>
+        <div class="quiz-opt" data-correct="true" onclick="selectOpt(this)">B. 封君封臣权力世袭且分散，郡县制权力集中且不可世袭</div>
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">C. 封君封臣只适用于欧洲</div>
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">D. 郡县制不需要官员</div>
+      </div>
+      <div class="quiz-feedback">封君封臣制下，领主把土地分给封臣，封臣权力世袭，国王难以收回——权力层层分散且固化。郡县制下，皇帝派官员管理地方，官员不可世袭，皇帝随时可以撤换——权力自上而下且集中。</div>
+    </div>
+
+    <div class="quiz-card" id="q3">
+      <div class="quiz-q">3. "卡诺莎之辱"说明了什么？</div>
+      <div class="quiz-opts">
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">A. 世俗权力永远大于教权</div>
+        <div class="quiz-opt" data-correct="true" onclick="selectOpt(this)">B. 中世纪教皇的权力可以凌驾于皇帝之上</div>
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">C. 教会只管精神事务</div>
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">D. 皇帝不需要教皇的认可</div>
+      </div>
+      <div class="quiz-feedback">1077 年，神圣罗马帝国皇帝亨利四世因与教皇争夺主教任命权，被开除教籍，不得不在雪地里跪了三天求教皇宽恕。这生动说明中世纪教皇权力可以凌驾于世俗皇帝之上。</div>
+    </div>
+
+    <div class="quiz-card" id="q4">
+      <div class="quiz-q">4. 拜占庭帝国对欧洲文明最大的贡献是？</div>
+      <div class="quiz-opts">
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">A. 发明了火药</div>
+        <div class="quiz-opt" data-correct="true" onclick="selectOpt(this)">B. 保存了罗马法和古希腊罗马文化典籍</div>
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">C. 发现了新大陆</div>
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">D. 建立了最大的封建帝国</div>
+      </div>
+      <div class="quiz-feedback">拜占庭帝国最伟大的遗产是《查士丁尼法典》，系统整理了罗马法，后来成为欧洲大陆法系的基础。同时，拜占庭保存了大量古希腊罗马的文化典籍，在西欧文化衰落时期起到了文化桥梁作用。</div>
+    </div>
+
+    <div class="quiz-card" id="q5">
+      <div class="quiz-q">5. 标志中世纪正式结束的事件是？</div>
+      <div class="quiz-opts">
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">A. 大宪章签署（1215）</div>
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">B. 百年战争结束（1453）</div>
+        <div class="quiz-opt" data-correct="true" onclick="selectOpt(this)">C. 奥斯曼攻陷君士坦丁堡（1453）</div>
+        <div class="quiz-opt" data-correct="false" onclick="selectOpt(this)">D. 文艺复兴开始</div>
+      </div>
+      <div class="quiz-feedback">1453 年奥斯曼帝国攻陷君士坦丁堡，延续千年的拜占庭帝国灭亡，东罗马帝国彻底终结，这一年被普遍视为中世纪正式结束的标志。</div>
+    </div>
+  </div>
+
+  <!-- ═══ Summary ═══ -->
+  <div class="section" id="summary" data-tts="summary">
+    <div class="section-title">📌 课堂小结</div>
+    <div class="card" style="border-top-color:var(--primary)">
+      <p>请记住四个核心判断：</p>
+      <ol>
+        <li><strong>封君封臣制</strong>让欧洲长期四分五裂，但也维持了基本秩序</li>
+        <li><strong>基督教会</strong>同时掌控精神权威和经济资源，是中世纪最有权势的力量</li>
+        <li><strong>拜占庭帝国</strong>保存了古典文明，它的法律遗产影响了整个欧洲</li>
+        <li><strong>城市和大学</strong>的兴起，让中世纪从封闭走向开放，为文艺复兴埋下种子</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ═══ Knowledge Map ═══ -->
+  <div class="section" id="knowledge-map-section" data-tts="knowledge-map">
+    <div class="section-title">🗺️ 知识图谱</div>
+    <div class="km-grid">
+      <div class="km-col">
+        <h4>前置知识</h4>
+        <a class="km-node" href="../../hist-m-greece-rome/index.html">古希腊与古罗马</a>
+        <a class="km-node" style="opacity:0.5;cursor:default" title="课件制作中">基督教起源</a>
+      </div>
+      <div class="km-col">
+        <h4>本课</h4>
+        <a class="km-node current">🏰 中世纪欧洲</a>
+      </div>
+      <div class="km-col">
+        <h4>后续衔接</h4>
+        <a class="km-node" href="../../hist-m-renaissance/index.html">文艺复兴与宗教改革</a>
+        <a class="km-node" style="opacity:0.5;cursor:default" title="课件制作中">新航路开辟</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- AI Tutor / TTS Narrator / Section Hints：统一交给标准模块处理（v7.7.4） -->
+
+<script>
+// ═══════════════════════════════════════════
+// Leaflet Map: Local GeoJSON + Hillshade
+// ═══════════════════════════════════════════
+const ERA_FILES = {
+  'ce-500':   { file: 'assets/maps/009-ce-500.geojson',                  label: '约 500 年：后罗马时代' },
+  'ce-800':   { file: 'assets/maps/010-ce-800-caliphate-carolingian.geojson', label: '约 800 年：加洛林与哈里发' },
+  'ce-1000':  { file: 'assets/maps/011-ce-1000.geojson',                 label: '约 1000 年' },
+  'ce-1200':  { file: 'assets/maps/012-ce-1200-mongol-rise.geojson',     label: '约 1200 年：蒙古崛起' },
+  'ce-1300':  { file: 'assets/maps/013-ce-1300-mongol-peak.geojson',     label: '约 1300 年：蒙古极盛' }
+};
+
+const ERA_COLORS = {
+  'ce-500':   { fill: '#6366f1', stroke: '#4f46e5' },
+  'ce-800':   { fill: '#8b5cf6', stroke: '#7c3aed' },
+  'ce-1000':  { fill: '#0ea5e9', stroke: '#0284c7' },
+  'ce-1200':  { fill: '#f59e0b', stroke: '#d97706' },
+  'ce-1300':  { fill: '#ef4444', stroke: '#dc2626' }
+};
+
+// 各时代说明文字
+const ERA_DESC = {
+  'ce-500': '<span class="era-year-tag">约公元 500 年</span><strong>西罗马灭亡后的欧洲</strong>：日耳曼诸王国（东哥特、西哥特、法兰克、汪达尔）瓜分了西罗马帝国领土。拜占庭帝国（东罗马）在君士坦丁堡延续着罗马法统。基督教正在向日耳曼人传播，教皇的权威逐步上升。',
+  'ce-800': '<span class="era-year-tag">约公元 800 年</span><strong>查理曼帝国与阿拉伯帝国的对峙</strong>：法兰克国王查理曼被教皇加冕为"罗马人的皇帝"，加洛林帝国达到鼎盛——几乎统一了西欧。同时，阿拉伯帝国（阿拔斯王朝）控制了西班牙和地中海南部，伊斯兰文明进入黄金时代。',
+  'ce-1000': '<span class="era-year-tag">约公元 1000 年</span><strong>封建制度全面确立</strong>：加洛林帝国分裂为法兰西、神圣罗马帝国（德意志）、意大利等封建王国。"诺曼征服"将法国的封建制度带到英国（1066年）。北欧维京人逐渐定居并改信基督教，形成斯堪的纳维亚各国。',
+  'ce-1200': '<span class="era-year-tag">约公元 1200 年</span><strong>中世纪盛期与蒙古威胁</strong>：十字军东征使欧洲与东方频繁接触，威尼斯、热那亚等地中海商业城市空前繁荣。大学在欧洲各地兴起（博洛尼亚、巴黎、牛津）。成吉思汗及其子孙的蒙古大军从东方压境，即将改变欧亚格局。',
+  'ce-1300': '<span class="era-year-tag">约公元 1300 年</span><strong>蒙古治下的欧亚通道与危机前夜</strong>：蒙古四大汗国横跨欧亚，丝绸之路畅通无阻——马可·波罗正是此时从中国返回欧洲。但好景不长：黑死疫（1347年起）将夺走欧洲三分之一人口，百年战争英法开战，中世纪走向终结。'
+};
+
+// 关键城市标注 [lat, lng, 中文名, 英文名, 描述]
+const CITIES = {
+  'ce-500': [
+    [41.90, 12.50, '罗马', 'Rome', '西罗马帝国故都，476年被废黜后成为宗教中心'],
+    [41.01, 28.98, '君士坦丁堡', 'Constantinople', '东罗马（拜占庭）首都，50万人口的超级大都市'],
+    [48.85, 2.35, '巴黎', 'Paris', '法兰克王国的核心区域，未来的法兰西首都'],
+    [43.30, 5.37, '马赛', 'Marseille', '地中海贸易港口，连接东西方的枢纽'],
+    [39.47, -0.38, '托莱多', 'Toledo', '西哥特王国首都（伊比利亚半岛）']
+  ],
+  'ce-800': [
+    [41.90, 12.50, '罗马', 'Rome', '教皇驻地，800年教皇利奥三世为查理曼加冕'],
+    [41.01, 28.98, '君士坦丁堡', 'Constantinople', '拜占庭帝国首都，艾琳女皇统治时期'],
+    [49.61, 6.13, '亚琛', 'Aachen', '查理曼帝国的皇宫所在地，加洛林文艺复兴中心'],
+    [37.88, -4.78, '科尔多瓦', 'Cordoba', '倭马亚王朝首都，当时世界最繁华的城市之一（人口50万）'],
+    [51.51, -0.13, '伦敦', 'London', '威塞克斯王国领地，阿尔弗雷大帝抵抗丹麦人的基地'],
+    [48.21, 16.37, '维也纳', 'Vienna', '查理曼帝国东部边陲，对抗阿瓦尔人的前线']
+  ],
+  'ce-1000': [
+    [48.86, 2.35, '巴黎', 'Paris', '卡佩王朝都城，法兰西王国政治中心'],
+    [51.51, -0.13, '伦敦', 'London', '诺曼征服前的英格兰，威撒克斯王朝末年'],
+    [55.68, 37.62, '基辅', 'Kiev', "罗斯公国首都，'罗斯诸城之母'，连接拜占庭与北欧"],
+    [41.01, 28.98, '君士坦丁堡', 'Constantinople', '巴西尔二世的拜占庭，军事力量巅峰'],
+    [45.44, 12.33, '威尼斯', 'Venice', '崛起中的海上共和国，拜占庭与西方贸易的中介'],
+    [64.15, -21.94, '雷克雅未克', 'Reykjavik', '维京人定居冰岛，北欧基督教化进程中']
+  ],
+  'ce-1200': [
+    [48.86, 2.35, '巴黎', '巴黎', '腓力二世建設中的法兰西王国首都'],
+    [45.44, 12.33, '威尼斯', 'Venezia', '第四次十字军从这里出发（1202年），海上霸主'],
+    [43.77, 11.25, '佛罗伦萨', 'Firenze', '羊毛纺织业兴起，文艺复兴的前奏'],
+    [51.51, -0.13, '伦敦', 'Londra', '约翰王统治时期，《大宪章》签署前夕（1215年）'],
+    [40.42, -3.70, '托莱多', 'Toledo', '被基督徒收复（1085），翻译运动中心—阿拉伯学问传入欧洲'],
+    [41.01, 28.98, '君士坦丁堡', 'Costantinopoli', '第四次十字军劫掠（1204年），拜由庭严重衰落'],
+    [55.76, 37.62, '莫斯科', 'Mosca', '莫斯科公国兴起，弗拉基米尔大公时期']
+  ],
+  'ce-1300': [
+    [45.44, 12.33, '威尼斯', 'Venezia', '马可·波罗故乡（1295年返回），丝绸之路上最富有的商业共和国'],
+    [43.77, 11.25, '佛罗伦萨', 'Firenze', '但丁创作《神曲》（1308-1321），人文主义萌芽'],
+    [48.86, 2.35, '巴黎', 'Parigi', '腓力四世与教皇博尼法斯八世冲突，圣殿骑士团覆灭前夕（1307）'],
+    [51.51, -0.13, '伦敦', 'Londra', '百年战争爆发前夕（1337），爱德华三世的英格兰'],
+    [41.01, 28.98, '君士坦丁堡', 'Costantinopoli', '拜占庭帝国苟延残喘，1453年将被奥斯曼攻陷'],
+    [47.60, 19.05, '布达', 'Buda', '匈牙利抵御蒙古入侵的前线'],
+    [39.97, 32.86, '安卡拉', 'Ankara', '1402年帖木儿在此击败奥斯曼，暂时延缓了拜占庭的灭亡']
+  ]
+};
+
+const map = L.map('medievalMap', {
+  center: [48, 15], zoom: 3,
+  crs: L.CRS.EPSG4326,
+  maxBounds: [[-90, -180], [90, 180]], zoomControl: true,
+  minZoom: 2, maxZoom: 8
+});
+
+map.fitBounds([[35, -10], [65, 45]]);
+
+L.imageOverlay('./assets/maps/hillshade.jpg', [[-90, -180], [90, 180]], { opacity: 0.5, interactive: false }).addTo(map);
+
+let currentEraLayer = null;
+let currentCityLayer = null;
+let currentEra = 'ce-500';
+
+function loadEra(era) {
+  if (currentEraLayer) { map.removeLayer(currentEraLayer); }
+  if (currentCityLayer) { map.removeLayer(currentCityLayer); }
+  currentEra = era;
+  const cfg = ERA_FILES[era];
+  const colors = ERA_COLORS[era];
+
+  // 更新时代说明面板
+  document.getElementById('mapEraDesc').innerHTML = ERA_DESC[era] || '';
+
+  // 加载 GeoJSON 边界
+  fetch(cfg.file)
+    .then(r => r.json())
+    .then(data => {
+      currentEraLayer = L.geoJSON(data, {
+        style: feature => ({
+          fillColor: colors.fill, fillOpacity: 0.25,
+          color: colors.stroke, weight: 1.2, opacity: 0.7
+        }),
+        onEachFeature: (feature, layer) => {
+          // 悬停高亮效果
+          layer.on({
+            mouseover: function(e) {
+              e.target.setStyle({ weight: 3, color: '#fbbf24', fillOpacity: 0.45 });
+              if (!L.Browser.ie && !L.Browser.opus) e.target.bringToFront();
+            },
+            mouseout: function(e) {
+              currentEraLayer.resetStyle(e.target);
+            }
+          });
+          if (feature.properties) {
+            const name = feature.properties.ABBREVN || feature.properties.name || feature.properties.NAME || feature.properties.title || '';
+            const partof = feature.properties.PARTOF || '';
+            if (name) {
+              layer.bindPopup(`<b style="color:#fbbf24">${name}</b>${partof ? '<br><i>隶属于：' + partof + '</i>' : ''}`);
+            }
+          }
+        }
+      }).addTo(map);
+    })
+    .catch(err => console.warn('Map load error:', err));
+
+  // 添加城市标记层
+  const cities = CITIES[era] || [];
+  const cityGroup = L.layerGroup();
+  cities.forEach(([lat, lng, cn, en, desc]) => {
+    const icon = L.divIcon({
+      className: '', html: `<div class="city-marker-icon" style="background:${colors.stroke}"></div>`,
+      iconSize: [8, 8], iconAnchor: [4, 4]
+    });
+    const marker = L.marker([lat, lng], { icon })
+      .bindPopup(`<b style="color:#fbbf24;font-size:14px">📍 ${cn}</b> <span style="color:#94a3b8;font-size:11px">${en}</span><br><div style="margin-top:6px;color:#e2e8f0;font-size:12px;line-height:1.6">${desc}</div>`);
+    cityGroup.addLayer(marker);
+  });
+  currentCityLayer = cityGroup.addTo(map);
+
+  document.querySelectorAll('.map-era-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.map-era-btn[data-era="${era}"]`).classList.add('active');
+}
+
+document.querySelectorAll('.map-era-btn').forEach(btn => {
+  btn.addEventListener('click', () => loadEra(btn.dataset.era));
+});
+
+loadEra('ce-500');
+
+// ═══════════════════════════════════════════
+// Feudal Hierarchy Interactive (click to show info)
+// ═══════════════════════════════════════════
+const FEUDAL_INFO = {
+  king: { level: '👑 国王', text: '名义上的最高统治者，但实际权力有限——"我的附庸的附庸，不是我的附庸"。国王只能直接管辖自己的领地，对封臣的封臣没有约束力。' },
+  lord: { level: '🏰 领主/主教/伯爵', text: '从国王获封土地，在自己的领地上几乎拥有全部权力——司法、税收、军事。主教和修道院长也是大领主，教会拥有欧洲三分之一的土地。' },
+  knight: { level: '⚔️ 骑士', text: '从领主获封小块土地（骑士采邑），以军事服役为交换条件，是封建制度的基础武力。骑士也有自己的小庄园，由农奴耕种。' }
+};
+
+const infoPanel = document.getElementById('feudalInfoPanel');
+const infoLevel = document.getElementById('feudalInfoLevel');
+const infoText = document.getElementById('feudalInfoText');
+let activeNode = null;
+
+document.querySelectorAll('.feudal-node').forEach(node => {
+  node.addEventListener('click', () => {
+    const level = node.dataset.level;
+    if (!FEUDAL_INFO[level]) return;
+    // 如果点击同一个节点，切换显示/隐藏
+    if (activeNode === node) {
+      node.classList.remove('active');
+      infoPanel.classList.remove('show');
+      activeNode = null;
+      return;
+    }
+    // 清除之前的选中状态
+    if (activeNode) activeNode.classList.remove('active');
+    // 显示信息
+    node.classList.add('active');
+    activeNode = node;
+    infoLevel.textContent = FEUDAL_INFO[level].level;
+    infoText.textContent = FEUDAL_INFO[level].text;
+    infoPanel.classList.add('show');
+  });
+});
+
+// ═══════════════════════════════════════════
+// Sort Game (click-to-select + drag support)
+// ═══════════════════════════════════════════
+let selectedChip = null;
+
+function isPlaced(chip) {
+  return chip.classList.contains('placed-politics') || chip.classList.contains('placed-economy') || chip.classList.contains('placed-culture');
+}
+
+function getZoneClass(zoneId) {
+  if (zoneId === 'zonePolitics') return 'placed-politics';
+  if (zoneId === 'zoneEconomy') return 'placed-economy';
+  if (zoneId === 'zoneCulture') return 'placed-culture';
+  return '';
+}
+
+function placeChip(chip, zone) {
+  const placedClass = getZoneClass(zone.id);
+  // 清除旧的放置状态
+  chip.classList.remove('placed-politics', 'placed-economy', 'placed-culture');
+  chip.classList.add(placedClass);
+  zone.appendChild(chip);
+  chip.style.outline = '';
+  selectedChip = null;
+}
+
+function returnToPool(chip) {
+  chip.classList.remove('placed-politics', 'placed-economy', 'placed-culture');
+  chip.style.outline = '';
+  document.getElementById('sortPool').appendChild(chip);
+}
+
+document.querySelectorAll('.sort-chip').forEach(chip => {
+  // 点击选择/取消
+  chip.addEventListener('click', () => {
+    if (isPlaced(chip)) { returnToPool(chip); return; }
+    if (selectedChip === chip) { chip.style.outline = ''; selectedChip = null; return; }
+    if (selectedChip) selectedChip.style.outline = '';
+    selectedChip = chip;
+    chip.style.outline = '2px solid var(--primary)';
+  });
+  // 拖拽支持
+  chip.draggable = true;
+  chip.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', '');
+    chip.style.opacity = '0.5';
+    selectedChip = chip;
+  });
+  chip.addEventListener('dragend', () => { chip.style.opacity = '1'; });
+});
+
+document.querySelectorAll('.sort-zone').forEach(zone => {
+  // 点击放置
+  zone.addEventListener('click', () => {
+    if (!selectedChip || isPlaced(selectedChip)) return;
+    placeChip(selectedChip, zone);
+  });
+  // 拖拽放置
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.outline = '2px dashed var(--primary)'; });
+  zone.addEventListener('dragleave', () => { zone.style.outline = ''; });
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.style.outline = '';
+    if (selectedChip) placeChip(selectedChip, zone);
+  });
+});
+
+function checkSort() {
+  let correct = 0, total = 0;
+  document.querySelectorAll('.sort-chip').forEach(chip => {
+    total++;
+    const answer = chip.dataset.answer;
+    const parent = chip.parentElement;
+    if (parent.id === 'zonePolitics' && answer === 'politics') correct++;
+    else if (parent.id === 'zoneEconomy' && answer === 'economy') correct++;
+    else if (parent.id === 'zoneCulture' && answer === 'culture') correct++;
+  });
+  const fb = document.getElementById('sortFeedback');
+  if (correct === total) {
+    fb.textContent = `✅ 全部正确！${correct}/${total}`;
+    fb.className = 'sort-feedback correct';
+  } else {
+    fb.textContent = `❌ 还不对哦，正确 ${correct}/${total}，再试试`;
+    fb.className = 'sort-feedback wrong';
+  }
+}
+
+function resetSort() {
+  const pool = document.getElementById('sortPool');
+  document.querySelectorAll('.sort-chip').forEach(chip => {
+    chip.classList.remove('placed-politics', 'placed-economy', 'placed-culture');
+    chip.style.outline = '';
+    pool.appendChild(chip);
+  });
+  document.getElementById('sortFeedback').textContent = '';
+}
+
+// ═══════════════════════════════════════════
+// Quiz
+// ═══════════════════════════════════════════
+let quizAnswered = 0;
+const totalQuiz = 5;
+
+function selectOpt(el) {
+  const card = el.closest('.quiz-card');
+  if (card.dataset.answered) return;
+  card.dataset.answered = '1';
+  const isCorrect = el.dataset.correct === 'true';
+  el.classList.add(isCorrect ? 'correct' : 'wrong');
+  // Highlight correct answer
+  card.querySelectorAll('.quiz-opt').forEach(o => {
+    if (o.dataset.correct === 'true') o.classList.add('correct');
+    o.style.pointerEvents = 'none';
+  });
+  const fb = card.querySelector('.quiz-feedback');
+  fb.classList.add('show');
+  fb.classList.add(isCorrect ? 'correct' : 'wrong');
+  quizAnswered++;
+  document.getElementById('quizProgress').style.width = (quizAnswered / totalQuiz * 100) + '%';
+  document.getElementById('quizProgressText').textContent = `${quizAnswered} / ${totalQuiz} 完成`;
+}
+
+// ═══════════════════════════════════════════
+// Legacy TTS & AI Tutor 逻辑已迁移至标准模块：
+//   - teachany-tts-narrator.js （朗读控制器 + narration.json 自动加载）
+//   - ai-tutor.js                （AI 学伴 FAB + 对话面板）
+//   - teachany-section-hints.js  （情境感知气泡）
+// 无需任何本地 JS 支撑，仅保留 data-tts 段落标记与 data-tsh 思考提示即可。
+// ═══════════════════════════════════════════
+
+// Nav active tracking
+const navObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      document.querySelectorAll('.nav a').forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, { threshold: 0.2 });
+document.querySelectorAll('.section').forEach(s => navObserver.observe(s));
+</script>
+
+<script src="/assets/scripts/ai-tutor.js"></script>
+<script src="/assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="/assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="/assets/scripts/teachany-section-hints.js" defer></script>
+<script src="/assets/scripts/teachany-knowledge-graph.js" defer></script>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+<section class="ta-standard-section" id="teachany-ai-tutor-card">
+  <div data-teachany-tutor-card></div>
+</section>
+
+<!-- ⭐ v7.7.4 标准知识图谱模块 -->
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;">
+  <h2 class="section-title">🗺️ 知识图谱：hist-m-medieval-europe</h2>
+  <div data-teachany-kg="hist-m-medieval-europe">
+    <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布占位" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
+  </div>
+</section>
+  <script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "中世纪欧洲",
+  subject: "history",
+  grade: 9,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+
+<script src="/assets/scripts/feedback-widget.js" defer></script>
+
+<script src="/assets/scripts/teachany-audio-player.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多位数除法 · 小学数学 G4 · TeachAny v5.27</title>
+<meta name="teachany-node" content="math-e-multi-digit-division">>
+<meta name="teachany-subject" content="math">
+<meta name="teachany-domain" content="numbers-operations">
+<meta name="teachany-grade" content="4">
+<meta name="teachany-difficulty" content="3">
+<meta name="teachany-version" content="2.0">
+<meta name="teachany-prerequisites" content="numbers-operations">
+<meta name="teachany-author" content="weponusa">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+:root{--bg:#fffbf0;--primary:#ff6b6b;--secondary:#4ecdc4;--accent:#ffe66d;--success:#51cf66;--card:#fff;--purple:#cc5de8;--blue:#339af0;--orange:#ff922b;--text:#2b2b2b;--dim:#666;--border:rgba(0,0,0,0.06);}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{font-family:'Noto Sans SC',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.85;font-size:16px;padding-bottom:60px;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle at 10% 20%,rgba(255,107,107,.06),transparent 50%),radial-gradient(circle at 90% 80%,rgba(78,205,196,.06),transparent 50%);pointer-events:none;z-index:-1;}
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:3px solid var(--accent);padding:0 20px;display:flex;align-items:center;height:62px;gap:4px;overflow-x:auto;}
+.nav-brand{font-size:20px;font-weight:900;margin-right:16px;white-space:nowrap;background:linear-gradient(135deg,var(--primary),var(--orange),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav a{color:var(--dim);text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:700;transition:all .25s;white-space:nowrap;}
+.nav a:hover,.nav a.active{color:#fff;background:linear-gradient(135deg,var(--primary),var(--orange));}
+.container{max-width:960px;margin:0 auto;padding:80px 20px 60px;}
+.hero{text-align:center;padding:36px 0 30px;}
+.hero h1{font-size:42px;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--orange),var(--purple),var(--blue));background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:rainbowShift 6s ease infinite;margin-bottom:10px;}
+@keyframes rainbowShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+.hero .subtitle{font-size:18px;color:var(--dim);margin-bottom:16px;}
+.hero .meta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+.hero .meta span{background:#fff;border:2px solid var(--border);border-radius:24px;padding:6px 18px;font-size:14px;font-weight:700;color:var(--dim);}
+.section{margin:40px 0;}
+.section-title{font-size:26px;font-weight:900;margin-bottom:18px;padding:10px 20px;border-radius:16px;background:linear-gradient(135deg,rgba(255,107,107,.1),rgba(78,205,196,.1));display:inline-block;}
+.card{background:var(--card);border:2px solid var(--border);border-radius:20px;padding:24px 26px;margin-bottom:18px;box-shadow:0 4px 16px rgba(0,0,0,.04);transition:transform .25s,box-shadow .25s;}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(255,107,107,.12);}
+.card h3{font-size:20px;font-weight:900;margin-bottom:10px;}
+.card p,.card li{font-size:16px;line-height:1.9;color:var(--dim);}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;}
+.highlight{color:var(--primary);font-weight:900;}
+
+/* 生活场景 */
+#life-scene{background:linear-gradient(135deg,#fff8e1,#e3f2fd);border-radius:24px;padding:32px;}
+.share-stage{display:flex;justify-content:center;align-items:flex-end;gap:24px;height:200px;position:relative;}
+.candy-pile{position:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:48px;animation:candyBounce 2s ease-in-out infinite;}
+@keyframes candyBounce{0%,100%{transform:translateX(-50%) scale(1);}50%{transform:translateX(-50%) scale(1.1);}}
+.kids{display:flex;gap:24px;align-items:flex-end;}
+.kid-box{text-align:center;width:80px;}
+.kid-emoji{font-size:36px;display:block;animation:kidBounce 1s ease-in-out infinite;}
+.kid-box:nth-child(2) .kid-emoji{animation-delay:.3s;}
+.kid-box:nth-child(3) .kid-emoji{animation-delay:.6s;}
+@keyframes kidBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+.kid-candies{font-size:22px;margin-top:8px;transition:all .5s;}
+.kid-label{font-size:13px;font-weight:700;color:var(--dim);}
+.divide-arrow{font-size:32px;color:var(--primary);font-weight:900;align-self:center;animation:arrowPulse 1.5s ease-in-out infinite;}
+@keyframes arrowPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+
+/* 竖式展示 */
+.long-div{font-family:'Courier New',monospace;font-size:18px;background:#f9f9f9;border-radius:14px;padding:20px;line-height:2.2;overflow-x:auto;}
+.long-div .step{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.step-num{background:var(--primary);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0;}
+.div-highlight{color:var(--primary);font-weight:900;}
+.div-row{padding:2px 0;letter-spacing:4px;}
+.div-line{border-top:2px solid var(--text);margin:4px 0;}
+
+/* 互动实验台 */
+#interactive-lab{padding:28px;border-radius:24px;background:linear-gradient(135deg,#f0fff4,#e8f4ff);}
+.calc-display{font-size:28px;font-weight:900;text-align:center;padding:20px;background:#fff;border-radius:16px;margin-bottom:16px;color:var(--primary);border:2px solid var(--border);min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.slider-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.slider-row label{font-weight:700;min-width:100px;}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--primary);}
+.slider-val{min-width:80px;font-weight:900;color:var(--primary);}
+
+/* 拖拽步骤排序 */
+.step-sorter{display:flex;flex-direction:column;gap:8px;}
+.step-sort-item{padding:12px 16px;background:#fff;border:2.5px dashed var(--secondary);border-radius:12px;cursor:grab;font-weight:700;transition:all .2s;display:flex;align-items:center;gap:10px;}
+.step-sort-item:hover{transform:scale(1.02);background:rgba(78,205,196,.1);}
+.step-sort-item.drag-over{border-color:var(--primary);background:rgba(255,107,107,.08);}
+
+/* 知识图谱 */
+#knowledge-graph{background:#fff;border-radius:24px;padding:24px;}
+#kg-svg{width:100%;height:340px;display:block;}
+.kg-legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;}
+.kg-legend-item{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;}
+.kg-dot{width:14px;height:14px;border-radius:50%;}
+
+/* 互动题 */
+.quiz-step{display:none;}
+.quiz-step.active{display:block;animation:fadeIn .4s;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.quiz-q{font-size:18px;font-weight:900;margin-bottom:18px;}
+.quiz-option{display:block;width:100%;padding:14px 20px;margin:8px 0;border-radius:16px;background:#fff;border:2.5px solid #e8e8e8;cursor:pointer;font-size:16px;font-weight:700;text-align:left;transition:all .25s;}
+.quiz-option:hover{background:rgba(78,205,196,.08);border-color:var(--secondary);}
+.quiz-option.correct{background:rgba(81,207,102,.12);border-color:var(--success);color:#2b8a3e;}
+.quiz-option.wrong{background:rgba(255,107,107,.1);border-color:var(--primary);color:#c92a2a;}
+.quiz-feedback{padding:12px 18px;border-radius:14px;margin-top:10px;font-size:15px;font-weight:700;display:none;}
+.quiz-feedback.show{display:block;animation:popIn .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes popIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+.quiz-feedback.ok{background:rgba(81,207,102,.15);color:#2b8a3e;}
+.quiz-feedback.err{background:rgba(255,107,107,.12);color:#c92a2a;}
+.quiz-next{margin-top:14px;padding:10px 28px;background:linear-gradient(135deg,var(--primary),var(--orange));color:#fff;border:none;border-radius:20px;font-size:16px;font-weight:900;cursor:pointer;display:none;}
+.progress-bar{height:8px;background:#f0f0f0;border-radius:4px;margin-bottom:18px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--orange));border-radius:4px;transition:width .4s;}
+.step-indicator{font-size:13px;color:var(--dim);margin-bottom:8px;font-weight:700;}
+
+
+
+
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+</style>
+
+  <link rel="stylesheet" href="/assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="/assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="/assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-floating-dock.css">
+</head>
+<body>
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<nav class="nav">
+  <span class="nav-brand">➗ 多位数除法</span>
+  <a href="#life-scene">生活场景</a>
+  <a href="#concepts">除法原理</a>
+  <a href="#interactive-lab">互动实验</a>
+  <a href="#knowledge-graph">知识图谱</a>
+  <a href="#quiz">互动练习</a>
+</nav>
+
+<div class="container">
+  <div class="hero"><h1>➗ 多位数除法</h1>
+    <p class="subtitle">掌握多位数÷一位数与÷两位数的计算方法，理解余数含义</p>
+    <div class="meta">
+      <span>📚 四年级</span><span>🔢 运算</span><span>⏱️ 45分钟</span><span>⭐⭐ 中等</span>
+    </div>
+  </div>
+<!-- hero-cover -->
+<img class="hero-cover-img" src="assets/multi-digit-division-hero.png" alt="课件封面">
+
+
+  <!-- 生活场景 -->
+  
+<!-- ABT 情境引入 - TeachAny Upgrade -->
+<div class="abt-card" style="background:linear-gradient(135deg,#667eea22,#764ba222);border-left:4px solid #667eea;border-radius:12px;padding:20px 24px;margin:20px 0;font-size:15px;line-height:1.8;">
+  <div style="font-size:13px;font-weight:700;color:#667eea;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">🎯 为什么学这节课？</div>
+  <p>🌍 <strong>And（已知）</strong>：我们已经有了一定的基础知识</p>
+  <p>⚡ <strong>But（问题）</strong>：但还有一个重要概念需要深入理解</p>
+  <p>💡 <strong>Therefore（新知）</strong>：因此通过本节课的学习，我们将掌握新知识并能灵活运用</p>
+</div>
+
+<!-- 前测 - TeachAny Upgrade #02 -->
+<section id="pretest" style="background:#f8f9ff;border-radius:16px;padding:28px;margin:24px 0;border:2px solid #e8eaff;">
+  <h2 style="font-size:20px;font-weight:800;color:#4c6ef5;margin-bottom:8px;">📋 前测：你已经知道什么？</h2>
+  <p style="color:#666;font-size:14px;margin-bottom:20px;">学习前先测一测，了解你的起点 ✨</p>
+  
+  <div class="pretest-q" style="background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+    <p style="font-weight:700;margin-bottom:12px;">1. 下面哪个说法是正确的？</p>
+    
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;" 
+           onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="pretest_q0" value="0" style="accent-color:#4c6ef5;">
+      <span>A. 学习前我完全不了解这个知识</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;" 
+           onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="pretest_q0" value="1" style="accent-color:#4c6ef5;">
+      <span>B. 我对这个知识有一些了解</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;" 
+           onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="pretest_q0" value="2" style="accent-color:#4c6ef5;">
+      <span>C. 我已经完全掌握了这个知识</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;" 
+           onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="pretest_q0" value="3" style="accent-color:#4c6ef5;">
+      <span>D. 这个知识对我没有用</span>
+    </label>
+    <div class="pretest-feedback-0" style="display:none;margin-top:8px;padding:8px 12px;border-radius:8px;font-size:13px;"></div>
+  </div>
+  <div class="pretest-q" style="background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+    <p style="font-weight:700;margin-bottom:12px;">2. 你觉得学好这个知识最重要的是？</p>
+    
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;" 
+           onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="pretest_q1" value="0" style="accent-color:#4c6ef5;">
+      <span>A. 死记硬背公式</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;" 
+           onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="pretest_q1" value="1" style="accent-color:#4c6ef5;">
+      <span>B. 理解概念，多做练习</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;" 
+           onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="pretest_q1" value="2" style="accent-color:#4c6ef5;">
+      <span>C. 看别人做题</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;" 
+           onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="pretest_q1" value="3" style="accent-color:#4c6ef5;">
+      <span>D. 完全不重要</span>
+    </label>
+    <div class="pretest-feedback-1" style="display:none;margin-top:8px;padding:8px 12px;border-radius:8px;font-size:13px;"></div>
+  </div>
+  <button onclick="checkPretest()" style="background:linear-gradient(135deg,#4c6ef5,#7c3aed);color:#fff;border:none;padding:12px 28px;border-radius:24px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;">查看结果 →</button>
+</section>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（放在 pretest 之后，课件顶部可见） -->
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+<section class="ta-standard-section" id="teachany-ai-tutor-card">
+  <div data-teachany-tutor-card></div>
+</section>
+
+<script>
+function checkPretest() {
+  
+  var sel0 = document.querySelector('input[name="pretest_q0"]:checked');
+  var fb0 = document.querySelector('.pretest-feedback-0');
+  if (sel0) {
+    fb0.style.display = 'block';
+    if (parseInt(sel0.value) === 1) {
+      fb0.style.background = '#d3f9d8'; fb0.style.color = '#2b8a3e';
+      fb0.textContent = '✅ 很好！你已经有了正确的认识，继续加油！';
+    } else {
+      fb0.style.background = '#fff3bf'; fb0.style.color = '#e67700';
+      fb0.textContent = '💡 这是个常见误区，学完本节课你会有新的理解！';
+    }
+  }
+  var sel1 = document.querySelector('input[name="pretest_q1"]:checked');
+  var fb1 = document.querySelector('.pretest-feedback-1');
+  if (sel1) {
+    fb1.style.display = 'block';
+    if (parseInt(sel1.value) === 1) {
+      fb1.style.background = '#d3f9d8'; fb1.style.color = '#2b8a3e';
+      fb1.textContent = '✅ 很好！你已经有了正确的认识，继续加油！';
+    } else {
+      fb1.style.background = '#fff3bf'; fb1.style.color = '#e67700';
+      fb1.textContent = '💡 这是个常见误区，学完本节课你会有新的理解！';
+    }
+  }
+}
+</script>
+<section class="section" id="life-scene">
+    <div class="section-title">🎬 生活场景：分糖果</div>
+    <div class="share-stage">
+      <div class="candy-pile" title="共96颗糖">🍬×96</div>
+      <div class="kids">
+        <div class="kid-box"><span class="kid-emoji">👧</span><div class="kid-candies">🍬×32</div><div class="kid-label">小红</div></div>
+        <div class="divide-arrow">÷3→</div>
+        <div class="kid-box"><span class="kid-emoji">👦</span><div class="kid-candies">🍬×32</div><div class="kid-label">小明</div></div>
+        <div class="kid-box"><span class="kid-emoji">🧒</span><div class="kid-candies">🍬×32</div><div class="kid-label">小华</div></div>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:16px;color:var(--dim);font-size:15px;">96颗糖平均分给3个人，每人得 96÷3 = <span style="color:var(--primary);font-weight:900;">32</span> 颗</p>
+  </section>
+
+  <!-- 除法原理 -->
+  <section class="section" id="concepts">
+    <div class="section-title">📐 除法竖式步骤</div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>🔢 例：96 ÷ 3</h3>
+        <div class="long-div">
+          <div class="div-row">&nbsp;&nbsp;<span class="div-highlight">3</span> 2</div>
+          <div class="div-row">3 ) 9 6</div>
+          <div class="div-line"></div>
+          <div class="div-row">&nbsp;&nbsp;9&nbsp;↑ 9÷3=3</div>
+          <div class="div-row">&nbsp;&nbsp;──</div>
+          <div class="div-row">&nbsp;&nbsp;&nbsp;6&nbsp;↑ 6÷3=2</div>
+          <div class="div-row">&nbsp;&nbsp;&nbsp;6</div>
+          <div class="div-row">&nbsp;&nbsp;&nbsp;──</div>
+          <div class="div-row">&nbsp;&nbsp;&nbsp;&nbsp;0 ← 余数为0</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>📝 竖式四步口诀</h3>
+        <ul style="list-style:none;padding:0;">
+          <li style="padding:8px 0;border-bottom:1px solid #f0f0f0;"><span class="step-num">1</span> <strong>除</strong>：从最高位开始试商</li>
+          <li style="padding:8px 0;border-bottom:1px solid #f0f0f0;"><span class="step-num">2</span> <strong>乘</strong>：商×除数</li>
+          <li style="padding:8px 0;border-bottom:1px solid #f0f0f0;"><span class="step-num">3</span> <strong>减</strong>：被除数-乘积</li>
+          <li style="padding:8px 0;"><span class="step-num">4</span> <strong>移</strong>：移下下一位，重复</li>
+        </ul>
+        <p style="margin-top:10px;font-size:14px;color:var(--secondary);font-weight:700;">记忆口诀：除乘减移，反复循环！</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>⚡ 关键知识点</h3>
+      <ul style="list-style:none;padding:0;">
+        <li style="padding:6px 0;border-bottom:1px solid #f0f0f0;">📌 余数必须 <span class="highlight">小于除数</span>（否则还能再除）</li>
+        <li style="padding:6px 0;border-bottom:1px solid #f0f0f0;">📌 商的位数：被除数位数 - 除数位数 + 1（粗估）</li>
+        <li style="padding:6px 0;">📌 验证：<span class="highlight">商×除数 + 余数 = 被除数</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 互动实验台 -->
+  <section class="section" id="interactive-lab">
+    <div class="section-title">🧪 互动实验台</div>
+    <div class="card">
+      <h3>🎛️ 除法计算器</h3>
+      <div class="slider-row">
+        <label>被除数</label>
+        <input type="range" id="dividendSlider" min="10" max="999" value="96">
+        <span class="slider-val"><span id="dividendVal">96</span></span>
+      </div>
+      <div class="slider-row">
+        <label>除数</label>
+        <input type="range" id="divisorSlider" min="2" max="99" value="3">
+        <span class="slider-val"><span id="divisorVal">3</span></span>
+      </div>
+      <div class="calc-display" id="divDisplay">
+        <span>96 ÷ 3 = 32 余 0</span>
+        <span style="font-size:14px;color:var(--dim);margin-top:6px;">验证：32 × 3 + 0 = 96 ✅</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🎯 拖拽排序：竖式计算步骤</h3>
+      <p style="color:var(--dim);font-size:14px;margin-bottom:12px;">把计算 84÷4 的步骤按正确顺序拖拽排列：</p>
+      <div class="step-sorter" id="stepSorter">
+        <div class="step-sort-item" draggable="true" data-order="3">➡️ 步骤B：8÷4=2，写商2在十位</div>
+        <div class="step-sort-item" draggable="true" data-order="1">➡️ 步骤A：从十位8开始，8能被4整除</div>
+        <div class="step-sort-item" draggable="true" data-order="4">➡️ 步骤C：移下个位4，4÷4=1，写商1</div>
+        <div class="step-sort-item" draggable="true" data-order="2">➡️ 步骤D：验证：21×4=84 ✅</div>
+      </div>
+      <button onclick="checkOrder()" style="margin-top:12px;padding:8px 22px;background:var(--primary);color:#fff;border:none;border-radius:16px;font-weight:700;cursor:pointer;">✅ 检查顺序</button>
+      <div id="orderResult" style="margin-top:10px;font-weight:700;font-size:15px;display:none;"></div>
+    </div>
+  </section>
+
+  <!-- 知识图谱 -->
+  
+<!-- v7.7.4 标准知识图谱模块 -->
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;">
+  <h2 class="section-title">🗺️ 知识图谱：多位数除法 - TeachAny 互动课件</h2>
+  <div data-teachany-kg="math-e-multi-digit-division">
+    <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布占位" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
+  </div>
+</section>
+
+
+  <!-- 互动练习 -->
+  <section class="section" id="quiz">
+    <div class="section-title">✏️ 互动练习</div>
+    <div class="card">
+      <div class="step-indicator" id="stepInd">第 1 题 / 共 5 题</div>
+      <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+
+      <div class="quiz-step active" id="q1">
+        <div class="quiz-q">1. 84 ÷ 4 = ?</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 不对，4×20=80，84-80=4，还有4÷4=1，所以是21。')">20</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！84÷4：8÷4=2，4÷4=1，商21。')">21</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 不对，4×22=88 > 84，所以商不是22。')">22</button>
+        <div class="quiz-feedback" id="fb1"></div>
+        <button class="quiz-next" onclick="nextStep(1)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q2">
+        <div class="quiz-q">2. 75 ÷ 5 的余数是多少？</div>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！75÷5=15，没有余数，余数为0。')">0</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 75÷5=15整除，余数是0。')">5</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 75÷5=15，余数为0。')">2</button>
+        <div class="quiz-feedback" id="fb2"></div>
+        <button class="quiz-next" onclick="nextStep(2)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q3">
+        <div class="quiz-q">3. 下面哪个算式的商最大？</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 96÷8=12，不是最大的。')">96÷8</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 对！128÷4=32，是最大的。')">128÷4</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 63÷9=7，是最小的。')">63÷9</button>
+        <div class="quiz-feedback" id="fb3"></div>
+        <button class="quiz-next" onclick="nextStep(3)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q4">
+        <div class="quiz-q">4. 验证：商13、除数6、余数3，被除数是多少？</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 用公式：被除数=商×除数+余数=13×6+3=81。')">78</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 是13×6+3=78+3=81，不是80。')">80</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！13×6+3=78+3=81。')">81</button>
+        <div class="quiz-feedback" id="fb4"></div>
+        <button class="quiz-next" onclick="nextStep(4)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q5">
+        <div class="quiz-q">5. 学校有125名学生分乘客车，每辆车坐8人，需要几辆车？</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 125÷8=15余5，最后那5个人也需要一辆车。')">15辆</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！125÷8=15余5，还剩5人也需要一辆，共16辆！')">16辆</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 17辆太多了，15辆能坐120人，再加1辆坐剩余5人即可。')">17辆</button>
+        <div class="quiz-feedback" id="fb5"></div>
+        <button class="quiz-next" onclick="showResult()">查看结果 🎉</button>
+      </div>
+
+      <div class="quiz-step" id="result">
+        <div style="text-align:center;padding:20px;">
+          <div style="font-size:64px;margin-bottom:16px;">🏆</div>
+          <div style="font-size:24px;font-weight:900;color:var(--primary);" id="scoreText"></div>
+          <button onclick="restartQuiz()" style="margin-top:20px;padding:12px 32px;background:linear-gradient(135deg,var(--primary),var(--orange));color:#fff;border:none;border-radius:20px;font-size:16px;font-weight:900;cursor:pointer;">🔄 再练一次</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+// 除法计算器
+const divSlider = document.getElementById('dividendSlider');
+const divisorSlider = document.getElementById('divisorSlider');
+const dividendVal = document.getElementById('dividendVal');
+const divisorVal = document.getElementById('divisorVal');
+const divDisplay = document.getElementById('divDisplay');
+function updateDiv() {
+  const a = parseInt(divSlider.value);
+  const b = parseInt(divisorSlider.value);
+  dividendVal.textContent = a; divisorVal.textContent = b;
+  const q = Math.floor(a/b), r = a % b;
+  divDisplay.innerHTML = `<span>${a} ÷ ${b} = ${q} 余 ${r}</span><span style="font-size:14px;color:var(--dim);margin-top:6px;">验证：${q} × ${b} + ${r} = ${q*b+r} ${q*b+r===a?'✅':'❌'}</span>`;
+}
+divSlider.addEventListener('input', updateDiv);
+divisorSlider.addEventListener('input', updateDiv);
+updateDiv();
+
+// 步骤拖拽排序
+let dragItem = null;
+document.querySelectorAll('.step-sort-item').forEach(item => {
+  item.addEventListener('dragstart', () => { dragItem = item; });
+  item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
+  item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+  item.addEventListener('drop', e => {
+    e.preventDefault(); item.classList.remove('drag-over');
+    if (dragItem && dragItem !== item) {
+      const parent = item.parentNode;
+      const items = [...parent.children];
+      const fromIdx = items.indexOf(dragItem);
+      const toIdx = items.indexOf(item);
+      if (fromIdx < toIdx) parent.insertBefore(dragItem, item.nextSibling);
+      else parent.insertBefore(dragItem, item);
+    }
+  });
+});
+function checkOrder() {
+  const items = document.querySelectorAll('#stepSorter .step-sort-item');
+  const orders = [...items].map(i => parseInt(i.dataset.order));
+  const correct = orders[0]===1 && orders[1]===2 && orders[2]===3 && orders[3]===4;
+  // actually the correct order for 84÷4: A(1st)->B(2nd)->C(3rd)->D(4th)
+  const res = document.getElementById('orderResult');
+  res.style.display='block';
+  // check if sorted ascending
+  const isSorted = orders.every((v,i,a)=>i===0||a[i-1]<=v);
+  res.textContent = isSorted ? '✅ 顺序正确！依次是：A→B→C→D' : '❌ 顺序还不对，再拖拽调整一下！';
+  res.style.color = isSorted ? 'var(--success)' : 'var(--primary)';
+}
+
+// D3 知识图谱
+const kgData = {
+  nodes:[
+    {id:"mul",name:"乘法",type:"prereq"},
+    {id:"div-basic",name:"基础除法",type:"prereq"},
+    {id:"cur",name:"多位数除法",type:"current"},
+    {id:"remainder",name:"余数问题",type:"next"},
+    {id:"fraction",name:"分数初步",type:"next"},
+    {id:"word",name:"综合应用题",type:"next"}
+  ],
+  links:[
+    {source:"mul",target:"cur"},{source:"div-basic",target:"cur"},
+    {source:"cur",target:"remainder"},{source:"cur",target:"fraction"},{source:"cur",target:"word"}
+  ]
+};
+const colorMap={current:"#ff6b6b",prereq:"#51cf66",next:"#4ecdc4"};
+const svgEl=document.getElementById('kg-svg');
+const W=(svgEl.parentElement.offsetWidth||600)-48,H=340;
+svgEl.setAttribute('viewBox',`0 0 ${W} ${H}`);
+const kgSvg=d3.select('#kg-svg');
+kgSvg.append('defs').append('marker').attr('id','arrow').attr('viewBox','0 -5 10 10').attr('refX',22).attr('refY',0).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto').append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#aaa');
+const sim=d3.forceSimulation(kgData.nodes).force('link',d3.forceLink(kgData.links).id(d=>d.id).distance(110)).force('charge',d3.forceManyBody().strength(-280)).force('center',d3.forceCenter(W/2,H/2));
+const linkEl=kgSvg.append('g').selectAll('line').data(kgData.links).join('line').attr('stroke','#ccc').attr('stroke-width',2).attr('marker-end','url(#arrow)');
+const nodeEl=kgSvg.append('g').selectAll('g').data(kgData.nodes).join('g').call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
+nodeEl.append('circle').attr('r',28).attr('fill',d=>colorMap[d.type]).attr('stroke','#fff').attr('stroke-width',3).style('filter','drop-shadow(0 2px 6px rgba(0,0,0,.15))');
+nodeEl.append('text').attr('text-anchor','middle').attr('dy','0.35em').attr('font-size','12px').attr('font-weight','700').attr('fill','#fff').text(d=>d.name);
+sim.on('tick',()=>{linkEl.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);nodeEl.attr('transform',d=>`translate(${d.x},${d.y})`);});
+
+// 互动题
+let score=0,answered=[false,false,false,false,false];
+function answer(btn,type,msg){
+  const step=btn.closest('.quiz-step');const fb=step.querySelector('.quiz-feedback');const nxt=step.querySelector('.quiz-next');
+  if(step.querySelector('.correct')||step.querySelector('.wrong'))return;
+  btn.classList.add(type==='correct'?'correct':'wrong');fb.textContent=msg;fb.className='quiz-feedback show '+(type==='correct'?'ok':'err');nxt.style.display='inline-block';
+  const idx=parseInt(step.id.replace('q',''))-1;if(type==='correct'&&!answered[idx]){score++;answered[idx]=true;}
+}
+function nextStep(n){
+  document.getElementById('q'+n).classList.remove('active');
+  const next=document.getElementById('q'+(n+1));
+  if(next){next.classList.add('active');document.getElementById('stepInd').textContent=`第 ${n+1} 题 / 共 5 题`;document.getElementById('progFill').style.width=(n*20)+'%';}
+}
+function showResult(){
+  document.getElementById('q5').classList.remove('active');document.getElementById('result').classList.add('active');document.getElementById('progFill').style.width='100%';
+  const msgs=['继续加油！','还不错哦！','做得好！','非常棒！','满分！太厉害了！'];
+  document.getElementById('scoreText').textContent=`得了 ${score} / 5 分 — ${msgs[score]}`;
+}
+function restartQuiz(){
+  score=0;answered=[false,false,false,false,false];
+  document.querySelectorAll('.quiz-step').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.quiz-option').forEach(o=>o.classList.remove('correct','wrong'));
+  document.querySelectorAll('.quiz-feedback').forEach(f=>f.className='quiz-feedback');
+  document.querySelectorAll('.quiz-next').forEach(b=>b.style.display='none');
+  document.getElementById('q1').classList.add('active');
+  document.getElementById('stepInd').textContent='第 1 题 / 共 5 题';document.getElementById('progFill').style.width='0%';
+}
+</script>
+
+<!-- 后测 - TeachAny Upgrade #05 -->
+<section id="posttest" style="background:linear-gradient(135deg,#f0fff4,#e6fffa);border-radius:16px;padding:28px;margin:24px 0;border:2px solid #69db7c;">
+  <h2 style="font-size:20px;font-weight:800;color:#2b8a3e;margin-bottom:8px;">🎓 后测：学会了吗？</h2>
+  <p style="color:#666;font-size:14px;margin-bottom:20px;">和前测对比一下，看看你进步了多少！ 🚀</p>
+  
+  <div class="posttest-q" style="background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+    <p style="font-weight:700;margin-bottom:12px;">1. 学完本节课，你最大的收获是？</p>
+    
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;"
+           onmouseover="this.style.background='#f0fff4'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="posttest_q0" value="0" style="accent-color:#2b8a3e;">
+      <span>A. 掌握了核心概念，能举例说明</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;"
+           onmouseover="this.style.background='#f0fff4'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="posttest_q0" value="1" style="accent-color:#2b8a3e;">
+      <span>B. 能背诵定义</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;"
+           onmouseover="this.style.background='#f0fff4'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="posttest_q0" value="2" style="accent-color:#2b8a3e;">
+      <span>C. 做了很多题目</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;"
+           onmouseover="this.style.background='#f0fff4'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="posttest_q0" value="3" style="accent-color:#2b8a3e;">
+      <span>D. 没什么特别的收获</span>
+    </label>
+    <div class="posttest-feedback-0" style="display:none;margin-top:8px;padding:8px 12px;border-radius:8px;font-size:13px;"></div>
+  </div>
+  <div class="posttest-q" style="background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+    <p style="font-weight:700;margin-bottom:12px;">2. 如果让你把这个知识教给同学，你能做到吗？</p>
+    
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;"
+           onmouseover="this.style.background='#f0fff4'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="posttest_q1" value="0" style="accent-color:#2b8a3e;">
+      <span>A. 完全可以，我理解得很清楚</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;"
+           onmouseover="this.style.background='#f0fff4'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="posttest_q1" value="1" style="accent-color:#2b8a3e;">
+      <span>B. 大概可以，但有些地方还不确定</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;"
+           onmouseover="this.style.background='#f0fff4'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="posttest_q1" value="2" style="accent-color:#2b8a3e;">
+      <span>C. 有点困难，需要再复习</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;border-radius:8px;cursor:pointer;transition:background 0.2s;"
+           onmouseover="this.style.background='#f0fff4'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="posttest_q1" value="3" style="accent-color:#2b8a3e;">
+      <span>D. 不行，还没理解</span>
+    </label>
+    <div class="posttest-feedback-1" style="display:none;margin-top:8px;padding:8px 12px;border-radius:8px;font-size:13px;"></div>
+  </div>
+  <button onclick="checkPosttest()" style="background:linear-gradient(135deg,#2b8a3e,#20c997);color:#fff;border:none;padding:12px 28px;border-radius:24px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;">完成学习 🎉</button>
+</section>
+<script>
+function checkPosttest() {
+  var score = 0;
+  
+  var sel0 = document.querySelector('input[name="posttest_q0"]:checked');
+  var fb0 = document.querySelector('.posttest-feedback-0');
+  if (sel0) {
+    fb0.style.display = 'block';
+    if (parseInt(sel0.value) === 0) {
+      score++; fb0.style.background = '#d3f9d8'; fb0.style.color = '#2b8a3e';
+      fb0.textContent = '✅ 太棒了！这说明你真正理解了本节课的内容。';
+    } else {
+      fb0.style.background = '#ffe8cc'; fb0.style.color = '#e67700';
+      fb0.textContent = '💪 还有提升空间，建议回顾一下重点内容后再做一次！';
+    }
+  }
+  var sel1 = document.querySelector('input[name="posttest_q1"]:checked');
+  var fb1 = document.querySelector('.posttest-feedback-1');
+  if (sel1) {
+    fb1.style.display = 'block';
+    if (parseInt(sel1.value) === 0) {
+      score++; fb1.style.background = '#d3f9d8'; fb1.style.color = '#2b8a3e';
+      fb1.textContent = '✅ 太棒了！这说明你真正理解了本节课的内容。';
+    } else {
+      fb1.style.background = '#ffe8cc'; fb1.style.color = '#e67700';
+      fb1.textContent = '💪 还有提升空间，建议回顾一下重点内容后再做一次！';
+    }
+  }
+  setTimeout(function() {
+    if (score >= 1) {
+      alert('🎊 恭喜你！本节课学习完成，你已经掌握了核心知识！');
+    } else {
+      alert('💡 完成了！建议回顾重点内容，巩固学习效果。');
+    }
+  }, 500);
+}
+</script>
+
+<!-- 易错点 - TeachAny Upgrade #18 -->
+<div class="error-points" style="background:linear-gradient(135deg,#fff5f5,#ffe3e3);border-radius:12px;padding:18px 22px;margin:20px 0;border-left:4px solid #ff6b6b;">
+  <div style="font-size:12px;font-weight:700;color:#c92a2a;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">⚠️ 易错点提醒</div>
+  <ul style="margin:0;padding-left:20px;list-style:none;">
+    <li style="padding:5px 0;font-size:14px;color:#5c1a1a;line-height:1.6;padding-left:0;list-style:none;display:flex;gap:8px;"><span>🔴</span><span><strong>易错：</strong>混淆>和<符号方向，将大于号和小于号用反：注意规范书写和理解概念</span></li><li style="padding:5px 0;font-size:14px;color:#5c1a1a;line-height:1.6;padding-left:0;list-style:none;display:flex;gap:8px;"><span>🔴</span><span><strong>易错：</strong>凑十法拆数错误，如9+6把6拆成1和6：注意规范书写和理解概念</span></li><li style="padding:5px 0;font-size:14px;color:#5c1a1a;line-height:1.6;padding-left:0;list-style:none;display:flex;gap:8px;"><span>🔴</span><span><strong>易错：</strong>破十法时拆错数，如13-5拆成13-3-3=7：注意规范书写和理解概念</span></li>
+  </ul>
+  <p style="margin:10px 0 0;font-size:13px;color:#e03131;font-style:italic;">💡 <strong>常见错误</strong>往往就在细节中，仔细检查每一步！</p>
+</div>
+
+<!-- Bloom层级覆盖 - TeachAny Upgrade #06 -->
+<div class="bloom-exercises" style="background:#f8f9ff;border-radius:16px;padding:24px;margin:20px 0;border:2px solid #748ffc;">
+  <div style="font-size:12px;font-weight:700;color:#4c6ef5;margin-bottom:16px;letter-spacing:1px;">📚 BLOOM 认知层级练习</div>
+  <div style="display:grid;gap:12px;">
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #51cf66;">
+      <span style="font-size:11px;color:#2b8a3e;font-weight:700;">记忆层</span>
+      <p style="margin-top:6px;font-size:14px;">回忆：今天学了哪些关键词和规则？试着说出来。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #339af0;">
+      <span style="font-size:11px;color:#1971c2;font-weight:700;">理解层</span>
+      <p style="margin-top:6px;font-size:14px;">用自己的话解释今天学的核心概念，不看书能说清楚吗？</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #f59f00;">
+      <span style="font-size:11px;color:#e67700;font-weight:700;">应用层</span>
+      <p style="margin-top:6px;font-size:14px;">用今天的知识解决一个实际问题，或写一个新例子。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #cc5de8;">
+      <span style="font-size:11px;color:#862e9c;font-weight:700;">分析→创造层</span>
+      <p style="margin-top:6px;font-size:14px;">把今天的知识与已有知识联系起来：有什么共同点？有什么区别？能不能自己创造一道新题？</p>
+    </div>
+  </div>
+</div>
+
+<!-- 五镜头深层理解 - TeachAny Upgrade #08 -->
+<div class="five-lens insight-box" style="background:linear-gradient(135deg,#f3f0ff,#e5dbff);border-radius:16px;padding:24px;margin:20px 0;border:2px solid #9775fa;">
+  <div style="font-size:12px;font-weight:700;color:#5c2d91;margin-bottom:16px;letter-spacing:1px;">🔭 五镜头 · 深层理解</div>
+  <div style="display:grid;gap:10px;">
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🎯 本质：</strong><span style="color:#666;font-size:14px;">这个知识的核心是什么？用一句话概括。</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🔗 联系：</strong><span style="color:#666;font-size:14px;">它和你已知的哪些知识有关联？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🌍 应用：</strong><span style="color:#666;font-size:14px;">在生活中，你在哪里见过这个知识？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>❓ 疑问：</strong><span style="color:#666;font-size:14px;">学完之后，你还有什么不明白的地方？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>💡 洞见：</strong><span style="color:#666;font-size:14px;">学完后，你觉得最有意思或最让你惊讶的是什么？</span></div>
+  </div>
+</div>
+
+<!-- 诊断性反馈 #04 patch -->
+<script>
+(function(){
+  document.querySelectorAll('input[type="radio"]').forEach(function(r){
+    r.addEventListener('change', function(){
+      var name = r.name, val = parseInt(r.value);
+      var fb = document.getElementById('fb-' + name);
+      if (!fb) {
+        fb = document.createElement('div');
+        fb.id = 'fb-' + name;
+        fb.style.cssText = 'margin-top:6px;padding:8px 12px;border-radius:8px;font-size:13px;';
+        r.closest('div,p,li,section') && r.closest('div,p,li,section').appendChild(fb);
+      }
+      if (val === 0 || val === 1) {
+        fb.style.background='#d3f9d8'; fb.style.color='#2b8a3e';
+        fb.textContent = '✅ 很好！思路正确，继续保持！';
+      } else {
+        fb.style.background='#fff3bf'; fb.style.color='#e67700';
+        fb.textContent = '💡 常见错误：注意审题，再想想关键条件。易错点：概念混淆时要对照定义重新理解。';
+      }
+    });
+  });
+})();
+</script>
+
+
+<!-- TTS 音频 #TeachAny Edge-TTS -->
+<div class="teachany-audio-intro" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
+  <button onclick="document.getElementById('ta-audio').play()" 
+    style="background:linear-gradient(135deg,#ff6b6b,#ee5a24);color:#fff;border:none;
+    width:52px;height:52px;border-radius:50%;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 16px rgba(255,107,107,0.4);display:flex;align-items:center;justify-content:center;"
+    title="播放课程介绍">🔊</button>
+  <audio id="ta-audio" src="audio/intro.mp3" preload="auto"></audio>
+</div>
+
+
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "多位数除法",
+  subject: "math",
+  grade: 4,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴脚本（左下角 FAB · 首次点击引导配置 API） -->
+<script src="/assets/scripts/ai-tutor.js" defer></script>
+
+<script src="/assets/scripts/teachany-tutor-card.js" defer></script>
+
+<script src="/assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="/assets/scripts/teachany-section-hints.js" defer></script>
+<script src="/assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="/assets/scripts/feedback-widget.js" defer></script>
+
+<script src="/assets/scripts/teachany-audio-player.js" defer></script>
+
+<!-- v7.20 标准连续音频配置（apply-standard-modules 自动补齐） -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01",
+    "section": "",
+    "src": "./tts/s01.mp3",
+    "label": "讲解 1"
+  },
+  {
+    "id": "s02",
+    "section": "",
+    "src": "./tts/s02.mp3",
+    "label": "讲解 2"
+  },
+  {
+    "id": "s03",
+    "section": "",
+    "src": "./tts/s03.mp3",
+    "label": "讲解 3"
+  },
+  {
+    "id": "s04",
+    "section": "",
+    "src": "./tts/s04.mp3",
+    "label": "讲解 4"
+  },
+  {
+    "id": "s05",
+    "section": "",
+    "src": "./tts/s05.mp3",
+    "label": "讲解 5"
+  },
+  {
+    "id": "s06",
+    "section": "",
+    "src": "./tts/s06.mp3",
+    "label": "讲解 6"
+  },
+  {
+    "id": "s07",
+    "section": "",
+    "src": "./tts/s07.mp3",
+    "label": "讲解 7"
+  }
+]
+  </script>
+</div>
+</body>
+</html>

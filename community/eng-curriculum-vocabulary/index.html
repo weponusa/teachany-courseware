@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>课标三级词汇总控 · 初中英语 G7 · TeachAny v6.1</title>
+<meta name="teachany-node" content="eng-m-curriculum-vocabulary">>
+<meta name="teachany-subject" content="english">
+<meta name="teachany-domain" content="vocabulary">
+<meta name="teachany-grade" content="7">
+<meta name="teachany-difficulty" content="2">
+<meta name="teachany-version" content="1.0">
+<meta name="teachany-author" content="weponusa">
+<style>
+:root{--bg:#f0f4ff;--bg-soft:#e8eeff;--card:#fff;--primary:#4f46e5;--primary-light:#818cf8;--secondary:#0ea5e9;--accent:#f59e0b;--ink:#1e293b;--text-secondary:#64748b;--border:#e2e8f0;--success:#22c55e;--danger:#ef4444;--purple:#a855f7;--shadow:0 8px 32px rgba(79,70,229,.08);--radius:16px}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:linear-gradient(135deg,#f0f4ff 0%,#e8eeff 50%,#f5f3ff 100%);color:var(--ink);line-height:1.7;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 20% 20%,rgba(79,70,229,.06) 0,transparent 40%),radial-gradient(circle at 80% 80%,rgba(14,165,233,.06) 0,transparent 40%);pointer-events:none;z-index:-1}
+
+.progress-bar{position:fixed;top:0;left:0;height:3px;width:0;z-index:300;background:linear-gradient(90deg,var(--primary),var(--secondary));transition:width .2s}
+
+.nav-bar{position:sticky;top:0;z-index:200;display:flex;align-items:center;gap:8px;padding:12px 20px;background:rgba(240,244,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);overflow-x:auto;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.04)}
+.nav-bar .brand{font-weight:800;font-size:15px;color:var(--primary);margin-right:8px;flex-shrink:0}
+.nav-btn{padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;border:1.5px solid var(--border);background:var(--card);color:var(--text-secondary);transition:all .2s;flex-shrink:0}
+.nav-btn:hover,.nav-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);transform:translateY(-1px)}
+
+.container{max-width:900px;margin:0 auto;padding:20px}
+
+/* Hero */
+.hero{text-align:center;padding:48px 20px 36px;position:relative}
+.hero h1{font-size:clamp(28px,5vw,42px);font-weight:900;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.hero .subtitle{font-size:18px;color:var(--text-secondary)}
+
+/* Stats bar */
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:24px 0}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:16px;text-align:center;box-shadow:var(--shadow);border:1px solid var(--border)}
+.stat-card .num{font-size:28px;font-weight:800;color:var(--primary)}
+.stat-card .label{font-size:12px;color:var(--text-secondary);margin-top:4px}
+
+/* Section */
+.section{margin:28px 0}
+.section-title{font-size:22px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card{background:var(--card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:16px}
+
+/* Tabs */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tab{padding:8px 16px;border-radius:20px;font-size:14px;cursor:pointer;border:1.5px solid var(--border);background:var(--card);color:var(--text-secondary);transition:all .2s}
+.tab:hover,.tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.tab .count{font-size:11px;opacity:.8;margin-left:4px}
+
+/* Search */
+.search-box{position:relative;margin-bottom:16px}
+.search-box input{width:100%;padding:14px 14px 14px 44px;border-radius:12px;border:2px solid var(--border);font-size:15px;background:var(--bg-soft);transition:border .2s;outline:none}
+.search-box input:focus{border-color:var(--primary)}
+.search-box::before{content:"🔍";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px}
+
+/* Word grid */
+.word-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.word-card{background:var(--bg-soft);border-radius:12px;padding:14px;cursor:pointer;border:2px solid transparent;transition:all .25s;position:relative}
+.word-card:hover{border-color:var(--primary-light);transform:translateY(-2px);box-shadow:0 4px 12px rgba(79,70,229,.12)}
+.word-card.mastered{border-color:var(--success);background:#f0fdf4}
+.word-card.error{border-color:var(--danger);background:#fef2f2}
+.word-card .en{font-size:17px;font-weight:700;color:var(--primary)}
+.word-card .zh{font-size:13px;color:var(--text-secondary);margin-top:2px}
+.word-card .pos{font-size:11px;background:var(--primary);color:#fff;padding:2px 8px;border-radius:8px;display:inline-block;margin-top:4px}
+.word-card .star{position:absolute;top:10px;right:10px;font-size:16px;cursor:pointer;opacity:.5;transition:opacity .2s}
+.word-card .star:hover,.word-card .star.marked{opacity:1}
+
+/* Theme test result */
+.theme-result{text-align:center;padding:24px;background:var(--bg-soft);border-radius:12px;margin-top:16px}
+.theme-result .score{font-size:48px;font-weight:900;color:var(--primary)}
+.theme-result .label{color:var(--text-secondary);margin-top:4px}
+.pagination{display:flex;justify-content:center;gap:4px;margin-top:12px;flex-wrap:wrap}
+.pagination .page{padding:4px 10px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--card)}
+.pagination .page.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* Quiz */
+.quiz-area .question{font-size:20px;font-weight:700;text-align:center;margin-bottom:20px;color:var(--primary)}
+.quiz-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quiz-opt{padding:16px;border-radius:12px;border:2px solid var(--border);background:var(--card);cursor:pointer;font-size:15px;text-align:center;transition:all .2s}
+.quiz-opt:hover{border-color:var(--primary-light);background:var(--bg-soft)}
+.quiz-opt.correct{border-color:var(--success);background:#f0fdf4;color:var(--success);font-weight:700}
+.quiz-opt.wrong{border-color:var(--danger);background:#fef2f2;color:var(--danger)}
+
+/* Buttons */
+.btn{padding:12px 24px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:#4338ca;transform:translateY(-1px)}
+.btn-outline{background:transparent;border:2px solid var(--primary);color:var(--primary)}
+.btn-outline:hover{background:var(--primary);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-group{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+
+/* Error recycler */
+.error-list .word-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:10px;background:var(--bg-soft);margin-bottom:8px}
+.error-list .word-row .info{display:flex;align-items:center;gap:12px}
+.error-list .word-row .en{font-weight:700;font-size:16px;color:var(--danger)}
+.error-list .word-row .zh{color:var(--text-secondary);font-size:14px}
+.error-list .word-row .times{background:var(--danger);color:#fff;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:700}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-secondary);font-size:16px}
+
+@media(max-width:640px){
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  .word-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .quiz-options{grid-template-columns:1fr}
+  .nav-bar{padding:10px 12px}
+}
+
+
+
+
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+
+    /* ═══ PPT 播放模式（v6.1 轻量注入） ═══ */
+    body.play-mode { overflow: hidden; }
+    body.play-mode .slide-wrapper {
+      scroll-snap-type: y mandatory;
+      overflow-y: auto;
+      height: 100dvh;
+      -webkit-overflow-scrolling: touch;
+    }
+    .slide-wrapper { position: relative; }
+    .slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary, #3b82f6), var(--secondary, #06b6d4));
+      z-index: 201; transition: width 0.3s; border-radius: 0 2px 2px 0; pointer-events: none; }
+    .slide-toolbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 20px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border, #e5e7eb);
+      transform: translateY(100%); transition: transform 0.3s ease; }
+    body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+    .toolbar-btn { background: none; border: none; cursor: pointer; padding: 8px;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary, #6b7280); transition: all 0.2s; }
+    .toolbar-btn:hover { background: var(--border, #e5e7eb); color: var(--text, #1f2937); }
+    .toolbar-btn.active { color: var(--primary, #3b82f6); }
+    .toolbar-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2;
+      fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .toolbar-progress { flex: 1; max-width: 200px; height: 4px;
+      background: var(--border, #e5e7eb); border-radius: 2px; cursor: pointer; position: relative; }
+    .toolbar-progress-fill { height: 100%; background: var(--primary, #3b82f6);
+      border-radius: 2px; transition: width 0.3s; }
+    .toolbar-page-info { font-size: 12px; color: var(--text-secondary, #6b7280);
+      min-width: 50px; text-align: center; }
+    .play-mode-fab { position: fixed; bottom: 80px; right: 20px; z-index: 101;
+      width: 48px; height: 48px; border-radius: 50%; border: none;
+      background: var(--primary, #3b82f6); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3); transition: all 0.3s; }
+    .play-mode-fab:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(59,130,246,0.4); }
+    .play-mode-fab svg { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+    .slide-sidenav { position: fixed; right: 12px; top: 50%; transform: translateY(-50%);
+      z-index: 90; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+      opacity: 0; transition: opacity 0.3s; max-height: 70vh; overflow-y: auto;
+      padding: 8px 4px; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(12px);
+      border: 1px solid var(--border, #e5e7eb); }
+    .slide-sidenav::-webkit-scrollbar { display: none; }
+    body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+    .sidenav-dot { width: 24px; height: 4px; border-radius: 2px;
+      background: var(--border, #e5e7eb); border: none; cursor: pointer;
+      transition: all 0.2s; padding: 0; }
+    .sidenav-dot.active { width: 32px; background: var(--primary, #3b82f6); }
+    .sidenav-dot:hover { background: var(--primary, #3b82f6); opacity: 0.7; }
+    .sidenav-counter { font-size: 10px; color: var(--text-secondary, #6b7280);
+      text-align: center; margin-bottom: 4px; }
+    /* 隐藏旧版 tab 导航（播放模式下） */
+    body.play-mode #main-nav, body.play-mode nav[id="nav"], body.play-mode nav.nav { display: none !important; }
+    @media (max-width:768px) {
+      .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+      .sidenav-dot { width: 20px; height: 3px; }
+    }
+
+  </style>
+
+  <link rel="stylesheet" href="/assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="/assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="/assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="/assets/scripts/teachany-floating-dock.css">
+</head>
+<body>
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<div class="progress-bar" id="progressBar"></div>
+
+<nav class="nav-bar">
+  <span class="brand">📚 词汇总控</span>
+  <button class="nav-btn active" onclick="showSection('themes')">主题词群</button>
+  <button class="nav-btn" onclick="showSection('quiz')">主题小测</button>
+  <button class="nav-btn" onclick="showSection('random')">随机抽测</button>
+  <button class="nav-btn" onclick="showSection('errors')">易错攻克</button>
+</nav>
+
+<div class="container">
+  <!-- Hero -->
+  <div class="hero"><h1>课标三级词汇总控</h1>
+    <p class="subtitle">《义务教育英语课程标准（2022年版）》三级词汇表 · 约1600词</p>
+  </div>
+<!-- hero-cover -->
+<img class="hero-cover-img" src="assets/curriculum-vocabulary-hero.png" alt="课件封面">
+
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="num" id="totalCount">0</div><div class="label">总词量</div></div>
+    <div class="stat-card"><div class="num" id="masteredCount" style="color:var(--success)">0</div><div class="label">已掌握</div></div>
+    <div class="stat-card"><div class="num" id="errorCount" style="color:var(--danger)">0</div><div class="label">易错词</div></div>
+    <div class="stat-card"><div class="num" id="progressPct">0%</div><div class="label">完成率</div></div>
+  </div>
+
+  <!-- Section: 主题词群 -->
+  <div class="section" id="sec-themes">
+    <h2 class="section-title">🏷️ 主题词群</h2>
+    <div class="search-box"><input type="text" id="searchInput" placeholder="搜索单词、中文释义或词性…" oninput="filterWords()"></div>
+    <div class="tabs" id="themeTabs"></div>
+    <div class="word-grid" id="wordGrid"></div>
+  </div>
+
+  <!-- Section: 主题小测 -->
+  <div class="section" id="sec-quiz" style="display:none">
+    <h2 class="section-title">📝 主题小测</h2>
+    <div class="card">
+      <p style="margin-bottom:12px;color:var(--text-secondary)">选择一个主题，测试该主题下的所有词汇（每轮 10 题）</p>
+      <div class="tabs" id="quizThemeTabs"></div>
+      <div class="quiz-area" id="themeQuizArea">
+        <div class="empty-state">选择主题后开始测试</div>
+      </div>
+      <div class="btn-group" id="themeQuizBtns" style="display:none">
+        <button class="btn btn-primary" onclick="nextThemeQuestion()">下一题 →</button>
+      </div>
+      <p style="text-align:center;margin-top:12px;color:var(--text-secondary);font-size:14px" id="themeQuizProgress"></p>
+    </div>
+  </div>
+
+  <!-- Section: 随机抽测 -->
+  <div class="section" id="sec-random" style="display:none">
+    <h2 class="section-title">🎯 随机抽测</h2>
+    <div class="card">
+      <div class="tabs" style="margin-bottom:16px">
+        <div class="tab active" onclick="startQuiz('en2zh')">英→中</div>
+        <div class="tab" onclick="startQuiz('zh2en')">中→英</div>
+        <div class="tab" onclick="startQuiz('listen')">听音选义</div>
+      </div>
+      <div class="quiz-area" id="quizArea">
+        <div class="empty-state">选择模式后开始抽测</div>
+      </div>
+      <div class="btn-group" id="quizBtns" style="display:none">
+        <button class="btn btn-primary" onclick="nextQuizQuestion()">下一题 →</button>
+      </div>
+      <p style="text-align:center;margin-top:12px;color:var(--text-secondary);font-size:14px">
+        得分：<strong id="quizScore">0</strong> / <strong id="quizTotal">0</strong>
+      </p>
+    </div>
+  </div>
+
+  <!-- Section: 易错回收 -->
+  <div class="section" id="sec-errors" style="display:none">
+    <h2 class="section-title">♻️ 易错攻克</h2>
+    <div class="card">
+      <p style="margin-bottom:16px;color:var(--text-secondary)">复习中标记为"不认识"或抽测答错的词汇会自动收录到这里</p>
+      <div class="error-list" id="errorList">
+        <div class="empty-state">🎉 还没有易错词，继续加油！</div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="reviewErrors()">集中复习易错词</button>
+        <button class="btn btn-outline" onclick="clearErrors()">清空回收站</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="vocab-data.js"></script>
+<script>
+/* ═══════════════════════════════════════
+   状态管理
+   ═══════════════════════════════════════ */
+const STATE_KEY = 'teachany-vocab-state';
+let state = loadState();
+
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STATE_KEY));
+    return s && s.mastered ? s : {mastered: {}, errors: {}};
+  } catch { return {mastered: {}, errors: {}}; }
+}
+function saveState() { localStorage.setItem(STATE_KEY, JSON.stringify(state)); }
+
+/* ═══════════════════════════════════════
+   主题 & 分页
+   ═══════════════════════════════════════ */
+const themes = [...new Set(VOCAB.map(w => w.theme))];
+let currentTheme = '全部';
+let currentPage = 0;
+const PAGE_SIZE = 60;
+
+// 主题小测状态
+let tqTheme = '';
+let tqQueue = [];
+let tqIdx = 0;
+let tqCorrect = 0;
+
+// 随机抽测状态
+let rqQueue = [];
+let rqIdx = 0;
+let rqCorrect = 0;
+
+function init() {
+  renderThemeTabs();
+  renderWords();
+  updateStats();
+  renderQuizThemeTabs();
+}
+
+function renderThemeTabs() {
+  const tabs = document.getElementById('themeTabs');
+  tabs.innerHTML = `<div class="tab active" onclick="setTheme('全部')">全部 <span class="count">${VOCAB.length}</span></div>`;
+  themes.forEach(t => {
+    const count = VOCAB.filter(w => w.theme === t).length;
+    tabs.innerHTML += `<div class="tab" onclick="setTheme('${t}')">${t} <span class="count">${count}</span></div>`;
+  });
+}
+
+function setTheme(t) {
+  currentTheme = t;
+  currentPage = 0;
+  document.querySelectorAll('#themeTabs .tab').forEach(el => {
+    el.classList.toggle('active', el.textContent.includes(t === '全部' ? '全部' : t));
+  });
+  renderWords();
+}
+
+function getFilteredWords() {
+  const query = document.getElementById('searchInput').value.toLowerCase().trim();
+  let words = currentTheme === '全部' ? VOCAB : VOCAB.filter(w => w.theme === currentTheme);
+  if (query) words = words.filter(w => w.en.includes(query) || w.zh.includes(query) || w.pos.includes(query));
+  return words;
+}
+
+function renderWords() {
+  const words = getFilteredWords();
+  const totalPages = Math.ceil(words.length / PAGE_SIZE);
+  if (currentPage >= totalPages) currentPage = Math.max(0, totalPages - 1);
+  const pageWords = words.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+
+  const grid = document.getElementById('wordGrid');
+  grid.innerHTML = pageWords.map(w => {
+    const isMastered = state.mastered[w.en];
+    const isError = state.errors[w.en];
+    const cls = isMastered ? 'mastered' : isError ? 'error' : '';
+    return `<div class="word-card ${cls}" onclick="toggleMaster('${w.en.replace(/'/g,"\\'")}')">
+      <div class="en">${w.en}</div>
+      <div class="zh">${w.zh}</div>
+      <span class="pos">${w.pos}</span>
+    </div>`;
+  }).join('');
+
+  // 分页
+  let pagHtml = '';
+  if (totalPages > 1) {
+    pagHtml = '<div class="pagination">';
+    for (let i = 0; i < totalPages; i++) {
+      pagHtml += `<span class="page ${i===currentPage?'active':''}" onclick="goPage(${i})">${i+1}</span>`;
+    }
+    pagHtml += `</div><p style="text-align:center;font-size:13px;color:var(--text-secondary);margin-top:6px">共 ${words.length} 词 · 第 ${currentPage+1}/${totalPages} 页</p>`;
+  }
+  // 插入分页到 grid 后面
+  let pagEl = document.getElementById('wordPagination');
+  if (!pagEl) {
+    pagEl = document.createElement('div');
+    pagEl.id = 'wordPagination';
+    grid.parentElement.appendChild(pagEl);
+  }
+  pagEl.innerHTML = pagHtml;
+}
+
+function goPage(p) { currentPage = p; renderWords(); }
+function filterWords() { currentPage = 0; renderWords(); }
+
+function toggleMaster(en) {
+  state.mastered[en] = !state.mastered[en];
+  if (state.mastered[en]) delete state.errors[en];
+  saveState(); renderWords(); updateStats();
+}
+
+/* ═══════════════════════════════════════
+   统计
+   ═══════════════════════════════════════ */
+function updateStats() {
+  const total = VOCAB.length;
+  const mastered = Object.keys(state.mastered).filter(k => state.mastered[k]).length;
+  const errors = Object.keys(state.errors).length;
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('masteredCount').textContent = mastered;
+  document.getElementById('errorCount').textContent = errors;
+  document.getElementById('progressPct').textContent = Math.round(mastered / total * 100) + '%';
+  document.getElementById('progressBar').style.width = (mastered / total * 100) + '%';
+}
+
+/* ═══════════════════════════════════════
+   导航
+   ═══════════════════════════════════════ */
+function showSection(name) {
+  ['themes','quiz','random','errors'].forEach(s => {
+    document.getElementById('sec-' + s).style.display = s === name ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (name === 'errors') renderErrors();
+}
+
+/* ═══════════════════════════════════════
+   主题小测
+   ═══════════════════════════════════════ */
+function renderQuizThemeTabs() {
+  const tabs = document.getElementById('quizThemeTabs');
+  tabs.innerHTML = themes.map(t => {
+    const count = VOCAB.filter(w => w.theme === t).length;
+    return `<div class="tab" onclick="startThemeQuiz('${t}')">${t} <span class="count">${count}</span></div>`;
+  }).join('');
+}
+
+function startThemeQuiz(theme) {
+  tqTheme = theme;
+  const pool = VOCAB.filter(w => w.theme === theme);
+  tqQueue = shuffle(pool).slice(0, Math.min(10, pool.length));
+  tqIdx = 0; tqCorrect = 0;
+  document.querySelectorAll('#quizThemeTabs .tab').forEach(t => t.classList.toggle('active', t.textContent.includes(theme)));
+  showThemeQuestion();
+}
+
+function showThemeQuestion() {
+  const area = document.getElementById('themeQuizArea');
+  const btns = document.getElementById('themeQuizBtns');
+  const prog = document.getElementById('themeQuizProgress');
+
+  if (tqIdx >= tqQueue.length) {
+    const pct = Math.round(tqCorrect / tqQueue.length * 100);
+    area.innerHTML = `<div class="theme-result"><div class="score">${pct}%</div><div class="label">${tqTheme}：${tqCorrect}/${tqQueue.length} 正确</div></div>`;
+    btns.style.display = 'none';
+    prog.textContent = '';
+    return;
+  }
+  const w = tqQueue[tqIdx];
+  const others = VOCAB.filter(x => x.en !== w.en);
+  const distractors = shuffle(others).slice(0, 3);
+  const opts = shuffle([w, ...distractors]);
+
+  area.innerHTML = `<div class="question">${w.en} <span style="font-size:14px;opacity:.5">${w.pos}</span></div>
+    <div class="quiz-options">${opts.map(o => `<div class="quiz-opt" onclick="checkThemeAnswer(this,'${esc(w.zh)}','${esc(o.zh)}')">${o.zh}</div>`).join('')}</div>`;
+  btns.style.display = 'flex';
+  prog.textContent = `第 ${tqIdx + 1} / ${tqQueue.length} 题 · ${tqTheme}`;
+}
+
+function checkThemeAnswer(el, correct, chosen) {
+  el.parentElement.querySelectorAll('.quiz-opt').forEach(o => { o.style.pointerEvents = 'none'; if (o.textContent === correct) o.classList.add('correct'); });
+  if (chosen === correct) { tqCorrect++; }
+  else { el.classList.add('wrong'); const w = tqQueue[tqIdx]; state.errors[w.en] = (state.errors[w.en] || 0) + 1; delete state.mastered[w.en]; saveState(); }
+  updateStats();
+}
+
+function nextThemeQuestion() { tqIdx++; showThemeQuestion(); }
+
+/* ═══════════════════════════════════════
+   随机抽测
+   ═══════════════════════════════════════ */
+function startQuiz(mode) {
+  rqQueue = shuffle([...VOCAB]).slice(0, 20);
+  rqIdx = 0; rqCorrect = 0;
+  document.querySelectorAll('#sec-random .tab').forEach((t, i) => {
+    t.classList.toggle('active', (mode === 'en2zh' && i === 0) || (mode === 'zh2en' && i === 1) || (mode === 'listen' && i === 2));
+  });
+  window._rqMode = mode;
+  showRandomQuestion();
+}
+
+function showRandomQuestion() {
+  const area = document.getElementById('quizArea');
+  const btns = document.getElementById('quizBtns');
+  if (rqIdx >= rqQueue.length) {
+    area.innerHTML = `<div class="theme-result"><div class="score">${Math.round(rqCorrect/rqQueue.length*100)}%</div><div class="label">随机抽测完成：${rqCorrect}/${rqQueue.length}</div></div>`;
+    btns.style.display = 'none';
+    return;
+  }
+  const w = rqQueue[rqIdx];
+  const others = VOCAB.filter(x => x.en !== w.en);
+  const distractors = shuffle(others).slice(0, 3);
+  const mode = window._rqMode || 'en2zh';
+  btns.style.display = 'flex';
+
+  if (mode === 'en2zh') {
+    const opts = shuffle([w, ...distractors]);
+    area.innerHTML = `<div class="question">${w.en}</div><div class="quiz-options">${opts.map(o => `<div class="quiz-opt" onclick="checkRandomAnswer(this,'${esc(w.zh)}','${esc(o.zh)}')">${o.zh}</div>`).join('')}</div>`;
+  } else if (mode === 'zh2en') {
+    const opts = shuffle([w, ...distractors]);
+    area.innerHTML = `<div class="question">${w.zh}（${w.pos}）</div><div class="quiz-options">${opts.map(o => `<div class="quiz-opt" onclick="checkRandomAnswer(this,'${esc(w.en)}','${esc(o.en)}')">${o.en}</div>`).join('')}</div>`;
+  } else {
+    const opts = shuffle([w, ...distractors]);
+    area.innerHTML = `<div class="question"><button class="btn btn-primary" onclick="speak('${w.en}')">🔊 播放发音</button></div><div class="quiz-options">${opts.map(o => `<div class="quiz-opt" onclick="checkRandomAnswer(this,'${esc(w.zh)}','${esc(o.zh)}')">${o.zh}</div>`).join('')}</div>`;
+    setTimeout(() => speak(w.en), 300);
+  }
+  document.getElementById('quizScore').textContent = rqCorrect;
+  document.getElementById('quizTotal').textContent = rqIdx;
+}
+
+function checkRandomAnswer(el, correct, chosen) {
+  el.parentElement.querySelectorAll('.quiz-opt').forEach(o => { o.style.pointerEvents = 'none'; if (o.textContent === correct) o.classList.add('correct'); });
+  if (chosen === correct) { rqCorrect++; }
+  else { el.classList.add('wrong'); const w = rqQueue[rqIdx]; state.errors[w.en] = (state.errors[w.en] || 0) + 1; delete state.mastered[w.en]; saveState(); }
+  document.getElementById('quizScore').textContent = rqCorrect;
+  document.getElementById('quizTotal').textContent = rqIdx + 1;
+  updateStats();
+}
+
+function nextQuizQuestion() { rqIdx++; showRandomQuestion(); }
+
+function speak(text) {
+  if ('speechSynthesis' in window) {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 0.9;
+    speechSynthesis.speak(u);
+  }
+}
+
+/* ═══════════════════════════════════════
+   易错攻克
+   ═══════════════════════════════════════ */
+function renderErrors() {
+  const list = document.getElementById('errorList');
+  const errorWords = Object.entries(state.errors).map(([en, times]) => {
+    const w = VOCAB.find(v => v.en === en);
+    return w ? {...w, times} : null;
+  }).filter(Boolean).sort((a, b) => b.times - a.times);
+
+  if (!errorWords.length) {
+    list.innerHTML = '<div class="empty-state">🎉 还没有易错词，继续加油！</div>';
+    return;
+  }
+  list.innerHTML = errorWords.map(w => `<div class="word-row">
+    <div class="info"><span class="en">${w.en}</span><span class="zh">${w.pos} ${w.zh}</span></div>
+    <span class="times">错${w.times}次</span>
+  </div>`).join('');
+}
+
+function reviewErrors() {
+  const errorWords = Object.keys(state.errors).map(en => VOCAB.find(v => v.en === en)).filter(Boolean);
+  if (!errorWords.length) { alert('没有易错词！'); return; }
+  // 用易错词做一轮主题小测
+  tqTheme = '易错词';
+  tqQueue = shuffle(errorWords).slice(0, Math.min(10, errorWords.length));
+  tqIdx = 0; tqCorrect = 0;
+  showSection.call({}, 'quiz');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.textContent.includes('主题小测')));
+  showThemeQuestion();
+}
+
+function clearErrors() {
+  if (confirm('确认清空所有易错词？')) { state.errors = {}; saveState(); renderErrors(); updateStats(); }
+}
+
+/* ═══════════════════════════════════════
+   工具
+   ═══════════════════════════════════════ */
+function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function esc(s) { return s.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+init();
+</script>
+
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "课标三级词汇总控",
+  subject: "english",
+  grade: 7,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴脚本（左下角 FAB · 首次点击引导配置 API） -->
+<script src="/assets/scripts/ai-tutor.js" defer></script>
+
+<script src="/assets/scripts/teachany-tutor-card.js" defer></script>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+<section class="ta-standard-section" id="teachany-ai-tutor-card">
+  <div data-teachany-tutor-card></div>
+</section>
+
+<script src="/assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="/assets/scripts/teachany-section-hints.js" defer></script>
+<script src="/assets/scripts/teachany-knowledge-graph.js" defer></script>
+
+<!-- v7.7.4 标准知识图谱模块 -->
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;">
+  <h2 class="section-title">🗺️ 知识图谱：课标三级词汇总控</h2>
+  <div data-teachany-kg="eng-m-curriculum-vocabulary">
+    <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布占位" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
+  </div>
+</section>
+
+<!-- ═══ PPT 播放控件（v6.1 轻量注入） ═══ -->
+<div class="slide-progress-bar" id="slide-progress-bar" style="width:0%"></div>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换演示模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+</button>
+
+<div class="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info"></span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav"></nav>
+
+<script>
+/* ═══════ Slide Controller v6.1 (轻量注入) ═══════ */
+(function(){
+'use strict';
+/* 检测页面元素：.section 或 .screen */
+const allSections = Array.from(document.querySelectorAll('.section, .screen'));
+if(!allSections.length) return;
+const totalPages = allSections.length;
+
+let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+const progressBar = document.getElementById('slide-progress-bar');
+const sidenav = document.getElementById('slide-sidenav');
+const fab = document.getElementById('play-mode-fab');
+const fabPlay = document.getElementById('fab-icon-play');
+const fabBrowse = document.getElementById('fab-icon-browse');
+const tbPrev = document.getElementById('tb-prev');
+const tbNext = document.getElementById('tb-next');
+const tbPageInfo = document.getElementById('tb-page-info');
+const tbProgressFill = document.getElementById('tb-progress-fill');
+const tbProgress = document.getElementById('tb-progress');
+const tbAutoplay = document.getElementById('tb-autoplay');
+const tbFullscreen = document.getElementById('tb-fullscreen');
+
+/* 提取标签名 */
+function getPageLabel(el) {
+  const h = el.querySelector('h1,h2,h3,.section-title');
+  if (h) return h.textContent.trim().slice(0, 20);
+  const btn = document.querySelector('.nav-btn.active, .nav-tab.active');
+  if (btn) return btn.textContent.trim().slice(0, 20);
+  return '第' + (allSections.indexOf(el) + 1) + '页';
+}
+
+function buildSidenav() {
+  sidenav.innerHTML = '';
+  const counter = document.createElement('div');
+  counter.className = 'sidenav-counter'; counter.id = 'sidenav-counter';
+  counter.textContent = '1/' + totalPages;
+  sidenav.appendChild(counter);
+  allSections.forEach((p, i) => {
+    const d = document.createElement('button');
+    d.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+    d.setAttribute('aria-label', getPageLabel(p));
+    d.addEventListener('click', () => goToPage(i));
+    sidenav.appendChild(d);
+  });
+}
+
+function updateUI() {
+  const prog = totalPages > 1 ? currentPage / (totalPages - 1) * 100 : 100;
+  if (progressBar) progressBar.style.width = prog + '%';
+  if (tbProgressFill) tbProgressFill.style.width = prog + '%';
+  if (tbPageInfo) tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+  sidenav.querySelectorAll('.sidenav-dot').forEach((d, i) => d.classList.toggle('active', i === currentPage));
+  const ce = document.getElementById('sidenav-counter');
+  if (ce) ce.textContent = (currentPage + 1) + '/' + totalPages;
+  if (tbPrev) tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+  if (tbNext) tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+}
+
+function goToPage(i) {
+  if (i < 0 || i >= totalPages) return;
+  currentPage = i;
+  const target = allSections[currentPage];
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateUI();
+}
+
+function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+/* Scroll-based page tracking */
+let scrollTimeout;
+function onScroll() {
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => {
+    const st = window.scrollY;
+    let closest = 0, minD = Infinity;
+    allSections.forEach((p, i) => {
+      const d = Math.abs(p.offsetTop - st - 100);
+      if (d < minD) { minD = d; closest = i; }
+    });
+    if (closest !== currentPage) { currentPage = closest; updateUI(); }
+  }, 120);
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+
+function togglePlayMode() {
+  isPlayMode = !isPlayMode;
+  document.body.classList.toggle('play-mode', isPlayMode);
+  document.body.classList.toggle('toolbar-visible', isPlayMode);
+  if (fabPlay) fabPlay.style.display = isPlayMode ? 'none' : 'block';
+  if (fabBrowse) fabBrowse.style.display = isPlayMode ? 'block' : 'none';
+  if (isPlayMode) {
+    document.documentElement.style.overflow = 'hidden';
+    goToPage(currentPage);
+  } else {
+    document.documentElement.style.overflow = '';
+  }
+}
+
+if (fab) fab.addEventListener('click', togglePlayMode);
+if (tbPrev) tbPrev.addEventListener('click', prevPage);
+if (tbNext) tbNext.addEventListener('click', nextPage);
+if (tbProgress) tbProgress.addEventListener('click', e => {
+  const r = tbProgress.getBoundingClientRect();
+  goToPage(Math.round((e.clientX - r.left) / r.width * (totalPages - 1)));
+});
+if (tbAutoplay) tbAutoplay.addEventListener('click', () => {
+  isAutoPlay = !isAutoPlay;
+  tbAutoplay.classList.toggle('active', isAutoPlay);
+  if (isAutoPlay) {
+    autoPlayTimer = setInterval(() => {
+      if (currentPage < totalPages - 1) nextPage();
+      else { clearInterval(autoPlayTimer); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+    }, 8000);
+  } else { clearInterval(autoPlayTimer); }
+});
+if (tbFullscreen) tbFullscreen.addEventListener('click', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (!isPlayMode) {
+    if (e.key === 'f' || e.key === 'F') { if (!e.ctrlKey && !e.metaKey) togglePlayMode(); }
+    return;
+  }
+  switch (e.key) {
+    case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+    case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+    case 'Escape': togglePlayMode(); break;
+  }
+});
+
+buildSidenav();
+
+/* ═══ v6.2 自动初始化：连续阅读模式下预加载动态内容 ═══ */
+(function(){
+  try {
+    var inited = new Set();
+    allSections.forEach(function(screen) {
+      var id = screen.id;
+      if (!id || inited.has(id)) return;
+      inited.add(id);
+      /* 根据屏幕 ID 推测并调用对应的 init 函数 */
+      var caps = id.charAt(0).toUpperCase() + id.slice(1);
+      var candidates = [
+        'init' + caps,              /* initWarmup, initL1, initBoss ... */
+        'init_' + id,               /* init_warmup */
+        'load' + caps,              /* loadBoss */
+        'build' + caps,             /* buildQuiz */
+        'render' + caps,            /* renderContent */
+        'setup' + caps,             /* setupLevel */
+      ];
+      for (var i = 0; i < candidates.length; i++) {
+        if (typeof window[candidates[i]] === 'function') {
+          try { window[candidates[i]](); } catch(e) {}
+          break;
+        }
+      }
+    });
+  } catch(e) {}
+})();
+/* ═══ end v6.2 auto-init ═══ */
+
+updateUI();
+document.body.classList.add('toolbar-visible');
+setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+})();
+</script>
+
+<script src="/assets/scripts/feedback-widget.js" defer></script>
+
+<script src="/assets/scripts/teachany-audio-player.js" defer></script>
+</body>
+</html>

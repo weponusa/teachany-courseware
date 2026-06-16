@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>正在打开 TeachAny 课件</title>
+  <script>
+    (function () {
+      var oldPrefix = '/teachany/';
+      var newPrefix = 'https://www.teachany.cn/';
+      var path = location.pathname;
+      if (path.indexOf(oldPrefix) === 0) {
+        var rest = path.slice(oldPrefix.length);
+        if (/^(community|examples)\//.test(rest)) {
+          location.replace(newPrefix + rest + location.search + location.hash);
+        }
+      }
+    })();
+  </script>
+  <style>body{margin:0;background:#07111f;color:#e5f2ff;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;display:grid;min-height:100vh;place-items:center;text-align:center;line-height:1.8;padding:24px}a{color:#7dd3fc;word-break:break-all}#status{opacity:.85;font-size:14px;margin-top:8px}</style>
+</head>
+<body>
+  <main>
+    <p>课件正在同步到 CDN，请稍候…</p>
+    <p id="status">首次打开新课件可能需要 1–5 分钟，页面会自动重试。</p>
+    <p><a id="new-url" href="https://www.teachany.cn/">如果没有自动打开，点这里重试</a></p>
+  </main>
+  <script>
+    (function () {
+      var path = location.pathname || '';
+      var search = location.search || '';
+      var hash = location.hash || '';
+      var link = document.getElementById('new-url');
+      var status = document.getElementById('status');
+      var rest = path.replace(/^\/teachany\//, '');
+      var target = '';
+      if (/^(community|examples)\//.test(rest)) {
+        target = 'https://www.teachany.cn/' + rest + search + hash;
+      } else if (/^\/community\//.test(path) || /^\/examples\//.test(path)) {
+        target = 'https://www.teachany.cn' + path + search + hash;
+      }
+      if (!target) return;
+      if (link) {
+        link.href = target;
+        link.textContent = '点这里打开：' + target.replace('https://www.teachany.cn', '');
+      }
+      var waits = [3000, 7000, 15000, 30000, 60000];
+      var step = 0;
+      function setMsg(msg) { if (status) status.textContent = msg; }
+      function probe() {
+        fetch(target, { method: 'HEAD', cache: 'no-store' })
+          .then(function (res) {
+            if (res.ok) {
+              setMsg('课件已就绪，正在打开…');
+              location.replace(target);
+              return;
+            }
+            schedule();
+          })
+          .catch(schedule);
+      }
+      function schedule() {
+        if (step >= waits.length) {
+          setMsg('同步时间较长，请点上方链接手动重试，或稍后再打开。请确认使用 www.teachany.cn');
+          return;
+        }
+        var sec = Math.round(waits[step] / 1000);
+        setMsg('第 ' + (step + 1) + ' 次重试，' + sec + ' 秒后检测…（大课件部署可达 5 分钟）');
+        setTimeout(probe, waits[step++]);
+      }
+      probe();
+    })();
+  </script>
+</body>
+</html>
