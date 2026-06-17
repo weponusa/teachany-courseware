@@ -4062,6 +4062,36 @@ window.GAME_INDEX = [
     "url": "games/readings/g6-b-rbf1b68a.html",
     "refined": true,
     "note": "批量精修：推荐阅读个性化闯关题目 + 场景插画"
+  },
+  {
+    "grade": 4,
+    "volume": "上册",
+    "no": 51,
+    "title": "哈利·波特与魔法石",
+    "author": "J.K.罗琳",
+    "genre": "奇幻小说",
+    "brief": "11岁的哈利·波特发现自己是巫师，进入霍格沃茨魔法学校，结识罗恩和赫敏，勇闯密室保护魔法石。",
+    "theme": "课文博物馆",
+    "difficulty": "中年级",
+    "kind": "custom",
+    "url": "games/readings/g4-a-rcbb4f95b6.html",
+    "refined": true,
+    "note": "预制自制游戏：个性化闯关题目 + 场景插画"
+  },
+  {
+    "grade": 4,
+    "volume": "下册",
+    "no": 52,
+    "title": "海底两万里",
+    "author": "儒勒·凡尔纳",
+    "genre": "科幻小说",
+    "brief": "阿罗纳克斯教授和仆人康塞尔、鱼叉手尼德·兰登上神秘的鹦鹉螺号潜水艇，与尼摩船长环游海底世界。",
+    "theme": "课文博物馆",
+    "difficulty": "中年级",
+    "kind": "custom",
+    "url": "games/readings/g4-b-rc17800323.html",
+    "refined": true,
+    "note": "预制自制游戏：个性化闯关题目 + 场景插画"
   }
 ];
 
