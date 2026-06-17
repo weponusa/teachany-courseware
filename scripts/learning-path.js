@@ -12,7 +12,8 @@ class LearningPathSystem {
     this.pathCache = new Map();       // 路径缓存（nodeId -> 完整路径数据）
     this.subjectMap = new Map();      // subject -> [nodeIds]
     this.gradeMap = new Map();        // grade -> [nodeIds]
-    this.domainMap = new Map();       // domain -> [nodeIds]
+    this.domainMap = new Map();       // subject::domain -> [nodeIds]（避免跨学科 domain 串台）
+    this.MAX_PARALLEL = 6;
     this.initialized = false;
     this.initializing = false;
     this._initPromise = null;
@@ -198,11 +199,12 @@ class LearningPathSystem {
       }
       this.gradeMap.get(grade).push(nodeId);
 
-      // 按领域
-      if (!this.domainMap.has(node.domain)) {
-        this.domainMap.set(node.domain, []);
+      // 按学科+领域（domain id 会跨学科重复，如 interpersonal / vocabulary）
+      const domainKey = `${node.subject || ''}::${node.domain || ''}`;
+      if (!this.domainMap.has(domainKey)) {
+        this.domainMap.set(domainKey, []);
       }
-      this.domainMap.get(node.domain).push(nodeId);
+      this.domainMap.get(domainKey).push(nodeId);
     });
   }
 
@@ -230,7 +232,7 @@ class LearningPathSystem {
     // 2. 后续学习方向（递归向下，深度3层）
     const nextSteps = this._getNextSteps(nodeId, 3, new Set());
 
-    // 3. 平行知识点（同领域同年级）
+    // 3. 并列知识点（同学科·同主题·同年级，排除前序/后续，最多 6 个）
     const parallel = this._getParallelNodes(nodeId);
 
     // 4. 跨学段链（跨越小学→初中→高中的知识链）
@@ -316,31 +318,65 @@ class LearningPathSystem {
     return result;
   }
 
+  _parallelCard(otherNode, otherId) {
+    return {
+      id: otherNode.id,
+      name: otherNode.name,
+      grade: otherNode.grade,
+      definition: otherNode.definition,
+      hasCourseware: this.courseIndex.has(otherId),
+      coursewareCount: (this.courseIndex.get(otherId) || []).length
+    };
+  }
+
   _getParallelNodes(nodeId) {
     const node = this.nodeIndex.get(nodeId);
     if (!node) return [];
 
-    const result = [];
-    const domainNodes = this.domainMap.get(node.domain) || [];
+    const exclude = new Set([nodeId]);
+    (node.prerequisites || []).forEach(id => exclude.add(id));
+    (node.nextSteps || []).forEach(id => exclude.add(id));
 
-    for (const otherId of domainNodes) {
-      if (otherId === nodeId) continue;
-      const otherNode = this.nodeIndex.get(otherId);
-      if (!otherNode) continue;
-      // 同领域即为平行，不限制同年级
-      result.push({
-        id: otherNode.id,
-        name: otherNode.name,
-        grade: otherNode.grade,
-        definition: otherNode.definition,
-        hasCourseware: this.courseIndex.has(otherId),
-        coursewareCount: (this.courseIndex.get(otherId) || []).length
+    const maxN = this.MAX_PARALLEL;
+    const domainKey = `${node.subject || ''}::${node.domain || ''}`;
+
+    // 1) 课标树显式 parallel / related_nodes
+    const explicit = (node.relatedNodes || [])
+      .filter(id => !exclude.has(id) && this.nodeIndex.has(id))
+      .slice(0, maxN)
+      .map(id => this._parallelCard(this.nodeIndex.get(id), id));
+    if (explicit.length > 0) return explicit;
+
+    const pick = (pool) => pool
+      .filter(id => !exclude.has(id))
+      .map(id => this.nodeIndex.get(id))
+      .filter(Boolean);
+
+    const domainNodes = this.domainMap.get(domainKey) || [];
+
+    // 2) 同学科 + 同领域 + 同年级
+    let candidates = pick(domainNodes).filter(o => o.grade === node.grade);
+
+    // 3) 不足 2 个时，补充相邻年级（±1）同主题节点
+    if (candidates.length < 2 && node.grade > 0) {
+      const seen = new Set(candidates.map(c => c.id));
+      domainNodes.forEach(otherId => {
+        if (exclude.has(otherId) || seen.has(otherId)) return;
+        const other = this.nodeIndex.get(otherId);
+        if (!other || Math.abs(other.grade - node.grade) !== 1) return;
+        candidates.push(other);
+        seen.add(otherId);
       });
     }
 
-    // 按年级排序
-    result.sort((a, b) => a.grade - b.grade);
-    return result;
+    candidates.sort((a, b) => {
+      const aScore = (this.courseIndex.has(a.id) ? 4 : 0) - Math.abs(a.grade - node.grade);
+      const bScore = (this.courseIndex.has(b.id) ? 4 : 0) - Math.abs(b.grade - node.grade);
+      if (bScore !== aScore) return bScore - aScore;
+      return a.grade - b.grade || a.name.localeCompare(b.name, 'zh');
+    });
+
+    return candidates.slice(0, maxN).map(o => this._parallelCard(o, o.id));
   }
 
   _getCrossGradeInfo(prerequisites, currentNode, nextSteps) {
@@ -502,7 +538,7 @@ class LearningPathSystem {
           <div class="current-stats">
             <div class="stat-item"><span class="stat-val">${path.summary.prerequisiteCount}</span><span class="stat-lbl">前置知识</span></div>
             <div class="stat-item"><span class="stat-val">${path.summary.nextStepCount}</span><span class="stat-lbl">后续方向</span></div>
-            <div class="stat-item"><span class="stat-val">${path.summary.parallelCount}</span><span class="stat-lbl">平行知识</span></div>
+            <div class="stat-item"><span class="stat-val">${path.summary.parallelCount}</span><span class="stat-lbl">并列知识</span></div>
             <div class="stat-item"><span class="stat-val">${path.summary.coursewareCount}</span><span class="stat-lbl">可用课件</span></div>
           </div>
         </div>
@@ -556,11 +592,12 @@ class LearningPathSystem {
     }
     html += '</div>';
 
-    // ===== 平行知识 =====
+    // ===== 并列知识点（精简，非整域罗列） =====
     if (path.parallel.length > 0) {
       html += `
         <div class="path-section parallel-section">
-          <div class="section-header"><span class="section-icon">🔄</span> 同领域知识点 <span class="count">${path.parallel.length}</span></div>
+          <div class="section-header"><span class="section-icon">🔄</span> 并列知识点 <span class="count">${path.parallel.length}</span></div>
+          <p class="section-hint">与当前知识点同学科、同主题、同年级，且非前序/后续依赖，最多展示 ${this.MAX_PARALLEL} 个可横向拓展的内容。</p>
           <div class="parallel-grid">
             ${path.parallel.map(node => renderNodeCard(node)).join('')}
           </div>
