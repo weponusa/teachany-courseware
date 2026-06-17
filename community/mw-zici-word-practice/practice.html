@@ -69558,8 +69558,36 @@ const EDITIONS = {
       titleInput.value = state.mode === "py-to-word" ? "看拼音写词语" : "看词语写拼音";
       makeQuestions();
     }));
+    function applyFromQuery() {
+      const qs = new URLSearchParams(location.search);
+      const gradeRaw = qs.get("grade");
+      const volumeRaw = qs.get("volume");
+      const lessonTitle = (qs.get("lesson") || "").trim();
+      if (!gradeRaw && !volumeRaw && !lessonTitle) return;
+
+      const CN = { "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6 };
+      let gradeNum = CN[gradeRaw] || Number(gradeRaw);
+      if (!Number.isFinite(gradeNum) || gradeNum < 1 || gradeNum > 6) gradeNum = 2;
+
+      gradeSelect.value = String(gradeNum);
+      populateVolumes();
+
+      if (volumeRaw) {
+        const vol = volumeRaw.includes("上") ? "上册" : volumeRaw.includes("下") ? "下册" : volumeRaw;
+        if ([...volumeSelect.options].some(o => o.value === vol)) volumeSelect.value = vol;
+      }
+      populateLessons();
+
+      if (lessonTitle) {
+        const match = [...lessonSelect.options].find(o => o.textContent.includes(lessonTitle));
+        if (match) lessonSelect.value = match.value;
+      }
+      makeQuestions();
+    }
+
     populateEditions();
     applyEdition(state.editionId);
+    applyFromQuery();
   </script>
 </body>
 </html>
