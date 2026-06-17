@@ -902,10 +902,16 @@ async function loadTree(index) {
 
     // 统计 active 节点
     const allNodes = currentTree.domains.flatMap(d => d.nodes);
-    const activeNodes = allNodes.filter(n => n.status === 'active' && n.courses && n.courses.length);
+    const activeNodes = allNodes.filter(n =>
+      window.TeachAnyHub && TeachAnyHub.hasResolvableTreeCourses
+        ? TeachAnyHub.hasResolvableTreeCourses(n.courses)
+        : (n.status === 'active' && n.courses && n.courses.length)
+    );
     // 通过 Hub 检测额外有课件的节点（社区/用户课件自动接入）
     const hubCoveredNodes = allNodes.filter(n => {
-      if (n.status === 'active' && n.courses && n.courses.length) return false; // 已计入 active
+      if (window.TeachAnyHub && TeachAnyHub.hasResolvableTreeCourses
+        ? TeachAnyHub.hasResolvableTreeCourses(n.courses)
+        : (n.status === 'active' && n.courses && n.courses.length)) return false; // 已计入 active
       return window.TeachAnyHub && TeachAnyHub.hasAnyCourseware(n.id);
     });
     console.log(`[KnowledgeMap] ${TREES[index].label}: ${allNodes.length} nodes, ${activeNodes.length} active, ${hubCoveredNodes.length} hub-covered`);
@@ -1012,9 +1018,14 @@ function renderTree(tree) {
   const hasUserCourse = (nodeId) => window.TeachAnyImporter ? TeachAnyImporter.isUserCourseNode(nodeId) : false;
   // Hub 通用检测：只要有任何来源的课件就算有
   const hubHasCourse = (nodeId) => window.TeachAnyHub ? TeachAnyHub.hasAnyCourseware(nodeId) : false;
-  // 统一判断：节点是否有课件（合并所有来源）
+  const hubResolvable = (courses) => (
+    window.TeachAnyHub && typeof TeachAnyHub.hasResolvableTreeCourses === 'function'
+      ? TeachAnyHub.hasResolvableTreeCourses(courses)
+      : false
+  );
+  // 统一判断：节点是否有课件（合并所有来源；tree.courses 须能在 registry 解析）
   const nodeHasAnyCourse = (n) => {
-    if (n.status === 'active' && n.courses && n.courses.length) return true;
+    if (hubResolvable(n.courses)) return true;
     if (hasUserCourse(n.id)) return true;
     if (hubHasCourse(n.id)) return true;
     return false;
@@ -1030,10 +1041,10 @@ function renderTree(tree) {
 
   // Stats — 使用 nodeHasAnyCourse() 统一统计所有来源
   const totalNodes = nodes.length;
-  const officialNodes = nodes.filter(n => n.status === 'active' && n.courses && n.courses.length).length;
-  const userOnlyNodes = nodes.filter(n => !(n.status === 'active' && n.courses && n.courses.length) && hasUserCourse(n.id)).length;
+  const officialNodes = nodes.filter(n => hubResolvable(n.courses)).length;
+  const userOnlyNodes = nodes.filter(n => !hubResolvable(n.courses) && hasUserCourse(n.id)).length;
   const hubOnlyNodes = nodes.filter(n => {
-    if (n.status === 'active' && n.courses && n.courses.length) return false;
+    if (hubResolvable(n.courses)) return false;
     if (hasUserCourse(n.id)) return false;
     return hubHasCourse(n.id);
   }).length;
@@ -1126,7 +1137,7 @@ function renderTree(tree) {
     })
     .attr('stroke-width', d => {
       // Hub 社区接入节点用双线样式区分
-      if (!(d.status === 'active' && d.courses && d.courses.length) && !hasUserCourse(d.id) && hubHasCourse(d.id)) return 3.5;
+      if (!(hubResolvable(d.courses)) && !hasUserCourse(d.id) && hubHasCourse(d.id)) return 3.5;
       return 2.5;
     });
 
@@ -1463,10 +1474,14 @@ function showTooltip(event, d) {
   const communityCourses = window.TeachAnyCommunity ? TeachAnyCommunity.getTopCommunityCourses(d.id, 5) : [];
   const hasCommunity = communityCourses.length > 0;
 
+  const treeOfficialCourses = window.TeachAnyHub && typeof TeachAnyHub.getResolvableTreeCourses === 'function'
+    ? TeachAnyHub.getResolvableTreeCourses(d.courses || [])
+    : [];
+
   // ── 状态徽章（基于统一检测） ──
   const hasAnyCourse = nodeHasAnyCourse(d);
   if (hasAnyCourse) {
-    if (d.status === 'active' && d.courses && d.courses.length) {
+    if (treeOfficialCourses.length) {
       html += `<span class="status-badge badge-active">✅ 有课件</span>`;
     } else if (hasUserCourses) {
       html += `<span class="status-badge badge-active">📂 我的课件</span>`;
@@ -1502,8 +1517,8 @@ function showTooltip(event, d) {
     if (hubCount > 1) statParts.push(`共 ${hubCount} 个课件`);
   } else {
     // Fallback：Hub 未初始化时走旧逻辑
-    if (d.status === 'active' && d.courses.length) {
-      statParts.push(`📋 官方 ×${d.courses.length}`);
+    if (treeOfficialCourses.length) {
+      statParts.push(`📋 官方 ×${treeOfficialCourses.length}`);
     }
     if (hasCommunity) statParts.push(`🌐 社区 ×${communityCourses.length}`);
     if (hasUserCourses) statParts.push(`📂 我的 ×${userCourses.length}`);
@@ -1511,9 +1526,8 @@ function showTooltip(event, d) {
     // 爱心数（旧逻辑）
     let totalLikes = 0;
     if (window.TeachAnyRegistry) {
-      d.courses.forEach(c => {
-        const cid = typeof c === 'string' ? c.split('/').pop() : '';
-        totalLikes += TeachAnyRegistry.getRegistryLikeCount(cid);
+      treeOfficialCourses.forEach(c => {
+        totalLikes += TeachAnyRegistry.getRegistryLikeCount(c.id);
       });
     }
     if (window.TeachAnyImporter) {
@@ -1561,34 +1575,20 @@ function showTooltip(event, d) {
       }
     });
     html += `</div>`;
-  } else if (d.status === 'active' && d.courses.length) {
-    // Fallback：用 tree 中的课件列表
+  } else if (treeOfficialCourses.length) {
+    // Fallback：仅展示 registry 能解析的官方课件
     html += `<div style="margin-top:8px;font-size:12px;color:var(--dim);">课件列表：</div>`;
     html += `<div style="max-height:160px;overflow-y:auto;margin-top:4px;">`;
-    d.courses.forEach(courseId => {
-      // v6.6: 优先从 TeachAnyHub 查 course 的真实 path（community/xxx 或 examples/xxx）
-      // 避免硬编码 ./examples/ 导致 community 课件 404
-      let courseUrl = '';
-      if (window.TeachAnyHub && typeof TeachAnyHub.getCourseById === 'function') {
-        const hit = TeachAnyHub.getCourseById(courseId);
-        if (hit && hit.url) courseUrl = hit.url;
-      }
-      if (!courseUrl) {
-        // 兜底 1：courses[] 里自带路径前缀
-        if (courseId.startsWith('examples/') || courseId.startsWith('community/')) {
-          courseUrl = `./${courseId}/index.html`;
-        } else {
-          // 兜底 2：尝试 community/<id>（新课件主力通道）
-          courseUrl = `./community/${courseId}/index.html`;
-        }
-      }
-      const likesCount = window.TeachAnyRegistry ? TeachAnyRegistry.getRegistryLikeCount(courseId) : 0;
+    treeOfficialCourses.forEach(c => {
+      const courseUrl = c.url || (c.path ? `./${c.path}/index.html` : '');
+      if (!courseUrl) return;
+      const likesCount = window.TeachAnyRegistry ? TeachAnyRegistry.getRegistryLikeCount(c.id) : (c.likes || 0);
       const likeBadge = likesCount > 0 ? ` <span style="color:#f87171;">❤️${likesCount}</span>` : ' <span style="color:var(--dimmer);">❤️0</span>';
       html += `<a ${courseLinkAttrs(courseUrl)}
         style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin:3px 0;font-size:13px;color:var(--text);text-decoration:none;background:rgba(148,163,184,0.08);transition:all 0.2s;pointer-events:auto;border:1px solid transparent;"
         onmouseover="this.style.background='rgba(59,130,246,0.15)';this.style.borderColor='rgba(59,130,246,0.3)'"
         onmouseout="this.style.background='rgba(148,163,184,0.08)';this.style.borderColor='transparent'"
-      ><span>📋</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${courseId}</span>${likeBadge}</a>`;
+      ><span>📋</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name || c.id}</span>${likeBadge}</a>`;
     });
     html += `</div>`;
   }

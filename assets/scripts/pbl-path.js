@@ -8165,7 +8165,7 @@ class PBLGraphRenderer {
       .attr('font-size', '14px')
       .text(d => {
         if (d.isExternal) return '💡';
-        if (d.status === 'active' && d.courses && d.courses.length) return '✅';
+        if (this._hubResolvableTreeCourses(d.courses)) return '✅';
         if (this._nodeHasAnyCourse(d)) return '📂';
         return '📝';
       });
@@ -8410,23 +8410,12 @@ class PBLGraphRenderer {
             html += `<a href="${courseUrl}" target="_blank" onclick="event.stopPropagation();" style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin:3px 0;border-radius:6px;font-size:13px;color:#f8fafc;text-decoration:none;background:rgba(148,163,184,0.08);pointer-events:auto;">${sourceIcon} 打开课件：${this._escapeHtml(c.name || c.id)}</a>`;
           }
         });
-      } else if (d.courses && d.courses.length) {
-        d.courses.forEach(courseId => {
-          const isStr = typeof courseId === 'string';
-          let courseUrl = '';
-          if (window.TeachAnyHub && typeof TeachAnyHub.getCourseById === 'function') {
-            const hit = TeachAnyHub.getCourseById(courseId);
-            if (hit && hit.url) courseUrl = hit.url;
-          }
-          if (!courseUrl) {
-            const base = 'https://www.teachany.cn';
-            if (isStr && (courseId.startsWith('examples/') || courseId.startsWith('community/'))) {
-              courseUrl = `${base}/${courseId.replace(/^\/+/, '').replace(/\/$/, '')}/index.html`;
-            } else if (isStr) {
-              courseUrl = `${base}/community/${courseId}/index.html`;
-            }
-          }
-          html += `<a href="${courseUrl}" target="_blank" onclick="event.stopPropagation();" style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin:3px 0;border-radius:6px;font-size:13px;color:#f8fafc;text-decoration:none;background:rgba(148,163,184,0.08);pointer-events:auto;">📋 打开课件：${this._escapeHtml(isStr ? courseId.split('/').pop() : courseId)}</a>`;
+      } else if (window.TeachAnyHub && typeof TeachAnyHub.getResolvableTreeCourses === 'function') {
+        const treeCourses = TeachAnyHub.getResolvableTreeCourses(d.courses || []);
+        treeCourses.forEach(c => {
+          const courseUrl = c.url || (c.path ? `./${c.path}/index.html` : '');
+          if (!courseUrl) return;
+          html += `<a href="${courseUrl}" target="_blank" onclick="event.stopPropagation();" style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin:3px 0;border-radius:6px;font-size:13px;color:#f8fafc;text-decoration:none;background:rgba(148,163,184,0.08);pointer-events:auto;">📋 打开课件：${this._escapeHtml(c.name || c.id)}</a>`;
         });
       }
       html += `</div>`;
@@ -8527,10 +8516,15 @@ class PBLGraphRenderer {
       .join(' · ');
   }
 
+  _hubResolvableTreeCourses(courses) {
+    return !!(window.TeachAnyHub && typeof TeachAnyHub.hasResolvableTreeCourses === 'function'
+      && TeachAnyHub.hasResolvableTreeCourses(courses));
+  }
+
   _nodeHasAnyCourse(d) {
     // 1. 标准节点：按 id 精确匹配
     if (!d.isExternal) {
-      if (d.status === 'active' && d.courses && d.courses.length) return true;
+      if (this._hubResolvableTreeCourses(d.courses)) return true;
       if (window.TeachAnyHub && typeof TeachAnyHub.getAllCoursesForNode === 'function') {
         if (TeachAnyHub.getAllCoursesForNode(d.id).length > 0) return true;
       }
