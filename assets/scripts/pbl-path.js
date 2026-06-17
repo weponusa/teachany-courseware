@@ -432,10 +432,19 @@ class PBLPathBuilder {
     phases.forEach(p => {
       (p.steps || []).forEach(st => { if (this._isHollowStep(st)) hollow++; });
     });
-    if (hollow >= 2) {
-      const pen = Math.min(20, hollow * 4);
+    if (hollow >= 1) {
+      const pen = Math.min(28, hollow * 5);
       score -= pen;
-      breakdown.push({ key: 'hollow', label: '空话步骤', delta: -pen });
+      breakdown.push({ key: 'hollow', label: `空话步骤 ${hollow} 条`, delta: -pen });
+    }
+
+    if (projectBlueprint) {
+      const substance = this._blueprintSubstanceScore(projectBlueprint, goal);
+      if (substance < 3) {
+        const pen = Math.min(32, (3 - substance) * 12);
+        score -= pen;
+        breakdown.push({ key: 'substance', label: '蓝图内容空洞（缺题目锚点/可验收产出）', delta: -pen });
+      }
     }
 
     if (projectBlueprint && this._isGenericBlueprintText(projectBlueprint.projectSummary)) {
@@ -1962,6 +1971,46 @@ class PBLPathBuilder {
     return 'subject-anchored';
   }
 
+  _blueprintSubstanceScore(blueprint, goal) {
+    const blob = [
+      blueprint?.projectSummary,
+      blueprint?.deliverable,
+      ...(blueprint?.schemes || []).flatMap(s => [
+        s.name, s.summary,
+        ...(s.phases || []).flatMap(p => [p.phase, ...(p.steps || []), p.deliverable, ...(p.knowledgeHints || [])]),
+      ]),
+    ].join(' ');
+    const profile = this._goalProfile(goal, blueprint);
+    const anchor = profile.topic?.coreTopic || this._parseGoalSubject(goal);
+    const tokens = this._goalTokens(anchor);
+    let score = 0;
+    const hits = tokens.filter(t => t.length >= 2 && blob.includes(t)).length;
+    if (hits >= 2) score += 2;
+    else if (hits >= 1) score += 1;
+    if (blob.includes(anchor) && anchor.length >= 4) score += 1;
+    if (/\d+/.test(blob)) score += 1;
+    if (/表|图|轴|清单|附录|柱状|折线|地图|记录|统计|问卷|访谈|对照|维度|指标|样本|时间轴|案例/.test(blob)) score += 2;
+    if (/≥|≤|不少于|至少|精确到/.test(blob)) score += 1;
+    if (profile.mismatchRes.some(re => re.test(blob))) score -= 3;
+    const steps = (blueprint?.schemes || []).flatMap(s => (s.phases || []).flatMap(p => p.steps || []));
+    if (steps.length) {
+      const vacuous = steps.filter(s => this._isVacuousResearchStep(s)).length;
+      if (vacuous / steps.length >= 0.4) score -= 2;
+    }
+    return score;
+  }
+
+  _isVacuousResearchStep(step) {
+    const s = String(step || '').trim();
+    if (!s) return true;
+    if (/^(查阅|收集|整理|对比分析|撰写|研究|探究|了解|梳理|开展).{0,24}(资料|信息|内容|报告|研究|对比|调查)/.test(s)
+      && !/\d|表|图|维度|指标|年|条|个|篇|项|节点|样本|问卷|访谈|对照|案例|城市|发展/.test(s)) {
+      return true;
+    }
+    if (/^(完成|进行|落实).{0,12}(本阶段|阶段任务|研究任务|对比任务|调查任务)/.test(s)) return true;
+    return false;
+  }
+
   _isFiltrationGoal(goal) {
     return this._inferTopicKind(String(goal || ''), this._parseGoalSubject(goal)) === 'environmental-filtration';
   }
@@ -2282,7 +2331,7 @@ class PBLPathBuilder {
     if (/烹饪|烘焙|美食|菜谱|料理|手工|编织|缝纫|收纳|整理|维修|清洁|打扫|劳动/.test(g)) return 'labor-practice';
     if (/研学|游学|研学旅行|研学路线|红色研学|文化研学|文化考察|实地考察|field.?trip|遗址|博物馆|人文史迹|古迹|古村|世界遗产/.test(g)) return 'study-trip';
     if (/活动策划|策划.{0,6}(活动|晚会|联欢|运动会|典礼|节|比赛)|联欢会|晚会|文艺汇演|毕业典礼|生日会|出游|旅行|路线规划|时间管理|班级布置|布置教室|嘉年华|游园/.test(g)) return 'life-planning';
-    if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|公众.{0,4}认知|居民|乡土|口述史/.test(g)) return 'social-inquiry';
+    if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|公众.{0,4}认知|居民|乡土|口述史|城市|发展史|对比|比较|典型|区域|案例/.test(g)) return 'social-inquiry';
     if (this._isExhibitionRedesignGoal(g)) return 'exhibition-redesign';
     if (this._isIndustryInnovationGoal(g)) return 'industry-innovation';
     if (/工坊|鲁班|榫卯|古典.*风格|木结构|建筑模型|微缩|传统建筑|斗拱|飞檐/.test(g)) return 'maker-workshop';
@@ -2305,9 +2354,9 @@ class PBLPathBuilder {
         { id: 'conclusion', label: '分析与结论', keywords: ['分析', '结论', '解释', '规律', '报告'], subjects: ['science', 'math', 'chinese'] },
       ],
       'social-inquiry': [
-        { id: 'topic', label: '选题与调查设计', keywords: ['选题', '调查', '问卷', '访谈', '抽样', '样本'], subjects: ['chinese', 'math'] },
-        { id: 'collect', label: '资料与数据收集', keywords: ['资料', '数据', '收集', '记录', '文献', '实地'], subjects: ['geography', 'history', 'chinese'] },
-        { id: 'analyze', label: '整理与统计分析', keywords: ['统计', '整理', '图表', '分析', '百分比', '平均数'], subjects: ['math'] },
+        { id: 'topic', label: '选题与调查设计', keywords: ['选题', '调查', '问卷', '访谈', '抽样', '样本', '维度', '指标'], subjects: ['chinese', 'math'] },
+        { id: 'collect', label: '资料与数据收集', keywords: ['资料', '数据', '收集', '记录', '文献', '实地', '史料', '案例'], subjects: ['geography', 'history', 'chinese'] },
+        { id: 'analyze', label: '整理与统计分析', keywords: ['统计', '整理', '图表', '分析', '百分比', '平均数', '对比'], subjects: ['math'] },
         { id: 'report', label: '结论与报告', keywords: ['结论', '报告', '建议', '论证', '写作', '说明'], subjects: ['chinese'] },
       ],
       'humanities-literary': [
@@ -2980,6 +3029,7 @@ class PBLPathBuilder {
   _isHollowStep(step) {
     const s = String(step || '').trim();
     if (!s || s.length < 12) return true;
+    if (this._isVacuousResearchStep(s)) return true;
     if (PBLPathBuilder.HOLLOW_STEP_RE.test(s)) return true;
     if (/^运用[①②③④⑤⑥⑦⑧⑨⑩\d]+「/.test(s) && /完成本阶段|探究任务/.test(s)) return true;
     if (/^(选择|确定|调研|了解|学习|掌握|认识|编写基础|配置|安装).{0,12}(组件|框架|逻辑|特点|风格|方案|软件|环境)$/.test(s)) return true;
@@ -3219,6 +3269,11 @@ class PBLPathBuilder {
     };
 
     const mismatchRes = [];
+    const type = this._classifyProjectType(g);
+    if (['social-inquiry', 'humanities-literary', 'study-trip', 'business-economics'].includes(type)
+      && !domains.robot && !domains.software && !/设计|制作|搭建|装置|原型|硬件|编程/.test(g)) {
+      mismatchRes.push(/智慧城市|工程设计思维|环境搭建|硬件组件|原型驱动|MVP|程序设计|电解池|焊接|传感器模块|物流配送|烧录|GPIO/);
+    }
     if (domains.lowAltitude || domains.industry) {
       mismatchRes.push(/现代物流管理|智慧城市|工程设计思维|环境搭建|硬件组件|编写.*控制|榫卯|斗拱|焊接|搭建原型|MVP|快速原型|程序设计|电解池/);
     }
@@ -3654,6 +3709,14 @@ class PBLPathBuilder {
       if (/架构|结构|装置|设计|方案/.test(phase)) return `「${art}」系统架构图与方案对比表（含电源/热控/通信/冗余）`;
       if (/控制|实现|调度|运行/.test(phase)) return `「${art}」调度控制流程图 + 故障切换策略说明`;
       if (/测试|迭代|验证|验收/.test(phase)) return `「${art}」测试验收表 + 工程实施方案推荐稿`;
+    }
+    const projType = this._classifyProjectType(goal);
+    if (projType === 'social-inquiry' || /研究|对比|发展史|典型|案例|调查|问卷|访谈/.test(String(goal || ''))) {
+      if (/脉络|史料|时间|背景|梳理|资料|收集/.test(phase)) return `「${art}」专题资料卡/时间轴（≥5个关键节点+来源标注）`;
+      if (/案例|典型|选取|调研|调查|问卷|访谈|样本/.test(phase)) return `「${art}」案例/样本记录表（≥3例+来源标注）`;
+      if (/维度|指标|框架|设计|统计|整理/.test(phase)) return `「${art}」对比/分析维度表（≥4项指标+操作定义）`;
+      if (/对比|分析|结论|专题/.test(phase)) return `「${art}」对比分析图表（≥2组可比数据）`;
+      if (/报告|结论|展示|写作/.test(phase)) return `「${art}」研究报告（含结论与局限说明）`;
     }
     if (/调研|勘测|现场|需求/.test(phase)) return `「${art}」调研记录表（需求清单+照片编号）`;
     if (/设计|方案|草图|图纸|风格/.test(phase)) return `「${art}」${phase}图册（标注尺寸的方案稿）`;
@@ -6363,6 +6426,18 @@ class PBLPathBuilder {
     if (!this._blueprintAnchoredToGoal(blueprint, goal)) {
       issues.push('未锚定题目关键词，步骤/阶段可能跑题或套用无关模板');
     }
+    const substance = this._blueprintSubstanceScore(blueprint, goal);
+    if (substance < 3) {
+      issues.push('蓝图内容空洞：步骤/交付物缺少题目锚点、数量或可验收表格/图表');
+    }
+    const profile = this._goalProfile(goal, blueprint);
+    const reviewBlob = [
+      blueprint.projectSummary,
+      ...(blueprint.schemes || []).flatMap(s => (s.phases || []).flatMap(p => p.steps || [])),
+    ].join(' ');
+    if (profile.mismatchRes.some(re => re.test(reviewBlob))) {
+      issues.push('步骤/概述套用与题目不符的通用工程模板，须改为题目对应的任务类型');
+    }
     const scheme = blueprint.schemes.find(s => s.id === blueprint.recommendedSchemeId) || blueprint.schemes[0];
     if (this._isGenericBlueprintText(scheme?.summary)) {
       issues.push('推荐方案 summary 过于笼统，需写清实施路线差异');
@@ -6396,6 +6471,11 @@ class PBLPathBuilder {
     if (!data?.schemes?.length) return this._fallbackDecomposeBlueprint(goal);
     const anchored = this._blueprintAnchoredToGoal(data, goal);
     const depth = this._blueprintStepDepthScore(data);
+    const substance = this._blueprintSubstanceScore(data, goal);
+    if (substance < 3) {
+      console.warn('[PBL] 蓝图内容空洞，使用主题蓝图回退');
+      return this._fallbackDecomposeBlueprint(goal);
+    }
     if (!anchored && depth < 1.5) {
       console.warn('[PBL] 蓝图未锚定且步骤过浅，使用主题蓝图回退');
       return this._fallbackDecomposeBlueprint(goal);
