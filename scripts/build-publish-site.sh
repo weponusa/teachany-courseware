@@ -27,11 +27,13 @@ rsync -a "${COMMUNITY_EXCLUDES[@]}" "$ROOT/community/" "$OUT/community/"
 # 2. 站点公共资源
 rsync -a --exclude='maps/physical/' "$ROOT/assets/" "$OUT/assets/"
 
-# 3. 数据（排除 venv、断链、kp 备份）
+# 3. 数据（排除 venv、断链、构建期资料；kp 卫星文件仅用于离线管线，站点读 trees/*.json）
 rsync -a \
   --exclude='.venv/' \
   --exclude='history' \
   --exclude='geography' \
+  --exclude='kp/' \
+  --exclude='curriculum-sources/' \
   --exclude='kp/_backups/' \
   "$ROOT/data/" "$OUT/data/"
 
