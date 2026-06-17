@@ -923,6 +923,9 @@ def main():
     for helper in [
         'sync-community-index.py',
         'check-courseware-links.py',
+        'apply-stage-bridges.py',
+        'build-knowledge-map-data.py',
+        'sync-knowledge-map-domains.py',
         'build-teachany-kg-manifest.py',
         'build-nodes-selector.py',
         'build-nodes-metadata.py',
