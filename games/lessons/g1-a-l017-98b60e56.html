@@ -20,21 +20,11 @@
 </div>
 <script>
 const DATA={"item": {"kind": "lesson", "grade": 1, "volume": "上册", "no": 17, "title": "ieüeer", "writing": "", "literacy": "开雪夜色美"}, "levels": [{"tag": "第 1 关 · 进入线索板", "story": "你现在是《ieüeer》的侦探。进入线索板前，要先给自己画一张阅读地图。", "q": "读《ieüeer》前，小读者先看什么最合适？", "hint": "先整体看，再进入细节。", "opts": [{"t": "看题目，想一想可能会讲什么", "c": true}, {"t": "先把所有生字抄三遍", "c": false}, {"t": "只看标题，不读内容", "c": false}, {"t": "直接猜作者想表达什么", "c": false}], "fb": "阅读闯关的第一步是抓住人物、事件和结果，先建立整体地图。"}, {"stage": "关键词入口", "q": "下面哪个词最适合作为《ieüeer》的阅读入口？", "hint": "先抓住这篇内容最核心的线索。", "opts": [{"t": "开", "c": true}, {"t": "无关数字", "c": false}, {"t": "随机颜色", "c": false}, {"t": "页面按钮", "c": false}], "fb": "入口关键词能帮你迅速进入文本，后面的题都要回到这个线索上。"}, {"tag": "第 3 关 · 线索搜集", "story": "侦探发现了一条发光线索：开。真正的答案不能只靠猜，要回到文本里找证据。", "q": "如果要把《ieüeer》做成剧情任务，哪种任务最适合放在这一关？", "hint": "阅读理解要有文本证据。", "opts": [{"t": "找出和“开”最相关的句子或情节", "c": true}, {"t": "让同学背诵一段无关材料", "c": false}, {"t": "只统计全文一共有多少个标点", "c": false}, {"t": "跳过文本直接看答案", "c": false}], "fb": "好问题会把你带回文本。找到证据，理解才站得住。"}, {"tag": "第 4 关 · 句子显微镜", "story": "你遇到一张句子卡：文本片段。这张卡要求你不仅读懂字面意思，还要说出它写出了什么。", "q": "解释一个词句时，最稳的方法是什么？", "hint": "不要孤立解释，要看上下文。", "opts": [{"t": "联系上下文，说明它写出了什么画面或变化", "c": true}, {"t": "只查字典，不看句子", "c": false}, {"t": "用一个同义词替换就结束", "c": false}, {"t": "凭感觉选一个最像的答案", "c": false}], "fb": "词句理解要回到上下文，最好能说出画面、情绪或人物变化。"}, {"tag": "第 5 关 · 通关徽章", "story": "你已经走到《ieüeer》最后一关。通关不是只看分数，还要留下自己的阅读发现。", "q": "最值得留下的阅读成果是什么？", "hint": "想一想怎样证明自己真的读懂了。", "opts": [{"t": "能用一个文本细节说明自己的理解或启发", "c": true}, {"t": "记住页面用了什么颜色", "c": false}, {"t": "只知道自己得了几分", "c": false}, {"t": "把选项顺序背下来", "c": false}], "fb": "阅读游戏最终要回到表达：用细节支撑理解。"}], "theme": {"id": "detective", "name": "阅读侦探", "role": "侦探", "place": "线索板", "icon": "⌕"}};
+const TTS_ID='g1-a-l017-98b60e56';
 let state={idx:0,score:0,answered:false};
 const $=s=>document.querySelector(s), scene=$('#scene'), steps=$('#steps'), scoreBadge=$('#scoreBadge');
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
-function ttsSpeak(text,btn){
-if(!window.speechSynthesis)return;
-window.speechSynthesis.cancel();
-document.querySelectorAll('.tts-btn.playing').forEach(b=>b.classList.remove('playing'));
-const u=new SpeechSynthesisUtterance(text);
-u.lang='zh-CN';u.rate=0.82;u.pitch=1.1;
-const pick=()=>{const zh=speechSynthesis.getVoices().filter(v=>v.lang.startsWith('zh'));if(zh.length)u.voice=zh[0];};
-pick();if(!speechSynthesis.getVoices().length)speechSynthesis.onvoiceschanged=pick;
-if(btn){btn.classList.add('playing');u.onend=()=>btn.classList.remove('playing');u.onerror=()=>btn.classList.remove('playing')}
-speechSynthesis.speak(u);
-}
 
 
 
@@ -44,8 +34,18 @@ const prompt=decodeURIComponent(img.dataset.fallbackPrompt||'')||'reading scene'
 (async()=>{try{img.src=await agnesImage(prompt)}catch(e){if(loading)loading.textContent='插画加载失败，继续答题吧～'}})();
 }
 
+let _ttsAudio=null;
+function ttsPlay(kind,btn){
+if(_ttsAudio){try{_ttsAudio.pause()}catch(e){}_ttsAudio=null;}
+document.querySelectorAll('.tts-btn.playing').forEach(b=>b.classList.remove('playing'));
+const a=new Audio('/assets/tts/g1/'+TTS_ID+'/'+state.idx+'-'+kind+'.mp3');
+_ttsAudio=a;
+if(btn){btn.classList.add('playing');const done=()=>{btn.classList.remove('playing');if(_ttsAudio===a)_ttsAudio=null};a.onended=done;a.onerror=done;}
+a.play().catch(()=>{if(btn)btn.classList.remove('playing')});
+}
+
 function renderSteps(){steps.innerHTML='';DATA.levels.forEach((_,i)=>{const d=document.createElement('div');d.className='step'+(i<state.idx?' done':'')+(i===state.idx?' cur':'');steps.appendChild(d)})}
-function renderLevel(){renderSteps();scoreBadge.textContent='积分 '+state.score;state.answered=false;const lv=DATA.levels[state.idx];scene.innerHTML=`<span class="scene-tag">${lv.tag}</span><p class="story"><button class="tts-btn" onclick="ttsSpeak(DATA.levels[state.idx].story,this)" title="听故事">🔊</button> ${lv.story}</p><div class="qbox"><p class="q"><button class="tts-btn" onclick="ttsSpeak(DATA.levels[state.idx].q,this)" title="听题目">🔊</button> ${lv.q}</p><p class="hint">${lv.hint}</p><div class="opts" id="opts"></div><div class="feedback" id="feedback"></div></div><div class="nav"><button class="btn btn-ghost" id="prevBtn" ${state.idx===0?'style="display:none"':''}>← 上一关</button><button class="btn btn-primary" id="nextBtn" disabled>${state.idx===DATA.levels.length-1?'查看结果 ✦':'下一关 →'}</button></div>`;const opts=$('#opts');shuffle(lv.opts.slice()).forEach(o=>{const b=document.createElement('button');b.className='opt';b.textContent=o.t;b.onclick=()=>answer(b,o,lv);opts.appendChild(b)});$('#nextBtn').onclick=()=>{state.idx===DATA.levels.length-1?showEnd():(state.idx++,renderLevel())};const prev=$('#prevBtn');if(prev)prev.onclick=()=>{state.idx--;renderLevel()}}
+function renderLevel(){renderSteps();scoreBadge.textContent='积分 '+state.score;state.answered=false;const lv=DATA.levels[state.idx];scene.innerHTML=`<span class="scene-tag">${lv.tag}</span><p class="story"><button type="button" class="tts-btn" onclick="ttsPlay('story',this)" title="听故事">🔊</button> ${lv.story}</p><div class="qbox"><p class="q"><button type="button" class="tts-btn" onclick="ttsPlay('q',this)" title="听题目">🔊</button> ${lv.q}</p><p class="hint">${lv.hint}</p><div class="opts" id="opts"></div><div class="feedback" id="feedback"></div></div><div class="nav"><button class="btn btn-ghost" id="prevBtn" ${state.idx===0?'style="display:none"':''}>← 上一关</button><button class="btn btn-primary" id="nextBtn" disabled>${state.idx===DATA.levels.length-1?'查看结果 ✦':'下一关 →'}</button></div>`;const opts=$('#opts');shuffle(lv.opts.slice()).forEach(o=>{const b=document.createElement('button');b.className='opt';b.textContent=o.t;b.onclick=()=>answer(b,o,lv);opts.appendChild(b)});$('#nextBtn').onclick=()=>{state.idx===DATA.levels.length-1?showEnd():(state.idx++,renderLevel())};const prev=$('#prevBtn');if(prev)prev.onclick=()=>{state.idx--;renderLevel()}}
 function answer(btn,opt,lv){if(state.answered)return;state.answered=true;document.querySelectorAll('.opt').forEach(b=>{const o=lv.opts.find(x=>x.t===b.textContent);if(o&&o.c)b.classList.add('ok');else if(b===btn)b.classList.add('no')});const fb=$('#feedback');fb.innerHTML=(opt.c?'🌟 ':'💡 ')+lv.fb;fb.classList.add('show');if(opt.c){state.score++;scoreBadge.textContent='积分 '+state.score}$('#nextBtn').disabled=false}
 function showEnd(){renderSteps();document.querySelectorAll('.step').forEach(s=>s.classList.add('done'));const full=state.score===DATA.levels.length;scene.innerHTML=`<div class="end"><div style="font-size:46px">${full?'🏅':'📖'}</div><h2>${full?'阅读徽章到手':'闯关完成'}</h2><p class="blurb">你获得 <b style="color:var(--gold)">${state.score} / ${DATA.levels.length}</b> 分。真正的通关，是能带着文本证据说出自己的理解。</p><div class="create"><h3>最后的创作任务：把阅读变成一张图</h3><p>请写一段图像提示词，包含“谁、在哪里、做什么、画面颜色或心情”。写好后点击生成，看看你的阅读画面会变成什么样。</p><div class="prompt-row"><input id="imagePrompt" value="《ieüeer》中最打动我的画面，儿童绘本风格，温暖光线，细节丰富"><button class="btn btn-primary" id="imageBtn">生成我的阅读插画</button></div><div class="image-box" id="imageBox"><img id="imageResult" alt="阅读插画"><div class="image-caption" id="imageCaption"></div></div></div><div class="nav"><button class="btn btn-ghost" id="againBtn">再玩一次</button></div></div>`;$('#againBtn').onclick=()=>{state={idx:0,score:0,answered:false};renderLevel()};$('#imageBtn').onclick=generateImage}
 const AGNES_CFG={key:'sk-sizYW5qbTggzJ2liRgzJ9wj7IYGajALpUBtvzOfY86h1BqRE',base:'https://apihub.agnes-ai.com/v1',model:'agnes-image-2.1-flash'};
