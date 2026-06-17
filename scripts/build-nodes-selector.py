@@ -17,7 +17,7 @@ data/nodes-selector.json 快照。
       ...
     ]
 
-学科白名单：math/chinese/physics/biology/english/chemistry/history/geography/info-tech
+学科白名单：math/chinese/physics/biology/english/chemistry/history/geography/info-tech/science/politics/psychology
 年级约定：1-6 = 小学；7-9 = 初中；10-12 = 高中；0 = 通识
 """
 import json
@@ -34,6 +34,7 @@ VALID_SUBJECTS = {
     'math', 'chinese', 'physics', 'biology', 'english',
     'chemistry', 'history', 'geography', 'info-tech',
     'science',  # K5 科学综合
+    'politics', 'psychology',
     'ela',      # 英语语言艺术（美式）
 }
 

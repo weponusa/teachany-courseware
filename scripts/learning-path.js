@@ -482,7 +482,8 @@ class LearningPathSystem {
     const subjectNames = {
       math: '📐 数学', biology: '🧬 生物', physics: '⚡ 物理',
       chemistry: '🧪 化学', geography: '🌍 地理', history: '🏛️ 历史',
-      chinese: '📖 语文', english: '🔤 英语', 'info-tech': '💻 信息技术'
+      chinese: '📖 语文', english: '🔤 英语', 'info-tech': '💻 信息技术',
+      science: '🔬 科学', politics: '⚖️ 道法', psychology: '💚 心理',
     };
 
     const gradeLabel = (g) => {
