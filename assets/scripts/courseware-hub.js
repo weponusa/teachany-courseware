@@ -325,6 +325,31 @@ function hasAnyCourseware(nodeId) {
 }
 
 /**
+ * tree.json 的 courses[] 常为预留 id；仅当 registry/community 能解析时才视为真实课件。
+ * @param {string[]} courses
+ * @returns {UnifiedCourse[]}
+ */
+function getResolvableTreeCourses(courses) {
+  if (!Array.isArray(courses) || !courses.length) return [];
+  const out = [];
+  const seen = new Set();
+  courses.forEach((courseId) => {
+    const id = typeof courseId === 'string' ? courseId.trim() : '';
+    if (!id || seen.has(id)) return;
+    const hit = getCourseById(id);
+    if (hit) {
+      seen.add(id);
+      out.push(hit);
+    }
+  });
+  return out;
+}
+
+function hasResolvableTreeCourses(courses) {
+  return getResolvableTreeCourses(courses).length > 0;
+}
+
+/**
  * 手动刷新索引（用户导入新课件后调用）
  */
 function refreshIndex() {
@@ -413,6 +438,8 @@ window.TeachAnyHub = {
   getBestCourseForNode,
   getNodeCourseCount,
   hasAnyCourseware,
+  getResolvableTreeCourses,
+  hasResolvableTreeCourses,
   getCourseById,  // v6.6: 新增
   searchByKeyword,  // v7.15: 新增
   refreshIndex,

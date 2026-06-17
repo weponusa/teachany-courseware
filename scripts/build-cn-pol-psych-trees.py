@@ -294,7 +294,7 @@ def make_node(
         "prerequisites": prerequisites,
         "extends": [],
         "parallel": [],
-        "courses": [nid],
+        "courses": [],
         "curriculum_points": curriculum_points,
         "stage": stage,
     }
