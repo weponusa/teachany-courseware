@@ -35,6 +35,7 @@ SUBJECT_LABEL = {
     "science": "科学", "math": "数学", "chinese": "语文", "english": "英语",
     "history": "历史", "geography": "地理", "biology": "生物", "chemistry": "化学",
     "physics": "物理", "info-tech": "信息科技", "politics": "道德与法治",
+    "psychology": "心理健康",
 }
 TEACHANY_VERSION = "7.20.0"
 

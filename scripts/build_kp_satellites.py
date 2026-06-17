@@ -50,6 +50,8 @@ def collect_nodes():
         except Exception as e:
             print(f'[WARN] skip {fp}: {e}')
             continue
+        if not isinstance(tree, dict) or 'domains' not in tree:
+            continue
         rel = os.path.relpath(fp, ROOT)
         # tree top metadata
         top = {

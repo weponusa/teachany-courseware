@@ -81,6 +81,8 @@ def main() -> int:
             "english",
             "geography",
             "science",
+            "politics",
+            "psychology",
             "info-tech",
         ):
             ok = enrich_cn_subject_satellite(data, force=args.force)

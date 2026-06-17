@@ -41,6 +41,7 @@ SUBJECT_META = {
     "physics": {"theme": "blue", "label": "物理", "lesson": "concept-inquiry"},
     "info-tech": {"theme": "blue", "label": "信息科技", "lesson": "computational-thinking"},
     "politics": {"theme": "orange", "label": "道德与法治", "lesson": "value-inquiry"},
+    "psychology": {"theme": "green", "label": "心理健康", "lesson": "reflection-activity"},
 }
 
 STAGE_LABEL = {"elementary": "小学", "middle": "初中", "high": "高中"}

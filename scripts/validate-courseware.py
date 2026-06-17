@@ -37,6 +37,8 @@ SUBJECT_PREFIXES = {
     'phy': 'physics', 'chem': 'chemistry', 'bio': 'biology',
     'hist': 'history', 'geo': 'geography', 'it': 'info-tech',
     'sci': 'science',  # v5.34.6 新增：小学科学
+    'pol': 'politics',
+    'psych': 'psychology',
 }
 
 LEVEL_INFIX = {

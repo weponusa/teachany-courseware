@@ -82,6 +82,8 @@ CN_SOURCE_NAMES = {
     "chinese": "chinese.md",
     "english": "english.md",
     "science": "science.md",
+    "politics": "morality-law-2022-outline.md",
+    "psychology": "psychology-2012-outline.md",
 }
 CN_HIGH_NAMES = {
     "math": "数学.md",

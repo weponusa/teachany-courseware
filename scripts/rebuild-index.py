@@ -279,6 +279,8 @@ def subject_to_tree_prefix(subject):
         'geography': ['geography-high'],
         'earth_science': ['earth-science-middle'],
         'science': ['science-elementary'],  # v5.34.6 新增：小学科学（2022 版课标）
+        'politics': ['politics-elementary', 'politics-middle', 'politics-high'],
+        'psychology': ['psychology-elementary', 'psychology-middle', 'psychology-high'],
         'info_tech': ['info-tech-high'],
     }
     return mapping.get(subject, [])
