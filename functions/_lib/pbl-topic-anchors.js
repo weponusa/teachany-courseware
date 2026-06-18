@@ -39,6 +39,11 @@ const THEME_LEX = [
     { keys: /语音|识别|声控|麦克风|唤醒词|ASR/i, subjects: ['info-tech', 'physics'], terms: ['语音', '识别', '信号', '算法', '传感', '交互', '控制'] },
     { keys: /LED|灯控|RGB|彩灯|GPIO|PWM|调光|指示灯/i, subjects: ['physics', 'info-tech', 'science'], terms: ['电路', '电流', '电压', '控制', '程序设计', '输出', '引脚'] },
     { keys: /光伏|太阳能发电|屋顶.*光伏|发电潜力|发电收益|碳减排|光电|日照|用电数据/, subjects: ['physics', 'math', 'science'], terms: ['光伏', '太阳能', '光电', '电功率', '能量转化', '能量守恒', '一次函数', '统计', '百分比', '碳排放', '日照', '发电', '电路', '电流', '电压'] },
+    { keys: /菌|真菌|蘑菇|食用菌|菌丝|发霉|发酵|培养基/, subjects: ['biology', 'science'], terms: ['微生物', '真菌', '细胞', '生态系统', '培养', '发酵', '生物'] },
+    { keys: /降解|分解|净化|吸附|生物修复|染料|废水|污染治理/, subjects: ['biology', 'chemistry', 'science'], terms: ['降解', '环境污染', '物质循环', '溶液', '浓度', '化学反应', '生态', '治理'] },
+    { keys: /对照实验|控制变量|自变量|因变量|重复实验|科学探究|变量设计/, subjects: ['science', 'physics', 'biology'], terms: ['控制变量', '对照实验', '科学探究', '实验设计', '测量', '记录', '数据分析'] },
+    { keys: /问卷|抽样|访谈|社会调查|田野/, subjects: ['politics', 'psychology', 'math', 'chinese'], terms: ['调查', '统计', '问卷', '抽样', '数据分析', '公民'] },
+    { keys: /欺凌|霸凌|情绪|心理|共情|同伴关系/, subjects: ['psychology', 'politics'], terms: ['情绪', '共情', '心理健康', '规则', '权利', '责任'] },
   ];
 
 function uniq(arr) {

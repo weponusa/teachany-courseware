@@ -141,6 +141,7 @@ export async function onRequestPost(context) {
         projectSpec: body.projectSpec || null,
         deliverable: body.deliverable || '',
         maxProposed: body.maxProposed || (body.complex ? 12 : 14),
+        candidates: body.candidates || [],
       });
     } else if (stage === 'validate-match') {
       messages = buildValidateMatchMessages({
