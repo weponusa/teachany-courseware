@@ -75,6 +75,10 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: 'Too many candidates' }, 400);
   }
 
+  if (stage === 'propose-curriculum' && Array.isArray(body.candidates) && body.candidates.length > 120) {
+    return jsonResponse({ error: 'Too many candidates' }, 400);
+  }
+
   if (stage === 'refine' && !String(body.userMessage || '').trim()) {
     return jsonResponse({ error: 'userMessage required' }, 400);
   }
