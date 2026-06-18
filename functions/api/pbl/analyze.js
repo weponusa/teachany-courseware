@@ -176,6 +176,7 @@ export async function onRequestPost(context) {
         projectBlueprint: body.projectBlueprint || null,
         bloomProfile: body.bloomProfile || null,
         archetypeId: body.archetypeId || null,
+        projectSpec: body.projectSpec || null,
       });
     }
   } catch (e) {

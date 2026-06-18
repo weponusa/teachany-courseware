@@ -1999,6 +1999,9 @@ function renderPBLDecomposeHTML(blueprint) {
   const schemes = blueprint.schemes || [];
   const recId = blueprint.recommendedSchemeId;
   let html = `<div class="pbl-decompose-summary">`;
+  if (blueprint.drivingQuestion) {
+    html += `<div class="pbl-driving-question" style="margin-bottom:10px;padding:10px 12px;background:rgba(99,102,241,0.1);border-left:3px solid var(--accent);font-size:14px"><strong>驱动性问题</strong>：${escapePBLHtml(blueprint.drivingQuestion)}</div>`;
+  }
   html += `<div><strong>交付物</strong>：${escapePBLHtml(blueprint.deliverable || '—')}</div>`;
   if (blueprint.moduleChain) {
     html += `<div><strong>模块主线</strong>：${escapePBLHtml(blueprint.moduleChain)}</div>`;
@@ -2025,6 +2028,25 @@ function renderPBLDecomposeHTML(blueprint) {
     blueprint.successCriteria.forEach(s => { html += `<li style="margin-bottom:4px">${escapePBLHtml(s)}</li>`; });
     html += `</ul></div>`;
   }
+  if (blueprint.reportOutline?.length) {
+    html += `<div style="margin:0 0 10px;font-size:13px"><strong>报告结构</strong><ol style="margin:4px 0 0 18px;color:var(--dim)">`;
+    blueprint.reportOutline.forEach(s => { html += `<li style="margin-bottom:3px">${escapePBLHtml(s)}</li>`; });
+    html += `</ol></div>`;
+  }
+  if (blueprint.formativeCheckpoints?.length) {
+    html += `<div style="margin:0 0 10px;font-size:13px"><strong>形成性检查点</strong><ul style="margin:4px 0 0 18px;color:var(--dim)">`;
+    blueprint.formativeCheckpoints.forEach(s => { html += `<li style="margin-bottom:3px">${escapePBLHtml(s)}</li>`; });
+    html += `</ul></div>`;
+  }
+  if (blueprint.collaborationRoles?.length) {
+    html += `<div style="margin:0 0 10px;font-size:13px"><strong>小组分工</strong><ul style="margin:4px 0 0 18px;color:var(--dim);list-style:none;padding-left:0">`;
+    blueprint.collaborationRoles.forEach(r => {
+      const role = typeof r === 'string' ? r : (r.role || '');
+      const duty = typeof r === 'string' ? '' : (r.duty || '');
+      html += `<li style="margin-bottom:4px"><strong>${escapePBLHtml(role)}</strong>${duty ? ` — ${escapePBLHtml(duty)}` : ''}</li>`;
+    });
+    html += `</ul></div>`;
+  }
   if ((blueprint.subsystems || []).length) {
     html += `<div class="pbl-subsystem-list">`;
     blueprint.subsystems.forEach(s => {
@@ -2043,6 +2065,9 @@ function renderPBLDecomposeHTML(blueprint) {
       html += `<ol class="pbl-decompose-phases" style="margin:8px 0 0 18px;font-size:13px;color:var(--dim)">`;
       s.phases.forEach(p => {
         html += `<li style="margin-bottom:12px"><strong>${escapePBLHtml(p.phase)}</strong>`;
+        if (p.venue || p.durationHint) {
+          html += `<div style="font-size:12px;color:var(--dimmer)">${escapePBLHtml([p.durationHint, p.venue].filter(Boolean).join(' · '))}</div>`;
+        }
         html += `<div style="margin:4px 0;color:var(--accent)">产出：${escapePBLHtml(p.deliverable || '')}</div>`;
         if (p.tools?.length) {
           html += `<div style="font-size:12px;color:var(--dimmer)">工具/模板：${p.tools.map(t => escapePBLHtml(t)).join('、')}</div>`;
@@ -2083,6 +2108,22 @@ function showPBLDecompose(result) {
   el.classList.remove('collapsed');
 }
 
+function formatPBLPhaseLiteracy(literacy) {
+  if (!literacy || typeof literacy !== 'object') return '';
+  const dims = [
+    ['知识', literacy.knowledge],
+    ['方法', literacy.method],
+    ['能力', literacy.ability],
+    ['态度', literacy.attitude],
+    ['情感', literacy.emotion],
+    ['价值观', literacy.values],
+  ];
+  return dims
+    .filter(([, v]) => v && String(v).trim())
+    .map(([k, v]) => `${k}：${escapePBLHtml(String(v).trim())}`)
+    .join('；');
+}
+
 function renderPBLPathPlanHTML(pathPlan) {
   if (!pathPlan || !pathPlan.phases || !pathPlan.phases.length) return '';
   const roleColor = { foundation: '#10b981', bridge: '#8b5cf6', core: '#ef4444' };
@@ -2094,18 +2135,36 @@ function renderPBLPathPlanHTML(pathPlan) {
     const badges = knowledgeList.length ? (p.pathStepLabels || []).slice(0, knowledgeList.length).map((l, bi) =>
       `<span class="pbl-step-badge" style="border-color:${color}" title="${escapePBLHtml(knowledgeList[bi] || '')}">${l}</span>`).join('') : '';
     const kn = knowledgeList.map(n => `「${escapePBLHtml(n)}」`).join('、');
+    const sceneRows = (p.knowledgeScenes || []).filter(s => s && s.name);
     const stepsHtml = (p.steps || []).map((s, si) =>
       `<li style="margin-bottom:6px"><span style="color:var(--accent);font-weight:600">${si + 1}.</span> ${escapePBLHtml(s)}</li>`
     ).join('');
-    const lit = '';
+    const lit = formatPBLPhaseLiteracy(p.literacy);
     const tools = (p.tools || []).map(t => escapePBLHtml(t)).join('、');
     html += `<article class="pbl-path-phase${idx === 0 ? ' active' : ''}" data-steps="${(p.pathSteps || []).join(',')}" onclick="highlightPBLPhase(this)">`;
     html += `<header><span class="pbl-phase-idx">阶段 ${p.phaseIndex}</span>`;
     html += `<span class="pbl-phase-graph">${badges}</span>`;
-    html += `<span class="pbl-phase-title">${escapePBLHtml(p.phase)}</span></header>`;
-    if (kn) html += `<div class="pbl-phase-row"><span class="lbl">知识点</span>${kn}</div>`;
+    html += `<span class="pbl-phase-title">${escapePBLHtml(p.phase)}</span>`;
+    if (p.venue || p.durationHint) {
+      html += `<span style="font-size:11px;color:var(--dimmer);margin-left:8px">${escapePBLHtml([p.durationHint, p.venue].filter(Boolean).join(' · '))}</span>`;
+    }
+    html += `</header>`;
+    if (sceneRows.length) {
+      html += `<div class="pbl-phase-row"><span class="lbl">知识应用</span><ul style="margin:0;padding-left:18px;font-size:13px">`;
+      sceneRows.forEach(s => {
+        html += `<li style="margin-bottom:4px"><strong>${escapePBLHtml(s.name)}</strong>：${escapePBLHtml(s.sceneUse || '')}</li>`;
+      });
+      html += `</ul></div>`;
+    } else if (kn) {
+      html += `<div class="pbl-phase-row"><span class="lbl">知识点</span>${kn}</div>`;
+    }
     if (tools) html += `<div class="pbl-phase-row"><span class="lbl">工具</span>${tools}</div>`;
     html += `<div class="pbl-phase-row"><span class="lbl">任务</span><ol style="margin:0;padding-left:18px">${stepsHtml}</ol></div>`;
+    if ((p.acceptance || []).length) {
+      html += `<div class="pbl-phase-row"><span class="lbl">验收</span><ul style="margin:0;padding-left:18px;font-size:12px;color:var(--dimmer)">`;
+      p.acceptance.forEach(a => { html += `<li>${escapePBLHtml(a)}</li>`; });
+      html += `</ul></div>`;
+    }
     if (lit) html += `<div class="pbl-phase-literacy"><span class="lbl">素养</span>${lit}</div>`;
     html += `<div class="pbl-phase-row"><span class="lbl">产出</span>${escapePBLHtml(p.deliverable)}</div></article>`;
   });

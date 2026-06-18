@@ -214,10 +214,10 @@ function genericDomainsForType(id, goal = '') {
       { id: 'conclusion', label: '分析与结论', keywords: ['分析', '结论', '解释', '规律', '报告'], subjects: ['science', 'math', 'chinese'] },
     ],
     'social-inquiry': [
-      { id: 'topic', label: '选题与调查设计', keywords: ['选题', '调查', '问卷', '访谈', '抽样', '样本', '维度', '指标'], subjects: ['chinese', 'math'] },
-      { id: 'collect', label: '资料与数据收集', keywords: ['资料', '数据', '收集', '记录', '文献', '实地', '史料', '案例'], subjects: ['geography', 'history', 'chinese'] },
-      { id: 'analyze', label: '整理与统计分析', keywords: ['统计', '整理', '图表', '分析', '百分比', '平均数', '对比'], subjects: ['math'] },
-      { id: 'report', label: '结论与报告', keywords: ['结论', '报告', '建议', '论证', '写作', '说明'], subjects: ['chinese'] },
+      { id: 'topic', label: '选题与调查设计', keywords: ['选题', '调查', '问卷', '访谈', '抽样', '样本', '维度', '指标'], subjects: ['chinese', 'math', 'politics', 'psychology'] },
+      { id: 'collect', label: '资料与数据收集', keywords: ['资料', '数据', '收集', '记录', '文献', '实地', '史料', '案例'], subjects: ['geography', 'history', 'chinese', 'politics', 'psychology'] },
+      { id: 'analyze', label: '整理与统计分析', keywords: ['统计', '整理', '图表', '分析', '百分比', '平均数', '对比'], subjects: ['math', 'psychology'] },
+      { id: 'report', label: '结论与报告', keywords: ['结论', '报告', '建议', '论证', '写作', '说明'], subjects: ['chinese', 'politics'] },
     ],
     'humanities-literary': [
       { id: 'theme', label: '立意与选材', keywords: ['立意', '主题', '选材', '构思', '观点'], subjects: ['chinese', 'english'] },
@@ -253,8 +253,8 @@ function genericDomainsForType(id, goal = '') {
       { id: 'status', label: '现状调查与数据', keywords: ['现状', '调查', '问卷', '统计', '数据', '测量', '记录', '比例', '图表'], subjects: ['math', 'biology', 'science'] },
       { id: 'mechanism', label: '科学原理与生理机制', keywords: ['原理', '机制', '结构', '成因', '凸透镜', '晶状体', '视网膜', '睫状肌', '光学', '成像', '折射', '消化', '吸收', '代谢', '循环', '呼吸', '细胞', '神经', '肌肉', '骨骼'], subjects: ['physics', 'biology', 'chemistry', 'science'] },
       { id: 'prevention', label: '预防/干预原理与方法', keywords: ['预防', '矫正', '凹透镜', '焦距', '屈光', '营养素', '膳食', '训练', '恢复', '保护', '防护', '干预', '治疗'], subjects: ['biology', 'physics', 'chemistry', 'science'] },
-      { id: 'plan', label: '方案制定与宣传', keywords: ['计划', '方案', '目标', '公约', '标准', '倡议', '宣传', '海报', '说明文'], subjects: ['chinese', 'math'] },
-      { id: 'assess', label: '实践记录与评估', keywords: ['记录', '评估', '对比', '反馈', '改进', '报告', '数据跟踪'], subjects: ['chinese', 'math', 'science'] },
+      { id: 'plan', label: '方案制定与宣传', keywords: ['计划', '方案', '目标', '公约', '标准', '倡议', '宣传', '海报', '说明文'], subjects: ['chinese', 'math', 'politics', 'psychology'] },
+      { id: 'assess', label: '实践记录与评估', keywords: ['记录', '评估', '对比', '反馈', '改进', '报告', '数据跟踪'], subjects: ['chinese', 'math', 'science', 'psychology'] },
     ],
     'planting-cultivation': [
       { id: 'taxonomy', label: '植物识别与分类', keywords: ['植物', '分类', '特征', '结构', '器官'], subjects: ['science', 'biology'] },
@@ -379,12 +379,25 @@ function typeMatchHints(goal) {
 // 七、系统提示词 — Match 阶段
 // ============================================================
 
-function systemPromptMatch(complex, goal) {
+function formatPolPsychLiteracyHint(projectSpec) {
+  if (!projectSpec) return '';
+  const subs = Array.isArray(projectSpec.subjects) && projectSpec.subjects.length
+    ? projectSpec.subjects.filter(id => id && id !== 'cross')
+    : (projectSpec.subject && projectSpec.subject !== 'cross' ? [projectSpec.subject] : []);
+  const hasPol = subs.includes('politics');
+  const hasPsych = subs.includes('psychology');
+  if (!hasPol && !hasPsych) return '';
+  const labels = [hasPol && '道法', hasPsych && '心理'].filter(Boolean).join('+');
+  return `\n【${labels}学科】每阶段 literacy.ability 须补充高层社会性能力（社交沟通、团队合作、协商说服、共情倾听等），结合本阶段任务具体化，禁止套话。`;
+}
+
+function systemPromptMatch(complex, goal, projectSpec = null) {
+  const polPsychHint = formatPolPsychLiteracyHint(projectSpec);
   const base = `PBL 课标路径编排。${formatTopicAnchorBlock(goal)}｜${typeGuardrailBlock(goal)}
 
 选点门禁：①reason以「模块：」开头 ②删掉会卡住该模块才选 ③名称须来自候选列表。
 角色：foundation/bridge/core。标准：贴合交付物>凑学科；精准5-8个。
-禁：编造节点、泛素养、空话steps、跑题凑数。${ANTI_VACUUM_BLOCK}`;
+禁：编造节点、泛素养、空话steps、跑题凑数。${ANTI_VACUUM_BLOCK}${polPsychHint}`;
 
   if (!complex) {
     return `${base}
@@ -394,6 +407,7 @@ function systemPromptMatch(complex, goal) {
 - 每个 matched 的 reason 以「模块：」开头
 - dependsOn 构成 DAG；pathOrder 满足依赖顺序
 - projectPhases 3-5 阶段，每阶段 literacy 六维（知识/方法/能力/态度/情感/价值观）各 1 句，结合学科与项目类型，禁止套话
+- 每阶段 knowledgeScenes：对 knowledgeNames 中每个知识点写 1 句「本项目场景用法」（如何将课标知识用于本题任务，禁空话）
 - knowledgeChain 用 → 串联模块递进
 
 只返回 JSON，不要 markdown，不要解释。`;
@@ -414,14 +428,30 @@ function systemPromptMatch(complex, goal) {
 // 八、系统提示词 — Decompose 阶段（泛化版，去掉特定 hint 函数）
 // ============================================================
 
+// ============================================================
+// 七-b、PBL 教学设计逻辑（通用，禁止抄袭固定项目模板）
+// ============================================================
+
+const PBL_DESIGN_LOGIC_BLOCK = `
+【PBL 教学设计逻辑 · 必须体现在 JSON 中】
+1. drivingQuestion：可验证、有约束、指向最终 deliverable（一句问句，含本题专名）
+2. 旅程：推荐方案 phases 4-5，覆盖「准备→探究/调研→分析/建模→决策/展示」；每阶段写 venue（教室/机房/校外/家庭/线上）
+3. 脚手架：每阶段 tools 写可复用模板/记录表/计算表（工具辅助过程，不等于抄答案）
+4. formativeCheckpoints：3-6 条形成性检查点，教师可核查（含阶段名+验收物）
+5. reportOutline：3-7 段，对应最终 deliverable 的章节结构（按本题自定义，禁套固定范例）
+6. collaborationRoles：2-4 人小组时写角色+职责（按任务类型自定义）
+7. 每阶段 acceptance：2-4 条可勾选验收项（□ 开头）
+须按本题专名与交付物自定义，禁止照搬任何固定项目（如购车/研学等）的固定句式。`;
+
 function systemPromptDecompose(complex, goal) {
   const p = projectTypeProfile(goal);
   const depth = complex ? '2-3套路线并推荐1套' : '≥2套路线并推荐1套';
   return `PBL 全链路拆解（本阶段不选课标）。${formatTopicAnchorBlock(goal)}｜${typeGuardrailBlock(goal)}
 
 ${DECOMPOSE_DEPTH_BLOCK}
+${PBL_DESIGN_LOGIC_BLOCK}
 
-输出：交付物+约束+scopeLimits+successCriteria+subsystems+${depth}+推荐方案 phases（steps/deliverable/knowledgeHints）。
+输出：drivingQuestion+交付物+约束+scopeLimits+successCriteria+reportOutline+formativeCheckpoints+collaborationRoles+subsystems+${depth}+推荐方案 phases（venue/steps/deliverable/tools/acceptance/knowledgeHints）。
 ${ANTI_VACUUM_BLOCK}
 禁复述：phase/deliverable/steps/scheme名禁止出现【学科】【任务】或粘贴全文goal。
 去重：各phase steps零重叠；steps≠deliverable同义复述；summary/pros/cons/约束字段互不复制。
@@ -449,8 +479,12 @@ function userPromptDecompose(goal, complex) {
 
 返回 JSON（严格遵循字段名）：
 {
+  "drivingQuestion": "一句驱动性问题（含本题专名与约束）",
   "projectSummary": "一句话概括项目",
   "deliverable": "最终交付物",
+  "reportOutline": ["报告/成果第1部分", "第2部分"],
+  "formativeCheckpoints": ["第1周末：…可核查", "第2周中：…"],
+  "collaborationRoles": [{"role": "角色名", "duty": "职责"}],
   "constraints": ["时间/安全/器材等约束"],
   "scopeLimits": ["不能宣称的结论或能力边界，至少2条"],
   "successCriteria": ["可检查的验收标准，至少2条"],
@@ -467,8 +501,12 @@ function userPromptDecompose(goal, complex) {
       "phases": [
         {
           "phase": "阶段名",
+          "venue": "教室/校外/家庭/线上",
+          "durationHint": "约1周或2课时",
           "steps": ["任务1", "任务2"],
           "deliverable": "阶段产出",
+          "tools": ["记录表模板", "计算工作表"],
+          "acceptance": ["□ 验收项1", "□ 验收项2"],
           "subsystemIds": ["xxx"],
           "knowledgeHints": ["检索关键词1", "检索关键词2"]
         }
@@ -500,7 +538,7 @@ function systemPromptFilter(complex, goal) {
 输出 subjects/systems/grades/projectDomains/bloomCeiling；根据题目地点/时代/主题延展思考后选取学科（可跨全科，不限项目类型），如「英国研学」须含英国地理与世界/欧洲史相关检索方向。subjects 可留空[]表示不限。${gradeHint} 只返回JSON。`;
 }
 
-function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomProfile = null) {
+function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomProfile = null, projectSpec = null) {
   const domains = inferProjectDomains(goal);
   const blueprintBlock = formatBlueprintForMatch(projectBlueprint);
   const domainBlock = domains.length
@@ -509,7 +547,7 @@ function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomPro
   const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
   const bloomBlock = formatBloomHintForFilter(bloom);
   const gradeHint = complex ? '；grades通常7-12' : '';
-  const ctx = buildCompactUserContext({ goal, projectBlueprint, includeBlueprint: false });
+  const ctx = buildCompactUserContext({ goal, projectSpec, projectBlueprint, includeBlueprint: false });
   return `${ctx}${blueprintBlock}${domainBlock}${bloomBlock}
 课标体系：${summaryList}
 
@@ -525,7 +563,7 @@ function userPromptFilter(goal, summaryList, complex, projectBlueprint, bloomPro
   "reasoning": "说明各模块对应的学科与年级"
 }
 
-subjects取值math/physics/chemistry/biology/chinese/english/history/geography/info-tech/science；按题目需要填写2-5科，无需限制时可返回[]；systems为cn/ap/cambridge/ib/us${gradeHint}`;
+subjects取值math/physics/chemistry/biology/chinese/english/history/geography/info-tech/science/politics/psychology；按题目需要填写2-5科，无需限制时可返回[]；systems为cn/ap/cambridge/ib/us${gradeHint}`;
 }
 
 // ============================================================
@@ -555,7 +593,10 @@ const FORMAT_EXAMPLE_COMPLEX = `
         "attitude": "严谨/认真/负责的态度",
         "emotion": "对XXX产生好奇/成就感",
         "values": "树立YYY意识"
-      }
+      },
+      "knowledgeScenes": [
+        {"name": "候选列表中的节点名称", "sceneUse": "在本项目中用于…（具体场景句）"}
+      ]
     }
   ],
   "external": [
@@ -580,7 +621,7 @@ const FORMAT_EXAMPLE_NORMAL = `
   "techRoute": "按模块递进实施"
 }`;
 
-function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint, bloomProfile = null, archetypeId = null) {
+function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, domainHints, projectBlueprint, bloomProfile = null, archetypeId = null, projectSpec = null) {
   const matchedRange = complex ? `5-${Math.min(maxMatched, 8)}` : `8-${maxMatched}`;
   const externalMax = complex ? 2 : 3;
   const domains = domainHints && domainHints.length ? domainHints : inferProjectDomains(goal);
@@ -602,7 +643,7 @@ function userPromptMatch(goal, candidateList, complex, maxMatched, minConf, doma
   const archetypeBlock = formatArchetypeForMatch(archetype, projectBlueprint);
   const registryBlock = archetype ? formatRegistryForMatch(archetype.id) : '';
 
-  const ctx = buildCompactUserContext({ goal, projectBlueprint });
+  const ctx = buildCompactUserContext({ goal, projectSpec, projectBlueprint });
   return `${ctx}${blueprintSection}${domainSection}${archetypeBlock}${bloomBlock}${registryBlock}
 候选（matched仅选下列index，先对齐蓝图阶段）：
 ${candidateList}
@@ -618,7 +659,7 @@ ${example}
 const SUBJECT_ZH = {
   math: '数学', physics: '物理', chemistry: '化学', biology: '生物',
   science: '科学', 'info-tech': '信息技术', chinese: '语文', english: '英语',
-  history: '历史', geography: '地理',
+  history: '历史', geography: '地理', politics: '道法', psychology: '心理',
   engineering: '工程', 'computer-science': '计算机科学',
 };
 
@@ -639,6 +680,7 @@ export function buildPBMessages(stage, payload) {
     projectBlueprint = null,
     bloomProfile = null,
     archetypeId = null,
+    projectSpec = null,
   } = payload;
 
   if (stage === 'decompose') {
@@ -652,7 +694,7 @@ export function buildPBMessages(stage, payload) {
     const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
     return [
       { role: 'system', content: systemPromptFilter(complex, goal) },
-      { role: 'user', content: userPromptFilter(goal, summaryList, complex, projectBlueprint, bloom) },
+      { role: 'user', content: userPromptFilter(goal, summaryList, complex, projectBlueprint, bloom, projectSpec) },
     ];
   }
 
@@ -670,10 +712,10 @@ export function buildPBMessages(stage, payload) {
     const bloom = bloomProfile || inferBloomFromBlueprint(projectBlueprint);
 
     return [
-      { role: 'system', content: systemPromptMatch(complex, goal) },
+      { role: 'system', content: systemPromptMatch(complex, goal, projectSpec) },
       {
         role: 'user',
-        content: userPromptMatch(goal, candidateList, complex, maxMatched, minConf, hints, projectBlueprint, bloom, archetypeId),
+        content: userPromptMatch(goal, candidateList, complex, maxMatched, minConf, hints, projectBlueprint, bloom, archetypeId, projectSpec),
       },
     ];
   }

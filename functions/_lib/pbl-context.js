@@ -4,8 +4,26 @@
 
 import { formatGradeConstraint } from './pbl-grade-constraint.js';
 
+const SUBJECT_ID_ZH = {
+  math: '数学', physics: '物理', chemistry: '化学', biology: '生物', science: '科学',
+  chinese: '语文', english: '英语', history: '历史', geography: '地理',
+  'info-tech': '信息技术', art: '艺术', politics: '道法', psychology: '心理',
+};
+
+function formatSubjectConstraint(projectSpec) {
+  if (!projectSpec) return '';
+  if (Array.isArray(projectSpec.subjects) && projectSpec.subjects.length) {
+    const ids = projectSpec.subjects.filter(id => id && id !== 'cross');
+    if (ids.length) return ids.map(id => SUBJECT_ID_ZH[id] || id).join('+');
+  }
+  if (projectSpec.subject && projectSpec.subject !== 'cross') {
+    return SUBJECT_ID_ZH[projectSpec.subject] || projectSpec.subject;
+  }
+  return '';
+}
+
 const SUBJECT_LABELS = new Set([
-  '跨学科', '数学', '物理', '化学', '生物', '科学', '语文', '英语', '历史', '地理', '信息技术', '艺术',
+  '跨学科', '数学', '物理', '化学', '生物', '科学', '语文', '英语', '历史', '地理', '信息技术', '艺术', '道法', '心理',
 ]);
 
 /** 从结构化 goal 提取任务正文（兼容【任务】与｜分隔单行格式） */
@@ -69,9 +87,11 @@ export function buildCompactUserContext({
     || extractDeliverableFromGoal(goal)
     || '';
   const grade = formatGradeConstraint(projectSpec);
+  const subject = formatSubjectConstraint(projectSpec);
   const lines = [`目标:${task}`];
   if (deliv) lines.push(`交付:${deliv}`);
   if (grade) lines.push(`学段:${grade}`);
+  if (subject) lines.push(`学科:${subject}`);
   if (includeBlueprint && projectBlueprint) {
     const bp = compactBlueprintHeader(projectBlueprint);
     if (bp) lines.push(`蓝图:${bp}`);

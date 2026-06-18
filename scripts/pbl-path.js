@@ -3246,7 +3246,197 @@ class PBLPathBuilder {
         }
       });
     });
+    return this._enrichBlueprintPedagogy(goal, bp);
+  }
+
+  /** 通用 PBL 教学设计加厚：驱动性问题、场景 venue、形成性检查、报告结构、协作角色 */
+  _enrichBlueprintPedagogy(goal, blueprint) {
+    if (!blueprint?.schemes?.length) return blueprint;
+    const bp = blueprint;
+    const type = this._classifyProjectType(goal);
+    const art = this._compactProjectLabel(goal, this._extractTopicProfile(goal));
+
+    if (!bp.drivingQuestion || bp.drivingQuestion.length < 12) {
+      bp.drivingQuestion = this._synthesizeDrivingQuestion(goal, bp);
+    }
+    if (!Array.isArray(bp.reportOutline) || bp.reportOutline.length < 3) {
+      bp.reportOutline = this._inferReportOutline(goal, bp, type);
+    }
+    if (!Array.isArray(bp.formativeCheckpoints) || bp.formativeCheckpoints.length < 3) {
+      bp.formativeCheckpoints = this._inferFormativeCheckpoints(goal, bp);
+    }
+    if ((!Array.isArray(bp.collaborationRoles) || !bp.collaborationRoles.length)
+      && this._suggestsGroupCollaboration(goal, type)) {
+      bp.collaborationRoles = this._inferCollaborationRoles(goal, type);
+    }
+
+    bp.schemes = (bp.schemes || []).map(s => ({
+      ...s,
+      phases: (s.phases || []).map((p, i, arr) => {
+        const role = i === 0 ? 'foundation' : (i < arr.length - 1 ? 'bridge' : 'core');
+        const acceptance = (p.acceptance || []).length
+          ? p.acceptance
+          : (p.steps || []).slice(0, 3).map(st =>
+            `□ ${String(st).slice(0, 42)}${String(st).length > 42 ? '…' : ''}（有记录/签字）`);
+        return {
+          ...p,
+          venue: p.venue || this._inferPhaseVenue(goal, p.phase, role, type, i, arr.length),
+          durationHint: p.durationHint || this._inferPhaseDurationHint(i, arr.length),
+          tools: (p.tools || []).length ? p.tools : this._inferPhaseTools(goal, p.phase, this._goalProfile(goal, bp)),
+          acceptance,
+        };
+      }),
+    }));
     return bp;
+  }
+
+  _synthesizeDrivingQuestion(goal, blueprint) {
+    const g = String(goal || '').trim();
+    const qMatch = g.match(/[^。！？\n]{6,90}[？?]/);
+    if (qMatch) return qMatch[0].replace(/^【[^】]+】/g, '').trim();
+    const art = this._compactProjectLabel(goal, this._extractTopicProfile(goal));
+    const deliv = blueprint?.deliverable || '';
+    const constraint = (blueprint?.constraints || [])[0] || '';
+    const type = this._classifyProjectType(goal);
+    const opener = ({
+      'consumer-decision': '在给定约束下，如何用学科方法比较并决策',
+      'social-inquiry': '如何通过调查与数据分析回答',
+      'scientific-inquiry': '如何通过实验与证据探究',
+      'engineering': '如何设计、制作并验证',
+      'health-life': '如何基于科学原理制定并评估',
+      'life-planning': '如何策划并执行',
+      'study-trip': '如何通过实地调研完成',
+    })[type] || '如何围绕真实情境完成';
+    let q = `${opener}「${art}」`;
+    if (deliv && deliv.length >= 4) q += `，并产出${deliv}`;
+    q += '？';
+    if (constraint && constraint.length >= 4) q += `（须考虑：${constraint.slice(0, 36)}）`;
+    return q;
+  }
+
+  _inferReportOutline(goal, blueprint, type) {
+    const art = this._compactProjectLabel(goal, this._extractTopicProfile(goal));
+    const maps = {
+      'consumer-decision': [
+        `背景与需求（「${art}」情境）`, '约束条件与筛选标准', '方案对比与数据表', '模型测算与假设说明', '推荐结论与理由', '局限与未解决问题',
+      ],
+      'social-inquiry': [
+        `问题与样本设计（「${art}」）`, '调查方法与数据来源', '数据整理与统计发现', '分析与解释', '建议或倡议', '局限说明',
+      ],
+      'scientific-inquiry': ['问题与假设', '实验设计与变量', '数据记录与处理', '分析与结论', '误差与改进'],
+      'engineering': ['需求与指标', '方案与结构设计', '制作与调试记录', '测试数据与分析', '迭代说明与展示'],
+      'health-life': ['现状调查', '科学原理说明', '干预/预防方案', '实践记录', '效果评估与宣传'],
+      'humanities-literary': ['立意与选材', '结构与表达', '修改过程', '作品定稿', '创作说明'],
+    };
+    return maps[type] || [
+      `背景与任务（「${art}」）`, '过程与方法', '数据/证据', '分析与发现', '结论与建议', '反思',
+    ];
+  }
+
+  _inferFormativeCheckpoints(goal, blueprint) {
+    const scheme = this._getRecommendedScheme(blueprint);
+    const phases = scheme?.phases || [];
+    const checks = [];
+    phases.forEach((p, i) => {
+      const week = i + 1;
+      const deliv = p.deliverable || p.phase || `阶段${i + 1}`;
+      checks.push(`第${week}阶段末：提交「${String(deliv).slice(0, 28)}」并经教师/组长核查`);
+    });
+    if (blueprint?.deliverable) {
+      checks.push(`终稿前：${String(blueprint.deliverable).slice(0, 32)} 同伴互评 1 轮`);
+    }
+    return checks.slice(0, 6);
+  }
+
+  _suggestsGroupCollaboration(goal, type) {
+    if (/小组|团队|合作|分工/.test(String(goal || ''))) return true;
+    return ['consumer-decision', 'social-inquiry', 'engineering', 'life-planning',
+      'exhibition-redesign', 'study-trip', 'business-economics', 'health-life'].includes(type);
+  }
+
+  _inferCollaborationRoles(goal, type) {
+    const maps = {
+      'consumer-decision': [
+        { role: '需求调研员', duty: '收集资料、填写数据采集表并标注来源' },
+        { role: '建模分析员', duty: '建立对比/测算模型并核对假设' },
+        { role: '可视化设计', duty: '制作统计图、对比表与 PPT 图表' },
+        { role: '报告与答辩', duty: '整合报告、准备汇报与答辩要点' },
+      ],
+      'engineering': [
+        { role: '调研与需求', duty: '明确指标、记录约束与测试标准' },
+        { role: '设计与制作', duty: '方案草图、搭建/编程与过程记录' },
+        { role: '测试与数据', duty: '测量、记录数据并分析误差' },
+        { role: '文档与展示', duty: '验收表、展示稿与答辩' },
+      ],
+      'social-inquiry': [
+        { role: '调查设计', duty: '问卷/访谈提纲与抽样方案' },
+        { role: '数据采集', duty: '发放回收、实地记录与来源标注' },
+        { role: '统计分析', duty: '整理表格、制图与发现归纳' },
+        { role: '报告撰写', duty: '报告结构与答辩准备' },
+      ],
+    };
+    return maps[type] || [
+      { role: '资料采集', duty: '调研、记录与来源标注' },
+      { role: '分析建模', duty: '数据处理、计算或实验记录' },
+      { role: '成果整合', duty: '报告/作品整合与排版' },
+      { role: '展示答辩', duty: '汇报演示与互评' },
+    ];
+  }
+
+  _inferPhaseVenue(goal, phaseName, role, type, index, total) {
+    const phase = String(phaseName || '');
+    if (/校外|实地|4S|田野|研学|走访|参观|市场|店铺/.test(phase)) return '校外/实地';
+    if (/线上|网络|文献|检索/.test(phase)) return '线上+教室';
+    if (/家庭|居家|课后/.test(phase)) return '家庭+教室';
+    if (/展示|汇报|答辩|评审/.test(phase) || (role === 'core' && index === total - 1)) return '教室';
+    if (/调研|调查|访谈|问卷|采集/.test(phase)) {
+      return type === 'study-trip' ? '校外+线上' : '校外/家庭+线上';
+    }
+    if (role === 'foundation' || /知识|准备|学习|课件/.test(phase)) return '教室/机房';
+    if (role === 'bridge') return '教室+家庭';
+    return '教室';
+  }
+
+  _inferPhaseDurationHint(index, total) {
+    if (total <= 3) return `约第 ${index + 1} 阶段（${index === 0 ? '1' : '1–2'} 周）`;
+    return `约第 ${index + 1} 周`;
+  }
+
+  _inferKnowledgeSceneUse(node, goal) {
+    if (!node?.name) return '';
+    const name = String(node.name);
+    const art = this._compactProjectLabel(goal, this._extractTopicProfile(goal));
+    const subj = node.subject || '';
+    if (/函数|方程|不等式/.test(name)) {
+      return `建立「${art}」中的数量关系或约束条件，用于测算、对比或筛选`;
+    }
+    if (/统计|数据|平均|方差|百分比|图表/.test(name)) {
+      return `整理「${art}」的调研/实验数据并制图对比`;
+    }
+    if (/说明文|写作|论证|报告/.test(name) || subj === 'chinese') {
+      return `撰写「${art}」阶段性或最终说明/论证段落`;
+    }
+    if (/实验|探究|变量|测量/.test(name)) {
+      return `设计并完成与「${art}」相关的实验或观测`;
+    }
+    if (subj === 'politics') {
+      return `从规则、责任或公共议题角度分析「${art}」中的价值判断与行动建议`;
+    }
+    if (subj === 'psychology') {
+      return `运用沟通、共情或自我认知理解「${art}」中的人际与情绪因素`;
+    }
+    return `将「${name}」应用于「${art}」的本阶段任务`;
+  }
+
+  _buildKnowledgeScenes(knowledgeNames, matchedNodes, goal) {
+    const byName = new Map((matchedNodes || []).map(n => [n.name, n]));
+    return (knowledgeNames || []).filter(Boolean).map(name => {
+      const node = byName.get(name);
+      return {
+        name,
+        sceneUse: node ? this._inferKnowledgeSceneUse(node, goal) : `支撑「${this._compactProjectLabel(goal)}」本阶段任务`,
+      };
+    });
   }
 
   /** 从用户输入提取交付物锚点 — 一切任务步骤必须围绕此展开，禁止套其他项目模板 */
@@ -3774,6 +3964,19 @@ class PBLPathBuilder {
     const phase = String(phaseName || '');
     const profile = profileOrType?.artifact ? profileOrType : this._goalProfile(goal);
     const g = profile.raw || goal;
+    const type = this._classifyProjectType(g);
+    if (this._isConsumerDecisionGoal(g) || type === 'consumer-decision') {
+      if (/调研|需求|收集|资料/.test(phase)) return ['需求清单模板', '数据采集表', '来源标注规范'];
+      if (/对比|筛选|约束|比选/.test(phase)) return ['约束条件清单', '方案对比矩阵', '假设说明表'];
+      if (/测算|模型|成本|函数|计算|分析/.test(phase)) return ['计算工作表', '假设参数表', '图表模板'];
+      if (/报告|决策|建议|论证/.test(phase)) return ['报告提纲', '论证段落模板', '答辩要点清单'];
+    }
+    if (type === 'social-inquiry') {
+      if (/选题|设计|问卷|访谈/.test(phase)) return ['问卷/访谈提纲模板', '抽样方案表', '伦理说明'];
+      if (/收集|实地|调查/.test(phase)) return ['数据采集表', '来源标注规范', '照片/录音编号表'];
+      if (/统计|整理|分析/.test(phase)) return ['统计表模板', '图表工具', '异常值处理说明'];
+      if (/报告|结论/.test(phase)) return ['报告结构模板', '论证检查表', '答辩提纲'];
+    }
     if (/算力中心|数据中心|太空算力|卫星计算|轨道计算/.test(String(g || ''))) {
       if (/需求|约束|原理|调研/.test(phase)) return ['需求矩阵模板', '公开技术资料', '指标清单'];
       if (/架构|结构|设计|方案/.test(phase)) return ['系统架构图模板', '方案对比矩阵', '风险清单'];
@@ -4974,10 +5177,6 @@ class PBLPathBuilder {
     return { nodes: graphData.nodes, links: this._deduplicateLinks(links) };
   }
 
-  _formatPhaseLiteracy() {
-    return '';
-  }
-
   static PATH_STEP_CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫'];
 
   _pathStepCircled(step) {
@@ -5362,6 +5561,65 @@ class PBLPathBuilder {
     };
   }
 
+  _hasPolPsychSubjectSpec() {
+    const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec) || [];
+    return specSubjects.includes('politics') || specSubjects.includes('psychology');
+  }
+
+  /** 道法/心理学科：在 literacy.ability 层补充社交、合作、说服等高层能力 */
+  _supplementPolPsychLiteracy(literacy = {}, ctx = {}) {
+    const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec) || [];
+    const hasPol = specSubjects.includes('politics');
+    const hasPsych = specSubjects.includes('psychology');
+    if (!hasPol && !hasPsych) return literacy || {};
+
+    const lit = { ...(literacy || {}) };
+    const role = ctx.role || 'core';
+    const supplements = {
+      foundation: hasPol && hasPsych
+        ? '能倾听他人观点并初步协商分工，觉察自身与他人情绪'
+        : (hasPol
+          ? '能倾听并尊重不同意见，初步理解他人立场与社会规则'
+          : '能觉察自身与他人情绪，建立基本信任与沟通关系'),
+      bridge: hasPol && hasPsych
+        ? '能与同伴协作完成任务，运用协商沟通化解分歧'
+        : (hasPol
+          ? '能在团队中分工协作，运用理性论证表达观点'
+          : '能与同伴合作探究，运用共情与倾听技巧理解他人'),
+      core: hasPol && hasPsych
+        ? '能组织小组讨论，运用说服与论证策略推动共识并形成行动倡议'
+        : (hasPol
+          ? '能撰写倡议或演讲稿，运用说服性表达影响他人'
+          : '能开展同伴访谈或小组辅导，运用沟通与引导技巧提供支持'),
+    };
+    const extra = supplements[role] || supplements.core;
+    const existing = String(lit.ability || '').trim();
+    if (!existing || PBLPathBuilder.GENERIC_TRANSVERSAL_RE.test(existing)) {
+      lit.ability = extra;
+    } else if (!/社交|合作|说服|协商|共情|倾听|沟通|团队|协作|影响|讨论/.test(existing)) {
+      lit.ability = `${existing}；${extra}`;
+    }
+    return lit;
+  }
+
+  _formatPhaseLiteracy(p) {
+    if (!p) return '';
+    const lit = p.literacy;
+    if (!lit || typeof lit !== 'object') return '';
+    const dims = [
+      ['知识', lit.knowledge],
+      ['方法', lit.method],
+      ['能力', lit.ability],
+      ['态度', lit.attitude],
+      ['情感', lit.emotion],
+      ['价值观', lit.values],
+    ];
+    return dims
+      .filter(([, v]) => v && String(v).trim())
+      .map(([k, v]) => `${k}：${String(v).trim()}`)
+      .join('；');
+  }
+
   /**
    * 路径拆解模式：以图谱 pathStep 为主线，合并 LLM 阶段任务/素养/产出
    */
@@ -5382,6 +5640,11 @@ class PBLPathBuilder {
           const circ = this._pathStepCircled(n.pathStep);
           return `阅读${circ}「${n.name}」要点，完成 1 份与本阶段产出相关的记录或计算（附数据/例证）`;
         });
+      const knNames = keptNodes.map(n => n.name);
+      const llmScenes = lp.knowledgeScenes || bp.knowledgeScenes || [];
+      const knowledgeScenes = llmScenes.length
+        ? llmScenes
+        : this._buildKnowledgeScenes(knNames, keptNodes, goal);
       return {
         phaseIndex: g.phaseIndex,
         phase: lp.phase || bp.phase || lp.name || g.phase,
@@ -5390,12 +5653,15 @@ class PBLPathBuilder {
         pathStepLabels: keptNodes.map(n => this._pathStepCircled(n.pathStep)),
         graphRef: keptNodes.map(n => this._pathStepCircled(n.pathStep)).join(''),
         nodeIds: keptNodes.map(n => n.id),
-        knowledgeNames: keptNodes.map(n => n.name),
+        knowledgeNames: knNames,
+        knowledgeScenes,
+        venue: lp.venue || bp.venue || '',
+        durationHint: lp.durationHint || bp.durationHint || '',
         steps,
         deliverable: this._pickConcreteDeliverable(lp, bp, g.role, goal),
         tools: bp.tools || lp.tools || this._inferPhaseTools(goal, lp.phase || bp.phase || g.phase, this._classifyProjectType(goal)),
         acceptance: bp.acceptance || lp.acceptance || [],
-        literacy: {}
+        literacy: this._supplementPolPsychLiteracy(this._literacyFromLlmPhase(lp), { role: g.role, phaseIndex: g.phaseIndex }),
       };
     });
     const chain = knowledgeChain || mainline.map(n => n.name).join(' → ');
@@ -5432,7 +5698,7 @@ class PBLPathBuilder {
             knowledgeNames: p.knowledgeNames || [],
             steps: p.steps || [],
             deliverable: p.deliverable || '',
-            literacy: p.literacy || {}
+            literacy: this._supplementPolPsychLiteracy(p.literacy || {}, { role: 'core', phaseIndex: i + 1 })
           })),
           external: []
         };
@@ -5470,7 +5736,8 @@ class PBLPathBuilder {
   _subjectLabel(subject) {
     const map = {
       math: '数学', physics: '物理', chemistry: '化学', biology: '生物', science: '科学',
-      'info-tech': '信息技术', chinese: '语文', english: '英语', history: '历史', geography: '地理'
+      'info-tech': '信息技术', chinese: '语文', english: '英语', history: '历史', geography: '地理',
+      politics: '道法', psychology: '心理',
     };
     return map[subject] || subject || '';
   }
@@ -7323,7 +7590,9 @@ class PBLPathBuilder {
           lp.knowledgeNames?.length ? lp.knowledgeNames : bp.knowledgeNames, goal
         ),
         deliverable: this._pickConcreteDeliverable(lp, bp, bp.role, goal),
-        literacy: lp.literacy || bp.literacy,
+        literacy: this._supplementPolPsychLiteracy(lp.literacy || bp.literacy || {}, { role: bp.role || 'core', phaseIndex: i + 1 }),
+        knowledgeScenes: lp.knowledgeScenes || bp.knowledgeScenes || [],
+        venue: lp.venue || bp.venue || '',
       };
     }) : blueprintPhases;
     const moduleChainPre = this._archetypeEngine
@@ -7438,6 +7707,7 @@ class PBLPathBuilder {
       complex: profile.complex,
       projectBlueprint,
       bloomProfile: ruleBloom,
+      projectSpec: this._activeProjectSpec || null,
     });
     const jsonStr = this._extractJsonObject(response);
     const filter = JSON.parse(jsonStr);
@@ -7523,6 +7793,7 @@ class PBLPathBuilder {
       projectBlueprint,
       bloomProfile: bloomProfile || this._inferBloomProfile(projectBlueprint),
       archetypeId: archetype?.id || null,
+      projectSpec: this._activeProjectSpec || null,
     });
     let result = { matched: [], pathOrder: [], projectPhases: [], external: [], techRoute: '' };
     try {
@@ -7600,19 +7871,21 @@ class PBLPathBuilder {
 
     const dependsOnLinks = this._buildDependsOnLinks(result, candidates);
 
-    let projectPhases = (result.projectPhases || result.phases || []).map(p => ({
+    let projectPhases = (result.projectPhases || result.phases || []).map((p, i) => ({
       phase: p.phase || p.name || '',
       steps: p.steps || (p.tasks ? (Array.isArray(p.tasks) ? p.tasks : [p.tasks]) : []),
       knowledgeNames: this._filterPhaseKnowledgeNames(p.knowledgeNames || p.knowledge || [], goal),
+      knowledgeScenes: p.knowledgeScenes || [],
+      venue: p.venue || '',
       deliverable: p.deliverable || p.output || '',
-      literacy: p.literacy || {
+      literacy: this._supplementPolPsychLiteracy(p.literacy || {
         knowledge: p.knowledgeLiteracy || p.knowledge_dim || '',
         method: p.methodLiteracy || p.method || '',
         ability: p.abilityLiteracy || p.ability || '',
         attitude: p.attitudeLiteracy || p.attitude || '',
         emotion: p.emotionLiteracy || p.emotion || '',
         values: p.valuesLiteracy || p.values || ''
-      }
+      }, { role: p.role || 'core', phaseIndex: i + 1 }),
     }));
     if (!projectPhases.length && blueprintPhases.length) {
       projectPhases = blueprintPhases;
