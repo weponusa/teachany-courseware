@@ -1295,7 +1295,7 @@ body {
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260617-pbl-null-guard2"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260617-pbl-suggest-steps"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1503,6 +1503,9 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
         }, { projectSpec: spec, chatHistory: pblChatHistory });
       }
     } catch (llmError) {
+      if (llmError instanceof TypeError || /Cannot read properties of null/i.test(String(llmError.message || ''))) {
+        throw llmError;
+      }
       console.warn('[PBL] LLM 调用失败，降级为关键词搜索:', llmError.message);
       statusText.textContent = 'LLM 不可用，降级为关键词搜索...';
       result = await builder.searchByKeywords(goal, systems);
