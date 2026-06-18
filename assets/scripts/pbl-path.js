@@ -441,8 +441,8 @@ class PBLPathBuilder {
 
     if (projectBlueprint) {
       const substance = this._blueprintSubstanceScore(projectBlueprint, goal);
-      if (substance < 3) {
-        const pen = Math.min(32, (3 - substance) * 12);
+      if (substance < 4) {
+        const pen = Math.min(32, (4 - substance) * 10);
         score -= pen;
         breakdown.push({ key: 'substance', label: '蓝图内容空洞（缺题目锚点/可验收产出）', delta: -pen });
       }
@@ -453,8 +453,8 @@ class PBLPathBuilder {
       breakdown.push({ key: 'summary', label: '项目概述套话', delta: -12 });
     }
     const stepDepth = this._blueprintStepDepthScore(projectBlueprint);
-    if (stepDepth > 0 && stepDepth < 2.5) {
-      const pen = Math.min(15, Math.round((2.5 - stepDepth) * 8));
+    if (stepDepth > 0 && stepDepth < 3) {
+      const pen = Math.min(15, Math.round((3 - stepDepth) * 8));
       score -= pen;
       breakdown.push({ key: 'depth', label: '任务步骤偏笼统', delta: -pen });
     }
@@ -2077,11 +2077,12 @@ class PBLPathBuilder {
   _isVacuousResearchStep(step) {
     const s = String(step || '').trim();
     if (!s) return true;
-    if (/^(查阅|收集|整理|对比分析|撰写|研究|探究|了解|梳理|开展).{0,24}(资料|信息|内容|报告|研究|对比|调查)/.test(s)
-      && !/\d|表|图|维度|指标|年|条|个|篇|项|节点|样本|问卷|访谈|对照|案例|城市|发展/.test(s)) {
+    if (/^(查阅|收集|整理|对比分析|撰写|研究|探究|了解|梳理|开展|进行|完成|落实).{0,28}(资料|信息|内容|报告|研究|对比|调查|任务|工作|阶段)/.test(s)
+      && !/\d|表|图|维度|指标|年|条|个|篇|项|节点|样本|问卷|访谈|对照|案例|字数|题|人|次|≥|不少于|至少/.test(s)) {
       return true;
     }
     if (/^(完成|进行|落实).{0,12}(本阶段|阶段任务|研究任务|对比任务|调查任务)/.test(s)) return true;
+    if (/查阅资料并分析|开展调查研究|撰写研究报告初稿/.test(s)) return true;
     return false;
   }
 
@@ -2762,9 +2763,12 @@ class PBLPathBuilder {
     return false;
   }
 
-  /** 社会调查/社区议题（垃圾分类、环保治理等）且题目未涉及生命科学 */
+  /** 社会调查/社区议题（垃圾分类、环保治理、校园欺凌等）且题目未涉及生命科学 */
   _isSocialOrCivicInquiryGoal(goal) {
     const g = String(goal || '');
+    if (/欺凌|霸凌|校园安全|同伴关系|维权|遵纪守法|公民责任|公共议题|规则意识|社会责任|反欺凌|友善校园/.test(g)) {
+      return !/生物|细胞|生态|光合|酶|遗传|植物|动物|种植|栽培|养殖|人体|器官/.test(g);
+    }
     if (/田野|问卷|访谈|社区|民俗|传统文化|非遗|人口|城乡|社会现象|调研报告|居民|乡土|口述史|垃圾分类|垃圾治理|垃圾处理|废弃物|固体废物|环保|治理|倡议/.test(g)) {
       return !/生物|细胞|生态|光合|酶|遗传|植物|动物|种植|栽培|养殖|人体|器官/.test(g);
     }
@@ -3166,7 +3170,29 @@ class PBLPathBuilder {
   _isGenericBlueprintText(text) {
     const s = String(text || '').trim();
     if (!s || s.length < 16) return true;
-    return /按模块推进|阶段产出可检查|可检查验收|主题实施方案|浸润式|递进式|可展示的项目原型|围绕「.+」按模块|紧扣题目关键词|每阶段产出可检查|技术路线概述|方案名称/.test(s);
+    return /按模块推进|阶段产出可检查|可检查验收|主题实施方案|浸润式|递进式|可展示的项目原型|围绕「.+」按模块|紧扣题目关键词|每阶段产出可检查|技术路线概述|方案名称|认真完成|培养素养|提升能力|环境搭建|原型驱动|MVP|基础准备|实施阶段|总结反思/.test(s);
+  }
+
+  _isGenericSupplyToolInBlueprint(tool) {
+    const t = String(tool || '').trim();
+    if (!t) return true;
+    return /A3|绘图纸|铅笔|尺规|标注笔|签字笔|相机|手机拍照|过程记录表|分工表|护目镜|砂纸|手锯|木工胶|角尺|螺丝刀|扳手|万用表|卷尺|记录表模板|文具|耗材/.test(t);
+  }
+
+  _stepHasQuantifier(step) {
+    const s = String(step || '');
+    return /\d/.test(s) || /≥|≤|不少于|不超过|至少|至多|精确到/.test(s);
+  }
+
+  _collectForbiddenStepIssues(steps, phaseName) {
+    const issues = [];
+    const forbidden = /查阅资料并分析|开展调查研究|完成本阶段|进行本阶段|撰写研究报告初稿|进行调研工作|落实本阶段|贯彻实施/;
+    (steps || []).forEach((st, j) => {
+      if (forbidden.test(String(st || ''))) {
+        issues.push(`阶段「${phaseName}」步骤${j + 1}命中禁句模板，须改为含量化指标的可验收任务`);
+      }
+    });
+    return issues;
   }
 
   _blueprintStepDepthScore(blueprint) {
@@ -3356,7 +3382,7 @@ class PBLPathBuilder {
         return {
           ...p,
           ...(venue ? { venue } : {}),
-          tools: Array.isArray(p.tools) && p.tools.length ? p.tools : this._inferPhaseTools(goal, p.phase, this._goalProfile(goal, bp)),
+          tools: this._resolvePhaseTools(goal, p.phase, p.tools, p.knowledgeHints),
           // acceptance 仅采用 LLM 提供的实质验收项，不再复述步骤
           acceptance: Array.isArray(p.acceptance) ? p.acceptance.filter(a => a && String(a).trim()) : [],
         };
@@ -3504,10 +3530,16 @@ class PBLPathBuilder {
       return `设计并完成与「${art}」相关的实验或观测`;
     }
     if (subj === 'politics') {
-      return `从规则、责任或公共议题角度分析「${art}」中的价值判断与行动建议`;
+      if (/规则|责任|权利|法治|公民/.test(name)) {
+        return `用「${name}」分析「${art}」中的规则边界、责任主体与可求助渠道`;
+      }
+      return `从公共议题角度，用「${name}」论证「${art}」中的价值判断与行动建议`;
     }
     if (subj === 'psychology') {
-      return `运用沟通、共情或自我认知理解「${art}」中的人际与情绪因素`;
+      if (/情绪|共情|沟通|自我/.test(name)) {
+        return `运用「${name}」识别「${art}」中的情绪信号并设计共情回应或沟通策略`;
+      }
+      return `用「${name}」理解「${art}」中的人际互动与心理影响因素`;
     }
     // 无法给出具体应用场景时返回空，由调用方丢弃，避免「将X应用于本阶段任务」式占位
     return '';
@@ -3817,25 +3849,33 @@ class PBLPathBuilder {
     }
     // 社会/公民调查类模板（仅垃圾分类等明确议题，禁止「分类标签」等误触发）
     const isTrueSocialSurvey = this._isSocialOrCivicInquiryGoal(goal) && !this._isHealthLifeGoal(goal);
-    if (isTrueSocialSurvey) {
+    const isPolPsychCivic = this._isHealthLifeGoal(goal) || isTrueSocialSurvey
+      || /欺凌|霸凌|心理|情绪|同伴|规则|责任|公民/.test(String(goal || ''));
+    if (isPolPsychCivic) {
       if (/现状|调查|问卷|访谈|勘测|实地|走访/.test(blob)) {
-        return `走访≥2处相关点位，填写${phaseName}记录表（观察项≥8条+居民访谈≥5条），附现场照片3张并标注时间与地点`;
+        return `设计10题匿名问卷（含规则认知/情绪安全感题各≥2道+开放题2道），明确样本≥15人并附知情说明`;
       }
       if (/垃圾分类|四类垃圾|垃圾投放|厨余|可回收物|有害垃圾/.test(blob)) {
         return `整理四类垃圾投放标准对照表（可回收/有害/厨余/其他），列举本社区常见误投案例≥6条并注明改正做法`;
       }
       if (/统计|数据|图表|整理|分析/.test(blob)) {
-        return `将调查数据录入表格并绘制≥2种统计图（条形/扇形任选），计算占比与平均数，写出3条数据结论`;
+        return `将调查数据录入频数表并绘制≥1张统计图（条形/扇形），计算占比与平均数，写出3条数据结论（附图表编号）`;
       }
-      if (/建议|改进|宣传|倡议|策划|方案|报告/.test(blob)) {
+      if (/方案|计划|设计|干预|宣传|倡议|行动/.test(blob)) {
+        return `制定「${artifact}」${phaseName}：列出3种活动形式（宣讲/情景剧/海报各1条）及分工时间表，说明每条如何运用 ${hints}`;
+      }
+      if (/建议|改进|策划|报告/.test(blob)) {
         return `撰写${artifact}${phaseName}（≥400字）：含问题归纳、3条可执行改进措施与1份宣传策划要点（对象/渠道/口号各1条）`;
       }
-      return `完成${artifact}${phaseName}：结合${hints}整理资料并产出可核查记录表（≥5条要点+来源标注）`;
+      return `完成${artifact}${phaseName}：结合${hints}整理调查资料并产出可核查数据表（≥5条要点+来源标注）`;
     }
     if (/调研|勘测|现场|需求|资料/.test(blob)) {
       return `开展${phaseName}：列出5条可验证需求并制成优先级表，附3张现场/参考照片（文件命名 P${stepIdx + 1}-01~03）`;
     }
     if (/设计|方案|草图|图纸|规划|风格|定义/.test(blob)) {
+      if (isPolPsychCivic) {
+        return `制定「${artifact}」${phaseName}：列出3种干预/宣传活动及分工时间表，说明每条如何运用 ${hints}`;
+      }
       return `为「${artifact}」绘制${phaseName}草图（A3 或 CAD 均可），标注 ≥5 处关键尺寸，并结合 ${hints} 写 150 字方案说明`;
     }
     if (/材料|采购|物料|预算|成本|BOM/.test(blob)) {
@@ -3859,7 +3899,7 @@ class PBLPathBuilder {
     if (templated[stepIdx % templated.length]) {
       return templated[stepIdx % templated.length];
     }
-    return `${verb}${artifact}${phaseName}（结合${hints}），交付「${outName}」并附1份签字确认的过程记录表`;
+    return `${verb}${artifact}${phaseName}（结合${hints}），交付「${outName}」并附可核查数据或例证清单`;
   }
 
   _phaseStepFillers(goal, phase, profile, ctx, phaseIndex) {
@@ -3869,7 +3909,8 @@ class PBLPathBuilder {
     const phaseName = ctx.phaseName || '本阶段';
     if (!dom) return [];
     const art = profile.shortLabel || profile.artifact;
-    const knRef = (phase?.knowledgeHints || ctx.hints || []).slice(0, 2).map(h => `「${h}」`).join('、') || '本阶段课标知识点';
+    const knRef = (phase?.knowledgeHints || ctx.hints || []).slice(0, 2).map(h => `「${h}」`).join('、')
+      || (ctx.hints ? ctx.hints : '');
 
     if (this._isSocialOrCivicInquiryGoal(goal)) {
       const byId = {
@@ -4040,7 +4081,7 @@ class PBLPathBuilder {
         const role = i === 0 ? 'foundation' : (i < arr.length - 1 ? 'bridge' : 'core');
         const steps = this._concretizePhaseSteps(goal, p, i, arr.length, archetype, bp);
         const deliverable = this._concretizeDeliverable(goal, p.phase, role, p.deliverable, bp);
-        const tools = p.tools || this._inferPhaseTools(goal, p.phase, profile);
+        const tools = this._resolvePhaseTools(goal, p.phase, p.tools, p.knowledgeHints);
         // acceptance 仅保留 LLM 提供的实质验收项，不再逐条复述步骤
         const acceptance = Array.isArray(p.acceptance) ? p.acceptance.filter(a => a && String(a).trim()) : [];
         return { ...p, steps, deliverable, tools, acceptance };
@@ -4050,43 +4091,122 @@ class PBLPathBuilder {
     return bp;
   }
 
-  _inferPhaseTools(goal, phaseName, profileOrType) {
+  /** 文具/通用耗材类「工具」——不应作为技术指导展示 */
+  _isGenericSupplyTool(tool) {
+    const t = String(tool || '').trim();
+    if (!t || t.length < 3) return true;
+    return /A3|绘图纸|铅笔|尺规|标注笔|签字笔|相机|手机拍照|过程记录表|分工表|护目镜|砂纸|手锯|木工胶|角尺|螺丝刀|扳手|万用表|调试线|卷尺|计算器(?!工作)|开发环境|版本记录/.test(t)
+      || /^(工具|材料|文具|耗材)$/.test(t);
+  }
+
+  _filterPhaseTools(tools) {
+    return (Array.isArray(tools) ? tools : [])
+      .map(t => String(t || '').trim())
+      .filter(t => t && !this._isGenericSupplyTool(t));
+  }
+
+  /** 按阶段 + 课标知识点生成可操作方法指导（非文具清单） */
+  _inferKnowledgeMethodTools(goal, phaseName, nodes, knowledgeHints = []) {
     const phase = String(phaseName || '');
-    const profile = profileOrType?.artifact ? profileOrType : this._goalProfile(goal);
-    const g = profile.raw || goal;
-    const type = this._classifyProjectType(g);
-    if (this._isConsumerDecisionGoal(g) || type === 'consumer-decision') {
-      if (/调研|需求|收集|资料/.test(phase)) return ['需求清单模板', '数据采集表', '来源标注规范'];
-      if (/对比|筛选|约束|比选/.test(phase)) return ['约束条件清单', '方案对比矩阵', '假设说明表'];
-      if (/测算|模型|成本|函数|计算|分析/.test(phase)) return ['计算工作表', '假设参数表', '图表模板'];
-      if (/报告|决策|建议|论证/.test(phase)) return ['报告提纲', '论证段落模板', '答辩要点清单'];
+    const g = String(goal || '');
+    const names = [...(knowledgeHints || []), ...(nodes || []).map(n => n.name)].filter(Boolean);
+    const subjects = new Set((nodes || []).map(n => n.subject).filter(Boolean));
+    const tools = [];
+    const add = t => { if (t && !tools.includes(t)) tools.push(t); };
+
+    if (/问卷|访谈|调研|调查|选题|抽样|样本/.test(phase)) {
+      if (subjects.has('psychology') || /心理|情绪|欺凌|霸凌|共情/.test(g)) {
+        add('匿名问卷设计要点（情绪/安全感量表题 + 2道开放题）');
+        add('访谈提纲结构（情境还原→感受→求助意愿→知情同意说明）');
+      } else if (subjects.has('politics') || /规则|责任|公民|法治|权利/.test(g)) {
+        add('情境问卷题型设计（规则认知/责任判断/救济途径各≥2题）');
+        add('访谈记录表字段（事实描述/规则适用/改进建议）');
+      } else {
+        add('问卷题型配比说明（单选/量表/开放题各占比）');
+        add('样本量与回收目标表（对象/人数/截止日）');
+      }
     }
-    if (type === 'social-inquiry') {
-      if (/选题|设计|问卷|访谈/.test(phase)) return ['问卷/访谈提纲模板', '抽样方案表', '伦理说明'];
-      if (/收集|实地|调查/.test(phase)) return ['数据采集表', '来源标注规范', '照片/录音编号表'];
-      if (/统计|整理|分析/.test(phase)) return ['统计表模板', '图表工具', '异常值处理说明'];
-      if (/报告|结论/.test(phase)) return ['报告结构模板', '论证检查表', '答辩提纲'];
+    if (/统计|整理|分析|数据|图表/.test(phase)) {
+      add('频数统计表模板（类别/频次/百分比三列）');
+      add('条形图/扇形图绘制规范（标题、坐标轴标签、数据标签）');
+      if (names.some(n => /平均|百分/.test(n))) add('用平均数/百分比解读调查结果的计算步骤');
     }
-    if (/算力中心|数据中心|太空算力|卫星计算|轨道计算/.test(String(g || ''))) {
-      if (/需求|约束|原理|调研/.test(phase)) return ['需求矩阵模板', '公开技术资料', '指标清单'];
-      if (/架构|结构|设计|方案/.test(phase)) return ['系统架构图模板', '方案对比矩阵', '风险清单'];
-      if (/控制|实现|调度|运行/.test(phase)) return ['流程图工具', '接口清单模板', '异常场景表'];
-      if (/测试|迭代|验证|验收/.test(phase)) return ['测试指标表', '仿真/估算表', '迭代记录表'];
+    if (/倡议|宣传|海报|演讲|行动|干预|辅导/.test(phase)) {
+      add('倡议书结构提纲（称呼/问题陈述/具体倡议/号召/落款）');
+      add('宣传文案核查表（事实依据/立场/可操作建议/受众）');
     }
-    if (/调研|勘测/.test(phase)) return ['记录表模板', '相机/手机', profile.domains.woodwork ? '卷尺' : '数据来源清单'];
-    if (/设计|草图|图纸|风格/.test(phase)) {
-      return profile.domains.software ? ['绘图/CAD 或设计工具', '尺寸标注规范'] : ['A3纸或绘图纸', '铅笔尺规', '标注笔'];
+    if (/报告|总结|答辩|展示|复盘/.test(phase)) {
+      add('论证段落模板（观点→证据→回扣驱动性问题）');
+      add('答辩应答要点清单（数据图表编号 + 局限说明）');
     }
-    if (/材料|采购|预算/.test(phase)) return ['物料清单模板', '计算器', '询价记录表'];
-    if (/搭建|制作|组装|结构|装饰/.test(phase)) {
-      if (profile.domains.robot) return ['螺丝刀/扳手', '万用表', '调试线', '安全防护'];
-      if (profile.domains.woodwork) return ['手锯/砂纸', '木工胶', '角尺', '护目镜'];
-      return ['分工表', '过程记录表', '相机'];
+    if (/方案|计划|干预/.test(phase) || (/设计/.test(phase) && !/问卷|访谈|调查|题项|提纲/.test(phase))) {
+      add('干预/宣传方案表（活动形式/分工/时间节点/预期效果）');
+      add('知识点运用对照表（每条活动对应运用的课标概念）');
     }
-    if (/软件|编程|控制|电路/.test(phase) || profile.domains.software) return ['开发环境', '版本记录', '测试用例表'];
-    if (/测试|验收|展示/.test(phase)) return ['验收量规', '展示稿模板', '相机'];
-    if (/撰写|报告|作文|倡议/.test(phase) || profile.domains.writing) return ['文稿模板', '修改痕迹记录', '格式规范'];
-    return ['过程记录表', '相机'];
+
+    for (const n of (nodes || []).slice(0, 3)) {
+      const hint = this._knowledgeMethodHint(n, phase, goal);
+      if (hint) add(hint);
+    }
+    for (const name of names.slice(0, 2)) {
+      if (/百分|统计|条形|扇形|平均/.test(name)) add(`按「${name}」规范整理调查数据并制图`);
+      if (/规则|责任|权利|法治/.test(name)) add(`用「${name}」分析情境中的规则边界与救济途径`);
+      if (/情绪|共情|沟通|自我认知/.test(name)) add(`结合「${name}」设计2-3道情境判断或共情练习题`);
+    }
+    return tools.slice(0, 4);
+  }
+
+  _knowledgeMethodHint(node, phase, goal) {
+    if (!node?.name) return '';
+    const name = String(node.name);
+    const subj = node.subject || '';
+    if (/百分|统计|数据|条形|扇形|平均|图表/.test(name)) {
+      return `用「${name}」制作调查频数表，计算百分比并绘制标注完整的统计图`;
+    }
+    if (subj === 'psychology' && /情绪|共情|沟通|自我|人际/.test(name)) {
+      return `运用「${name}」设计情绪识别或共情回应的情境题（含参考答案要点）`;
+    }
+    if (subj === 'politics' && /规则|责任|权利|法治|公民|公共/.test(name)) {
+      return `结合「${name}」列出欺凌/冲突情境中的规则依据与可求助渠道`;
+    }
+    if (/问卷|调查|访谈/.test(name) && /问卷|访谈|调研|调查/.test(phase)) {
+      return `参照「${name}」检查问卷题项可读性、选项互斥性与伦理说明`;
+    }
+    if (/写作|倡议|说明|论证/.test(name) && /倡议|报告|宣传|写作/.test(phase)) {
+      return `按「${name}」要求撰写论证段落（观点+证据+回扣问题）`;
+    }
+    return '';
+  }
+
+  _knowledgeAnchoredFallbackStep(node, goal, role, phaseName) {
+    if (!node?.name) return '';
+    const phase = String(phaseName || '');
+    const hint = this._knowledgeMethodHint(node, phase, goal);
+    if (hint) return hint;
+    const scene = this._inferKnowledgeSceneUse(node, goal);
+    if (scene) return scene;
+    const circ = this._pathStepCircled(node.pathStep);
+    if (/调查|问卷|访谈/.test(phase)) {
+      return `运用${circ}「${node.name}」设计或优化本阶段调查题项（≥2道）并说明测量意图`;
+    }
+    if (/统计|分析|数据|图表/.test(phase)) {
+      return `用${circ}「${node.name}」整理调查数据：制表、计算至少1项统计量并写1条发现`;
+    }
+    if (/倡议|宣传|报告|行动|干预/.test(phase)) {
+      return `在${circ}「${node.name}」指导下撰写本阶段论证段落（观点+证据+回扣问题）`;
+    }
+    return `结合${circ}「${node.name}」完成本阶段可检查产出（含数据或例证）`;
+  }
+
+  _resolvePhaseTools(goal, phaseName, rawTools, knowledgeHints, nodes = []) {
+    const filtered = this._filterPhaseTools(rawTools);
+    if (filtered.length) return filtered;
+    return this._inferKnowledgeMethodTools(goal, phaseName, nodes, knowledgeHints);
+  }
+
+  /** @deprecated 不再注入文具/耗材；保留空实现供旧调用兜底 */
+  _inferPhaseTools() {
+    return [];
   }
 
   _pickConcreteDeliverable(lp, bp, role, goal) {
@@ -5333,7 +5453,7 @@ class PBLPathBuilder {
     }
     const nodes = group.nodes || [];
     const kn = nodes.map(n => n.name).filter(Boolean);
-    const knRef = kn.map(n => `「${n}」`).join('、') || '本阶段课标知识点';
+    const knRef = kn.map(n => `「${n}」`).join('、') || '本阶段知识点';
     const shortGoal = String(goal || '').slice(0, 48);
     const role = group.role || 'core';
     const type = this._classifyProjectType(goal);
@@ -5622,8 +5742,10 @@ class PBLPathBuilder {
       return mk(this._domainStepTemplates(dom, art, knRef));
     }
     return mk([
-      `围绕「${shortGoal}」完成本阶段资料整理与记录表（附数据来源）`,
-      `结合 ${knRef} 撰写可核查的阶段小结（含数据、例证或签字确认）`,
+      `围绕「${shortGoal}」完成本阶段资料整理与数据/例证记录（附来源）`,
+      knRef !== '本阶段知识点'
+        ? `结合 ${knRef} 撰写可核查的阶段小结（含数据、例证与改进建议）`
+        : `撰写可核查的阶段小结（含数据、例证与改进建议）`,
     ]);
   }
 
@@ -5764,16 +5886,21 @@ class PBLPathBuilder {
       const contextual = this._suggestPhaseSteps(goal, { ...g, nodes: keptNodes.length ? keptNodes : g.nodes }, bp);
       const steps = this._pickConcreteSteps(lp.steps, bp.steps, contextual)
         || contextual
-        || keptNodes.map(n => {
-          const circ = this._pathStepCircled(n.pathStep);
-          return `阅读${circ}「${n.name}」要点，完成 1 份与本阶段产出相关的记录或计算（附数据/例证）`;
-        });
+        || keptNodes.map(n => this._knowledgeAnchoredFallbackStep(n, goal, g.role, lp.phase || bp.phase || g.phase))
+          .filter(Boolean);
       const knNames = keptNodes.map(n => n.name);
       const llmScenes = Array.isArray(lp.knowledgeScenes) ? lp.knowledgeScenes
         : (Array.isArray(bp.knowledgeScenes) ? bp.knowledgeScenes : []);
       const knowledgeScenes = llmScenes.length
         ? llmScenes
         : this._buildKnowledgeScenes(knNames, keptNodes, goal);
+      const phaseTools = this._resolvePhaseTools(
+        goal,
+        lp.phase || bp.phase || g.phase,
+        bp.tools || lp.tools,
+        bp.knowledgeHints || lp.knowledgeHints || knNames,
+        keptNodes,
+      );
       return {
         phaseIndex: g.phaseIndex,
         phase: lp.phase || bp.phase || lp.name || g.phase,
@@ -5788,7 +5915,7 @@ class PBLPathBuilder {
         durationHint: lp.durationHint || bp.durationHint || '',
         steps,
         deliverable: this._pickConcreteDeliverable(lp, bp, g.role, goal),
-        tools: bp.tools || lp.tools || this._inferPhaseTools(goal, lp.phase || bp.phase || g.phase, this._classifyProjectType(goal)),
+        tools: phaseTools,
         acceptance: bp.acceptance || lp.acceptance || [],
         literacy: this._supplementPolPsychLiteracy(this._literacyFromLlmPhase(lp), { role: g.role, phaseIndex: g.phaseIndex }),
       };
@@ -5874,7 +6001,7 @@ class PBLPathBuilder {
   // ─── PBL 路径分析核心 ──────────────────────────
 
   static GENERIC_TRANSVERSAL_RE = /批判性思维|创新思维|创新能力|团队协作|团队合作|项目管理|项目管理能力|沟通能力|沟通表达|问题解决|解决问题能力|时间管理|领导力|学习能力|核心素养|综合素养|信息素养|媒体素养|科学精神|人文素养|劳动素养|审辨性思维|审辨思维|元认知|学会学习|责任担当|社会责任|公民素养|国际理解/;
-  static HOLLOW_STEP_RE = /^(完成|进行|开展|落实|实施|贯彻|培养|提升|增强|锻炼|学习|掌握|了解|认识|运用|选择|确定|调研|编写|配置|安装).{0,10}(探究|调研|学习|任务|活动|阶段|工作|研究|分析|讨论|探索|实践|制作|设计|总结|反思|课件|练习|组件|框架|逻辑|特点|风格|方案|软件|环境)$|完成本阶段|进行调研|开展研究|完成探究|运用.*完成本阶段|培养.*素养|提升.*能力|环境搭建|编写基础/;
+  static HOLLOW_STEP_RE = /^(完成|进行|开展|落实|实施|贯彻|培养|提升|增强|锻炼|学习|掌握|了解|认识|运用|选择|确定|调研|编写|配置|安装).{0,10}(探究|调研|学习|任务|活动|阶段|工作|研究|分析|讨论|探索|实践|制作|设计|总结|反思|课件|练习|组件|框架|逻辑|特点|风格|方案|软件|环境)$|完成本阶段|进行调研|开展研究|完成探究|开展调查研究|查阅资料并分析|撰写研究报告初稿|运用.*完成本阶段|培养.*素养|提升.*能力|环境搭建|编写基础|进行本阶段|落实本阶段/;
   static PBL_MAX_GRAPH_NODES = 22;
   static PBL_MIN_EXTERNAL = 1;
   static PBL_MAX_EXTERNAL = 3;
@@ -6805,6 +6932,10 @@ class PBLPathBuilder {
   _collectDecomposeReviewIssues(goal, blueprint) {
     if (!blueprint?.schemes?.length) return ['缺少可行方案'];
     const issues = [];
+    if (!blueprint.drivingQuestion || String(blueprint.drivingQuestion).length < 12
+      || !/[？?]/.test(String(blueprint.drivingQuestion))) {
+      issues.push('drivingQuestion 须为含本题专名的可验证问句（以？结尾）');
+    }
     if (this._isGenericBlueprintText(blueprint.projectSummary)) {
       issues.push('projectSummary 过于套话，需写清谁+方法+交付物+要解决的问题');
     }
@@ -6825,7 +6956,7 @@ class PBLPathBuilder {
       issues.push('未锚定题目关键词，步骤/阶段可能跑题或套用无关模板');
     }
     const substance = this._blueprintSubstanceScore(blueprint, goal);
-    if (substance < 3) {
+    if (substance < 4) {
       issues.push('蓝图内容空洞：步骤/交付物缺少题目锚点、数量或可验收表格/图表');
     }
     const profile = this._goalProfile(goal, blueprint);
@@ -6840,24 +6971,41 @@ class PBLPathBuilder {
     if (this._isGenericBlueprintText(scheme?.summary)) {
       issues.push('推荐方案 summary 过于笼统，需写清实施路线差异');
     }
+    let phasesWithQuant = 0;
+    const allStepTexts = [];
     (scheme?.phases || []).forEach((p) => {
       const steps = p.steps || [];
       if (steps.length < 2) issues.push(`阶段「${p.phase}」steps 不足 2 条`);
+      if (/基础准备|实施阶段|总结反思|阶段一|阶段二/.test(String(p.phase || ''))) {
+        issues.push(`阶段「${p.phase}」名称过于泛化，须用模块参考中的具体 label`);
+      }
       const hollow = steps.filter(s => this._isHollowStep(s)).length;
       if (hollow > 0) issues.push(`阶段「${p.phase}」含 ${hollow} 条空话/笼统步骤，需改为可验收任务`);
+      issues.push(...this._collectForbiddenStepIssues(steps, p.phase));
+      if (steps.some(st => this._stepHasQuantifier(st))) phasesWithQuant += 1;
       steps.forEach((st, j) => {
         if (this._stepActionabilityScore(st) < 2) {
-          issues.push(`阶段「${p.phase}」步骤${j + 1}缺少数量/工具/表格等可验收要素`);
+          issues.push(`阶段「${p.phase}」步骤${j + 1}缺少数量/方法/表格等可验收要素`);
         }
+        allStepTexts.push(String(st || '').slice(0, 80));
       });
-      if (!p.deliverable || /阶段成果|素养|能力/.test(p.deliverable) || String(p.deliverable).length < 6) {
+      const genericTools = (p.tools || []).filter(t => this._isGenericSupplyToolInBlueprint(t));
+      if (genericTools.length) {
+        issues.push(`阶段「${p.phase}」tools 含文具/耗材项（${genericTools.slice(0, 2).join('、')}），须改为方法指导`);
+      }
+      if (!p.deliverable || /阶段成果|素养|能力|探究任务/.test(p.deliverable) || String(p.deliverable).length < 6) {
         issues.push(`阶段「${p.phase}」deliverable 不具体`);
       }
     });
-    if (this._blueprintStepDepthScore(blueprint) < 2.5) {
-      issues.push('整体步骤可操作性偏低，需补充数据表/图表/记录表/测量次数等');
+    if ((scheme?.phases || []).length >= 4 && phasesWithQuant < 3) {
+      issues.push('至少 3 个阶段 steps 须含数字或≥/不少于等量化指标');
     }
-    return [...new Set(issues)].slice(0, 14);
+    const dupes = allStepTexts.filter((t, i) => allStepTexts.indexOf(t) !== i);
+    if (dupes.length) issues.push('各阶段 steps 存在重复或高度相似条目，须去重');
+    if (this._blueprintStepDepthScore(blueprint) < 3) {
+      issues.push('整体步骤可操作性偏低，需补充数据表/图表/样本量/测量次数等');
+    }
+    return [...new Set(issues)].slice(0, 16);
   }
 
   _shouldReviewDecompose(goal, blueprint) {
@@ -6870,11 +7018,11 @@ class PBLPathBuilder {
     const anchored = this._blueprintAnchoredToGoal(data, goal);
     const depth = this._blueprintStepDepthScore(data);
     const substance = this._blueprintSubstanceScore(data, goal);
-    if (substance < 3) {
+    if (substance < 4) {
       console.warn('[PBL] 蓝图内容空洞，使用主题蓝图回退');
       return this._fallbackDecomposeBlueprint(goal);
     }
-    if (!anchored && depth < 1.5) {
+    if (!anchored && depth < 2) {
       console.warn('[PBL] 蓝图未锚定且步骤过浅，使用主题蓝图回退');
       return this._fallbackDecomposeBlueprint(goal);
     }
@@ -6900,6 +7048,7 @@ class PBLPathBuilder {
         projectBlueprint: this._compactBlueprintForReview(draftBlueprint),
         reviewIssues,
         complex,
+        projectSpec: this._activeProjectSpec || null,
       });
       const data = this._extractDecomposeData(response);
       if (!data) return null;
@@ -6933,11 +7082,21 @@ class PBLPathBuilder {
       const response = await this._callPBLAnalyzeStage('decompose', {
         goal: decomposeGoal,
         complex: profile.complex,
+        projectSpec: this._activeProjectSpec || null,
       });
+      if (this._lastPBLStageMeta?.model) {
+        console.info(`[PBL] decompose 模型：${this._lastPBLStageMeta.model}（${this._lastPBLStageMeta.backend || 'server'}）`);
+      }
       let data = this._extractDecomposeData(response);
       if (!data) return this._fallbackDecomposeBlueprint(goal);
 
-      const issues = this._collectDecomposeReviewIssues(goal, data);
+      let issues = this._collectDecomposeReviewIssues(goal, data);
+      const forceReview = this._blueprintSubstanceScore(data, goal) < 4
+        || this._blueprintStepDepthScore(data) < 3
+        || this._projectSpecHasPolPsych(this._activeProjectSpec);
+      if (forceReview && !issues.length) {
+        issues = ['按通用拆解原则全面修订：步骤须含量化指标与可验收产出，tools 写方法指导禁文具，deliverable 用具体表/图/报告名'];
+      }
       if (issues.length) {
         this._reportPBLStatus(onStatus, `第 1/6 步：评审修订蓝图（${issues.length} 项待改）...`);
         const reviewed = await this._llmReviewDecomposeStage(goal, data, issues, profile.complex);
@@ -6965,6 +7124,19 @@ class PBLPathBuilder {
       || (cfg.providerId === 'openrouter' && cfg.apiKey));
   }
 
+  _normalizeStageReturn(raw, stage, cfg) {
+    if (raw && typeof raw === 'object' && raw.content != null) {
+      this._lastPBLStageMeta = { stage, model: raw.model || '', backend: raw.backend || 'server' };
+      return raw.content;
+    }
+    this._lastPBLStageMeta = {
+      stage,
+      model: cfg.model || cfg.displayDetail || '',
+      backend: cfg.providerId === 'preset' ? 'server' : (cfg.providerId || 'client'),
+    };
+    return String(raw || '');
+  }
+
   async _callPBLAnalyzeStage(stage, payload) {
     const cfg = this.getLLMConfig();
     const llmOpts = this._llmStageOptions(stage);
@@ -6977,7 +7149,7 @@ class PBLPathBuilder {
       }
       if (!cfg.model) throw new Error('请先在 ⚙️ API 设置中选择或填写模型名称');
       const messages = await this._fetchPBLMessages(stage, payload);
-      return this.callLLM(messages, llmOpts);
+      return this._normalizeStageReturn(await this.callLLM(messages, llmOpts), stage, cfg);
     }
 
     const body = { stage, ...payload };
@@ -7000,7 +7172,7 @@ class PBLPathBuilder {
         throw new Error(data.error || `PBL API ${resp.status}`);
       }
       if (!data.content) throw new Error('PBL API 返回为空');
-      return data.content;
+      return this._normalizeStageReturn(data, stage, cfg);
     } finally {
       clearTimeout(timeout);
     }
