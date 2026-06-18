@@ -1286,6 +1286,9 @@ class PBLPathBuilder {
     if (!blueprint) return blueprint;
     return {
       ...blueprint,
+      reportOutline: Array.isArray(blueprint.reportOutline) ? [...blueprint.reportOutline] : blueprint.reportOutline,
+      formativeCheckpoints: Array.isArray(blueprint.formativeCheckpoints) ? [...blueprint.formativeCheckpoints] : blueprint.formativeCheckpoints,
+      collaborationRoles: Array.isArray(blueprint.collaborationRoles) ? blueprint.collaborationRoles.map(r => ({ ...r })) : blueprint.collaborationRoles,
       constraints: blueprint.constraints ? [...blueprint.constraints] : blueprint.constraints,
       scopeLimits: blueprint.scopeLimits ? [...blueprint.scopeLimits] : blueprint.scopeLimits,
       successCriteria: blueprint.successCriteria ? [...blueprint.successCriteria] : blueprint.successCriteria,
@@ -1298,12 +1301,26 @@ class PBLPathBuilder {
           ...p,
           steps: [...(p.steps || [])],
           knowledgeHints: p.knowledgeHints ? [...p.knowledgeHints] : p.knowledgeHints,
-          tools: p.tools ? [...p.tools] : p.tools,
-          acceptance: p.acceptance ? [...p.acceptance] : p.acceptance,
+          tools: Array.isArray(p.tools) ? [...p.tools] : p.tools,
+          acceptance: Array.isArray(p.acceptance) ? [...p.acceptance] : p.acceptance,
+          knowledgeScenes: Array.isArray(p.knowledgeScenes) ? p.knowledgeScenes.map(x => ({ ...x })) : p.knowledgeScenes,
           subsystemIds: p.subsystemIds ? [...p.subsystemIds] : p.subsystemIds,
         })),
       })),
     };
+  }
+
+  _normalizeGraphData(graphData) {
+    if (!graphData) return { nodes: [], links: [] };
+    return {
+      ...graphData,
+      nodes: Array.isArray(graphData.nodes) ? graphData.nodes : [],
+      links: Array.isArray(graphData.links) ? graphData.links : [],
+    };
+  }
+
+  _asStringArray(val) {
+    return Array.isArray(val) ? val.filter(v => v != null && String(v).trim()) : [];
   }
 
   _cloneBlueprint(blueprint) {
@@ -1336,6 +1353,9 @@ class PBLPathBuilder {
     bp.constraints = (bp.constraints || []).slice(0, 6);
     bp.scopeLimits = (bp.scopeLimits || []).slice(0, 6);
     bp.successCriteria = (bp.successCriteria || []).slice(0, 6);
+    bp.reportOutline = this._asStringArray(bp.reportOutline).slice(0, 8);
+    bp.formativeCheckpoints = this._asStringArray(bp.formativeCheckpoints).slice(0, 8);
+    if (!Array.isArray(bp.collaborationRoles)) bp.collaborationRoles = [];
     return bp;
   }
 
@@ -3274,7 +3294,7 @@ class PBLPathBuilder {
       ...s,
       phases: (s.phases || []).map((p, i, arr) => {
         const role = i === 0 ? 'foundation' : (i < arr.length - 1 ? 'bridge' : 'core');
-        const acceptance = (p.acceptance || []).length
+        const acceptance = Array.isArray(p.acceptance) && p.acceptance.length
           ? p.acceptance
           : (p.steps || []).slice(0, 3).map(st =>
             `□ ${String(st).slice(0, 42)}${String(st).length > 42 ? '…' : ''}（有记录/签字）`);
@@ -3282,7 +3302,7 @@ class PBLPathBuilder {
           ...p,
           venue: p.venue || this._inferPhaseVenue(goal, p.phase, role, type, i, arr.length),
           durationHint: p.durationHint || this._inferPhaseDurationHint(i, arr.length),
-          tools: (p.tools || []).length ? p.tools : this._inferPhaseTools(goal, p.phase, this._goalProfile(goal, bp)),
+          tools: Array.isArray(p.tools) && p.tools.length ? p.tools : this._inferPhaseTools(goal, p.phase, this._goalProfile(goal, bp)),
           acceptance,
         };
       }),
@@ -5500,7 +5520,7 @@ class PBLPathBuilder {
   }
 
   _groupMainlineIntoPhases(mainline) {
-    if (!mainline.length) return [];
+    if (!mainline?.length) return [];
     const blocks = [];
     let cur = { role: null, nodes: [] };
     mainline.forEach(n => {
@@ -5641,7 +5661,8 @@ class PBLPathBuilder {
           return `阅读${circ}「${n.name}」要点，完成 1 份与本阶段产出相关的记录或计算（附数据/例证）`;
         });
       const knNames = keptNodes.map(n => n.name);
-      const llmScenes = lp.knowledgeScenes || bp.knowledgeScenes || [];
+      const llmScenes = Array.isArray(lp.knowledgeScenes) ? lp.knowledgeScenes
+        : (Array.isArray(bp.knowledgeScenes) ? bp.knowledgeScenes : []);
       const knowledgeScenes = llmScenes.length
         ? llmScenes
         : this._buildKnowledgeScenes(knNames, keptNodes, goal);
@@ -6705,7 +6726,7 @@ class PBLPathBuilder {
     if (profile.mismatchRes.some(re => re.test(reviewBlob))) {
       issues.push('步骤/概述套用与题目不符的通用工程模板，须改为题目对应的任务类型');
     }
-    const scheme = blueprint.schemes.find(s => s.id === blueprint.recommendedSchemeId) || blueprint.schemes[0];
+    const scheme = (blueprint.schemes || []).find(s => s.id === blueprint.recommendedSchemeId) || blueprint.schemes?.[0];
     if (this._isGenericBlueprintText(scheme?.summary)) {
       issues.push('推荐方案 summary 过于笼统，需写清实施路线差异');
     }
@@ -6927,8 +6948,9 @@ class PBLPathBuilder {
   }
 
   _capGraphNodes(graphData, maxNodes = PBLPathBuilder.PBL_MAX_GRAPH_NODES, goal = '') {
-    const nodes = graphData.nodes || [];
-    if (nodes.length <= maxNodes) return graphData;
+    const normalized = this._normalizeGraphData(graphData);
+    const nodes = normalized.nodes;
+    if (nodes.length <= maxNodes) return normalized;
     const extCap = this._externalLimit(goal);
     const extKeep = nodes.filter(n => n.layer === 'external').slice(0, extCap);
     const others = nodes.filter(n => n.layer !== 'external');
@@ -6945,7 +6967,7 @@ class PBLPathBuilder {
     scored.sort((a, b) => b.score - a.score);
     const kept = [...scored.slice(0, budget).map(s => s.n), ...extKeep];
     const keptIds = new Set(kept.map(n => n.id));
-    const links = (graphData.links || []).filter(l => {
+    const links = (normalized.links || []).filter(l => {
       const src = typeof l.source === 'object' ? l.source.id : l.source;
       const tgt = typeof l.target === 'object' ? l.target.id : l.target;
       return keptIds.has(src) && keptIds.has(tgt);
@@ -7325,8 +7347,8 @@ class PBLPathBuilder {
         ...(previousResult.stats || {}),
         matchedCount: matched.length,
         externalCount: external.length,
-        graphNodes: graphData.nodes.length,
-        graphLinks: graphData.links.length,
+        graphNodes: graphData?.nodes?.length || 0,
+        graphLinks: graphData?.links?.length || 0,
         qualityScore: quality.score,
         qualityGrade: quality.grade,
       },
@@ -7574,9 +7596,9 @@ class PBLPathBuilder {
       }
     }
 
-    const finalMatched = outputAudit.matched;
-    const finalExternal = outputAudit.external;
-    const finalGraphData = outputAudit.graphData;
+    const finalMatched = outputAudit.matched || [];
+    const finalExternal = outputAudit.external || [];
+    const finalGraphData = this._normalizeGraphData(outputAudit.graphData);
     const llmPhases = stage2.projectPhases || [];
     const phaseLen = Math.max(blueprintPhases.length, llmPhases.length);
     const mergedPhases = phaseLen ? Array.from({ length: phaseLen }, (_, i) => {
@@ -7591,7 +7613,8 @@ class PBLPathBuilder {
         ),
         deliverable: this._pickConcreteDeliverable(lp, bp, bp.role, goal),
         literacy: this._supplementPolPsychLiteracy(lp.literacy || bp.literacy || {}, { role: bp.role || 'core', phaseIndex: i + 1 }),
-        knowledgeScenes: lp.knowledgeScenes || bp.knowledgeScenes || [],
+        knowledgeScenes: Array.isArray(lp.knowledgeScenes) ? lp.knowledgeScenes
+          : (Array.isArray(bp.knowledgeScenes) ? bp.knowledgeScenes : []),
         venue: lp.venue || bp.venue || '',
       };
     }) : blueprintPhases;
@@ -8160,6 +8183,8 @@ class PBLPathBuilder {
       projectBlueprint
     });
 
+    const finalizedGraph = this._normalizeGraphData(finalized.graphData);
+
     return {
       goal,
       systems: activeSystems,
@@ -8167,15 +8192,15 @@ class PBLPathBuilder {
       matched: finalized.matched,
       external: finalized.external,
       techRoute,
-      graphData: finalized.graphData,
+      graphData: finalizedGraph,
       complexProject: finalized.complex,
       stats: {
         totalCandidates: this.unifiedIndex.size,
         filteredCandidates: this.unifiedIndex.size,
         matchedCount: finalized.matched.length,
         externalCount: finalized.external.length,
-        graphNodes: finalized.graphData.nodes.length,
-        graphLinks: finalized.graphData.links.length
+        graphNodes: finalizedGraph.nodes.length,
+        graphLinks: finalizedGraph.links.length
       },
       fallback: true
     };
