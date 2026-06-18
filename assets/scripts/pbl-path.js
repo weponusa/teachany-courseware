@@ -7515,9 +7515,11 @@ class PBLPathBuilder {
         result.goal = goal;
         return result;
       }
-      if (e instanceof TypeError || /Cannot read properties of null/i.test(String(e.message || ''))) {
-        const step = this._pblStep ? `（步骤：${this._pblStep}）` : '';
-        throw new TypeError(`${e.message}${step}`);
+      if (e instanceof TypeError || /Cannot read properties of (null|undefined)/i.test(String(e.message || ''))) {
+        const step = this._pblStep ? `（步骤：${this._pblStep}` : '（步骤：未知';
+        const frame = String(e.stack || '').split('\n').find(l => /pbl-path\.js:\d+/.test(l));
+        const loc = frame ? frame.replace(/.*?(pbl-path\.js:\d+:\d+).*/, '$1') : '';
+        throw new TypeError(`${e.message}${step}${loc ? ' @ ' + loc : ''}）`);
       }
       throw e;
     }
@@ -7553,6 +7555,7 @@ class PBLPathBuilder {
     }
 
     // 3. 构建候选知识点列表（默认锚定 K12 全科图谱子图，大学层按需开启）
+    step('intake-candidates');
     const rawCandidates = [];
     this.unifiedIndex.forEach((node) => {
       if (!activeSystems.includes(node.system)) return;
@@ -7580,6 +7583,7 @@ class PBLPathBuilder {
     const bloomProfile = this._inferBloomProfile(projectBlueprint);
 
     // 5. 第一阶段 LLM：判断学科+学段+课标体系（压缩候选集）
+    step('filter');
     this._reportPBLStatus(onStatus, '第 2/6 步：按拆解蓝图筛选课标候选（Bloom 层级）...');
     const stage1 = await this._llmFilterStage(goal, candidates, projectBlueprint, bloomProfile, archetype, activeSystems);
     const filterAudit = this._verifyAndPruneNodes(stage1.filteredCandidates, goal, archetype, '拆解入口·课标筛选后');
@@ -7597,12 +7601,14 @@ class PBLPathBuilder {
     }
 
     // 6. 知识点提案 → 图谱对齐 → validate-match（失败回退 index match）
+    step('propose-match');
     this._reportPBLStatus(onStatus, '第 3/6 步：知识点提案并对齐图谱...');
     let stage2 = await this._runCurriculumProposeValidatePipeline(
       goal, stage1.filteredCandidates, projectBlueprint, stage1.bloomProfile, archetype
     );
 
     // 6.5 相关性二审：规则白名单 + LLM 剔除幻觉节点
+    step('verify-relevance');
     this._reportPBLStatus(onStatus, '第 4/6 步：核实课标节点相关性...');
     stage2 = await this._llmVerifyRelevanceStage(
       goal, stage2, stage1.filteredCandidates, archetype, projectBlueprint
@@ -7623,6 +7629,7 @@ class PBLPathBuilder {
     };
 
     // 7. 第三阶段：dependsOn 方向性验证
+    step('verify-deps');
     this._reportPBLStatus(onStatus, '第 5/6 步：校验知识依赖方向...');
     const verifiedResult = await this._llmVerifyDepsStage(goal, stage2.rawMatchResult, stage1.filteredCandidates, stage2.matched);
     const builtLinks = this._buildDependsOnLinks(verifiedResult, stage1.filteredCandidates);
@@ -7640,6 +7647,7 @@ class PBLPathBuilder {
       archetype,
       projectBlueprint,
     });
+    step('output-audit');
     this._reportPBLStatus(onStatus, '输出前核实无关节点...');
     let outputAudit = this._verifyOutputBundle({
       complex: finalized.complex,
@@ -7653,6 +7661,7 @@ class PBLPathBuilder {
       projectBlueprint,
     });
 
+    step('review-curriculum');
     this._reportPBLStatus(onStatus, '第 6/6 步：LLM 二次检讨课内节点...');
     const reviewed = await this._llmReviewCurriculumStage(
       goal,
@@ -7697,6 +7706,7 @@ class PBLPathBuilder {
       }
     }
 
+    step('merge-phases');
     const finalMatched = outputAudit.matched || [];
     const finalExternal = outputAudit.external || [];
     const finalGraphData = this._normalizeGraphData(outputAudit.graphData);
@@ -7719,6 +7729,7 @@ class PBLPathBuilder {
         venue: lp.venue || bp.venue || '',
       };
     }) : blueprintPhases;
+    step('build-path-plan');
     const moduleChainPre = this._archetypeEngine
       ? this._archetypeEngine.moduleChainFromBlueprint(projectBlueprint)
       : (projectBlueprint.knowledgeChain || '');
@@ -7730,6 +7741,7 @@ class PBLPathBuilder {
       knowledgeChain: moduleChainPre || stage2.knowledgeChain || projectBlueprint.knowledgeChain || '',
       external: finalExternal
     });
+    step('tech-route');
     const moduleChain = moduleChainPre;
     const techRoute = this._buildTechRouteFromPathPlan(pathPlan)
       || this.resolveTechRouteText({
