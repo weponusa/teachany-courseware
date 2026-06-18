@@ -1295,7 +1295,7 @@ body {
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260617-pbl-suggest-steps"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260618-pbl-step-trace"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1517,10 +1517,10 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
 
     pblResult = result;
     pblChatHistory = result.chatHistory || pblChatHistory;
-    renderPBLChatMessages(pblChatHistory);
+    try { renderPBLChatMessages(pblChatHistory); } catch (e) { console.warn('[PBL] 聊天消息渲染降级:', e); }
     statusText.textContent = '正在渲染知识路径图谱...';
-    renderPBLResult(result);
-    scrollToPBLOutput();
+    try { renderPBLResult(result); } catch (e) { console.warn('[PBL] 结果渲染整体降级:', e); }
+    try { scrollToPBLOutput(); } catch (_e) { /* ignore */ }
 
     try {
       if (window.TeachAnyHistory && typeof window.TeachAnyHistory.recordPBL === 'function') {
@@ -1570,7 +1570,9 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
     if (/stack/i.test(msg)) {
       statusText.textContent = '❌ 分析过程内存溢出，请硬刷新页面后重试';
     } else {
-      statusText.textContent = '❌ ' + msg;
+      const frame = String(error.stack || '').split('\n').find(l => /\.js:\d+/.test(l) && !/runPBLAnalysis/.test(l));
+      const loc = (!/步骤：|@/.test(msg) && frame) ? ' @ ' + frame.trim().replace(/^at\s*/, '').replace(/.*\/(?=[^/]+\.js:)/, '') : '';
+      statusText.textContent = '❌ ' + msg + loc;
     }
     statusEl.querySelector('.pulse').style.background = '#ef4444';
     window.__pblLastAnalysisDone = { ok: false, error: error.message, ts: Date.now() };
