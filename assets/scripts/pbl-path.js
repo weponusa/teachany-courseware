@@ -19,6 +19,13 @@ class PBLPathBuilder {
     this.k12NodeIds = new Set();       // grade 1–12 中国课标节点 ID
     this.universityNodeIds = new Set(); // grade 0 大学层节点 ID
 
+    // PBL 课标向量索引（data/pbl/node-embeddings.json）
+    this.pblEmbeddingsMap = null;
+    this.pblEmbedDim = 0;
+    this.pblEmbedModel = '';
+    this._embeddingsLoaded = false;
+    this._vectorHitCache = null;
+
     // Tooltip 延迟隐藏：允许鼠标从节点移动到弹窗内点击课程链接
     this._tooltipHideTimer = null;
     this._tooltipHovered = false;
@@ -1736,6 +1743,130 @@ class PBLPathBuilder {
 
     bp._knowledgeSeedsDerived = true;
     return bp;
+  }
+
+  _getPBLEmbedUrl() {
+    return this._getPBLAnalyzeUrl().replace(/\/analyze$/, '/embed');
+  }
+
+  async _loadPBLEmbeddings() {
+    if (this._embeddingsLoaded) return this.pblEmbeddingsMap;
+    this._embeddingsLoaded = true;
+    try {
+      const resp = await fetch('./data/pbl/node-embeddings.json?t=' + Date.now());
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      const map = new Map();
+      (data.nodes || []).forEach(({ id, e }) => {
+        if (id && Array.isArray(e) && e.length) map.set(id, e);
+      });
+      this.pblEmbeddingsMap = map;
+      this.pblEmbedDim = data.dim || (map.values().next().value?.length || 0);
+      this.pblEmbedModel = data.model || '';
+      console.log(`[PBL] 📐 课标向量索引: ${map.size} 节点, dim=${this.pblEmbedDim}, model=${this.pblEmbedModel || '?'}`);
+    } catch (e) {
+      console.warn('[PBL] 课标向量索引未加载（将仅用关键词召回）:', e.message);
+      this.pblEmbeddingsMap = null;
+    }
+    return this.pblEmbeddingsMap;
+  }
+
+  _buildVectorQuery(goal, blueprint) {
+    const scheme = blueprint?.schemes?.find(s => s.id === blueprint.recommendedSchemeId)
+      || blueprint?.schemes?.[0];
+    const parts = [
+      `项目目标：${String(goal || '').trim()}`,
+    ];
+    if (blueprint?.deliverable) parts.push(`交付物：${blueprint.deliverable}`);
+    if (blueprint?.projectSummary) parts.push(`摘要：${blueprint.projectSummary}`);
+    if (blueprint?.drivingQuestion) parts.push(`驱动性问题：${blueprint.drivingQuestion}`);
+    (scheme?.phases || []).forEach((p, i) => {
+      const steps = (p.steps || []).slice(0, 3).join('；');
+      const hints = (p.knowledgeHints || []).join('、');
+      parts.push(`阶段${i + 1}·${p.phase || ''}：${steps}`);
+      if (hints) parts.push(`检索：${hints}`);
+    });
+    return parts.filter(Boolean).join('\n').slice(0, 6000);
+  }
+
+  _cosineSimilarity(a, b) {
+    if (!a?.length || !b?.length || a.length !== b.length) return -1;
+    let dot = 0;
+    let na = 0;
+    let nb = 0;
+    for (let i = 0; i < a.length; i++) {
+      dot += a[i] * b[i];
+      na += a[i] * a[i];
+      nb += b[i] * b[i];
+    }
+    const denom = Math.sqrt(na) * Math.sqrt(nb);
+    return denom > 0 ? dot / denom : -1;
+  }
+
+  _localHashEmbed(text, dim = 512) {
+    const vec = new Array(dim).fill(0);
+    const tokens = String(text || '').match(/[\u4e00-\u9fa5a-zA-Z0-9]{2,12}/g) || [];
+    for (const t of tokens) {
+      let h = 2166136261;
+      for (let i = 0; i < t.length; i++) {
+        h ^= t.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      for (let k = 0; k < 5; k++) {
+        const idx = Math.abs((h + k * 2654435761) % dim);
+        vec[idx] += 1;
+      }
+    }
+    const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0)) || 1;
+    return vec.map(v => v / norm);
+  }
+
+  async _embedPBLQuery(text) {
+    const payload = String(text || '').trim();
+    if (!payload) return null;
+    if (this.pblEmbedModel === 'local-hash-v1') {
+      return this._localHashEmbed(payload, this.pblEmbedDim || 512);
+    }
+    try {
+      const resp = await fetch(this._getPBLEmbedUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: payload }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+      return data.vector || null;
+    } catch (e) {
+      console.warn('[PBL] query embed 失败:', e.message);
+      return null;
+    }
+  }
+
+  async _retrieveByVectorSimilarity(pool, goal, blueprint, limit = 80) {
+    await this._loadPBLEmbeddings();
+    const map = this.pblEmbeddingsMap;
+    if (!map?.size || !Array.isArray(pool) || !pool.length) return [];
+
+    const queryVec = await this._embedPBLQuery(this._buildVectorQuery(goal, blueprint));
+    if (!queryVec?.length) return [];
+
+    const scored = [];
+    for (const n of pool) {
+      const e = map.get(n.id);
+      if (!e || e.length !== queryVec.length) continue;
+      const s = this._cosineSimilarity(queryVec, e);
+      if (s > 0.05) scored.push({ n, s });
+    }
+    scored.sort((a, b) => b.s - a.s);
+    const top = scored.slice(0, limit).map(x => ({
+      ...x.n,
+      _vectorScore: x.s,
+      matchReason: x.n.matchReason || `向量召回(${(x.s * 100).toFixed(0)}%)`,
+    }));
+    if (top.length) {
+      console.info('[PBL] 向量召回 top:', top.slice(0, 6).map(n => n.name).join('、'));
+    }
+    return top;
   }
 
   _relevanceKeepThreshold(floorMode = false) {
@@ -4737,7 +4868,7 @@ class PBLPathBuilder {
       .join('\n');
   }
 
-  _buildMatchCandidateList(goal, pool, projectBlueprint, archetype, filter, profile, domains, maxCount = 50) {
+  _buildMatchCandidateList(goal, pool, projectBlueprint, archetype, filter, profile, domains, maxCount = 80, vectorHits = null) {
     const goalTerms = this._tokenizeGoalTerms(goal);
     const scored = pool.map(n => ({
       ...n,
@@ -4745,7 +4876,11 @@ class PBLPathBuilder {
     }));
     const lists = [];
 
-    const hintHits = this._retrieveByBlueprintHints(pool, projectBlueprint, archetype, goal, Math.ceil(maxCount * 0.45));
+    if (vectorHits?.length) {
+      lists.push(vectorHits.slice(0, Math.ceil(maxCount * 0.55)));
+    }
+
+    const hintHits = this._retrieveByBlueprintHints(pool, projectBlueprint, archetype, goal, Math.ceil(maxCount * 0.4));
     if (hintHits.length) lists.push(hintHits);
 
     if (archetype && this._archetypeEngine) {
@@ -5100,16 +5235,28 @@ class PBLPathBuilder {
   /** 主路径：提案 → 图谱对齐 → validate-match；不足则回退 index match */
   async _runCurriculumProposeValidatePipeline(goal, candidates, projectBlueprint, bloomProfile, archetype) {
     const minNeed = Math.max(this._getMinMatchedFloor(archetype), archetype?.minMatched || 5);
-    const broadPool = this._getBroadCurriculumPool(goal, candidates, 80);
     const profile = this._getPBLGoalProfile(goal);
     const domains = this._inferProjectDomains(goal);
+    const broadPool = this._getBroadCurriculumPool(goal, candidates, 120);
+
+    let vectorHits = this._vectorHitCache;
+    if (!vectorHits?.length) {
+      vectorHits = await this._retrieveByVectorSimilarity(
+        candidates.length >= 20 ? candidates : broadPool,
+        goal,
+        projectBlueprint,
+        90
+      );
+      this._vectorHitCache = vectorHits;
+    }
+
     const proposePool = this._buildMatchCandidateList(
       goal, candidates, projectBlueprint, archetype,
-      { subjects: [] }, profile, domains, 45
+      { subjects: [] }, profile, domains, 100, vectorHits
     );
-    const proposeCandidates = proposePool.length >= 12
+    const proposeCandidates = proposePool.length >= 15
       ? proposePool
-      : this._unionCandidateNodes([proposePool, broadPool], 45);
+      : this._unionCandidateNodes([proposePool, broadPool, vectorHits || []], 100);
 
     if (proposeCandidates.length) {
       console.info('[PBL] propose 候选池:', proposeCandidates.slice(0, 8).map(n => n.name).join('、'));
@@ -7996,6 +8143,7 @@ class PBLPathBuilder {
 
     // 4. 第零阶段：全链路拆解可行方案（不选课标）
     step('decompose');
+    this._vectorHitCache = null;
     const projectBlueprint = this._deriveBlueprintKnowledgeSeeds(
       goal, await this._llmDecomposeStage(goal, onStatus)
     );
@@ -8305,7 +8453,7 @@ class PBLPathBuilder {
       return subjectMatch && systemMatch && gradeMatch && notElementary;
     });
 
-    const MAX_STAGE2_CANDIDATES = archetype ? 50 : (profile.complex ? 45 : (this._isSocialOrCivicInquiryGoal(goal) ? 50 : 36));
+    const MAX_STAGE2_CANDIDATES = archetype ? 90 : (profile.complex ? 85 : (this._isSocialOrCivicInquiryGoal(goal) ? 90 : 80));
     let pool = filteredCandidates.length > 0 ? filteredCandidates : candidates.filter(n => {
       if (!this._passesGradeBandGate(n, goal)) return false;
       const g = parseInt(n.grade, 10) || 0;
@@ -8326,8 +8474,17 @@ class PBLPathBuilder {
         pool = this._unionCandidateNodes([mainlinePool, pool], Math.max(pool.length, MAX_STAGE2_CANDIDATES * 2));
       }
     }
+
+    let vectorHits = [];
+    try {
+      vectorHits = await this._retrieveByVectorSimilarity(pool, goal, projectBlueprint, 90);
+      this._vectorHitCache = vectorHits;
+    } catch (e) {
+      console.warn('[PBL] 向量召回跳过:', e.message);
+    }
+
     const topCandidates = this._buildMatchCandidateList(
-      goal, pool, projectBlueprint, archetype, filter, profile, domains, MAX_STAGE2_CANDIDATES
+      goal, pool, projectBlueprint, archetype, filter, profile, domains, MAX_STAGE2_CANDIDATES, vectorHits
     );
     if (topCandidates.length) {
       console.log(`[PBL] match 候选召回 ${topCandidates.length} 个:`, topCandidates.slice(0, 8).map(n => n.name).join('、'));
