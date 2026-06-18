@@ -6509,9 +6509,12 @@ class PBLPathBuilder {
     return bp;
   }
 
-  _applyBlueprintPipeline(goal, blueprint) {
+  _applyBlueprintPipeline(goal, blueprint, opts = {}) {
     const bp = this._normalizeBlueprint(blueprint);
     if (!bp?.schemes?.length) return this._fallbackDecomposeBlueprint(goal);
+    if (opts.preserveLlm || (bp._fromLlm && this._isUsableLlmBlueprint(bp, goal))) {
+      return this._lightNormalizeBlueprint(goal, bp);
+    }
     try {
       const sanitized = this._sanitizeBlueprintForGoal(bp, goal);
       return this._concretizeBlueprint(goal, sanitized, this._resolvedArchetype);
@@ -6523,6 +6526,46 @@ class PBLPathBuilder {
       }
       throw e;
     }
+  }
+
+  /** LLM 初稿是否足够可用：优先保留模型原生拆解，后续再匹配课标 */
+  _isUsableLlmBlueprint(blueprint, goal) {
+    if (!blueprint?.schemes?.length) return false;
+    const scheme = (blueprint.schemes || []).find(s => s.id === blueprint.recommendedSchemeId)
+      || blueprint.schemes[0];
+    const phases = scheme?.phases || [];
+    const steps = phases.flatMap(p => p.steps || []).filter(s => String(s || '').trim());
+    if (phases.length < 3 || steps.length < 6) return false;
+    const hollow = steps.filter(s => this._isHollowStep(s)).length;
+    if (hollow > Math.max(2, Math.floor(steps.length * 0.35))) return false;
+    const blob = JSON.stringify(blueprint);
+    if (/A3纸|铅笔尺规|查阅资料并分析|完成本阶段任务/.test(blob)) return false;
+    return true;
+  }
+
+  /** 轻量归一化：只补缺失元数据，不改写 LLM steps/deliverable */
+  _lightNormalizeBlueprint(goal, blueprint) {
+    if (!blueprint?.schemes?.length) return blueprint;
+    let bp = this._shallowCloneBlueprint(blueprint);
+    const topic = this._extractTopicProfile(goal);
+    if (!bp.projectSummary || this._isGenericBlueprintText(bp.projectSummary)) {
+      bp.projectSummary = topic.definition || bp.projectSummary;
+    }
+    if (!bp.deliverable || bp.deliverable.length < 6) {
+      bp.deliverable = topic.deliverableHint || bp.deliverable;
+    }
+    if (!Array.isArray(bp.constraints) || bp.constraints.length < 2) {
+      bp.constraints = this._inferDefaultConstraints(goal);
+    }
+    if (!Array.isArray(bp.scopeLimits) || bp.scopeLimits.length < 2) {
+      bp.scopeLimits = this._inferDefaultScopeLimits(goal);
+    }
+    if (!Array.isArray(bp.successCriteria) || bp.successCriteria.length < 2) {
+      bp.successCriteria = this._inferDefaultSuccessCriteria(goal);
+    }
+    bp._fromLlm = true;
+    bp._concretized = true;
+    return this._normalizeBlueprint(bp);
   }
 
   _blueprintAnchoredToGoal(blueprint, goal) {
@@ -7015,18 +7058,23 @@ class PBLPathBuilder {
 
   _finalizeDecomposeBlueprint(goal, data) {
     if (!data?.schemes?.length) return this._fallbackDecomposeBlueprint(goal);
+    data._fromLlm = true;
+    if (this._isUsableLlmBlueprint(data, goal)) {
+      console.info('[PBL] 保留 LLM 原生拆解，课标匹配后置');
+      return this._applyBlueprintPipeline(goal, data, { preserveLlm: true });
+    }
     const anchored = this._blueprintAnchoredToGoal(data, goal);
     const depth = this._blueprintStepDepthScore(data);
     const substance = this._blueprintSubstanceScore(data, goal);
-    if (substance < 4) {
+    if (substance < 3) {
       console.warn('[PBL] 蓝图内容空洞，使用主题蓝图回退');
       return this._fallbackDecomposeBlueprint(goal);
     }
-    if (!anchored && depth < 2) {
+    if (!anchored && depth < 1.5) {
       console.warn('[PBL] 蓝图未锚定且步骤过浅，使用主题蓝图回退');
       return this._fallbackDecomposeBlueprint(goal);
     }
-    if (!anchored) console.warn('[PBL] 蓝图锚定偏弱，客户端加厚 metadata/steps');
+    if (!anchored) console.warn('[PBL] 蓝图锚定偏弱，客户端轻度加厚');
     return this._applyBlueprintPipeline(goal, data);
   }
 
@@ -7089,23 +7137,28 @@ class PBLPathBuilder {
       }
       let data = this._extractDecomposeData(response);
       if (!data) return this._fallbackDecomposeBlueprint(goal);
+      data._fromLlm = true;
 
-      let issues = this._collectDecomposeReviewIssues(goal, data);
-      const forceReview = this._blueprintSubstanceScore(data, goal) < 4
-        || this._blueprintStepDepthScore(data) < 3
-        || this._projectSpecHasPolPsych(this._activeProjectSpec);
-      if (forceReview && !issues.length) {
-        issues = ['按通用拆解原则全面修订：步骤须含量化指标与可验收产出，tools 写方法指导禁文具，deliverable 用具体表/图/报告名'];
-      }
-      if (issues.length) {
+      const issues = this._collectDecomposeReviewIssues(goal, data);
+      const hollowMajority = (() => {
+        const scheme = (data.schemes || []).find(s => s.id === data.recommendedSchemeId) || data.schemes?.[0];
+        const steps = (scheme?.phases || []).flatMap(p => p.steps || []);
+        if (steps.length < 4) return true;
+        return steps.filter(s => this._isHollowStep(s)).length > steps.length * 0.4;
+      })();
+      const needReview = hollowMajority && issues.length >= 2;
+      if (needReview) {
         this._reportPBLStatus(onStatus, `第 1/6 步：评审修订蓝图（${issues.length} 项待改）...`);
-        const reviewed = await this._llmReviewDecomposeStage(goal, data, issues, profile.complex);
+        const reviewed = await this._llmReviewDecomposeStage(goal, data, issues.slice(0, 6), profile.complex);
         if (reviewed) {
           data = reviewed;
+          data._fromLlm = true;
           console.info('[PBL] review-decompose 已应用修订稿');
         } else {
-          console.warn('[PBL] review-decompose 跳过或无效，使用初稿+客户端加厚');
+          console.warn('[PBL] review-decompose 跳过，保留 LLM 初稿');
         }
+      } else if (issues.length) {
+        console.info('[PBL] 初稿可用，跳过 review-decompose（', issues.length, '项轻微问题）');
       }
 
       return this._finalizeDecomposeBlueprint(goal, data);

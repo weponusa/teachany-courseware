@@ -538,93 +538,114 @@ const PBL_DESIGN_LOGIC_BLOCK = `
 
 function systemPromptDecompose(complex, goal, projectSpec = null) {
   const p = projectTypeProfile(goal);
-  const depth = complex ? '2-3套路线并推荐1套' : '≥2套路线并推荐1套';
+  const subject = parseGoalSubject(goal);
+  const schemeCount = complex ? '2-3' : '至少2';
   const polPsychHint = formatPolPsychDecomposeHint(projectSpec, goal);
-  return `PBL 全链路拆解（本阶段不选课标）。${formatTopicAnchorBlock(goal)}｜${typeGuardrailBlock(goal)}
+  return `你是资深 PBL/探究项目设计教师。本阶段只做「项目完整拆解」，**不选课标、不写课标节点名**；课标匹配在后续独立步骤完成。
 
-${DECOMPOSE_DEPTH_BLOCK}
-${formatUniversalDecomposePrinciples(goal)}
-${PBL_DESIGN_LOGIC_BLOCK}${polPsychHint}
+${formatTopicAnchorBlock(goal)}｜类型：${p.label}
 
-输出：drivingQuestion+交付物+约束+scopeLimits+successCriteria+reportOutline+formativeCheckpoints+collaborationRoles+subsystems+${depth}+推荐方案 phases（venue/steps/deliverable/tools/acceptance/knowledgeHints）。
-${ANTI_VACUUM_BLOCK}
-禁复述：phase/deliverable/steps/scheme名禁止出现【学科】【任务】或粘贴全文goal。
-去重：各phase steps零重叠；steps≠deliverable同义复述；summary/pros/cons/约束字段互不复制。
-只返回JSON，不要markdown。`;
+## 你的任务
+像直接回答教师提问一样，把项目拆成可实施的路线：
+1. 写清 drivingQuestion、最终 deliverable、约束与验收标准
+2. 给出 ${schemeCount} 套 **实质不同** 的方案（schemes），差异在：菌种/样本策略/对照设计/周期/仪器深度/课堂可行性等，禁止只改标题
+3. 推荐方案含 4-5 个阶段（phases），每阶段 ≥2 条 **具体可执行** steps（含变量、指标、次数、仪器或表格名）
+4. knowledgeHints 可留空 [] 或每阶段 0-3 个检索词；**不要编造课标节点名**
+
+## 质量要求（简洁）
+- steps 写「做什么+怎么做+产出什么」，禁止「查阅资料并分析」「完成本阶段」「环境搭建」
+- deliverable 用具体名称（XX实验记录表/降解曲线图/菌种比选报告），禁「阶段成果」「方案」
+- tools 写方法要点（变量对照表规范、培养条件、测色方法），禁文具清单
+- 科学实验类：须写清自变量/因变量/对照、重复次数、测量指标与安全边界
+${polPsychHint ? `\n${polPsychHint}` : ''}
+
+只返回 JSON，不要 markdown。`;
+}
+
+function decomposeJsonExample(goal) {
+  const subject = parseGoalSubject(goal);
+  const type = classifyProjectType(goal);
+  if (type === 'scientific-inquiry' || /实验|降解|菌|培养|对照|变量/.test(String(goal || ''))) {
+    return `{
+  "drivingQuestion": "哪种食用菌菌丝体对目标合成染料降解最快？降解率与培养条件有何关系？",
+  "projectSummary": "比较多种食用菌菌丝体对合成染料的降解能力，通过对照实验测定降解率并筛选最优菌种",
+  "deliverable": "菌种降解能力比选报告（含实验设计表、数据曲线、结论与局限）",
+  "schemes": [
+    {
+      "id": "A",
+      "name": "多菌种平行对照路线",
+      "summary": "选3-5种菌株，固定染料浓度与培养条件，平行重复测定7-14天降解率",
+      "pros": ["可比性强", "结论直接"],
+      "cons": ["菌种获取与培养周期较长"],
+      "phases": [
+        {
+          "phase": "文献调研与菌种确定",
+          "venue": "教室+实验室",
+          "steps": [
+            "确定2种目标染料（如甲基橙、刚果红）及3-5种待测食用菌菌株，列出培养温度/湿度要求",
+            "编制实验变量表：自变量=菌种种类，因变量=染料浓度/吸光度，对照=无菌丝培养基"
+          ],
+          "deliverable": "实验变量与菌种清单表",
+          "tools": ["变量对照设计表", "培养条件记录规范"],
+          "knowledgeHints": []
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "name": "单菌种多条件优化路线",
+      "summary": "先筛出1种降解力强的菌，再优化温度/pH/接种量",
+      "pros": ["深入机理", "课时可控"],
+      "cons": ["初筛阶段可能遗漏优质菌种"],
+      "phases": []
+    }
+  ],
+  "recommendedSchemeId": "A"
+}`;
+  }
+  if (type === 'social-inquiry' || /问卷|调查|访谈/.test(String(goal || ''))) {
+    return `{
+  "drivingQuestion": "…可验证问句…",
+  "deliverable": "调查报告",
+  "schemes": [{"id":"A","name":"…","phases":[{"phase":"调查设计","steps":["设计10题问卷…","确定样本≥30人…"],"deliverable":"问卷定稿","knowledgeHints":[]}]}],
+  "recommendedSchemeId": "A"
+}`;
+  }
+  return `{
+  "drivingQuestion": "围绕「${subject}」的可验证问句",
+  "projectSummary": "40-80字概括谁、用什么方法、做出什么",
+  "deliverable": "具体成果名（报告/模型/方案册）",
+  "schemes": [
+    {"id":"A","name":"路线A名称","summary":"与B不同的技术/样本/周期路线","phases":[{"phase":"阶段名","steps":["具体步骤1","具体步骤2"],"deliverable":"阶段产出名","knowledgeHints":[]}]},
+    {"id":"B","name":"路线B名称","summary":"另一套实质不同的路线","phases":[]}
+  ],
+  "recommendedSchemeId": "A"
+}`;
 }
 
 function decomposeQualityExtra(goal) {
   const subject = parseGoalSubject(goal);
-  const p = projectTypeProfile(goal);
   return `
 
-【通用拆解验收 · 硬性】
-- 所有 steps/deliverable 须出现题目核心对象「${subject}」或其关键专名，不得写成与题目无关的通用流程
-- 最终 deliverable 须为可命名产物（XX表/XX图/XX报告/XX模型/XX倡议书），禁「阶段成果」「研究报告初稿」「方案」
-- 每阶段 steps 至少 1 条含阿拉伯数字或 ≥/不少于；全项目至少 3 个阶段满足
-- 研究/调查/对比类：至少 2 个阶段 steps 含样本量、题数、图表名或表格列名
-- 工程/制作类：至少 1 个阶段含关键尺寸、测试次数或功能验收指标
-- 人文/写作类：至少 1 个阶段含字数、篇数或修改轮次
-- 步骤类型须符合「${p.label}」红线：${p.redlines}
-- 禁止套用与题目无关的模板套话（工程接线/智慧城市/MVP/环境搭建等，除非题目明确要求）`;
+【输出前自检】
+- schemes≥2，路线差异可辨认（不是同义改写）
+- 推荐方案 phases 4-5，每阶段 steps≥2 且具体
+- steps/deliverable 紧扣「${subject}」及题目专名（染料、菌丝体、降解等）
+- 禁止空泛套话与文具清单`;
 }
 
 function userPromptDecompose(goal, complex, projectSpec = null) {
   const ctx = buildCompactUserContext({ goal, projectSpec, includeBlueprint: false });
   const task = stripStructuredGoal(goal);
-  const subject = parseGoalSubject(goal);
-  const domains = inferProjectDomains(goal);
-  const domainBlock = domains.length
-    ? `\n模块参考：${domains.map(d => d.label).join('、')}`
-    : '';
   const specBlock = ctx && ctx !== task ? `\n${ctx}` : '';
-  return `${task}${specBlock}${domainBlock}${decomposeQualityExtra(goal)}
+  const example = decomposeJsonExample(goal);
+  return `${task}${specBlock}${decomposeQualityExtra(goal)}
 
-返回 JSON（严格遵循字段名）：
-{
-  "drivingQuestion": "一句驱动性问题（含本题专名与约束）",
-  "projectSummary": "一句话概括项目",
-  "deliverable": "最终交付物",
-  "reportOutline": ["报告/成果第1部分", "第2部分"],
-  "formativeCheckpoints": ["第1周末：…可核查", "第2周中：…"],
-  "collaborationRoles": [{"role": "角色名", "duty": "职责"}],
-  "constraints": ["时间/安全/器材等约束"],
-  "scopeLimits": ["不能宣称的结论或能力边界，至少2条"],
-  "successCriteria": ["可检查的验收标准，至少2条"],
-  "subsystems": [
-    {"id": "xxx", "name": "子系统名", "description": "该子系统要解决的问题"}
-  ],
-  "schemes": [
-    {
-      "id": "A",
-      "name": "方案名称",
-      "summary": "技术路线概述",
-      "pros": ["优点"],
-      "cons": ["局限"],
-      "phases": [
-        {
-          "phase": "选题与调查设计",
-          "venue": "教室/校外/家庭/线上",
-          "durationHint": "约1周或2课时",
-          "steps": [
-            "围绕「${subject}」写出1句可验证调查问题，确定样本对象与回收目标≥15份",
-            "设计8-10题问卷（含2道开放题），注明发放渠道、截止日与知情说明"
-          ],
-          "deliverable": "调查问卷定稿+抽样方案表",
-          "tools": ["问卷题型配比说明", "样本量与回收目标表"],
-          "acceptance": ["□ 问卷题项≥8且含开放题", "□ 抽样对象与回收目标已写明"],
-          "subsystemIds": ["xxx"],
-          "knowledgeHints": ["检索关键词1", "检索关键词2"]
-        }
-      ]
-    }
-  ],
-  "recommendedSchemeId": "A",
-  "knowledgeChain": "子系统1 → 子系统2 → 测试迭代"
-}
+返回 JSON，字段含：drivingQuestion, projectSummary, deliverable, reportOutline, formativeCheckpoints, collaborationRoles, constraints, scopeLimits, successCriteria, subsystems, schemes(≥2), recommendedSchemeId, knowledgeChain。
+knowledgeHints 可省略或留空，后续再匹配课标。
 
-要求：schemes≥2；phases 4-5；knowledgeHints每阶段2-5个；各字段去重不复述。
-阶段 steps 每条须满足通用步骤公式（动词+本题专名+方法/数据来源+可验收产出），示例中的「${subject}」须替换为本题实际专名。`;
+结构参考（须按本题改写，勿照搬示例菌种/染料名除非题目相关）：
+${example}`;
 }
 
 function formatBlueprintForMatch(blueprint) {
