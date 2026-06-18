@@ -374,9 +374,10 @@ class PBLPathBuilder {
 
   computeQualityScore(payload = {}) {
     const {
-      goal = '', matched = [], external = [], projectBlueprint = null,
+      goal = '', external = [], projectBlueprint = null,
       archetype = null, graphData = null, pathPlan = null,
     } = payload;
+    const matched = this._asArray(payload.matched);
     let score = 100;
     const breakdown = [];
 
@@ -3943,7 +3944,7 @@ class PBLPathBuilder {
     if (goodSteps.length < 2 || avgScore < 2) {
       const role = phaseIndex === 0 ? 'foundation' : (phaseIndex < totalPhases - 1 ? 'bridge' : 'core');
       const suggested = this._suggestPhaseSteps(goal, { role, phase: phase?.phase, nodes: [] }, phase);
-      if (suggested.length) return suggested.slice(0, 4);
+      if (Array.isArray(suggested) && suggested.length) return suggested.slice(0, 4);
     }
     return (goodSteps.length ? goodSteps : steps).slice(0, 4);
   }
@@ -4551,7 +4552,7 @@ class PBLPathBuilder {
       if (modulePicks.length) lists.push(modulePicks);
     }
 
-    if (domains.length && (profile.complex || this._isConsumerDecisionGoal(goal) || this._isChemistryInquiryGoal(goal))) {
+    if (this._asArray(domains).length && (profile.complex || this._isConsumerDecisionGoal(goal) || this._isChemistryInquiryGoal(goal))) {
       lists.push(this._pickDomainAwareCandidates(scored, Math.ceil(maxCount * 0.4), domains, goal));
     }
 
@@ -4894,7 +4895,7 @@ class PBLPathBuilder {
     if (safeMatched.length >= min || !candidatePool.length) {
       return this._assignCoreRoles(safeMatched.slice(0, limit), Math.min(min, safeMatched.length));
     }
-    const domains = this._inferProjectDomains(goal);
+    const domains = this._asArray(this._inferProjectDomains(goal));
     const list = [...safeMatched];
     const seen = new Set(list.map(n => n.id));
     const domainMin = (complex || civic) ? (civic ? 2 : 6) : 2;
@@ -5568,7 +5569,42 @@ class PBLPathBuilder {
       };
       return (byRole[group.role] || [`围绕 ${knRef} 完成探究记录与数据分析`]).slice(0, 3);
     }
-    return null;
+    if (type === 'health-life') {
+      const map = {
+        foundation: [
+          `围绕「${shortGoal}」设计现状调查：问卷/访谈提纲≥8题，明确样本对象与回收目标（如本班≥15份）`,
+          `查阅 ${knRef} 相关知识，整理 1 页概念说明、规则摘要或健康/心理知识卡片`,
+        ],
+        bridge: [
+          `回收并整理调查数据，绘制至少 1 张统计图，写出 3 条基于数据的发现`,
+          `结合道法/心理视角分析成因，列出 2–3 条可执行的干预或宣传要点`,
+        ],
+        core: [
+          `实施小组行动（宣传、情景剧、访谈反馈等）并记录过程照片≥3张`,
+          `撰写实践报告/倡议书（≥500字），附自评表与同伴反馈要点`,
+        ],
+      };
+      return mk(map[role] || map.core);
+    }
+    if (type === 'general' || type === 'humanities-literary') {
+      const domains = this._inferProjectDomains(goal);
+      const dom = domains[0];
+      if (dom) {
+        const art = this._compactProjectLabel(goal);
+        const templated = this._domainStepTemplates(dom, art, knRef);
+        if (templated.length) return mk(templated);
+      }
+    }
+    const domains = this._inferProjectDomains(goal);
+    const dom = domains.find((_, i) => i === (group.phaseIndex ? group.phaseIndex - 1 : 0)) || domains[0];
+    if (dom) {
+      const art = this._compactProjectLabel(goal);
+      return mk(this._domainStepTemplates(dom, art, knRef));
+    }
+    return mk([
+      `围绕「${shortGoal}」完成本阶段资料整理与记录表（附数据来源）`,
+      `结合 ${knRef} 撰写可核查的阶段小结（含数据、例证或签字确认）`,
+    ]);
   }
 
   _groupMainlineIntoPhases(mainline) {
@@ -5847,11 +5883,12 @@ class PBLPathBuilder {
   }
 
   _assignCoreRoles(nodes, minCore) {
-    if (!nodes.length) return nodes;
-    const floor = Math.min(minCore, nodes.length);
-    const sorted = [...nodes].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+    const list = this._asArray(nodes);
+    if (!list.length) return list;
+    const floor = Math.min(minCore, list.length);
+    const sorted = [...list].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
     const coreIds = new Set(sorted.slice(0, floor).map(n => n.id));
-    return nodes.map(n => ({
+    return list.map(n => ({
       ...n,
       pblRole: coreIds.has(n.id) ? 'core' : (n.pblRole || 'bridge'),
     }));
@@ -7478,11 +7515,16 @@ class PBLPathBuilder {
         result.goal = goal;
         return result;
       }
+      if (e instanceof TypeError || /Cannot read properties of null/i.test(String(e.message || ''))) {
+        const step = this._pblStep ? `（步骤：${this._pblStep}）` : '';
+        throw new TypeError(`${e.message}${step}`);
+      }
       throw e;
     }
   }
 
   async _analyzePBLGoalBody(goal, selectedSystems = ['all'], onStatus = null, options = {}) {
+    const step = (label) => { this._pblStep = label; };
     this._activeProjectSpec = options.projectSpec || null;
     this._refinementContext = options.refinementContext || null;
     const chatHistory = options.chatHistory || [];
@@ -7531,6 +7573,7 @@ class PBLPathBuilder {
     }
 
     // 4. 第零阶段：全链路拆解可行方案（不选课标）
+    step('decompose');
     const projectBlueprint = await this._llmDecomposeStage(goal, onStatus);
     this._activeBlueprint = projectBlueprint;
     const blueprintPhases = this._blueprintProjectPhases(projectBlueprint, goal);
@@ -7589,6 +7632,7 @@ class PBLPathBuilder {
       stage2.dependsOnLinks = builtLinks;
     }
 
+    step('finalize-graph');
     const finalized = this._finalizePBLGraph(goal, stage2.matched, stage2.external, activeSystems, {
       pathOrderIds: stage2.pathOrderIds,
       dependsOnLinks: stage2.dependsOnLinks || [],
@@ -7697,6 +7741,7 @@ class PBLPathBuilder {
         knowledgeChain: moduleChain || pathPlan.knowledgeChain,
         pathPlan
       });
+    step('quality-score');
     const quality = this.computeQualityScore({
       goal,
       matched: finalMatched,
