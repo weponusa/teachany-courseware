@@ -1323,6 +1323,39 @@ class PBLPathBuilder {
     return Array.isArray(val) ? val.filter(v => v != null && String(v).trim()) : [];
   }
 
+  _asArray(val) {
+    return Array.isArray(val) ? val : [];
+  }
+
+  _normalizeBlueprint(bp) {
+    if (!bp || typeof bp !== 'object') return bp;
+    const out = { ...bp };
+    out.reportOutline = this._asStringArray(out.reportOutline);
+    out.formativeCheckpoints = this._asStringArray(out.formativeCheckpoints);
+    out.collaborationRoles = Array.isArray(out.collaborationRoles) ? out.collaborationRoles : [];
+    out.constraints = this._asStringArray(out.constraints);
+    out.scopeLimits = this._asStringArray(out.scopeLimits);
+    out.successCriteria = this._asStringArray(out.successCriteria);
+    out.subsystems = this._asArray(out.subsystems);
+    out.schemes = this._asArray(out.schemes).map(s => ({
+      ...s,
+      pros: this._asStringArray(s.pros),
+      cons: this._asStringArray(s.cons),
+      phases: this._asArray(s.phases).map(p => ({
+        ...p,
+        steps: this._asStringArray(p.steps),
+        knowledgeHints: this._asStringArray(p.knowledgeHints),
+        tools: this._asStringArray(p.tools),
+        acceptance: this._asStringArray(p.acceptance),
+        knowledgeScenes: Array.isArray(p.knowledgeScenes)
+          ? p.knowledgeScenes.filter(x => x && typeof x === 'object')
+          : [],
+      })),
+    }));
+    if (typeof out.drivingQuestion !== 'string') out.drivingQuestion = out.drivingQuestion ? String(out.drivingQuestion) : '';
+    return out;
+  }
+
   _cloneBlueprint(blueprint) {
     if (!blueprint) return blueprint;
     try {
@@ -1401,7 +1434,14 @@ class PBLPathBuilder {
       const anchors = (typeof PBLTopicAnchors !== 'undefined' && PBLTopicAnchors.inferTopicKnowledgeAnchors)
         ? PBLTopicAnchors.inferTopicKnowledgeAnchors(key)
         : empty;
-      this._topicAnchorCache.set(key, anchors);
+      this._topicAnchorCache.set(key, {
+        recallTerms: this._asStringArray(anchors?.recallTerms),
+        subjects: this._asStringArray(anchors?.subjects),
+        places: this._asArray(anchors?.places),
+        periods: this._asArray(anchors?.periods),
+        hints: anchors?.hints ? String(anchors.hints) : '',
+        strong: !!anchors?.strong,
+      });
     }
     return this._topicAnchorCache.get(key);
   }
@@ -1559,7 +1599,15 @@ class PBLPathBuilder {
   /** 学科限制：表单显式指定优先；光伏/能源测算等类型锁定物理+数学+地学，避免「能量」误召回生物 */
   _getAllowedSubjects(goal, archetype = null) {
     const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
-    if (specSubjects?.length) return new Set(specSubjects);
+    if (specSubjects?.length) {
+      const set = new Set(specSubjects);
+      // 道法/心理 PBL 常需语文写作、数学统计作支撑课标，保底召回时一并纳入
+      if (set.has('politics') || set.has('psychology')) {
+        set.add('chinese');
+        set.add('math');
+      }
+      return set;
+    }
     if (this._isEnergyAnalysisGoal(goal)) {
       return new Set(['physics', 'math', 'science', 'geography', 'chinese', 'info-tech']);
     }
@@ -2374,10 +2422,10 @@ class PBLPathBuilder {
         { id: 'conclusion', label: '分析与结论', keywords: ['分析', '结论', '解释', '规律', '报告'], subjects: ['science', 'math', 'chinese'] },
       ],
       'social-inquiry': [
-        { id: 'topic', label: '选题与调查设计', keywords: ['选题', '调查', '问卷', '访谈', '抽样', '样本', '维度', '指标'], subjects: ['chinese', 'math'] },
-        { id: 'collect', label: '资料与数据收集', keywords: ['资料', '数据', '收集', '记录', '文献', '实地', '史料', '案例'], subjects: ['geography', 'history', 'chinese'] },
-        { id: 'analyze', label: '整理与统计分析', keywords: ['统计', '整理', '图表', '分析', '百分比', '平均数', '对比'], subjects: ['math'] },
-        { id: 'report', label: '结论与报告', keywords: ['结论', '报告', '建议', '论证', '写作', '说明'], subjects: ['chinese'] },
+        { id: 'topic', label: '选题与调查设计', keywords: ['选题', '调查', '问卷', '访谈', '抽样', '样本', '维度', '指标'], subjects: ['chinese', 'math', 'politics', 'psychology'] },
+        { id: 'collect', label: '资料与数据收集', keywords: ['资料', '数据', '收集', '记录', '文献', '实地', '史料', '案例'], subjects: ['geography', 'history', 'chinese', 'politics'] },
+        { id: 'analyze', label: '整理与统计分析', keywords: ['统计', '整理', '图表', '分析', '百分比', '平均数', '对比'], subjects: ['math', 'psychology'] },
+        { id: 'report', label: '结论与报告', keywords: ['结论', '报告', '建议', '论证', '写作', '说明', '倡议'], subjects: ['chinese', 'politics'] },
       ],
       'humanities-literary': [
         { id: 'theme', label: '立意与选材', keywords: ['立意', '主题', '选材', '构思', '观点'], subjects: ['chinese', 'english'] },
@@ -2410,10 +2458,10 @@ class PBLPathBuilder {
         { id: 'review', label: '执行与复盘', keywords: ['执行', '记录', '反馈', '复盘', '总结', '报告', '通知'], subjects: ['chinese'] },
       ],
       'health-life': [
-        { id: 'status', label: '现状了解', keywords: ['现状', '调查', '统计', '数据', '测量', '记录'], subjects: ['math', 'biology', 'science'] },
-        { id: 'knowledge', label: '健康知识', keywords: ['健康', '营养', '饮食', '运动', '睡眠', '安全', '疾病', '人体', '视力'], subjects: ['biology', 'science'] },
-        { id: 'plan', label: '计划制定', keywords: ['计划', '方案', '目标', '食谱', '作息', '锻炼'], subjects: ['chinese', 'math'] },
-        { id: 'assess', label: '实践与评估', keywords: ['记录', '评估', '对比', '反馈', '改进', '报告', '宣传', '倡议'], subjects: ['chinese', 'math'] },
+        { id: 'status', label: '现状了解', keywords: ['现状', '调查', '统计', '数据', '测量', '记录'], subjects: ['math', 'biology', 'science', 'psychology', 'politics'] },
+        { id: 'knowledge', label: '健康知识', keywords: ['健康', '营养', '饮食', '运动', '睡眠', '安全', '疾病', '人体', '视力', '情绪', '心理', '规则', '责任'], subjects: ['biology', 'science', 'psychology', 'politics'] },
+        { id: 'plan', label: '计划制定', keywords: ['计划', '方案', '目标', '食谱', '作息', '锻炼', '沟通', '合作'], subjects: ['chinese', 'math', 'psychology', 'politics'] },
+        { id: 'assess', label: '实践与评估', keywords: ['记录', '评估', '对比', '反馈', '改进', '报告', '宣传', '倡议'], subjects: ['chinese', 'math', 'politics'] },
       ],
       'planting-cultivation': [
         { id: 'taxonomy', label: '植物识别与分类', keywords: ['植物', '分类', '特征', '结构', '器官', '绿色'], subjects: ['science', 'biology'] },
@@ -2818,11 +2866,12 @@ class PBLPathBuilder {
   }
 
   _purgeCurriculumNoise(nodes, goal) {
-    let list = this._purgeBiologyNoise(nodes, goal);
+    const base = Array.isArray(nodes) ? nodes : [];
+    let list = this._purgeBiologyNoise(base, goal);
     list = this._purgeOffTopicScienceNoise(list, goal);
     list = this._purgeChemistryNoise(list, goal);
     list = this._purgeGeographyClimateNoise(list, goal);
-    return list;
+    return Array.isArray(list) ? list : [];
   }
 
   _purgeAviationNoise(nodes, goal) {
@@ -3568,7 +3617,7 @@ class PBLPathBuilder {
     );
     let hints = (p.knowledgeHints || []).filter(h => !this._isIrrelevantBlueprintHint(h, goal));
     if (hints.length < 2 && dom) {
-      hints = [...new Set([...hints, ...dom.keywords.slice(0, 5)])].slice(0, 6);
+      hints = [...new Set([...hints, ...(dom.keywords || []).slice(0, 5)])].slice(0, 6);
     }
     return { ...p, phase, steps, knowledgeHints: hints };
   }
@@ -4841,11 +4890,12 @@ class PBLPathBuilder {
   _ensureMinimumMatched(matched, goal, candidatePool, limit, complex, archetype = null) {
     const civic = this._isSocialOrCivicInquiryGoal(goal);
     const min = this._getMinMatchedFloor(archetype);
-    if (matched.length >= min || !candidatePool.length) {
-      return this._assignCoreRoles(matched.slice(0, limit), Math.min(min, matched.length));
+    const safeMatched = Array.isArray(matched) ? matched : [];
+    if (safeMatched.length >= min || !candidatePool.length) {
+      return this._assignCoreRoles(safeMatched.slice(0, limit), Math.min(min, safeMatched.length));
     }
     const domains = this._inferProjectDomains(goal);
-    const list = [...matched];
+    const list = [...safeMatched];
     const seen = new Set(list.map(n => n.id));
     const domainMin = (complex || civic) ? (civic ? 2 : 6) : 2;
     const rescued = this._rescueCandidatesFromPool(goal, candidatePool, limit * 2)
@@ -5173,20 +5223,22 @@ class PBLPathBuilder {
   }
 
   _applyPathOrderToGraph(graphData, matchedNodes, pathOrderIds = []) {
-    const nodeMap = new Map(graphData.nodes.map(n => [n.id, n]));
-    const byId = new Map(matchedNodes.map(n => [n.id, n]));
+    const gd = this._normalizeGraphData(graphData);
+    const safeMatched = Array.isArray(matchedNodes) ? matchedNodes : [];
+    const nodeMap = new Map(gd.nodes.map(n => [n.id, n]));
+    const byId = new Map(safeMatched.map(n => [n.id, n]));
     const ordered = [];
     (pathOrderIds || []).forEach(id => {
       if (byId.has(id) && !ordered.find(o => o.id === id)) ordered.push(byId.get(id));
     });
-    matchedNodes.forEach(n => {
+    safeMatched.forEach(n => {
       if (!ordered.find(o => o.id === n.id)) ordered.push(n);
     });
     ordered.forEach((n, idx) => {
       const gNode = nodeMap.get(n.id);
       if (gNode) gNode.pathStep = idx + 1;
     });
-    const links = [...graphData.links];
+    const links = [...gd.links];
     for (let i = 0; i < ordered.length - 1; i++) {
       const a = ordered[i].id;
       const b = ordered[i + 1].id;
@@ -5194,7 +5246,7 @@ class PBLPathBuilder {
         links.push({ source: a, target: b, type: 'path-step' });
       }
     }
-    return { nodes: graphData.nodes, links: this._deduplicateLinks(links) };
+    return { nodes: gd.nodes, links: this._deduplicateLinks(links) };
   }
 
   static PATH_STEP_CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫'];
@@ -5855,14 +5907,14 @@ class PBLPathBuilder {
    */
   _ensureTopicAnchorRecall(matched, goal, pool, archetype, limit) {
     const anchors = this._getTopicAnchors(goal);
-    if (!anchors.strong || !anchors.subjects.length) return matched;
+    if (!anchors.strong || !this._asArray(anchors.subjects).length) return matched;
 
-    const list = [...matched];
+    const list = [...(Array.isArray(matched) ? matched : [])];
     const seen = new Set(list.map(n => n.id));
     const basePool = (pool?.length ? pool : this._getK12Pool(goal))
       .filter(n => this._passesHardNodeGate(n, goal, archetype));
 
-    anchors.subjects.forEach(subj => {
+    this._asArray(anchors.subjects).forEach(subj => {
       const hasStrong = list.some(n => n.subject === subj && this._nodeMatchesTopicAnchors(n, goal, 6));
       if (hasStrong) return;
 
@@ -5888,7 +5940,7 @@ class PBLPathBuilder {
       });
     });
 
-    if (anchors.subjects.length) {
+    if (this._asArray(anchors.subjects).length) {
       const recalled = list.filter(n => anchors.subjects.includes(n.subject) && this._nodeMatchesTopicAnchors(n, goal, 4));
       if (recalled.length) {
         console.warn('[PBL] 语义锚点召回:', recalled.map(n => `${n.name}(${n.subject})`).join('、'));
@@ -6274,15 +6326,16 @@ class PBLPathBuilder {
   }
 
   _applyBlueprintPipeline(goal, blueprint) {
-    if (!blueprint?.schemes?.length) return this._fallbackDecomposeBlueprint(goal);
+    const bp = this._normalizeBlueprint(blueprint);
+    if (!bp?.schemes?.length) return this._fallbackDecomposeBlueprint(goal);
     try {
-      const sanitized = this._sanitizeBlueprintForGoal(blueprint, goal);
+      const sanitized = this._sanitizeBlueprintForGoal(bp, goal);
       return this._concretizeBlueprint(goal, sanitized, this._resolvedArchetype);
     } catch (e) {
       if (/stack|too much recursion/i.test(String(e.message || ''))) {
         console.warn('[PBL] 蓝图加厚栈溢出，返回裁剪蓝图:', e.message);
-        const pruned = this._pruneDecomposeBlueprint(this._shallowCloneBlueprint(blueprint));
-        if (pruned?.schemes?.length) return pruned;
+        const pruned = this._pruneDecomposeBlueprint(this._shallowCloneBlueprint(bp));
+        if (pruned?.schemes?.length) return this._normalizeBlueprint(pruned);
       }
       throw e;
     }
@@ -6316,14 +6369,14 @@ class PBLPathBuilder {
       description: `围绕「${subject}」完成${d.label}`,
     }));
     const mkPhase = (dom, i) => {
-      const stub = { phase: dom.label, knowledgeHints: dom.keywords.slice(0, 5), subsystemIds: [dom.id] };
+      const stub = { phase: dom.label, knowledgeHints: (dom.keywords || []).slice(0, 5), subsystemIds: [dom.id] };
       const bpStub = { subsystems, deliverable: topic.deliverableHint || '' };
       return {
         phase: dom.label,
         steps: this._concretizePhaseSteps(goal, stub, i, domains.length, this._resolvedArchetype, bpStub),
         deliverable: this._concretizeDeliverable(goal, dom.label, i === domains.length - 1 ? 'core' : 'bridge', '', bpStub),
         subsystemIds: [dom.id],
-        knowledgeHints: dom.keywords.slice(0, 5),
+        knowledgeHints: (dom.keywords || []).slice(0, 5),
       };
     };
     const chain = domains.map(d => d.label).join(' → ');
@@ -6488,14 +6541,14 @@ class PBLPathBuilder {
       description: `完成「${topicName}」${d.label}相关调研与分析`,
     }));
     const mkPhase = (dom, i) => {
-      const stub = { phase: dom.label, knowledgeHints: dom.keywords.slice(0, 5), subsystemIds: [dom.id] };
+      const stub = { phase: dom.label, knowledgeHints: (dom.keywords || []).slice(0, 5), subsystemIds: [dom.id] };
       const bpStub = { subsystems, deliverable: topic.deliverableHint || '' };
       return {
         phase: dom.label,
         steps: this._concretizePhaseSteps(goal, stub, i, domains.length, this._resolvedArchetype, bpStub),
         deliverable: this._concretizeDeliverable(goal, dom.label, i === domains.length - 1 ? 'core' : 'bridge', '', bpStub),
         subsystemIds: [dom.id],
-        knowledgeHints: dom.keywords.slice(0, 5),
+        knowledgeHints: (dom.keywords || []).slice(0, 5),
       };
     };
     return {
@@ -6655,7 +6708,7 @@ class PBLPathBuilder {
     const jsonStr = this._extractJsonObject(raw);
     const data = this._safeJsonParse(jsonStr);
     if (!data?.schemes?.length) return null;
-    const pruned = this._pruneDecomposeBlueprint(data);
+    const pruned = this._normalizeBlueprint(this._pruneDecomposeBlueprint(data));
     if (!pruned.recommendedSchemeId && pruned.schemes[0]) {
       pruned.recommendedSchemeId = pruned.schemes[0].id;
     }
@@ -6976,15 +7029,17 @@ class PBLPathBuilder {
   }
 
   _finalizePBLGraph(goal, matched, external, activeSystems, meta = {}) {
+    const safeMatched = Array.isArray(matched) ? matched : [];
+    const safeExternal = Array.isArray(external) ? external : [];
     const profile = this._getPBLGoalProfile(goal);
     const complex = profile.complex;
     const archetype = meta.archetype || null;
-    let core = complex ? this._filterMatchedForComplexProject(matched) : matched;
+    let core = complex ? this._filterMatchedForComplexProject(safeMatched) : safeMatched;
     core = this._purgeCurriculumNoise(core, goal);
     core = this._filterMainlineNodes(core, goal, archetype);
-    if (complex && core.length === 0 && matched.length) {
+    if (complex && core.length === 0 && safeMatched.length) {
       core = this._filterMainlineNodes(
-        [...matched].sort((a, b) => (b.confidence || 0) - (a.confidence || 0)),
+        [...safeMatched].sort((a, b) => (b.confidence || 0) - (a.confidence || 0)),
         goal,
         archetype
       );
@@ -7022,11 +7077,11 @@ class PBLPathBuilder {
       meta.pathOrderIds || [],
       goal,
       meta.dependsOnLinks || [],
-      external.slice(0, this._externalLimit(goal))
+      safeExternal.slice(0, this._externalLimit(goal))
     );
     graphData = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES, goal);
     const mainline = this._getMainlinePath(graphData);
-    const extOut = external.slice(0, this._externalLimit(goal));
+    const extOut = safeExternal.slice(0, this._externalLimit(goal));
     return {
       complex,
       matched: mainline.length ? mainline : core,
@@ -7143,12 +7198,14 @@ class PBLPathBuilder {
   }
 
   _buildProjectPathGraph(matchedNodes, externalNodes, pathOrderIds = []) {
-    const byId = new Map(matchedNodes.map(n => [n.id, n]));
+    const safeMatched = Array.isArray(matchedNodes) ? matchedNodes : [];
+    const safeExternal = Array.isArray(externalNodes) ? externalNodes : [];
+    const byId = new Map(safeMatched.map(n => [n.id, n]));
     const ordered = [];
     (pathOrderIds || []).forEach(id => {
       if (byId.has(id) && !ordered.find(o => o.id === id)) ordered.push(byId.get(id));
     });
-    matchedNodes
+    safeMatched
       .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
       .forEach(n => {
         if (!ordered.find(o => o.id === n.id)) ordered.push(n);
@@ -7162,7 +7219,7 @@ class PBLPathBuilder {
     for (let i = 0; i < ordered.length - 1; i++) {
       links.push({ source: ordered[i].id, target: ordered[i + 1].id, type: 'path-step' });
     }
-    externalNodes.forEach(ext => {
+    safeExternal.forEach(ext => {
       nodes.push({ ...ext, layer: 'external' });
       const related = this._findMostRelated(ext, ordered);
       if (related) {
@@ -7691,7 +7748,7 @@ class PBLPathBuilder {
         qualityGrade: quality.grade,
         prunedAtIntake: intakeAudit.stats.removed,
         prunedAtFilter: filterAudit.stats.removed,
-        prunedAtOutput: outputAudit.relevanceAudit.removedTotal,
+        prunedAtOutput: outputAudit.relevanceAudit?.removedTotal ?? 0,
       }
     };
   }
@@ -8276,8 +8333,12 @@ class PBLGraphRenderer {
     const container = document.getElementById(this.containerId);
     if (!container) return;
 
+    const gd = (window.PBLPathBuilder && window.PBLPathBuilder._normalizeGraphData)
+      ? window.PBLPathBuilder._normalizeGraphData(graphData)
+      : { nodes: Array.isArray(graphData?.nodes) ? graphData.nodes : [], links: Array.isArray(graphData?.links) ? graphData.links : [] };
+
     this.width = container.clientWidth || 900;
-    const nodeCount = (graphData.nodes || []).length || 0;
+    const nodeCount = gd.nodes.length || 0;
 
     // ── 根据节点数量动态计算 SVG 高度和力导向参数 ──
     // 目标：让节点均匀分布在画布上，不挤在一起
@@ -8375,7 +8436,7 @@ class PBLGraphRenderer {
         isExternal: !!n.isExternal
       };
     };
-    const nodes = graphData.nodes.map(n => {
+    const nodes = gd.nodes.map(n => {
       const enriched = enrichNode(n);
       // 大学延伸节点用独立 layer 颜色
       if (enriched.isUniversity || enriched.grade === 0) enriched.layer = 'university';
@@ -8383,7 +8444,7 @@ class PBLGraphRenderer {
       if (enriched.crossSubject) enriched.layerSuffix = '(跨学科)';
       return enriched;
     });
-    const links = graphData.links.map(l => ({ ...l }));
+    const links = gd.links.map(l => ({ ...l }));
 
     // 箭头标记
     this.svg.append('defs').selectAll('marker')
