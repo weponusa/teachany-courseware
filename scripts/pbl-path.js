@@ -1842,6 +1842,24 @@ class PBLPathBuilder {
     }
   }
 
+  _scoreVectorRecallOverlap(node, goal, blueprint) {
+    const terms = new Set([
+      ...this._tokenizeGoalTerms(goal),
+      ...this._collectBlueprintHints(blueprint, null),
+    ]);
+    const text = this._nodeSearchText(node);
+    const name = String(node.name || '');
+    let hit = 0;
+    let max = 0;
+    terms.forEach(t => {
+      if (!t || t.length < 2) return;
+      max += 3;
+      if (name.includes(t)) hit += 3;
+      else if (text.includes(t)) hit += 1;
+    });
+    return max > 0 ? hit / max : 0;
+  }
+
   async _retrieveByVectorSimilarity(pool, goal, blueprint, limit = 80) {
     await this._loadPBLEmbeddings();
     const map = this.pblEmbeddingsMap;
@@ -1850,12 +1868,17 @@ class PBLPathBuilder {
     const queryVec = await this._embedPBLQuery(this._buildVectorQuery(goal, blueprint));
     if (!queryVec?.length) return [];
 
+    const useHybrid = this.pblEmbedModel === 'local-hash-v1';
     const scored = [];
     for (const n of pool) {
       const e = map.get(n.id);
       if (!e || e.length !== queryVec.length) continue;
-      const s = this._cosineSimilarity(queryVec, e);
-      if (s > 0.05) scored.push({ n, s });
+      let s = this._cosineSimilarity(queryVec, e);
+      if (useHybrid) {
+        const lex = this._scoreVectorRecallOverlap(n, goal, blueprint);
+        s = s * 0.25 + lex * 0.75;
+      }
+      if (s > 0.08) scored.push({ n, s });
     }
     scored.sort((a, b) => b.s - a.s);
     const top = scored.slice(0, limit).map(x => ({

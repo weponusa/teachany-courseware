@@ -60,31 +60,41 @@ function walkJsonFiles(dir, out = []) {
 
 function collectNodes() {
   const byId = new Map();
-  const add = (n, system = 'cn') => {
+  const add = (n, meta = {}) => {
     if (!n?.id || !n?.name) return;
     const grade = parseInt(n.grade, 10) || 0;
     if (grade < 1 || grade > 12) return;
+    const system = meta.system || 'cn';
     if (system !== 'cn') return;
     const name = String(n.name || n.name_zh || '').trim();
     if (!name) return;
-    const def = String(n.definition || n.description || '').replace(/\s+/g, ' ').slice(0, 200);
-    const cp = (n.curriculum_points || []).slice(0, 3).join(' ');
-    const subj = n.subject || '';
-    const text = [name, def, cp, subj ? `学科:${subj}` : '', `G${grade}`].filter(Boolean).join(' | ');
+    const def = String(n.definition || n.description || '').replace(/\s+/g, ' ').slice(0, 240);
+    const cp = (n.curriculum_points || []).slice(0, 5).join(' ');
+    const subj = n.subject || meta.subject || '';
+    const domain = meta.domain ? `领域:${meta.domain}` : '';
+    const text = [name, def, cp, subj ? `学科:${subj}` : '', domain, `G${grade}`].filter(Boolean).join(' | ');
     byId.set(n.id, { id: n.id, name, grade, subject: subj, text });
   };
 
   walkJsonFiles(path.join(ROOT, 'data/trees/cn')).forEach(file => {
     try {
       const j = JSON.parse(fs.readFileSync(file, 'utf8'));
-      (j.nodes || []).forEach(n => add(n, 'cn'));
+      const subject = j.subject || '';
+      (j.nodes || []).forEach(n => add(n, { subject, system: 'cn' }));
+      (j.domains || []).forEach(d => {
+        (d.nodes || []).forEach(n => add({ ...n, subject: n.subject || subject }, {
+          subject: n.subject || subject,
+          domain: d.name || d.id,
+          system: 'cn',
+        }));
+      });
     } catch { /* skip */ }
   });
 
   const kmPath = path.join(ROOT, 'data/knowledge-map-data.json');
   if (fs.existsSync(kmPath)) {
     const km = JSON.parse(fs.readFileSync(kmPath, 'utf8'));
-    (km.nodes || []).forEach(n => add(n, 'cn'));
+    (km.nodes || []).forEach(n => add(n, { system: 'cn' }));
   }
 
   return [...byId.values()];
