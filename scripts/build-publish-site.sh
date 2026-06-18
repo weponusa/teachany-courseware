@@ -37,7 +37,15 @@ rsync -a \
   --exclude='kp/_backups/' \
   "$ROOT/data/" "$OUT/data/"
 
-# 4. 根级页面与索引
+# 4. 根级页面脚本（path/tree/index 等引用 ./scripts/，须随站发布）
+mkdir -p "$OUT/scripts"
+rsync -a \
+  --include='*.js' \
+  --include='*.css' \
+  --exclude='*' \
+  "$ROOT/scripts/" "$OUT/scripts/"
+
+# 5. 根级页面与索引
 touch "$OUT/.nojekyll"
 for f in \
   404.html index.html courseware-registry.json registry.json registry-v2.json \
@@ -49,7 +57,7 @@ do
   fi
 done
 
-# 5. Cloudflare 重定向（阅读学院已迁至 read.teachany.cn）
+# 6. Cloudflare 重定向（阅读学院已迁至 read.teachany.cn）
 if [ -f "$ROOT/_redirects" ]; then
   cp "$ROOT/_redirects" "$OUT/"
 fi
