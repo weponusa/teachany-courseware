@@ -57,7 +57,12 @@ do
   fi
 done
 
-# 6. Cloudflare 重定向（阅读学院已迁至 read.teachany.cn）
+# 6. Cloudflare Pages Functions（PBL API、LLM 中转等；须随 gh-pages 一并发布）
+if [ -d "$ROOT/functions" ]; then
+  rsync -a "$ROOT/functions/" "$OUT/functions/"
+fi
+
+# 7. Cloudflare 重定向（阅读学院已迁至 read.teachany.cn）
 if [ -f "$ROOT/_redirects" ]; then
   cp "$ROOT/_redirects" "$OUT/"
 fi

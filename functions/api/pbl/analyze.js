@@ -163,6 +163,7 @@ export async function onRequestPost(context) {
         projectBlueprint: body.projectBlueprint,
         reviewIssues: body.reviewIssues || [],
         complex: !!body.complex,
+        projectSpec: body.projectSpec || null,
       });
     } else {
       messages = buildPBMessages(stage, {

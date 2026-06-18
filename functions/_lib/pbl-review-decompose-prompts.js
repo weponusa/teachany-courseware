@@ -3,7 +3,7 @@
  */
 
 import { buildCompactUserContext } from './pbl-context.js';
-import { inferProjectDomains, projectTypeProfile } from './pbl-prompts.js';
+import { inferProjectDomains, projectTypeProfile, formatPolPsychDecomposeHint, formatUniversalDecomposePrinciples } from './pbl-prompts.js';
 import { formatTopicAnchorHint } from './pbl-topic-anchors.js';
 
 function formatTopicAnchorBlock(goal) {
@@ -24,14 +24,16 @@ export function buildReviewDecomposeMessages(payload) {
     projectBlueprint = null,
     reviewIssues = [],
     complex = false,
+    projectSpec = null,
   } = payload;
 
   const p = projectTypeProfile(goal);
+  const polPsychHint = formatPolPsychDecomposeHint(projectSpec, goal);
   const domains = inferProjectDomains(goal);
   const domainLine = domains.length
     ? `模块参考：${domains.map(d => d.label).join(' → ')}`
     : '';
-  const ctx = buildCompactUserContext({ goal, projectBlueprint, includeBlueprint: false });
+  const ctx = buildCompactUserContext({ goal, projectSpec, projectBlueprint, includeBlueprint: false });
   const draftJson = JSON.stringify(projectBlueprint || {}, null, 0).slice(0, 12000);
   const issuesBlock = (reviewIssues || []).length
     ? reviewIssues.map((x, i) => `${i + 1}. ${x}`).join('\n')
@@ -40,6 +42,7 @@ export function buildReviewDecomposeMessages(payload) {
   const system = `PBL 拆解蓝图评审官。任务：审阅初稿 JSON，修订后输出**完整**拆解蓝图（与 decompose 阶段同 schema）。
 类型：${p.label}｜${p.redlines}
 ${formatTopicAnchorBlock(goal)}
+${formatUniversalDecomposePrinciples(goal)}
 
 修订硬性要求：
 - 保留 schemes≥2、phases 4-5、recommendedSchemeId；可改内容不可删空结构
@@ -49,7 +52,8 @@ ${formatTopicAnchorBlock(goal)}
 - deliverable 为具体表/图/报告名，禁「阶段成果」「提升素养」
 - 步骤须含题目关键词；调查/测算类禁接线/原型/硬件套话；工程类禁空泛「环境搭建」
 - knowledgeHints 为检索词（2-5/阶段），非课标节点名
-- 只输出修订后 JSON，不要 markdown、不要解释`;
+- tools 为方法指导（题型设计/统计规范/论证结构），禁文具耗材
+- 只输出修订后 JSON，不要 markdown、不要解释${polPsychHint}`;
 
   const user = `${ctx}
 ${domainLine}

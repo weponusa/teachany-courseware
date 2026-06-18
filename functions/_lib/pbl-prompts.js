@@ -338,16 +338,73 @@ function formatDomainHints(domains) {
 
 const ANTI_VACUUM_BLOCK = `禁泛素养节点；steps≥2条且≥20字含动作+对象+方法+可验收产出（数量/尺寸/次数）；reason以「模块：」开头并写明怎么用`;
 
+const DECOMPOSE_FORBIDDEN_STEP_RE = /查阅资料并分析|开展调查研究|完成本阶段|进行本阶段|撰写研究报告初稿|按模块推进|环境搭建|原型驱动迭代|浸润式场景|可检查验收|过程记录表|记录表模板|A3纸|铅笔尺规|标注笔/;
+
 const DECOMPOSE_DEPTH_BLOCK = `## 拆解深度（硬性，违反则视为无效输出）
 - projectSummary：40-80字，须写清「谁+用什么方法+做出什么交付物+解决什么问题」，禁止「按模块推进」「可检查验收」等套话
-- scopeLimits≥2条、successCriteria≥2条、constraints≥2条：须可检查，禁止「注意安全」「认真完成」
-- 每套 scheme 的 summary 必须与 projectSummary 不同，写技术/实施路线差异
-- phases 4-5个，阶段名用模块参考中的 label，禁止「基础准备」「实施阶段」等泛名
-- 每 phase：steps≥2条且互不重复；deliverable 是具体表/图/报告名（≤20字），不是「阶段成果」「方案」
-- steps 须嵌入题目中的具体对象/专名/指标，且含可验收要素（数量/次数/表格/图表/数据来源之一）
+- drivingQuestion：一句可验证问句，含本题专名+约束条件，能指向最终 deliverable
+- scopeLimits≥2条、successCriteria≥2条、constraints≥2条：须可检查，禁止「注意安全」「认真完成」「培养素养」
+- 每套 scheme 的 summary 必须与 projectSummary 不同，写清路线/样本/深度/周期差异，禁止仅改方案名
+- phases 4-5个，阶段名用模块参考中的 label，禁止「基础准备」「实施阶段」「总结反思」等泛名
+- 每 phase：steps≥2条且互不重复；deliverable 是具体表/图/报告名（≤20字），不是「阶段成果」「方案」「探究任务」
+- steps 须嵌入题目中的具体对象/专名/指标，且含可验收要素（数量/次数/表格列名/图表类型/数据来源之一）
 - steps 示范格式：「统计近3个月用电量并制成折线图，标注数据来源与异常值处理方式」
 - knowledgeHints 是检索词（2-5个/阶段），不是课标节点名
-- 禁止空泛步骤：「查阅资料并分析」「开展调查研究」「完成本阶段任务」「撰写研究报告初稿」`;
+- tools 写方法指导（题型配比/统计规范/论证结构/变量对照），禁文具耗材清单
+- 禁止空泛步骤：「查阅资料并分析」「开展调查研究」「完成本阶段任务」「撰写研究报告初稿」「进行调研工作」`;
+
+/** 全项目类型通用的拆解原则块（注入 system/user/review 提示词） */
+function formatUniversalDecomposePrinciples(goal) {
+  const subject = parseGoalSubject(goal);
+  const p = projectTypeProfile(goal);
+  const type = classifyProjectType(goal);
+  const quantHint = ({
+    'social-inquiry': '样本量/题数/访谈人数/图表类型',
+    'scientific-inquiry': '变量数/重复次数/测量工具/对照组',
+    engineering: '关键尺寸/测试次数/功能点数/误差范围',
+    'consumer-decision': '对比维度数/测算假设/候选方案数',
+    'humanities-literary': '字数/篇数/修改轮次/批注条数',
+    'health-life': '问卷题数/统计图类型/干预活动形式数',
+    'business-economics': '成本项数/访谈人数/盈亏测算假设',
+    general: '条数/次数/表格或图表名称',
+  })[type] || '条数/次数/表格或图表名称';
+
+  return `
+## 通用拆解原则（全部类型适用）
+
+### 步骤公式（每条 steps 须同时满足）
+**[动词] + 「${subject}」或题目专名 + [方法/数据来源] + [可验收产出（含量化指标）]**
+- 动词用：设计/统计/绘制/撰写/测量/访谈/编制/测算/标注/对照/归纳/排演/验收
+- 量化要素（本题侧重 ${quantHint}）：数字、≥/不少于、样本量、题数、字数、尺寸、次数、图表名、表格列名至少出现其一
+- 合格示范：「围绕「${subject}」设计10题问卷（6单选+2量表+2开放），回收目标≥20份并附知情说明」
+- 不合格示范：「查阅资料并分析」「开展调查研究」「完成本阶段任务」
+
+### 交付物与阶段产出
+- 最终 deliverable + 每阶段 deliverable：用「XX表/XX图/XX报告/XX方案册/XX倡议书/XX模型」命名
+- 禁：阶段成果、研究报告初稿、方案、探究任务、可展示作品（无具体名）
+
+### 阶段旅程（4-5 阶段，名称取自模块参考）
+递进建议：问题界定/准备 → 采集或调研 → 整理分析或原理说明 → 方案/作品形成 → 论证展示或验收
+- 每阶段 steps 只写本阶段任务，禁止跨阶段重复同义句
+- 每阶段至少 1 条 step 直接产出该阶段 deliverable
+
+### tools（方法指导，非文具）
+- 写：题型配比说明、频数统计表规范、论证段落模板、变量对照设计、成本测算假设表
+- 禁：A3纸、铅笔尺规、相机、过程记录表、记录表模板、文具、耗材
+
+### 方案差异（schemes≥2）
+- A/B 方案差异须在路线、样本策略、深度或周期上可辨认，禁止仅调换语序
+- pros/cons/summary 不得与 projectSummary 同义复述
+
+### 本题类型红线（${p.label}）
+${p.redlines}
+
+### 输出前自检（任一项不通过则重写 steps）
+□ 每阶段 steps≥2 且互不重复
+□ steps/deliverable 均出现「${subject}」或题目关键专名
+□ 至少 3 个阶段含阿拉伯数字或 ≥/不少于
+□ tools 无文具耗材；acceptance 为可勾选验收项（□ 开头）`;
+}
 
 // ============================================================
 // 六、typeMatchHints — 泛化版（通用类型指导，不再硬编码具体节点名）
@@ -379,16 +436,52 @@ function typeMatchHints(goal) {
 // 七、系统提示词 — Match 阶段
 // ============================================================
 
-function formatPolPsychLiteracyHint(projectSpec) {
-  if (!projectSpec) return '';
-  const subs = Array.isArray(projectSpec.subjects) && projectSpec.subjects.length
-    ? projectSpec.subjects.filter(id => id && id !== 'cross')
-    : (projectSpec.subject && projectSpec.subject !== 'cross' ? [projectSpec.subject] : []);
-  const hasPol = subs.includes('politics');
-  const hasPsych = subs.includes('psychology');
+function polPsychSubjects(projectSpec, goal = '') {
+  const subs = new Set();
+  if (projectSpec) {
+    const fromSpec = Array.isArray(projectSpec.subjects) && projectSpec.subjects.length
+      ? projectSpec.subjects.filter(id => id && id !== 'cross')
+      : (projectSpec.subject && projectSpec.subject !== 'cross' ? [projectSpec.subject] : []);
+    fromSpec.forEach(s => subs.add(s));
+  }
+  const g = String(goal || '');
+  if (/道法|道德与法治|思想品德|法治|公民/.test(g)) subs.add('politics');
+  if (/心理|情绪|共情|欺凌|霸凌|同伴关系/.test(g)) subs.add('psychology');
+  return subs;
+}
+
+function formatPolPsychLiteracyHint(projectSpec, goal = '') {
+  const subs = polPsychSubjects(projectSpec, goal);
+  const hasPol = subs.has('politics');
+  const hasPsych = subs.has('psychology');
   if (!hasPol && !hasPsych) return '';
   const labels = [hasPol && '道法', hasPsych && '心理'].filter(Boolean).join('+');
   return `\n【${labels}学科】每阶段 literacy.ability 须补充高层社会性能力（社交沟通、团队合作、协商说服、共情倾听等），结合本阶段任务具体化，禁止套话。`;
+}
+
+/** 拆解阶段：道法/心理须写出可操作方法，禁文具/空泛调查套话 */
+function formatPolPsychDecomposeHint(projectSpec, goal = '') {
+  const subs = polPsychSubjects(projectSpec, goal);
+  const hasPol = subs.has('politics');
+  const hasPsych = subs.has('psychology');
+  if (!hasPol && !hasPsych) return '';
+  const labels = [hasPol && '道法', hasPsych && '心理'].filter(Boolean).join('+');
+  const lines = [
+    `\n【${labels} · 拆解硬性要求】`,
+    '- 项目类型按「社会调查+健康/心理干预」拆解，禁工程制图/原型搭建/A3草图/过程记录表等无关工序',
+    '- tools 写**方法指导**（问卷题型设计、频数统计表规范、倡议书结构、情境判断题设计），禁「A3纸/铅笔尺规/相机/记录表模板」',
+    '- 每阶段 steps 须含：样本量或题数、具体题型（量表/开放题/情境判断）、统计图类型或论证段落结构',
+  ];
+  if (hasPol) {
+    lines.push('- 道法：至少 1 阶段 steps 含「规则边界/权利义务/求助渠道/责任主体」的情境分析或条款对照');
+  }
+  if (hasPsych) {
+    lines.push('- 心理：至少 1 阶段 steps 含「情绪识别/共情回应/沟通话术/安全感量表」的设计或演练');
+  }
+  if (/欺凌|霸凌/.test(String(goal || ''))) {
+    lines.push('- 校园欺凌：问卷须含匿名安全感题+旁观者态度题；干预方案须列宣讲/情景剧/同伴辅导至少 2 种形式及分工');
+  }
+  return lines.join('\n');
 }
 
 function systemPromptMatch(complex, goal, projectSpec = null) {
@@ -436,20 +529,22 @@ const PBL_DESIGN_LOGIC_BLOCK = `
 【PBL 教学设计逻辑 · 必须体现在 JSON 中】
 1. drivingQuestion：可验证、有约束、指向最终 deliverable（一句问句，含本题专名）
 2. 旅程：推荐方案 phases 4-5，覆盖「准备→探究/调研→分析/建模→决策/展示」；每阶段写 venue（教室/机房/校外/家庭/线上）
-3. 脚手架：每阶段 tools 写可复用模板/记录表/计算表（工具辅助过程，不等于抄答案）
+3. 脚手架：每阶段 tools 写**方法指导**（问卷题型配比、统计制图规范、论证段落结构、情境题设计要点），禁文具耗材清单
 4. formativeCheckpoints：3-6 条形成性检查点，教师可核查（含阶段名+验收物）
 5. reportOutline：3-7 段，对应最终 deliverable 的章节结构（按本题自定义，禁套固定范例）
 6. collaborationRoles：2-4 人小组时写角色+职责（按任务类型自定义）
 7. 每阶段 acceptance：2-4 条可勾选验收项（□ 开头）
 须按本题专名与交付物自定义，禁止照搬任何固定项目（如购车/研学等）的固定句式。`;
 
-function systemPromptDecompose(complex, goal) {
+function systemPromptDecompose(complex, goal, projectSpec = null) {
   const p = projectTypeProfile(goal);
   const depth = complex ? '2-3套路线并推荐1套' : '≥2套路线并推荐1套';
+  const polPsychHint = formatPolPsychDecomposeHint(projectSpec, goal);
   return `PBL 全链路拆解（本阶段不选课标）。${formatTopicAnchorBlock(goal)}｜${typeGuardrailBlock(goal)}
 
 ${DECOMPOSE_DEPTH_BLOCK}
-${PBL_DESIGN_LOGIC_BLOCK}
+${formatUniversalDecomposePrinciples(goal)}
+${PBL_DESIGN_LOGIC_BLOCK}${polPsychHint}
 
 输出：drivingQuestion+交付物+约束+scopeLimits+successCriteria+reportOutline+formativeCheckpoints+collaborationRoles+subsystems+${depth}+推荐方案 phases（venue/steps/deliverable/tools/acceptance/knowledgeHints）。
 ${ANTI_VACUUM_BLOCK}
@@ -460,22 +555,30 @@ ${ANTI_VACUUM_BLOCK}
 
 function decomposeQualityExtra(goal) {
   const subject = parseGoalSubject(goal);
+  const p = projectTypeProfile(goal);
   return `
 
 【通用拆解验收 · 硬性】
 - 所有 steps/deliverable 须出现题目核心对象「${subject}」或其关键专名，不得写成与题目无关的通用流程
-- 最终 deliverable 须为可命名产物（XX表/XX图/XX报告/XX模型），禁「阶段成果」「研究报告初稿」「方案」
-- 研究/调查/对比类：至少 2 个阶段 steps 含数字、条数、样本量或表格/图表名称
-- 步骤类型须与项目类型红线一致，禁止套用工程/智慧城市/原型迭代套话（除非题目明确要求）`;
+- 最终 deliverable 须为可命名产物（XX表/XX图/XX报告/XX模型/XX倡议书），禁「阶段成果」「研究报告初稿」「方案」
+- 每阶段 steps 至少 1 条含阿拉伯数字或 ≥/不少于；全项目至少 3 个阶段满足
+- 研究/调查/对比类：至少 2 个阶段 steps 含样本量、题数、图表名或表格列名
+- 工程/制作类：至少 1 个阶段含关键尺寸、测试次数或功能验收指标
+- 人文/写作类：至少 1 个阶段含字数、篇数或修改轮次
+- 步骤类型须符合「${p.label}」红线：${p.redlines}
+- 禁止套用与题目无关的模板套话（工程接线/智慧城市/MVP/环境搭建等，除非题目明确要求）`;
 }
 
-function userPromptDecompose(goal, complex) {
+function userPromptDecompose(goal, complex, projectSpec = null) {
+  const ctx = buildCompactUserContext({ goal, projectSpec, includeBlueprint: false });
   const task = stripStructuredGoal(goal);
+  const subject = parseGoalSubject(goal);
   const domains = inferProjectDomains(goal);
   const domainBlock = domains.length
     ? `\n模块参考：${domains.map(d => d.label).join('、')}`
     : '';
-  return `${task}${domainBlock}${decomposeQualityExtra(goal)}
+  const specBlock = ctx && ctx !== task ? `\n${ctx}` : '';
+  return `${task}${specBlock}${domainBlock}${decomposeQualityExtra(goal)}
 
 返回 JSON（严格遵循字段名）：
 {
@@ -500,13 +603,16 @@ function userPromptDecompose(goal, complex) {
       "cons": ["局限"],
       "phases": [
         {
-          "phase": "阶段名",
+          "phase": "选题与调查设计",
           "venue": "教室/校外/家庭/线上",
           "durationHint": "约1周或2课时",
-          "steps": ["任务1", "任务2"],
-          "deliverable": "阶段产出",
-          "tools": ["记录表模板", "计算工作表"],
-          "acceptance": ["□ 验收项1", "□ 验收项2"],
+          "steps": [
+            "围绕「${subject}」写出1句可验证调查问题，确定样本对象与回收目标≥15份",
+            "设计8-10题问卷（含2道开放题），注明发放渠道、截止日与知情说明"
+          ],
+          "deliverable": "调查问卷定稿+抽样方案表",
+          "tools": ["问卷题型配比说明", "样本量与回收目标表"],
+          "acceptance": ["□ 问卷题项≥8且含开放题", "□ 抽样对象与回收目标已写明"],
           "subsystemIds": ["xxx"],
           "knowledgeHints": ["检索关键词1", "检索关键词2"]
         }
@@ -518,7 +624,7 @@ function userPromptDecompose(goal, complex) {
 }
 
 要求：schemes≥2；phases 4-5；knowledgeHints每阶段2-5个；各字段去重不复述。
-阶段 steps 每条须含：动词+操作对象+工具/数据来源+可验收产出（含数量/次数/尺寸之一）。`;
+阶段 steps 每条须满足通用步骤公式（动词+本题专名+方法/数据来源+可验收产出），示例中的「${subject}」须替换为本题实际专名。`;
 }
 
 function formatBlueprintForMatch(blueprint) {
@@ -685,8 +791,8 @@ export function buildPBMessages(stage, payload) {
 
   if (stage === 'decompose') {
     return [
-      { role: 'system', content: systemPromptDecompose(complex, goal) },
-      { role: 'user', content: userPromptDecompose(goal, complex) },
+      { role: 'system', content: systemPromptDecompose(complex, goal, projectSpec) },
+      { role: 'user', content: userPromptDecompose(goal, complex, projectSpec) },
     ];
   }
 
@@ -723,4 +829,4 @@ export function buildPBMessages(stage, payload) {
   throw new Error(`Unknown PBL stage: ${stage}`);
 }
 
-export { inferProjectDomains, projectTypeProfile };
+export { inferProjectDomains, projectTypeProfile, formatPolPsychDecomposeHint, formatUniversalDecomposePrinciples };
