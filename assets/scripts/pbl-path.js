@@ -1670,6 +1670,74 @@ class PBLPathBuilder {
     return [...hints];
   }
 
+  /**
+   * 拆解后从 steps/阶段名推导课标检索词，写回 phase.knowledgeHints（不改动 steps）
+   */
+  _deriveBlueprintKnowledgeSeeds(goal, blueprint) {
+    if (!blueprint?.schemes?.length) return blueprint;
+    const bp = this._shallowCloneBlueprint(blueprint);
+    const scheme = (bp.schemes || []).find(s => s.id === bp.recommendedSchemeId) || bp.schemes[0];
+    if (!scheme?.phases?.length) return bp;
+
+    const goalTerms = this._tokenizeGoalTerms(goal);
+    const domains = this._inferProjectDomains(goal);
+    const domainKw = domains.flatMap(d => d.keywords || []);
+    const g = String(goal || '');
+    const sciExtra = /实验|降解|菌|染料|培养|对照|变量|探究/.test(g)
+      ? ['对照实验', '控制变量', '科学探究', '微生物', '生态系统', '环境污染', '数据处理', '统计图表']
+      : [];
+    const civicExtra = /问卷|调查|欺凌|情绪|倡议/.test(g)
+      ? ['问卷调查', '抽样', '情绪', '公民', '规则', '权利义务']
+      : [];
+    const stop = /^(进行|完成|围绕|设计|本阶段|实验|研究|各种|选择|合适|撰写|编制|绘制|测量|统计|开展|落实|任务|步骤)$/;
+
+    (scheme.phases || []).forEach(phase => {
+      const seeds = new Set((phase.knowledgeHints || []).map(h => String(h).trim()).filter(h => h.length >= 2));
+      const blob = [
+        phase.phase,
+        phase.deliverable,
+        ...(phase.steps || []),
+        ...(phase.tools || []),
+      ].join(' ');
+
+      goalTerms.forEach(t => { if (t.length >= 2) seeds.add(t); });
+      (blob.match(/[\u4e00-\u9fa5]{2,8}/g) || []).forEach(w => {
+        if (!stop.test(w)) seeds.add(w);
+      });
+
+      if (/文献|调研|背景|菌种|确定|假设/.test(blob)) {
+        ['微生物', '真菌', '文献'].forEach(t => seeds.add(t));
+      }
+      if (/变量|对照|设计|实验|培养|接种/.test(blob)) {
+        ['控制变量', '对照实验', '培养基', '无菌操作'].forEach(t => seeds.add(t));
+      }
+      if (/数据|统计|吸光|浓度|测量|处理|图表|曲线/.test(blob)) {
+        ['数据处理', '统计图表', '溶液', '浓度', '溶液浓度'].forEach(t => seeds.add(t));
+      }
+      if (/结论|报告|降解|环境|污染|倡议/.test(blob)) {
+        ['环境污染', '生态系统', '物质循环', '降解'].forEach(t => seeds.add(t));
+      }
+      if (/问卷|访谈|调查|样本|抽样/.test(blob)) {
+        ['问卷调查', '抽样', '数据分析'].forEach(t => seeds.add(t));
+      }
+      if (/情绪|心理|共情|欺凌|同伴/.test(blob)) {
+        ['情绪', '心理健康', '共情'].forEach(t => seeds.add(t));
+      }
+      if (/规则|权利|法治|责任|公民/.test(blob)) {
+        ['法治', '权利义务', '公民'].forEach(t => seeds.add(t));
+      }
+
+      [...sciExtra, ...civicExtra, ...domainKw].forEach(t => {
+        if (g.includes(t.slice(0, 2)) || blob.includes(t.slice(0, 2))) seeds.add(t);
+      });
+
+      phase.knowledgeHints = [...seeds].filter(h => h.length >= 2).slice(0, 6);
+    });
+
+    bp._knowledgeSeedsDerived = true;
+    return bp;
+  }
+
   _relevanceKeepThreshold(floorMode = false) {
     return floorMode ? 5 : 7;
   }
@@ -4736,6 +4804,67 @@ class PBLPathBuilder {
     return score;
   }
 
+  /** 提案名称同义词扩展（对齐课标节点名） */
+  _proposalNameVariants(name) {
+    const base = String(name || '').trim();
+    if (!base) return [];
+    const variants = new Set([base]);
+    const pairs = [
+      ['降解', '分解'], ['微生物', '真菌'], ['真菌', '微生物'],
+      ['对照实验', '控制变量'], ['控制变量', '对照实验'],
+      ['科学探究', '探究'], ['环境污染', '污染'], ['物质循环', '循环'],
+      ['溶液浓度', '浓度'], ['数据处理', '统计'], ['问卷调查', '调查'],
+    ];
+    pairs.forEach(([a, b]) => {
+      if (base.includes(a)) variants.add(base.replace(a, b));
+      if (base.includes(b)) variants.add(base.replace(b, a));
+    });
+    return [...variants].filter(v => v.length >= 2);
+  }
+
+  /** 候选池 index 选配 → 已对齐节点（主路径） */
+  _proposedIndexesToLinked(proposals, candidates, goal, blueprint, archetype = null) {
+    const roles = ['foundation', 'bridge', 'bridge', 'core', 'core', 'core', 'core', 'core'];
+    const linked = [];
+    const seen = new Set();
+
+    (proposals || []).forEach((p) => {
+      const idx = typeof p.index === 'number' ? p.index : parseInt(p.index, 10);
+      let node = null;
+      let linkMethod = '候选index';
+
+      if (Number.isInteger(idx) && idx >= 0 && idx < candidates.length) {
+        node = candidates[idx];
+      } else {
+        const pname = String(p.name || '').trim();
+        if (!pname) return;
+        const variants = this._proposalNameVariants(pname);
+        for (const v of variants) {
+          const exact = candidates.find(c => c.name === v && this._passesHardNodeGate(c, goal, archetype));
+          if (exact) { node = exact; linkMethod = '名称回退'; break; }
+          const partial = candidates.filter(c => this._passesHardNodeGate(c, goal, archetype)
+            && (c.name.includes(v) || v.includes(c.name)));
+          if (partial.length === 1) { node = partial[0]; linkMethod = '子串回退'; break; }
+        }
+        if (!node) return;
+      }
+
+      if (!node || !this._passesHardNodeGate(node, goal, archetype) || seen.has(node.id)) return;
+      seen.add(node.id);
+      const role = p.role || roles[linked.length] || 'core';
+      linked.push({
+        ...node,
+        confidence: Math.min(0.94, 0.76 + Math.min(0.18, (parseFloat(p.confidence) || 0.85) * 0.14)),
+        matchReason: p.reason ? `选配：${p.reason}` : `候选池选配：${node.name}`,
+        pblRole: ['foundation', 'bridge', 'core'].includes(role) ? role : 'core',
+        _proposedIndex: Number.isInteger(idx) ? idx : -1,
+        _linkMethod: linkMethod,
+      });
+    });
+
+    return linked;
+  }
+
   /**
    * 将模型提案的知识点名称对齐到 unifiedIndex / 候选池
    * @returns {{ linked: object[], unlinked: object[] }}
@@ -4755,25 +4884,34 @@ class PBLPathBuilder {
 
       let node = null;
       let linkMethod = '';
+      const nameVariants = this._proposalNameVariants(pname);
 
-      const exact = searchPool.find(c => c.name === pname && this._passesHardNodeGate(c, goal, archetype));
-      if (exact) {
-        node = exact;
-        linkMethod = '精确名匹配';
+      for (const variant of nameVariants) {
+        const exact = searchPool.find(c => c.name === variant && this._passesHardNodeGate(c, goal, archetype));
+        if (exact) {
+          node = exact;
+          linkMethod = variant === pname ? '精确名匹配' : '同义词匹配';
+          break;
+        }
       }
 
       if (!node) {
-        const partials = searchPool
-          .filter(c => this._passesHardNodeGate(c, goal, archetype)
-            && (c.name.includes(pname) || pname.includes(c.name)));
-        if (partials.length === 1) {
-          node = partials[0];
-          linkMethod = '子串匹配';
-        } else if (partials.length > 1) {
-          node = partials
-            .map(n => ({ n, s: this._scoreProposalLink(n, p, goal, blueprint, archetype) }))
-            .sort((a, b) => b.s - a.s)[0]?.n;
-          linkMethod = '子串消歧';
+        for (const variant of nameVariants) {
+          const partials = searchPool
+            .filter(c => this._passesHardNodeGate(c, goal, archetype)
+              && (c.name.includes(variant) || variant.includes(c.name)));
+          if (partials.length === 1) {
+            node = partials[0];
+            linkMethod = '子串匹配';
+            break;
+          }
+          if (partials.length > 1) {
+            node = partials
+              .map(n => ({ n, s: this._scoreProposalLink(n, p, goal, blueprint, archetype) }))
+              .sort((a, b) => b.s - a.s)[0]?.n;
+            linkMethod = '子串消歧';
+            break;
+          }
         }
       }
 
@@ -4809,8 +4947,9 @@ class PBLPathBuilder {
     return { linked, unlinked };
   }
 
-  async _llmProposeCurriculumStage(goal, projectBlueprint) {
+  async _llmProposeCurriculumStage(goal, projectBlueprint, candidates = []) {
     const profile = this._getPBLGoalProfile(goal);
+    const candidatesLite = (candidates || []).map(n => this._enrichCandidateForMatch(n));
     const response = await this._callPBLAnalyzeStage('propose-curriculum', {
       goal,
       projectBlueprint,
@@ -4818,6 +4957,7 @@ class PBLPathBuilder {
       deliverable: projectBlueprint?.deliverable || '',
       maxProposed: profile.maxMatched || 14,
       complex: profile.complex,
+      candidates: candidatesLite,
     });
     const parsed = JSON.parse(this._extractJsonObject(response));
     if (parsed.summary) console.warn('[PBL] propose-curriculum:', parsed.summary);
@@ -4961,17 +5101,51 @@ class PBLPathBuilder {
   async _runCurriculumProposeValidatePipeline(goal, candidates, projectBlueprint, bloomProfile, archetype) {
     const minNeed = Math.max(this._getMinMatchedFloor(archetype), archetype?.minMatched || 5);
     const broadPool = this._getBroadCurriculumPool(goal, candidates, 80);
+    const profile = this._getPBLGoalProfile(goal);
+    const domains = this._inferProjectDomains(goal);
+    const proposePool = this._buildMatchCandidateList(
+      goal, candidates, projectBlueprint, archetype,
+      { subjects: [] }, profile, domains, 45
+    );
+    const proposeCandidates = proposePool.length >= 12
+      ? proposePool
+      : this._unionCandidateNodes([proposePool, broadPool], 45);
+
+    if (proposeCandidates.length) {
+      console.info('[PBL] propose 候选池:', proposeCandidates.slice(0, 8).map(n => n.name).join('、'));
+    }
 
     try {
-      const proposed = await this._llmProposeCurriculumStage(goal, projectBlueprint);
-      const { linked, unlinked } = this._linkProposedToGraph(
-        proposed.proposed || [], goal, broadPool, projectBlueprint, archetype
-      );
-      if (unlinked.length) {
-        console.warn('[PBL] 提案未对齐图谱:', unlinked.map(p => p.name).join('、'));
+      const proposed = await this._llmProposeCurriculumStage(goal, projectBlueprint, proposeCandidates);
+      const hasIndexes = (proposed.proposed || []).some(p => {
+        const idx = typeof p.index === 'number' ? p.index : parseInt(p.index, 10);
+        return Number.isInteger(idx) && idx >= 0;
+      });
+
+      let linked = [];
+      if (hasIndexes && proposeCandidates.length) {
+        linked = this._proposedIndexesToLinked(
+          proposed.proposed, proposeCandidates, goal, projectBlueprint, archetype
+        );
+        if (linked.length) {
+          console.warn('[PBL] 候选池 index 选配:', linked.map(n => `${n.name}(${n._linkMethod})`).join('、'));
+        }
       }
+
+      if (!linked.length) {
+        const { linked: nameLinked, unlinked } = this._linkProposedToGraph(
+          proposed.proposed || [], goal, broadPool, projectBlueprint, archetype
+        );
+        linked = nameLinked;
+        if (unlinked.length) {
+          console.warn('[PBL] 提案未对齐图谱:', unlinked.map(p => p.name).join('、'));
+        }
+        if (linked.length) {
+          console.warn('[PBL] 提案名称对齐:', linked.map(n => `${n.name}(${n._linkMethod})`).join('、'));
+        }
+      }
+
       if (linked.length >= Math.min(3, minNeed)) {
-        console.warn('[PBL] 提案对齐图谱:', linked.map(n => `${n.name}(${n._linkMethod})`).join('、'));
         return this._llmValidateMatchStage(
           goal, linked, projectBlueprint, bloomProfile, archetype, candidates
         );
@@ -7822,7 +7996,9 @@ class PBLPathBuilder {
 
     // 4. 第零阶段：全链路拆解可行方案（不选课标）
     step('decompose');
-    const projectBlueprint = await this._llmDecomposeStage(goal, onStatus);
+    const projectBlueprint = this._deriveBlueprintKnowledgeSeeds(
+      goal, await this._llmDecomposeStage(goal, onStatus)
+    );
     this._activeBlueprint = projectBlueprint;
     const blueprintPhases = this._blueprintProjectPhases(projectBlueprint, goal);
     const bloomProfile = this._inferBloomProfile(projectBlueprint);
