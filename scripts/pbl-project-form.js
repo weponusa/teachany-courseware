@@ -15,6 +15,8 @@
     { id: 'geography', label: '地理' },
     { id: 'info-tech', label: '信息技术' },
     { id: 'art', label: '艺术' },
+    { id: 'politics', label: '道法' },
+    { id: 'psychology', label: '心理' },
   ];
 
   const GRADE_OPTIONS = [
