@@ -1838,6 +1838,11 @@ class PBLPathBuilder {
   _sanitizeDeliverableTitle(name, goal) {
     const art = this._compactProjectLabel(goal);
     let s = this._stripGoalMarkup(name, goal).replace(/^《+|》+$/g, '').trim();
+    // 幂等：清除重复前缀「art·art·」，避免多次清洗叠加成占位式标题
+    if (art) {
+      const dupRe = new RegExp(`^(?:${art}[·:：]\\s*)+`);
+      s = s.replace(dupRe, '');
+    }
     if (this._isEnergyAnalysisGoal(goal) && /测算|收益|减排|论证|图表|记录表/.test(s) && s.length >= 8) {
       return s.includes(art) ? s : `${art}：${s}`;
     }
@@ -3115,8 +3120,9 @@ class PBLPathBuilder {
     if (/\d+(\.\d+)?\s*(cm|mm|m|ml|g|kg|℃|°|分钟|小时|天|日|次|人|题|页|张|帧|行|列|条|份|组|点|字|mw|kwh|度)/i.test(s)) score += 3;
     if (/\d+[\-–~至]\d+/.test(s)) score += 2;
     if (/≥|≤|不少于|不超过|精确到|至少|至多/.test(s)) score += 2;
-    if (/表格|清单|记录表|草图|立面|平面|BOM|问卷|提纲|甘特|量规|检查表|数据表|照片|截图|附录|折线图|示意图|柱状|扇形|模型|因子|假设|论证|测算表/.test(s)) score += 2;
-    if (/填写|绘制|称量|测量|焊接|切割|打磨|组装|编程|调试|访谈|统计|撰写|标注|拍照|导出|打印|查阅|计算|测绘|调查|分析|整理|录入|估算|对比/.test(s)) score += 1;
+    if (/表格|清单|名单|记录表|台账|草图|立面|平面|BOM|问卷|提纲|甘特|量规|检查表|数据表|照片|截图|附录|折线图|示意图|柱状|条形图?|饼图|扇形|分类表|对照表|时间轴|脚本|倡议书?|情景剧|海报|采访|模型|因子|假设|论证|测算表/.test(s)) score += 2;
+    if (/填写|绘制|称量|测量|焊接|切割|打磨|组装|编程|调试|访谈|统计|撰写|编写|设计|标注|拍照|排演|排练|录制|导出|打印|查阅|计算|测绘|调查|分析|整理|录入|估算|对比|归纳|列出|找出|制定/.test(s)) score += 1;
+    if (/正确率|占比|百分比|比例|薄弱|短板|优先级|成因|渠道|承诺|流程/.test(s)) score += 1;
     if (/面积×|效率×|日照|用电|减排|碳排放|收益|电价|辐射|光电|屋顶|碳足迹/.test(s)) score += 1;
     if (PBLPathBuilder.HOLLOW_STEP_RE.test(s)) score -= 4;
     if (/^(选择|确定|了解|学习|掌握|认识|编写基础)/.test(s)) score -= 2;
@@ -3131,23 +3137,27 @@ class PBLPathBuilder {
     return avg < 2.5;
   }
 
+  /**
+   * 选步骤：优先保留 LLM / 蓝图本身可操作的项目专属步骤，客户端模板仅在它们
+   * 缺失或空洞时兜底——避免同类项目千篇一律套模板、产出占位。
+   */
   _pickConcreteSteps(llmSteps, bpSteps, contextual) {
-    const normalize = (steps) => {
+    const clean = (steps) => {
       if (!Array.isArray(steps) || !steps.length) return null;
       const good = steps.filter(s => !this._isHollowStep(s));
-      if (!good.length) return null;
-      const score = good.reduce((a, s) => a + this._stepActionabilityScore(s), 0);
-      return { steps: good.slice(0, 4), score };
+      if (good.length < 2) return null;
+      const avg = good.reduce((a, s) => a + this._stepActionabilityScore(s), 0) / good.length;
+      return { steps: good.slice(0, 4), avg };
     };
-    const ranked = [
-      { ...normalize(contextual), w: 4, src: contextual },
-      { ...normalize(bpSteps), w: 3 },
-      { ...normalize(llmSteps), w: 2 },
-    ].filter(x => x.steps?.length);
-    if (ranked.length) {
-      ranked.sort((a, b) => (b.score + b.w * 2) - (a.score + a.w * 2));
-      return ranked[0].steps;
-    }
+    const llm = clean(llmSteps);
+    const bp = clean(bpSteps);
+    const ctx = clean(contextual);
+    // LLM / 蓝图步骤只要本身可操作（含数量/工具/产出），就直接采用，保留针对性
+    if (llm && llm.avg >= 2) return llm.steps;
+    if (bp && bp.avg >= 2) return bp.steps;
+    // 否则取三者中可操作性最高者，模板作为最后兜底
+    const ranked = [llm, bp, ctx].filter(Boolean).sort((a, b) => b.avg - a.avg);
+    if (ranked.length) return ranked[0].steps;
     if (contextual?.length) return contextual.slice(0, 4);
     if (bpSteps?.length) return bpSteps.slice(0, 4);
     return (llmSteps || []).slice(0, 4);
@@ -3319,45 +3329,52 @@ class PBLPathBuilder {
     return this._enrichBlueprintPedagogy(goal, bp);
   }
 
-  /** 通用 PBL 教学设计加厚：驱动性问题、场景 venue、形成性检查、报告结构、协作角色 */
+  /**
+   * 教学法补全（精简版）：只补能从题目真正提取的驱动性问题，以及阶段场地/工具；
+   * 报告结构、形成性检查、协作角色、acceptance 等若 LLM 未给则留空（不再用通用模板硬填），
+   * 避免产出与项目无关的占位信息。
+   */
   _enrichBlueprintPedagogy(goal, blueprint) {
     if (!blueprint?.schemes?.length) return blueprint;
     const bp = blueprint;
     const type = this._classifyProjectType(goal);
-    const art = this._compactProjectLabel(goal, this._extractTopicProfile(goal));
 
+    // 驱动性问题：优先用题目里本就存在的问句；否则合成一句紧扣交付物的问题
     if (!bp.drivingQuestion || bp.drivingQuestion.length < 12) {
       bp.drivingQuestion = this._synthesizeDrivingQuestion(goal, bp);
     }
-    if (!Array.isArray(bp.reportOutline) || bp.reportOutline.length < 3) {
-      bp.reportOutline = this._inferReportOutline(goal, bp, type);
-    }
-    if (!Array.isArray(bp.formativeCheckpoints) || bp.formativeCheckpoints.length < 3) {
-      bp.formativeCheckpoints = this._inferFormativeCheckpoints(goal, bp);
-    }
-    if ((!Array.isArray(bp.collaborationRoles) || !bp.collaborationRoles.length)
-      && this._suggestsGroupCollaboration(goal, type)) {
-      bp.collaborationRoles = this._inferCollaborationRoles(goal, type);
-    }
+    // 报告结构/形成性检查/协作角色：仅保留 LLM 明确给出的，避免通用模板占位
+    if (!Array.isArray(bp.reportOutline)) bp.reportOutline = [];
+    if (!Array.isArray(bp.formativeCheckpoints)) bp.formativeCheckpoints = [];
+    if (!Array.isArray(bp.collaborationRoles)) bp.collaborationRoles = [];
 
     bp.schemes = (bp.schemes || []).map(s => ({
       ...s,
       phases: (s.phases || []).map((p, i, arr) => {
         const role = i === 0 ? 'foundation' : (i < arr.length - 1 ? 'bridge' : 'core');
-        const acceptance = Array.isArray(p.acceptance) && p.acceptance.length
-          ? p.acceptance
-          : (p.steps || []).slice(0, 3).map(st =>
-            `□ ${String(st).slice(0, 42)}${String(st).length > 42 ? '…' : ''}（有记录/签字）`);
+        const venue = p.venue || this._inferSpecificVenue(p.phase, role, type, i, arr.length);
         return {
           ...p,
-          venue: p.venue || this._inferPhaseVenue(goal, p.phase, role, type, i, arr.length),
-          durationHint: p.durationHint || this._inferPhaseDurationHint(i, arr.length),
+          ...(venue ? { venue } : {}),
           tools: Array.isArray(p.tools) && p.tools.length ? p.tools : this._inferPhaseTools(goal, p.phase, this._goalProfile(goal, bp)),
-          acceptance,
+          // acceptance 仅采用 LLM 提供的实质验收项，不再复述步骤
+          acceptance: Array.isArray(p.acceptance) ? p.acceptance.filter(a => a && String(a).trim()) : [],
         };
       }),
     }));
     return bp;
+  }
+
+  /** 仅返回有信息量的场地（校外/实地/线上/家庭等），普通教室场景返回空以保持精简 */
+  _inferSpecificVenue(phaseName, role, type, index, total) {
+    const phase = String(phaseName || '');
+    if (/校外|实地|4S|田野|研学|走访|参观|市场|店铺/.test(phase)) return '校外/实地';
+    if (/线上|网络|文献|检索/.test(phase)) return '线上+教室';
+    if (/家庭|居家|课后/.test(phase)) return '家庭+教室';
+    if (/调研|调查|访谈|问卷|采集/.test(phase)) {
+      return type === 'study-trip' ? '校外+线上' : '校外/家庭+线上';
+    }
+    return '';
   }
 
   _synthesizeDrivingQuestion(goal, blueprint) {
@@ -3377,11 +3394,8 @@ class PBLPathBuilder {
       'life-planning': '如何策划并执行',
       'study-trip': '如何通过实地调研完成',
     })[type] || '如何围绕真实情境完成';
-    let q = `${opener}「${art}」`;
-    if (deliv && deliv.length >= 4) q += `，并产出${deliv}`;
-    q += '？';
-    if (constraint && constraint.length >= 4) q += `（须考虑：${constraint.slice(0, 36)}）`;
-    return q;
+    // 精简：只问核心问题，不再拼接（常被多次清洗而重复的）交付物文本
+    return `${opener}「${art}」？`;
   }
 
   _inferReportOutline(goal, blueprint, type) {
@@ -3495,18 +3509,19 @@ class PBLPathBuilder {
     if (subj === 'psychology') {
       return `运用沟通、共情或自我认知理解「${art}」中的人际与情绪因素`;
     }
-    return `将「${name}」应用于「${art}」的本阶段任务`;
+    // 无法给出具体应用场景时返回空，由调用方丢弃，避免「将X应用于本阶段任务」式占位
+    return '';
   }
 
   _buildKnowledgeScenes(knowledgeNames, matchedNodes, goal) {
     const byName = new Map((matchedNodes || []).map(n => [n.name, n]));
-    return (knowledgeNames || []).filter(Boolean).map(name => {
-      const node = byName.get(name);
-      return {
-        name,
-        sceneUse: node ? this._inferKnowledgeSceneUse(node, goal) : `支撑「${this._compactProjectLabel(goal)}」本阶段任务`,
-      };
-    });
+    return (knowledgeNames || []).filter(Boolean)
+      .map(name => {
+        const node = byName.get(name);
+        return { name, sceneUse: node ? this._inferKnowledgeSceneUse(node, goal) : '' };
+      })
+      // 只保留能说清「这个知识点在本项目里怎么用」的具体场景
+      .filter(s => s.sceneUse);
   }
 
   /** 从用户输入提取交付物锚点 — 一切任务步骤必须围绕此展开，禁止套其他项目模板 */
@@ -3915,9 +3930,9 @@ class PBLPathBuilder {
       let out = s;
       const energyStepOk = this._isEnergyAnalysisGoal(goal)
         && /日照|辐射|用电|屋顶|发电|收益|减排|碳|报告|论证|测算|统计|函数|图表|模型|假设|因子/.test(s);
-      const actionable = this._stepActionabilityScore(s) >= 4;
-      const needsRewrite = !energyStepOk && (this._isHollowStep(s) || this._stepDomainMismatch(s, profile)
-        || (!actionable && !this._stepAnchoredToGoal(s, profile)));
+      // 仅当步骤空洞或与项目领域明显不符时才改写；可操作但措辞普通的 LLM 步骤保留原文，
+      // 避免把项目专属内容换成通用模板（占位感的主要来源）。
+      const needsRewrite = !energyStepOk && (this._isHollowStep(s) || this._stepDomainMismatch(s, profile));
       if (needsRewrite) {
         out = this._expandStepAnchoredToGoal(s, goal, phase, profile, ctx, i);
       }
@@ -3938,15 +3953,19 @@ class PBLPathBuilder {
     });
 
     const goodSteps = steps.filter(s => !this._isHollowStep(s));
-    const avgScore = goodSteps.length
-      ? goodSteps.reduce((a, s) => a + this._stepActionabilityScore(s), 0) / goodSteps.length
-      : 0;
-    if (goodSteps.length < 2 || avgScore < 2) {
-      const role = phaseIndex === 0 ? 'foundation' : (phaseIndex < totalPhases - 1 ? 'bridge' : 'core');
-      const suggested = this._suggestPhaseSteps(goal, { role, phase: phase?.phase, nodes: [] }, phase);
-      if (Array.isArray(suggested) && suggested.length) return suggested.slice(0, 4);
-    }
-    return (goodSteps.length ? goodSteps : steps).slice(0, 4);
+    // 已有 ≥2 条可操作步骤就直接采用，绝不丢弃 LLM 的项目专属内容
+    if (goodSteps.length >= 2) return goodSteps.slice(0, 4);
+    // 不足 2 条时，保留已有好步骤，再用「围绕知识点」的模板补足（而非整段替换）
+    const role = phaseIndex === 0 ? 'foundation' : (phaseIndex < totalPhases - 1 ? 'bridge' : 'core');
+    const knNodes = (phase?.knowledgeHints || phase?.knowledgeNames || [])
+      .filter(Boolean).map(n => ({ name: String(n) }));
+    const suggested = this._suggestPhaseSteps(goal, { role, phase: phase?.phase, nodes: knNodes }, phase) || [];
+    const merged = [...goodSteps];
+    suggested.forEach(s => {
+      if (merged.length >= 4) return;
+      if (!merged.some(ex => this._stepsNearDuplicate(ex, s)) && !this._isHollowStep(s)) merged.push(s);
+    });
+    return (merged.length ? merged : (goodSteps.length ? goodSteps : steps)).slice(0, 4);
   }
 
   _concretizeDeliverable(goal, phaseName, role, fallback, blueprint) {
@@ -4022,7 +4041,8 @@ class PBLPathBuilder {
         const steps = this._concretizePhaseSteps(goal, p, i, arr.length, archetype, bp);
         const deliverable = this._concretizeDeliverable(goal, p.phase, role, p.deliverable, bp);
         const tools = p.tools || this._inferPhaseTools(goal, p.phase, profile);
-        const acceptance = steps.map((st, j) => `□ ${String(st).slice(0, 48)}${String(st).length > 48 ? '…' : ''}（有记录/照片/签字）`);
+        // acceptance 仅保留 LLM 提供的实质验收项，不再逐条复述步骤
+        const acceptance = Array.isArray(p.acceptance) ? p.acceptance.filter(a => a && String(a).trim()) : [];
         return { ...p, steps, deliverable, tools, acceptance };
       }),
     }));
@@ -7715,13 +7735,15 @@ class PBLPathBuilder {
     const mergedPhases = phaseLen ? Array.from({ length: phaseLen }, (_, i) => {
       const bp = blueprintPhases[i] || {};
       const lp = llmPhases[i] || {};
-      const stubGroup = { role: bp.role || 'core', nodes: [] };
+      const knowledgeNames = this._filterPhaseKnowledgeNames(
+        lp.knowledgeNames?.length ? lp.knowledgeNames : bp.knowledgeNames, goal
+      );
+      // 用真实匹配到的课标知识点（而非空 nodes）驱动步骤兜底，确保围绕知识点
+      const stubGroup = { role: bp.role || 'core', nodes: knowledgeNames.map(n => ({ name: n })) };
       return {
         phase: lp.phase || bp.phase || `阶段 ${i + 1}`,
         steps: this._pickConcreteSteps(lp.steps, bp.steps, this._suggestPhaseSteps(goal, stubGroup, bp)),
-        knowledgeNames: this._filterPhaseKnowledgeNames(
-          lp.knowledgeNames?.length ? lp.knowledgeNames : bp.knowledgeNames, goal
-        ),
+        knowledgeNames,
         deliverable: this._pickConcreteDeliverable(lp, bp, bp.role, goal),
         literacy: this._supplementPolPsychLiteracy(lp.literacy || bp.literacy || {}, { role: bp.role || 'core', phaseIndex: i + 1 }),
         knowledgeScenes: Array.isArray(lp.knowledgeScenes) ? lp.knowledgeScenes
