@@ -3772,7 +3772,11 @@ class PBLPathBuilder {
     return (knowledgeNames || []).filter(Boolean)
       .map(name => {
         const node = byName.get(name);
-        return { name, sceneUse: node ? this._inferKnowledgeSceneUse(node, goal) : '' };
+        return {
+          name,
+          pathStep: node?.pathStep || null,
+          sceneUse: node ? this._inferKnowledgeSceneUse(node, goal) : '',
+        };
       })
       // 只保留能说清「这个知识点在本项目里怎么用」的具体场景
       .filter(s => s.sceneUse);
@@ -4407,7 +4411,7 @@ class PBLPathBuilder {
     if (hint) return hint;
     const scene = this._inferKnowledgeSceneUse(node, goal);
     if (scene) return scene;
-    const circ = this._pathStepCircled(node.pathStep);
+    const circ = node.pathStep ? `图谱${node.pathStep}` : '图谱';
     if (/调查|问卷|访谈/.test(phase)) {
       return `运用${circ}「${node.name}」设计或优化本阶段调查题项（≥2道）并说明测量意图`;
     }
@@ -5736,9 +5740,14 @@ class PBLPathBuilder {
 
   static PATH_STEP_CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫'];
 
+  /** 与图谱节点角标一致的阿拉伯数字（路径 UI 与图谱统一） */
+  _pathStepLabel(step) {
+    const n = parseInt(step, 10);
+    return Number.isFinite(n) && n > 0 ? String(n) : '';
+  }
+
   _pathStepCircled(step) {
-    const i = (step || 1) - 1;
-    return PBLPathBuilder.PATH_STEP_CIRCLED[i] || String(step);
+    return this._pathStepLabel(step);
   }
 
   /** 图谱主线：带 pathStep 的实施节点（绿/紫/红均算） */
@@ -6250,8 +6259,8 @@ class PBLPathBuilder {
         phase: lp.phase || bp.phase || lp.name || g.phase,
         role: g.role,
         pathSteps: keptNodes.map(n => n.pathStep),
-        pathStepLabels: keptNodes.map(n => this._pathStepCircled(n.pathStep)),
-        graphRef: keptNodes.map(n => this._pathStepCircled(n.pathStep)).join(''),
+        pathStepLabels: keptNodes.map(n => this._pathStepLabel(n.pathStep)),
+        graphRef: keptNodes.map(n => n.pathStep).filter(Boolean).join('→'),
         nodeIds: keptNodes.map(n => n.id),
         knowledgeNames: knNames,
         knowledgeScenes,
@@ -6320,7 +6329,7 @@ class PBLPathBuilder {
     text += `知识链：${pathPlan.knowledgeChain}\n\n`;
     pathPlan.phases.forEach(p => {
       const kn = (p.knowledgeNames || []).map(n => `「${n}」`).join('、');
-      text += `【阶段${p.phaseIndex} · 图谱 ${p.graphRef || p.pathStepLabels?.join('') || ''}】${p.phase}\n`;
+      text += `【阶段${p.phaseIndex} · 图谱 ${p.graphRef || (p.pathSteps || []).join('→')}】${p.phase}\n`;
       text += `知识点：${kn}\n`;
       text += `任务：${(p.steps || []).join('；')}\n`;
       const literacy = this._formatPhaseLiteracy(p);
@@ -9253,15 +9262,27 @@ class PBLGraphRenderer {
       .attr('fill', d => this.colors[d.layer] || '#94a3b8')
       .text(d => d.systemTag);
 
-    // ─── 实施顺序序号（主线节点） ───
+    // ─── 实施顺序序号（主线节点，与路径区徽章一致） ───
+    node.filter(d => d.pathStep)
+      .append('circle')
+      .attr('class', 'path-step-badge-bg')
+      .attr('cx', 20)
+      .attr('cy', -20)
+      .attr('r', 12)
+      .attr('fill', d => this.colors[d.layer] || this.colors.matched)
+      .attr('stroke', '#0f172a')
+      .attr('stroke-width', 2)
+      .attr('pointer-events', 'none');
     node.filter(d => d.pathStep)
       .append('text')
-      .attr('x', 16)
-      .attr('y', 14)
+      .attr('class', 'path-step-badge')
+      .attr('x', 20)
+      .attr('y', -20)
       .attr('text-anchor', 'middle')
-      .attr('font-size', '10px')
+      .attr('dominant-baseline', 'central')
+      .attr('font-size', '14px')
       .attr('font-weight', '800')
-      .attr('fill', d => this.colors.matched)
+      .attr('fill', '#ffffff')
       .attr('pointer-events', 'none')
       .text(d => d.pathStep);
 
@@ -9632,7 +9653,9 @@ class PBLGraphRenderer {
     this.svg.selectAll('.node-group').select('.node-circle')
       .attr('stroke-width', d => (active && set.has(d.pathStep) ? 4 : 2.5))
       .attr('opacity', d => (!active || set.has(d.pathStep) ? 1 : 0.28));
-    this.svg.selectAll('.node-group').select('.node-label')
+    this.svg.selectAll('.node-group').select('.path-step-badge-bg')
+      .attr('opacity', d => (!active || set.has(d.pathStep) ? 1 : 0.35));
+    this.svg.selectAll('.node-group').select('.path-step-badge')
       .attr('opacity', d => (!active || set.has(d.pathStep) ? 1 : 0.35));
   }
 
