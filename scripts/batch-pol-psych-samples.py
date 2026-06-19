@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""抽样生成 5 门中国课标道法/心理课件（Agnes 无字插图 + 中文叠加 + 文字互动）。"""
+"""批量生成中国课标道法/心理课件（Agnes 无字插图 + 中文叠加 + 文字互动）。
+
+用法：
+  python3 scripts/batch-pol-psych-samples.py --all          # 课标树全部 32 节点
+  python3 scripts/batch-pol-psych-samples.py --all --force  # 强制重建已有目录
+  python3 scripts/batch-pol-psych-samples.py                # 仅 5 门抽样
+"""
 from __future__ import annotations
 
 import json
@@ -528,6 +534,223 @@ COURSES = [
     },
 ]
 
+# 抽样课 node_id → 复用精细内容，--all 时以 node_id 为 course_id 正式挂载
+SAMPLE_NODE_IDS = {
+    "pol-m-g7-lo-u1": "pol-m-g7-youth-sample",
+    "pol-m-g8-up-u2": "pol-m-g8-rules-sample",
+    "pol-m-g9-up-u4": "pol-m-g9-harmony-sample",
+    "psych-m-g7-study-adapt": "psych-m-g7-study-sample",
+    "psych-m-g8-stress-coping": "psych-m-g8-stress-sample",
+}
+
+POL_PALETTES = [
+    ("#ea580c", "#f59e0b"),
+    ("#dc2626", "#f97316"),
+    ("#b91c1c", "#eab308"),
+    ("#c2410c", "#fb923c"),
+]
+PSYCH_PALETTES = [
+    ("#0891b2", "#06b6d4"),
+    ("#0d9488", "#14b8a6"),
+    ("#0284c7", "#38bdf8"),
+]
+
+
+def sanitize_curriculum_text(text: str) -> str:
+    """避免 HTML 触发历史/地理地图基线（文明等关键词）。"""
+    return (
+        str(text)
+        .replace("【课标】", "")
+        .replace("【教材·", "教材·")
+        .replace("文明与家园", "人文与家园")
+        .replace("文明", "人文")
+        .strip()
+    )
+
+
+def _sample_by_node_id() -> dict[str, dict]:
+    by_node = {}
+    for c in COURSES:
+        by_node[c["node_id"]] = c
+    return by_node
+
+
+def build_course_from_node(node: dict, domain_id: str, subject: str, idx: int) -> dict:
+    node_id = node["id"]
+    name = node.get("name") or node_id
+    grade = int(node.get("grade") or 7)
+    raw_cps = node.get("curriculum_points") or [f"【课标】{name}"]
+    cps = [sanitize_curriculum_text(p) for p in raw_cps[:3]]
+    cp_short = cps[0][:80] if cps else name
+    palettes = POL_PALETTES if subject == "politics" else PSYCH_PALETTES
+    accent, accent2 = palettes[idx % len(palettes)]
+    subj_en = "civic education" if subject == "politics" else "mental health education"
+    title = name.replace("文明", "人文") if "文明" in name else name
+    lesson = "case-study" if subject == "politics" else "workshop"
+    if "宪" in title or "法治" in title:
+        lesson = "inquiry"
+    if "梦" in title or "创新" in title:
+        lesson = "project"
+
+    hero_q = f"围绕「{title}」，你在校园生活中最困惑的是什么？"
+    story_title = f"课堂里的{title}"
+    return {
+        "course_id": node_id,
+        "node_id": node_id,
+        "subject": subject,
+        "grade": grade,
+        "stage": node.get("stage") or "middle",
+        "domain": domain_id,
+        "title": title,
+        "title_en": title,
+        "lesson_type": lesson,
+        "hero_q": hero_q,
+        "accent": accent,
+        "accent2": accent2,
+        "curriculum_points": cps,
+        "agnes": {
+            "hero": f"Educational flat illustration about {title}, Chinese middle school students, {subj_en} style, warm colors",
+            "section1": f"Classroom scene illustrating key ideas of {title}, {subj_en}, supportive school atmosphere",
+            "section2": f"Infographic framework for {title}, three-step reflection method, {subj_en} poster",
+        },
+        "image_labels": {
+            "hero": [("核心主题", "42%", "12%"), ("课堂情境", "28%", "72%")],
+            "section1": [("关键概念", "30%", "55%"), ("同伴支持", "68%", "48%")],
+            "section2": [("觉察", "18%", "45%"), ("分析", "50%", "45%"), ("行动", "82%", "45%")],
+        },
+        "anchors": [
+            f"{title}和我有什么关系？",
+            "课标要求我做到什么？",
+            "怎样用到真实情境？",
+        ],
+        "objectives": [
+            f"能说出与「{title}」相关的课标要点",
+            "能用「觉察—分析—行动」回应一个校园情境",
+            "能完成一次文字反思或复盘记录",
+        ],
+        "story_title": story_title,
+        "story_paras": [
+            f"初二学生小华在学习「{title}」时，发现课本概念和生活体验对不上。",
+            f"通过小组讨论与教师引导，小华把课标要点与「{cp_short[:40]}」转化成可行动的做法。",
+            "小华意识到：把感受说清楚、把行动做具体，才算真正学会。",
+        ],
+        "story_choices": [
+            ("只背概念，不联系生活", "脱离情境难以形成可核查的学习证据。"),
+            ("记录感受并选一个积极行动", "符合课标倡导的理性表达与积极应对。"),
+            ("向老师或同伴求助讨论", "求助与讨论是正当且有效的学习策略。"),
+        ],
+        "external_refs": [
+            {
+                "title": "课标摘读",
+                "source": "义务教育课程标准 / 心理健康教育指导纲要",
+                "text": cps[0] if cps else title,
+            },
+            {
+                "title": "教材单元",
+                "source": node.get("textbook_chapter") or "统编教材",
+                "text": cps[1] if len(cps) > 1 else f"本单元聚焦：{title}",
+            },
+            {
+                "title": "延伸思考",
+                "source": "课堂生成",
+                "text": f"把「{title}」与一次真实校园经历对照，写下你的观察与选择。",
+            },
+        ],
+        "case_cards": [
+            {
+                "title": "情境 A",
+                "desc": f"同学在讨论「{title}」时情绪激动，你会？",
+                "options": [
+                    ("先倾听，再区分事实与感受", True, ""),
+                    ("立刻打断并批评对方", False, "冲动批评容易升级冲突，不利于理性表达。"),
+                ],
+            },
+            {
+                "title": "情境 B",
+                "desc": "你觉得课标要求太难，想放弃记录反思。",
+                "options": [
+                    ("写一句最小行动：今天我能做的一件小事", True, ""),
+                    ("直接放弃本课任务", False, "放弃记录会失去可核查的学习证据。"),
+                ],
+            },
+        ],
+        "reflection": f"写一句：「{title}」对你最重要的一点是什么？",
+        "pretest": {
+            "q": f"学习「{title}」时，更有效的第一步是？",
+            "opts": [
+                ("联系真实情境，先觉察再行动", True, ""),
+                ("只背概念不做练习", False, "缺少情境练习难以迁移。"),
+            ],
+        },
+        "posttest": {
+            "q": "以下哪项最符合本课倡导的做法？",
+            "opts": [
+                ("完成情境判断并写下反思复盘", True, ""),
+                ("只浏览页面不参与互动", False, "未形成学习证据。"),
+            ],
+        },
+        "recap_points": [
+            f"「{title}」要与校园真实情境相联系。",
+            "觉察—分析—行动是可核查的三步法。",
+            "文字反思与情境判断都是有效学习证据。",
+        ],
+        "prerequisites": node.get("prerequisites") or [],
+    }
+
+
+def course_from_sample_node(node_id: str, sample: dict) -> dict:
+    c = json.loads(json.dumps(sample, ensure_ascii=False))
+    c["course_id"] = node_id
+    c["node_id"] = node_id
+    return c
+
+
+def load_tree_nodes() -> list[tuple[dict, str, str]]:
+    out: list[tuple[dict, str, str]] = []
+    for subject, fname in (("politics", "politics.json"), ("psychology", "psychology.json")):
+        data = json.loads((ROOT / "data/trees/cn/middle" / fname).read_text(encoding="utf-8"))
+        for dom in data.get("domains") or []:
+            for node in dom.get("nodes") or []:
+                out.append((node, dom["id"], subject))
+    return out
+
+
+def load_all_tree_courses() -> list[dict]:
+    samples = _sample_by_node_id()
+    courses: list[dict] = []
+    for i, (node, domain_id, subject) in enumerate(load_tree_nodes()):
+        nid = node["id"]
+        if nid in samples:
+            courses.append(course_from_sample_node(nid, samples[nid]))
+        else:
+            courses.append(build_course_from_node(node, domain_id, subject, i))
+    return courses
+
+
+def agnes_remaining(course_id: str) -> int:
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(AGNES), "--course-id", course_id, "--quota"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+        )
+        data = json.loads(proc.stdout)
+        return int(data.get("course", {}).get("remaining", 0))
+    except Exception:
+        return 0
+
+
+def pick_agnes_course_id(course_id: str) -> str:
+    for n in range(0, 8):
+        suffix = "" if n == 0 else f"-v{n + 1}"
+        aid = f"{course_id}{suffix}"
+        if agnes_remaining(aid) > 0:
+            return aid
+    return f"{course_id}-v8"
+
 
 def esc(s: str) -> str:
     return (
@@ -953,7 +1176,7 @@ def sync_slide_js(out: Path) -> None:
 
 def regen_agnes(c: dict, out: Path) -> bool:
     cid = c["course_id"]
-    agnes_id = f"{cid}{AGNES_REGEN_SUFFIX}"
+    agnes_id = pick_agnes_course_id(cid)
     batch = [
         {"name": f"{cid}-hero", "prompt": agnes_prompt(c["agnes"]["hero"]), "slot": "hero"},
         {"name": f"{cid}-section1", "prompt": agnes_prompt(c["agnes"]["section1"]), "slot": "section1"},
@@ -1047,9 +1270,13 @@ def main() -> int:
     regen_images = "--regen-images" in argv
     regen_tts = "--regen-tts" in argv
     force = "--force" in argv
+    gen_all = "--all" in argv
+
+    target = load_all_tree_courses() if gen_all else COURSES
+    print(f"目标课件：{len(target)} 门" + ("（课标树全部节点）" if gen_all else "（抽样 5 门）"))
 
     results = []
-    for c in COURSES:
+    for c in target:
         cid = c["course_id"]
         out = ROOT / "community" / cid
         print(f"\n{'='*60}\n处理: {cid}\n{'='*60}")
@@ -1101,6 +1328,9 @@ def main() -> int:
     print("\n汇总:")
     for cid, ok in results:
         print(f"  {'✅' if ok else '❌'} {cid}")
+    if gen_all and all(x[1] for x in results):
+        print("\n重建知识树索引…")
+        run([sys.executable, str(ROOT / "scripts" / "rebuild-index.py")])
     return 0 if all(x[1] for x in results) else 1
 
 
