@@ -7,12 +7,15 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = Path.home() / ".claude/skills/teachany"
-AGNES = SKILL / "scripts/agnes-image-gen.py"
+AGNES = ROOT / "scripts" / "agnes-image-gen.py"
+AGNES_REGEN_SUFFIX = "-v2"
+AGNES_IMAGE_DELAY_SEC = 7
 FINALIZE = SKILL / "scripts/finalize-courseware.py"
 SET_PW = SKILL / "scripts/set-feedback-password.py"
 BASELINE = SKILL / "scripts/check_baseline.sh"
@@ -950,6 +953,7 @@ def sync_slide_js(out: Path) -> None:
 
 def regen_agnes(c: dict, out: Path) -> bool:
     cid = c["course_id"]
+    agnes_id = f"{cid}{AGNES_REGEN_SUFFIX}"
     batch = [
         {"name": f"{cid}-hero", "prompt": agnes_prompt(c["agnes"]["hero"]), "slot": "hero"},
         {"name": f"{cid}-section1", "prompt": agnes_prompt(c["agnes"]["section1"]), "slot": "section1"},
@@ -957,12 +961,35 @@ def regen_agnes(c: dict, out: Path) -> bool:
     ]
     batch_path = out / "agnes-batch.json"
     batch_path.write_text(json.dumps(batch, ensure_ascii=False, indent=2), encoding="utf-8")
-    try:
-        run([sys.executable, str(AGNES), "--course-id", cid, "--batch", str(batch_path), "--out-dir", str(out / "assets")])
+    if not AGNES.is_file():
+        AGNES_FALLBACK = SKILL / "scripts" / "agnes-image-gen.py"
+        agnes_bin = AGNES_FALLBACK if AGNES_FALLBACK.is_file() else AGNES
+    else:
+        agnes_bin = AGNES
+
+    print(f"  Agnes 配额桶: {agnes_id}（原课件 {cid} 额度用尽时用 -v2 重生成）")
+    ok = 0
+    for i, task in enumerate(batch):
+        if i > 0:
+            time.sleep(AGNES_IMAGE_DELAY_SEC)
+        out_path = out / "assets" / f"{task['name']}.png"
+        try:
+            run([
+                sys.executable, str(agnes_bin),
+                "--course-id", agnes_id,
+                "--prompt", task["prompt"],
+                "--out", str(out_path),
+                "--slot", task["slot"],
+            ])
+            ok += 1
+            print(f"  ✅ {out_path.name}")
+        except subprocess.CalledProcessError as e:
+            print(f"  ❌ {task['name']}: {e}")
+    if ok:
+        print(f"  Agnes 完成 {ok}/{len(batch)} 张")
         return True
-    except subprocess.CalledProcessError:
-        print("  ⚠️ Agnes 额度已尽，保留现有插图；已更新 agnes-batch.json（无字 prompt）供后续重生成")
-        return False
+    print("  ⚠️ Agnes 重生成失败，保留现有插图")
+    return False
 
 
 def regen_tts(out: Path) -> None:

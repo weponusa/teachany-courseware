@@ -114,8 +114,8 @@ def gen_with_retry(course_id: str, prompt: str, **kwargs) -> dict:
         if result.get('error') == 'COURSE_QUOTA_EXCEEDED':
             break
         if result.get('_http_status') == 429 and attempt < 3:
-            wait = 15 * attempt
-            print(f'  ⚠️  429 限流，{wait}s 后重试…')
+            wait = 60 if result.get('error') == 'RATE_LIMIT' else 15 * attempt
+            print(f'  ⚠️  429 {"IP 限流" if result.get("error") == "RATE_LIMIT" else "限流"}，{wait}s 后重试…')
             time.sleep(wait)
             continue
         if attempt < 3:
