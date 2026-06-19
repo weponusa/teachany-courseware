@@ -18,6 +18,8 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from pol_psych_rich_content import get_rich_override, sanitize_course_strings  # noqa: E402
 SKILL = Path.home() / ".claude/skills/teachany"
 AGNES = ROOT / "scripts" / "agnes-image-gen.py"
 AGNES_REGEN_SUFFIX = "-v2"
@@ -584,6 +586,21 @@ def _sample_by_node_id() -> dict[str, dict]:
 
 def build_course_from_node(node: dict, domain_id: str, subject: str, idx: int) -> dict:
     node_id = node["id"]
+    rich = get_rich_override(node_id)
+    if rich:
+        c = json.loads(json.dumps(rich, ensure_ascii=False))
+        c["course_id"] = node_id
+        c["node_id"] = node_id
+        c.setdefault("domain", domain_id)
+        c.setdefault("subject", subject)
+        c.setdefault("grade", int(node.get("grade") or 7))
+        c.setdefault("stage", node.get("stage") or "middle")
+        c.setdefault("prerequisites", node.get("prerequisites") or [])
+        c.setdefault("parallel", node.get("parallel") or [])
+        c.setdefault("extends", node.get("extends") or [])
+        c["leads_to"] = []
+        return c
+
     name = node.get("name") or node_id
     grade = int(node.get("grade") or 7)
     raw_cps = node.get("curriculum_points") or [f"【课标】{name}"]
@@ -1133,11 +1150,11 @@ def build_manifest(c: dict) -> dict:
         "lesson_type": c["lesson_type"],
         "status": "community",
         "author": "TeachAny",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "teachany_version": TEACHANY_VER,
         "template_version": "2.0",
         "curriculum": "cn",
-        "description": f"中国课标{subj_label}互动课件：{c['title']}（故事+延伸知识+文字互动，无占位视频）",
+        "description": f"中国课标{subj_label}高质量互动课件：{c['title']}（精细故事+延伸知识+情境判断，无占位视频）",
         "tags": [subj_label, f"初中{c['grade']}年级", "课标互动", "Agnes无字插图"],
         "prerequisites": c.get("prerequisites") or [],
         "leads_to": c.get("leads_to") or [],
@@ -1273,6 +1290,7 @@ def finalize_course(out: Path, cid: str, *, regen_tts_audio: bool = True) -> Non
 
 
 def refresh_course(c: dict, *, regen_images: bool = False, regen_tts_audio: bool = True) -> Path:
+    c = sanitize_course_strings(c)
     out = ROOT / "community" / c["course_id"]
     out.mkdir(parents=True, exist_ok=True)
     (out / "index.html").write_text(build_html(c), encoding="utf-8")
@@ -1287,7 +1305,7 @@ def refresh_course(c: dict, *, regen_images: bool = False, regen_tts_audio: bool
         f"## 知识层引用\n\n"
         f"- 课标节点：`{c['node_id']}`（{c['title']}）\n"
         f"- 来源：`data/trees/cn/middle/{c['subject']}.json`\n"
-        f"- v1.1：无占位视频；Agnes 无字生图 + HTML 中文叠加；故事/延伸知识/情境判断\n",
+        f"- v1.2：高质量精细内容（故事/延伸/情境判断）；Agnes 无字生图 + HTML 中文叠加\n",
         encoding="utf-8",
     )
     return out
