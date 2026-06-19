@@ -25,7 +25,8 @@ AGNES_IMAGE_DELAY_SEC = 7
 FINALIZE = SKILL / "scripts/finalize-courseware.py"
 SET_PW = SKILL / "scripts/set-feedback-password.py"
 BASELINE = SKILL / "scripts/check_baseline.sh"
-SLIDE_CSS = "../../assets/teachany-slide-v2.css"
+SLIDE_CSS = "/assets/teachany-slide-v2.css"
+SITE_SCRIPTS = "/assets/scripts"
 TODAY = date.today().isoformat()
 TEACHANY_VER = "7.18.0"
 AGNES_NO_TEXT = (
@@ -985,13 +986,13 @@ def build_html(c: dict) -> str:
 <meta name="teachany-lesson-type" content="{c["lesson_type"]}">
 <meta name="teachany-free-mode" content="false">
 <meta name="teachany-template-version" content="2.0">
-<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+<link rel="stylesheet" href="{SITE_SCRIPTS}/ai-tutor.css">
+<link rel="stylesheet" href="{SITE_SCRIPTS}/teachany-tutor-card.css">
+<link rel="stylesheet" href="{SITE_SCRIPTS}/teachany-tts-narrator.css">
+<link rel="stylesheet" href="{SITE_SCRIPTS}/teachany-section-hints.css">
+<link rel="stylesheet" href="{SITE_SCRIPTS}/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="{SITE_SCRIPTS}/teachany-audio-player.css">
+<link rel="stylesheet" href="{SITE_SCRIPTS}/teachany-floating-dock.css">
 <link rel="stylesheet" href="{SLIDE_CSS}">
 <style>
 :root {{
@@ -1065,13 +1066,13 @@ document.querySelectorAll('.recap-check').forEach(cb=>cb.addEventListener('chang
 (function(){{const c=document.getElementById('lab-canvas');if(!c)return;const ctx=c.getContext('2d');const e=document.getElementById('emo-level');const p=document.getElementById('cope-level');const f=document.getElementById('lab-feedback');function draw(){{const emo=+e.value, cope=+p.value;ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='#e2e8f0';ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle='#0f172a';ctx.font='15px sans-serif';ctx.fillText(`强度 ${{emo}}/10 · 应对 ${{cope}}/10`,20,28);ctx.fillStyle='{c["accent"]}';ctx.fillRect(60,180-emo*14,100,emo*14);ctx.fillStyle='{c["accent2"]}';ctx.fillRect(280,180-cope*14,100,cope*14);if(f)f.textContent=emo>7&&cope<5?'高强度时优先暂停冲动、寻求支持。':'保持觉察，选一种具体行动试试。';}}e?.addEventListener('input',draw);p?.addEventListener('input',draw);draw();}})();
 window.__TEACHANY_TUTOR_CONFIG__={{courseId:'{cid}',courseTitle:'{esc(c["title"])}',subject:'{c["subject"]}',grade:'{c["grade"]}',nodeId:'{c["node_id"]}',lessonType:'{c["lesson_type"]}',getLearnerQuestion:()=>window.__TEACHANY_LEARNER_QUESTION__||'',getContext:()=>document.body.innerText.slice(0,3000)}};
 </script>
-<script src="../../assets/teachany-slide-v2.js"></script>
-<script src="../../assets/scripts/ai-tutor.js"></script>
-<script src="../../assets/scripts/teachany-tutor-card.js"></script>
-<script src="../../assets/scripts/teachany-tts-narrator.js"></script>
-<script src="../../assets/scripts/teachany-section-hints.js"></script>
-<script src="../../assets/scripts/teachany-knowledge-graph.js"></script>
-<script src="../../assets/scripts/teachany-audio-player.js"></script>
+<script src="/assets/teachany-slide-v2.js"></script>
+<script src="{SITE_SCRIPTS}/ai-tutor.js"></script>
+<script src="{SITE_SCRIPTS}/teachany-tutor-card.js"></script>
+<script src="{SITE_SCRIPTS}/teachany-tts-narrator.js"></script>
+<script src="{SITE_SCRIPTS}/teachany-section-hints.js"></script>
+<script src="{SITE_SCRIPTS}/teachany-knowledge-graph.js"></script>
+<script src="{SITE_SCRIPTS}/teachany-audio-player.js"></script>
 </body>
 </html>
 '''
@@ -1167,19 +1168,6 @@ def remove_placeholder_videos(out: Path, cid: str) -> None:
             print(f"  删除占位视频 {p.name}")
 
 
-def sync_slide_js(out: Path) -> None:
-    slide_js = ROOT / "assets" / "teachany-slide-v2.js"
-    if not slide_js.is_file():
-        return
-    dest = out / "assets" / "scripts" / "teachany-slide-v2.js"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(slide_js, dest)
-    html_path = out / "index.html"
-    html = html_path.read_text(encoding="utf-8")
-    html = html.replace("../../assets/teachany-slide-v2.js", "./assets/scripts/teachany-slide-v2.js")
-    html_path.write_text(html, encoding="utf-8")
-
-
 def regen_agnes(c: dict, out: Path) -> bool:
     cid = c["course_id"]
     agnes_id = pick_agnes_course_id(cid)
@@ -1240,8 +1228,8 @@ def regen_tts(out: Path) -> None:
 def finalize_course(out: Path, cid: str, *, regen_tts_audio: bool = True) -> None:
     if regen_tts_audio:
         regen_tts(out)
-    run([sys.executable, str(FINALIZE), str(out)])
-    sync_slide_js(out)
+    # --shared：引用站点根 /assets/scripts/（gh-pages 发布排除 community/*/assets/scripts/）
+    run([sys.executable, str(FINALIZE), str(out), "--shared"])
     run([sys.executable, str(SET_PW), str(out / "manifest.json"), "--password", "道法心理2026", "--hint", "课堂抽样审查口令"])
 
 
