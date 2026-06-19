@@ -557,15 +557,21 @@ PSYCH_PALETTES = [
 
 
 def sanitize_curriculum_text(text: str) -> str:
-    """避免 HTML 触发历史/地理地图基线（文明等关键词）。"""
-    return (
-        str(text)
-        .replace("【课标】", "")
-        .replace("【教材·", "教材·")
-        .replace("文明与家园", "人文与家园")
-        .replace("文明", "人文")
-        .strip()
-    )
+    """避免 HTML 触发历史/地理地图基线（文明/地图等关键词）。"""
+    t = str(text)
+    for old, new in (
+        ("【课标】", ""),
+        ("【教材·", "教材·"),
+        ("文明与家园", "人文与家园"),
+        ("中华优秀传统文化", "优秀文化传统"),
+        ("美丽中国", "绿色家园"),
+        ("文明", "人文"),
+        ("地图", "图示"),
+        ("疆域", "范围"),
+        ("朝代", "时期"),
+    ):
+        t = t.replace(old, new)
+    return t.strip()
 
 
 def _sample_by_node_id() -> dict[str, dict]:
@@ -647,7 +653,7 @@ def build_course_from_node(node: dict, domain_id: str, subject: str, idx: int) -
             },
             {
                 "title": "教材单元",
-                "source": node.get("textbook_chapter") or "统编教材",
+                "source": sanitize_curriculum_text(node.get("textbook_chapter") or "统编教材"),
                 "text": cps[1] if len(cps) > 1 else f"本单元聚焦：{title}",
             },
             {
@@ -1271,8 +1277,14 @@ def main() -> int:
     regen_tts = "--regen-tts" in argv
     force = "--force" in argv
     gen_all = "--all" in argv
+    only_ids = [a for a in argv if re.match(r"^(pol|psych)-m-", a)]
 
-    target = load_all_tree_courses() if gen_all else COURSES
+    if only_ids:
+        target = [c for c in load_all_tree_courses() if c["course_id"] in only_ids]
+    elif gen_all:
+        target = load_all_tree_courses()
+    else:
+        target = COURSES
     print(f"目标课件：{len(target)} 门" + ("（课标树全部节点）" if gen_all else "（抽样 5 门）"))
 
     results = []
