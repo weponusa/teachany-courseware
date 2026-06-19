@@ -284,7 +284,6 @@
     renderHTML(pack) {
       if (!pack) return '';
       const parts = [];
-      parts.push(this._renderSectionNav());
       parts.push(this._renderToolkit(pack));
       parts.push(this._renderTimeline(pack));
       parts.push(this._renderRubric(pack));
@@ -292,23 +291,9 @@
       return `<div class="pbl-support-pack">${parts.join('')}</div>`;
     }
 
-    _renderSectionNav() {
-      const items = [
-        { id: 'pbl-sp-toolkit', label: '📚 知识工具包' },
-        { id: 'pbl-sp-journey', label: '🗓️ 学习旅程' },
-        { id: 'pbl-sp-rubric', label: '📋 评价量规' },
-        { id: 'pbl-sp-handbook', label: '📘 学生手册' },
-      ];
-      const links = items.map(i => `<a href="#${i.id}">${i.label}</a>`).join('');
-      return `<nav class="pbl-sp-nav" aria-label="项目支撑模块">${links}</nav>`;
-    }
-
     _renderToolkit(pack) {
       const items = pack.knowledgeToolkit || [];
-      if (!items.length) {
-        return `<section class="pbl-sp-section" id="pbl-sp-toolkit"><h3>📚 知识工具包</h3>
-          <p class="pbl-sp-hint">完成课标匹配后，图谱主线节点（角标 1、2、3…）将在此列出，并附上场景说明与 TeachAny 课件链接。</p></section>`;
-      }
+      if (!items.length) return '';
       let cards = items.map(k => {
         const courseBtns = (k.courses || []).map(c =>
           c.url ? `<a class="pbl-sp-course" href="${esc(c.url)}" target="_blank" rel="noopener">📖 ${esc(c.title)}</a>` : ''
@@ -321,7 +306,7 @@
           ${courseBtns ? `<div class="pbl-sp-tool-courses">${courseBtns}</div>` : ''}
         </article>`;
       }).join('');
-      return `<section class="pbl-sp-section" id="pbl-sp-toolkit"><h3>📚 知识工具包</h3>
+      return `<section class="pbl-sp-section"><h3>📚 知识工具包</h3>
         <p class="pbl-sp-hint">序号与图谱节点角标一致；优先通过 TeachAny 课件完成各知识点学习。</p>
         <div class="pbl-sp-tool-grid">${cards}</div></section>`;
     }
@@ -329,10 +314,7 @@
     _renderTimeline(pack) {
       const tl = pack.timeline || [];
       const checks = pack.formativeChecks || [];
-      if (!tl.length) {
-        return `<section class="pbl-sp-section" id="pbl-sp-journey"><h3>🗓️ 学习旅程与形成性评价</h3>
-          <p class="pbl-sp-hint">拆解完成后将按项目阶段自动生成周次时间线与形成性评价检查点。</p></section>`;
-      }
+      if (!tl.length) return '';
       const rows = tl.map(t => `<li class="pbl-sp-timeline-item">
         <span class="pbl-sp-week">${esc(t.weekRange)}</span>
         <div><strong>阶段 ${t.phaseIndex} · ${esc(t.phase)}</strong>
@@ -340,7 +322,7 @@
         <ul class="pbl-sp-task-list">${(t.tasks || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
       </li>`).join('');
       const checkRows = checks.map(c => `<li><strong>${esc(c.when)}</strong> — ${esc(c.item)}</li>`).join('');
-      return `<section class="pbl-sp-section" id="pbl-sp-journey"><h3>🗓️ 学习旅程与形成性评价</h3>
+      return `<section class="pbl-sp-section"><h3>🗓️ 学习旅程与形成性评价</h3>
         ${pack.drivingQuestion ? `<p class="pbl-sp-dq"><strong>驱动性问题：</strong>${esc(pack.drivingQuestion)}</p>` : ''}
         <ol class="pbl-sp-timeline">${rows}</ol>
         <h4>形成性评价节点</h4><ul class="pbl-sp-checks">${checkRows}</ul></section>`;
@@ -348,10 +330,7 @@
 
     _renderRubric(pack) {
       const r = pack.rubric;
-      if (!r?.dimensions?.length) {
-        return `<section class="pbl-sp-section" id="pbl-sp-rubric"><h3>📋 多维度项目评价量规</h3>
-          <p class="pbl-sp-hint">量规模板加载中或暂不可用，请刷新页面后重试。</p></section>`;
-      }
+      if (!r?.dimensions?.length) return '';
       const gradeHead = (r.grades || []).map(g =>
         `<th>${esc(r.gradeLabels?.[g] || g)}</th>`
       ).join('');
@@ -362,7 +341,7 @@
       const scoreRows = r.dimensions.map(d =>
         `<tr><td>${esc(d.name)}</td><td>____ / ${d.weight}</td></tr>`
       ).join('');
-      return `<section class="pbl-sp-section" id="pbl-sp-rubric"><h3>📋 多维度项目评价量规</h3>
+      return `<section class="pbl-sp-section"><h3>📋 多维度项目评价量规</h3>
         <p class="pbl-sp-hint">适用于各类 PBL；教师可按项目微调权重。实践维度当前为：${esc(pack.practiceLabel)}。</p>
         <div class="pbl-sp-table-wrap"><table class="pbl-sp-rubric-table">
           <thead><tr><th>维度</th>${gradeHead}</tr></thead><tbody>${rows}</tbody></table></div>
@@ -392,7 +371,7 @@
       const peerHead = (hb.peerReviewCriteria || []).map(c => `<th>${esc(c.name)} (/${c.max})</th>`).join('');
       const peerRow = `<tr><td class="pbl-sp-fill">被评成员</td>${(hb.peerReviewCriteria || []).map(() => `<td class="pbl-sp-fill"></td>`).join('')}<td class="pbl-sp-fill">总分</td><td class="pbl-sp-fill">评语</td></tr>`;
 
-      return `<section class="pbl-sp-section" id="pbl-sp-handbook"><h3>📘 学生项目手册（可填写骨架）</h3>
+      return `<section class="pbl-sp-section"><h3>📘 学生项目手册（可填写骨架）</h3>
         <p class="pbl-sp-hint">导出网页后可打印；文本框支持直接填写（浏览器本地保存需自行复制）。</p>
         <h4>项目目标</h4><ul>${(hb.goals || []).map(g => `<li>${esc(g)}</li>`).join('')}</ul>
         <h4>小组分工</h4>
