@@ -1058,7 +1058,7 @@ def main() -> int:
                 print("  跳过（目录不存在）")
                 continue
             try:
-                refresh_course(c, regen_images=regen_images, regen_tts_audio=regen_tts or regen_images)
+                refresh_course(c, regen_images=regen_images, regen_tts_audio=regen_tts)
                 log = subprocess.run(
                     ["bash", str(BASELINE), str(out)],
                     capture_output=True,
