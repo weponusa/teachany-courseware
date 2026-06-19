@@ -702,7 +702,46 @@ def build_course_from_node(node: dict, domain_id: str, subject: str, idx: int) -
             "文字反思与情境判断都是有效学习证据。",
         ],
         "prerequisites": node.get("prerequisites") or [],
+        "parallel": node.get("parallel") or [],
+        "extends": node.get("extends") or [],
+        "leads_to": [],
     }
+
+
+def _tree_node_index() -> tuple[dict[str, dict], dict[str, list[str]]]:
+    nodes: dict[str, dict] = {}
+    leads_to: dict[str, list[str]] = {}
+    for node, _, _ in load_tree_nodes():
+        nid = node["id"]
+        nodes[nid] = node
+        for prereq in node.get("prerequisites") or []:
+            leads_to.setdefault(prereq, []).append(nid)
+    return nodes, leads_to
+
+
+def enrich_graph_fields(c: dict) -> dict:
+    nodes, leads_to = _tree_node_index()
+    node = nodes.get(c["node_id"], {})
+    if not c.get("prerequisites"):
+        c["prerequisites"] = node.get("prerequisites") or []
+    c["leads_to"] = leads_to.get(c["node_id"], [])
+    c["parallel"] = c.get("parallel") or node.get("parallel") or []
+    c["extends"] = c.get("extends") or node.get("extends") or []
+    return c
+
+
+def kg_div_attrs(c: dict) -> str:
+    attrs = [f'data-teachany-kg="{c["node_id"]}"']
+    prereqs = c.get("prerequisites") or []
+    leads = c.get("leads_to") or []
+    related = list(c.get("parallel") or []) + list(c.get("extends") or [])
+    if prereqs:
+        attrs.append(f'data-kg-prerequisites="{",".join(prereqs)}"')
+    if leads:
+        attrs.append(f'data-kg-leads-to="{",".join(leads)}"')
+    if related:
+        attrs.append(f'data-kg-related="{",".join(related)}"')
+    return " ".join(attrs)
 
 
 def course_from_sample_node(node_id: str, sample: dict) -> dict:
@@ -731,7 +770,7 @@ def load_all_tree_courses() -> list[dict]:
             courses.append(course_from_sample_node(nid, samples[nid]))
         else:
             courses.append(build_course_from_node(node, domain_id, subject, i))
-    return courses
+    return [enrich_graph_fields(c) for c in courses]
 
 
 def agnes_remaining(course_id: str) -> int:
@@ -812,7 +851,7 @@ def build_quiz_html(qid: str, quiz: dict) -> str:
 
 def build_html(c: dict) -> str:
     cid = c["course_id"]
-    prereq = (c.get("prerequisites") or [""])[0]
+    prereq = ",".join(c.get("prerequisites") or [])
     subj_label = "道德与法治" if c["subject"] == "politics" else "心理健康"
     anchors = "".join(
         f'<button class="choice" data-anchor-choice="{esc(a)}">{esc(a)}</button>' for a in c["anchors"]
@@ -957,7 +996,7 @@ def build_html(c: dict) -> str:
     pages.append(slide(15, "graph", "知识图谱", f'''<section class="section" id="knowledge-graph" data-tts="knowledge-graph">
   <div class="card"><span class="phase-tag">Knowledge Graph</span><h2>知识图谱</h2>
   <p style="color:var(--muted)">本节点的前置、后续由标准知识图谱模块渲染。</p>
-  <div data-teachany-kg="{c["node_id"]}"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱画布" style="display:block;width:100%"></canvas></div></div>
+  <div {kg_div_attrs(c)}><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱画布" style="display:block;width:100%"></canvas></div></div>
 </section>''', "knowledge-graph"))
     pages.append(slide(16, "tutor", "AI学伴", f'''<section class="section" id="teachany-ai-tutor-card" data-tts="ai-tutor">
   <div data-teachany-tutor-card></div>
@@ -1100,8 +1139,8 @@ def build_manifest(c: dict) -> dict:
         "curriculum": "cn",
         "description": f"中国课标{subj_label}互动课件：{c['title']}（故事+延伸知识+文字互动，无占位视频）",
         "tags": [subj_label, f"初中{c['grade']}年级", "课标互动", "Agnes无字插图"],
-        "prerequisites": [],
-        "leads_to": [],
+        "prerequisites": c.get("prerequisites") or [],
+        "leads_to": c.get("leads_to") or [],
         "learning_objectives": c["objectives"],
         "assets": {
             "hero": f"assets/{cid}-hero.png",
