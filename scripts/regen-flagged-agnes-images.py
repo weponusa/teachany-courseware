@@ -15,6 +15,12 @@ DELAY = 8
 
 # 额外强无字 prompt（避免 infographics 带标题/书法伪字）
 PROMPT_OVERRIDES: dict[str, str] = {
+    "pol-m-g7-lo-u1-hero": (
+        "Chinese seventh graders and young counselor sitting in circle on sunny school courtyard, "
+        "talking about emotions, trees and orange school building background, "
+        "no blackboards no posters no signs, warm orange flat illustration, empty surfaces only, "
+        "NO text NO letters NO numbers NO Chinese characters NO labels"
+    ),
     "pol-m-g7-lo-u2-section2": (
         "Three Chinese teens in school uniforms showing confidence and teamwork, "
         "abstract icons for growth and support, warm orange flat illustration, "

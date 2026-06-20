@@ -55,7 +55,12 @@ COURSES = [
             "青春正当时；做情绪情感的主人。",
         ],
         "agnes": {
-            "hero": "Warm educational flat illustration, Chinese middle school students in bright classroom discussing emotions, emotion thermometer chart, soft orange and cream palette, inclusive diverse teens, poster style",
+            "hero": (
+                "Chinese seventh graders and young counselor sitting in circle on sunny school courtyard, "
+                "talking about emotions, trees and orange school building background, "
+                "no blackboards no posters no signs no clipboards with writing, "
+                "warm soft orange cream flat educational illustration, empty surfaces only"
+            ),
             "section1": "Educational infographic, Chinese teen managing emotions with breathing exercise and mood journal, warm orange flat illustration, supportive school counselor atmosphere",
             "section2": "Concept map illustration, emotional regulation steps for adolescents, self-awareness empathy coping, warm civic education style orange tones",
         },
