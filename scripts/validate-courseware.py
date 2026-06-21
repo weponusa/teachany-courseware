@@ -123,10 +123,21 @@ def should_skip_asset_ref(ref):
     if not ref or ref.startswith(('#', '{{')):
         return True
     lowered = ref.lower()
-    return lowered.startswith((
+    if lowered.startswith((
         'http://', 'https://', 'data:', 'blob:', 'mailto:', 'tel:',
         'javascript:', 'about:', 'chrome:', 'edge:',
-    ))
+    )):
+        return True
+    # CSS url(text/none/…) 或 SVG fragment，非文件路径
+    if lowered in ('text', 'none', 'inherit', 'initial', 'unset', 'currentcolor', 'auto'):
+        return True
+    if ref.startswith('#'):
+        return True
+    if '${' in ref or '{{' in ref or 'input.files' in ref:
+        return True
+    if '/' not in ref and '.' not in ref and re.fullmatch(r'[a-z][a-z0-9_-]*', lowered):
+        return True
+    return False
 
 
 def find_missing_local_asset_refs(course_dir, html_text):

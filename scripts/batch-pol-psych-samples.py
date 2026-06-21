@@ -752,6 +752,93 @@ def enrich_graph_fields(c: dict) -> dict:
     return c
 
 
+def apply_safe_agnes(c: dict) -> dict:
+    """重写 Agnes prompt，避免黑板/海报/信息图标题等易产生乱码的场景。"""
+    grade = c.get("grade", 7)
+    subj = c.get("subject", "politics")
+    palette = (
+        "warm orange cream civic education palette"
+        if subj == "politics"
+        else "soft teal cyan mental health education palette"
+    )
+    topic = c.get("title_en") or c.get("title", "school life")
+    agnes = dict(c.get("agnes") or {})
+    agnes["hero"] = (
+        f"Chinese grade {grade} students and caring teacher in sunny school courtyard circle, "
+        f"discussing {topic}, trees and school building background, "
+        f"no blackboards no posters no signs no papers with writing no speech bubbles, "
+        f"{palette}, purely pictorial scene"
+    )
+    agnes["section1"] = (
+        f"Chinese teens in supportive workshop activity about {topic}, "
+        f"hands-on learning props without labels, counselor nearby, "
+        f"no clipboards with text no charts with numbers no wall writing, {palette}"
+    )
+    agnes["section2"] = (
+        f"Three abstract connected icons only for notice analyze act steps, "
+        f"symbolic shapes and arrows, NO headers NO titles NO typography NO infographic text, "
+        f"{palette}, minimal clean composition"
+    )
+    c["agnes"] = agnes
+    return c
+
+
+def enrich_engagement(c: dict) -> dict:
+    """加长故事、强化情境，避免内容偏短、吸引力不足。"""
+    paras = list(c.get("story_paras") or [])
+    if paras and len(paras) < 4:
+        name = "主人公"
+        m = re.search(r"([小初高][一二三四五六七八九]?[男女]?生[\u4e00-\u9fff]{0,2})", paras[0])
+        if m:
+            name = m.group(1)[:4]
+        paras.append(
+            f"下课铃响，{name}把今天的选择记进笔记本："
+            f"「{c.get('recap_points', ['我学到一种可核查的做法'])[0]}」。"
+            f"你也试着写一句——哪条最贴近你的真实生活？"
+        )
+        c["story_paras"] = paras
+    cards = list(c.get("case_cards") or [])
+    while len(cards) < 3:
+        cards.append(
+            {
+                "title": f"情境 {chr(65 + len(cards))}",
+                "desc": f"在「{c.get('title', '本课')}」相关场景中，哪种回应更成熟、更可核查？",
+                "options": [
+                    ("先觉察感受，再选积极行动", True, ""),
+                    ("冲动回应或放弃记录", False, "缺少觉察与复盘，难以形成学习证据。"),
+                ],
+            }
+        )
+    c["case_cards"] = cards
+    refs = list(c.get("external_refs") or [])
+    if len(refs) < 4:
+        refs.append(
+            {
+                "title": "课堂追问",
+                "source": "TeachAny 互动设计",
+                "text": f"如果把「{c.get('hero_q', c.get('title', ''))}」讲给同伴听，"
+                f"你会用哪一个真实例子支撑你的观点？",
+            }
+        )
+        c["external_refs"] = refs
+    return c
+
+
+def prepare_course(c: dict) -> dict:
+    c = enrich_graph_fields(c)
+    c = enrich_engagement(c)
+    c = apply_safe_agnes(c)
+    return sanitize_course_strings(c)
+    nodes, leads_to = _tree_node_index()
+    node = nodes.get(c["node_id"], {})
+    if not c.get("prerequisites"):
+        c["prerequisites"] = node.get("prerequisites") or []
+    c["leads_to"] = leads_to.get(c["node_id"], [])
+    c["parallel"] = c.get("parallel") or node.get("parallel") or []
+    c["extends"] = c.get("extends") or node.get("extends") or []
+    return c
+
+
 def kg_div_attrs(c: dict) -> str:
     attrs = [f'data-teachany-kg="{c["node_id"]}"']
     prereqs = c.get("prerequisites") or []
@@ -792,7 +879,7 @@ def load_all_tree_courses() -> list[dict]:
             courses.append(course_from_sample_node(nid, samples[nid]))
         else:
             courses.append(build_course_from_node(node, domain_id, subject, i))
-    return [enrich_graph_fields(c) for c in courses]
+    return [prepare_course(c) for c in courses]
 
 
 def agnes_remaining(course_id: str) -> int:
@@ -812,12 +899,17 @@ def agnes_remaining(course_id: str) -> int:
 
 
 def pick_agnes_course_id(course_id: str) -> str:
-    for n in range(0, 8):
+    for n in range(5, 12):
+        suffix = f"-v{n + 1}"
+        aid = f"{course_id}{suffix}"
+        if agnes_remaining(aid) > 0:
+            return aid
+    for n in range(0, 5):
         suffix = "" if n == 0 else f"-v{n + 1}"
         aid = f"{course_id}{suffix}"
         if agnes_remaining(aid) > 0:
             return aid
-    return f"{course_id}-v8"
+    return f"{course_id}-v12"
 
 
 def esc(s: str) -> str:
@@ -1155,11 +1247,11 @@ def build_manifest(c: dict) -> dict:
         "lesson_type": c["lesson_type"],
         "status": "community",
         "author": "TeachAny",
-        "version": "1.2.0",
+        "version": "1.3.0",
         "teachany_version": TEACHANY_VER,
         "template_version": "2.0",
         "curriculum": "cn",
-        "description": f"中国课标{subj_label}高质量互动课件：{c['title']}（精细故事+延伸知识+情境判断，无占位视频）",
+        "description": f"中国课标{subj_label}高质量互动课件 v1.3：{c['title']}（加长故事+情境判断+无字插图）",
         "tags": [subj_label, f"初中{c['grade']}年级", "课标互动", "Agnes无字插图"],
         "prerequisites": c.get("prerequisites") or [],
         "leads_to": c.get("leads_to") or [],
@@ -1295,7 +1387,7 @@ def finalize_course(out: Path, cid: str, *, regen_tts_audio: bool = True) -> Non
 
 
 def refresh_course(c: dict, *, regen_images: bool = False, regen_tts_audio: bool = True) -> Path:
-    c = sanitize_course_strings(c)
+    c = prepare_course(c)
     out = ROOT / "community" / c["course_id"]
     out.mkdir(parents=True, exist_ok=True)
     (out / "index.html").write_text(build_html(c), encoding="utf-8")
@@ -1310,7 +1402,7 @@ def refresh_course(c: dict, *, regen_images: bool = False, regen_tts_audio: bool
         f"## 知识层引用\n\n"
         f"- 课标节点：`{c['node_id']}`（{c['title']}）\n"
         f"- 来源：`data/trees/cn/middle/{c['subject']}.json`\n"
-        f"- v1.2：高质量精细内容（故事/延伸/情境判断）；Agnes 无字生图 + HTML 中文叠加\n",
+        f"- v1.3：加长故事第四段+第三节情境；安全无字 Agnes prompt；HTML 中文叠加\n",
         encoding="utf-8",
     )
     return out
@@ -1322,11 +1414,12 @@ def gen_course(c: dict) -> Path:
 
 def main() -> int:
     argv = sys.argv[1:]
-    refresh_only = "--refresh-html" in argv
-    regen_images = "--regen-images" in argv
-    regen_tts = "--regen-tts" in argv
-    force = "--force" in argv
-    gen_all = "--all" in argv
+    quality_pass = "--quality-pass" in argv
+    refresh_only = "--refresh-html" in argv or quality_pass
+    regen_images = "--regen-images" in argv or quality_pass
+    regen_tts = "--regen-tts" in argv or quality_pass
+    force = "--force" in argv or quality_pass
+    gen_all = "--all" in argv or quality_pass
     only_ids = [a for a in argv if re.match(r"^(pol|psych)-m-", a)]
 
     if only_ids:
@@ -1335,7 +1428,10 @@ def main() -> int:
         target = load_all_tree_courses()
     else:
         target = COURSES
-    print(f"目标课件：{len(target)} 门" + ("（课标树全部节点）" if gen_all else "（抽样 5 门）"))
+    print(f"目标课件：{len(target)} 门" + (
+        "（质量全检：32 节点）" if quality_pass else
+        ("（课标树全部节点）" if gen_all else "（抽样 5 门）")
+    ))
 
     results = []
     for c in target:

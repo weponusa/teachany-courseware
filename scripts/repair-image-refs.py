@@ -223,6 +223,9 @@ def update_manifest(course_dir: Path) -> None:
     except Exception:
         return
     assets_meta = data.setdefault("assets", {})
+    if isinstance(assets_meta, list):
+        assets_meta = {}
+        data["assets"] = assets_meta
     if (course_dir / "assets" / "hero-infographic.svg").is_file():
         assets_meta["hero"] = "assets/hero-infographic.svg"
     images = []
