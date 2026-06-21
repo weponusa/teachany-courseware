@@ -38,6 +38,38 @@ PLACEHOLDER_MP4_MAX = 500 * 1024  # 小于 500KB 的 mp4 视为占位
 MIN_IMG_REFS = 3
 
 
+def resolve_local_ref(d: Path, ref: str) -> Path:
+    """Resolve ./assets/foo.png?v=1 style refs to on-disk paths."""
+    clean = ref.split("?", 1)[0].split("#", 1)[0]
+    if clean.startswith("./"):
+        clean = clean[2:]
+    return (d / clean).resolve()
+
+
+def mp4_has_audio(mp4: Path) -> bool | None:
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(mp4)],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if r.returncode != 0:
+            return None
+        return "audio" in r.stdout
+    except Exception:
+        return None
+
+
+def is_placeholder_mp4(mp4: Path, html: str = "") -> bool:
+    if mp4.stat().st_size >= PLACEHOLDER_MP4_MAX:
+        return False
+    if mp4.name in html and re.search(rf"<(?:video|source)[^>]+{re.escape(mp4.name)}", html, re.I):
+        if mp4_has_audio(mp4):
+            return False
+    return True
+
+
 def rewrite_site_root_script_paths(html: str) -> tuple[str, int]:
     """./assets/scripts/ 与 ../../assets/scripts/ → /assets/scripts/（挂树可加载）。"""
     n = 0
@@ -204,7 +236,7 @@ def audit_course(d: Path, *, ocr: bool = False, strict: bool = False) -> dict:
             continue
         if "${" in ref or "{{" in ref:
             continue
-        target = (d / ref).resolve()
+        target = resolve_local_ref(d, ref)
         if not target.is_file():
             issues.append("broken_image_ref")
             break
@@ -247,19 +279,26 @@ def audit_course(d: Path, *, ocr: bool = False, strict: bool = False) -> dict:
             and "mLoadGeoBoundaries" in html
         )
         has_fit = bool(re.search(r"fitBounds|setView", html))
-        if not (has_tile or has_decl or has_canvas):
+        has_leaflet = bool(re.search(r"L\.map\s*\(", html)) and has_fit
+        if not (has_tile or has_decl or has_canvas or has_leaflet):
             issues.append("missing_map")
-        elif not has_decl and not has_canvas and not has_fit:
+        elif not has_decl and not has_canvas and not has_leaflet and not has_fit:
             issues.append("missing_map_focus")
 
     # --- 占位/死链视频 ---
     mp4s = list(d.glob("assets/**/*.mp4")) + list(d.glob("videos/**/*.mp4"))
     for mp4 in mp4s:
-        if mp4.stat().st_size < PLACEHOLDER_MP4_MAX:
+        if is_placeholder_mp4(mp4, html):
             issues.append("placeholder_video")
             break
-    if re.search(r"\.mp4", html) and "placeholder" in html.lower():
-        issues.append("placeholder_video_ref")
+    if re.search(r"\.mp4", html):
+        for ref in re.findall(r'src=["\']([^"\']+\.mp4[^"\']*)["\']', html, re.I):
+            if ref.startswith(("http://", "https://", "/")):
+                continue
+            target = resolve_local_ref(d, ref)
+            if target.is_file() and is_placeholder_mp4(target, html):
+                issues.append("placeholder_video_ref")
+                break
     for ref in re.findall(r'src=["\']([^"\']+\.mp4)["\']', html, re.I):
         if ref.startswith(("http", "/")):
             continue
@@ -373,13 +412,16 @@ def fix_course(d: Path, issues: list[str], *, dry_run: bool = False) -> list[str
             applied.extend(ref_actions)
 
     if "placeholder_video" in issues or "placeholder_video_ref" in issues:
+        html_path = d / "index.html"
+        html = html_path.read_text(encoding="utf-8", errors="replace") if html_path.is_file() else ""
+        removed_any = False
         for mp4 in list(d.glob("assets/**/*.mp4")) + list(d.glob("videos/**/*.mp4")):
-            if mp4.stat().st_size < PLACEHOLDER_MP4_MAX:
+            if is_placeholder_mp4(mp4, html):
                 if not dry_run:
                     mp4.unlink()
                 applied.append("removed_placeholder_mp4")
-        html_path = d / "index.html"
-        if html_path.is_file() and not dry_run:
+                removed_any = True
+        if html_path.is_file() and not dry_run and removed_any:
             html = html_path.read_text(encoding="utf-8")
             html = re.sub(
                 r'<video[^>]*>.*?</video>\s*',
