@@ -1460,8 +1460,17 @@ function createImportDialog(options = {}) {
         parsedCourse.manifest.node_id = options.targetNodeId;
         parsedCourse.id = buildCourseId(parsedCourse.manifest, parsedCourse.fileName);
       }
+      // 自动优化：压缩图片 + 统一格式
+      status.textContent = '🗜️ 正在优化课件（压缩图片）...';
+      const { savedBytes, optimizedCount, warnings } = await optimizeCourse(parsedCourse);
+      const successMsg = optimizedCount > 0
+        ? `✅ 课件解析成功（已压缩 ${optimizedCount} 张图片，节省 ${formatFileSize(savedBytes)}）`
+        : '✅ 课件解析成功';
       status.className = 'ta-import-status success';
-      status.textContent = '✅ 课件解析成功';
+      status.textContent = successMsg;
+      if (warnings.length) {
+        status.textContent += '\n' + warnings.join('\n');
+      }
       renderPreview(parsedCourse);
       confirmBtn.disabled = false;
     } catch (err) {
@@ -1483,8 +1492,18 @@ function createImportDialog(options = {}) {
         parsedCourse.manifest.node_id = options.targetNodeId;
         parsedCourse.id = buildCourseId(parsedCourse.manifest, parsedCourse.fileName);
       }
+      // 自动优化：压缩图片 + 统一格式
+      status.textContent = '🗜️ 正在优化课件（压缩图片）...';
+      const { savedBytes, optimizedCount, warnings } = await optimizeCourse(parsedCourse);
+      const fileCount = parsedCourse.files.length;
+      const successMsg = optimizedCount > 0
+        ? `✅ 课件解析成功（共 ${fileCount} 个文件，已压缩 ${optimizedCount} 张图片，节省 ${formatFileSize(savedBytes)}）`
+        : `✅ 课件解析成功（共 ${fileCount} 个文件）`;
       status.className = 'ta-import-status success';
-      status.textContent = `✅ 课件解析成功（共 ${parsedCourse.files.length} 个文件）`;
+      status.textContent = successMsg;
+      if (warnings.length) {
+        status.textContent += '\n' + warnings.join('\n');
+      }
       renderPreview(parsedCourse);
       confirmBtn.disabled = false;
     } catch (err) {
@@ -1936,6 +1955,131 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+/* ─── 自动优化 & 格式统一 ─────────────────────── */
+
+/**
+ * 将图片 Blob 压缩为 WebP 格式（利用 OffscreenCanvas / Canvas）
+ * @param {Blob} blob - 原始图片
+ * @param {number} quality - WebP 质量 0-1
+ * @param {number} maxDim - 最大边长（超过则等比缩放）
+ * @returns {Promise<Blob>}
+ */
+async function compressImageToWebP(blob, quality = 0.8, maxDim = 2048) {
+  const bitmap = await createImageBitmap(blob);
+  let { width, height } = bitmap;
+
+  // 超大图等比缩放
+  if (width > maxDim || height > maxDim) {
+    const ratio = Math.min(maxDim / width, maxDim / height);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+  }
+
+  // 优先用 OffscreenCanvas（Web Worker 兼容），降级用普通 Canvas
+  let webpBlob;
+  if (typeof OffscreenCanvas !== 'undefined') {
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    webpBlob = await canvas.convertToBlob({ type: 'image/webp', quality });
+  } else {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    webpBlob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, 'image/webp', quality)
+    );
+  }
+  bitmap.close?.();
+  return webpBlob;
+}
+
+/**
+ * 自动优化课件包：压缩图片 → WebP，统一格式，确保 manifest 存在
+ * @param {Object} parsedCourse - 解析后的课件对象
+ * @returns {Promise<{course: Object, savedBytes: number, optimizedCount: number, warnings: string[]}>}
+ */
+async function optimizeCourse(parsedCourse) {
+  const optimizedFiles = [];
+  let savedBytes = 0;
+  let optimizedCount = 0;
+  const warnings = [];
+  const renamedPaths = new Map(); // oldPath → newPath
+
+  // 第一遍：压缩图片
+  for (const file of parsedCourse.files) {
+    const ext = file.path.split('.').pop()?.toLowerCase();
+
+    // 图片压缩：PNG/JPG > 100KB → WebP
+    if (['png', 'jpg', 'jpeg'].includes(ext) && file.blob.size > 100 * 1024) {
+      try {
+        const compressed = await compressImageToWebP(file.blob, 0.82);
+        // 只在节省 > 20% 时才替换
+        if (compressed.size < file.blob.size * 0.8) {
+          const newPath = file.path.replace(/\.(png|jpe?g)$/i, '.webp');
+          renamedPaths.set(file.path, newPath);
+          savedBytes += file.blob.size - compressed.size;
+          optimizedCount++;
+          optimizedFiles.push({ path: newPath, blob: compressed });
+          continue;
+        }
+      } catch {
+        // 压缩失败，保留原文件
+      }
+    }
+
+    // 大音频文件警告（浏览器端无法转码）
+    if (['wav', 'flac'].includes(ext) && file.blob.size > 2 * 1024 * 1024) {
+      warnings.push(`⚠️ ${file.path} 为未压缩音频 (${formatFileSize(file.blob.size)})，建议转为 MP3 后再上传`);
+    }
+
+    optimizedFiles.push(file);
+  }
+
+  // 第二遍：更新 HTML 中的图片引用路径（png/jpg → webp）
+  if (renamedPaths.size > 0) {
+    for (let i = 0; i < optimizedFiles.length; i++) {
+      const file = optimizedFiles[i];
+      if (/\.(html?|css)$/i.test(file.path)) {
+        let text = await file.blob.text();
+        let changed = false;
+        for (const [oldPath, newPath] of renamedPaths) {
+          // 匹配 src="..." / url(...) 中的引用
+          const oldName = oldPath.split('/').pop();
+          const newName = newPath.split('/').pop();
+          if (text.includes(oldName)) {
+            text = text.replaceAll(oldName, newName);
+            changed = true;
+          }
+        }
+        if (changed) {
+          optimizedFiles[i] = {
+            path: file.path,
+            blob: new Blob([text], { type: guessMimeType(file.path) }),
+          };
+        }
+      }
+    }
+  }
+
+  // 确保有 manifest.json
+  const hasManifest = optimizedFiles.some((f) => f.path === 'manifest.json');
+  if (!hasManifest && parsedCourse.manifest) {
+    optimizedFiles.push({
+      path: 'manifest.json',
+      blob: new Blob([JSON.stringify(parsedCourse.manifest, null, 2)], { type: 'application/json' }),
+    });
+  }
+
+  // 统一 packageType
+  parsedCourse.files = optimizedFiles;
+  parsedCourse.packageType = 'archive';
+
+  return { course: parsedCourse, savedBytes, optimizedCount, warnings };
+}
+
 window.TeachAnyImporter = {
   parseTeachanyPackage,
   parseFolderFiles,
@@ -1962,7 +2106,9 @@ window.TeachAnyImporter = {
   mountImportedCourseViewer,
   pruneMissingCoursePayloads,
 
-  // 导出功能
+  // 优化 & 导出功能
+  optimizeCourse,
+  compressImageToWebP,
   exportCourseAsTeachany,
   getCourseFileSize,
   formatFileSize,
