@@ -44,9 +44,10 @@ def collect_images(course_glob: str) -> list[Path]:
         assets = base / "assets"
         if not assets.is_dir():
             continue
-        for p in sorted(assets.glob("*.png")):
-            if re.search(r"-(hero|section1|section2)\.png$", p.name):
-                paths.append(p)
+        for ext in ("*.webp", "*.png"):
+            for p in sorted(assets.glob(ext)):
+                if re.search(r"-(hero|section1|section2)\.(webp|png)$", p.name):
+                    paths.append(p)
     return sorted(paths)
 
 

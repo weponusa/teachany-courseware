@@ -11,7 +11,7 @@ API Key 分工（勿混用）：
 
 用法:
   export OPENROUTER_IMAGE_API_KEY='sk-or-v1-...'   # 本地终端，勿提交仓库
-  python3 scripts/openrouter-image2.py --prompt "..." --out assets/foo.png
+  python3 scripts/openrouter-image2.py --prompt "..." --out assets/foo.webp
   python3 scripts/openrouter-image2.py --course chn-h-red-chamber --preset red-chamber-3
 """
 from __future__ import annotations
@@ -39,7 +39,7 @@ STYLE_EDU_INFO = (
 PRESETS = {
     "dream-red-mansions-3": [
         (
-            "hero-infographic.png",
+            "hero-infographic.webp",
             f"""{STYLE_EDU_INFO}
 Poster title area: Dream of the Red Chamber selected reading (《红楼梦》选读).
 Three equal panels: 人物关系 (character relations), 细节伏笔 (details and foreshadowing), 主题意蕴 (theme and meaning).
@@ -47,14 +47,14 @@ Bottom banner: memory anchor about reading classics from details to themes.
 Landscape 16:9, legible simplified Chinese labels in each panel.""",
         ),
         (
-            "concept-diagram.png",
+            "concept-diagram.webp",
             f"""{STYLE_EDU_INFO}
 Concept map with three connected nodes labeled in Chinese: 人物关系, 细节伏笔, 主题意蕴.
 Central question mood: using textual evidence to explain expression and emotion in Red Chamber excerpts.
 Clean arrows between nodes, dark blue background, cyan purple green accent colors.""",
         ),
         (
-            "process-diagram.png",
+            "process-diagram.webp",
             f"""{STYLE_EDU_INFO}
 Three-step horizontal flowchart in Chinese: 圈画证据 → 判断方法 → 组织答案.
 Topic: answering questions on Dream of the Red Chamber selected passages.
@@ -63,28 +63,28 @@ Subtle Grand View Garden silhouette in background, same color scheme as companio
     ],
     "red-chamber-diagrams": [
         (
-            "hero-infographic.png",
+            "hero-infographic.webp",
             f"""{STYLE_EDU_INFO}
 Whole-book reading overview poster: 《红楼梦》整本书阅读 — 感动细节, 四层赏析, 研读研讨.
 Four modules: 通读精读, 四层赏析, 研讨追问, 阅读档案; bottom quote about moved-by-details close reading.
 Landscape 16:9, legible simplified Chinese labels, crimson-gold classical garden mood.""",
         ),
         (
-            "character-relations.png",
+            "character-relations.webp",
             f"""{STYLE_EDU_INFO}
 Family relationship diagram for Jia household in Dream of the Red Chamber.
 Nodes: 贾母 at top, 贾政 and 王夫人, 贾宝玉 林黛玉 薛宝钗, 王熙凤.
 Elegant org-chart with connecting lines on dark burgundy background, Chinese labels, 16:9.""",
         ),
         (
-            "plot-timeline.png",
+            "plot-timeline.webp",
             f"""{STYLE_EDU_INFO}
 Horizontal timeline of key plot beats in Dream of the Red Chamber for high school reading:
 通读, 葬花, 宝玉挨打, 抄检大观园, 好了歌, 衰败收束.
 Chinese labels along a golden timeline, classical ink-wash landscape strip below.""",
         ),
         (
-            "appreciation-lens.png",
+            "appreciation-lens.webp",
             f"""{STYLE_EDU_INFO}
 Circular four-lens analysis diagram around center 文本证据:
 语言品味, 人物形象, 结构照应, 主题意蕴.
@@ -93,20 +93,20 @@ Dream of the Red Chamber literary appreciation method, symmetrical layout, Chine
     ],
     "red-chamber-3": [
         (
-            "illustration-daiyu-burying-flowers.png",
+            "illustration-daiyu-burying-flowers.webp",
             """High-quality educational illustration for Chinese literature class.
 Scene: Daiyu burying fallen flowers in Grand View Garden (黛玉葬花), Qing dynasty costume,
 delicate sorrowful mood, soft morning light, peach blossoms, classical Chinese garden pavilion.
 Style: refined digital gouache, museum-quality, no text, no watermark, 16:9 landscape.""",
         ),
         (
-            "illustration-baoyu-and-garden.png",
+            "illustration-baoyu-and-garden.webp",
             """High-quality educational illustration: Jia Baoyu in Grand View Garden (大观园),
 elegant Ming-Qing style architecture, scholars and maidens in distance, warm golden afternoon.
 Style: historical drama concept art, rich detail, cinematic composition, no text, 16:9.""",
         ),
         (
-            "illustration-red-chamber-themes.png",
+            "illustration-red-chamber-themes.webp",
             """Educational infographic-style painting (not diagram): symbols of Dream of the Red Chamber —
 jade, flower, scroll, incense, falling petals, metaphor of family rise and fall.
 Style: Chinese aesthetic, deep crimson and gold accents on dark ink wash background, artistic not cartoon, no text.""",
@@ -178,6 +178,18 @@ def generate_image(prompt: str, out_path: Path, model: str, api_key: str) -> boo
                 print(f"  文件过小 ({len(raw)} B)，可能无效")
                 return False
 
+            # 自动转 WebP（若输出路径要求 .webp 且源数据非 WebP）
+            if out_path.suffix.lower() == '.webp' and not raw[:4].startswith(b'RIFF'):
+                try:
+                    from PIL import Image
+                    import io
+                    img = Image.open(io.BytesIO(raw))
+                    buf = io.BytesIO()
+                    img.save(buf, format='WEBP', quality=85)
+                    raw = buf.getvalue()
+                except ImportError:
+                    pass  # Pillow 不可用时原样保存
+
             out_path.write_bytes(raw)
             print(f"  ✅ {out_path.name} ({len(raw)//1024} KB)")
             return True
@@ -200,7 +212,7 @@ def main():
     ap.add_argument("--delay", type=float, default=8.0, help="张间间隔秒")
     ap.add_argument(
         "--only",
-        help="预设模式下只生成指定文件名，逗号分隔，如 appreciation-lens.png,hero-infographic.png",
+        help="预设模式下只生成指定文件名，逗号分隔，如 appreciation-lens.webp,hero-infographic.webp",
     )
     args = ap.parse_args()
 

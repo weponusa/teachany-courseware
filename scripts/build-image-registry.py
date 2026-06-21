@@ -41,20 +41,20 @@ SUBJECT_TO_DIR = {
 # CDN 上有图但课件用了别的 hero 文件名 — 显式挂 node_id
 CDN_EXTRA: List[Tuple[str, str, str, str]] = [
     # (cdn_file, node_id, course_id, subject)
-    ("biology/cell-membrane-hero.png", "bio-h-cell-membrane", "bio-h-cell-membrane", "biology"),
-    ("biology/cell-metabolism-hero.png", "bio-h-cell-metabolism", "bio-h-cell-metabolism", "biology"),
-    ("biology/elements-compounds-hero.png", "bio-h-elements-compounds", "bio-h-elements-compounds", "biology"),
-    ("biology/endomembrane-system-hero.png", "bio-h-endomembrane-system", "bio-h-endomembrane-system", "biology"),
-    ("biology/nucleus-hero.png", "bio-h-nucleus", "bio-h-nucleus", "biology"),
-    ("biology/organelles-hero.png", "bio-h-organelles", "bio-h-organelles", "biology"),
-    ("biology/photosynthesis-m-hero.png", "bio-m-photosynthesis-m", "bio-m-photosynthesis-m", "biology"),
-    ("biology/prokaryote-eukaryote-hero.png", "bio-h-prokaryote-eukaryote", "bio-h-prokaryote-eukaryote", "biology"),
-    ("chemistry/aluminum-compounds-hero.png", "chem-h-aluminum-compounds", "chem-h-aluminum-compounds", "chemistry"),
-    ("chemistry/ib-dp-periodic-table-hero.png", "chem-ib-dp-periodic-table", "chem-ib-dp-periodic-table", "chemistry"),
-    ("chemistry/oxidation-reduction-hero.png", "chem-h-oxidation-reduction", "chem-oxidation-reduction", "chemistry"),
-    ("chemistry/periodic-table-hero.png", "chem-m-periodic-table", "chem-periodic-table", "chemistry"),
-    ("geography/monsoon-system-hero.png", "geo-h-monsoon-system", "geo-h-monsoon-system", "geography"),
-    ("science/plant-life-cycle-hero.png", "sci-e-plant-life-cycle", "sci-e-plant-life-cycle", "science"),
+    ("biology/cell-membrane-hero.webp", "bio-h-cell-membrane", "bio-h-cell-membrane", "biology"),
+    ("biology/cell-metabolism-hero.webp", "bio-h-cell-metabolism", "bio-h-cell-metabolism", "biology"),
+    ("biology/elements-compounds-hero.webp", "bio-h-elements-compounds", "bio-h-elements-compounds", "biology"),
+    ("biology/endomembrane-system-hero.webp", "bio-h-endomembrane-system", "bio-h-endomembrane-system", "biology"),
+    ("biology/nucleus-hero.webp", "bio-h-nucleus", "bio-h-nucleus", "biology"),
+    ("biology/organelles-hero.webp", "bio-h-organelles", "bio-h-organelles", "biology"),
+    ("biology/photosynthesis-m-hero.webp", "bio-m-photosynthesis-m", "bio-m-photosynthesis-m", "biology"),
+    ("biology/prokaryote-eukaryote-hero.webp", "bio-h-prokaryote-eukaryote", "bio-h-prokaryote-eukaryote", "biology"),
+    ("chemistry/aluminum-compounds-hero.webp", "chem-h-aluminum-compounds", "chem-h-aluminum-compounds", "chemistry"),
+    ("chemistry/ib-dp-periodic-table-hero.webp", "chem-ib-dp-periodic-table", "chem-ib-dp-periodic-table", "chemistry"),
+    ("chemistry/oxidation-reduction-hero.webp", "chem-h-oxidation-reduction", "chem-oxidation-reduction", "chemistry"),
+    ("chemistry/periodic-table-hero.webp", "chem-m-periodic-table", "chem-periodic-table", "chemistry"),
+    ("geography/monsoon-system-hero.webp", "geo-h-monsoon-system", "geo-h-monsoon-system", "geography"),
+    ("science/plant-life-cycle-hero.webp", "sci-e-plant-life-cycle", "sci-e-plant-life-cycle", "science"),
 ]
 
 

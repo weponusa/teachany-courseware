@@ -61,13 +61,13 @@ process_course() {
 
   # 5. 下载信息图
   echo "  4️⃣  下载信息图..."
-  TMPFILE="/tmp/nlm-info-$dir.png"
-  rm -f /tmp/nlm-info-$dir*.png 2>/dev/null
+  TMPFILE="/tmp/nlm-info-$dir.webp"
+  rm -f /tmp/nlm-info-$dir*.webp 2>/dev/null
   notebooklm download infographic "$TMPFILE" 2>&1 | tail -3
 
   # 处理可能的文件名后缀问题
   if [ ! -f "$TMPFILE" ]; then
-    ACTUAL=$(ls /tmp/nlm-info-$dir*.png 2>/dev/null | head -1)
+    ACTUAL=$(ls /tmp/nlm-info-$dir*.webp 2>/dev/null | head -1)
     if [ -n "$ACTUAL" ]; then
       TMPFILE="$ACTUAL"
     else
@@ -80,7 +80,7 @@ process_course() {
   # 6. 替换 hero 图
   cp "$TMPFILE" "$EXAMPLES/$dir/assets/$hero"
   echo "     ✅ 已保存: assets/$hero ($(du -h "$EXAMPLES/$dir/assets/$hero" | cut -f1))"
-  rm -f /tmp/nlm-info-$dir*.png
+  rm -f /tmp/nlm-info-$dir*.webp
 
   SUCCESS=$((SUCCESS+1))
   echo "  ✅ 完成!"
@@ -95,7 +95,7 @@ process_course() {
 process_course \
   "math-linear-function" \
   "一次函数" \
-  "linear-hero.png" \
+  "linear-hero.webp" \
   "请为【一次函数 y=kx+b】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（义务教育数学课程标准2022，八年级）：
 1. 一次函数的定义：y=kx+b（k≠0），正比例函数 y=kx 是其特例（b=0）
 2. 一次函数与正比例函数的区别与联系
@@ -115,7 +115,7 @@ process_course \
 process_course \
   "math-quadratic-function" \
   "二次函数" \
-  "quadratic-hero.png" \
+  "quadratic-hero.webp" \
   "请为【二次函数 y=ax²+bx+c】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（义务教育数学课程标准2022，九年级）：
 1. 二次函数的定义：y=ax²+bx+c（a≠0），三种表达形式（一般式/顶点式/交点式）
 2. 一般式 → 顶点式的配方法：四步详解，y=a(x-h)²+k
@@ -135,7 +135,7 @@ process_course \
 process_course \
   "bio-photosynthesis" \
   "光合作用" \
-  "photosynthesis-hero.png" \
+  "photosynthesis-hero.webp" \
   "请为【光合作用】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（义务教育生物学课程标准2022，七年级）：
 1. 光合作用的定义与总反应式：6CO₂+6H₂O →(光能/叶绿体)→ C₆H₁₂O₆+6O₂
 2. 反应方程式详解：原料（二氧化碳+水）→ 产物（有机物+氧气）
@@ -155,7 +155,7 @@ process_course \
 process_course \
   "chem-periodic-table" \
   "元素周期表" \
-  "periodic-hero.png" \
+  "periodic-hero.webp" \
   "请为【元素周期表】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（义务教育化学课程标准2022，九年级）：
 1. 排列规则：按原子序数（=质子数=核电荷数）递增排列
 2. 周期：7个横行=7个周期，同周期元素电子层数相同
@@ -175,7 +175,7 @@ process_course \
 process_course \
   "chem-oxidation-reduction" \
   "氧化还原反应" \
-  "redox-hero.png" \
+  "redox-hero.webp" \
   "请为【氧化还原反应】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（普通高中化学课程标准2017/2020修订，必修一）：
 1. 本质：电子的转移（得电子=还原，失电子=氧化）
 2. 化合价变化判断：化合价升高=失电子=被氧化；化合价降低=得电子=被还原
@@ -195,7 +195,7 @@ process_course \
 process_course \
   "geo-monsoon" \
   "全球季风系统" \
-  "monsoon-hero.png" \
+  "monsoon-hero.webp" \
   "请为【全球季风系统】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（普通高中地理课程标准2017/2020修订，必修一）：
 1. 季风的定义：大范围地区风向随季节有规律地改变的现象
 2. 成因：海陆热力性质差异（陆地升温快降温快，海洋升温慢降温慢）
@@ -215,7 +215,7 @@ process_course \
 process_course \
   "imperial-unification" \
   "秦汉统一多民族国家" \
-  "qinhan-hero.png" \
+  "qinhan-hero.webp" \
   "请为【秦汉统一多民族国家】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（义务教育历史课程标准2022，七年级上册第三单元）：
 1. 秦朝统一（前221年）：嬴政灭六国，建立中国第一个统一中央集权国家，定都咸阳
 2. 秦朝制度创新：政治—郡县制（取代分封制）、文化—书同文（统一小篆）、经济—统一度量衡和货币、交通—车同轨、军事—修长城
@@ -234,7 +234,7 @@ process_course \
 process_course \
   "history-sanguo-sui-tang" \
   "三国至隋唐" \
-  "sanguo-sui-tang-hero.png" \
+  "sanguo-sui-tang-hero.webp" \
   "请为【三国两晋南北朝至隋唐】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（义务教育历史课程标准2022，七年级）：
 1. 三国鼎立：魏（曹操→曹丕，都洛阳）、蜀（刘备，都成都）、吴（孙权，都建业）；赤壁之战→三国格局形成
 2. 魏蜀吴对比：政权特点、经济发展、灭亡时间
@@ -254,7 +254,7 @@ process_course \
 process_course \
   "history-industrial-revolution" \
   "工业革命" \
-  "industrial-revolution-hero.png" \
+  "industrial-revolution-hero.webp" \
   "请为【工业革命】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（义务教育历史课程标准2022，世界近代史·工业革命）：
 1. 时间与地点：18世纪60年代至19世纪中期，首发英国
 2. 工业革命始于英国的五大因素：农业革命（劳动力供给）、殖民贸易与资本积累、煤炭资源与地理位置、政治稳定与专利保护、科学思维与工匠传统
@@ -274,7 +274,7 @@ process_course \
 process_course \
   "teachany-phy-mid-pressure" \
   "压强" \
-  "pressure-hero.png" \
+  "pressure-hero.webp" \
   "请为【压强（固体压强与液体压强）】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（义务教育物理课程标准2022，八年级下册）：
 1. 压强定义：物体单位面积上受到的压力，是描述压力作用效果的物理量
 2. 固体压强公式：p=F/S，单位帕斯卡Pa（1Pa=1N/m²）
@@ -295,7 +295,7 @@ process_course \
 process_course \
   "sci-motion-speed" \
   "运动与速度" \
-  "motion-speed-hero.png" \
+  "motion-speed-hero.webp" \
   "请为【运动与速度】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（义务教育科学课程标准2022，四年级）：
 1. 比较快慢的两种方法：相同时间比路程（路程大的快）、相同路程比时间（时间短的快）
 2. 路程和时间都不同时→引出速度概念
@@ -315,7 +315,7 @@ process_course \
 process_course \
   "chn-compound-vowel" \
   "复韵母乐园" \
-  "compound-vowel-hero.png" \
+  "compound-vowel-hero.webp" \
   "请为【复韵母】生成一份完整的中文知识结构信息图，适合一年级小朋友。必须涵盖以下课标重点知识（义务教育语文课程标准2022，一年级拼音教学）：
 1. 复韵母的定义：两个或三个韵母组合在一起发出的韵母（与单韵母区别）
 2. 复韵母三大家族分类：
@@ -337,7 +337,7 @@ process_course \
 process_course \
   "course-classical-poetry" \
   "古典诗词" \
-  "hero-denglouque.png" \
+  "hero-denglouque.webp" \
   "请为【古典诗词教学课程】生成一份完整的中文知识结构信息图。必须涵盖以下课标重点知识（义务教育语文课程标准2022，诗词鉴赏与教学）：
 1. 诵读技法：节奏（两字一顿，古诗的声音骨架）、停连、重音
 2. 平仄格律：平声（阴平阳平）与仄声（上声去声入声）、四种标准格律句式

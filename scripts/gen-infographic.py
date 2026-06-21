@@ -15,79 +15,79 @@ COURSES = [
     {
         "dir": "math-linear-function",
         "title": "一次函数 y=kx+b",
-        "hero_file": "linear-hero.png",
+        "hero_file": "linear-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。信息图要包含：课程核心主题（一次函数 y=kx+b）、所有主要知识点及其层级关系（定义、k的意义斜率、b的意义截距、图像特征、正比例函数作为特例、待定系数法），用思维导图或概念图的形式展示，让学生一眼看到本课知识全貌。"
     },
     {
         "dir": "math-quadratic-function",
         "title": "二次函数 y=ax²+bx+c",
-        "hero_file": "quadratic-hero.png",
+        "hero_file": "quadratic-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。信息图要包含：课程核心主题（二次函数 y=ax²+bx+c）、所有主要知识点（一般式/顶点式/交点式互化、开口方向由a决定、对称轴x=-b/2a、顶点坐标、与坐标轴交点、判别式Δ、实际应用），用信息图形式展示完整知识结构。"
     },
     {
         "dir": "bio-photosynthesis",
         "title": "光合作用",
-        "hero_file": "photosynthesis-hero.png",
+        "hero_file": "photosynthesis-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是光合作用（6CO₂+6H₂O→C₆H₁₂O₆+6O₂），分支展示：光反应阶段（场所、条件、产物）、暗反应阶段（CO₂固定、C₃还原）、影响因素（光照强度、CO₂浓度、温度）、意义（能量转化、物质循环）。"
     },
     {
         "dir": "chem-periodic-table",
         "title": "元素周期表",
-        "hero_file": "periodic-hero.png",
+        "hero_file": "periodic-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是元素周期表，分支展示：周期（横行，7个周期，电子层数递增）、族（纵列，主族与副族）、元素性质递变规律（同周期/同族变化趋势）、常见元素。"
     },
     {
         "dir": "chem-oxidation-reduction",
         "title": "氧化还原反应",
-        "hero_file": "redox-hero.png",
+        "hero_file": "redox-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是氧化还原反应，分支展示：本质（电子转移）、氧化反应（失电子/化合价升高）、还原反应（得电子/化合价降低）、氧化剂与还原剂、常见实例、口诀（升失氧降得还）。"
     },
     {
         "dir": "geo-monsoon",
         "title": "全球季风系统",
-        "hero_file": "monsoon-hero.png",
+        "hero_file": "monsoon-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是季风气候，分支展示：成因（海陆热力性质差异）、夏季风与冬季风特征、我国三大气候区、雨热同期对农业的影响。"
     },
     {
         "dir": "imperial-unification",
         "title": "秦汉统一多民族国家",
-        "hero_file": "qinhan-hero.png",
+        "hero_file": "qinhan-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是秦汉大一统，分支展示：秦朝（统一六国、中央集权、郡县制、统一文字度量衡、修长城）、秦亡原因、西汉（休养生息、文景之治）、汉武帝大一统（推恩令、罢黜百家、张骞出使西域、丝绸之路）。"
     },
     {
         "dir": "history-sanguo-sui-tang",
         "title": "三国两晋南北朝至隋唐",
-        "hero_file": "sanguo-sui-tang-hero.png",
+        "hero_file": "sanguo-sui-tang-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是从分裂到统一，分支展示：三国鼎立（魏蜀吴、赤壁之战）、两晋南北朝（北方民族融合、江南开发）、隋朝（大运河、科举制）、唐朝盛世（贞观之治、开元盛世、安史之乱）。"
     },
     {
         "dir": "history-industrial-revolution",
         "title": "工业革命",
-        "hero_file": "industrial-revolution-hero.png",
+        "hero_file": "industrial-revolution-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是工业革命，分支展示：时间（18世纪60年代-19世纪中期）、始于英国的原因（5大因素）、关键发明（珍妮纺纱机、水力纺纱机、蒸汽机、火车）、双重影响（经济发展vs社会问题）。"
     },
     {
         "dir": "teachany-phy-mid-pressure",
         "title": "压强",
-        "hero_file": "pressure-hero.png",
+        "hero_file": "pressure-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是压强p=F/S，分支展示：固体压强定义和单位（帕斯卡Pa）、增大/减小压强的方法、液体压强p=ρgh、大气压强（托里拆利实验）、连通器原理。"
     },
     {
         "dir": "sci-motion-speed",
         "title": "运动与速度",
-        "hero_file": "motion-speed-hero.png",
+        "hero_file": "motion-speed-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是运动与速度v=s÷t，分支展示：机械运动概念、参照物与相对运动、速度的定义与公式、速度单位（m/s和km/h）及换算、匀速直线运动与变速运动。"
     },
     {
         "dir": "chn-compound-vowel",
         "title": "复韵母乐园",
-        "hero_file": "compound-vowel-hero.png",
+        "hero_file": "compound-vowel-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是复韵母，适合一年级小朋友。分支展示：ai ei ui（前响复韵母）、ao ou iu（后响复韵母）、标调规则（有a标a有e标e、iu并列标在后）、组词示例，用可爱活泼的风格。"
     },
     {
         "dir": "course-classical-poetry",
         "title": "古典诗词教学",
-        "hero_file": "classical-poetry-hero.png",
+        "hero_file": "classical-poetry-hero.webp",
         "ask_prompt": "请为这门课生成一份中文知识结构信息图。核心主题是古典诗词教学，分支展示：诵读技法（节奏、停连、重音）、平仄格律（平仄规则、四声）、押韵与对仗、意象解读（常见意象及象征意义）、诗体辨析（绝句、律诗、词、曲）。"
     },
 ]
