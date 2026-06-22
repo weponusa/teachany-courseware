@@ -786,10 +786,11 @@ class PBLPathBuilder {
     return band.explicit && band.minGrade >= 1 && band.maxGrade <= 6;
   }
 
-  /** 知识来源门控：课标树 / 全科图谱（可多选） */
+  /** 知识来源门控：课标树 / 全科图谱（可多选）；扩展全量图谱时放宽来源标记 */
   _passesKnowledgeSourceGate(node, projectSpec = null) {
     if (!node || node.isExternal || node.layer === 'external') return true;
     const spec = projectSpec || this._activeProjectSpec;
+    if (this._shouldExtendFullGraph(spec)) return true;
     const src = spec?.knowledgeSources || { curriculum: true, k12Graph: true };
     const wantCurriculum = src.curriculum !== false;
     const wantGraph = src.k12Graph !== false;
@@ -850,9 +851,14 @@ class PBLPathBuilder {
     return /竞赛拓展|高等数学|大学物理|大学化学/i.test(g);
   }
 
-  /** 默认匹配池：CN 仅 K12（grade 1–12），国际课标保留；大学层按需开启 */
+  /** 默认匹配池：CN 仅 K12（grade 1–12），国际课标保留；大学层按需或全量图谱扩展开启 */
   _isMatchingPoolNode(node, goal) {
     if (!node || node.isExternal) return false;
+    if (this._shouldExtendFullGraph()) {
+      if (!this._passesKnowledgeSourceGate(node)) return false;
+      if (!this._passesGradeBandGate(node, goal)) return false;
+      return true;
+    }
     const adultOrUni = this._isAdultOrUniversityContext(goal);
     if (adultOrUni) return !!(this._isUniversityNode(node) || node.isUniversity);
     if (!this._shouldAllowUniversityNodes(goal) && this._isUniversityNode(node)) return false;
@@ -896,19 +902,30 @@ class PBLPathBuilder {
       .flatMap(s => (s.phases || []).flatMap(p => [...(p.knowledgeHints || []), p.phase, ...(p.steps || [])]))
       .join(' ');
     const allowed = this._getAllowedSubjects(goal, archetype);
-    const basePool = (pool?.length >= 30 ? pool : null) || this._getK12Pool(goal);
+    const basePool = (pool?.length >= 30 ? pool : null) || this._getRecallScopePool(
+      goal,
+      this._shouldExtendFullGraph() ? 'full' : 'k12',
+      pool,
+      ['cn']
+    );
     const specSubjects = this._subjectFilterFromProjectSpec(this._activeProjectSpec);
     const primaryCtx = this._isPrimarySchoolContext(goal);
     const k12Pool = basePool
       .filter(n => this._passesHardNodeGate(n, goal, archetype))
       .filter(n => !allowed?.size || allowed.has(n.subject))
-      .map(n => ({
-        ...n,
-        _score: this._scoreUniversalRelevance(n, goal, blueprint, domains, archetype)
-          + (hintBlob.split(/[、,，\s]+/).filter(h => h.length >= 2 && this._nodeSearchText(n).includes(h)).length * 2)
-          + (primaryCtx && specSubjects?.includes(n.subject) ? 8 : 0)
-          + (primaryCtx && goalTerms.some(t => t.length >= 2 && this._nodeSearchText(n).includes(t)) ? 4 : 0),
-      }))
+      .map(n => {
+        const hintTerms = hintBlob.split(/[、,，\s]+/).filter(h => h.length >= 2);
+        const fuzzy = this._fuzzyScoreNodeForTerms(n, [
+          ...goalTerms,
+          ...hintTerms,
+        ], { goal, blueprint, archetype });
+        return {
+          ...n,
+          _score: fuzzy
+            + (primaryCtx && specSubjects?.includes(n.subject) ? 8 : 0)
+            + (primaryCtx && goalTerms.some(t => t.length >= 2 && this._nodeSearchText(n).includes(t)) ? 4 : 0),
+        };
+      })
       .filter(n => n._score >= this._relevanceKeepThreshold(floorMode))
       .sort((a, b) => b._score - a._score);
 
@@ -3242,7 +3259,148 @@ class PBLPathBuilder {
   }
 
   _nodeSearchText(node) {
-    return `${node.name || ''} ${node.definition || node.description || ''} ${(node.key_concepts || []).join(' ')}`.toLowerCase();
+    const cp = (node.curriculum_points || []).join(' ');
+    return `${node.name || ''} ${node.definition || node.description || ''} ${(node.key_concepts || []).join(' ')} ${cp}`.toLowerCase();
+  }
+
+  _shouldExtendFullGraph(projectSpec = null) {
+    const spec = projectSpec || this._activeProjectSpec;
+    return spec?.knowledgeSources?.fullGraph === true;
+  }
+
+  _nameBigramOverlap(name, term) {
+    const n = String(name || '');
+    const t = String(term || '');
+    if (!n || !t) return 0;
+    if (n.includes(t)) return 1;
+    if (t.length < 2) return n.includes(t) ? 0.75 : 0;
+    let hit = 0;
+    const grams = [];
+    for (let i = 0; i < t.length - 1; i++) grams.push(t.slice(i, i + 2));
+    grams.forEach((g) => { if (n.includes(g)) hit++; });
+    return grams.length ? hit / grams.length : 0;
+  }
+
+  _expandSearchTerms(query, goal = '', blueprint = null, archetype = null) {
+    const terms = new Set();
+    String(query || '').split(/[\s,，、;；：:]+/).forEach((t) => {
+      const s = t.trim();
+      if (s.length >= 2) terms.add(s);
+    });
+    if (goal) this._tokenizeGoalTerms(goal).forEach((t) => terms.add(t));
+    this._collectBlueprintHints(blueprint, archetype || this._resolvedArchetype).forEach((h) => {
+      if (h.length >= 2) terms.add(h);
+    });
+    (this._getTopicAnchors(goal).recallTerms || []).forEach((t) => terms.add(t));
+    return [...terms].filter(t => t.length >= 2).slice(0, 48);
+  }
+
+  _fuzzyScoreNodeForTerms(node, terms, context = {}) {
+    if (!node || !terms?.length) return 0;
+    const { goal = '', blueprint = null, archetype = null } = context;
+    const name = String(node.name || '');
+    const text = this._nodeSearchText(node);
+    let score = 0;
+    terms.forEach((term) => {
+      const t = String(term || '').trim();
+      if (!t || t.length < 2) return;
+      const tl = t.toLowerCase();
+      const nl = name.toLowerCase();
+      if (nl === tl) score += 40;
+      else if (nl.includes(tl)) score += 22;
+      else {
+        const overlap = this._nameBigramOverlap(name, t);
+        if (overlap >= 0.5) score += Math.round(16 * overlap);
+        else if (text.includes(tl)) score += 10;
+        else if (overlap >= 0.25) score += 7;
+      }
+      (node.key_concepts || []).forEach((kc) => {
+        if (String(kc).includes(t)) score += 8;
+      });
+      (node.curriculum_points || []).forEach((cp) => {
+        if (String(cp).includes(t)) score += 6;
+      });
+    });
+    if (goal) {
+      score += this._scoreUniversalRelevance(node, goal, blueprint, null, archetype) * 0.35;
+    }
+    if (node.subject && this._subjectFilterFromProjectSpec(this._activeProjectSpec)?.includes(node.subject)) {
+      score += 5;
+    }
+    return score;
+  }
+
+  _getRecallScopePool(goal, scope = 'k12', basePool = null, selectedSystems = ['all'], projectSpec = null) {
+    const activeSystems = selectedSystems.includes('all')
+      ? Array.from(this.systemIndex.keys())
+      : selectedSystems.filter(s => this.systemIndex.has(s));
+    const fullGraph = scope === 'full' || this._shouldExtendFullGraph(projectSpec);
+    const src = basePool?.length ? basePool : [...this.unifiedIndex.values()];
+    return src.filter((node) => {
+      if (!node || node.isExternal) return false;
+      if (activeSystems.length && !activeSystems.includes(node.system)) return false;
+      if (!this._passesKnowledgeSourceGate(node, projectSpec)) return false;
+      if (fullGraph) return this._passesGradeBandGate(node, goal, projectSpec);
+      if (scope === 'matching') return this._isMatchingPoolNode(node, goal);
+      if (node.system === 'cn') return this._isK12Node(node) && this._isMatchingPoolNode(node, goal);
+      return this._isMatchingPoolNode(node, goal);
+    });
+  }
+
+  _fuzzyMatchKnowledgeNodes(queryOrTerms, options = {}) {
+    const terms = Array.isArray(queryOrTerms)
+      ? queryOrTerms.filter(t => String(t).trim().length >= 2)
+      : this._expandSearchTerms(
+        queryOrTerms,
+        options.goal || '',
+        options.blueprint || this._activeBlueprint,
+        options.archetype || this._resolvedArchetype
+      );
+    if (!terms.length) return [];
+    const scope = options.scope || (this._shouldExtendFullGraph(options.projectSpec) ? 'full' : 'k12');
+    const pool = options.pool?.length
+      ? options.pool
+      : this._getRecallScopePool(
+        options.goal || '',
+        scope,
+        options.basePool,
+        options.selectedSystems || ['all'],
+        options.projectSpec
+      );
+    const minScore = options.minScore ?? 8;
+    const limit = options.limit ?? 30;
+    const scored = pool
+      .map((n) => ({ ...n, _score: this._fuzzyScoreNodeForTerms(n, terms, options) }))
+      .filter((n) => n._score >= minScore)
+      .sort((a, b) => b._score - a._score);
+    const matchReason = options.matchReason || '关键词模糊检索';
+    return this._compactCandidateNodes(scored, limit).map((n, i) => ({
+      ...n,
+      confidence: Math.max(0.55, 0.92 - i * 0.02),
+      matchReason,
+      _fuzzyScore: n._score,
+    }));
+  }
+
+  _autonomousKeywordRecall(goal, blueprint, archetype, options = {}) {
+    const terms = this._expandSearchTerms(goal, goal, blueprint, archetype);
+    const recalled = this._fuzzyMatchKnowledgeNodes(terms, {
+      goal,
+      blueprint,
+      archetype,
+      scope: options.scope,
+      pool: options.pool,
+      basePool: options.basePool,
+      selectedSystems: options.selectedSystems,
+      projectSpec: options.projectSpec || this._activeProjectSpec,
+      limit: options.limit ?? 28,
+      minScore: options.minScore ?? 11,
+      matchReason: '自主关键词模糊召回',
+    });
+    if (recalled.length) {
+      console.info('[PBL] 自主关键词召回:', recalled.slice(0, 10).map(n => n.name).join('、'));
+    }
+    return recalled;
   }
 
   _stemGenericKeywords() {
@@ -4852,25 +5010,15 @@ class PBLPathBuilder {
     (blueprint?.schemes || []).forEach(s => (s.phases || []).forEach(p => (p.knowledgeHints || []).forEach(h => hints.add(String(h).trim()))));
     const hintArr = [...hints].filter(h => h.length >= 2);
     if (!hintArr.length) return [];
-    const goalTerms = this._tokenizeGoalTerms(goal);
-    return pool
-      .map(n => {
-        const text = this._nodeSearchText(n);
-        const name = String(n.name || '');
-        let s = 0;
-        hintArr.forEach(h => {
-          if (name.includes(h)) s += 10;
-          else if (text.includes(h)) s += 5;
-        });
-        goalTerms.forEach(term => {
-          if (term.length >= 2 && (name.includes(term) || text.includes(term))) s += 3;
-        });
-        return { n, s };
-      })
-      .filter(x => x.s > 0)
-      .sort((a, b) => b.s - a.s)
-      .slice(0, limit)
-      .map(x => x.n);
+    return this._fuzzyMatchKnowledgeNodes(hintArr, {
+      goal,
+      blueprint,
+      archetype,
+      pool,
+      limit,
+      minScore: 9,
+      matchReason: '蓝图 hints 模糊检索',
+    });
   }
 
   _buildSubjectExemplarSummary(candidates, goal, archetype, perSubject = 4) {
@@ -7944,42 +8092,205 @@ class PBLPathBuilder {
       }));
   }
 
-  searchKnowledgeCandidates(query, goal = '', selectedSystems = ['all'], limit = 30) {
+  searchKnowledgeCandidates(query, goal = '', selectedSystems = ['all'], limit = 30, options = {}) {
     const q = String(query || '').trim();
     if (!q) return [];
-    const terms = q.split(/[\s,，、]+/).map(t => t.trim()).filter(Boolean);
-    const activeSystems = selectedSystems.includes('all')
-      ? Array.from(this.systemIndex.keys())
-      : selectedSystems.filter(s => this.systemIndex.has(s));
-    const scored = [];
-    this.unifiedIndex.forEach((node) => {
-      if (!node || node.isExternal) return;
-      if (activeSystems.length && !activeSystems.includes(node.system)) return;
-      if (goal && !this._isMatchingPoolNode(node, goal)) return;
-      const name = String(node.name || '');
-      const text = this._nodeSearchText(node);
-      let score = 0;
-      terms.forEach(t => {
-        if (!t) return;
-        if (name === t) score += 30;
-        else if (name.includes(t)) score += 18;
-        else if (text.includes(t)) score += 8;
-      });
-      if (!score && terms.length) return;
-      score += this._scoreUniversalRelevance(node, goal || q, this._activeBlueprint, this._inferProjectDomains(goal || q), this._resolvedArchetype) * 0.25;
-      scored.push({ ...node, _score: score });
+    const scope = options.scope || (options.fullGraph || this._shouldExtendFullGraph() ? 'full' : 'k12');
+    const skipPoolGate = !!options.skipPoolGate || scope === 'full';
+    let pool = null;
+    if (skipPoolGate) {
+      pool = this._getRecallScopePool(goal, scope, null, selectedSystems, options.projectSpec);
+    } else if (options.pool?.length) {
+      pool = options.pool;
+    }
+    return this._fuzzyMatchKnowledgeNodes(q, {
+      goal: goal || q,
+      blueprint: this._activeBlueprint,
+      archetype: this._resolvedArchetype,
+      selectedSystems,
+      projectSpec: options.projectSpec || this._activeProjectSpec,
+      scope,
+      pool,
+      limit,
+      minScore: options.minScore ?? 7,
+      matchReason: scope === 'full' ? '全量图谱模糊检索' : 'K12图谱模糊检索',
     });
-    scored.sort((a, b) => b._score - a._score);
-    return this._compactCandidateNodes(scored, limit);
+  }
+
+  _getSelectedKnowledgeIds(result) {
+    if (result?.selectedKnowledgeIds?.length) return [...result.selectedKnowledgeIds];
+    return this._getMainlinePath(result?.graphData || { nodes: [] }).map(n => n.id).filter(Boolean);
+  }
+
+  _nodeMatchesTerms(node, terms = []) {
+    if (!node || !terms.length) return false;
+    const name = String(node.name || '').toLowerCase();
+    const subj = String(node.subject || '').toLowerCase();
+    const text = this._nodeSearchText(node).toLowerCase();
+    return terms.some((term) => {
+      const t = String(term || '').trim().toLowerCase();
+      if (!t) return false;
+      return name.includes(t) || subj.includes(t) || text.includes(t);
+    });
+  }
+
+  _sortSelectedByPrerequisites(ids = []) {
+    const idSet = new Set(ids);
+    const order = [];
+    const visiting = new Set();
+    const visited = new Set();
+    const visit = (id) => {
+      if (visited.has(id)) return;
+      if (visiting.has(id)) return;
+      visiting.add(id);
+      const node = this.unifiedIndex.get(id);
+      (node?.prerequisites || []).forEach((preId) => {
+        if (idSet.has(preId)) visit(preId);
+      });
+      visiting.delete(id);
+      visited.add(id);
+      order.push(id);
+    };
+    ids.forEach((id) => visit(id));
+    return order.length ? order : [...ids];
+  }
+
+  _syncBlueprintWithSelectedKnowledge(blueprint, selectedNodes = [], goal = '') {
+    if (!blueprint?.schemes?.length || !selectedNodes.length) return blueprint;
+    const bp = this._shallowCloneBlueprint(blueprint);
+    const scheme = (bp.schemes || []).find(s => s.id === bp.recommendedSchemeId) || bp.schemes[0];
+    if (!scheme?.phases?.length) return bp;
+    const names = selectedNodes.map(n => n.name).filter(Boolean);
+    bp.knowledgeChain = names.join(' → ');
+    const phaseCount = scheme.phases.length;
+    scheme.phases.forEach((phase, i) => {
+      const start = Math.floor(i * names.length / phaseCount);
+      const end = Math.floor((i + 1) * names.length / phaseCount);
+      const slice = names.slice(start, Math.max(end, start + 1));
+      const hints = new Set([...(phase.knowledgeHints || []), ...slice]);
+      phase.knowledgeHints = [...hints].filter(h => String(h).trim().length >= 2).slice(0, 6);
+    });
+    return this._deriveBlueprintKnowledgeSeeds(goal, bp);
+  }
+
+  _applyBlueprintTextTweaks(result, plan, projectSpec) {
+    if (!result?.projectBlueprint?.schemes?.length) return result;
+    const bp = this._shallowCloneBlueprint(result.projectBlueprint);
+    const scheme = (bp.schemes || []).find(s => s.id === bp.recommendedSchemeId) || bp.schemes[0];
+    if (plan.revisedDeliverable) {
+      bp.deliverable = plan.revisedDeliverable;
+      if (scheme?.phases?.length) {
+        const last = scheme.phases[scheme.phases.length - 1];
+        if (last) last.deliverable = plan.revisedDeliverable;
+      }
+    }
+    if (plan.revisedTask && projectSpec?.task) {
+      bp.projectSummary = plan.revisedTask;
+    }
+    return { ...result, projectBlueprint: bp, projectSpec: projectSpec || result.projectSpec };
+  }
+
+  _heuristicRefinePlanFromMessage(userMessage = '') {
+    const msg = String(userMessage || '').trim();
+    const plan = {
+      summary: '',
+      fullRematch: false,
+      removeKeywords: [],
+      addKeywords: [],
+      knowledgeRemove: [],
+      knowledgeAdd: [],
+      userFacingReply: '已根据你的描述调整知识点与路径。',
+    };
+    if (/重新拆解|全部重来|从头|重做|换项目|大改方向/.test(msg)) {
+      plan.fullRematch = true;
+      plan.userFacingReply = '好的，将按你的要求重新拆解。';
+      return plan;
+    }
+    const splitTerms = (text) => String(text || '')
+      .split(/[、,，/及与和\s]+/)
+      .map(t => t.trim())
+      .filter(t => t.length >= 2);
+    const removeMatch = msg.match(/(?:去掉|删除|移除|减少)\s*[「『""]?([^」』""\n]+)/);
+    if (removeMatch) plan.removeKeywords.push(...splitTerms(removeMatch[1]));
+    const addMatch = msg.match(/(?:增加|加入|补充|添加)\s*[「『""]?([^」』""\n]+)/);
+    if (addMatch) plan.addKeywords.push(...splitTerms(addMatch[1]));
+    return plan;
+  }
+
+  _shouldUseKnowledgeRefine(plan = {}, userMessage = '') {
+    const removeTerms = [
+      ...(plan.removeKeywords || []),
+      ...(plan.knowledgeRemove || []),
+    ];
+    const addTerms = [
+      ...(plan.addKeywords || []),
+      ...(plan.knowledgeAdd || []),
+    ];
+    const wantsKnowledgeEdit = removeTerms.length > 0 || addTerms.length > 0;
+    const fullRewrite = /重新拆解|全部重来|从头|重做|换项目|大改方向/.test(String(userMessage || ''));
+    if (plan.fullRematch === true && fullRewrite) return false;
+    if (plan.fullRematch === false) {
+      return wantsKnowledgeEdit || !!plan.revisedDeliverable || !!plan.revisedTask;
+    }
+    return wantsKnowledgeEdit && !plan.revisedTask;
+  }
+
+  _refineKnowledgeSelection(previousResult, plan, projectSpec, selectedSystems = ['all'], onStatus = null, chatHistory = [], userMessage = '') {
+    const goal = previousResult.goal || '';
+    this._activeProjectSpec = projectSpec || previousResult.projectSpec || this._activeProjectSpec || null;
+    this._activeBlueprint = previousResult.projectBlueprint || this._activeBlueprint || null;
+    this._resolvedArchetype = this._resolveArchetype(goal);
+
+    let ids = this._getSelectedKnowledgeIds(previousResult);
+    const removeTerms = [...(plan.removeKeywords || []), ...(plan.knowledgeRemove || [])];
+    const addTerms = [...(plan.addKeywords || []), ...(plan.knowledgeAdd || [])];
+
+    if (removeTerms.length) {
+      ids = ids.filter((id) => {
+        const node = this.unifiedIndex.get(id)
+          || (previousResult.graphData?.nodes || []).find(n => n.id === id);
+        return !this._nodeMatchesTerms(node, removeTerms);
+      });
+    }
+
+    if (addTerms.length) {
+      this._reportPBLStatus(onStatus, '检索并补充知识点...');
+      addTerms.forEach((term) => {
+        const found = this.searchKnowledgeCandidates(term, goal, selectedSystems, 12, {
+          skipPoolGate: true,
+          scope: this._shouldExtendFullGraph() ? 'full' : 'k12',
+        });
+        found.slice(0, 3).forEach((n) => {
+          if (n?.id && !ids.includes(n.id)) ids.push(n.id);
+        });
+      });
+    }
+
+    ids = this._sortSelectedByPrerequisites([...new Set(ids)]);
+    if (!ids.length) throw new Error('调整后没有剩余知识点，请放宽删除条件或手动勾选候选列表');
+
+    let result = this.redesignPBLWithSelectedKnowledge(previousResult, ids);
+    result = this._applyBlueprintTextTweaks(result, plan, {
+      ...(projectSpec || previousResult.projectSpec || {}),
+      ...(plan.revisedTask ? { task: plan.revisedTask } : {}),
+    });
+
+    const reply = plan.userFacingReply || plan.summary || '已按你的要求更新知识点与实施路径。';
+    result.chatHistory = [
+      ...chatHistory,
+      { role: 'user', content: userMessage, ts: Date.now() },
+      { role: 'assistant', content: reply, ts: Date.now() },
+    ];
+    result.refineMode = 'knowledge-selection';
+    return result;
   }
 
   redesignPBLWithSelectedKnowledge(previousResult, selectedIds = []) {
     if (!previousResult) throw new Error('请先完成一次项目拆解');
-    const ids = [...new Set((selectedIds || []).filter(Boolean))];
+    const ids = this._sortSelectedByPrerequisites([...new Set((selectedIds || []).filter(Boolean))]);
     if (!ids.length) throw new Error('请至少选择 1 个知识点');
     const goal = previousResult.goal || '';
     this._activeProjectSpec = previousResult.projectSpec || this._activeProjectSpec || null;
-    this._activeBlueprint = previousResult.projectBlueprint || this._activeBlueprint || null;
     const archetype = this._resolveArchetype(goal);
     this._resolvedArchetype = archetype;
     const existing = new Map((previousResult.graphData?.nodes || []).map(n => [n.id, n]));
@@ -7992,13 +8303,19 @@ class PBLPathBuilder {
     }).filter(Boolean);
     if (!selected.length) throw new Error('所选知识点不在当前图谱索引中');
 
+    let projectBlueprint = previousResult.projectBlueprint || null;
+    if (projectBlueprint) {
+      projectBlueprint = this._syncBlueprintWithSelectedKnowledge(projectBlueprint, selected, goal);
+      this._activeBlueprint = projectBlueprint;
+    }
+
     const external = (previousResult.external || previousResult.graphData?.nodes?.filter(n => n.layer === 'external') || [])
       .slice(0, this._externalLimit(goal));
     let graphData = this._buildRichMainlineGraph(selected, ids, goal, [], external);
     graphData = this._capGraphNodes(graphData, PBLPathBuilder.PBL_MAX_GRAPH_NODES, goal);
     const matched = this._getMainlinePath(graphData);
-    const blueprintPhases = previousResult.projectBlueprint
-      ? this._blueprintProjectPhases(previousResult.projectBlueprint, goal)
+    const blueprintPhases = projectBlueprint
+      ? this._blueprintProjectPhases(projectBlueprint, goal)
       : [];
     const pathPlan = this._buildPathPlan({
       goal,
@@ -8018,7 +8335,7 @@ class PBLPathBuilder {
       goal,
       matched,
       external,
-      projectBlueprint: previousResult.projectBlueprint,
+      projectBlueprint,
       archetype,
       graphData,
       pathPlan,
@@ -8029,6 +8346,7 @@ class PBLPathBuilder {
       external,
       graphData,
       pathPlan,
+      projectBlueprint,
       projectPhases: pathPlan.phases,
       techRoute,
       knowledgeChain: pathPlan.knowledgeChain,
@@ -8054,7 +8372,7 @@ class PBLPathBuilder {
 
     this._reportPBLStatus(onStatus, '理解修改要求...');
     const snapshot = this._buildRefineSnapshot(previousResult);
-    let plan = { summary: '', fullRematch: true, userFacingReply: '好的，将按你的要求重新拆解。' };
+    let plan = { summary: '', fullRematch: false, userFacingReply: '好的，将按你的要求调整知识点与路径。' };
 
     try {
       const response = await this._callPBLAnalyzeStage('refine', {
@@ -8065,7 +8383,20 @@ class PBLPathBuilder {
       });
       plan = { ...plan, ...JSON.parse(this._extractJsonObject(response)) };
     } catch (e) {
-      console.warn('[PBL] refine 阶段失败，将直接带修改要求重拆:', e.message);
+      console.warn('[PBL] refine 阶段失败，尝试从用户话术解析增减意图:', e.message);
+      plan = { ...plan, ...this._heuristicRefinePlanFromMessage(msg) };
+    }
+
+    if (this._shouldUseKnowledgeRefine(plan, msg)) {
+      const spec = { ...(projectSpec || previousResult.projectSpec || {}) };
+      if (plan.revisedTask) spec.task = plan.revisedTask;
+      if (plan.revisedDeliverable) {
+        spec.deliverable = 'other';
+        spec.deliverableCustom = plan.revisedDeliverable;
+      }
+      return this._refineKnowledgeSelection(
+        previousResult, plan, spec, selectedSystems, onStatus, chatHistory, msg
+      );
     }
 
     const spec = { ...(projectSpec || previousResult.projectSpec || {}) };
@@ -8199,6 +8530,23 @@ class PBLPathBuilder {
       if (filterAudit.kept.length < minRecall) {
         console.warn(`[PBL] 筛选后候选仅 ${filterAudit.kept.length} 个，已并回宽池 ${stage1.filteredCandidates.length} 个`);
       }
+    }
+
+    this._reportPBLStatus(onStatus, '关键词模糊检索 K12 知识点...');
+    const fuzzyRecalled = this._autonomousKeywordRecall(goal, projectBlueprint, archetype, {
+      pool: this._getBroadCurriculumPool(goal, stage1.filteredCandidates, 80),
+      selectedSystems: activeSystems,
+      projectSpec: this._activeProjectSpec,
+      scope: this._shouldExtendFullGraph() ? 'full' : 'k12',
+      limit: 32,
+    });
+    if (fuzzyRecalled.length) {
+      const recallCap = Math.max(90, stage1.filteredCandidates.length + fuzzyRecalled.length);
+      stage1.filteredCandidates = this._unionCandidateNodes(
+        [fuzzyRecalled, stage1.filteredCandidates],
+        recallCap
+      );
+      console.info(`[PBL] 模糊检索并入候选池，当前 ${stage1.filteredCandidates.length} 个`);
     }
 
     // 6. 知识点提案 → 图谱对齐 → validate-match（失败回退 index match）

@@ -291,6 +291,17 @@ body {
   background: var(--bg);
   color: var(--text);
 }
+.pbl-candidate-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--dim);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+.pbl-candidate-scope input { flex: none; min-width: auto; width: auto; }
 .pbl-candidate-btn {
   padding: 9px 14px;
   border-radius: 8px;
@@ -1317,7 +1328,8 @@ body {
         <div class="pbl-system-tags">
           <span class="tag-label">来源：</span>
           <span class="pbl-src-tag active" data-source="curriculum" onclick="toggleKnowledgeSourceTag(this)">课标树</span>
-          <span class="pbl-src-tag active" data-source="k12Graph" onclick="toggleKnowledgeSourceTag(this)">全科图谱</span>
+          <span class="pbl-src-tag active" data-source="k12Graph" onclick="toggleKnowledgeSourceTag(this)">K12图谱</span>
+          <span class="pbl-src-tag" data-source="fullGraph" onclick="toggleKnowledgeSourceTag(this)" title="含大学延伸、跨体系节点">扩展全量图谱</span>
         </div>
       </div>
     </div>
@@ -1332,7 +1344,7 @@ body {
   <!-- 多轮对话调整 -->
   <div id="pblChatPanel" class="pbl-chat-panel" aria-live="polite">
     <div class="pbl-chat-header">💬 继续调整拆解结果</div>
-    <p style="font-size:12px;color:var(--dim);margin-bottom:10px">例如：「去掉历史课标」「增加统计与函数」「产出改成演示文稿」「面向初二学生简化」</p>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:10px">例如：「去掉历史课标」「增加统计与函数」「产出改成演示文稿」。仅改知识点时走增量调整，不必全量重拆。</p>
     <div class="pbl-chat-messages" id="pblChatMessages"></div>
     <div class="pbl-chat-input-row">
       <textarea id="pblRefineInput" placeholder="描述你想如何修改当前拆解…"></textarea>
@@ -1343,9 +1355,12 @@ body {
   <!-- 候选知识点编辑 -->
   <div id="pblCandidatePanel" class="pbl-candidate-panel" aria-live="polite">
     <div class="pbl-chat-header">候选知识点与图谱重设</div>
-    <p style="font-size:12px;color:var(--dim);margin-bottom:8px">勾选要进入学习图谱主线的知识点；可从候选列表增减，也可从全科图谱模糊检索补充。点击重设后，图谱和实施路径会同步更新。</p>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:8px">勾选主线知识点；可用关键词模糊检索 K12 课标点补充，也可开启「扩展全量图谱」检索大学/跨体系节点。</p>
     <div class="pbl-candidate-toolbar">
-      <input id="pblKnowledgeSearchInput" type="text" placeholder="搜索全科图谱，如：任务调度、热控、通信链路" onkeydown="if(event.key==='Enter') searchPBLKnowledgeCandidates()" />
+      <input id="pblKnowledgeSearchInput" type="text" placeholder="模糊检索，如：一次函数、控制变量、热力学" onkeydown="if(event.key==='Enter') searchPBLKnowledgeCandidates()" />
+      <label class="pbl-candidate-scope" title="开启后检索含大学延伸与更广课标节点">
+        <input type="checkbox" id="pblSearchFullGraph" /> 扩展全量图谱
+      </label>
       <button type="button" class="pbl-candidate-btn" onclick="searchPBLKnowledgeCandidates()">检索补充</button>
       <button type="button" class="pbl-candidate-btn primary" onclick="applyPBLKnowledgeSelection()">一键重设学习图谱和实施路径</button>
     </div>
@@ -1434,7 +1449,7 @@ body {
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260619-path-step-sync"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260622-fuzzy-recall"></script>
 <script src="./assets/scripts/pbl-support-modules.js?v=20260619-support-pack-v2"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
@@ -1454,13 +1469,16 @@ function toggleKnowledgeSourceTag(el) {
 }
 
 function fillPBLKnowledgeSourceTags(sources) {
-  const src = sources || { curriculum: true, k12Graph: true };
+  const src = sources || { curriculum: true, k12Graph: true, fullGraph: false };
   document.querySelectorAll('.pbl-src-tag').forEach(tag => {
     const key = tag.dataset.source;
-    tag.classList.toggle('active', src[key] !== false);
+    if (key === 'fullGraph') tag.classList.toggle('active', src.fullGraph === true);
+    else tag.classList.toggle('active', src[key] !== false);
   });
+  const fullGraphCb = document.getElementById('pblSearchFullGraph');
+  if (fullGraphCb) fullGraphCb.checked = src.fullGraph === true;
   if (!document.querySelectorAll('.pbl-src-tag.active').length) {
-    document.querySelectorAll('.pbl-src-tag').forEach(t => t.classList.add('active'));
+    document.querySelectorAll('.pbl-src-tag[data-source="curriculum"], .pbl-src-tag[data-source="k12Graph"]').forEach(t => t.classList.add('active'));
   }
 }
 
@@ -1767,6 +1785,10 @@ function renderPBLCandidatePanel(result) {
   const summary = document.getElementById('pblSelectedSummary');
   if (!panel || !list || !summary || !result) return;
   ensurePBLCandidateState(result);
+  const fullGraphCb = document.getElementById('pblSearchFullGraph');
+  if (fullGraphCb && result?.projectSpec?.knowledgeSources) {
+    fullGraphCb.checked = result.projectSpec.knowledgeSources.fullGraph === true;
+  }
   panel.classList.add('visible');
   renderPBLCandidateList();
 }
@@ -1785,9 +1807,10 @@ function renderPBLCandidateList(nodes = pblCandidateView) {
     const id = encodeURIComponent(n.id);
     const checked = pblKnowledgeSelection.has(n.id) ? 'checked' : '';
     const meta = [n.systemTag || n.system || '', n.subject || '', n.gradeLabel || (n.grade > 0 ? `G${n.grade}` : (n.stage || ''))].filter(Boolean).join(' · ');
+    const reason = n.matchReason ? `<span class="pbl-candidate-meta">${escapePBLHtml(n.matchReason)}</span>` : '';
     return `<label class="pbl-candidate-item">
       <input type="checkbox" ${checked} onchange="togglePBLKnowledgeCandidate('${id}', this.checked)" />
-      <span><span class="pbl-candidate-name">${escapePBLHtml(n.name || n.id)}</span><span class="pbl-candidate-meta">${escapePBLHtml(meta || '知识点')}</span></span>
+      <span><span class="pbl-candidate-name">${escapePBLHtml(n.name || n.id)}</span>${reason}<span class="pbl-candidate-meta">${escapePBLHtml(meta || '知识点')}</span></span>
     </label>`;
   }).join('');
 }
@@ -1809,7 +1832,15 @@ async function searchPBLKnowledgeCandidates() {
   const builder = window.PBLPathBuilder;
   if (!builder || typeof builder.searchKnowledgeCandidates !== 'function') return;
   await builder.loadUnifiedIndex();
-  const results = builder.searchKnowledgeCandidates(q, pblResult.goal || buildPBLGoalFromForm(), pblResult.systems || getSelectedSystems(), 40);
+  const fullGraph = document.getElementById('pblSearchFullGraph')?.checked
+    || getPBLProjectSpec()?.knowledgeSources?.fullGraph;
+  const results = builder.searchKnowledgeCandidates(
+    q, pblResult.goal || buildPBLGoalFromForm(), pblResult.systems || getSelectedSystems(), 48, {
+      skipPoolGate: true,
+      scope: fullGraph ? 'full' : 'k12',
+      fullGraph: !!fullGraph,
+    }
+  );
   const seen = new Set();
   pblCandidateView = [...results, ...pblCandidateView].filter(n => n && n.id && !seen.has(n.id) && (seen.add(n.id) || true)).slice(0, 160);
   pblResult.candidateNodes = pblCandidateView;
@@ -1821,10 +1852,20 @@ async function applyPBLKnowledgeSelection() {
   if (!pblKnowledgeSelection.size) { alert('请至少选择 1 个知识点'); return; }
   const builder = window.PBLPathBuilder;
   if (!builder || typeof builder.redesignPBLWithSelectedKnowledge !== 'function') return;
-  await builder.loadUnifiedIndex();
-  const updated = builder.redesignPBLWithSelectedKnowledge(pblResult, [...pblKnowledgeSelection]);
-  pblResult = updated;
-  await renderPBLResult(updated);
+  const statusEl = document.getElementById('pblStatus');
+  const statusText = document.getElementById('pblStatusText');
+  if (statusEl && statusText) {
+    statusEl.style.display = 'block';
+    statusText.textContent = '正在根据所选知识点重设图谱与实施路径...';
+  }
+  try {
+    await builder.loadUnifiedIndex();
+    const updated = builder.redesignPBLWithSelectedKnowledge(pblResult, [...pblKnowledgeSelection]);
+    pblResult = updated;
+    await renderPBLResult(updated);
+  } finally {
+    if (statusEl) statusEl.style.display = 'none';
+  }
 }
 
 function serializePBLResult(result) {
