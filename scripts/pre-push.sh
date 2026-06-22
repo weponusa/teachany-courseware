@@ -121,6 +121,26 @@ EOF
         return 0
     }
 
+    # 仅修改 manifest.json（反馈密码、元数据等），不改动 index.html → 跳过整课质检
+    is_manifest_only_change() {
+        local id="$1"
+        local files
+        files=$(git diff --name-only "$base" "$local_sha" -- "community/$id/" 2>/dev/null || true)
+        if [ -z "$files" ]; then
+            return 1
+        fi
+        while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+                community/$id/manifest.json) continue ;;
+                *) return 1 ;;
+            esac
+        done <<EOF
+$files
+EOF
+        return 0
+    }
+
     validate_ids=""
     for id in $changed_community; do
         index="community/$id/index.html"
@@ -136,6 +156,10 @@ EOF
         fi
         if is_kcp_only_change "$id"; then
             echo "  ↪️  community/$id 仅 knowledge-context.json（KCP），跳过课件质检"
+            continue
+        fi
+        if is_manifest_only_change "$id"; then
+            echo "  ↪️  community/$id 仅 manifest.json（元数据），跳过课件质检"
             continue
         fi
         validate_ids="$validate_ids $id"
