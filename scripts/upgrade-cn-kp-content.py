@@ -203,6 +203,95 @@ def fallback_snippets(data: dict[str, Any]) -> list[dict[str, Any]]:
     return out[:4]
 
 
+def snippet_quality(snippets: list[dict]) -> str:
+    if not snippets:
+        return "none"
+    rich = ("local_textbook_markdown", "existing_textbook_excerpt", "curriculum_md_structured")
+    if any(str(s.get("source_type") or "") in rich for s in snippets):
+        return "textbook"
+    return "curriculum"
+
+
+def snippets_from_curriculum_md(raw: str) -> list[dict[str, Any]]:
+    if not raw or len(raw) < 80:
+        return []
+    m = re.search(r"## 一、课标原文\s*(.*?)(?=\n## |\Z)", raw, re.S)
+    if not m:
+        return []
+    body = m.group(1).strip()
+    lines = [ln.strip(" >-") for ln in body.splitlines() if ln.strip() and not ln.strip().startswith("#")]
+    text = "\n".join(lines)
+    if len(text) < 40:
+        return []
+    return [{
+        "source": "curriculum_md_raw/课标原文",
+        "text": text[:1600],
+        "score": 25,
+        "match_terms": [],
+        "source_type": "curriculum_md_structured",
+    }]
+
+
+def force_curriculum_md_snippets(deep_mod, data: dict[str, Any], cache: dict, stats: Counter) -> list[dict[str, Any]]:
+    """从教育部课标全文 MD 强制匹配段落（降低阈值，覆盖名称匹配弱的节点）。"""
+    cn_kw, en_kw = deep_mod.keywords_for(data)
+    if not cn_kw and not en_kw:
+        return []
+    best: tuple[int, dict[str, Any]] | None = None
+    for path, label in deep_mod.candidate_sources(data):
+        if "课标知识点MD" not in label and "curriculum-sources" not in label:
+            continue
+        for chunk in deep_mod.source_chunks(path, cache):
+            if not deep_mod.valid_chunk(chunk):
+                continue
+            score, hits = deep_mod.score_chunk(chunk, cn_kw, en_kw)
+            if score < 3:
+                continue
+            item = {
+                "source": label,
+                "text": chunk[:1600],
+                "score": score,
+                "match_terms": hits,
+                "source_type": "local_textbook_markdown",
+            }
+            if best is None or score > best[0]:
+                best = (score, item)
+    if best:
+        stats["forced_curriculum_md_snippets"] += 1
+        return [best[1]]
+    return []
+
+
+def pick_snippets(deep_mod, data: dict[str, Any], cache: dict, max_items: int, stats: Counter) -> list[dict[str, Any]]:
+    book = deep_mod.find_snippets(data, cache, max_items)
+    if book and snippet_quality(book) == "textbook":
+        stats["textbook_snippets"] += 1
+        return book
+    forced = force_curriculum_md_snippets(deep_mod, data, cache, stats)
+    if forced:
+        stats["textbook_snippets"] += 1
+        return forced
+    if book:
+        stats["curriculum_md_snippets"] += 1
+        return book
+    fb = fallback_snippets(data)
+    if fb:
+        stats["fallback_curriculum_snippets"] += 1
+    return fb
+
+
+def ensure_curriculum_md(clean_mod, data: dict[str, Any], subject: str, kp_id: str, sup: dict, stats: Counter) -> bool:
+    raw = sup.get("curriculum_md_raw") or ""
+    if len(raw) >= 400:
+        return False
+    name = data.get("name") or kp_id
+    cps = clean_mod.curriculum_points(data)
+    sup["curriculum_md_raw"] = clean_mod.generated_md(data, subject, name, cps)
+    sup["curriculum_md_source"] = UPGRADE_TAG
+    stats["generated_curriculum_md"] += 1
+    return True
+
+
 def exercises_from_deep(clean_mod, deep_mod, data: dict[str, Any], snippets: list[dict]) -> list[dict[str, Any]]:
     subject = data.get("subject") or ""
     name = data.get("name") or data.get("kp_id") or ""
@@ -266,12 +355,20 @@ def process(args: argparse.Namespace) -> dict[str, Any]:
             changed = True
 
         deep.backfill_curriculum(data, stats)
-        snippets = deep.find_snippets(data, cache, args.max_snippets)
-        if not snippets:
-            snippets = fallback_snippets(data)
-            if snippets:
-                stats["fallback_curriculum_snippets"] += 1
         sup = data.setdefault("supplements", {})
+        prev_snippets = list(sup.get("deep_textbook_snippets") or [])
+        prev_quality = snippet_quality(prev_snippets)
+
+        if ensure_curriculum_md(clean, data, subject, kp_id, sup, stats):
+            changed = True
+
+        snippets = pick_snippets(deep, data, cache, args.max_snippets, stats)
+        if snippet_quality(snippets) == "curriculum":
+            md_sn = snippets_from_curriculum_md(sup.get("curriculum_md_raw") or "")
+            if md_sn:
+                snippets = md_sn
+                stats["structured_md_snippets"] += 1
+        new_quality = snippet_quality(snippets)
 
         if snippets:
             sup["deep_textbook_snippets"] = snippets
@@ -296,9 +393,11 @@ def process(args: argparse.Namespace) -> dict[str, Any]:
         clean.clean_derived_fields(data, subject, stats)
 
         exercises = data.get("exercises") or []
+        snippet_upgraded = prev_quality == "curriculum" and new_quality == "textbook"
         needs_ex = (
             not exercises
             or all(isinstance(e, dict) and is_template_exercise(e) for e in exercises)
+            or snippet_upgraded
             or (snippets and not any(str(e.get("id") or "") == "q-deep-1" for e in exercises if isinstance(e, dict)))
         )
         if needs_ex and snippets:

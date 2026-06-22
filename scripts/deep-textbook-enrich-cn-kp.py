@@ -87,6 +87,30 @@ CN_CURATED = {
     ("chinese", "middle"): "curated/chinese-middle-curated.md",
     ("math", "middle"): "curated/math-middle-curated.md",
 }
+
+# 教育部课标全文 MD（工作区 课标知识点MD/）
+CURRICULUM_MD_FULL = {
+    "math": "课标知识点MD/义务教育数学课程标准（2022年版）.md",
+    "chinese": "课标知识点MD/义务教育语文课程标准（2022年版）.md",
+    "english": "课标知识点MD/义务教育英语课程标准（2022年版）.md",
+    "physics": "课标知识点MD/义务教育物理课程标准（2022年版）.md",
+    "chemistry": "课标知识点MD/义务教育化学课程标准（2022年版）.md",
+    "biology": "课标知识点MD/义务教育生物学课程标准（2022年版）.md",
+    "history": "课标知识点MD/义务教育历史课程标准（2022年版）.md",
+    "geography": "课标知识点MD/义务教育地理课程标准（2022年版）.md",
+    "science": "课标知识点MD/义务教育科学课程标准（2022年版）.md",
+    "info-tech": "课标知识点MD/义务教育信息科技课程标准（2022年版）.md",
+    "politics": "课标知识点MD/义务教育道德与法治课程标准（2022年版）.md",
+}
+
+EXTRA_CURRICULUM_REL = {
+    "politics": [
+        "data/curriculum-sources/cn/morality-law-2022-outline.md",
+    ],
+    "psychology": [
+        "data/curriculum-sources/cn/psychology-2012-outline.md",
+    ],
+}
 CN_HIGH_NAMES = {
     "math": "数学.md",
     "physics": "物理.md",
@@ -252,6 +276,16 @@ def candidate_sources(data: dict[str, Any]) -> list[tuple[Path, str]]:
             if p.is_file():
                 sources.append((p, rel))
 
+    full_rel = CURRICULUM_MD_FULL.get(subject)
+    if full_rel:
+        p = WORKSPACE / full_rel
+        if p.is_file():
+            sources.append((p, full_rel))
+    for rel in EXTRA_CURRICULUM_REL.get(subject, []):
+        p = ROOT / rel
+        if p.is_file():
+            sources.append((p, rel))
+
     for rel in OPENSTAX_SOURCES.get(subject, []):
         p = WORKSPACE / rel
         if p.is_file():
@@ -300,7 +334,7 @@ def find_snippets(data: dict[str, Any], cache: dict[Path, list[str]], max_items:
     for path, label in candidate_sources(data):
         for chunk in source_chunks(path, cache):
             score, hits = score_chunk(chunk, cn_kw, en_kw)
-            if score < 8:
+            if score < 5:
                 continue
             candidates.append({
                 "source": label,
