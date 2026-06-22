@@ -127,23 +127,34 @@ def extract_teachany_version_from_html(course_dir: Path):
     return ''
 
 
+MIN_HERO_BYTES = 20 * 1024  # 小于 20KB 的图视为占位
+
+
 def detect_images(course_dir: Path):
     """自动检测课件的 hero 和 scene 图片（v6.2 统一命名规范）
 
-    检测优先级：
-      0. assets/hero-infographic.svg  TeachAny 标准 SVG Hero（最高优先）
-      1. *-hero.{png,jpg,webp}   后缀匹配（主流模式）
-      2. hero-*.{png,jpg,webp}   前缀匹配（兼容旧命名）
-      3. hero.{png,jpg,webp}     纯名称匹配
-      4. assets/ 下字母序第一张  兜底
+    检测优先级（v7.14.1：栅格图优先于占位 SVG）：
+      0. assets/hero-infographic.{webp,png,jpg}  标准 Hero 栅格图
+      1. *-hero.{webp,png,jpg}   后缀匹配
+      2. hero-*.{webp,png,jpg}   前缀匹配
+      3. hero.{webp,png,jpg}     纯名称匹配
+      4. assets/ 下第一张合格栅格图  兜底
+      5. assets/hero-infographic.svg  仅当无合格栅格图时使用
 
     同理检测 *-scene / scene-* / scene。
     返回: (hero_image_rel, scene_image_rel)  相对于 course_dir 的路径字符串
     """
-    # 优先级 0：标准 SVG Hero
-    std_svg = course_dir / 'assets' / 'hero-infographic.svg'
-    if std_svg.exists():
-        return 'assets/hero-infographic.svg', ''
+    raster_exts = ('.webp', '.png', '.jpg', '.jpeg')
+
+    def is_real_hero(p: Path) -> bool:
+        return p.is_file() and p.suffix.lower() in raster_exts and p.stat().st_size >= MIN_HERO_BYTES
+
+    assets_dir = course_dir / 'assets'
+    if assets_dir.is_dir():
+        for ext in raster_exts:
+            p = assets_dir / f'hero-infographic{ext}'
+            if is_real_hero(p):
+                return f'assets/{p.name}', ''
 
     # 搜索 assets/ 和 images/ 两个可能的目录
     img_dir = None
@@ -153,29 +164,32 @@ def detect_images(course_dir: Path):
             img_dir = candidate
             break
     if img_dir is None:
+        std_svg = course_dir / 'assets' / 'hero-infographic.svg'
+        if std_svg.exists():
+            return 'assets/hero-infographic.svg', ''
         return '', ''
 
     all_imgs = sorted([
         p for p in img_dir.iterdir()
-        if p.is_file() and p.suffix.lower() in IMG_EXTS
+        if p.is_file() and p.suffix.lower() in {*raster_exts, '.svg'}
     ])
     if not all_imgs:
+        std_svg = course_dir / 'assets' / 'hero-infographic.svg'
+        if std_svg.exists():
+            return 'assets/hero-infographic.svg', ''
         return '', ''
 
     def find_typed(keyword):
-        """按优先级查找指定类型的图片"""
-        # 1. 后缀匹配：*-keyword.ext（主流模式）
-        for p in all_imgs:
-            if p.stem.lower().endswith(f'-{keyword}'):
-                return p
-        # 2. 前缀匹配：keyword-*.ext（兼容旧命名）
-        for p in all_imgs:
-            if p.stem.lower().startswith(f'{keyword}-'):
-                return p
-        # 3. 纯名称匹配：keyword.ext
-        for p in all_imgs:
-            if p.stem.lower() == keyword:
-                return p
+        """按优先级查找指定类型的图片（栅格优先）"""
+        for ext in raster_exts:
+            for p in all_imgs:
+                if p.suffix.lower() != ext:
+                    continue
+                if p.stat().st_size < MIN_HERO_BYTES:
+                    continue
+                stem = p.stem.lower()
+                if stem.endswith(f'-{keyword}') or stem.startswith(f'{keyword}-') or stem == keyword:
+                    return p
         return None
 
     hero = find_typed('hero')
@@ -186,9 +200,17 @@ def detect_images(course_dir: Path):
             return ''
         return str(p.relative_to(course_dir))
 
-    # hero 兜底：取第一张图
-    if hero is None and all_imgs:
-        hero = all_imgs[0]
+    # hero 兜底：取第一张合格栅格图
+    if hero is None:
+        for p in all_imgs:
+            if p.suffix.lower() in raster_exts and p.stat().st_size >= MIN_HERO_BYTES:
+                hero = p
+                break
+
+    if hero is None:
+        std_svg = course_dir / 'assets' / 'hero-infographic.svg'
+        if std_svg.exists():
+            return 'assets/hero-infographic.svg', ''
 
     return to_rel(hero), to_rel(scene)
 

@@ -915,7 +915,24 @@ body {
   font-size: 15px;
 }
 .pbl-support-body { padding: 0 16px 16px; }
-.pbl-sp-section { margin-top: 18px; }
+.pbl-sp-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 0 4px;
+  border-bottom: 1px solid rgba(148,163,184,0.15);
+}
+.pbl-sp-nav a {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(59,130,246,0.12);
+  color: #93c5fd;
+  text-decoration: none;
+}
+.pbl-sp-nav a:hover { background: rgba(59,130,246,0.22); }
+.pbl-sp-section { margin-top: 18px; scroll-margin-top: 72px; }
 .pbl-sp-section h3 { font-size: 16px; margin-bottom: 8px; }
 .pbl-sp-section h4 { font-size: 14px; margin: 12px 0 6px; color: var(--dim); }
 .pbl-sp-hint, .pbl-sp-dim { font-size: 12px; color: var(--dimmer); line-height: 1.55; margin-bottom: 8px; }
@@ -1418,7 +1435,7 @@ body {
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
 <script src="./assets/scripts/pbl-path.js?v=20260619-path-step-sync"></script>
-<script src="./assets/scripts/pbl-support-modules.js?v=20260619-support-pack"></script>
+<script src="./assets/scripts/pbl-support-modules.js?v=20260619-support-pack-v2"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script>
@@ -1562,7 +1579,7 @@ async function fillPBLExample(el) {
         }
         pblResult = result;
         statusText.textContent = '渲染知识路径图谱...';
-        renderPBLResult(result);
+        await renderPBLResult(result);
         statusEl.style.display = 'none';
         scrollToPBLOutput();
         return;
@@ -1642,7 +1659,7 @@ async function runPBLAnalysis({ refine = false, userMessage = '' } = {}) {
     pblChatHistory = result.chatHistory || pblChatHistory;
     try { renderPBLChatMessages(pblChatHistory); } catch (e) { console.warn('[PBL] 聊天消息渲染降级:', e); }
     statusText.textContent = '正在渲染知识路径图谱...';
-    try { renderPBLResult(result); } catch (e) { console.warn('[PBL] 结果渲染整体降级:', e); }
+    try { await renderPBLResult(result); } catch (e) { console.warn('[PBL] 结果渲染整体降级:', e); }
     try { scrollToPBLOutput(); } catch (_e) { /* ignore */ }
 
     try {
@@ -1807,7 +1824,7 @@ async function applyPBLKnowledgeSelection() {
   await builder.loadUnifiedIndex();
   const updated = builder.redesignPBLWithSelectedKnowledge(pblResult, [...pblKnowledgeSelection]);
   pblResult = updated;
-  renderPBLResult(updated);
+  await renderPBLResult(updated);
 }
 
 function serializePBLResult(result) {
@@ -1940,7 +1957,7 @@ function ensurePBLQuality(result) {
   return result;
 }
 
-function renderPBLResult(result) {
+async function renderPBLResult(result) {
   try { result = ensurePBLBlueprint(result); } catch (e) { console.warn('[PBL] 蓝图补全降级:', e); }
   try {
     if (window.PBLPathBuilder && typeof window.PBLPathBuilder.buildPathPlanFromResult === 'function') {
@@ -1953,6 +1970,7 @@ function renderPBLResult(result) {
   try { renderPBLCandidatePanel(result); } catch (e) { console.warn('[PBL] 候选面板降级:', e); }
   try { renderPBLStats(result); } catch (e) { console.warn('[PBL] 统计面板降级:', e); }
   try { renderPBLGraph(result); } catch (e) { console.warn('[PBL] 图谱渲染降级:', e); }
+  try { await showPBLSupportPack(result); } catch (e) { console.warn('[PBL] 支撑模块降级:', e); }
   const activePhase = document.querySelector('.pbl-path-phase.active') || document.querySelector('.pbl-path-phase');
   if (activePhase) highlightPBLPhase(activePhase);
   if (result.graphData?.nodes?.length) {
@@ -2032,7 +2050,7 @@ async function restorePBLFromHandoff(handoffId) {
     const statusEl = document.getElementById('pblStatus');
     if (statusEl) statusEl.style.display = 'none';
     pblResult = result;
-    renderPBLResult(result);
+    await renderPBLResult(result);
     scrollToPBLOutput();
     if (window.TeachAnyHistory?.importPBLHandoff) {
       const runId = window.TeachAnyHistory.importPBLHandoff(data);
@@ -2101,7 +2119,7 @@ async function restorePBLRunFromHistory(id) {
   renderPBLChatMessages(pblChatHistory);
   const statusEl = document.getElementById('pblStatus');
   if (statusEl) statusEl.style.display = 'none';
-  renderPBLResult(result);
+  await renderPBLResult(result);
   scrollToPBLOutput();
   return true;
 }
@@ -2446,8 +2464,9 @@ ${html}
 </html>`;
 }
 
-function exportPBLAsHtml() {
+async function exportPBLAsHtml() {
   if (!pblResult) { alert('请先完成项目拆解'); return; }
+  await ensurePBLSupportPackRendered(pblResult);
   const doc = buildPBLExportHtmlDocument();
   const blob = new Blob([doc], { type: 'text/html;charset=utf-8' });
   const a = document.createElement('a');
@@ -2516,6 +2535,11 @@ async function exportPBLAsImage() {
 }
 
 function scrollToPBLOutput() {
+  const support = document.getElementById('pblSupportPack');
+  if (support && support.style.display !== 'none' && support.querySelector('.pbl-support-pack')) {
+    support.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
   const deco = document.getElementById('pblDecompose');
   if (deco && deco.style.display !== 'none') {
     deco.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2550,6 +2574,9 @@ function renderPBLStats(result) {
   nodes.forEach(n => { layerCounts[n.layer] = (layerCounts[n.layer] || 0) + 1; });
   if (!nodes.length) {
     showPBLTechRoute(result);
+    statsEl.innerHTML = hasDecompose
+      ? '<div class="pbl-quality-hint">课标匹配为空，但上方「项目结构化拆解」与下方「项目支撑模块」仍可使用。</div>'
+      : '';
     return;
   }
 
@@ -2582,7 +2609,6 @@ function renderPBLStats(result) {
   statsEl.innerHTML = html;
 
   showPBLTechRoute(result);
-  showPBLSupportPack(result);
 }
 
 async function showPBLSupportPack(result) {
@@ -2595,19 +2621,29 @@ async function showPBLSupportPack(result) {
   if (!mod || (!hasDecompose && !hasGraph)) {
     panel.style.display = 'none';
     body.innerHTML = '';
-    result.supportPack = null;
+    if (result) result.supportPack = null;
     return;
   }
+  panel.style.display = 'block';
+  panel.classList.remove('collapsed');
+  body.innerHTML = '<p class="pbl-sp-hint">正在生成通用支撑模块（量规 · 手册 · 旅程 · 工具包）…</p>';
   try {
     const { pack, html } = await mod.buildAndRender(result);
-    result.supportPack = pack;
+    if (result) result.supportPack = pack;
     body.innerHTML = html || '<p class="pbl-sp-hint">支撑模块生成失败，请刷新重试。</p>';
     panel.style.display = html ? 'block' : 'none';
-    panel.classList.remove('collapsed');
   } catch (e) {
     console.warn('[PBL] 支撑模块渲染失败:', e);
-    panel.style.display = 'none';
+    body.innerHTML = '<p class="pbl-sp-hint">支撑模块生成失败：' + escapePBLHtml(e.message || String(e)) + '</p>';
+    panel.style.display = 'block';
   }
+}
+
+async function ensurePBLSupportPackRendered(result) {
+  if (!result) return;
+  const body = document.getElementById('pblSupportPackBody');
+  const hasContent = body && body.querySelector('.pbl-support-pack');
+  if (!hasContent) await showPBLSupportPack(result);
 }
 
 function renderPBLGraph(result) {
