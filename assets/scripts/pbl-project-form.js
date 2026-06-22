@@ -97,6 +97,7 @@
     return {
       curriculum: src.curriculum !== false,
       k12Graph: src.k12Graph !== false,
+      fullGraph: src.fullGraph === true,
     };
   }
 
@@ -143,11 +144,12 @@
     const picked = [];
     tags.forEach(t => picked.push(t.dataset.source));
     if (!picked.length || picked.includes('all')) {
-      return { curriculum: true, k12Graph: true };
+      return { curriculum: true, k12Graph: true, fullGraph: false };
     }
     return {
       curriculum: picked.includes('curriculum'),
       k12Graph: picked.includes('k12Graph'),
+      fullGraph: picked.includes('fullGraph'),
     };
   }
 
