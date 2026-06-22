@@ -81,9 +81,11 @@ CN_SOURCE_NAMES = {
     "geography": "geography.md",
     "chinese": "chinese.md",
     "english": "english.md",
-    "science": "science.md",
-    "politics": "morality-law-2022-outline.md",
-    "psychology": "psychology-2012-outline.md",
+    "science": "science_curriculum.md",
+}
+CN_CURATED = {
+    ("chinese", "middle"): "curated/chinese-middle-curated.md",
+    ("math", "middle"): "curated/math-middle-curated.md",
 }
 CN_HIGH_NAMES = {
     "math": "数学.md",
@@ -224,12 +226,21 @@ def candidate_sources(data: dict[str, Any]) -> list[tuple[Path, str]]:
             sources.append((exact, f"curriculum-standards/{zh_subject}/{zh_stage}/{name}.md"))
 
     cn_root = WORKSPACE / "books" / "课标-整理版" / "cn"
+    curated_rel = CN_CURATED.get((subject, stage))
+    if curated_rel:
+        p = cn_root / curated_rel
+        if p.is_file():
+            sources.append((p, f"books/课标-整理版/cn/{curated_rel}"))
     fname = CN_SOURCE_NAMES.get(subject)
     if fname:
-        for subdir in (stage, "all"):
+        for subdir in (stage, "all", "elementary", "middle", "high"):
             p = cn_root / subdir / fname
             if p.is_file():
                 sources.append((p, f"books/课标-整理版/cn/{subdir}/{fname}"))
+        # all/ 下 high_*_high_curriculum.md
+        alt = cn_root / "all" / f"high_{subject}_high_curriculum.md"
+        if alt.is_file():
+            sources.append((alt, f"books/课标-整理版/cn/all/high_{subject}_high_curriculum.md"))
     if stage == "high" and subject in CN_HIGH_NAMES:
         for subdir in ("high", "all"):
             p = cn_root / subdir / CN_HIGH_NAMES[subject]
@@ -289,7 +300,7 @@ def find_snippets(data: dict[str, Any], cache: dict[Path, list[str]], max_items:
     for path, label in candidate_sources(data):
         for chunk in source_chunks(path, cache):
             score, hits = score_chunk(chunk, cn_kw, en_kw)
-            if score < 12:
+            if score < 8:
                 continue
             candidates.append({
                 "source": label,
