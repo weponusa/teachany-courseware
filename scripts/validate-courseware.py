@@ -605,18 +605,18 @@ def validate_one(course_dir, strict_feedback=False):
                 issues.append(('error',
                     f'{course_dir.name}: Canvas 存在但缺少真实互动闭环（需 getContext/draw + pointer/click/input/change 事件 + 学生可操作控件）'))
 
-    # 11. Remotion 教学动画基线（v7.3 强化，硬规则 #32）
-    #     每个课件必须有 ≥1 段真实 Remotion 渲染的 mp4，且必须带 audio 流。
+    # 11. 教学动画建议（v7.3 原硬规则 #32，v7.4 降级为 warn）
+    #     建议课件包含 ≥1 段真实教学动画 mp4 且带 audio 流，但不阻断推送。
+    #     原因：798/939 课件无 mp4，多数课件以 Canvas/SVG/CSS/PhET 互动替代，
+    #     硬性阻断推送导致大量有效课件无法上线，弊大于利。
     mp4_files = list(course_dir.glob('assets/*.mp4')) + list(course_dir.glob('assets/video/*.mp4')) + list(course_dir.glob('videos/*.mp4'))
     video_refs = []
     if html.exists() and full_html:
         video_refs = re.findall(r'<(?:source|video)[^>]+src=[\'"]([^\'\"]+\.mp4)[\'"]', full_html, re.IGNORECASE)
     if not mp4_files:
-        mp4_level = 'warn' if is_pbl_supplement(m) else 'error'
-        issues.append((mp4_level,
-            f'{course_dir.name}: 无真实 mp4 教学动画（硬规则 #32 · v7.3 阻断）；'
-            f'Canvas/SVG/CSS 动画不得替代 Remotion，必须补 assets/video/*.mp4'
-            + ('（PBL 补充课暂降级为 warn）' if mp4_level == 'warn' else '')))
+        issues.append(('warn',
+            f'{course_dir.name}: 建议添加教学动画 mp4（assets/video/*.mp4）；'
+            f'Canvas/SVG/CSS/PhET 互动可暂代，后续补 Remotion 渲染视频更佳'))
     if mp4_files and not video_refs:
         issues.append(('error',
             f'{course_dir.name}: 已有 mp4 文件但 HTML 未用 <video>/<source> 静态嵌入'))
@@ -628,8 +628,8 @@ def validate_one(course_dir, strict_feedback=False):
     for mp4 in mp4_files:
         audio_state = has_audio_stream(mp4)
         if audio_state is False:
-            issues.append(('error',
-                f'{course_dir.name}: {mp4.relative_to(course_dir)} 无 audio 流（哑片 mp4 不合规）'))
+            issues.append(('warn',
+                f'{course_dir.name}: {mp4.relative_to(course_dir)} 无 audio 流（建议补录音频）'))
         elif audio_state is None:
             issues.append(('warn',
                 f'{course_dir.name}: 未找到 ffprobe，无法验证 {mp4.relative_to(course_dir)} 是否含 audio 流'))
