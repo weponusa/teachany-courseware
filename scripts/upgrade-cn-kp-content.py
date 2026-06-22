@@ -165,9 +165,21 @@ def fallback_snippets(data: dict[str, Any]) -> list[dict[str, Any]]:
                     break
             if out:
                 break
-    for cp in data.get("curriculum_points") or []:
-        cp = str(cp).strip()
-        if len(cp) < 30 or GENERIC_CP_RE.search(cp):
+    chapter = str(data.get("textbook_chapter") or "").strip()
+    cps = [str(x).strip() for x in (data.get("curriculum_points") or []) if str(x).strip()]
+    good_cps = [c for c in cps if len(c) >= 8 and not GENERIC_CP_RE.search(c)]
+    if chapter and good_cps:
+        blob = f"{chapter}：{'；'.join(good_cps)}"
+        if len(blob) >= 20:
+            out.append({
+                "source": "课标要点·单元摘要",
+                "text": blob[:1600],
+                "score": 22,
+                "match_terms": [],
+                "source_type": "curriculum_standard_excerpt",
+            })
+    for cp in good_cps:
+        if len(cp) < 12:
             continue
         out.append({
             "source": "国家课标·内容要求",
@@ -178,6 +190,16 @@ def fallback_snippets(data: dict[str, Any]) -> list[dict[str, Any]]:
         })
         if len(out) >= 4:
             break
+    if not out and good_cps:
+        joined = "；".join(good_cps)
+        if len(joined) >= 12:
+            out.append({
+                "source": "国家课标·内容要求",
+                "text": joined[:1600],
+                "score": 18,
+                "match_terms": [],
+                "source_type": "curriculum_standard_excerpt",
+            })
     return out[:4]
 
 

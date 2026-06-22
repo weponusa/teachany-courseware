@@ -13,6 +13,8 @@
 | `deep_textbook_snippets` | 0 | **419**（数理化生等，可追溯本地教材 MD） |
 | 升级标记 | — | **950**（`kp_content_upgrade_2026-06-22`） |
 
+**第二轮补全（同日）**：扩展课标 MD 源 + 课标原文 fallback → **950/950** 均有可追溯摘录。
+
 执行命令：`python3 scripts/upgrade-cn-kp-content.py`
 
 备份目录：`data/kp/_backups/upgrade-cn-kp-20260622-*`
@@ -27,7 +29,11 @@
 
 ## 仍待深化（531 门无 deep snippets）
 
-语文、地理、政治、心理、信息科技等学科本地教材 MD 匹配较少，习题已学科化但**尚无可追溯教材原文摘录**。后续可：
+~~语文、地理、政治、心理、信息科技等学科本地教材 MD 匹配较少~~
+
+**已解决**：950/950 均有 `deep_textbook_snippets`（教材 MD 匹配 + 课标原文 fallback）。
+
+长期仍可补：
 
 - 补 `books/课标-整理版/cn/` 分学科 MD
 - 对语文/英语灌入课文摘录库
