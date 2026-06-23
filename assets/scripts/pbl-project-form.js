@@ -143,13 +143,15 @@
     const tags = document.querySelectorAll('.pbl-src-tag.active');
     const picked = [];
     tags.forEach(t => picked.push(t.dataset.source));
+    const fullGraphCb = document.getElementById('pblSearchFullGraph');
+    const fullGraph = picked.includes('fullGraph') || fullGraphCb?.checked === true;
     if (!picked.length || picked.includes('all')) {
-      return { curriculum: true, k12Graph: true, fullGraph: false };
+      return { curriculum: true, k12Graph: true, fullGraph };
     }
     return {
       curriculum: picked.includes('curriculum'),
       k12Graph: picked.includes('k12Graph'),
-      fullGraph: picked.includes('fullGraph'),
+      fullGraph,
     };
   }
 
