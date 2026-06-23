@@ -67,13 +67,14 @@ function collectNodes() {
     const system = meta.system || 'cn';
     if (system !== 'cn') return;
     const name = String(n.name || n.name_zh || '').trim();
-    if (!name) return;
+    const nameEn = String(n.name_en || '').trim();
+    if (!name && !nameEn) return;
     const def = String(n.definition || n.description || '').replace(/\s+/g, ' ').slice(0, 240);
     const cp = (n.curriculum_points || []).slice(0, 5).join(' ');
     const subj = n.subject || meta.subject || '';
     const domain = meta.domain ? `领域:${meta.domain}` : '';
-    const text = [name, def, cp, subj ? `学科:${subj}` : '', domain, `G${grade}`].filter(Boolean).join(' | ');
-    byId.set(n.id, { id: n.id, name, grade, subject: subj, text });
+    const text = [name, nameEn && nameEn !== name ? nameEn : '', def, cp, subj ? `学科:${subj}` : '', domain, `G${grade}`].filter(Boolean).join(' | ');
+    byId.set(n.id, { id: n.id, name: name || nameEn, grade, subject: subj, text });
   };
 
   walkJsonFiles(path.join(ROOT, 'data/trees/cn')).forEach(file => {

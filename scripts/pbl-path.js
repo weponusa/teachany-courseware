@@ -706,7 +706,8 @@ class PBLPathBuilder {
           status: n.status || 'active',
           courses: n.courses || [],
           curriculum_points: n.curriculum_points || [],
-          treePath: n.treePath || n.graph_path || '',
+          tags: n.tags || [],
+          treePath: n.treePath || n.graph_path || n.tree_path || '',
           isExternal: false,
           isUniversity: isUni,
           isK12: isK12,
@@ -1910,6 +1911,59 @@ class PBLPathBuilder {
       console.info('[PBL] 向量召回 top:', top.slice(0, 6).map(n => n.name).join('、'));
     }
     return top;
+  }
+
+  /** 用户检索框：本地 hash 向量 + 关键词混合（覆盖全科图谱，含未预计算 embedding 的节点） */
+  async _retrieveByVectorSimilarityForQuery(query, pool, limit = 48, goal = '') {
+    if (!Array.isArray(pool) || !pool.length) return [];
+    const q = String(query || '').trim();
+    if (!q) return [];
+    await this._loadPBLEmbeddings();
+    const dim = this.pblEmbedDim || 512;
+    const qtext = `检索：${q}${goal ? `\n项目：${String(goal).slice(0, 400)}` : ''}`;
+    let queryVec = await this._embedPBLQuery(qtext);
+    if (!queryVec?.length) queryVec = this._localHashEmbed(qtext, dim);
+    const useStored = this.pblEmbeddingsMap?.size > 0 && queryVec.length === dim;
+    const terms = this._expandSearchTerms(q, goal, this._activeBlueprint, this._resolvedArchetype);
+    const scored = [];
+    for (const n of pool) {
+      let e = useStored ? this.pblEmbeddingsMap.get(n.id) : null;
+      if (!e || e.length !== queryVec.length) {
+        e = this._localHashEmbed(this._nodeEmbedText(n), dim);
+      }
+      let s = this._cosineSimilarity(queryVec, e);
+      const lex = Math.min(1, this._fuzzyScoreNodeForTerms(n, terms, { goal }) / 36);
+      s = s * 0.32 + lex * 0.68;
+      if (s > 0.14) scored.push({ n, s });
+    }
+    scored.sort((a, b) => b.s - a.s);
+    return scored.slice(0, limit).map((x, i) => ({
+      ...x.n,
+      _vectorScore: x.s,
+      confidence: Math.max(0.55, 0.9 - i * 0.015),
+      matchReason: `向量+关键词(${(x.s * 100).toFixed(0)}%)`,
+    }));
+  }
+
+  _mergeHybridSearchResults(fuzzy = [], vector = [], limit = 48) {
+    const byId = new Map();
+    const ingest = (list, weight) => {
+      (list || []).forEach((n, i) => {
+        if (!n?.id) return;
+        const rank = list.length - i;
+        const score = (n._fuzzyScore || n._score || rank * 3) * weight + (n._vectorScore || 0) * 100 * (1 - weight);
+        const prev = byId.get(n.id);
+        if (!prev || score > prev._hybridScore) {
+          byId.set(n.id, { ...n, _hybridScore: score, matchReason: n.matchReason || prev?.matchReason });
+        }
+      });
+    };
+    ingest(fuzzy, 0.55);
+    ingest(vector, 0.45);
+    return [...byId.values()]
+      .sort((a, b) => b._hybridScore - a._hybridScore)
+      .slice(0, limit)
+      .map(({ _hybridScore, ...n }) => n);
   }
 
   _relevanceKeepThreshold(floorMode = false) {
@@ -3261,9 +3315,32 @@ class PBLPathBuilder {
     };
   }
 
+  _nodeEmbedText(node) {
+    if (!node) return '';
+    const name = String(node.name || node.name_zh || '').trim();
+    const en = String(node.name_en || '').trim();
+    const def = String(node.definition || node.description || '').replace(/\s+/g, ' ').slice(0, 280);
+    const cp = (node.curriculum_points || []).slice(0, 4).join(' ');
+    const subj = this._subjectLabel(node.subject) || node.subject || '';
+    const tags = (node.tags || []).slice(0, 6).join(' ');
+    const grade = node.gradeLabel || (node.grade > 0 ? `G${node.grade}` : (node.isUniversity ? '大学' : ''));
+    return [name, en && en !== name ? en : '', def, cp, tags, subj ? `学科:${subj}` : '', grade].filter(Boolean).join(' | ');
+  }
+
   _nodeSearchText(node) {
     const cp = (node.curriculum_points || []).join(' ');
-    return `${node.name || ''} ${node.definition || node.description || ''} ${(node.key_concepts || []).join(' ')} ${cp}`.toLowerCase();
+    const tags = (node.tags || []).join(' ');
+    const subj = this._subjectLabel(node.subject) || '';
+    const parts = [
+      node.name || node.name_zh || '',
+      node.name_en || '',
+      node.definition || node.description || '',
+      (node.key_concepts || []).join(' '),
+      cp,
+      tags,
+      subj,
+    ];
+    return parts.filter(Boolean).join(' ').toLowerCase();
   }
 
   _shouldExtendFullGraph(projectSpec = null) {
@@ -8122,7 +8199,7 @@ class PBLPathBuilder {
       }));
   }
 
-  searchKnowledgeCandidates(query, goal = '', selectedSystems = ['all'], limit = 30, options = {}) {
+  async searchKnowledgeCandidates(query, goal = '', selectedSystems = ['all'], limit = 30, options = {}) {
     const q = String(query || '').trim();
     if (!q) return [];
     const projectSpec = options.projectSpec || this._activeProjectSpec;
@@ -8141,7 +8218,7 @@ class PBLPathBuilder {
     } else if (options.pool?.length) {
       pool = options.pool;
     }
-    return this._fuzzyMatchKnowledgeNodes(q, {
+    const fuzzy = this._fuzzyMatchKnowledgeNodes(q, {
       goal: goal || q,
       blueprint: this._activeBlueprint,
       archetype: this._resolvedArchetype,
@@ -8149,10 +8226,22 @@ class PBLPathBuilder {
       projectSpec,
       scope,
       pool,
-      limit,
-      minScore: options.minScore ?? (freeSearch ? 6 : 7),
-      matchReason: scope === 'full' ? '全量图谱自由检索' : '全科图谱自由检索',
+      limit: Math.max(limit, 32),
+      minScore: options.minScore ?? (freeSearch ? 5 : 7),
+      matchReason: scope === 'full' ? '全量图谱关键词' : '全科图谱关键词',
     });
+    let vector = [];
+    if (options.useVector !== false && pool?.length) {
+      try {
+        vector = await this._retrieveByVectorSimilarityForQuery(q, pool, Math.ceil(limit * 1.2), goal || q);
+      } catch (e) {
+        console.warn('[PBL] 检索向量召回失败，仅用关键词:', e.message);
+      }
+    }
+    if (vector.length) {
+      return this._mergeHybridSearchResults(fuzzy, vector, limit);
+    }
+    return fuzzy.slice(0, limit);
   }
 
   _getSelectedKnowledgeIds(result) {
@@ -8273,7 +8362,7 @@ class PBLPathBuilder {
     return wantsKnowledgeEdit && !plan.revisedTask;
   }
 
-  _refineKnowledgeSelection(previousResult, plan, projectSpec, selectedSystems = ['all'], onStatus = null, chatHistory = [], userMessage = '') {
+  async _refineKnowledgeSelection(previousResult, plan, projectSpec, selectedSystems = ['all'], onStatus = null, chatHistory = [], userMessage = '') {
     const goal = previousResult.goal || '';
     this._activeProjectSpec = projectSpec || previousResult.projectSpec || this._activeProjectSpec || null;
     this._activeBlueprint = previousResult.projectBlueprint || this._activeBlueprint || null;
@@ -8294,8 +8383,8 @@ class PBLPathBuilder {
     if (addTerms.length) {
       this._reportPBLStatus(onStatus, '检索并补充知识点...');
       const refineScope = this._shouldExtendFullGraph(projectSpec) ? 'full' : 'k12';
-      addTerms.forEach((term) => {
-        const found = this.searchKnowledgeCandidates(term, goal, selectedSystems, 16, {
+      for (const term of addTerms) {
+        const found = await this.searchKnowledgeCandidates(term, goal, selectedSystems, 16, {
           skipPoolGate: true,
           freeSearch: true,
           userInitiated: true,
@@ -8305,7 +8394,7 @@ class PBLPathBuilder {
         found.slice(0, 4).forEach((n) => {
           if (n?.id && !ids.includes(n.id)) ids.push(n.id);
         });
-      });
+      }
     }
 
     ids = this._sortSelectedByPrerequisites([...new Set(ids)]);
@@ -8436,7 +8525,7 @@ class PBLPathBuilder {
         spec.deliverable = 'other';
         spec.deliverableCustom = plan.revisedDeliverable;
       }
-      return this._refineKnowledgeSelection(
+      return await this._refineKnowledgeSelection(
         previousResult, plan, spec, selectedSystems, onStatus, chatHistory, msg
       );
     }
