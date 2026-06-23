@@ -1449,7 +1449,8 @@ body {
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260623-zh-vector-search"></script>
+<script src="./assets/scripts/knowledge-node-display.js?v=20260623"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260623-zh-display"></script>
 <script src="./assets/scripts/pbl-support-modules.js?v=20260619-support-pack-v2"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
@@ -1810,7 +1811,7 @@ function renderPBLCandidateList(nodes = pblCandidateView) {
     const reason = n.matchReason ? `<span class="pbl-candidate-meta">${escapePBLHtml(n.matchReason)}</span>` : '';
     return `<label class="pbl-candidate-item">
       <input type="checkbox" ${checked} onchange="togglePBLKnowledgeCandidate('${id}', this.checked)" />
-      <span><span class="pbl-candidate-name">${escapePBLHtml(n.name || n.id)}</span>${reason}<span class="pbl-candidate-meta">${escapePBLHtml(meta || '知识点')}</span></span>
+      <span><span class="pbl-candidate-name">${escapePBLHtml((window.KnowledgeNodeDisplay && KnowledgeNodeDisplay.resolveNodeDisplayName(n)) || n.display_name || n.name || n.id)}</span>${reason}<span class="pbl-candidate-meta">${escapePBLHtml(meta || '知识点')}</span></span>
     </label>`;
   }).join('');
 }
@@ -2818,9 +2819,12 @@ function onPBLNodeClick(node) {
     </div>`;
   }
 
+  const nodeTitle = (window.KnowledgeNodeDisplay && KnowledgeNodeDisplay.resolveNodeDisplayName(node)) || node.display_name || node.name;
+  const nodeEnSub = (window.KnowledgeNodeDisplay && KnowledgeNodeDisplay.resolveNodeEnglishSubtitle(node)) || '';
+
   content.innerHTML = `
-    <h3>${node.name}</h3>
-    ${node.name_en ? `<p style="font-size:13px;color:var(--dimmer);margin-bottom:10px">${node.name_en}</p>` : ''}
+    <h3>${escapePBLHtml(nodeTitle)}</h3>
+    ${nodeEnSub ? `<p style="font-size:13px;color:var(--dimmer);margin-bottom:10px">${escapePBLHtml(nodeEnSub)}</p>` : ''}
     <div class="meta-row">
       <span class="meta-tag" style="background:${layerColors[node.layer]}22;color:${layerColors[node.layer]}">${layerLabels[node.layer]}</span>
       <span class="meta-tag">${node.systemTag || ''} ${node.curriculumLabel || node.systemLabel || ''}</span>
@@ -2880,7 +2884,7 @@ function onPBLNodeClick(node) {
       return crossHtml + uniHtml;
     })()}
     ${coursewareHtml}
-    <button class="generate-cw-btn" onclick="event.stopPropagation();event.preventDefault();generateCourseware('${node.id}', '${node.name.replace(/'/g, "\\'")}')">
+    <button class="generate-cw-btn" onclick="event.stopPropagation();event.preventDefault();generateCourseware('${node.id}', '${nodeTitle.replace(/'/g, "\\'")}')">
       ✨ 制作新课件
     </button>
   `;

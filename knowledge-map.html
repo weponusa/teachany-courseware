@@ -251,6 +251,7 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="./assets/scripts/courseware-hub.js"></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
+<script src="./assets/scripts/knowledge-node-display.js?v=20260623"></script>
 <script src="./assets/scripts/knowledge-node-detail.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -312,6 +313,16 @@ function getDomainLabel(domainId) {
   return DOMAIN_LABELS[domainId] || domainId;
 }
 
+function nodeDisplayName(n) {
+  return (global.KnowledgeNodeDisplay && KnowledgeNodeDisplay.resolveNodeDisplayName(n))
+    || n.display_name || n.name || n.name_en || n.id;
+}
+
+function nodeSearchBlob(n) {
+  return [nodeDisplayName(n), n.name, n.name_en, n.display_name, n.id, DOMAIN_LABELS[n.domain] || '']
+    .filter(Boolean).join(' ').toLowerCase();
+}
+
 let graphData = { nodes: [], edges: [] };
 let metaById = null;
 let metaLoadPromise = null;
@@ -371,7 +382,7 @@ async function init() {
   try {
     const [_, resp] = await Promise.all([
       hubInit,
-      fetch('./data/knowledge-map-data.json?v=20260617-pol-psych-k12'),
+      fetch('./data/knowledge-map-data.json?v=20260623-zh-display'),
     ]);
     graphData = await resp.json();
   } catch (e) {
@@ -387,6 +398,7 @@ async function init() {
       n.grade = 0;
       n.stage = 'university';
     }
+    if (global.KnowledgeNodeDisplay) KnowledgeNodeDisplay.applyDisplayFields(n);
     n.vx = 0; n.vy = 0;
     nodeMap.set(n.id, n);
   });
@@ -593,7 +605,7 @@ function getVisibleNodes() {
     if (!activeSubjects.has(n.subject)) return false;
     if (n.grade === 0) { if (!includeUni) return false; }
     else if (n.grade < gradeRange[0] || n.grade > gradeRange[1]) return false;
-    if (searchQuery && !n.name.toLowerCase().includes(searchQuery) && !n.id.includes(searchQuery) && !(DOMAIN_LABELS[n.domain] || '').includes(searchQuery)) return false;
+    if (searchQuery && !nodeSearchBlob(n).includes(searchQuery)) return false;
     return true;
   });
 }
@@ -665,7 +677,8 @@ function measureLabelBox(name, x, y, anchorR) {
 }
 
 function drawNodeLabel(n, r, alpha, { force = false, placed = null } = {}) {
-  const box = measureLabelBox(n.name, n.x, n.y, r);
+  const label = nodeDisplayName(n);
+  const box = measureLabelBox(label, n.x, n.y, r);
   if (!force && placed) {
     if (placed.some(b => labelBoxOverlaps(box, b))) return false;
     placed.push(box);
@@ -687,7 +700,7 @@ function drawNodeLabel(n, r, alpha, { force = false, placed = null } = {}) {
   ctx.font = `${box.fontSize}px -apple-system, PingFang SC, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillText(n.name, box.lx, box.ly);
+  ctx.fillText(label, box.lx, box.ly);
   return true;
 }
 
@@ -775,7 +788,7 @@ function render() {
       (edgesByTarget.get(highlightId) || []).includes(n.id) ||
       (edgesBySource.get(highlightId) || []).includes(n.id));
     const isSelected = selectedNode?.id === n.id;
-    const isSearchHit = searchQuery && n.name.toLowerCase().includes(searchQuery);
+    const isSearchHit = searchQuery && nodeSearchBlob(n).includes(searchQuery);
 
     let r = nodeRadius;
     let alpha = 0.7;

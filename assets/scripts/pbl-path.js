@@ -542,7 +542,7 @@ class PBLPathBuilder {
         if (cached) {
           const parsed = this._safeJsonParse(cached);
           const { ts, entries, v } = parsed || {};
-          if (parsed && v === 11 && Date.now() - ts < CACHE_TTL && Array.isArray(entries)) {
+          if (parsed && v === 12 && Date.now() - ts < CACHE_TTL && Array.isArray(entries)) {
             entries.forEach(([k, vNode]) => {
               if (!k || !vNode) return;
               this.unifiedIndex.set(k, vNode);
@@ -638,6 +638,7 @@ class PBLPathBuilder {
           fromK12Graph: false,
         };
         unified = this._normalizeUniversitySubjectNode(unified);
+        this._applyNodeDisplayFields(unified);
         this.unifiedIndex.set(node.id, unified);
         this.systemIndex.get(sysId).add(node.id);
         totalNodes++;
@@ -727,12 +728,12 @@ class PBLPathBuilder {
             fromCurriculumTree: !!prev?.fromCurriculumTree,
             fromK12Graph: true,
           };
-          this.unifiedIndex.set(n.id, unified);
+          this.unifiedIndex.set(n.id, this._applyNodeDisplayFields(unified));
           if (!this.systemIndex.has('cn')) this.systemIndex.set('cn', new Set());
           this.systemIndex.get('cn').add(n.id);
           k12Merged++;
         } else if (isUni && !this.unifiedIndex.has(n.id)) {
-          this.unifiedIndex.set(n.id, {
+          this.unifiedIndex.set(n.id, this._applyNodeDisplayFields({
             ...base,
             system: 'cn',
             systemTag: 'CN',
@@ -743,7 +744,7 @@ class PBLPathBuilder {
             fromCurriculumTree: false,
             fromK12Graph: true,
             isUniversity: true,
-          });
+          }));
           if (!this.systemIndex.has('cn')) this.systemIndex.set('cn', new Set());
           this.systemIndex.get('cn').add(n.id);
           uniAdded++;
@@ -1245,7 +1246,7 @@ class PBLPathBuilder {
     }
   }
 
-  static PBL_INDEX_CACHE_KEY = 'teachany_pbl_unified_index_v11';
+  static PBL_INDEX_CACHE_KEY = 'teachany_pbl_unified_index_v12';
 
   _slimNodeForCache(node) {
     if (!node) return node;
@@ -1303,7 +1304,7 @@ class PBLPathBuilder {
         entries.push([k, this._slimNodeForCache(v)]);
         if (entries.length >= 10000) break;
       }
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), v: 11, entries }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), v: 12, entries }));
     } catch (e) {
       console.warn('[PBL] 索引缓存写入跳过:', e.message);
       try { localStorage.removeItem(CACHE_KEY); } catch (_e) { /* ignore */ }
@@ -3317,7 +3318,7 @@ class PBLPathBuilder {
 
   _nodeEmbedText(node) {
     if (!node) return '';
-    const name = String(node.name || node.name_zh || '').trim();
+    const name = this._resolveNodeDisplayName(node);
     const en = String(node.name_en || '').trim();
     const def = String(node.definition || node.description || '').replace(/\s+/g, ' ').slice(0, 280);
     const cp = (node.curriculum_points || []).slice(0, 4).join(' ');
@@ -3325,6 +3326,27 @@ class PBLPathBuilder {
     const tags = (node.tags || []).slice(0, 6).join(' ');
     const grade = node.gradeLabel || (node.grade > 0 ? `G${node.grade}` : (node.isUniversity ? '大学' : ''));
     return [name, en && en !== name ? en : '', def, cp, tags, subj ? `学科:${subj}` : '', grade].filter(Boolean).join(' | ');
+  }
+
+  _resolveNodeDisplayName(node) {
+    if (!node) return '';
+    if (typeof globalThis.KnowledgeNodeDisplay !== 'undefined') {
+      return KnowledgeNodeDisplay.resolveNodeDisplayName(node);
+    }
+    const dn = node.display_name || node.name_zh || node.name;
+    if (dn && /[\u4e00-\u9fff]/.test(dn)) return dn;
+    if (node.name && /[\u4e00-\u9fff]/.test(node.name)) return node.name;
+    return String(dn || node.name_en || node.id || '');
+  }
+
+  _applyNodeDisplayFields(node) {
+    if (!node) return node;
+    if (typeof globalThis.KnowledgeNodeDisplay !== 'undefined') {
+      return KnowledgeNodeDisplay.applyDisplayFields(node);
+    }
+    const dn = this._resolveNodeDisplayName(node);
+    node.display_name = dn;
+    return node;
   }
 
   _nodeSearchText(node) {
@@ -9686,10 +9708,15 @@ class PBLGraphRenderer {
       .attr('fill', '#f8fafc')
       .attr('text-anchor', 'middle')
       .attr('pointer-events', 'none')
-      .text(d => this._truncate(d.name, 12));
+      .text(d => this._truncate(this._resolveNodeDisplayName(d), 12));
 
     // ─── 英文副标（与 tree.html 同） ───
-    node.filter(d => d.name_en)
+    node.filter(d => {
+      const sub = (typeof KnowledgeNodeDisplay !== 'undefined')
+        ? KnowledgeNodeDisplay.resolveNodeEnglishSubtitle(d)
+        : (d.name_en && d.name_en !== d.name ? d.name_en : '');
+      return !!sub;
+    })
       .append('text')
       .attr('class', 'node-label-en')
       .attr('dy', 52)
@@ -9699,7 +9726,11 @@ class PBLGraphRenderer {
       .attr('fill', '#94a3b8')
       .attr('text-anchor', 'middle')
       .attr('pointer-events', 'none')
-      .text(d => this._truncate(d.name_en, 16));
+      .text(d => this._truncate(
+        (typeof KnowledgeNodeDisplay !== 'undefined')
+          ? KnowledgeNodeDisplay.resolveNodeEnglishSubtitle(d)
+          : (d.name_en || ''),
+        16));
 
     // ─── 年级（与 tree.html 同） ───
     node.append('text')

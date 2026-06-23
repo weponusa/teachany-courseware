@@ -82,11 +82,21 @@
       : '';
   }
 
+  function displayName(node) {
+    const g = global.KnowledgeNodeDisplay;
+    return (g && g.resolveNodeDisplayName(node)) || node.display_name || node.name || node.id;
+  }
+
+  function englishSubtitle(node) {
+    const g = global.KnowledgeNodeDisplay;
+    return (g && g.resolveNodeEnglishSubtitle(node)) || '';
+  }
+
   function renderLinkTags(ids, getNodeById) {
     if (!ids || !ids.length) return '';
     return ids.map((id) => {
       const n = getNodeById ? getNodeById(id) : null;
-      const name = n ? n.name : id;
+      const name = n ? displayName(n) : id;
       return `<span class="knd-link-tag" data-focus-node="${escapeHtml(id)}" role="button" tabindex="0">${escapeHtml(name)}</span>`;
     }).join('');
   }
@@ -112,8 +122,11 @@
     const points = node.curriculum_points || meta.curriculum_points || [];
     const related = meta.related_nodes || [];
 
-    let html = `<h3>${escapeHtml(node.name)}</h3>`;
-    if (node.name_en) html += `<p class="knd-en">${escapeHtml(node.name_en)}</p>`;
+    const title = displayName(node);
+    const enSub = englishSubtitle(node);
+
+    let html = `<h3>${escapeHtml(title)}</h3>`;
+    if (enSub) html += `<p class="knd-en">${escapeHtml(enSub)}</p>`;
 
     html += '<div class="knd-meta-row">';
     html += `<span class="knd-meta-tag" style="background:${cfg.color}22;color:${cfg.color}">${cfg.emoji} ${escapeHtml(cfg.label)}</span>`;
@@ -164,13 +177,14 @@
       if (btn) {
         e.stopPropagation();
         const id = node.id;
-        const name = node.name || id;
+        const name = displayName(node);
         const makeMeta = {
           name,
           subject: node.subject,
           grade: node.grade,
           domain: node.domain,
           name_en: node.name_en,
+          display_name: title,
           definition: node.definition || opts.meta?.definition || '',
           key_concepts: opts.meta?.key_concepts || node.key_concepts || node.skills || [],
           curriculum_points: node.curriculum_points || opts.meta?.curriculum_points || [],
