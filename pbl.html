@@ -1355,11 +1355,11 @@ body {
   <!-- 候选知识点编辑 -->
   <div id="pblCandidatePanel" class="pbl-candidate-panel" aria-live="polite">
     <div class="pbl-chat-header">候选知识点与图谱重设</div>
-    <p style="font-size:12px;color:var(--dim);margin-bottom:8px">勾选主线知识点；可用关键词模糊检索 K12 课标点补充，也可开启「扩展全量图谱」检索大学/跨体系节点。</p>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:8px">勾选主线知识点；可用关键词<strong>自由检索</strong>全科图谱（跨年级/跨学科），开启「扩展全量图谱」还可检索大学延伸节点。</p>
     <div class="pbl-candidate-toolbar">
       <input id="pblKnowledgeSearchInput" type="text" placeholder="模糊检索，如：一次函数、控制变量、热力学" onkeydown="if(event.key==='Enter') searchPBLKnowledgeCandidates()" />
       <label class="pbl-candidate-scope" title="开启后检索含大学延伸与更广课标节点">
-        <input type="checkbox" id="pblSearchFullGraph" /> 扩展全量图谱
+        <input type="checkbox" id="pblSearchFullGraph" onchange="syncPBLFullGraphFromCheckbox()" /> 扩展全量图谱
       </label>
       <button type="button" class="pbl-candidate-btn" onclick="searchPBLKnowledgeCandidates()">检索补充</button>
       <button type="button" class="pbl-candidate-btn primary" onclick="applyPBLKnowledgeSelection()">一键重设学习图谱和实施路径</button>
@@ -1449,7 +1449,7 @@ body {
 <script src="./assets/scripts/pbl-bloom.js?v=20260608-goal-anchored"></script>
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260622-fuzzy-recall"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260623-free-graph-search"></script>
 <script src="./assets/scripts/pbl-support-modules.js?v=20260619-support-pack-v2"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
@@ -1824,6 +1824,13 @@ function togglePBLKnowledgeCandidate(encodedId, checked) {
   if (summary) summary.textContent = `已选择 ${pblKnowledgeSelection.size} 个主线知识点；当前列表 ${pblCandidateView.length} 个候选。`;
 }
 
+function syncPBLFullGraphFromCheckbox() {
+  const cb = document.getElementById('pblSearchFullGraph');
+  const tag = document.querySelector('.pbl-src-tag[data-source="fullGraph"]');
+  if (tag && cb) tag.classList.toggle('active', cb.checked);
+  markPBLGoalDirty();
+}
+
 async function searchPBLKnowledgeCandidates() {
   if (!pblResult) { alert('请先完成一次项目拆解'); return; }
   const input = document.getElementById('pblKnowledgeSearchInput');
@@ -1831,20 +1838,48 @@ async function searchPBLKnowledgeCandidates() {
   if (!q) { alert('请输入检索关键词'); return; }
   const builder = window.PBLPathBuilder;
   if (!builder || typeof builder.searchKnowledgeCandidates !== 'function') return;
-  await builder.loadUnifiedIndex();
-  const fullGraph = document.getElementById('pblSearchFullGraph')?.checked
-    || getPBLProjectSpec()?.knowledgeSources?.fullGraph;
-  const results = builder.searchKnowledgeCandidates(
-    q, pblResult.goal || buildPBLGoalFromForm(), pblResult.systems || getSelectedSystems(), 48, {
-      skipPoolGate: true,
-      scope: fullGraph ? 'full' : 'k12',
-      fullGraph: !!fullGraph,
+  const statusEl = document.getElementById('pblStatus');
+  const statusText = document.getElementById('pblStatusText');
+  if (statusEl && statusText) {
+    statusEl.style.display = 'block';
+    statusText.textContent = '正在检索全科图谱知识点...';
+  }
+  try {
+    await builder.loadUnifiedIndex();
+    if (typeof builder._loadKnowledgeGraph === 'function') await builder._loadKnowledgeGraph();
+    const spec = getPBLProjectSpec();
+    const fullGraph = document.getElementById('pblSearchFullGraph')?.checked
+      || spec?.knowledgeSources?.fullGraph;
+    if (fullGraph) {
+      spec.knowledgeSources = { ...(spec.knowledgeSources || {}), fullGraph: true };
+      document.querySelector('.pbl-src-tag[data-source="fullGraph"]')?.classList.add('active');
     }
-  );
-  const seen = new Set();
-  pblCandidateView = [...results, ...pblCandidateView].filter(n => n && n.id && !seen.has(n.id) && (seen.add(n.id) || true)).slice(0, 160);
-  pblResult.candidateNodes = pblCandidateView;
-  renderPBLCandidateList(results.length ? pblCandidateView : []);
+    builder._activeProjectSpec = spec;
+    const results = builder.searchKnowledgeCandidates(
+      q, pblResult.goal || buildPBLGoalFromForm(), pblResult.systems || getSelectedSystems(), 48, {
+        skipPoolGate: true,
+        freeSearch: true,
+        userInitiated: true,
+        scope: fullGraph ? 'full' : 'k12',
+        fullGraph: !!fullGraph,
+        projectSpec: spec,
+      }
+    );
+    if (!results.length) {
+      renderPBLCandidateList([]);
+      const list = document.getElementById('pblCandidateList');
+      if (list) {
+        list.innerHTML = `<div style="color:var(--dim);font-size:13px;line-height:1.6">未找到「${escapePBLHtml(q)}」相关知识点。可勾选「扩展全量图谱」后重试，或换用更短关键词（如：函数、压强、细胞）。</div>`;
+      }
+      return;
+    }
+    const seen = new Set();
+    pblCandidateView = [...results, ...pblCandidateView].filter(n => n && n.id && !seen.has(n.id) && (seen.add(n.id) || true)).slice(0, 160);
+    pblResult.candidateNodes = pblCandidateView;
+    renderPBLCandidateList(pblCandidateView);
+  } finally {
+    if (statusEl) statusEl.style.display = 'none';
+  }
 }
 
 async function applyPBLKnowledgeSelection() {

@@ -739,6 +739,9 @@ class PBLPathBuilder {
             curriculumLabel: '大学课程',
             stageLabel: '大学',
             gradeLabel: '大学',
+            fromCurriculumTree: false,
+            fromK12Graph: true,
+            isUniversity: true,
           });
           if (!this.systemIndex.has('cn')) this.systemIndex.set('cn', new Set());
           this.systemIndex.get('cn').add(n.id);
@@ -3344,6 +3347,33 @@ class PBLPathBuilder {
       if (scope === 'matching') return this._isMatchingPoolNode(node, goal);
       if (node.system === 'cn') return this._isK12Node(node) && this._isMatchingPoolNode(node, goal);
       return this._isMatchingPoolNode(node, goal);
+    });
+  }
+
+  /**
+   * 用户主动检索候选知识点：不受项目学段门控限制，可跨年级从全科图谱召回。
+   * scope=k12：课标树 + knowledge-map K12；scope=full：另含大学延伸节点。
+   */
+  _getFreeSearchPool(goal, selectedSystems = ['all'], options = {}) {
+    const activeSystems = selectedSystems.includes('all')
+      ? Array.from(this.systemIndex.keys())
+      : selectedSystems.filter(s => this.systemIndex.has(s));
+    const scope = options.scope || 'k12';
+    const includeUniversity = scope === 'full' || options.fullGraph || this._shouldExtendFullGraph(options.projectSpec);
+    const relaxSource = options.relaxSourceGate !== false;
+    const spec = options.projectSpec || this._activeProjectSpec;
+
+    return [...this.unifiedIndex.values()].filter((node) => {
+      if (!node || node.isExternal || node.layer === 'external') return false;
+      if (activeSystems.length && !activeSystems.includes(node.system)) return false;
+      if (!relaxSource && !this._passesKnowledgeSourceGate(node, spec)) return false;
+
+      const grade = parseInt(node.grade, 10) || 0;
+      const isUni = this._isUniversityNode(node) || node.isUniversity || grade === 0;
+      if (isUni) return includeUniversity;
+
+      if (node.system === 'cn') return grade >= 1 && grade <= 12;
+      return true;
     });
   }
 
@@ -8095,11 +8125,19 @@ class PBLPathBuilder {
   searchKnowledgeCandidates(query, goal = '', selectedSystems = ['all'], limit = 30, options = {}) {
     const q = String(query || '').trim();
     if (!q) return [];
-    const scope = options.scope || (options.fullGraph || this._shouldExtendFullGraph() ? 'full' : 'k12');
-    const skipPoolGate = !!options.skipPoolGate || scope === 'full';
+    const projectSpec = options.projectSpec || this._activeProjectSpec;
+    const scope = options.scope || (options.fullGraph || this._shouldExtendFullGraph(projectSpec) ? 'full' : 'k12');
+    const freeSearch = options.freeSearch !== false && (!!options.skipPoolGate || options.userInitiated);
     let pool = null;
-    if (skipPoolGate) {
-      pool = this._getRecallScopePool(goal, scope, null, selectedSystems, options.projectSpec);
+    if (freeSearch) {
+      pool = this._getFreeSearchPool(goal, selectedSystems, {
+        scope,
+        fullGraph: options.fullGraph,
+        projectSpec,
+        relaxSourceGate: options.relaxSourceGate !== false,
+      });
+    } else if (options.skipPoolGate || scope === 'full') {
+      pool = this._getRecallScopePool(goal, scope, null, selectedSystems, projectSpec);
     } else if (options.pool?.length) {
       pool = options.pool;
     }
@@ -8108,12 +8146,12 @@ class PBLPathBuilder {
       blueprint: this._activeBlueprint,
       archetype: this._resolvedArchetype,
       selectedSystems,
-      projectSpec: options.projectSpec || this._activeProjectSpec,
+      projectSpec,
       scope,
       pool,
       limit,
-      minScore: options.minScore ?? 7,
-      matchReason: scope === 'full' ? '全量图谱模糊检索' : 'K12图谱模糊检索',
+      minScore: options.minScore ?? (freeSearch ? 6 : 7),
+      matchReason: scope === 'full' ? '全量图谱自由检索' : '全科图谱自由检索',
     });
   }
 
@@ -8255,12 +8293,16 @@ class PBLPathBuilder {
 
     if (addTerms.length) {
       this._reportPBLStatus(onStatus, '检索并补充知识点...');
+      const refineScope = this._shouldExtendFullGraph(projectSpec) ? 'full' : 'k12';
       addTerms.forEach((term) => {
-        const found = this.searchKnowledgeCandidates(term, goal, selectedSystems, 12, {
+        const found = this.searchKnowledgeCandidates(term, goal, selectedSystems, 16, {
           skipPoolGate: true,
-          scope: this._shouldExtendFullGraph() ? 'full' : 'k12',
+          freeSearch: true,
+          userInitiated: true,
+          scope: refineScope,
+          projectSpec,
         });
-        found.slice(0, 3).forEach((n) => {
+        found.slice(0, 4).forEach((n) => {
           if (n?.id && !ids.includes(n.id)) ids.push(n.id);
         });
       });
