@@ -248,7 +248,15 @@ body {
 
 <div class="legend" id="legend"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="./assets/vendor/d3.min.js"></script>
+<script>
+if (!window.d3) {
+  document.write('<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"><\/script>');
+}
+if (!window.d3) {
+  document.write('<script src="https://unpkg.com/d3@7/dist/d3.min.js"><\/script>');
+}
+</script>
 <script src="./assets/scripts/courseware-hub.js"></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script src="./assets/scripts/knowledge-node-display.js?v=20260623"></script>
@@ -314,7 +322,7 @@ function getDomainLabel(domainId) {
 }
 
 function nodeDisplayName(n) {
-  return (global.KnowledgeNodeDisplay && KnowledgeNodeDisplay.resolveNodeDisplayName(n))
+  return (window.KnowledgeNodeDisplay && KnowledgeNodeDisplay.resolveNodeDisplayName(n))
     || n.display_name || n.name || n.name_en || n.id;
 }
 
@@ -334,7 +342,7 @@ let includeUni = true;
 let searchQuery = '';
 let selectedNode = null;
 let hoveredNode = null;
-let transform = d3.zoomIdentity;
+let transform = { k: 1, x: 0, y: 0 };
 
 // Node lookup
 const nodeMap = new Map();
@@ -376,17 +384,28 @@ async function ensureMetaIndex() {
   return metaLoadPromise;
 }
 
+function showLoadError(msg) {
+  document.getElementById('loading').innerHTML =
+    '<div style="color:#ef4444;max-width:420px;text-align:center;line-height:1.6">加载失败: ' + msg + '</div>';
+}
+
 async function init() {
+  if (!window.d3) {
+    showLoadError('图表库 d3 未加载，请检查网络或刷新重试');
+    return;
+  }
+  transform = d3.zoomIdentity;
   await loadDomainLabels();
   const hubInit = window.TeachAnyHub ? TeachAnyHub.init().catch(() => {}) : Promise.resolve();
   try {
     const [_, resp] = await Promise.all([
       hubInit,
-      fetch('./data/knowledge-map-data.json?v=20260623-zh-display'),
+      fetch('./data/knowledge-map-data.json?v=20260624-fix'),
     ]);
+    if (!resp.ok) throw new Error('知识图谱数据 HTTP ' + resp.status);
     graphData = await resp.json();
   } catch (e) {
-    document.getElementById('loading').innerHTML = '<div style="color:#ef4444">加载失败: ' + e.message + '</div>';
+    showLoadError(e.message);
     return;
   }
   ensureMetaIndex();
@@ -398,7 +417,7 @@ async function init() {
       n.grade = 0;
       n.stage = 'university';
     }
-    if (global.KnowledgeNodeDisplay) KnowledgeNodeDisplay.applyDisplayFields(n);
+    if (window.KnowledgeNodeDisplay) KnowledgeNodeDisplay.applyDisplayFields(n);
     n.vx = 0; n.vy = 0;
     nodeMap.set(n.id, n);
   });
@@ -1001,7 +1020,7 @@ function buildLegend() {
 // START
 // ═══════════════════════════════════════════════════════════════
 
-init();
+init().catch((e) => showLoadError(e.message || String(e)));
 </script>
 </body>
 </html>
