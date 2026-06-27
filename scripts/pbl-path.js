@@ -35,10 +35,10 @@ class PBLPathBuilder {
     this.providers = [
       {
         id: 'preset',
-        name: 'TeachAny 默认（Qwen3 Next 80B）',
+        name: 'TeachAny 默认（Qwen3 Next 80B 免费）',
         serverPreset: true,
         model: '',
-        models: ['', 'qwen/qwen3-next-80b-a3b-instruct', 'deepseek-ai/DeepSeek-V4-Flash', 'deepseek-ai/DeepSeek-V4-Pro', 'GLM-4-Flash', '__custom__'],
+        models: ['', 'qwen/qwen3-next-80b-a3b-instruct:free', 'qwen/qwen3-next-80b-a3b-instruct', 'deepseek-ai/DeepSeek-V4-Flash', 'deepseek-ai/DeepSeek-V4-Pro', 'GLM-4-Flash', '__custom__'],
       },
       {
         id: 'siliconflow',
@@ -60,9 +60,10 @@ class PBLPathBuilder {
         serverBacked: true,
         clientKeyOk: true,
         baseUrl: 'https://openrouter.ai/api/v1',
-        model: 'qwen/qwen3-next-80b-a3b-instruct',
+        model: 'qwen/qwen3-next-80b-a3b-instruct:free',
         models: [
           '',
+          'qwen/qwen3-next-80b-a3b-instruct:free',
           'qwen/qwen3-next-80b-a3b-instruct',
           'deepseek/deepseek-v4-flash',
           'deepseek/deepseek-v4-pro',
@@ -75,12 +76,12 @@ class PBLPathBuilder {
           'anthropic/claude-sonnet-4',
           'openai/gpt-4.1',
           'google/gemini-2.5-pro-preview',
-          'qwen/qwen3-next-80b-a3b-instruct:free',
           'meta-llama/llama-3.3-70b-instruct:free',
           '__custom__',
         ],
         modelLabels: {
-          'qwen/qwen3-next-80b-a3b-instruct': 'Qwen3 Next 80B（付费，默认）',
+          'qwen/qwen3-next-80b-a3b-instruct:free': 'Qwen3 Next 80B（免费，默认）',
+          'qwen/qwen3-next-80b-a3b-instruct': 'Qwen3 Next 80B（付费）',
           'deepseek/deepseek-v4-pro': 'DeepSeek V4 Pro（付费）',
           'deepseek/deepseek-v4-flash': 'DeepSeek V4 Flash（付费）',
           'deepseek/deepseek-chat-v3.1': 'DeepSeek Chat V3.1（付费）',
@@ -92,7 +93,6 @@ class PBLPathBuilder {
           'anthropic/claude-sonnet-4': 'Claude Sonnet 4（付费）',
           'openai/gpt-4.1': 'GPT-4.1（付费）',
           'google/gemini-2.5-pro-preview': 'Gemini 2.5 Pro（付费）',
-          'qwen/qwen3-next-80b-a3b-instruct:free': 'Qwen3 Next 80B（免费）',
           'meta-llama/llama-3.3-70b-instruct:free': 'Llama 3.3 70B（免费）',
         },
       },

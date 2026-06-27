@@ -31,7 +31,7 @@ export async function onRequestGet(context) {
 
   const result = {
     ok: false,
-    pbl_primary: { provider: 'openrouter', model: 'qwen/qwen3-next-80b-a3b-instruct' },
+    pbl_primary: { provider: 'openrouter', model: 'qwen/qwen3-next-80b-a3b-instruct:free' },
     siliconflow: null,
     openrouter: null,
   };
