@@ -16,9 +16,9 @@ export const BACKENDS = {
     extraHeaders: {},
   },
   openrouter: {
-    name: 'OpenRouter Qwen3 Next 80B',
+    name: 'OpenRouter Qwen3 Next 80B（免费）',
     baseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'qwen/qwen3-next-80b-a3b-instruct',
+    defaultModel: 'qwen/qwen3-next-80b-a3b-instruct:free',
     envKey: 'OPENROUTER_KEY',
     extraHeaders: {
       'HTTP-Referer': 'https://www.teachany.cn',
@@ -43,8 +43,8 @@ export function inferBackendIdForModel(model) {
   return 'openrouter';
 }
 
-/** PBL 主模型（OpenRouter 付费档，约 $0.09/1M in） */
-export const PBL_PRIMARY_MODEL = 'qwen/qwen3-next-80b-a3b-instruct';
+/** PBL 主模型（OpenRouter 免费档，有日限流） */
+export const PBL_PRIMARY_MODEL = 'qwen/qwen3-next-80b-a3b-instruct:free';
 
 /**
  * PBL 专用模型链（默认链；前端可选模型时用户指定模型优先）
