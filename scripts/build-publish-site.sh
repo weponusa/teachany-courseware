@@ -81,10 +81,16 @@ fi
 if [ -n "$PBL_MAP_SRC" ] && [ -d "$PBL_MAP_SRC" ]; then
   echo "📍 PBL Map ← $PBL_MAP_SRC"
   rsync -a \
-    --exclude='engine/' \
+    --exclude='engine' \
     --exclude='node_modules/' \
     --exclude='.git/' \
     "$PBL_MAP_SRC/" "$OUT/pbl-map/"
+  # engine 在源目录可能是指向仓库根的 symlink，禁止 rm -rf（会误删站点根文件）
+  if [ -L "$OUT/pbl-map/engine" ]; then
+    rm -f "$OUT/pbl-map/engine"
+  elif [ -d "$OUT/pbl-map/engine" ]; then
+    rm -rf "$OUT/pbl-map/engine"
+  fi
   mkdir -p "$OUT/pbl-map/engine"
   for page in index.html pbl.html tree.html knowledge-map.html path.html my.html; do
     printf '%s\n' \
