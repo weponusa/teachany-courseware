@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>拆解融入演示 — PBL Map</title>
+  <link rel="stylesheet" href="./assets/css/pblmap.css">
+  <style>
+    .demo-hero { padding: 32px 24px; border-bottom: 1px solid var(--border); background: rgba(16,185,129,0.06); }
+    .demo-hero h2 { font-size: 26px; margin-bottom: 8px; }
+    .step-panel { border-left: 3px solid var(--primary); padding-left: 16px; margin: 20px 0; }
+    .step-num { font-size: 11px; font-weight: 700; color: var(--primary); letter-spacing: 0.05em; }
+    .goal-box { font-family: ui-monospace, monospace; font-size: 12px; padding: 14px; border-radius: 8px; background: rgba(15,23,42,0.7); border: 1px solid var(--border); line-height: 1.7; word-break: break-all; }
+    .method-grid { display: grid; gap: 12px; }
+    .method-card { padding: 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(15,23,42,0.45); }
+    .method-card h4 { font-size: 14px; margin-bottom: 6px; }
+    .method-card .tool { font-size: 11px; color: var(--accent); margin-bottom: 6px; }
+    .method-card p { font-size: 12px; color: var(--dim); margin: 4px 0; }
+    .path-flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 16px 0; }
+    .path-node { padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid var(--border); cursor: pointer; transition: border-color 0.15s; }
+    .path-node.matched { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); }
+    .path-node.prerequisite { background: rgba(234,179,8,0.1); border-color: rgba(234,179,8,0.35); }
+    .path-node.active { outline: 2px solid var(--primary); }
+    .path-arrow { color: var(--dimmer); font-size: 10px; }
+    .integration-detail { padding: 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); min-height: 120px; }
+    .integration-detail h4 { font-size: 15px; margin-bottom: 8px; }
+    .integration-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; font-size: 12px; }
+    .integration-grid dt { color: var(--dimmer); margin-bottom: 2px; }
+    .integration-grid dd { color: var(--text); margin: 0 0 8px; }
+    .subject-tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; margin-right: 6px; }
+    .subject-chinese { background: rgba(239,68,68,0.15); color: #fca5a5; }
+    .subject-math { background: rgba(59,130,246,0.15); color: #93c5fd; }
+    .subject-science { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+    .subject-english { background: rgba(168,85,247,0.15); color: #d8b4fe; }
+    .subject-politics { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .subject-info-tech { background: rgba(6,182,212,0.15); color: #67e8f9; }
+    .subject-psychology { background: rgba(236,72,153,0.15); color: #f9a8d4; }
+    .blueprint-section { padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px; }
+    .blueprint-section h5 { font-size: 13px; margin-bottom: 6px; }
+    .outcome-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 12px; }
+    .outcome-box { text-align: center; padding: 12px; border-radius: 8px; background: rgba(15,23,42,0.5); border: 1px solid var(--border); }
+    .outcome-box .n { font-size: 22px; font-weight: 700; color: var(--success); }
+    .outcome-box .l { font-size: 11px; color: var(--dim); }
+    .matrix-mini { font-size: 11px; max-height: 280px; overflow: auto; }
+    .matrix-mini td, .matrix-mini th { padding: 4px 8px; }
+    .cov-core { color: var(--success); }
+    .cov-mention { color: var(--warn); }
+    .cov-gap { color: var(--dimmer); }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <h1>PBL Map · 拆解演示</h1>
+    <nav class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="roadmap.html">6 年推演</a>
+      <a href="plan.html?id=g5-community-map">策划包</a>
+      <a href="demo.html" class="active">拆解演示</a>
+    </nav>
+  </header>
+
+  <section class="demo-hero">
+    <span class="shell-badge" style="background:rgba(16,185,129,0.15);color:var(--success)">G5 下 · 社区小管家</span>
+    <h2 id="demoTitle">社区需求地图</h2>
+    <p style="color:var(--dim);font-size:14px;max-width:720px" id="demoSubtitle">
+      驱动问：<strong style="color:var(--text)">居民最需要哪种设施？</strong>
+      — 演示跨学科拆解如何融入课标、形成可交付成果
+    </p>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" type="button" id="launchTeachAny">🔍 在 TeachAny 中拆解</button>
+      <a class="btn btn-secondary" href="plan.html?id=g5-community-map">📋 完整策划包</a>
+      <a class="btn btn-secondary" href="student.html?plan=g5-community-map">✨ 学生自主入口</a>
+    </div>
+  </section>
+
+  <main class="container">
+    <div class="panel">
+      <div class="panel-title">① 输入：主题壳 + 学生驱动问</div>
+      <div class="step-panel">
+        <div class="step-num">STEP 1 · 合成 goal</div>
+        <p style="font-size:13px;color:var(--dim);margin:8px 0">教师发布主题壳「社区小管家」；学生改写驱动问并填写产出意向。系统合成 TeachAny 拆解用 goal：</p>
+        <div class="goal-box" id="goalBox"></div>
+        <div style="margin-top:12px;font-size:12px;color:var(--dim)" id="studentSpec"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">② 方法：五步拆解融入</div>
+      <div class="method-grid" id="methodGrid"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">③ 成果：跨学科路径（点击节点看融入方式）</div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:8px">
+        <span class="path-node matched" style="cursor:default;padding:2px 8px">■ 核心 matched</span>
+        <span class="path-node prerequisite" style="cursor:default;padding:2px 8px;margin-left:8px">■ 拓展 prerequisite</span>
+        · 一条路径，不是六科作业拼盘
+      </p>
+      <div class="path-flow" id="pathFlow"></div>
+      <div class="integration-detail" id="integrationDetail">
+        <p style="color:var(--dim)">点击上方路径节点，查看该课标点在本项目中的用法与证据</p>
+      </div>
+      <div class="outcome-row" id="pathStats"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">④ 产出蓝图：节点 → 交付物</div>
+      <div id="blueprint"></div>
+      <p style="font-size:12px;color:var(--dim);margin-top:12px" id="finalProducts"></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">⑤ 本子项目节点清单（M/C）</div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:12px" id="auditNote"></p>
+      <div class="matrix-mini" id="matrixMini"></div>
+    </div>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./scripts/pbl-plan-loader.js"></script>
+  <script src="./scripts/pbl-decompose-loader.js"></script>
+  <script>
+    const SUBJECT_CN = {
+      chinese: '语文', math: '数学', science: '科学', english: '英语',
+      politics: '道法', 'info-tech': '信息科技', psychology: '心理',
+    };
+
+    let plan = null;
+    let nodeMap = new Map();
+
+    async function init() {
+      const params = new URLSearchParams(location.search);
+      const projectId = params.get('project');
+      const planId = params.get('id') || 'g5-community-map';
+
+      if (projectId) {
+        const record = await PBLDecomposeLoader.loadDecompose(projectId);
+        plan = PBLDecomposeLoader.asPlanShape(record);
+        document.querySelector('.shell-badge').textContent =
+          `G${record.grade} · ${record.semester === 'autumn' ? '上' : '下'} · ${record.themeChain}`;
+        const planLink = record.planRef
+          ? `<a class="btn btn-secondary" href="plan.html?id=${record.planRef}">📋 策划包</a>`
+          : `<a class="btn btn-secondary" href="pack.html?id=${record.packId}">📦 覆盖包</a>`;
+        document.querySelector('.demo-hero > div').innerHTML = `
+          <button class="btn btn-primary" type="button" id="launchTeachAny">🔍 在 TeachAny 中拆解</button>
+          ${planLink}
+          <a class="btn btn-secondary" href="decompose.html">📚 全部拆解</a>
+        `;
+      } else {
+        plan = await PBLPlanLoader.loadPlan(planId);
+      }
+
+      const demo = plan.decomposeDemo;
+      if (!demo) {
+        document.body.innerHTML = '<main class="container"><div class="panel">此策划包暂无拆解演示数据</div></main>';
+        return;
+      }
+
+      document.title = `${plan.project?.title || plan.title} — 拆解演示`;
+      document.getElementById('demoTitle').textContent = plan.project?.title || plan.title;
+      document.getElementById('goalBox').textContent = demo.teachanyGoal;
+      document.getElementById('studentSpec').innerHTML = `
+        示例学生 <strong>${demo.featuredStudent.name}</strong> ·
+        驱动问：${demo.featuredStudent.drivingQuestion} ·
+        产出：${demo.featuredStudent.outputIntent}
+      `;
+
+      document.getElementById('methodGrid').innerHTML = demo.methodSteps.map(s => `
+        <div class="method-card">
+          <div class="step-num">STEP ${s.step}</div>
+          <h4>${s.title}</h4>
+          <div class="tool">${s.tool}</div>
+          <p>输入：${s.input}</p>
+          <p>输出：${s.output}</p>
+        </div>
+      `).join('');
+
+      demo.samplePath.nodes.forEach(n => nodeMap.set(n.id, n));
+      renderPath(demo.samplePath);
+      renderBlueprint(demo.deliverableBlueprint);
+      renderOutcomes(demo.outcomes, demo.samplePath);
+      renderMatrix(plan);
+      document.getElementById('auditNote').textContent = demo.outcomes.auditNote;
+
+      document.getElementById('launchTeachAny').onclick = () => {
+        if (projectId) {
+          window.location.href = PBLDecomposeLoader.buildTeachAnyUrl({ decomposeDemo: demo, gradeBand: plan.gradeBand });
+          return;
+        }
+        const q = demo.teachanyLaunchQuery || {};
+        const params = new URLSearchParams({
+          goal: q.goal || demo.teachanyGoal,
+          grade: q.grade || 'primary',
+          subject: q.subject || 'cross',
+          deliverable: q.deliverable || 'report',
+        });
+        window.location.href = `./engine/pbl.html?${params.toString()}`;
+      };
+    }
+
+    function subjectClass(sub) {
+      const key = (sub || '').replace('_', '-');
+      return `subject-tag subject-${key}`;
+    }
+
+    function renderPath(samplePath) {
+      const flow = document.getElementById('pathFlow');
+      const parts = [];
+      samplePath.sequence.forEach((id, i) => {
+        const n = nodeMap.get(id);
+        if (!n) return;
+        if (i > 0) parts.push('<span class="path-arrow">→</span>');
+        parts.push(`<span class="path-node ${n.layer}" data-id="${id}" title="${id}">${i + 1}</span>`);
+      });
+      flow.innerHTML = parts.join('');
+      flow.querySelectorAll('.path-node').forEach(el => {
+        el.addEventListener('click', () => showNode(el.dataset.id));
+      });
+      if (samplePath.sequence[0]) showNode(samplePath.sequence[0]);
+    }
+
+    async function showNode(id) {
+      document.querySelectorAll('.path-node').forEach(el => {
+        el.classList.toggle('active', el.dataset.id === id);
+      });
+      const n = nodeMap.get(id);
+      if (!n) return;
+      let meta = { name: id, subject: '' };
+      try {
+        const res = await fetch('./data/cn-k12-nodes.json');
+        const data = await res.json();
+        const hit = (data.nodes || []).find(x => x.id === id);
+        if (hit) meta = hit;
+      } catch (_e) {}
+
+      document.getElementById('integrationDetail').innerHTML = `
+        <span class="${subjectClass(meta.subject)}">${SUBJECT_CN[meta.subject] || meta.subject}</span>
+        <span style="font-size:11px;color:var(--dimmer)">${n.layer === 'matched' ? '核心' : '拓展'}</span>
+        <h4>${meta.name || id}</h4>
+        <div class="integration-grid">
+          <div><dt>项目阶段</dt><dd>${n.phase}</dd></div>
+          <div><dt>学生活动</dt><dd>${n.activity}</dd></div>
+          <div><dt>可核验证据</dt><dd>${n.evidence}</dd></div>
+          <div><dt>产出切片</dt><dd>${n.deliverable}</dd></div>
+        </div>
+      `;
+    }
+
+    function renderBlueprint(bp) {
+      document.getElementById('blueprint').innerHTML = (bp.sections || []).map(s => `
+        <div class="blueprint-section">
+          <h5>${s.name} <span style="color:var(--dim);font-weight:400">· ${s.format}</span></h5>
+          <div style="font-size:11px;color:var(--dim)">节点：${(s.nodes || []).join(' · ')}</div>
+        </div>
+      `).join('');
+      document.getElementById('finalProducts').innerHTML =
+        '<strong>最终交付：</strong>' + (bp.finalProducts || []).join(' · ');
+    }
+
+    function renderOutcomes(outcomes, samplePath) {
+      const ps = outcomes.pathStats || {};
+      const check = samplePath.subjectFloorCheck || {};
+      document.getElementById('pathStats').innerHTML = `
+        <div class="outcome-box"><div class="n">${ps.totalNodes || '—'}</div><div class="l">路径节点</div></div>
+        <div class="outcome-box"><div class="n">${ps.coreMatched || '—'}</div><div class="l">核心 matched</div></div>
+        <div class="outcome-box"><div class="n">${ps.prerequisite || '—'}</div><div class="l">拓展</div></div>
+        <div class="outcome-box"><div class="n">${ps.subjectsSpanned || '—'}</div><div class="l">跨越学科</div></div>
+        <div class="outcome-box"><div class="n">${check.passed ? '✓' : '—'}</div><div class="l">语数科底线</div></div>
+      `;
+    }
+
+    function renderMatrix(plan) {
+      const matrix = plan.expectedCoverageMatrix || {};
+      const stats = plan.expectedStats || {};
+      let rows = Object.entries(matrix).slice(0, 46);
+      fetch('./data/cn-k12-nodes.json').then(r => r.json()).then(data => {
+        const index = new Map((data.nodes || []).map(n => [n.id, n]));
+        let html = `<p style="margin-bottom:8px;font-size:12px">本子项目：M ${stats.plannedCore || stats.mandatory || 0} · C ${stats.plannedMention || stats.certified || 0}</p>`;
+        html += '<table class="coverage-matrix"><thead><tr><th>节点</th><th>学科</th><th>预期</th></tr></thead><tbody>';
+        rows.forEach(([nodeId, entry]) => {
+          const n = index.get(nodeId) || { name: nodeId };
+          const level = entry.gap ? 'gap' : (Object.values(entry).includes('core') || Object.values(entry).includes('M') ? 'core' : 'mention');
+          const cls = level === 'core' ? 'cov-core' : level === 'mention' ? 'cov-mention' : 'cov-gap';
+          html += `<tr><td>${n.name}</td><td>${SUBJECT_CN[n.subject] || n.subject || '—'}</td><td class="${cls}">${level}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        document.getElementById('matrixMini').innerHTML = html;
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

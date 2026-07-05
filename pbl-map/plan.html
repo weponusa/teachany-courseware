@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>策划包 — PBL Map</title>
+  <link rel="stylesheet" href="./assets/css/pblmap.css">
+  <style>
+    .plan-hero { padding: 32px 24px; background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(245,158,11,0.08)); border-bottom: 1px solid var(--border); }
+    .plan-hero h2 { font-size: 28px; margin-bottom: 8px; }
+    .plan-hero .meta { color: var(--dim); font-size: 14px; }
+    .cross-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgba(139,92,246,0.2); color: #c4b5fd; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+    .floor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
+    .floor-item { padding: 10px; border-radius: 8px; background: rgba(15,23,42,0.5); border: 1px solid var(--border); font-size: 12px; }
+    .floor-item strong { display: block; margin-bottom: 4px; }
+    .phase-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .phase-pill { padding: 6px 12px; border-radius: 999px; font-size: 12px; background: rgba(59,130,246,0.12); border: 1px solid var(--border); }
+    .week-row { display: grid; grid-template-columns: 48px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .week-num { font-weight: 700; color: var(--accent); }
+    .dq-cat { margin-bottom: 16px; }
+    .dq-cat h4 { font-size: 13px; color: var(--accent); margin-bottom: 8px; }
+    details.audit-panel summary { cursor: pointer; color: var(--dim); font-size: 13px; }
+    .anchor-list { font-size: 12px; color: var(--dim); margin-top: 12px; }
+    .anchor-list li { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <h1>PBL Map · 策划包</h1>
+    <nav class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="plan.html" class="active">策划包</a>
+      <a href="student.html">学生自主</a>
+      <a href="coverage.html">覆盖看板</a>
+      <a href="class.html">班级差异度</a>
+    </nav>
+  </header>
+
+  <section class="plan-hero" id="planHero">
+    <span class="cross-badge">🔗 跨学科 · 一个项目</span>
+    <h2 id="planTitle">加载中…</h2>
+    <p class="meta" id="planMeta"></p>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" type="button" onclick="startAsStudent()">✨ 开始跨学科探究</button>
+      <button class="btn btn-secondary" type="button" onclick="openDecompose()">🔍 TeachAny 拆解</button>
+      <button class="btn btn-secondary" type="button" onclick="openDemo()">📖 拆解融入演示</button>
+    </div>
+  </section>
+
+  <main class="container">
+    <div class="panel" id="projectPanel">
+      <div class="panel-title">🔗 跨学科项目（课堂唯一实施单元）</div>
+      <p id="projectDesc" style="font-size:14px;color:var(--dim);margin-bottom:12px"></p>
+      <div class="panel-title" style="font-size:13px;margin-top:8px">课标底线（检核用，不是分科作业）</div>
+      <div class="floor-grid" id="subjectFloor"></div>
+      <div class="phase-row" id="phaseRow"></div>
+    </div>
+
+    <div class="stat-row" id="statRow">
+      <div class="stat-box"><div class="num cov-green" id="statCore">—</div><div class="lbl">教研预期·核心</div></div>
+      <div class="stat-box"><div class="num cov-yellow" id="statMention">—</div><div class="lbl">教研预期·拓展</div></div>
+      <div class="stat-box"><div class="num cov-red" id="statGap">—</div><div class="lbl">留常规课</div></div>
+      <div class="stat-box"><div class="num" id="statRate">—</div><div class="lbl">预期核心率</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📅 6 周节奏（全班同一主题，每人不同问法与路径）</div>
+      <div id="weekSchedule"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">💡 驱动问灵感（按探究类型，非分科；须改写）</div>
+      <div id="dqBank"></div>
+    </div>
+
+    <div class="panel">
+      <details class="audit-panel">
+        <summary>📋 教研展开：按学科的覆盖情境参考（auditOnly · 不是六份学生作业）</summary>
+        <ul class="anchor-list" id="anchorList"></ul>
+      </details>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📊 预期 vs 实际覆盖</div>
+      <button class="btn btn-secondary" type="button" onclick="runCompare()">刷新对比</button>
+      <p id="compareSummary" style="margin-top:12px;font-size:13px;color:var(--dim)"></p>
+      <div class="matrix-wrap" id="compareMatrix" style="margin-top:16px;max-height:360px"></div>
+    </div>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./scripts/pbl-primary-coverage.js"></script>
+  <script src="./scripts/pbl-plan-loader.js"></script>
+  <script>
+    let currentPlan = null;
+
+    async function init() {
+      const id = new URLSearchParams(location.search).get('id') || 'g3-our-campus';
+      currentPlan = await PBLPlanLoader.loadPlan(id);
+      renderPlan(currentPlan);
+      runCompare();
+    }
+
+    function renderPlan(plan) {
+      const proj = PBLPlanLoader.getPrimaryProject(plan);
+      document.title = `${plan.title} — PBL Map`;
+      document.getElementById('planTitle').textContent = proj?.title || plan.title;
+      document.getElementById('planMeta').textContent = [
+        plan.themeShell?.duration,
+        plan.themeShell?.tagline,
+      ].filter(Boolean).join(' · ');
+      document.getElementById('projectDesc').textContent =
+        '全班共享主题壳「我们的校园」。每位学生一个驱动问 → 一次 TeachAny 跨学科拆解 → 一条个性化多科路径。';
+
+      const floor = proj?.subjectFloor || {};
+      document.getElementById('subjectFloor').innerHTML = Object.entries(floor).map(([k, v]) => `
+        <div class="floor-item">
+          <strong>${v.label}${v.minCore ? ' ≥' + v.minCore : ' 可选'}</strong>
+          ${v.hint}
+        </div>
+      `).join('');
+
+      document.getElementById('phaseRow').innerHTML = (proj?.implementationPhases || []).map(p =>
+        `<span class="phase-pill">${p.label}</span>`
+      ).join('');
+
+      const stats = PBLPlanLoader.summarizeExpectedMatrix(plan);
+      document.getElementById('statCore').textContent = stats.core;
+      document.getElementById('statMention').textContent = stats.mention;
+      document.getElementById('statGap').textContent = stats.gap;
+      document.getElementById('statRate').textContent = `${stats.coreRate}%`;
+
+      document.getElementById('weekSchedule').innerHTML = (plan.weeklySchedule || []).map(w => `
+        <div class="week-row">
+          <div class="week-num">W${w.week}</div>
+          <div>
+            <strong>${w.focus}</strong>
+            <div style="color:var(--dim);margin-top:4px">教师：${(w.teacher||[]).join('；')}</div>
+            <div style="color:var(--dim);margin-top:2px">学生：${(w.student||[]).join('；')}</div>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('dqBank').innerHTML = (plan.studentDrivingQuestionBank || []).map(cat => `
+        <div class="dq-cat">
+          <h4>${cat.lens || cat.category}</h4>
+          ${(cat.examples||[]).map(q => `<span class="inspiration-chip" title="须改写">${q}</span>`).join('')}
+        </div>
+      `).join('');
+
+      document.getElementById('anchorList').innerHTML = PBLPlanLoader.getCoverageAnchors(plan).map(a => `
+        <li><strong>${a.label || a.title}</strong> — ${(a.nodeIds || a.expectedCoreNodes || []).length} 个参考节点</li>
+      `).join('');
+    }
+
+    async function runCompare() {
+      if (!currentPlan) return;
+      const el = document.getElementById('compareSummary');
+      const wrap = document.getElementById('compareMatrix');
+      try {
+        const cmp = await PBLPlanLoader.comparePlanToActual(currentPlan);
+        el.innerHTML = `预期核心率 <strong>${cmp.expectedStats.coreRate}%</strong> · 实际 <strong>${cmp.actualStats.coverageRate}%</strong> · 对齐 <strong>${cmp.alignmentRate}%</strong> · ${cmp.runsAnalyzed} 条跨学科路径`;
+        let html = '<table class="coverage-matrix"><thead><tr><th class="node-col">节点</th><th>预期</th><th>实际</th></tr></thead><tbody>';
+        cmp.rows.slice(0, 40).forEach(r => {
+          html += `<tr><td class="node-col">${r.nodeName}</td><td>${r.expected}</td><td>${r.actual}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+      } catch (e) { el.textContent = e.message; }
+    }
+
+    function startAsStudent() {
+      sessionStorage.setItem('pblmap_active_plan', JSON.stringify({ id: currentPlan.id }));
+      location.href = 'student.html?plan=' + currentPlan.id;
+    }
+
+    function openDecompose() {
+      location.href = 'engine/pbl.html';
+    }
+
+    function openCoverage() {
+      location.href = `coverage.html?mode=map&grade=${currentPlan?.grade || 3}`;
+    }
+
+    function openDemo() {
+      if (currentPlan?.decomposeDemo) {
+        location.href = `demo.html?id=${currentPlan.id}`;
+      } else {
+        alert('此策划包暂无拆解演示');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
