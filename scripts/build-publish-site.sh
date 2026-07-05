@@ -67,6 +67,37 @@ if [ -f "$ROOT/_redirects" ]; then
   cp "$ROOT/_redirects" "$OUT/"
 fi
 
+# 8. K12 PBL Map（pbl-map/ 目录或 ../finalpbl）
+PBL_MAP_SRC="${PBL_MAP_SRC:-}"
+if [ -z "$PBL_MAP_SRC" ]; then
+  if [ -L "$ROOT/pbl-map" ]; then
+    PBL_MAP_SRC="$(cd "$ROOT/pbl-map" && pwd -P 2>/dev/null || true)"
+  elif [ -d "$ROOT/pbl-map" ]; then
+    PBL_MAP_SRC="$ROOT/pbl-map"
+  elif [ -d "$ROOT/../finalpbl" ]; then
+    PBL_MAP_SRC="$(cd "$ROOT/../finalpbl" && pwd)"
+  fi
+fi
+if [ -n "$PBL_MAP_SRC" ] && [ -d "$PBL_MAP_SRC" ]; then
+  echo "📍 PBL Map ← $PBL_MAP_SRC"
+  rsync -a \
+    --exclude='engine/' \
+    --exclude='node_modules/' \
+    --exclude='.git/' \
+    "$PBL_MAP_SRC/" "$OUT/pbl-map/"
+  mkdir -p "$OUT/pbl-map/engine"
+  for page in index.html pbl.html tree.html knowledge-map.html path.html my.html; do
+    printf '%s\n' \
+      '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">' \
+      "<script>location.replace('../../${page}'+location.search+location.hash);</script>" \
+      "<link rel=\"canonical\" href=\"../../${page}\"></head>" \
+      "<body><p>跳转中… <a href=\"../../${page}\">TeachAny</a></p></body></html>" \
+      > "$OUT/pbl-map/engine/$page"
+  done
+else
+  echo "⚠️ PBL Map 源目录未找到，跳过 pbl-map/"
+fi
+
 FILE_COUNT="$(find "$OUT" -type f | wc -l | tr -d ' ')"
 SIZE="$(du -sh "$OUT" | cut -f1)"
 
