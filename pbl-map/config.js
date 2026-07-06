@@ -47,4 +47,11 @@
   global.resolveEngineScript = function resolveEngineScript(name) {
     return `${global.PBL_MAP_CONFIG.scriptsBase}/${name}`;
   };
+
+  /** 本地 ./engine/…；发布在 /pbl-map/ 时 ../index.html、../pbl.html */
+  global.pblMapEngineUrl = function pblMapEngineUrl(page) {
+    const file = page || 'index.html';
+    const base = global.PBL_MAP_CONFIG?.engineBase || './engine';
+    return `${base}/${file}`.replace(/([^:]\/)\/+/g, '$1');
+  };
 })(typeof window !== 'undefined' ? window : globalThis);

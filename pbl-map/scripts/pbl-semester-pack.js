@@ -112,7 +112,8 @@
       subject: 'cross',
       deliverable: 'report',
     });
-    return `./engine/pbl.html?${params.toString()}`;
+    const base = typeof pblMapEngineUrl === 'function' ? pblMapEngineUrl('pbl.html') : './engine/pbl.html';
+    return `${base}?${params.toString()}`;
   }
 
   global.PBLSemesterPack = {
