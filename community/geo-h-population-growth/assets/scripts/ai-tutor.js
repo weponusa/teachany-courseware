@@ -24,7 +24,37 @@
   'use strict';
 
   // 版本标识 - 加载时立即打印到 console，方便排查浏览器缓存问题
-  console.log('%c[TeachAnyTutor] v8.0.0 loaded - default: OpenRouter free (built-in key)', 'color:#10b981;font-weight:bold;');
+  console.log('%c[TeachAnyTutor] v8.1.1 loaded - default: TeachAny server proxy (Qwen only)', 'color:#10b981;font-weight:bold;');
+
+  const DEPRECATED_FREE_MODELS = new Set([
+    'z-ai/glm-4.5-air:free',
+  ]);
+  const PRIMARY_FREE_MODEL = 'qwen/qwen3-next-80b-a3b-instruct:free';
+  const SERVER_PROXY_BASE = '/api/llm';
+  const LEGACY_BUILTIN_KEY_PREFIXES = [
+    'sk-or-v1-a4d900',
+    'sk-or-v1-1dd402',
+    'sk-or-v1-8945b6935',
+    'sk-or-v1-55b41815f',
+  ];
+
+  function isServerProxy(cfg) {
+    if (!cfg) return false;
+    if (cfg.serverProxy) return true;
+    const base = String(cfg.baseUrl || '');
+    return base.includes('/api/llm');
+  }
+
+  function resolveServerEndpoint(baseUrl) {
+    const base = String(baseUrl || SERVER_PROXY_BASE).trim().replace(/\/$/, '');
+    return /\/chat\/completions$/i.test(base) ? base : `${base}/chat/completions`;
+  }
+
+  function normalizeModelId(model) {
+    const m = String(model || '').trim();
+    if (!m || DEPRECATED_FREE_MODELS.has(m)) return PRIMARY_FREE_MODEL;
+    return m;
+  }
 
   // ───────────────────────────────────────────────────────
   // 1. 配置与默认值
@@ -33,52 +63,33 @@
   const HISTORY_KEY = 'teachany_tutor_history';
   const LANG_KEY = 'teachany_tutor_lang';
 
-  // 内置 OpenRouter Key（TeachAny 社区公共 Key，用于免费模型）
-  // 注意：此 Key 仅限 TeachAny 课件 AI 学伴使用，免费模型不扣费
-  // 拆分存储以绕过 GitHub Push Protection 扫描
-  const _k1 = 'sk-or-v1-8945b6935';
-  const _k2 = '7d55d9a486f9d4134f6';
-  const _k3 = '24533f9ae22173c0af4';
-  const _k4 = '446ce737ea2438b07';
-  const BUILTIN_OPENROUTER_KEY = _k1 + _k2 + _k3 + _k4;
-
-  // 默认配置：OpenRouter 免费模型（内置 Key，开箱即用）
-  // 2026-06: Pollinations 全面 429 "Queue full"，切换到 OpenRouter
+  // 默认：TeachAny 服务端中转（Key 仅存 Cloudflare，浏览器不接触）
   const DEFAULTS = {
-    baseUrl: 'https://openrouter.ai/api/v1',
-    apiKey: BUILTIN_OPENROUTER_KEY,
-    model: 'z-ai/glm-4.5-air:free',
-    noAuth: false,
-    providerId: 'openrouter-free'
+    baseUrl: SERVER_PROXY_BASE,
+    apiKey: '',
+    model: PRIMARY_FREE_MODEL,
+    noAuth: true,
+    serverProxy: true,
+    backendId: 'openrouter',
+    providerId: 'teachany-server',
   };
 
-  // 429/503 自动降级模型列表（按优先级）
-  const FALLBACK_MODELS = [
-    'z-ai/glm-4.5-air:free',
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'qwen/qwen3-next-80b-a3b-instruct:free',
-    'tencent/hy3-preview:free'
-  ];
+  // TeachAny 服务端默认仅使用千问免费模型（不自动切换 Llama/DeepSeek 等）
+  const SERVER_PROXY_MAX_RETRIES = 2;
 
   // 服务商预设（配置弹窗一键填表）
   // 每个预设包含 baseUrl + 推荐模型 + 该服务商的可选模型列表
   const PRESETS = [
     {
-      id: 'openrouter-free',
-      name: '🆓 OpenRouter 免费模型（默认 · 内置 Key）',
-      baseUrl: 'https://openrouter.ai/api/v1',
-      model: 'z-ai/glm-4.5-air:free',
-      models: [
-        'z-ai/glm-4.5-air:free',
-        'meta-llama/llama-3.3-70b-instruct:free',
-        'qwen/qwen3-next-80b-a3b-instruct:free',
-        'tencent/hy3-preview:free',
-        'openai/gpt-oss-120b:free',
-        'openai/gpt-oss-20b:free'
-      ],
-      keyHint: '已内置社区 Key，可直接使用；高峰期自动重试降级。',
-      noAuth: false,
-      builtinKey: BUILTIN_OPENROUTER_KEY
+      id: 'teachany-server',
+      name: '🌐 TeachAny 服务端（默认 · 免 Key）',
+      baseUrl: SERVER_PROXY_BASE,
+      model: PRIMARY_FREE_MODEL,
+      models: [PRIMARY_FREE_MODEL],
+      keyHint: '由 www.teachany.cn 服务端转发千问模型，API Key 不写入浏览器。',
+      noAuth: true,
+      serverProxy: true,
+      backendId: 'openrouter',
     },
     {
       id: 'pollinations',
@@ -208,17 +219,17 @@
       contextLabel: '当前学习：',
       contextLoading: '定位中...',
       configTitle: '🎓 启用你的 AI 学伴',
-      configSubtitle: '默认使用免费免 Key 接口，可直接对话。也可以切换到 OpenRouter、DeepSeek 等服务商并填写自己的 Key。',
+      configSubtitle: '默认经 TeachAny 服务端转发，浏览器不保存 API Key。也可切换到 OpenRouter、DeepSeek 等并填写自己的 Key。',
       presetLabel: '① 选择 AI 服务商（已预填 Base URL 和模型列表）',
       baseUrlLabel: 'API Base URL（高级，一般无需修改）',
       apiKeyLabel: '③ API Key（默认服务商免填）',
-      apiKeyPlaceholder: '默认 Pollinations 免 Key；其他服务商填 sk-...',
+      apiKeyPlaceholder: 'TeachAny 默认免 Key；其他服务商填 sk-...',
       modelLabel: '② 选择模型（可选自定义）',
       modelPlaceholder: '输入自定义模型名',
       customModelTitle: '改用自定义模型名',
       customModelOption: '✏️ 自定义模型名…',
       advancedLabel: '⚙️ 高级设置（修改 Base URL）',
-      privacy: '🔒 默认免 Key，不会保存密钥。若你切换到其他服务商，API Key 仅保存在此浏览器的 localStorage。TeachAny 不会收集或上传你的 Key。',
+      privacy: '🔒 默认经服务端转发，浏览器不接触 API Key。若切换到其他服务商，Key 仅保存在此浏览器的 localStorage。',
       cancel: '取消',
       save: '保存并开始对话',
       settings: '⚙️',
@@ -241,17 +252,17 @@
       contextLabel: 'Studying: ',
       contextLoading: 'Locating...',
       configTitle: '🎓 Set Up Your AI Tutor',
-      configSubtitle: 'The default free no-key provider works out of the box. You can still switch to OpenRouter, DeepSeek, or a custom provider with your own key.',
+      configSubtitle: 'The default routes through TeachAny servers — no API key in the browser. You can still switch to OpenRouter, DeepSeek, or a custom provider with your own key.',
       presetLabel: '① Choose AI Provider (Base URL & model list pre-filled)',
       baseUrlLabel: 'API Base URL (advanced, usually no need to change)',
       apiKeyLabel: '③ API Key (not needed for default provider)',
-      apiKeyPlaceholder: 'Default Pollinations needs no key; paste sk-... for other providers',
+      apiKeyPlaceholder: 'TeachAny default needs no key; paste sk-... for other providers',
       modelLabel: '② Choose Model (or customize)',
       modelPlaceholder: 'Enter custom model name',
       customModelTitle: 'Switch to custom model name',
       customModelOption: '✏️ Custom model name…',
       advancedLabel: '⚙️ Advanced (change Base URL)',
-      privacy: '🔒 The default provider needs no API key. If you switch providers, your key is stored only in this browser\'s localStorage. TeachAny never collects or uploads your key.',
+      privacy: '🔒 By default, requests go through TeachAny servers — no API key in the browser. If you switch providers, your key is stored only in this browser\'s localStorage.',
       cancel: 'Cancel',
       save: 'Save & Start',
       settings: '⚙️',
@@ -296,34 +307,49 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      // 旧失效内置 Key / Pollinations 默认配置迁移 → 触发回退到新 DEFAULTS
-      if (parsed.apiKey && (String(parsed.apiKey).startsWith('sk-or-v1-a4d900') || String(parsed.apiKey).startsWith('sk-or-v1-1dd402'))) return null;
-      // 旧 Pollinations 默认配置迁移
+      // 旧失效内置 Key / Pollinations / 前端直连 OpenRouter 默认 → 迁移到服务端中转
+      if (parsed.apiKey && LEGACY_BUILTIN_KEY_PREFIXES.some(p => String(parsed.apiKey).startsWith(p))) return null;
       if (parsed.baseUrl && parsed.baseUrl.includes('pollinations.ai')) return null;
-      const preset = PRESETS.find(p => p.baseUrl && parsed.baseUrl && p.baseUrl === parsed.baseUrl);
+      if (parsed.baseUrl && parsed.baseUrl.includes('openrouter.ai') && !parsed.apiKey) return null;
+      const preset = PRESETS.find(p =>
+        (p.serverProxy && (parsed.serverProxy || String(parsed.baseUrl || '').includes('/api/llm')))
+        || (p.baseUrl && parsed.baseUrl && p.baseUrl === parsed.baseUrl)
+      );
       if (!parsed.apiKey && !(preset && preset.noAuth)) return null;
       // v7.1：自检 model 字段合法性，防止旧版本把 PRESETS 的 name（带空格/括号）误存为 model
       if (parsed.model && /[\s()（）：，,]/.test(parsed.model)) {
         console.warn('[TeachAnyTutor] Detected invalid model id in localStorage, falling back to DEFAULTS:', parsed.model);
         parsed.model = DEFAULTS.model;
       }
-      return Object.assign({}, DEFAULTS, parsed, { noAuth: !!(preset && preset.noAuth) });
+      if (parsed.model && DEPRECATED_FREE_MODELS.has(parsed.model)) {
+        console.warn('[TeachAnyTutor] Migrating deprecated free model:', parsed.model, '→', PRIMARY_FREE_MODEL);
+        parsed.model = PRIMARY_FREE_MODEL;
+      }
+      parsed.model = normalizeModelId(parsed.model);
+      const merged = Object.assign({}, DEFAULTS, parsed, { noAuth: !!(preset && preset.noAuth) });
+      if (isServerProxy(merged)) {
+        merged.apiKey = '';
+        merged.noAuth = true;
+        merged.serverProxy = true;
+        merged.backendId = merged.backendId || 'openrouter';
+      }
+      return merged;
     } catch (e) {
       return null;
     }
   }
 
-  /** 获取生效配置：用户配置优先，否则用 DEFAULTS；OpenRouter-free 自动填充内置 Key */
+  /** 获取生效配置：用户配置优先，否则用 DEFAULTS */
   function getEffectiveConfig() {
     const cfg = readUserConfig() || Object.assign({}, DEFAULTS);
-    // 如果是 OpenRouter 免费模型且用户没填 Key，自动使用内置 Key
-    if (cfg.baseUrl && cfg.baseUrl.includes('openrouter.ai') && !cfg.apiKey) {
-      cfg.apiKey = BUILTIN_OPENROUTER_KEY;
-      cfg.noAuth = false;
-    }
-    // 如果用了内置 Key，标记 providerId
-    if (cfg.apiKey === BUILTIN_OPENROUTER_KEY) {
-      cfg.providerId = 'openrouter-free';
+    cfg.model = normalizeModelId(cfg.model);
+    if (isServerProxy(cfg)) {
+      cfg.apiKey = '';
+      cfg.noAuth = true;
+      cfg.serverProxy = true;
+      cfg.backendId = cfg.backendId || 'openrouter';
+      cfg.baseUrl = cfg.baseUrl || SERVER_PROXY_BASE;
+      cfg.model = PRIMARY_FREE_MODEL;
     }
     return cfg;
   }
@@ -337,9 +363,11 @@
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       baseUrl: cfg.baseUrl || DEFAULTS.baseUrl,
-      apiKey: cfg.apiKey || '',
+      apiKey: (cfg.noAuth || isServerProxy(cfg)) ? '' : (cfg.apiKey || ''),
       model: modelToSave,
-      noAuth: !!cfg.noAuth
+      noAuth: !!cfg.noAuth,
+      serverProxy: !!cfg.serverProxy || isServerProxy(cfg),
+      backendId: cfg.backendId || (isServerProxy(cfg) ? 'openrouter' : ''),
     }));
   }
 
@@ -645,7 +673,10 @@
     const presetOptions = PRESETS.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
 
     // 根据 initial.baseUrl 自动猜出当前预设
-    const guessedPreset = PRESETS.find(p => p.baseUrl && initial.baseUrl && p.baseUrl === initial.baseUrl) || PRESETS[0];
+    const guessedPreset = PRESETS.find(p =>
+      (p.serverProxy && isServerProxy(initial))
+      || (p.baseUrl && initial.baseUrl && p.baseUrl === initial.baseUrl)
+    ) || PRESETS[0];
 
     mask.innerHTML = `
       <div class="ai-tutor-config" role="dialog" aria-labelledby="aitutor-title">
@@ -759,7 +790,9 @@
         baseUrl: (nodeBaseUrl.value || DEFAULTS.baseUrl).trim().replace(/\/$/, ''),
         apiKey: preset.noAuth ? '' : apiKey,
         model: model || DEFAULTS.model,
-        noAuth: !!preset.noAuth
+        noAuth: !!preset.noAuth,
+        serverProxy: !!preset.serverProxy,
+        backendId: preset.backendId || '',
       };
       saveUserConfig(cfg);
       mask.remove();
@@ -814,16 +847,20 @@
   // ───────────────────────────────────────────────────────
   // 7. API 调用（OpenAI 兼容，支持流式）
   // ───────────────────────────────────────────────────────
-  async function callChatAPI(cfg, messages, onDelta, retried = false) {
+  async function callChatAPI(cfg, messages, onDelta, retryCount = 0) {
+    const useServerProxy = isServerProxy(cfg);
+    if (useServerProxy) cfg = { ...cfg, model: PRIMARY_FREE_MODEL };
     // 防御：apiKey 含全角空格、Base URL 含中文等都会导致 fetch 抛 TypeError
     const cleanKey = String(cfg.apiKey || '').trim().replace(/[\u3000\s]+/g, '');
     const cleanBaseUrl = String(cfg.baseUrl || '').trim().replace(/\/$/, '');
     // 拆分 URL path 和 query string，避免 ?referrer=xxx 干扰路径判断
     const [urlPath, urlQuery] = cleanBaseUrl.split('?');
     const qs = urlQuery ? '?' + urlQuery : '';
-    const endpoint = /\/chat\/completions$/i.test(urlPath)
-      ? cleanBaseUrl                              // 已含完整路径
-      : urlPath + '/chat/completions' + qs;       // 追加路径，保留 query string
+    const endpoint = useServerProxy
+      ? resolveServerEndpoint(cleanBaseUrl)
+      : (/\/chat\/completions$/i.test(urlPath)
+        ? cleanBaseUrl
+        : urlPath + '/chat/completions' + qs);
 
     // 工具函数：把任何字符串安全转换为 ISO-8859-1 兼容的 ASCII（浏览器 fetch header 的硬性要求）
     const toAsciiSafe = (s, fallback) => {
@@ -850,8 +887,12 @@
       'Content-Type': 'application/json'
     };
     if (!cfg.noAuth && cleanKey) headers['Authorization'] = 'Bearer ' + cleanKey;
-    // OpenRouter 推荐附带 HTTP-Referer 和 X-OpenRouter-Title（用于排行榜，可选但稳定）
-    if (cleanBaseUrl.includes('openrouter.ai')) {
+    if (useServerProxy) {
+      headers['X-Backend'] = cfg.backendId || 'openrouter';
+      try {
+        headers['X-Title'] = toAsciiSafe(document.title, 'TeachAny Course').slice(0, 100);
+      } catch (e) { /* ignore */ }
+    } else if (cleanBaseUrl.includes('openrouter.ai')) {
       try {
         headers['HTTP-Referer'] = toAsciiSafe(location.origin, 'https://teachany.app');
         const safeTitle = toAsciiSafe(document.title, 'TeachAny Course').slice(0, 100);
@@ -910,20 +951,29 @@
       let errJson;
       try { errJson = await resp.json(); } catch (e) {}
 
-      // 429/503 自动重试 + 模型降级（仅 OpenRouter 免费模型）
-      if ((resp.status === 429 || resp.status === 503) && cleanBaseUrl.includes('openrouter.ai') && !retried) {
-        const retryAfter = errJson?.error?.metadata?.retry_after_seconds || 16;
-        const currentModel = cfg.model || DEFAULTS.model;
-        const nextModel = FALLBACK_MODELS.find(m => m !== currentModel) || FALLBACK_MODELS[0];
+      // 429/503：同模型重试（服务端仅千问，不切换其他免费模型）
+      const errMsg = String(errJson?.error?.message || '');
+      const modelUnavailable = resp.status === 404
+        || /unavailable for free|model.*not found|does not exist/i.test(errMsg);
+      const canRetry = (resp.status === 429 || resp.status === 503
+        || (modelUnavailable && useServerProxy))
+        && (useServerProxy || cleanBaseUrl.includes('openrouter.ai'))
+        && retryCount < (useServerProxy ? SERVER_PROXY_MAX_RETRIES : 1);
+      if (canRetry) {
+        const retryAfter = errJson?.error?.metadata?.retry_after_seconds
+          || (resp.status === 429 ? 16 : 2);
 
-        console.warn(`[TeachAnyTutor] ${resp.status}, retrying in ${retryAfter}s with model ${nextModel}`);
-        if (onDelta) onDelta(getLang() === 'en'
-          ? `⏳ Rate limited, auto-retrying with ${nextModel} in ${retryAfter}s...`
-          : `⏳ 请求过快，${retryAfter} 秒后自动切换 ${nextModel} 重试...`);
+        console.warn(`[TeachAnyTutor] ${resp.status}, retrying in ${retryAfter}s (attempt ${retryCount + 1})`);
+        if (onDelta) onDelta(useServerProxy
+          ? (getLang() === 'en'
+            ? `⏳ Qwen is busy, retrying in ${retryAfter}s...`
+            : `⏳ 千问模型繁忙，${retryAfter} 秒后重试...`)
+          : (getLang() === 'en'
+            ? `⏳ Model busy, retrying in ${retryAfter}s...`
+            : `⏳ 当前模型繁忙，${retryAfter} 秒后重试...`));
 
         await new Promise(r => setTimeout(r, Math.min(retryAfter, 20) * 1000));
-        const retryCfg = { ...cfg, model: nextModel };
-        return callChatAPI(retryCfg, messages, onDelta, true);
+        return callChatAPI(cfg, messages, onDelta, retryCount + 1);
       }
 
       let errText = (getLang() === 'en' ? 'Request failed (' : '请求失败（') + resp.status + (getLang() === 'en' ? ')' : '）');
@@ -1045,6 +1095,14 @@
         if (parsed && parsed.model && /[\s()（）：，,]/.test(parsed.model)) {
           console.warn('[TeachAnyTutor v7.1] Migrating broken model id:', parsed.model, '→', DEFAULTS.model);
           parsed.model = DEFAULTS.model;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        } else if (parsed && parsed.model && isServerProxy(parsed) && parsed.model !== PRIMARY_FREE_MODEL) {
+          console.warn('[TeachAnyTutor v8.1.1] Server proxy locked to Qwen:', parsed.model, '→', PRIMARY_FREE_MODEL);
+          parsed.model = PRIMARY_FREE_MODEL;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        } else if (parsed && parsed.model && DEPRECATED_FREE_MODELS.has(parsed.model)) {
+          console.warn('[TeachAnyTutor v8.0.1] Migrating deprecated model:', parsed.model, '→', PRIMARY_FREE_MODEL);
+          parsed.model = PRIMARY_FREE_MODEL;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
         }
       }

@@ -22,7 +22,7 @@ const BACKENDS = {
   openrouter: {
     name: 'OpenRouter 免费模型',
     baseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'z-ai/glm-4.5-air:free',
+    defaultModel: 'qwen/qwen3-next-80b-a3b-instruct:free',
     secretKey: 'OPENROUTER_KEY',
     free: true,
     extraHeaders: {
