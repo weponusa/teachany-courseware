@@ -26,6 +26,12 @@ jobs:
       - name: Build publish directory
         run: bash scripts/build-publish-site.sh _site
 
+      - name: Verify PBL Map in publish output
+        run: |
+          test -f _site/pbl-map/index.html || { echo '❌ _site/pbl-map/index.html missing'; exit 1; }
+          test -f _site/pbl-map/config.js || { echo '❌ _site/pbl-map/config.js missing'; exit 1; }
+          echo "✅ pbl-map present ($(find _site/pbl-map -type f | wc -l | tr -d ' ') files)"
+
       # 增量部署到 gh-pages：先 clone 现有分支，rsync 更新，只 push 差异
       - name: Deploy to gh-pages (incremental)
         run: |
