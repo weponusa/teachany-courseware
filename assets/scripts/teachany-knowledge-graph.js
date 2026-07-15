@@ -51,7 +51,9 @@
     return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
   }
 
-  var COURSEWARE_BASE_URL = "https://www.teachany.cn";
+  var COURSEWARE_BASE_URL = (typeof location !== 'undefined' && /teachany\.cn$/i.test(String(location.hostname || '')))
+    ? location.origin
+    : 'https://www.teachany.cn';
 
   function coursewareUrl(course) {
     if (!course || !course.path) return null;
@@ -169,28 +171,51 @@
     }
     push(centerId, "self");
     (center.prerequisites || []).forEach(function (id) { push(id, "prereq"); });
+
+    // 增强层：hard/soft 前置进入邻域可视化（soft 仅展示，不改变课标必选逻辑）
+    var neo = window.TeachAnyNodeEnrichment;
+    var enriched = neo && typeof neo.get === "function" ? neo.get(centerId) : null;
+    if (enriched && Array.isArray(enriched.prereqs_enriched)) {
+      enriched.prereqs_enriched.forEach(function (e) {
+        if (e && e.id) push(e.id, "prereq");
+      });
+    }
+
     (center.next || []).forEach(function (id) { push(id, "next"); });
     (center.extends || []).forEach(function (id) { push(id, "extend"); });
     (center.siblings || []).slice(0, 6).forEach(function (id) { push(id, "sibling"); });
 
     var arr = Array.from(picked.values());
     var links = [];
+    var linkKey = {};
+    function addLink(source, target, type) {
+      var key = source + ">" + target + ">" + type;
+      if (linkKey[key]) return;
+      linkKey[key] = true;
+      links.push({ source: source, target: target, type: type });
+    }
     arr.forEach(function (n) {
       (n.prerequisites || []).forEach(function (pid) {
         if (picked.has(pid)) {
-          var tgtLayer = n._layer;
-          var type = tgtLayer === "self" || tgtLayer === "next" ? "prereq" : "prereq";
-          if (n._layer === "self") type = "prereq";
-          else if (n._layer === "next") type = "next";
-          links.push({ source: pid, target: n.id, type: type });
+          var type = "prereq";
+          if (n._layer === "next") type = "next";
+          addLink(pid, n.id, type);
         }
       });
     });
+    if (enriched && Array.isArray(enriched.prereqs_enriched)) {
+      enriched.prereqs_enriched.forEach(function (e) {
+        if (e && e.id && picked.has(e.id)) addLink(e.id, centerId, "prereq");
+      });
+    }
     // center <-> siblings
     arr.forEach(function (n) {
-      if (n._layer === "sibling") links.push({ source: centerId, target: n.id, type: "sibling" });
-      if (n._layer === "extend") links.push({ source: centerId, target: n.id, type: "extend" });
+      if (n._layer === "sibling") addLink(centerId, n.id, "sibling");
+      if (n._layer === "extend") addLink(centerId, n.id, "extend");
     });
+    if (neo && typeof neo.annotateLinks === "function") {
+      neo.annotateLinks(centerId, links);
+    }
     return { center: center, nodes: arr, links: links };
   }
 
@@ -248,7 +273,9 @@
     // 如果新旧图谱节点集合一致，只更新高亮和详情面板，不清除重建
     var oldNodeIds = existingGraph ? existingGraph.nodes.map(function(n){ return n.id; }).sort().join(',') : '';
     var newNodeIds = graph.nodes.map(function(n){ return n.id; }).sort().join(',');
-    var sameGraph = oldNodeIds && oldNodeIds === newNodeIds;
+    var oldCenterId = existingGraph ? (existingGraph.nodes.find(function(n){ return n._layer === 'self'; }) || {}).id : '';
+    var newCenterId = (graph.nodes.find(function(n){ return n._layer === 'self'; }) || {}).id;
+    var sameGraph = oldNodeIds && oldNodeIds === newNodeIds && oldCenterId === newCenterId;
 
     if (sameGraph) {
       // 增量更新：只改高亮状态，不重建SVG
@@ -336,10 +363,12 @@
       var src = graph.nodes.find(function (n) { return n.id === l.source; });
       var tgt = graph.nodes.find(function (n) { return n.id === l.target; });
       if (!src || !tgt) return;
+      var soft = l.strength === "soft";
       var line = h("line", {
-        class: "tkg-link link-" + l.type,
+        class: "tkg-link link-" + l.type + (soft ? " strength-soft" : ""),
         x1: src.x, y1: src.y, x2: tgt.x, y2: tgt.y,
-        "marker-end": "url(#tkg-arrow-" + l.type + ")"
+        "marker-end": "url(#tkg-arrow-" + l.type + ")",
+        "stroke-dasharray": soft ? "5 4" : undefined
       });
       line.__data = l;
       linkGroup.appendChild(line);
@@ -564,6 +593,20 @@
       panel.appendChild(ul);
     }
     if (node.textbook_chapter) panel.appendChild(h("div", { class: "meta", text: "教材：" + node.textbook_chapter }));
+
+    // 增强层：错因 / 必备前置提示
+    try {
+      var neoE = window.TeachAnyNodeEnrichment;
+      var entry = neoE && typeof neoE.get === "function" ? neoE.get(nodeId) : null;
+      if (entry && entry.misconceptions && entry.misconceptions.length) {
+        panel.appendChild(h("div", { class: "meta", text: "错因诊断" }));
+        var mul = h("ul");
+        entry.misconceptions.slice(0, 3).forEach(function (m) {
+          mul.appendChild(h("li", { text: (m.cue || "") + (m.diagnosis ? " — " + m.diagnosis : "") }));
+        });
+        panel.appendChild(mul);
+      }
+    } catch (_) { /* ignore */ }
 
     if ((node.courses || []).length) {
       panel.appendChild(h("div", { class: "meta", text: "可跳转课件" }));
@@ -864,10 +907,33 @@
     }
   }
 
+  function ensureEnrichment() {
+    if (window.TeachAnyNodeEnrichment) return window.TeachAnyNodeEnrichment.load();
+    return new Promise(function (resolve) {
+      var existing = document.querySelector("script[data-teachany-neo]");
+      if (existing) {
+        existing.addEventListener("load", function () {
+          (window.TeachAnyNodeEnrichment ? window.TeachAnyNodeEnrichment.load() : Promise.resolve(null)).then(resolve);
+        });
+        return;
+      }
+      var s = document.createElement("script");
+      s.src = "/assets/scripts/teachany-node-enrichment.js?v=neo-1";
+      s.async = true;
+      s.dataset.teachanyNeo = "1";
+      s.onload = function () {
+        (window.TeachAnyNodeEnrichment ? window.TeachAnyNodeEnrichment.load() : Promise.resolve(null)).then(resolve);
+      };
+      s.onerror = function () { resolve(null); };
+      document.head.appendChild(s);
+    });
+  }
+
   function init() {
     var targets = document.querySelectorAll("[data-teachany-kg]");
     if (!targets.length) return;
-    loadManifest().then(function (m) {
+    Promise.all([loadManifest(), ensureEnrichment().catch(function () { return null; })]).then(function (pair) {
+      var m = pair[0];
       targets.forEach(function (el) { mount(el, m); });
     }).catch(function (err) {
       targets.forEach(function (el) {
