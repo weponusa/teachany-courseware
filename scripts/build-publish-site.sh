@@ -18,6 +18,7 @@ COMMUNITY_EXCLUDES=(
 )
 
 echo "📦 Building publish site → $OUT"
+bash "$ROOT/scripts/verify-root-pages.sh"
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
@@ -45,6 +46,14 @@ rsync -a \
   --exclude='*' \
   "$ROOT/scripts/" "$OUT/scripts/"
 
+# 4b. learning-path.js 双份须一致（index 用 scripts/，path 用 assets/scripts/）
+LP_A="$ROOT/scripts/learning-path.js"
+LP_B="$ROOT/assets/scripts/learning-path.js"
+if [ -f "$LP_A" ] && [ -f "$LP_B" ] && ! cmp -s "$LP_A" "$LP_B"; then
+  echo "⚠️  learning-path.js 不一致，同步 scripts/ → assets/scripts/"
+  cp "$LP_A" "$LP_B"
+fi
+
 # 5. 根级页面与索引
 touch "$OUT/.nojekyll"
 for f in \
@@ -53,7 +62,19 @@ for f in \
   my.html license.html imported-course.html reading.html
 do
   if [ -f "$ROOT/$f" ]; then
+    if [[ "$f" == *.html ]] && grep -q "location.replace('../../" "$ROOT/$f" 2>/dev/null; then
+      echo "❌ $f 是 pbl-map/engine 跳转桩，不能作为站点根页面发布"
+      exit 1
+    fi
     cp "$ROOT/$f" "$OUT/"
+  fi
+done
+
+# 5b. 发布目录根页面不得含 pbl-map/engine 跳转桩
+for f in tree.html knowledge-map.html path.html my.html pbl.html index.html commercial-license.html; do
+  if [ -f "$OUT/$f" ] && grep -q "location.replace('../../" "$OUT/$f" 2>/dev/null; then
+    echo "❌ 发布目录 $f 含跳转桩，构建中止"
+    exit 1
   fi
 done
 

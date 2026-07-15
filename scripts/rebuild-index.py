@@ -954,6 +954,7 @@ def main():
         'build-nodes-selector.py',
         'build-nodes-metadata.py',
         'sync-node-index-courses.py',
+        'build-node-enrichment-overlay.py',
     ]:
         helper_path = Path('scripts') / helper
         if not helper_path.exists():

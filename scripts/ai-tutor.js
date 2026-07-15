@@ -24,7 +24,7 @@
   'use strict';
 
   // 版本标识 - 加载时立即打印到 console，方便排查浏览器缓存问题
-  console.log('%c[TeachAnyTutor] v8.1.1 loaded - default: TeachAny server proxy (Qwen only)', 'color:#10b981;font-weight:bold;');
+  console.log('%c[TeachAnyTutor] v8.1.2 loaded - server proxy + off-site fallback', 'color:#10b981;font-weight:bold;');
 
   const DEPRECATED_FREE_MODELS = new Set([
     'z-ai/glm-4.5-air:free',
@@ -45,8 +45,14 @@
     return base.includes('/api/llm');
   }
 
+  function resolveServerProxyBase() {
+    const host = String((typeof location !== 'undefined' && location.hostname) || '');
+    if (host === 'teachany.cn' || host === 'www.teachany.cn') return SERVER_PROXY_BASE;
+    return 'https://www.teachany.cn/api/llm';
+  }
+
   function resolveServerEndpoint(baseUrl) {
-    const base = String(baseUrl || SERVER_PROXY_BASE).trim().replace(/\/$/, '');
+    const base = String(baseUrl || resolveServerProxyBase()).trim().replace(/\/$/, '');
     return /\/chat\/completions$/i.test(base) ? base : `${base}/chat/completions`;
   }
 
@@ -63,7 +69,6 @@
   const HISTORY_KEY = 'teachany_tutor_history';
   const LANG_KEY = 'teachany_tutor_lang';
 
-  // 默认：TeachAny 服务端中转（Key 仅存 Cloudflare，浏览器不接触）
   const DEFAULTS = {
     baseUrl: SERVER_PROXY_BASE,
     apiKey: '',
@@ -348,7 +353,7 @@
       cfg.noAuth = true;
       cfg.serverProxy = true;
       cfg.backendId = cfg.backendId || 'openrouter';
-      cfg.baseUrl = cfg.baseUrl || SERVER_PROXY_BASE;
+      cfg.baseUrl = cfg.baseUrl || resolveServerProxyBase();
       cfg.model = PRIMARY_FREE_MODEL;
     }
     return cfg;
@@ -379,14 +384,41 @@
   // ───────────────────────────────────────────────────────
   // 2. 课件元信息（来自 window.__TEACHANY_TUTOR_CONFIG__）
   // ───────────────────────────────────────────────────────
+  function ensureNodeEnrichment() {
+    if (window.TeachAnyNodeEnrichment) return window.TeachAnyNodeEnrichment.load();
+    return new Promise((resolve) => {
+      const existing = document.querySelector('script[data-teachany-neo]');
+      if (existing) {
+        existing.addEventListener('load', () => {
+          (window.TeachAnyNodeEnrichment ? window.TeachAnyNodeEnrichment.load() : Promise.resolve(null)).then(resolve);
+        });
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = '/assets/scripts/teachany-node-enrichment.js?v=neo-1';
+      s.async = true;
+      s.dataset.teachanyNeo = '1';
+      s.onload = () => {
+        (window.TeachAnyNodeEnrichment ? window.TeachAnyNodeEnrichment.load() : Promise.resolve(null)).then(resolve);
+      };
+      s.onerror = () => resolve(null);
+      document.head.appendChild(s);
+    });
+  }
+
   function readCourseMeta() {
     const fromWindow = window.__TEACHANY_TUTOR_CONFIG__ || {};
     const grade = Number(fromWindow.grade || document.querySelector('meta[name="teachany-grade"]')?.content || 9);
+    const nodeId = fromWindow.nodeId
+      || document.querySelector('meta[name="teachany-node"]')?.content
+      || document.querySelector('meta[name="course-id"]')?.content
+      || '';
     return {
       courseTitle: fromWindow.courseTitle || document.title || '本课件',
       subject: fromWindow.subject || (document.querySelector('meta[name="teachany-subject"]')?.content || 'general'),
       grade: grade,
       stage: fromWindow.stage || inferStage(grade),
+      nodeId: String(nodeId || '').trim(),
       curriculumStandard: fromWindow.curriculumStandard || (document.querySelector('meta[name="teachany-curriculum"]')?.content || ''),
       knowledgeScope: fromWindow.knowledgeScope || (document.querySelector('meta[name="teachany-scope"]')?.content || ''),
       learningObjectives: Array.isArray(fromWindow.learningObjectives) ? fromWindow.learningObjectives : [],
@@ -576,13 +608,26 @@
       ? (lang === 'en' ? `\nKnowledge scope: ${meta.knowledgeScope}` : `\n知识范围：${meta.knowledgeScope}`)
       : '';
 
+    let enrichmentBlock = '';
+    try {
+      const neo = window.TeachAnyNodeEnrichment;
+      if (neo && meta.nodeId) {
+        const block = neo.formatTutorBlock(meta.nodeId, lang);
+        if (block) {
+          enrichmentBlock = lang === 'en'
+            ? `\n\n【Diagnostic enrichment】\n${block}\nWhen a matching misconception cue appears, diagnose briefly then correct.`
+            : `\n\n【诊断增强】\n${block}\n若学生表述命中上述易错点，先用一句完成错因诊断，再给最小纠正提示。`;
+        }
+      }
+    } catch (_) { /* ignore */ }
+
     if (lang === 'en') {
       return `${profile.role}.
 
 【Student profile】
 - Stage: ${stageName}, Grade ${grade}
 - Subject: ${subjectName}
-- Course: "${meta.courseTitle}"${curriculumBlock}${scopeBlock}${objectivesBlock}
+- Course: "${meta.courseTitle}"${curriculumBlock}${scopeBlock}${objectivesBlock}${enrichmentBlock}
 
 【Style requirements】
 - Role: ${profile.role}
@@ -598,7 +643,8 @@
 2. If the student's question goes beyond the course scope, redirect in one sentence.
 3. NEVER exceed the difficulty boundary for this stage. If the student asks something beyond their stage, briefly say so and give a stage-appropriate answer.
 4. NEVER show chain-of-thought, "Let me think...", or meta-commentary. Give the most useful answer directly.
-5. Strictly obey the sentence count limit above.`;
+5. Strictly obey the sentence count limit above.
+6. Prefer prerequisite gaps and misconception cues from【Diagnostic enrichment】 when relevant.`;
     }
 
     return `${profile.role}。
@@ -606,7 +652,7 @@
 【学生画像】
 - 学段：${stageName}（G${grade}）
 - 学科：${subjectName}
-- 当前课件：《${meta.courseTitle}》${curriculumBlock}${scopeBlock}${objectivesBlock}
+- 当前课件：《${meta.courseTitle}》${curriculumBlock}${scopeBlock}${objectivesBlock}${enrichmentBlock}
 
 【风格要求】
 - 角色定位：${profile.role}
@@ -622,7 +668,8 @@
 2. 学生问题若超出课件范围，用一句话引回到课件主题。
 3. 严禁超出本学段的知识难度边界。若学生问到超纲内容，先简短说明"这是更高学段才会深入的内容"，再给出符合本学段的简化答复。
 4. 严禁展示思维链、"让我思考一下"、"首先我需要…"等冗余前置文字，直接给学生最有用的答复。
-5. 严格遵守上述句数/字数限制，不展开长篇大论。`;
+5. 严格遵守上述句数/字数限制，不展开长篇大论。
+6. 若命中【诊断增强】中的易错点或前置缺口，优先做一句错因诊断，再给最小提示。`;
   }
 
   // ───────────────────────────────────────────────────────
@@ -908,9 +955,9 @@
         delete headers[k];
       }
     }
-    // 设置 30 秒整体超时
+    // 服务端代理：65s（与 Cloudflare Function 60s 对齐）；直连 30s
     const ac = new AbortController();
-    const overallTimeout = setTimeout(() => ac.abort('overall-timeout'), 30000);
+    const overallTimeout = setTimeout(() => ac.abort('overall-timeout'), useServerProxy ? 65000 : 30000);
 
     // fetch 本身可能因 CORS、header 编码、网络等抛 TypeError
     let resp;
@@ -1222,7 +1269,18 @@
 
       renderBubble(messagesEl, 'user', text);
 
-      const contextText = (meta.getContext() || '').slice(0, 3000);
+      try { await ensureNodeEnrichment(); } catch (_) { /* ignore */ }
+      // refresh meta in case nodeId / enrichment became available
+      Object.assign(meta, readCourseMeta());
+
+      let contextText = (meta.getContext() || '').slice(0, 2400);
+      try {
+        const neo = window.TeachAnyNodeEnrichment;
+        if (neo && meta.nodeId) {
+          const block = neo.formatTutorBlock(meta.nodeId, getLang());
+          if (block) contextText = (contextText + '\n\n' + block).slice(0, 3000);
+        }
+      } catch (_) { /* ignore */ }
       const sectionTitle = getCurrentSectionTitle();
       const system = buildSystemPrompt(meta);
 

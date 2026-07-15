@@ -53,6 +53,9 @@ class LearningPathSystem {
       // 4. 构建反向索引（后继 → 前置）
       this._buildReverseIndex();
 
+      // 4.5 叠加自有增强层：仅 hard 并入路径链；soft 不阻塞
+      await this._applyEnrichmentOverlay();
+
       // 5. 构建分类索引
       this._buildCategoryIndices();
 
@@ -71,6 +74,51 @@ class LearningPathSystem {
       this.initializing = false;
       console.error('[LearningPath] ❌ 初始化失败:', error);
       throw error;
+    }
+  }
+
+  _ensureEnrichment() {
+    if (window.TeachAnyNodeEnrichment) return window.TeachAnyNodeEnrichment.load();
+    return new Promise((resolve) => {
+      const existing = document.querySelector('script[data-teachany-neo]');
+      if (existing) {
+        existing.addEventListener('load', () => {
+          (window.TeachAnyNodeEnrichment ? window.TeachAnyNodeEnrichment.load() : Promise.resolve(null)).then(resolve);
+        });
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = '/assets/scripts/teachany-node-enrichment.js?v=neo-1';
+      s.async = true;
+      s.dataset.teachanyNeo = '1';
+      s.onload = () => {
+        (window.TeachAnyNodeEnrichment ? window.TeachAnyNodeEnrichment.load() : Promise.resolve(null)).then(resolve);
+      };
+      s.onerror = () => resolve(null);
+      document.head.appendChild(s);
+    });
+  }
+
+  async _applyEnrichmentOverlay() {
+    try {
+      await this._ensureEnrichment();
+      const neo = window.TeachAnyNodeEnrichment;
+      if (!neo) return;
+      let hardAdded = 0;
+      this.nodeIndex.forEach((node, nodeId) => {
+        const merged = neo.mergePrerequisiteIds(nodeId, node.prerequisites);
+        (merged.hard || []).forEach((pid) => {
+          if (!pid || !this.nodeIndex.has(pid)) return;
+          if (!node.prerequisites.includes(pid)) {
+            node.prerequisites.push(pid);
+            hardAdded += 1;
+          }
+        });
+        node._enrichmentSoft = merged.soft || [];
+      });
+      if (hardAdded) console.log(`[LearningPath] 增强层 hard 前置补齐 ${hardAdded} 条`);
+    } catch (e) {
+      console.warn('[LearningPath] 增强层跳过:', e && e.message);
     }
   }
 
@@ -555,6 +603,13 @@ class LearningPathSystem {
           </div>
         ` : ''}
       </div>`;
+
+    // ===== 增强层：必备/建议/错因（只读叠加，不改课标树） =====
+    try {
+      const neo = window.TeachAnyNodeEnrichment;
+      const hints = neo && typeof neo.pathHintsHtml === 'function' ? neo.pathHintsHtml(nodeId) : '';
+      if (hints) html += hints;
+    } catch (_) { /* ignore */ }
 
     // ===== 前置知识 =====
     html += `
