@@ -38,6 +38,17 @@ VALID_SUBJECTS = {
     'ela',      # 英语语言艺术（美式）
 }
 
+SYSTEM_LABELS = {
+    'cn': '中国课标',
+    'cn-unified': '中国课标',
+    'cambridge': 'Cambridge',
+    'ib': 'IB',
+    'us': 'US CCSS',
+    'ap': 'AP',
+    'other': '其他',
+}
+
+
 def load_json(p: Path):
     try:
         return json.loads(p.read_text(encoding='utf-8'))
@@ -54,8 +65,65 @@ def infer_subject(tree_data: dict, tree_path: Path) -> str:
     return tree_path.stem  # 文件名去扩展
 
 
-def extract_nodes(tree_data: dict, default_subject: str):
+def infer_system(tree_path: Path) -> str:
+    try:
+        rel = tree_path.relative_to(TREES_DIR)
+    except ValueError:
+        return 'other'
+    parts = rel.parts
+    return parts[0] if parts else 'other'
+
+
+def infer_curriculum_label(system: str, tree_path: Path) -> str:
+    path = str(tree_path).replace('\\', '/').lower()
+    if system in ('cn', 'cn-unified'):
+        return '中国课标'
+    if system == 'cambridge':
+        if '/primary/' in path:
+            return 'Cambridge Primary'
+        if '/lsec/' in path:
+            return 'Cambridge Lower Secondary'
+        if '/igcse/' in path:
+            return 'Cambridge IGCSE'
+        if '/al/' in path:
+            return 'Cambridge A Level'
+        return 'Cambridge'
+    if system == 'ib':
+        if '/pyp/' in path:
+            return 'IB PYP'
+        if '/myp/' in path:
+            return 'IB MYP'
+        if '/dp/' in path:
+            return 'IB DP'
+        return 'IB'
+    return SYSTEM_LABELS.get(system, system)
+
+
+def format_grade_label(grade: int, system: str, tree_path: Path) -> str:
+    path = str(tree_path).replace('\\', '/').lower()
+    if grade <= 0:
+        if 'university' in path or 'college' in path:
+            return '大学'
+        return '通识'
+    if system in ('cn', 'cn-unified'):
+        if grade <= 6:
+            return f'小学{grade}年级'
+        if grade <= 9:
+            return f'初中{grade - 6}年级'
+        return f'高中{grade - 9}年级'
+    if 'primary' in path or 'elementary' in path or 'pyp' in path:
+        return f'Primary G{grade}' if grade <= 6 else f'G{grade}'
+    if 'middle' in path or 'myp' in path or 'lsec' in path:
+        return f'Middle G{grade}'
+    if 'high' in path or 'igcse' in path or 'dp' in path or 'ap' in path:
+        return f'High G{grade}'
+    return f'G{grade}'
+
+
+def extract_nodes(tree_data: dict, default_subject: str, tree_path: Path):
     """从一棵知识树的 domains[*].nodes[*] 中抽取节点"""
+    system = infer_system(tree_path)
+    curriculum_label = infer_curriculum_label(system, tree_path)
     out = []
     for dom in tree_data.get('domains', []) or []:
         domain_id = dom.get('id') or dom.get('slug') or ''
@@ -80,6 +148,10 @@ def extract_nodes(tree_data: dict, default_subject: str):
                 'subject': subj,
                 'grade': grade,
                 'domain': domain_id,
+                'system': system,
+                'curriculumLabel': curriculum_label,
+                'gradeLabel': format_grade_label(grade, system, tree_path),
+                'treePath': str(tree_path.relative_to(TREES_DIR)).replace('\\', '/'),
             })
     return out
 
@@ -102,7 +174,7 @@ def main():
         if not isinstance(tree_data, dict):
             continue
         subj = infer_subject(tree_data, tree_path)
-        nodes = extract_nodes(tree_data, subj)
+        nodes = extract_nodes(tree_data, subj, tree_path)
         if not nodes:
             continue
         trees_seen += 1
@@ -113,8 +185,15 @@ def main():
             seen_ids.add(n['id'])
             all_nodes.append(n)
 
-    # 排序：先 subject，后 grade，后 name（中文拼音）
-    all_nodes.sort(key=lambda x: (x['subject'], x['grade'], x['name']))
+    # 排序：中国课标优先，再 subject / grade / name（避免同名国际节点排在前面）
+    system_rank = {'cn': 0, 'cn-unified': 1, 'cambridge': 2, 'ib': 3, 'us': 4, 'ap': 5}
+    all_nodes.sort(key=lambda x: (
+        x['subject'],
+        x['grade'],
+        x['name'],
+        system_rank.get(x.get('system'), 9),
+        x['id'],
+    ))
 
     OUT_FILE.write_text(
         json.dumps(all_nodes, ensure_ascii=False, indent=2),

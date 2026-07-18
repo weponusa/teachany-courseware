@@ -541,11 +541,18 @@ class LearningPathSystem {
       return `高中${g - 9}年级`;
     };
 
+    const role = String(window.TeachAnyPathRole || document.body?.dataset?.role || '').replace(/^role-/, '')
+      || (document.body?.classList?.contains('role-student') ? 'student'
+        : document.body?.classList?.contains('role-parent') ? 'parent'
+        : document.body?.classList?.contains('role-teacher') ? 'teacher' : '');
+    const simple = role === 'student' || role === 'parent';
+    const isParent = role === 'parent';
+
     const coursewareBadge = (node) => {
       if (node.hasCourseware || node.coursewareCount > 0) {
-        return `<span class="badge badge-green">📖 ${node.coursewareCount || '有'}课件</span>`;
+        return `<span class="badge badge-green">${simple ? '有练习' : `📖 ${node.coursewareCount || '有'}课件`}</span>`;
       }
-      return `<span class="badge badge-gray">暂无课件</span>`;
+      return `<span class="badge badge-gray">${simple ? '暂无练习' : '暂无课件'}</span>`;
     };
 
     const renderNodeCard = (node, clickable = true) => {
@@ -560,67 +567,113 @@ class LearningPathSystem {
 
     const c = path.current;
     const cw = path.current.coursewares || [];
+    const shortDef = (c.definition || '').replace(/\s+/g, ' ').trim();
+    const simpleDef = shortDef.length > 90 ? shortDef.slice(0, 90) + '…' : shortDef;
+    const firstCourse = cw[0];
+    const firstCourseUrl = firstCourse
+      ? (firstCourse.url || ('./' + firstCourse.path + '/index.html'))
+      : '';
+    const nextFlat = [];
+    const walkNext = (nodes, depth) => {
+      (nodes || []).forEach((n) => {
+        nextFlat.push(n);
+        if (depth < 1 && n.children) walkNext(n.children, depth + 1);
+      });
+    };
+    walkNext(path.nextSteps, 0);
+    const nextSimple = nextFlat.slice(0, 3);
+    const prereqSimple = (path.prerequisites || []).slice(-3);
 
     // 构建HTML
-    let html = '<div class="learning-path-viz">';
+    let html = `<div class="learning-path-viz${simple ? ' simple-path' : ''}">`;
+
+    if (simple) {
+      const who = isParent ? '孩子' : '你';
+      html += `
+        <div class="simple-guide">
+          <div class="simple-guide-card">
+            <strong>${isParent ? '现在练这个' : '现在学这个'}</strong>
+            <span>${c.name}${simpleDef ? ' —— ' + simpleDef : ''}</span>
+            ${firstCourseUrl ? `<div><a class="simple-start-btn" href="${firstCourseUrl}" target="_blank" rel="noopener">开始学习课件</a></div>` : '<span style="display:block;margin-top:8px;opacity:.8">这个点暂时还没有互动课件，可以先看前后知识点。</span>'}
+          </div>
+          <div class="simple-guide-card">
+            <strong>${isParent ? '建议先确认会不会' : '如果卡住了，先补这些'}</strong>
+            <span>${prereqSimple.length
+              ? prereqSimple.map((n) => n.name).join(' → ')
+              : `${who}可以从这里直接开始，没有必须先学的内容。`}</span>
+          </div>
+          <div class="simple-guide-card">
+            <strong>学完可以接着学</strong>
+            <span>${nextSimple.length
+              ? nextSimple.map((n) => n.name).join('、')
+              : '先把当前这个点吃透就很好。'}</span>
+          </div>
+        </div>`;
+    }
 
     // ===== 当前节点 =====
     html += `
       <div class="path-section current-section">
-        <div class="section-header"><span class="section-icon">🎯</span> 当前知识点</div>
+        <div class="section-header"><span class="section-icon">🎯</span> ${simple ? (isParent ? '当前内容' : '你选的知识点') : '当前知识点'}</div>
         <div class="current-node-card">
           <div class="current-info">
             <h2>${c.name}</h2>
             <div class="current-meta">
               <span>${subjectNames[c.subject] || c.subject}</span>
               <span>${gradeLabel(c.grade)}</span>
-              <span>📂 ${c.domain}</span>
+              ${simple ? '' : `<span>📂 ${c.domain}</span>`}
             </div>
-            ${c.definition ? `<p class="current-def">${c.definition}</p>` : ''}
-            ${c.key_concepts && c.key_concepts.length > 0 ? `
+            ${simple
+              ? (simpleDef ? `<p class="current-def">${simpleDef}</p>` : '')
+              : (c.definition ? `<p class="current-def">${c.definition}</p>` : '')}
+            ${!simple && c.key_concepts && c.key_concepts.length > 0 ? `
               <div class="key-concepts">
                 <strong>关键概念：</strong>
                 ${c.key_concepts.map(k => `<span class="concept-tag">${k}</span>`).join('')}
               </div>
             ` : ''}
           </div>
+          ${simple ? '' : `
           <div class="current-stats">
             <div class="stat-item"><span class="stat-val">${path.summary.prerequisiteCount}</span><span class="stat-lbl">前置知识</span></div>
             <div class="stat-item"><span class="stat-val">${path.summary.nextStepCount}</span><span class="stat-lbl">后续方向</span></div>
             <div class="stat-item"><span class="stat-val">${path.summary.parallelCount}</span><span class="stat-lbl">并列知识</span></div>
             <div class="stat-item"><span class="stat-val">${path.summary.coursewareCount}</span><span class="stat-lbl">可用课件</span></div>
-          </div>
+          </div>`}
         </div>
         ${cw.length > 0 ? `
           <div class="courseware-list">
-            <div class="cw-title">📖 可用课件</div>
+            <div class="cw-title">${simple ? '可以打开的练习' : '📖 可用课件'}</div>
             ${cw.map(course => `
               <a href="${course.url || ('./' + course.path + '/index.html')}" class="cw-link" target="_blank">
                 ${course.name || course.id}
-                ${course.status === 'official' ? '<span class="badge badge-red">⭐ 官方</span>' : ''}
+                ${!simple && course.status === 'official' ? '<span class="badge badge-red">⭐ 官方</span>' : ''}
               </a>
             `).join('')}
           </div>
         ` : ''}
       </div>`;
 
-    // ===== 增强层：必备/建议/错因（只读叠加，不改课标树） =====
-    try {
-      const neo = window.TeachAnyNodeEnrichment;
-      const hints = neo && typeof neo.pathHintsHtml === 'function' ? neo.pathHintsHtml(nodeId) : '';
-      if (hints) html += hints;
-    } catch (_) { /* ignore */ }
+    // ===== 增强层：必备/建议/错因（只读叠加，不改课标树）——学生/家长隐藏 =====
+    if (!simple) {
+      try {
+        const neo = window.TeachAnyNodeEnrichment;
+        const hints = neo && typeof neo.pathHintsHtml === 'function' ? neo.pathHintsHtml(nodeId) : '';
+        if (hints) html += `<div class="neo-enrichment">${hints}</div>`;
+      } catch (_) { /* ignore */ }
+    }
 
     // ===== 前置知识 =====
     html += `
       <div class="path-section prereq-section">
-        <div class="section-header"><span class="section-icon">📚</span> 前置知识路径 <span class="count">${path.prerequisites.length}</span></div>`;
+        <div class="section-header"><span class="section-icon">📚</span> ${simple ? '建议先会的内容' : '前置知识路径'} <span class="count">${path.prerequisites.length}</span></div>`;
 
     if (path.prerequisites.length > 0) {
+      const showPrereqs = simple ? prereqSimple : path.prerequisites;
       html += '<div class="prereq-chain">';
-      path.prerequisites.forEach((node, i) => {
+      showPrereqs.forEach((node, i) => {
         html += renderNodeCard(node);
-        if (i < path.prerequisites.length - 1) {
+        if (i < showPrereqs.length - 1) {
           html += '<div class="chain-arrow">→</div>';
         }
       });
@@ -630,16 +683,27 @@ class LearningPathSystem {
         </div>`;
       html += '</div>';
     } else {
-      html += '<div class="empty-hint">💡 这是该领域的起始知识点，没有前置依赖</div>';
+      html += `<div class="empty-hint">${simple ? '这里没有必须先学的内容，可以直接开始。' : '💡 这是该领域的起始知识点，没有前置依赖'}</div>`;
     }
     html += '</div>';
 
     // ===== 后续方向 =====
     html += `
       <div class="path-section next-section">
-        <div class="section-header"><span class="section-icon">🚀</span> 后续学习方向 <span class="count">${path.summary.nextStepCount}</span></div>`;
+        <div class="section-header"><span class="section-icon">🚀</span> ${simple ? '学完可以学' : '后续学习方向'} <span class="count">${simple ? nextSimple.length : path.summary.nextStepCount}</span></div>`;
 
-    if (path.nextSteps.length > 0) {
+    if (simple) {
+      if (nextSimple.length > 0) {
+        html += '<div class="prereq-chain">';
+        nextSimple.forEach((node, i) => {
+          html += renderNodeCard(node);
+          if (i < nextSimple.length - 1) html += '<div class="chain-arrow">→</div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="empty-hint">先把当前这个点学扎实就很好。</div>';
+      }
+    } else if (path.nextSteps.length > 0) {
       html += '<div class="next-tree">';
       html += this._renderNextTree(path.nextSteps, 0, gradeLabel, coursewareBadge);
       html += '</div>';
@@ -648,8 +712,8 @@ class LearningPathSystem {
     }
     html += '</div>';
 
-    // ===== 并列知识点（精简，非整域罗列） =====
-    if (path.parallel.length > 0) {
+    // ===== 并列 / 跨学段：仅老师完整模式 =====
+    if (!simple && path.parallel.length > 0) {
       html += `
         <div class="path-section parallel-section">
           <div class="section-header"><span class="section-icon">🔄</span> 并列知识点 <span class="count">${path.parallel.length}</span></div>
@@ -660,8 +724,7 @@ class LearningPathSystem {
         </div>`;
     }
 
-    // ===== 跨学段分析 =====
-    if (path.crossGrade.crossesGrades) {
+    if (!simple && path.crossGrade.crossesGrades) {
       html += `
         <div class="path-section cross-section">
           <div class="section-header"><span class="section-icon">🎓</span> 跨学段知识链 <span class="count">跨${path.crossGrade.spanCount}个学段</span></div>
