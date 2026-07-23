@@ -544,6 +544,20 @@ def validate_one(course_dir, strict_feedback=False):
             issues.append(('error',
                 f'{course_dir.name}: HTML 有 {len(missing_refs)} 个本地资源引用不存在（会导致 404）：{preview}{more}'))
 
+    # 8b2. GitHub Pages 项目站点 404 硬校验（v2026-07 经验）——/assets/ 绝对路径在本地
+    # 解析为 repo/assets（文件存在，本地不报错），但线上解析为域名根 weponusa.github.io/assets/
+    # → 全部 404，导致知识图谱/AI学伴/音频/TTS/section-hints 等标准模块静默失效。
+    # 必须改用 ../../assets/ 相对路径（community/<id>/ → 仓库根 assets/）。
+    if html.exists() and full_html:
+        abs_refs = re.findall(r'(?:src|href)\s*=\s*["\'](/assets/[^"\']+)["\']', full_html)
+        if abs_refs:
+            uniq = sorted(set(abs_refs))
+            preview2 = '；'.join(uniq[:6])
+            more2 = f'；另有 {len(uniq) - 6} 个' if len(uniq) > 6 else ''
+            issues.append(('error',
+                f'{course_dir.name}: HTML 有 {len(abs_refs)} 处 /assets/ 绝对路径引用'
+                f'（GitHub Pages 项目站点下解析为域名根会 404，必须用 ../../assets/ 相对路径）：{preview2}{more2}'))
+
     # 8c. Hero 图硬校验（v7.3）——不能只有 hero 文案而无知识结构主图
     if html.exists() and full_html:
         hero_refs = re.findall(r'<img[^>]+class=[\'"][^\'"]*(?:hero-img|hero-cover-img)[^\'"]*[\'"][^>]+src=[\'"]([^\'"]+)[\'"]', full_html, re.IGNORECASE)
@@ -591,10 +605,14 @@ def validate_one(course_dir, strict_feedback=False):
     #     每个课件必须有 ≥1 个原生 <canvas> 交互组件（纯文言字词类可豁免）
     if html.exists() and full_html:
         canvas_tags = re.findall(r'<canvas\b[^>]*>', full_html, re.IGNORECASE)
+        # 排除标准知识图谱模块的装饰性 fallback canvas（图谱本身为 SVG 交互，非 canvas 绘制）
+        canvas_tags = [c for c in canvas_tags if 'tkg-fallback-canvas' not in c]
         # 纯文言字词豁免：语文 + node_id 含 classical/character/stroke
         is_pure_chn_char = (ms == 'chinese' and any(kw in (mn or '') for kw in
                             ('classical', 'character', 'stroke', 'pinyin')))
-        if not canvas_tags and not is_pure_chn_char:
+        # 标准知识图谱模块（data-teachany-kg）提供等价的 SVG/DOM 交互探索，豁免 #33
+        has_kg_module = 'data-teachany-kg' in full_html
+        if not canvas_tags and not is_pure_chn_char and not has_kg_module:
             issues.append(('error',
                 f'{course_dir.name}: HTML 无原生 <canvas> 交互组件（硬规则 #33 强制 · 拖拽/画板/参数滑块/实时绘图任一；纯文言字词可用 SVG 替代但需在 manifest 声明）'))
         elif canvas_tags:
