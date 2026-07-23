@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中国交通运输 · 初中地理 G8 · TeachAny v6.1</title>
+  <!-- TeachAny 元信息 -->
+  <meta name="teachany-node" content="geo-m-china-transportation">
+  <meta name="teachany-subject" content="geography">
+  <meta name="teachany-domain" content="economic-geography">
+  <meta name="teachany-grade" content="8">
+  <meta name="teachany-prerequisites" content="china-agriculture,china-industry">
+  <meta name="teachany-difficulty" content="3">
+  <meta name="teachany-version" content="6.1">
+  <meta name="teachany-author" content="weponusa">
+  <!-- === TeachAny 路由元数据（跨课件导航） === -->
+  <meta name="course-id" content="geo-m-china-transportation">
+  <meta name="course-node" content="geo-m-china-transportation">
+  <meta name="course-subject" content="geography">
+  <meta name="course-title" content="中国交通运输">
+  <meta name="course-prereqs" content="geo-m-china-industry,geo-m-china-terrain">
+  <meta name="course-next" content="geo-m-china-regions,geo-h-transportation">
+  <meta name="registry-url" content="../../courseware-registry.json">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    /* ═══════════ 初中模板设计系统（v6.1 · 地理橙） ═══════════ */
+    :root {
+      --bg: #f8fafc;
+      --primary: #f59e0b;
+      --primary-dark: #d97706;
+      --secondary: #06b6d4;
+      --accent: #ef4444;
+      --teal: #14b8a6;
+      --purple: #8b5cf6;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-secondary: #64748b;
+      --border: #e2e8f0;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --radius: 14px;
+      --shadow: 0 1px 3px rgba(15,23,42,.06), 0 4px 14px rgba(15,23,42,.05);
+      --shadow-lg: 0 8px 30px rgba(15,23,42,.10);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.8; font-size: 16px;
+    }
+    .progress-bar { position: fixed; top: 36px; left: 0; height: 3px; z-index: 200;
+      background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width .2s; border-radius: 0 2px 2px 0; }
+    .nav-bar { position: sticky; top: 36px; z-index: 150; display: flex; align-items: center; gap: 4px;
+      background: rgba(255,255,255,.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
+      padding: 10px 20px; overflow-x: auto; scrollbar-width: none; }
+    .nav-bar::-webkit-scrollbar { display: none; }
+    .nav-bar .brand { font-weight: 800; font-size: 15px; color: var(--primary); margin-right: 12px; white-space: nowrap; }
+    .nav-bar a { padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      color: var(--text-secondary); text-decoration: none; white-space: nowrap; transition: all .2s; }
+    .nav-bar a:hover { background: #fef3c7; color: var(--primary); }
+    .nav-bar a.active { background: var(--primary); color: #fff; }
+
+    .hero { background: linear-gradient(135deg, #b45309 0%, #f59e0b 50%, #fbbf24 100%);
+      color: #fff; text-align: center; padding: 56px 24px 48px; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 15% 20%, rgba(255,255,255,.14) 0, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(255,255,255,.10) 0, transparent 40%); pointer-events: none; }
+    .hero h1 { font-size: 2.5rem; font-weight: 900; letter-spacing: 2px; position: relative; }
+    .hero .subtitle { font-size: 1.1rem; opacity: .92; margin-top: 10px; position: relative; }
+    .hero .tags { display: flex; gap: 8px; justify-content: center; margin-top: 18px; flex-wrap: wrap; position: relative; }
+    .hero .tag { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35);
+      padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+    .hero .stats { display: flex; gap: 26px; justify-content: center; margin-top: 26px; position: relative; flex-wrap: wrap; }
+    .hero .stat b { display: block; font-size: 1.4rem; font-weight: 800; }
+    .hero .stat span { font-size: 12px; opacity: .85; }
+    .hero-img { display: block; max-width: 720px; width: calc(100% - 32px); margin: 30px auto 0;
+      border-radius: 16px; box-shadow: 0 16px 48px rgba(15,23,42,.35); position: relative; }
+
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+    .section { margin: 40px auto; scroll-margin-top: 110px; }
+    .section-title { font-size: 1.4rem; font-weight: 800; margin-bottom: 18px;
+      padding-left: 14px; border-left: 5px solid var(--primary); line-height: 1.3; }
+    .section-sub { color: var(--text-secondary); font-size: 14px; margin: -12px 0 16px 19px; }
+
+    .card { background: var(--card); border-radius: var(--radius); padding: 22px 24px;
+      margin-bottom: 16px; box-shadow: var(--shadow); border-top: 3px solid var(--primary); }
+    .card.teal { border-top-color: var(--secondary); }
+    .card.amber { border-top-color: var(--accent); }
+    .card.purple { border-top-color: var(--purple); }
+    .card.green { border-top-color: var(--success); }
+    .card h3 { font-size: 1.08rem; font-weight: 700; margin-bottom: 12px; }
+    .card ul { padding-left: 22px; }
+    .card li { margin-bottom: 8px; }
+    .card p { margin-bottom: 10px; }
+    .card p:last-child { margin-bottom: 0; }
+    .muted { color: var(--text-secondary); font-size: 14px; }
+
+    .abt-grid { display: grid; gap: 12px; }
+    .abt-item { border-radius: 12px; padding: 16px 18px; border: 1px solid var(--border); background: #fff; }
+    .abt-item .abt-label { font-size: 12px; font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; }
+    .abt-item.and { background: #f0fdfa; border-color: #99f6e4; }
+    .abt-item.and .abt-label { color: #0d9488; }
+    .abt-item.but { background: #fffbeb; border-color: #fde68a; }
+    .abt-item.but .abt-label { color: #d97706; }
+    .abt-item.therefore { background: #fef3c7; border-color: #fcd34d; }
+    .abt-item.therefore .abt-label { color: #b45309; }
+    .abt-item p { font-size: 14.5px; line-height: 1.75; }
+
+    .cmp-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+    .cmp-table th, .cmp-table td { padding: 10px 12px; border: 1px solid var(--border); }
+    .cmp-table th { background: #fef3c7; font-weight: 700; }
+    .cmp-table td { text-align: center; }
+    .cmp-table td:first-child { text-align: left; font-weight: 600; background: #fafafa; }
+
+    .map-box { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border); margin: 14px 0; }
+    #transportMap { width: 100%; height: 460px; }
+    .map-legend { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+      padding: 10px; background: #fff; font-size: 13px; color: var(--text-secondary); }
+    .map-legend .lg { display: flex; align-items: center; gap: 6px; }
+    .map-legend .dot { width: 12px; height: 12px; border-radius: 50%; }
+
+    .quiz-option { display: block; width: 100%; text-align: left; padding: 13px 18px;
+      margin: 8px 0; border: 2px solid var(--border); border-radius: 10px;
+      background: var(--card); cursor: pointer; font-size: 15px; color: var(--text);
+      transition: all .2s; font-family: inherit; }
+    .quiz-option:hover:not(:disabled) { border-color: var(--primary); transform: translateX(3px); }
+    .quiz-option.correct { border-color: var(--success); background: #f0fdf4; }
+    .quiz-option.wrong { border-color: var(--danger); background: #fef2f2; }
+    .quiz-option:disabled { cursor: default; opacity: .85; transform: none; }
+    .feedback { padding: 14px 16px; border-radius: 10px; margin-top: 12px; display: none; font-size: 14.5px; line-height: 1.7; }
+    .feedback.show { display: block; }
+    .feedback.correct { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .feedback.wrong { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .level-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-right: 6px; }
+    .level-tag.l1 { background: #dbeafe; color: #1e40af; }
+    .level-tag.l2 { background: #fef3c7; color: #92400e; }
+    .level-tag.l3 { background: #fce7f3; color: #9d174d; }
+
+    .scene-card { border: 2px solid var(--border); border-radius: 12px; padding: 16px 18px; margin: 12px 0;
+      background: linear-gradient(135deg, #fffbeb, #fff); }
+    .scene-card .cargo { font-weight: 700; color: var(--primary-dark); }
+    .reveal-btn { margin-top: 8px; padding: 6px 16px; background: var(--teal); color: #fff;
+      border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .reveal-btn:hover { background: #0d9488; }
+    .reveal-answer { display: none; margin-top: 8px; padding: 12px 14px; background: #f0fdf4;
+      border-radius: 8px; font-size: 14px; color: #166534; line-height: 1.7; }
+
+    .next-course { background: linear-gradient(135deg, #fef3c7, #fffbeb);
+      border: 1px solid #fcd34d; border-radius: var(--radius); padding: 26px; text-align: center; margin: 40px 0; }
+    .next-course h3 { font-size: 1.15rem; margin-bottom: 8px; }
+    .next-course p { color: var(--text-secondary); font-size: 14px; margin-bottom: 16px; }
+    .next-course .nc-links { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .next-course a { display: inline-block; padding: 11px 24px; border-radius: 10px;
+      background: var(--primary); color: #fff; text-decoration: none; font-weight: 600; font-size: 15px; transition: background .2s; }
+    .next-course a:hover { background: var(--primary-dark); }
+    .next-course a.alt { background: #fff; color: var(--primary); border: 2px solid var(--primary); }
+    .next-course a.alt:hover { background: #fef3c7; }
+    .footer { text-align: center; padding: 30px 20px 60px; color: var(--text-secondary); font-size: 13px; }
+    .ta-standard-section { max-width: 880px; margin: 40px auto; padding: 0 20px; }
+
+    /* 学习闭环 UI */
+    .ta-toast { position: fixed; top: 56px; right: -460px; z-index: 10000; display: flex; align-items: center; gap: 12px;
+      padding: 14px 22px; border-radius: 12px; background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #1a1a2e;
+      box-shadow: 0 8px 32px rgba(245,158,11,.35); transition: right .4s cubic-bezier(.34,1.56,.64,1);
+      font-family: system-ui,sans-serif; max-width: 360px; }
+    .ta-toast.show { right: 20px; }
+    .ta-toast .ti { font-size: 32px; }
+    .ta-toast .tc { display: flex; flex-direction: column; }
+    .ta-toast .tc strong { font-size: 12px; opacity: .75; }
+    .ta-toast .tc span { font-size: 16px; font-weight: 700; }
+    .ta-toast.info { background: linear-gradient(135deg,#60a5fa,#3b82f6); color: #fff; }
+    .ta-toast.success { background: linear-gradient(135deg,#4ade80,#22c55e); color: #052e16; }
+    .ta-resume { position: fixed; top: 96px; left: 50%; transform: translateX(-50%); z-index: 9990;
+      background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--primary);
+      border-radius: 12px; padding: 12px 20px; box-shadow: var(--shadow-lg);
+      display: flex; gap: 14px; align-items: center; font-size: 14px; max-width: 92vw; }
+    .ta-resume button { border: none; border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--primary); color: #fff; }
+    .ta-resume button.sec { background: #f1f5f9; color: #64748b; }
+    .ta-banner { border-radius: 12px; padding: 16px 20px; margin: 18px 0; font-size: 15px; line-height: 1.7;
+      display: flex; gap: 12px; align-items: flex-start; box-shadow: var(--shadow); }
+    .ta-banner .bi { font-size: 24px; flex-shrink: 0; }
+    .ta-banner.warn { background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid var(--primary); color: #92400e; }
+    .ta-banner.challenge { background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; color: #1e40af; }
+    .ta-banner a { color: #d97706; font-weight: 600; }
+    .ta-modal-mask { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: flex; align-items: center; justify-content: center; z-index: 10001; font-family: system-ui,sans-serif; }
+    .ta-modal { background: #fff; border-radius: 16px; padding: 28px 30px; max-width: 480px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+    .ta-modal h3 { margin: 0 0 10px; font-size: 18px; color: #b45309; }
+    .ta-modal p { margin: 0 0 14px; font-size: 14px; color: #64748b; line-height: 1.7; }
+    .ta-modal ul { margin: 0 0 18px; padding: 0; list-style: none; }
+    .ta-modal li { padding: 10px 14px; margin-bottom: 8px; border-radius: 8px; background: #fffbeb; border-left: 3px solid var(--primary); font-size: 14px; }
+    .ta-modal li a { color: #d97706; text-decoration: none; font-weight: 600; }
+    .ta-modal li .st { font-size: 12px; color: #94a3b8; }
+    .ta-modal .acts { display: flex; gap: 10px; }
+    .ta-modal .acts button { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .ta-modal .b1 { background: var(--primary); color: #fff; }
+    .ta-modal .b2 { background: #f1f5f9; color: #64748b; }
+    .ta-done-mask { position: fixed; inset: 0; background: rgba(15,23,42,.7); display: flex; align-items: center; justify-content: center; z-index: 10001; font-family: system-ui,sans-serif; }
+    .ta-done { background: linear-gradient(135deg,#fef3c7,#fff); border-radius: 20px; padding: 38px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 24px 70px rgba(0,0,0,.3); }
+    .ta-done h2 { margin: 0 0 8px; font-size: 24px; }
+    .ta-done p { margin: 0 0 20px; color: #64748b; font-size: 14px; line-height: 1.7; }
+    .ta-done a { display: inline-block; padding: 13px 30px; background: var(--primary); color: #fff; border-radius: 12px; text-decoration: none; font-size: 16px; font-weight: 600; }
+    .ta-done .later { display: block; margin-top: 14px; color: #94a3b8; font-size: 13px; cursor: pointer; text-decoration: underline; }
+
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 1.8rem; }
+      .hero .stats { gap: 16px; }
+      .section-title { font-size: 1.2rem; }
+      .card { padding: 18px; }
+      .nav-bar { padding: 8px 12px; }
+      #transportMap { height: 340px; }
+    }
+  </style>
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+</head>
+<body>
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">🗺️ 知识地图</a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">🛤️ 学习路径</a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<div class="progress-bar" id="progressBar" style="width:0%"></div>
+
+<nav class="nav-bar" id="navbar">
+  <span class="brand">🚄 中国交通运输</span>
+  <a href="#why-learn">引入</a>
+  <a href="#objectives">目标</a>
+  <a href="#pretest">前测</a>
+  <a href="#module-1">五种方式</a>
+  <a href="#module-2">分布特征</a>
+  <a href="#module-3">高铁高速</a>
+  <a href="#module-4">方式选择</a>
+  <a href="#posttest">后测</a>
+  <a href="#knowledge-graph">图谱</a>
+</nav>
+
+<!-- ═══ Hero ═══ -->
+<header class="hero" id="hero">
+  <h1>🚄 中国交通运输</h1>
+  <p class="subtitle">一张交通网，看懂货物怎么流动、城市怎么连接</p>
+  <div class="tags">
+    <span class="tag">地理</span>
+    <span class="tag">八年级</span>
+    <span class="tag">中国经济地理</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>5</b><span>运输方式</span></div>
+    <div class="stat"><b>1</b><span>交通网地图</span></div>
+    <div class="stat"><b>8</b><span>诊断题</span></div>
+    <div class="stat"><b>≈25</b><span>分钟</span></div>
+  </div>
+  <img class="hero-img" src="./assets/hero-infographic.webp" alt="中国交通运输知识结构图" onerror="this.src='./assets/hero-infographic.png'">
+</header>
+
+<div class="wrap">
+
+  <!-- ═══ ABT 叙事引入 ═══ -->
+  <section class="section" id="why-learn" data-tts="why-learn" data-tsh="引入">
+    <h2 class="section-title">💭 为什么要研究交通运输？</h2>
+    <div class="abt-grid">
+      <div class="abt-item and">
+        <div class="abt-label">✅ 你已经知道</div>
+        <p>你坐过高铁、收过快递。你知道人和货物都能从一个城市快速运到另一个城市，离不开火车、汽车、轮船、飞机。</p>
+      </div>
+      <div class="abt-item but">
+        <div class="abt-label">⚠️ 但问题是</div>
+        <p>中国的交通线为什么<strong>东边密、西边疏</strong>？一批货到底该走铁路、公路还是水运，怎么选才又快又省钱？</p>
+      </div>
+      <div class="abt-item therefore">
+        <div class="abt-label">🎯 所以今天</div>
+        <p>我们用一张中国交通网地图，看懂五种运输方式怎么分工，学会"什么货走什么路"，并理解高铁高速如何改变中国。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 学习目标 ═══ -->
+  <section class="section" id="objectives" data-tts="objectives" data-tsh="学习目标">
+    <h2 class="section-title">🎯 学习目标</h2>
+    <div class="card teal">
+      <ul>
+        <li>说出五种现代运输方式（铁路、公路、水运、航空、管道）的特点与适用场景</li>
+        <li>在地图上描述中国交通线"<strong>东密西疏</strong>"的分布特征，并解释原因</li>
+        <li>举例说明高速公路、高速铁路的快速发展对生产生活的影响</li>
+        <li>根据货物性质和出行需求，选择最合适的运输方式</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══ 前测 ═══ -->
+  <section class="section" id="pretest" data-tts="pretest" data-tsh="前测" data-bloom-level="remember" data-conceptest="true" data-scaffold="partial">
+    <h2 class="section-title">🔍 前测：先试试你的直觉</h2>
+    <div class="card" data-conceptest="true">
+      <div class="quiz-card" data-quiz="0">
+        <span class="level-tag l1">前测 · 不计分</span>
+        <div class="quiz-question" style="font-weight:600;margin:8px 0 4px">从昆明运一批鲜花到北京，要求最快速度，最合适的运输方式是？</div>
+        <div class="quiz-options">
+          <button class="quiz-option" data-answer="a">A. 铁路运输</button>
+          <button class="quiz-option" data-answer="b">B. 公路运输</button>
+          <button class="quiz-option" data-answer="c">C. 航空运输</button>
+          <button class="quiz-option" data-answer="d">D. 水路运输</button>
+        </div>
+        <div class="feedback" id="fb-0"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ AI 学伴卡 ═══ -->
+  <section class="ta-standard-section" id="teachany-ai-tutor-card">
+    <div data-teachany-tutor-card></div>
+  </section>
+
+  <!-- ═══ 模块1：五种现代运输方式 ═══ -->
+  <section class="section" id="module-1" data-tts="module-1" data-tsh="五种运输方式" data-bloom-level="apply" data-scaffold="full">
+    <h2 class="section-title">🚚 模块 1：五种现代运输方式</h2>
+    <p class="section-sub">现代交通运输主要有五种方式，各有所长。</p>
+    <div class="card">
+      <h3>五种运输方式对比</h3>
+      <table class="cmp-table">
+        <tr><th>方式</th><th>运量</th><th>速度</th><th>运费</th><th>适合的货物/场景</th></tr>
+        <tr><td>🚂 铁路</td><td>大</td><td>较快</td><td>较低</td><td>大宗、长途：煤炭、粮食、钢材</td></tr>
+        <tr><td>🚗 公路</td><td>小</td><td>较快</td><td>较高</td><td>灵活门到门、短途：快递、鲜活</td></tr>
+        <tr><td>🚢 水运</td><td>最大</td><td>最慢</td><td>最低</td><td>大宗笨重、不急需：矿石、集装箱</td></tr>
+        <tr><td>✈️ 航空</td><td>最小</td><td>最快</td><td>最高</td><td>贵重、急需、生鲜：药品、鲜花</td></tr>
+        <tr><td>🛢️ 管道</td><td>连续</td><td>—</td><td>低</td><td>液体、气体：石油、天然气</td></tr>
+      </table>
+      <p class="muted" style="margin-top:10px">记忆口诀：<strong>大宗长途走铁路，短途灵活用公路；笨重不急选水运，贵重急需坐飞机；油气全靠管道送。</strong></p>
+    </div>
+    <div class="card teal" data-conceptest="true" data-scaffold="partial" data-bloom-level="analyze">
+      <h3>🗳️ 概念检测</h3>
+      <p>同桌讨论 30 秒：<strong>"水运运量最大、运费最低，所以大宗货物都该走水运"——对吗？</strong></p>
+      <button class="reveal-btn" onclick="document.getElementById('ct1').style.display='block'">揭晓解析</button>
+      <div class="reveal-answer" id="ct1">
+        <b>不对，忽略了前提条件。</b><br>
+        水运虽便宜量大，但<strong>速度最慢</strong>，且只能到达有水运条件的港口/河流沿线。如果货物急需、或目的地不通水运，就不能选水运。选运输方式要综合考虑<strong>运量、速度、运费、目的地条件</strong>四个因素，没有"万能"的方式。
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 模块2：交通线分布特征（地图） ═══ -->
+  <section class="section" id="module-2" data-tts="module-2" data-tsh="交通线分布特征" data-bloom-level="analyze" data-scaffold="partial">
+    <h2 class="section-title">🗺️ 模块 2：交通线"东密西疏"</h2>
+    <p class="section-sub">在地图上看中国主要铁路干线，找找分布规律。</p>
+    <div class="card">
+      <h3>中国主要铁路干线分布图</h3>
+      <div class="map-box">
+        <div id="transportMap"></div>
+        <div class="map-legend">
+          <span class="lg"><span class="dot" style="background:#f59e0b"></span>南北干线</span>
+          <span class="lg"><span class="dot" style="background:#06b6d4"></span>东西干线</span>
+          <span class="lg"><span class="dot" style="background:#ef4444"></span>主要枢纽城市</span>
+        </div>
+      </div>
+      <p class="muted">拖动、缩放地图，观察东部和西部的铁路密度差异。</p>
+    </div>
+    <div class="card purple">
+      <h3>🔎 分布特征与成因</h3>
+      <ul>
+        <li><strong>特征：</strong>中国铁路网（及公路网）呈现明显的"<strong>东密西疏</strong>"格局——东部线路密集成网，西部线路稀疏。</li>
+        <li><strong>自然原因：</strong>东部地形以平原、丘陵为主，施工难度小、成本低；西部多高原、山地、沙漠，施工难、成本高。</li>
+        <li><strong>社会经济原因：</strong>东部人口稠密、城市多、经济发达，运输需求大；西部人口稀少、经济相对落后，运输需求小。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══ 模块3：高速公路与高铁的发展 ═══ -->
+  <section class="section" id="module-3" data-tts="module-3" data-tsh="高速公路与高铁" data-bloom-level="understand" data-scaffold="full">
+    <h2 class="section-title">🚄 模块 3：高速公路与高铁改变中国</h2>
+    <div class="card">
+      <h3>飞驰的"中国速度"</h3>
+      <ul>
+        <li><strong>高速铁路：</strong>从"四纵四横"到"<strong>八纵八横</strong>"，运营时速达 350 公里，中国高铁里程居世界第一。</li>
+        <li><strong>高速公路：</strong>实现"县县通高速"，高速公路里程同样居世界第一。</li>
+        <li><strong>同城效应：</strong>高铁让相邻城市像"同一座城市"，人们可以跨城上班、当日往返。</li>
+      </ul>
+    </div>
+    <div class="card teal">
+      <h3>💡 高铁高速对生活的影响</h3>
+      <ul>
+        <li><strong>缩短时空距离：</strong>北京到上海从十几个小时缩到 4-5 小时，"千里江陵一日还"成为日常。</li>
+        <li><strong>带动沿线经济：</strong>高铁站周边形成新的商业圈，中小城市接入全国大市场。</li>
+        <li><strong>改变出行与居住：</strong>旅游更便捷，"在大城市工作、在周边城市居住"成为可能。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══ 模块4：运输方式选择（实战） ═══ -->
+  <section class="section" id="module-4" data-tts="module-4" data-tsh="运输方式选择" data-bloom-level="apply" data-scaffold="partial">
+    <h2 class="section-title">🎯 模块 4：实战——什么货走什么路</h2>
+    <p class="section-sub">综合运量、速度、运费和目的地条件，选出最合适的运输方式。</p>
+    <div class="scene-card">
+      <p><span class="cargo">情境①</span>：1 吨活鱼从郊区鱼塘运到市区菜市场，要保鲜。</p>
+      <button class="reveal-btn" onclick="var a=document.getElementById('s1');a.style.display=a.style.display==='block'?'none':'block'">看答案</button>
+      <div class="reveal-answer" id="s1"><b>公路运输。</b>短途、鲜活、要"门到门"，公路最灵活。</div>
+    </div>
+    <div class="scene-card">
+      <p><span class="cargo">情境②</span>：5000 吨煤炭从山西运到上海发电厂。</p>
+      <button class="reveal-btn" onclick="var a=document.getElementById('s2');a.style.display=a.style.display==='block'?'none':'block'">看答案</button>
+      <div class="reveal-answer" id="s2"><b>铁路为主。</b>大宗笨重、运量大、长途，铁路运量大、运费低。</div>
+    </div>
+    <div class="scene-card">
+      <p><span class="cargo">情境③</span>：一批急救药品从北京紧急运往成都。</p>
+      <button class="reveal-btn" onclick="var a=document.getElementById('s3');a.style.display=a.style.display==='block'?'none':'block'">看答案</button>
+      <div class="reveal-answer" id="s3"><b>航空运输。</b>贵重、急需，速度第一，不计运费。</div>
+    </div>
+    <div class="scene-card">
+      <p><span class="cargo">情境④</span>：新疆的天然气长期稳定供应上海。</p>
+      <button class="reveal-btn" onclick="var a=document.getElementById('s4');a.style.display=a.style.display==='block'?'none':'block'">看答案</button>
+      <div class="reveal-answer" id="s4"><b>管道运输（西气东输）。</b>气体、连续供应，管道最安全、成本低。</div>
+    </div>
+  </section>
+
+  <!-- ═══ 后测 ═══ -->
+  <section class="section" id="posttest" data-tts="posttest" data-tsh="后测" data-bloom-level="analyze" data-scaffold="none">
+    <h2 class="section-title">✏️ 后测：学会了吗？</h2>
+    <div class="card">
+      <div class="quiz-card" data-quiz="1">
+        <span class="level-tag l2">第 1 题</span>
+        <div class="quiz-question" style="font-weight:600;margin:8px 0 4px">我国交通线分布的总体特征是？</div>
+        <div class="quiz-options">
+          <button class="quiz-option" data-answer="a">A. 东密西疏</button>
+          <button class="quiz-option" data-answer="b">B. 西密东疏</button>
+          <button class="quiz-option" data-answer="c">C. 南北均匀</button>
+          <button class="quiz-option" data-answer="d">D. 中部最密</button>
+        </div>
+        <div class="feedback" id="fb-1"></div>
+      </div>
+      <div class="quiz-card" data-quiz="2" style="margin-top:18px">
+        <span class="level-tag l2">第 2 题</span>
+        <div class="quiz-question" style="font-weight:600;margin:8px 0 4px">10 万吨铁矿石从澳大利亚运到上海宝钢，最经济的运输方式是？</div>
+        <div class="quiz-options">
+          <button class="quiz-option" data-answer="a">A. 航空运输</button>
+          <button class="quiz-option" data-answer="b">B. 铁路运输</button>
+          <button class="quiz-option" data-answer="c">C. 海洋运输（水运）</button>
+          <button class="quiz-option" data-answer="d">D. 公路运输</button>
+        </div>
+        <div class="feedback" id="fb-2"></div>
+      </div>
+      <div class="quiz-card" data-quiz="3" style="margin-top:18px">
+        <span class="level-tag l3">第 3 题</span>
+        <div class="quiz-question" style="font-weight:600;margin:8px 0 4px">高铁开通后，沿线的中小城市发展往往更快，主要原因是？</div>
+        <div class="quiz-options">
+          <button class="quiz-option" data-answer="a">A. 高铁让沿线城市与大城市时空距离缩短，更容易承接产业转移和人员流动</button>
+          <button class="quiz-option" data-answer="b">B. 高铁票价便宜，人们都搬到沿线城市</button>
+          <button class="quiz-option" data-answer="c">C. 高铁沿线土地更便宜，所以发展快</button>
+          <button class="quiz-option" data-answer="d">D. 与发展快慢无关，只是巧合</button>
+        </div>
+        <div class="feedback" id="fb-3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 小结 ═══ -->
+  <section class="section" id="summary" data-tts="summary" data-tsh="小结">
+    <h2 class="section-title">📌 课堂小结</h2>
+    <div class="card green">
+      <h3>本课要点</h3>
+      <ul>
+        <li><strong>五种方式</strong>：铁路（大宗长途）、公路（短途灵活）、水运（笨重不急）、航空（贵重急需）、管道（油气）。</li>
+        <li><strong>分布特征</strong>：交通线"东密西疏"，由自然条件和社会经济共同决定。</li>
+        <li><strong>高铁高速</strong>：缩短时空距离、带动沿线经济、改变生活方式。</li>
+        <li><strong>选择原则</strong>：看运量、速度、运费、目的地条件，"什么货走什么路"。</li>
+      </ul>
+      <div style="margin-top:12px;padding:12px 14px;background:#fffbeb;border-radius:10px;border-left:3px solid #f59e0b">
+        <strong>⚠️ 易错提醒：</strong>选运输方式不能只看运费——水运最便宜但最慢且受港口限制，急需的货再贵也要走航空。
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 标准音频播放器 ═══ -->
+  <section class="ta-standard-section" id="teachany-audio-player">
+    <div data-teachany-audio-player></div>
+  </section>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  { "id": "seg01", "section": "why-learn", "src": "./tts/seg01_why-learn.mp3", "label": "引入：为什么要研究交通运输" },
+  { "id": "seg02", "section": "module-1", "src": "./tts/seg02_module-1.mp3", "label": "五种运输方式对比" },
+  { "id": "seg03", "section": "module-2", "src": "./tts/seg03_module-2.mp3", "label": "交通线东密西疏" },
+  { "id": "seg04", "section": "module-3", "src": "./tts/seg04_module-3.mp3", "label": "高铁高速改变中国" },
+  { "id": "seg05", "section": "module-4", "src": "./tts/seg05_module-4.mp3", "label": "运输方式怎么选" },
+  { "id": "seg06", "section": "summary", "src": "./tts/seg06_summary.mp3", "label": "课堂小结" }
+]
+  </script>
+
+  <!-- ═══ 知识图谱 ═══ -->
+  <section class="section" id="knowledge-graph" data-tts="knowledge-graph" data-tsh="知识图谱">
+    <h2 class="section-title">🗺️ 知识图谱：中国交通运输</h2>
+    <div data-teachany-kg="geo-m-china-transportation">
+      <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
+    </div>
+    <p style="margin-top:14px;color:var(--text-secondary);font-size:14px"><strong>前置：</strong><a href="../geo-m-china-industry/index.html" style="color:var(--primary)">中国工业</a> · <a href="../geo-m-china-terrain/index.html" style="color:var(--primary)">中国地形</a>　<strong>后续：</strong><a href="../geo-m-china-regions/index.html" style="color:var(--primary)">中国区域</a> · <a href="../geo-h-transportation/index.html" style="color:var(--primary)">交通运输</a></p>
+  </section>
+
+  <!-- ═══ 图文速览 ═══ -->
+  <section class="section" id="figures" data-tts="figures" data-tsh="图文速览">
+    <h2 class="section-title">🖼️ 图文速览</h2>
+    <div class="video-grid">
+      <figure class="card" style="padding:14px;text-align:center;margin-bottom:0"><img src="./assets/hero-infographic.webp" alt="中国交通运输知识结构" loading="lazy" style="width:100%;border-radius:10px"><figcaption class="muted" style="margin-top:8px;font-size:13px">知识结构总览</figcaption></figure>
+      <figure class="card teal" style="padding:14px;text-align:center;margin-bottom:0"><img src="./assets/concept-diagram.svg" alt="五种运输方式对比" loading="lazy" style="width:100%;border-radius:10px;background:#fff"><figcaption class="muted" style="margin-top:8px;font-size:13px">五种运输方式对比</figcaption></figure>
+      <figure class="card amber" style="padding:14px;text-align:center;margin-bottom:0"><img src="./assets/process-diagram.svg" alt="运输方式选择流程" loading="lazy" style="width:100%;border-radius:10px;background:#fff"><figcaption class="muted" style="margin-top:8px;font-size:13px">运输方式选择流程</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ═══ 结课导航 ═══ -->
+  <div class="next-course">
+    <h3>🎓 掌握交通运输后，继续你的地理之旅</h3>
+    <p>前置复习：中国工业 · 中国地形 ｜ 下一步：中国区域</p>
+    <div class="nc-links">
+      <a href="../geo-m-china-terrain/index.html" class="alt">← 复习：中国地形</a>
+      <a href="../geo-m-china-regions/index.html">下一课：中国区域 →</a>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<div class="footer">TeachAny · 中国交通运输 · 初中地理 G8 · 中国经济地理</div>
+
+<!-- ═══ 标准模块脚本 ═══ -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "中国交通运输",
+  subject: "geography",
+  grade: 8,
+  learningObjectives: ["说出五种运输方式特点与适用场景","描述交通线东密西疏分布并解释原因","说明高铁高速对生活的影响","根据需求选择合适运输方式"]
+};
+</script>
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+
+<!-- ═══ 中国交通网地图 ═══ -->
+<script>
+window.addEventListener('load', function(){
+  if (typeof L === 'undefined') { setTimeout(arguments.callee, 300); return; }
+  var map = L.map('transportMap', { scrollWheelZoom: false }).setView([35.0, 105.0], 4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 8, attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+  // 聚焦中国区域（硬规则：fitBounds）
+  map.fitBounds([[18, 73], [54, 135]]);
+
+  var ns = { color: '#f59e0b', weight: 3, opacity: .85 };
+  var ew = { color: '#06b6d4', weight: 3, opacity: .85 };
+  // 南北干线
+  L.polyline([[39.9,116.4],[31.2,121.5]], ns).addTo(map).bindPopup('京沪线：北京—上海');
+  L.polyline([[39.9,116.4],[23.1,113.3]], ns).addTo(map).bindPopup('京广线：北京—广州');
+  L.polyline([[45.8,126.5],[22.3,114.1]], ns).addTo(map).bindPopup('京哈—京九线：哈尔滨—九龙');
+  // 东西干线
+  L.polyline([[34.7,107.3],[34.3,108.9],[32.0,118.8],[31.2,121.5]], ew).addTo(map).bindPopup('陇海—沪昆线：兰州—上海');
+  L.polyline([[43.8,87.6],[36.1,103.8],[34.7,107.3]], ew).addTo(map).bindPopup('兰新线：乌鲁木齐—兰州');
+  L.polyline([[30.6,104.1],[30.6,114.3],[31.2,121.5]], ew).addTo(map).bindPopup('沪汉蓉线：成都—武汉—上海');
+  // 枢纽城市
+  var cities = [['北京',39.9,116.4],['上海',31.2,121.5],['广州',23.1,113.3],['成都',30.6,104.1],['武汉',30.6,114.3],['西安',34.3,108.9],['郑州',34.7,113.6],['兰州',36.1,103.8]];
+  cities.forEach(function(c){
+    L.circleMarker([c[1],c[2]], { radius: 6, color: '#ef4444', fillColor: '#ef4444', fillOpacity: .9 })
+      .addTo(map).bindPopup('🚉 ' + c[0]);
+  });
+});
+</script>
+
+<!-- ═══ 诊断题判定 + 学习闭环 ═══ -->
+<script>
+(function(){
+'use strict';
+const QUIZ_ANSWERS = {
+  0: { correct: 'c', feedback: '鲜花保鲜期短、要最快，航空运输速度最快。', bloom: 2 },
+  1: { correct: 'a', feedback: '我国交通线呈"东密西疏"格局，由自然条件和社会经济共同决定。', bloom: 2 },
+  2: { correct: 'c', feedback: '10万吨铁矿石是大宗笨重货物，跨国长途且不急需，海洋运输运量最大、运费最低。', bloom: 3 },
+  3: { correct: 'a', feedback: '高铁缩短了沿线城市与大城市的时空距离，促进产业转移和人员流动，带动发展。', bloom: 4 }
+};
+document.querySelectorAll('.quiz-card').forEach(function(card){
+  const qid = parseInt(card.dataset.quiz, 10);
+  const opts = card.querySelectorAll('.quiz-option');
+  const fb = card.querySelector('.feedback');
+  opts.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (card.dataset.done) return;
+      card.dataset.done = '1';
+      const ans = QUIZ_ANSWERS[qid];
+      const chosen = btn.dataset.answer;
+      const isCorrect = chosen === ans.correct;
+      opts.forEach(function(o){
+        o.disabled = true;
+        if (o.dataset.answer === ans.correct) o.classList.add('correct');
+      });
+      if (!isCorrect) btn.classList.add('wrong');
+      fb.textContent = (isCorrect ? '✅ 回答正确！' : '❌ 再想想。') + ' ' + ans.feedback;
+      fb.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
+      if (window.__onQuiz) window.__onQuiz(qid, isCorrect, ans.bloom);
+    });
+  });
+});
+
+/* ─── 学习闭环引擎 ─── */
+const COURSE = {
+  id: 'geo-m-china-transportation', node: 'geo-m-china-transportation', title: '中国交通运输',
+  prereqs: [
+    { id: 'geo-m-china-industry', node: 'china-industry', title: '中国工业' },
+    { id: 'geo-m-china-terrain', node: 'china-terrain', title: '中国地形' }
+  ],
+  next: [ { id: 'geo-m-china-regions', title: '中国区域' }, { id: 'geo-h-transportation', title: '交通运输' } ]
+};
+const peer = id => '../' + id + '/index.html';
+
+const TeachAnyAdaptive = (() => {
+  const KEY = 'teachany_mastery';
+  const get = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { return {}; } };
+  const save = d => localStorage.setItem(KEY, JSON.stringify(d));
+  function getNodeMastery(n) { return get()[n]?.level || 0; }
+  function updateMastery(n, correct, bloom = 1) {
+    const d = get(), prev = d[n]?.level || 0, w = 0.1 + (bloom - 1) * 0.04, s = correct ? 1 : 0;
+    const lv = Math.min(1, Math.max(0, prev * (1 - w) + s * w));
+    d[n] = { level: Math.round(lv * 1000) / 1000, attempts: (d[n]?.attempts || 0) + 1, lastCorrect: correct, lastAttempt: Date.now(), bloomMax: Math.max(d[n]?.bloomMax || 0, correct ? bloom : 0) };
+    save(d); return d[n];
+  }
+  return { getNodeMastery, updateMastery, getMastery: get };
+})();
+
+const TeachAnyProgress = (() => {
+  const key = c => 'teachany_progress_' + c;
+  const get = c => { try { return JSON.parse(localStorage.getItem(key(c)) || '{}'); } catch(e) { return {}; } };
+  const save = (c, d) => { const m = { ...get(c), ...d, lastUpdated: Date.now() }; localStorage.setItem(key(c), JSON.stringify(m)); };
+  function completeModule(c, mid, r = {}) { const p = get(c); p.modules = p.modules || {}; p.modules[mid] = { completed: true, completedAt: Date.now(), score: r.score || 0, total: r.totalQuestions || 0, bloom: r.bloomLevel || 1 }; save(c, p); }
+  const saveScroll = c => localStorage.setItem('teachany_scroll_' + c, String(window.scrollY));
+  const restoreScroll = c => { const p = localStorage.getItem('teachany_scroll_' + c); if (p) requestAnimationFrame(() => window.scrollTo(0, parseInt(p))); };
+  function recordTime(c, s = 30) { const p = get(c); p.timeSpent = (p.timeSpent || 0) + s; save(c, p); }
+  function getGlobalStats() { try { return JSON.parse(localStorage.getItem('teachany_stats') || '{}'); } catch(e) { return {}; } }
+  function updateGlobalStats() { const s = getGlobalStats(), today = new Date().toISOString().slice(0,10);
+    if (s.lastActiveDate !== today) { const y = new Date(Date.now() - 864e5).toISOString().slice(0,10); s.streak = (s.lastActiveDate === y) ? (s.streak || 0) + 1 : 1; s.lastActiveDate = today; }
+    s.totalSessions = (s.totalSessions || 0) + 1; s.maxStreak = Math.max(s.maxStreak || 0, s.streak);
+    localStorage.setItem('teachany_stats', JSON.stringify(s)); return s; }
+  return { getProgress: get, completeModule, saveScrollPosition: saveScroll, restoreScrollPosition: restoreScroll, recordTime, getGlobalStats, updateGlobalStats };
+})();
+
+const TeachAnySR = (() => {
+  const KEY = 'teachany_review';
+  const get = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { return {}; } };
+  function addToReview(n, name, url) { const d = get(); if (!d[n]) { d[n] = { name, url, interval: 1, easeFactor: 2.5, repetitions: 0, nextReview: Date.now() + 864e5, lastReview: Date.now(), quality: null }; localStorage.setItem(KEY, JSON.stringify(d)); } }
+  return { addToReview, getData: get };
+})();
+
+const TeachAnyAchievements = (() => {
+  const KEY = 'teachany_achievements';
+  const DEF = { 'first-lesson': { n: '第一步', i: '🌱' }, 'perfect-score': { n: '满分达人', i: '⭐' }, 'streak-3': { n: '连续学习', i: '🔥' }, 'streak-7': { n: '周冠军', i: '💪' } };
+  const get = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { return {}; } };
+  function toast(icon, title, sub, cls = '') { const t = document.createElement('div'); t.className = 'ta-toast ' + cls;
+    t.innerHTML = `<div class="ti">${icon}</div><div class="tc"><strong>${title}</strong><span>${sub}</span></div>`;
+    document.body.appendChild(t); requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 3200); }
+  function award(id) { const d = get(); if (d[id]) return false; d[id] = { earnedAt: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d));
+    const f = DEF[id]; if (f) toast(f.i, '🎉 解锁成就', f.n); return true; }
+  function checkAndAward() { const s = TeachAnyProgress.getGlobalStats();
+    let total = 0; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i);
+      if (k && k.startsWith('teachany_progress_')) { try { const p = JSON.parse(localStorage.getItem(k)); total += Object.values(p.modules || {}).filter(x => x.completed).length; } catch(e) {} } }
+    if (total >= 1) award('first-lesson');
+    if (s.streak >= 3) award('streak-3'); if (s.streak >= 7) award('streak-7'); }
+  return { award, checkAndAward, toast, getAchievements: get };
+})();
+
+function masteryStatus(node) { const l = TeachAnyAdaptive.getNodeMastery(node); return l >= 0.6 ? 'ready' : l > 0 ? 'weak' : 'none'; }
+function warnPrereqs() {
+  const gaps = COURSE.prereqs.filter(p => masteryStatus(p.node) !== 'ready');
+  if (!gaps.length) return;
+  const mask = document.createElement('div'); mask.className = 'ta-modal-mask';
+  mask.innerHTML = `<div class="ta-modal"><h3>⚠️ 前置知识检查</h3><p>本课件有 ${gaps.length} 个前置知识点尚未掌握，建议先复习再继续（也可以直接开始）：</p>
+    <ul>${gaps.map(g => `<li><a href="${peer(g.id)}">${g.title}</a> <span class="st">— ${masteryStatus(g.node) === 'weak' ? '已学习但未巩固' : '尚未开始'}</span></li>`).join('')}</ul>
+    <div class="acts"><button class="b1" onclick="location.href='${peer(gaps[0].id)}'">去复习：${gaps[0].title}</button>
+    <button class="b2" id="ta-prereq-skip">我已了解，继续学习</button></div></div>`;
+  document.body.appendChild(mask);
+  mask.querySelector('#ta-prereq-skip').onclick = () => mask.remove();
+  mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+}
+function showBanner(cls, icon, html, anchor) {
+  const b = document.createElement('div'); b.className = 'ta-banner ' + cls;
+  b.innerHTML = `<span class="bi">${icon}</span><div>${html}</div>`;
+  const target = document.querySelector(anchor);
+  if (target) target.after(b); else document.body.appendChild(b);
+  b.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+const answered = { pre: new Map(), post: new Map() };
+window.__onQuiz = function(qid, correct, bloom) {
+  if (qid === 0) {
+    TeachAnyAdaptive.updateMastery('china-transportation', correct, bloom);
+    answered.pre.set(qid, correct);
+    TeachAnyProgress.completeModule(COURSE.id, 'pretest', { score: correct ? 1 : 0, totalQuestions: 1, bloomLevel: 2 });
+    if (correct) TeachAnyAchievements.toast('🚀', '前测答对', '对运输方式的选择很有感觉', 'success');
+  } else {
+    TeachAnyAdaptive.updateMastery('china-transportation', correct, bloom);
+    answered.post.set(qid, correct);
+    if (answered.post.size === 3) onPostDone();
+  }
+};
+let postDoneFired = false;
+function onPostDone() {
+  if (postDoneFired) return; postDoneFired = true;
+  const score = [...answered.post.values()].filter(Boolean).length;
+  TeachAnyProgress.completeModule(COURSE.id, 'posttest', { score, totalQuestions: 3, bloomLevel: 4 });
+  TeachAnySR.addToReview('geo-m-china-transportation', '中国交通运输', location.href.split('#')[0]);
+  TeachAnyAchievements.checkAndAward();
+  if (score === 3) TeachAnyAchievements.award('perfect-score');
+  const m = TeachAnyAdaptive.getNodeMastery('china-transportation');
+  const mask = document.createElement('div'); mask.className = 'ta-done-mask';
+  mask.innerHTML = `<div class="ta-done"><div style="font-size:46px;margin-bottom:12px;">${score === 3 ? '🏆' : score === 2 ? '🎉' : '💪'}</div>
+    <h2>后测 ${score}/3</h2>
+    <p>${score === 3 ? '满分！你已掌握中国交通运输的核心，知识点已加入间隔复习队列。' : score === 2 ? '不错！错题解析再看一眼，注意运输方式选择的四要素。' : '建议回到"五种运输方式"对比表和"实战选择"再巩固。知识点已加入复习队列。'}</p>
+    <a href="${peer(COURSE.next[0].id)}">继续学习：${COURSE.next[0].title} →</a>
+    <span class="later" id="ta-done-close">稍后再说</span></div>`;
+  document.body.appendChild(mask);
+  mask.querySelector('#ta-done-close').onclick = () => mask.remove();
+}
+
+/* 初始化 */
+TeachAnyProgress.restoreScrollPosition(COURSE.id);
+let st2; window.addEventListener('scroll', () => { clearTimeout(st2); st2 = setTimeout(() => TeachAnyProgress.saveScrollPosition(COURSE.id), 500); }, { passive: true });
+setInterval(() => TeachAnyProgress.recordTime(COURSE.id, 30), 30000);
+TeachAnyProgress.updateGlobalStats();
+const prog = TeachAnyProgress.getProgress(COURSE.id);
+const doneMods = Object.values(prog.modules || {}).filter(m => m.completed).length;
+if (doneMods > 0 && doneMods < 2) {
+  const r = document.createElement('div'); r.className = 'ta-resume';
+  r.innerHTML = `<span>📚 欢迎回来！继续学习中国交通运输。</span><button id="ta-r1">继续 →</button><button class="sec" id="ta-r2">从头开始</button>`;
+  document.body.appendChild(r);
+  r.querySelector('#ta-r1').onclick = () => r.remove();
+  r.querySelector('#ta-r2').onclick = () => { window.scrollTo({ top: 0, behavior: 'smooth' }); r.remove(); };
+  setTimeout(() => r.remove(), 12000);
+}
+setTimeout(warnPrereqs, 800);
+
+/* 吸顶导航高亮 + 进度条 */
+const secs = document.querySelectorAll('.section[id]');
+const navLinks = document.querySelectorAll('.nav-bar a');
+window.addEventListener('scroll', () => {
+  const y = window.scrollY + 130;
+  let cur = '';
+  secs.forEach(s => { if (s.offsetTop <= y) cur = s.id; });
+  navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + cur));
+  const h = document.documentElement;
+  const pct = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+}, { passive: true });
+})();
+</script>
+</body>
+</html>
