@@ -219,6 +219,7 @@
   <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
   <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
   <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-historical-map.css">
 </head>
 <body>
 <!-- teachany-back-to-gallery -->
@@ -359,15 +360,49 @@
     <p class="section-sub">在地图上看中国主要铁路干线，找找分布规律。</p>
     <div class="card">
       <h3>中国主要铁路干线分布图</h3>
-      <div class="map-box">
-        <div id="transportMap"></div>
-        <div class="map-legend">
-          <span class="lg"><span class="dot" style="background:#f59e0b"></span>南北干线</span>
-          <span class="lg"><span class="dot" style="background:#06b6d4"></span>东西干线</span>
-          <span class="lg"><span class="dot" style="background:#ef4444"></span>主要枢纽城市</span>
-        </div>
+      <div class="map-host" data-teachany-map="thm-geo-m-china-transportation" data-teachany-map-scope="china" data-teachany-map-title="中国交通运输网">
+        <script type="application/json" data-teachany-map-config>
+{
+  "basemap": {
+    "url": "../../assets/maps/physical/terrain-tiles/{z}/{x}/{y}.png",
+    "minNativeZoom": 4, "maxNativeZoom": 6, "maxZoom": 8, "opacity": 1,
+    "bounds": [[16, 70], [56, 138]],
+    "attribution": "© TeachAny 自带地形底图"
+  },
+  "terrain": false,
+  "fitBounds": [[18, 73], [54, 135]],
+  "eras": [
+    {
+      "id": "cn",
+      "label": "省级行政区划",
+      "file": "../../assets/maps/political/china-modern/provinces.geojson",
+      "fill": "#f59e0b",
+      "fillOpacity": 0.08,
+      "stroke": "#fbbf24",
+      "weight": 1.3,
+      "strokeOpacity": 0.9,
+      "desc": "<strong>中国现代省级行政区划</strong>：34 个省级行政区（23 省、5 自治区、4 直辖市、2 特别行政区）。观察铁路干线在不同省份的密度差异。",
+      "cities": [
+        [39.9, 116.4, "北京", "Beijing", "全国铁路枢纽中心"],
+        [31.23, 121.47, "上海", "Shanghai", "京沪线·沪昆线起点"],
+        [34.76, 113.65, "郑州", "Zhengzhou", "京广线×陇海线十字枢纽"],
+        [30.6, 114.3, "武汉", "Wuhan", "京广线·长江水运交汇"],
+        [23.13, 113.26, "广州", "Guangzhou", "京广线终点·华南枢纽"],
+        [34.34, 108.94, "西安", "Xi'an", "西北铁路枢纽"],
+        [30.67, 104.07, "成都", "Chengdu", "西南铁路枢纽"],
+        [36.06, 103.82, "兰州", "Lanzhou", "陇海线·兰新线交汇"],
+        [45.75, 126.63, "哈尔滨", "Harbin", "京哈线终点"],
+        [25.04, 102.71, "昆明", "Kunming", "沪昆线·成昆线终点"]
+      ]
+    }
+  ],
+  "overlays": [
+    { "id": "railways", "file": "./assets/maps/railways.geojson", "label": "主要铁路干线", "style": { "color": "#dc2626", "weight": 3 }, "visible": true }
+  ]
+}
+        </script>
       </div>
-      <p class="muted">拖动、缩放地图，观察东部和西部的铁路密度差异。</p>
+      <p class="muted">拖动、缩放地图：灰色起伏是自带地形底图，橙色是省级行政区边界，红色线主要铁路干线——观察东部和西部的密度差异。</p>
     </div>
     <div class="card purple">
       <h3>🔎 分布特征与成因</h3>
@@ -549,36 +584,7 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script src="../../assets/scripts/feedback-widget.js" defer></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
-
-<!-- ═══ 中国交通网地图 ═══ -->
-<script>
-window.addEventListener('load', function(){
-  if (typeof L === 'undefined') { setTimeout(arguments.callee, 300); return; }
-  var map = L.map('transportMap', { scrollWheelZoom: false }).setView([35.0, 105.0], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 8, attribution: '&copy; OpenStreetMap'
-  }).addTo(map);
-  // 聚焦中国区域（硬规则：fitBounds）
-  map.fitBounds([[18, 73], [54, 135]]);
-
-  var ns = { color: '#f59e0b', weight: 3, opacity: .85 };
-  var ew = { color: '#06b6d4', weight: 3, opacity: .85 };
-  // 南北干线
-  L.polyline([[39.9,116.4],[31.2,121.5]], ns).addTo(map).bindPopup('京沪线：北京—上海');
-  L.polyline([[39.9,116.4],[23.1,113.3]], ns).addTo(map).bindPopup('京广线：北京—广州');
-  L.polyline([[45.8,126.5],[22.3,114.1]], ns).addTo(map).bindPopup('京哈—京九线：哈尔滨—九龙');
-  // 东西干线
-  L.polyline([[34.7,107.3],[34.3,108.9],[32.0,118.8],[31.2,121.5]], ew).addTo(map).bindPopup('陇海—沪昆线：兰州—上海');
-  L.polyline([[43.8,87.6],[36.1,103.8],[34.7,107.3]], ew).addTo(map).bindPopup('兰新线：乌鲁木齐—兰州');
-  L.polyline([[30.6,104.1],[30.6,114.3],[31.2,121.5]], ew).addTo(map).bindPopup('沪汉蓉线：成都—武汉—上海');
-  // 枢纽城市
-  var cities = [['北京',39.9,116.4],['上海',31.2,121.5],['广州',23.1,113.3],['成都',30.6,104.1],['武汉',30.6,114.3],['西安',34.3,108.9],['郑州',34.7,113.6],['兰州',36.1,103.8]];
-  cities.forEach(function(c){
-    L.circleMarker([c[1],c[2]], { radius: 6, color: '#ef4444', fillColor: '#ef4444', fillOpacity: .9 })
-      .addTo(map).bindPopup('🚉 ' + c[0]);
-  });
-});
-</script>
+<script src="../../assets/scripts/teachany-historical-map.js" defer></script>
 
 <!-- ═══ 诊断题判定 + 学习闭环 ═══ -->
 <script>
