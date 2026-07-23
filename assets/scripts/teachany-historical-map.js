@@ -225,16 +225,27 @@
       refitTimer = setTimeout(refitMap, 160);
     }
 
-    // v2.7: Web Mercator XYZ 底图（与 WGS84 GeoJSON 同 CRS 链，Leaflet 自动对齐）
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
-      {
-        subdomains: "abcd",
-        maxZoom: 19,
-        opacity: 0.72,
-        attribution: "© CARTO © OSM contributors"
-      }
-    ).addTo(map);
+    // v2.8: Web Mercator XYZ 底图（与 WGS84 GeoJSON 同 CRS 链，Leaflet 自动对齐）。
+    // 支持 cfg.basemap 自定义底图，可用仓库自带本地瓦片（离线/国内可访问）：
+    //   "basemap": { "url": "../../assets/maps/physical/terrain-tiles/{z}/{x}/{y}.png",
+    //                "minZoom": 4, "maxZoom": 6, "opacity": 1, "attribution": "© TeachAny 地形底图" }
+    // 不传 basemap 时默认 CARTO dark_nolabels 在线底图（保持向后兼容）。
+    var bmCfg = (cfg.basemap && typeof cfg.basemap === "object") ? cfg.basemap : {};
+    var bmUrl = bmCfg.url || "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png";
+    var bmOpts = {
+      maxZoom: bmCfg.maxZoom != null ? bmCfg.maxZoom : 19,
+      opacity: bmCfg.opacity != null ? bmCfg.opacity : 0.72,
+      attribution: bmCfg.attribution || "© CARTO © OSM contributors"
+    };
+    if (bmCfg.minZoom != null) bmOpts.minZoom = bmCfg.minZoom;
+    // v2.8: 稀疏瓦片集（如只有 zoom4-6 的自带地形瓦片）用 minNativeZoom/maxNativeZoom，
+    // 地图 zoom 超出原生范围时自动拉伸/缩放瓦片，避免低 zoom 时底图空白。
+    if (bmCfg.minNativeZoom != null) bmOpts.minNativeZoom = bmCfg.minNativeZoom;
+    if (bmCfg.maxNativeZoom != null) bmOpts.maxNativeZoom = bmCfg.maxNativeZoom;
+    // v2.8: bmCfg.bounds 限定瓦片请求范围（[[南,西],[北,东]]），范围外不请求，减少 404 噪音
+    if (Array.isArray(bmCfg.bounds)) { try { bmOpts.bounds = L.latLngBounds(bmCfg.bounds); } catch (e) {} }
+    if (bmUrl.indexOf("{s}") >= 0) bmOpts.subdomains = bmCfg.subdomains || "abcd";
+    L.tileLayer(bmUrl, bmOpts).addTo(map);
 
     if (cfg.terrain !== false) {
       var terrainOpacity = 0.42;
@@ -380,10 +391,12 @@
                 }
                 return {
                   fillColor: fill,
-                  fillOpacity: lvl === "prefecture" ? 0.12 : 0.28,
+                  // v2.8: 支持 era.fillOpacity / era.weight / era.strokeOpacity 自定义
+                  // （用自带地形底图时建议 fillOpacity 0.05-0.12，让地形纹理透出）
+                  fillOpacity: era.fillOpacity != null ? era.fillOpacity : (lvl === "prefecture" ? 0.12 : 0.28),
                   color: stroke,
-                  weight: lvl === "prefecture" ? 0.7 : 1.4,
-                  opacity: 0.75
+                  weight: era.weight != null ? era.weight : (lvl === "prefecture" ? 0.7 : 1.4),
+                  opacity: era.strokeOpacity != null ? era.strokeOpacity : 0.75
                 };
               },
               onEachFeature: function (feature, layer) {
