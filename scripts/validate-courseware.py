@@ -372,6 +372,45 @@ def validate_one(course_dir, strict_feedback=False):
     if 'community' in str(course_dir):
         issues.extend(check_feedback_manifest(m, course_dir.name, strict=strict_feedback))
 
+    # 13a-d. 地图专项硬伤检测（v2026-07 加固，RULES #21/#21a 质检化）
+    # ⚠ 必须放在国际路径 return 之前：curriculum 非 cn-national 的课件（cn/中文课标名/
+    # 人教版等约190个）走最小校验会提前 return，若放在 13 节（needs_map 块内）将永远
+    # 漏检——hist-m-renaissance 手写 L.map、hist-h-cold-war-h 缺 leaflet 正是这样逃逸的。
+    _map_html = ''
+    if html.exists():
+        try:
+            _map_html = html.read_text(encoding='utf-8', errors='ignore')
+        except Exception:
+            _map_html = ''
+    if _map_html:
+        _declarative = ('data-teachany-map' in _map_html and 'teachany-historical-map.js' in _map_html)
+        # 13a. 手写 Leaflet 铺底（硬规则 #21 严禁，须用声明式标准模块）
+        _handwritten = bool(re.search(r'L\.map\s*\(', _map_html))
+        if _handwritten and not _declarative:
+            issues.append(('error',
+                f'{course_dir.name}: 课件内手写 L.map 铺底（硬规则 #21 严禁 · '
+                f'须改用 data-teachany-map 声明式标准模块 + teachany-historical-map.js）'))
+        # 13b. baseImage 必须配 crs EPSG4326（等距圆柱 JPG 在 Web Mercator 下南北错位）
+        if re.search(r'"baseImage"\s*:', _map_html) and not re.search(r'"crs"\s*:\s*"EPSG:?4326"', _map_html):
+            issues.append(('error',
+                f'{course_dir.name}: data-teachany-map-config 用 baseImage 全球渲染图但未配 '
+                f'"crs":"EPSG4326"（等距圆柱 JPG 与 Web Mercator 错位 · RULES #21a）'))
+        # 13c. 声明式地图缺依赖：data-teachany-map 必须引入 leaflet.js + teachany-historical-map.js
+        if 'data-teachany-map' in _map_html:
+            if not re.search(r'leaflet[@/.][^"\']*leaflet[^"\']*\.js|leaflet\.js', _map_html):
+                issues.append(('error',
+                    f'{course_dir.name}: 声明式地图缺 leaflet.js（data-teachany-map 依赖 Leaflet，'
+                    f'不引入则地图不渲染）'))
+            if 'teachany-historical-map.js' not in _map_html:
+                issues.append(('error',
+                    f'{course_dir.name}: 声明式地图缺 teachany-historical-map.js 引用'))
+        # 13d. 手写在线瓦片底图（OSM/CARTO/Esri）建议改用自带资源（RULES #21a）
+        if _handwritten and re.search(
+                r'tile\.openstreetmap\.org|basemaps\.cartocdn\.com|server\.arcgisonline\.com', _map_html):
+            issues.append(('warn',
+                f'{course_dir.name}: 手写在线瓦片底图（OSM/CARTO/Esri）· 建议改用自带资源 '
+                f'baseImage=assets/maps/physical/hillshade/ + crs EPSG4326（RULES #21a）'))
+
     # v5.30：国际课标体系走独立校验路径（ID 前缀、年级范围、HTML 线索关键词都不同）
     if mc != 'cn-national':
         # 仅做最小校验：subject 与 node_id 学科前缀一致 + teachany_version 必填 + title 含 TeachAny
@@ -709,7 +748,6 @@ def validate_one(course_dir, strict_feedback=False):
             issues.append(('error',
                 f'{course_dir.name}: 地图未聚焦核心区域：需 fitBounds/setView、Canvas 地图中心控制、'
                 f'或 data-teachany-map 声明式模块（其 config 含 fitBounds/center）（硬规则 #36）'))
-
     # 14. 视频嵌入规范（v5.34.11 新增，硬规则 #25）
     if html.exists() and full_html:
         # 若使用了视频，必须用 <video> 标签 + controls + preload + playsinline

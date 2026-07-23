@@ -54,11 +54,6 @@
   if (window.__TeachAnyMapInit) return;
   window.__TeachAnyMapInit = true;
 
-  if (typeof L === "undefined") {
-    console.error("[TeachAnyMap] Leaflet 未加载。请在引入本模块前先引入 leaflet.js 和 leaflet.css");
-    return;
-  }
-
   // 双平台远程地图源：teachany.cn 优先（国内外均可访问，Cloudflare），
   // GitHub（jsDelivr / raw）作为备份。任一可用即可，互为冗余。
   var REMOTE_MAP_BASES = [
@@ -192,11 +187,21 @@
       crs: useEpsg4326 ? L.CRS.EPSG4326 : L.CRS.EPSG3857,
       maxBounds: cfg.maxBounds || [[-90, -180], [90, 180]],
       zoomControl: true,
+      // v2.9: zoomSnap 可配（如 0.25）——EPSG4326 下整数 zoom 粒度粗，
+      // fitBounds 会向下取整导致视图比目标区域大很多，细粒度 snap 让聚焦更准。
+      zoomSnap: cfg.zoomSnap != null ? cfg.zoomSnap : 1,
+      zoomDelta: cfg.zoomDelta != null ? cfg.zoomDelta : 1,
       minZoom: cfg.minZoom != null ? cfg.minZoom : 2,
       maxZoom: cfg.maxZoom != null ? cfg.maxZoom : 8,
       worldCopyJump: false,
       attributionControl: false
     });
+
+    // v2.9: 全局 map 实例注册表——课件需在标准底图上叠加自定义交互层
+    // （如 geo-monsoon 的季风区多边形/风向箭头）时，通过
+    // window.TeachAnyMaps['<data-teachany-map 的 id>'] 获取实例后 L.xxx.addTo(map)。
+    window.TeachAnyMaps = window.TeachAnyMaps || {};
+    window.TeachAnyMaps[mapId] = map;
 
     if (cfg.hillshade) {
       console.warn(
@@ -209,7 +214,9 @@
 
     function refitMap() {
       try { map.invalidateSize(true); } catch (e) { map.invalidateSize(); }
-      if (currentEraLayer) {
+      // v2.9: cfg.refitEra === false 时不用 era 边界 refit——全球轮廓类 era
+      // （如 geo-monsoon 用 world/countries 做底衬）会把视图拉成全球，覆盖教学聚焦区。
+      if (currentEraLayer && cfg.refitEra !== false) {
         try {
           var b = currentEraLayer.getBounds();
           if (b && b.isValid && b.isValid()) {
@@ -492,7 +499,15 @@
     map.whenReady(scheduleRefit);
   }
 
+  // v2.9: 等待 Leaflet 就绪再初始化——兼容课件异步/回退链加载 leaflet.js 的场景
+  // （如 geo-monsoon 的多 CDN 动态加载），最多等待约 10 秒，超时明确报错而非静默失败。
+  var initRetries = 0;
   function init() {
+    if (typeof L === "undefined") {
+      if (initRetries++ < 66) { setTimeout(init, 150); return; }
+      console.error("[TeachAnyMap] Leaflet 未加载。请在引入本模块前先引入 leaflet.js 和 leaflet.css");
+      return;
+    }
     document.querySelectorAll("[data-teachany-map]").forEach(mount);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
