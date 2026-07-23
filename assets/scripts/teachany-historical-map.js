@@ -183,14 +183,17 @@
     host.appendChild(legendEl);
 
     // Leaflet 地图初始化
+    // v2.9: cfg.crs="EPSG4326" 时用等距圆柱投影（配合 cfg.baseImage 全球渲染图铺底，
+    // 与 WGS84 GeoJSON 同为经纬度线性坐标，完美对齐）；默认仍 EPSG:3857 Web Mercator。
+    var useEpsg4326 = (cfg.crs === "EPSG4326" || cfg.crs === "EPSG:4326");
     var map = L.map(mapId, {
       center: cfg.center || [34, 108],
       zoom: cfg.zoom || 4,
-      // 使用默认 EPSG:3857（Web Mercator），与 CartoDB 瓦片底图匹配
+      crs: useEpsg4326 ? L.CRS.EPSG4326 : L.CRS.EPSG3857,
       maxBounds: cfg.maxBounds || [[-90, -180], [90, 180]],
       zoomControl: true,
-      minZoom: cfg.minZoom || 2,
-      maxZoom: cfg.maxZoom || 8,
+      minZoom: cfg.minZoom != null ? cfg.minZoom : 2,
+      maxZoom: cfg.maxZoom != null ? cfg.maxZoom : 8,
       worldCopyJump: false,
       attributionControl: false
     });
@@ -225,6 +228,19 @@
       refitTimer = setTimeout(refitMap, 160);
     }
 
+    // v2.9: cfg.baseImage 用等距圆柱全球渲染图铺底（如自带 hillshade/global-color-hillshade-4k.jpg）。
+    // 必须配 cfg.crs="EPSG4326"：等距圆柱 JPG 与 WGS84 GeoJSON 同为经纬度线性坐标，完美对齐。
+    // 在默认 Web Mercator 下用 imageOverlay 会南北错位（RULES #21 禁止的正是这种错位用法）。
+    if (cfg.baseImage && cfg.baseImage.url) {
+      if (!useEpsg4326) {
+        console.warn("[TeachAnyMap] cfg.baseImage 需配合 cfg.crs=\"EPSG4326\"，否则全球等距圆柱图与 Web Mercator 错位");
+      }
+      L.imageOverlay(cfg.baseImage.url, cfg.baseImage.bounds || [[-90, -180], [90, 180]], {
+        opacity: cfg.baseImage.opacity != null ? cfg.baseImage.opacity : 1,
+        attribution: cfg.baseImage.attribution || "",
+        interactive: false
+      }).addTo(map);
+    } else {
     // v2.8: Web Mercator XYZ 底图（与 WGS84 GeoJSON 同 CRS 链，Leaflet 自动对齐）。
     // 支持 cfg.basemap 自定义底图，可用仓库自带本地瓦片（离线/国内可访问）：
     //   "basemap": { "url": "../../assets/maps/physical/terrain-tiles/{z}/{x}/{y}.png",
@@ -257,6 +273,7 @@
         { maxZoom: 13, opacity: terrainOpacity, attribution: "© Esri" }
       ).addTo(map);
     }
+    } // end else（v2.9 baseImage 分支的备选路径）
 
     if (cfg.fitBounds) {
       try { map.fitBounds(L.latLngBounds(cfg.fitBounds), { padding: [24, 24] }); } catch (e) {}
