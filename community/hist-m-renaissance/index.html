@@ -443,12 +443,44 @@ footer .objectives li { margin-bottom: 6px; }
   <h2><span class="icon">🗺️</span>从佛罗伦萨到威登堡：观念的扩散</h2>
   <p class="section-intro">点击地图上的城市看它在这场运动里扮演什么角色。地图含 16 世纪欧洲疆域轮廓和地形底图——你能看到阿尔卑斯山如何分隔南北欧，也能看到德国诸侯林立的"政治空间"。</p>
 
-  <!-- 真实地图（基线 ⑯）：hillshade 地形 + GeoJSON 国界 + 城市点位 -->
-  <div id="renaissance-map-real"></div>
-  <div id="city-detail" class="city-detail">
-    <h4 id="city-name"></h4>
-    <div class="city-meta" id="city-meta"></div>
-    <div id="city-content"></div>
+  <!-- 标准声明式地图（RULES #21）：自带晕渲底图 + GeoJSON 国界 + 城市点位 -->
+  <div data-teachany-map="thm-hist-m-renaissance"
+       data-teachany-map-scope="world"
+       data-teachany-map-title="16 世纪欧洲：从佛罗伦萨到威登堡">
+    <script type="application/json" data-teachany-map-config>
+{
+  "crs": "EPSG4326",
+  "baseImage": {
+    "url": "./assets/maps/hillshade.jpg",
+    "bounds": [[-90, -180], [90, 180]],
+    "opacity": 0.9,
+    "attribution": "© Natural Earth / TeachAny 自带地形晕渲"
+  },
+  "fitBounds": [[35, -10], [60, 30]],
+  "refitEra": false,
+  "zoomSnap": 0.25,
+  "eras": [
+    {
+      "id": "europe16c",
+      "label": "16 世纪欧洲",
+      "file": "./assets/maps/boundaries.geojson",
+      "fill": "#fff8e7",
+      "fillOpacity": 0.12,
+      "stroke": "#8B6F47",
+      "weight": 1.2,
+      "desc": "<strong>16 世纪欧洲疆域轮廓</strong>：阿尔卑斯山分隔南北欧，德意志诸侯林立——观念的扩散沿着城市和商路发生。",
+      "cities": [
+        [43.7696, 11.2558, "佛罗伦萨", "Florence", "14-16 世纪 · 文艺复兴的心脏。美第奇家族用商业财富赞助艺术，达·芬奇、米开朗基罗、拉斐尔都在此创作。"],
+        [41.9028, 12.4964, "罗马", "Rome", "教皇国 · 教皇所在地。米开朗基罗在此画了西斯廷天顶画；重建圣彼得大教堂所筹的赎罪券成为宗教改革导火索。"],
+        [51.8665, 12.6487, "威登堡", "Wittenberg", "1517 · 10 月 31 日，马丁·路德将 95 条论纲钉在城堡教堂木门上，宗教改革爆发。"],
+        [51.5074, -0.1276, "伦敦", "London", "1534 · 亨利八世建立英国国教，宗教改革进入第二阶段——从神学之争变为国家与罗马的政治决裂。"],
+        [46.2044, 6.1432, "日内瓦", "Geneva", "1541 · 加尔文主义的大本营。比路德更严格的新教派，后来在荷兰、苏格兰、北美殖民地影响深远。"],
+        [48.1351, 11.582, "奥格斯堡", "Augsburg", "1555 ·《奥格斯堡和约》在此签订，首次确立教随国定原则。"]
+      ]
+    }
+  ]
+}
+    </script>
   </div>
 </section>
 
@@ -839,80 +871,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<!-- Leaflet 地图 JS（基线 ⑯） -->
+<!-- Leaflet 地图 JS（标准声明式地图依赖） -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-// ========== 真实地图初始化（基线 ⑯：hillshade + GeoJSON boundaries + places） ==========
-window.addEventListener('load', () => {
-  if (!document.getElementById('renaissance-map-real')) return;
-
-  // ⛔ 投影对齐铁律（v2 修复 2026-05-12）：
-  //    库中 hillshade 是全球 4096×2048 等距圆柱（Plate Carrée）投影，
-  //    Leaflet 默认 CRS 是 Web Mercator (EPSG:3857)，会把 Plate Carrée 图像
-  //    在墨卡托空间纵向拉伸（图像被渲染成 4096×4096，纬度严重压缩，
-  //    导致 hillshade 与 GeoJSON 国界错位 ~30°）。
-  //    解决：显式用 L.CRS.EPSG4326 (WGS84 等距圆柱) 让图与 GeoJSON 都按经纬度直接投影。
-  const map = L.map('renaissance-map-real', {
-    crs: L.CRS.EPSG4326,         // ★ 关键：等距圆柱 CRS，匹配 Plate Carrée hillshade
-    center: [48, 10],
-    zoom: 4,
-    minZoom: 3,
-    maxZoom: 7,
-    scrollWheelZoom: false,
-    attributionControl: false,
-  });
-
-  // 启用两指/Ctrl+滚轮才能缩放（教学场景友好）
-  map.once('focus', () => map.scrollWheelZoom.enable());
-
-  // Layer 1：hillshade 地形底图（Plate Carrée 全球范围）
-  const globalBounds = [[-90, -180], [90, 180]];
-  const europeBounds = [[35, -10], [60, 30]];
-  L.imageOverlay('./assets/maps/hillshade.jpg', globalBounds, { opacity: 0.85 }).addTo(map);
-  map.fitBounds(europeBounds);  // 视图缩放到欧洲
-
-  // Layer 2：13 国边界 GeoJSON
-  fetch('./assets/maps/boundaries.geojson')
-    .then(r => r.json())
-    .then(geo => {
-      L.geoJSON(geo, {
-        style: {
-          color: '#8B6F47', weight: 1.2, fillColor: '#fff8e7', fillOpacity: 0.12
-        },
-        onEachFeature: (f, layer) => {
-          layer.bindTooltip(f.properties.name_cn || f.properties.name, { direction: 'center', className: 'leaflet-boundary-label', permanent: false });
-        }
-      }).addTo(map);
-    })
-    .catch(e => console.warn('[Map] boundaries 加载失败：', e));
-
-  // Layer 3：6 个关键城市
-  fetch('./assets/maps/places.geojson')
-    .then(r => r.json())
-    .then(geo => {
-      L.geoJSON(geo, {
-        pointToLayer: (feat, latlng) => {
-          const props = feat.properties;
-          return L.circleMarker(latlng, {
-            radius: 9,
-            fillColor: props.color || '#C62828',
-            color: 'white',
-            weight: 3,
-            fillOpacity: 0.95
-          }).bindPopup(
-            `<h4>${props.name} <small>${props.name_en}</small></h4>
-             <div class="era">${props.era}</div>
-             <p>${props.desc}</p>`,
-            { maxWidth: 320 }
-          ).bindTooltip(props.name, { permanent: true, direction: 'right', offset: [10, 0], className: 'leaflet-city-label' });
-        }
-      }).addTo(map);
-    })
-    .catch(e => console.warn('[Map] places 加载失败：', e));
-
-  console.log('[Map] 真实地图初始化完成（hillshade + boundaries + places）');
-});
-</script>
 
 <!-- === TeachAny 标准五件套 JS === -->
 <script src="../../assets/scripts/ai-tutor.js"></script>

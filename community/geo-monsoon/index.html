@@ -339,6 +339,7 @@
   <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
   <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
   <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-historical-map.css">
 </head>
 <body>
 <!-- teachany-back-to-gallery -->
@@ -499,7 +500,35 @@
         <button class="season-btn summer-active" id="btnSum" onclick="setSeason('summer')">☀️ 夏季（7月）</button>
         <button class="season-btn" id="btnWin" onclick="setSeason('winter')">❄️ 冬季（1月）</button>
       </div>
-      <div id="monsoonMap" style="width:100%;height:420px;border-radius:12px;overflow:hidden;border:1px solid var(--border)"></div>
+      <div data-teachany-map="thm-geo-monsoon" data-teachany-map-scope="world" data-teachany-map-title="全球三大季风区">
+        <script type="application/json" data-teachany-map-config>
+{
+  "crs": "EPSG4326",
+  "baseImage": {
+    "url": "../../assets/maps/physical/hillshade/global-color-hillshade-4k.jpg",
+    "bounds": [[-90, -180], [90, 180]],
+    "opacity": 1,
+    "attribution": "© Natural Earth / TeachAny 自带地形晕渲"
+  },
+  "fitBounds": [[-30, 50], [55, 160]],
+  "refitEra": false,
+  "eras": [
+    {
+      "id": "world",
+      "label": "世界政区",
+      "file": "../../assets/maps/political/world/countries.geojson",
+      "fill": "#ffffff",
+      "fillOpacity": 0.04,
+      "stroke": "#94a3b8",
+      "weight": 0.8,
+      "strokeOpacity": 0.5,
+      "desc": "<strong>全球三大季风区</strong>：切换夏冬两季按钮，观察风向反转与气压中心移动。季风区多边形、风向箭头与气压标签由课件交互层叠加。",
+      "cities": []
+    }
+  ]
+}
+        </script>
+      </div>
       <p class="muted" style="text-align:center;margin-top:8px">↑ 可拖动/缩放地图 · 点击季风区查看详情 · 切换季节观察风向变化</p>
       <img src="./assets/monsoon-scene.png" alt="季风气候场景" style="display:block;max-width:100%;margin:14px auto 0;border-radius:10px;box-shadow:0 2px 12px rgba(255,255,255,0.06)">
     </div>
@@ -879,27 +908,11 @@ let curS = 'summer';
 let map, zoneLayer, arrowLayer, labelLayer;
 
 function initMap() {
-  if (typeof L === 'undefined') { setTimeout(initMap, 200); return; }
-  map = L.map('monsoonMap', { zoomControl: true, scrollWheelZoom: true }).setView([18, 85], 3);
-
-  var tileProviders = [
-    { url: 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', opts: { subdomains: '1234', maxZoom: 18, attribution: '&copy; 高德地图' } },
-    { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', opts: { subdomains: 'abcd', maxZoom: 18, attribution: '&copy; CARTO &copy; OSM' } },
-    { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', opts: { subdomains: 'abc', maxZoom: 18, attribution: '&copy; OSM' } }
-  ];
-
-  function tryTile(idx) {
-    if (idx >= tileProviders.length) return;
-    var p = tileProviders[idx];
-    var layer = L.tileLayer(p.url, p.opts);
-    layer.on('tileerror', function() {
-      console.warn('⚠️ 瓦片加载失败，尝试下一个:', p.url);
-      map.removeLayer(layer);
-      tryTile(idx + 1);
-    });
-    layer.addTo(map);
-  }
-  tryTile(0);
+  // 底图由 data-teachany-map 声明式标准模块接管（自带晕渲图 + EPSG4326），
+  // 本函数只负责从全局注册表取实例后叠加季风交互层（RULES #21/#21a）。
+  var std = (window.TeachAnyMaps || {})['thm-geo-monsoon'];
+  if (typeof L === 'undefined' || !std) { setTimeout(initMap, 200); return; }
+  map = std;
 
   L.polyline([[0, -180], [0, 180]], { color: '#f59e0b', weight: 1.5, dashArray: '8,6', opacity: 0.5 }).addTo(map)
     .bindTooltip('赤道', { permanent: true, direction: 'right', offset: [6, 0], className: 'eq-tip' });
@@ -1128,6 +1141,7 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
 <script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
 <script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-historical-map.js" defer></script>
 <script src="../../assets/scripts/feedback-widget.js" defer></script>
 
 <!-- ═══════════ TeachAny 学习闭环引擎（深色青蓝适配） ═══════════ -->
