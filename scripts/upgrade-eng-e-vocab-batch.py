@@ -385,7 +385,7 @@ def patch_html(html: str, course_id: str) -> str:
     if "teachany-floating-dock.css" not in html:
         html = html.replace(
             "teachany-tutor-card.css",
-            "teachany-tutor-card.css\">\n<link rel=\"stylesheet\" href=\"/assets/scripts/teachany-floating-dock.css",
+            "teachany-tutor-card.css\">\n<link rel=\"stylesheet\" href=\"../../assets/scripts/teachany-floating-dock.css",
             1,
         )
 

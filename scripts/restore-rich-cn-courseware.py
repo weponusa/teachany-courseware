@@ -48,16 +48,18 @@ def is_generic_template(html: str) -> bool:
 
 
 def rewrite_scripts(html: str) -> str:
+    # 统一为 ../../assets/scripts/ 相对路径（禁止 /assets/ 绝对路径：Pages 项目站点下 404）
     for pat, rep in (
-        (r"\./assets/scripts/", "/assets/scripts/"),
-        (r"\.\./\./assets/scripts/", "/assets/scripts/"),
-        (r"\.\./assets/scripts/", "/assets/scripts/"),
-        (r"\.\./\.\./assets/scripts/", "/assets/scripts/"),
+        (r"\./assets/scripts/", "../../assets/scripts/"),
+        (r"\.\./\./assets/scripts/", "../../assets/scripts/"),
+        (r"\.\./assets/scripts/", "../../assets/scripts/"),
+        (r"\.\./\.\./assets/scripts/", "../../assets/scripts/"),
+        (r"/assets/scripts/", "../../assets/scripts/"),
     ):
         html = re.sub(pat, rep, html)
     html = re.sub(
         r'((?:href|src)=["\'])assets/scripts/',
-        r"\1/assets/scripts/",
+        r"\1../../assets/scripts/",
         html,
         flags=re.I,
     )

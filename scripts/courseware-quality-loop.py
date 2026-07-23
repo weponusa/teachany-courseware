@@ -71,19 +71,24 @@ def is_placeholder_mp4(mp4: Path, html: str = "") -> bool:
 
 
 def rewrite_site_root_script_paths(html: str) -> tuple[str, int]:
-    """./assets/scripts/ 与 ../../assets/scripts/ → /assets/scripts/（挂树可加载）。"""
+    """各种 assets/scripts/ 路径形式 → ../../assets/scripts/ 相对路径。
+
+    挂树后 community/<id>/ → 仓库根 assets/，本地与 GitHub Pages 项目站点均可加载。
+    禁止输出 /assets/scripts/ 绝对路径：Pages 项目站点根为 /teachany-courseware/，
+    /assets/ 会解析到域名根 weponusa.github.io/assets/ 全部 404（2026-07 全站修复）。
+    """
     n = 0
     for pat, rep in (
-        (r"\./assets/scripts/", "/assets/scripts/"),
-        (r"\.\./\.\./assets/scripts/", "/assets/scripts/"),
-        (r"\.\./\./assets/scripts/", "/assets/scripts/"),
-        (r"\.\./assets/scripts/", "/assets/scripts/"),
+        (r"\./assets/scripts/", "../../assets/scripts/"),
+        (r"\.\./\./assets/scripts/", "../../assets/scripts/"),
+        (r"\.\./assets/scripts/", "../../assets/scripts/"),
+        (r"/assets/scripts/", "../../assets/scripts/"),
     ):
         html, c = re.subn(pat, rep, html)
         n += c
     html, c = re.subn(
         r'((?:href|src)=["\'])assets/scripts/',
-        r"\1/assets/scripts/",
+        r"\1../../assets/scripts/",
         html,
         flags=re.I,
     )
@@ -371,17 +376,17 @@ def fix_broken_html_refs(d: Path, *, dry_run: bool = False) -> list[str]:
     html, n = rewrite_site_root_script_paths(html)
     if n:
         actions.append(f"site_root_scripts({n})")
-    html = re.sub(r"\.\./+assets/scripts/", "/assets/scripts/", html)
-    html = html.replace("..//assets/scripts/", "/assets/scripts/")
+    html = re.sub(r"\.\./+assets/scripts/", "../../assets/scripts/", html)
+    html = html.replace("..//assets/scripts/", "../../assets/scripts/")
     html = re.sub(
         r'src=["\']\./history-tracker\.js["\']',
-        'src="/assets/scripts/history-tracker.js"',
+        'src="../../assets/scripts/history-tracker.js"',
         html,
     )
-    html = re.sub(r"\.\./+\.shared-assets/", "/assets/scripts/", html)
+    html = re.sub(r"\.\./+\.shared-assets/", "../../assets/scripts/", html)
     html = re.sub(
         r'((?:href|src)=["\'])(ai-tutor\.(?:css|js)|teachany-[a-z0-9-]+\.(?:css|js))(["\'])',
-        r"\1/assets/scripts/\2\3",
+        r"\1../../assets/scripts/\2\3",
         html,
         flags=re.I,
     )

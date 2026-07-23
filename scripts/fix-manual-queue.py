@@ -30,7 +30,7 @@ def fix_history_tracker(cid: str) -> None:
         cid,
         lambda h: re.sub(
             r'src=["\']\./history-tracker\.js["\']',
-            'src="/assets/scripts/history-tracker.js"',
+            'src="../../assets/scripts/history-tracker.js"',
             h,
         ),
     )
@@ -39,7 +39,7 @@ def fix_history_tracker(cid: str) -> None:
 def fix_double_slash_scripts(cid: str) -> None:
     patch_html(
         cid,
-        lambda h: h.replace("..//assets/scripts/", "/assets/scripts/"),
+        lambda h: h.replace("..//assets/scripts/", "../../assets/scripts/"),
     )
 
 

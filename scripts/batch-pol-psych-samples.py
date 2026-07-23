@@ -27,8 +27,8 @@ AGNES_IMAGE_DELAY_SEC = 7
 FINALIZE = SKILL / "scripts/finalize-courseware.py"
 SET_PW = SKILL / "scripts/set-feedback-password.py"
 BASELINE = SKILL / "scripts/check_baseline.sh"
-SLIDE_CSS = "/assets/teachany-slide-v2.css"
-SITE_SCRIPTS = "/assets/scripts"
+SLIDE_CSS = "../../assets/teachany-slide-v2.css"
+SITE_SCRIPTS = "../../assets/scripts"
 TODAY = date.today().isoformat()
 TEACHANY_VER = "7.18.0"
 AGNES_NO_TEXT = (
@@ -1219,7 +1219,7 @@ document.querySelectorAll('.recap-check').forEach(cb=>cb.addEventListener('chang
 (function(){{const c=document.getElementById('lab-canvas');if(!c)return;const ctx=c.getContext('2d');const e=document.getElementById('emo-level');const p=document.getElementById('cope-level');const f=document.getElementById('lab-feedback');function draw(){{const emo=+e.value, cope=+p.value;ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='#e2e8f0';ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle='#0f172a';ctx.font='15px sans-serif';ctx.fillText(`强度 ${{emo}}/10 · 应对 ${{cope}}/10`,20,28);ctx.fillStyle='{c["accent"]}';ctx.fillRect(60,180-emo*14,100,emo*14);ctx.fillStyle='{c["accent2"]}';ctx.fillRect(280,180-cope*14,100,cope*14);if(f)f.textContent=emo>7&&cope<5?'高强度时优先暂停冲动、寻求支持。':'保持觉察，选一种具体行动试试。';}}e?.addEventListener('input',draw);p?.addEventListener('input',draw);draw();}})();
 window.__TEACHANY_TUTOR_CONFIG__={{courseId:'{cid}',courseTitle:'{esc(c["title"])}',subject:'{c["subject"]}',grade:'{c["grade"]}',nodeId:'{c["node_id"]}',lessonType:'{c["lesson_type"]}',getLearnerQuestion:()=>window.__TEACHANY_LEARNER_QUESTION__||'',getContext:()=>document.body.innerText.slice(0,3000)}};
 </script>
-<script src="/assets/teachany-slide-v2.js"></script>
+<script src="../../assets/teachany-slide-v2.js"></script>
 <script src="{SITE_SCRIPTS}/ai-tutor.js"></script>
 <script src="{SITE_SCRIPTS}/teachany-tutor-card.js"></script>
 <script src="{SITE_SCRIPTS}/teachany-tts-narrator.js"></script>
