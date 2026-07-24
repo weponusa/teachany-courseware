@@ -1,279 +1,554 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>等高线与地形图 · 初中地理 G7 · TeachAny v7.12</title>
-<meta name="description" content="通过互动地形剖面和等高线生成器，学会从平面地图读懂山脊、山谷、陡崖和鞍部。">
-<meta name="course-id" content="geo-m-contour-topographic">
-<meta name="course-title" content="等高线与地形图">
-<meta name="course-subject" content="geography">
-<meta name="course-grade" content="middle-7">
-<meta name="course-prereqs" content="geo-m-earth-shape-size">
-<meta name="course-next" content="geo-m-topographic-application">
-<meta name="course-version" content="0.1.0">
-<meta name="teachany-version" content="7.12.1">
-<meta name="teachany-node" content="geo-m-topographic-map">
-<meta name="teachany-subject" content="geography">
-<meta name="teachany-grade" content="7">
-<meta name="teachany-stage" content="middle">
-<meta name="teachany-domain" content="地图与地形">
-<meta name="teachany-prerequisites" content="地球的形状与大小">
-<meta name="teachany-lesson-type" content="new-concept">
-<meta name="teachany-free-mode" content="true">
-<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
-<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
-<link rel="stylesheet" href="./assets/course.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="../../assets/scripts/teachany-historical-map.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>等高线与地形图 · 初中地理 G7 · TeachAny v7.12</title>
+  <meta name="description" content="通过互动地形剖面和等高线生成器，学会从平面地图读懂山脊、山谷、陡崖和鞍部。">
+  <!-- TeachAny 元信息 -->
+  <meta name="teachany-node" content="geo-m-topographic-map">
+  <meta name="teachany-subject" content="geography">
+  <meta name="teachany-domain" content="地图与地形">
+  <meta name="teachany-grade" content="7">
+  <meta name="teachany-stage" content="middle">
+  <meta name="teachany-prerequisites" content="地球的形状与大小">
+  <meta name="teachany-lesson-type" content="new-concept">
+  <meta name="teachany-version" content="7.12.1">
+  <meta name="teachany-author" content="weponusa">
+  <!-- === TeachAny 路由元数据（跨课件导航） === -->
+  <meta name="course-id" content="geo-m-contour-topographic">
+  <meta name="course-node" content="geo-m-topographic-map">
+  <meta name="course-subject" content="geography">
+  <meta name="course-title" content="等高线与地形图">
+  <meta name="course-prereqs" content="geo-m-map-reading">
+  <meta name="course-next" content="geo-m-terrain-types">
+  <meta name="registry-url" content="../../courseware-registry.json">
+  <style>
+    /* ═══════════ 初中模板设计系统（v6.1 精细重制 · 山地绿主题） ═══════════ */
+    :root {
+      --bg: #f8fafc;
+      --primary: #15803d;
+      --primary-dark: #166534;
+      --secondary: #92400e;
+      --accent: #f59e0b;
+      --teal: #14b8a6;
+      --purple: #8b5cf6;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-secondary: #64748b;
+      --border: #e2e8f0;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --radius: 14px;
+      --shadow: 0 1px 3px rgba(15,23,42,.06), 0 4px 14px rgba(15,23,42,.05);
+      --shadow-lg: 0 8px 30px rgba(15,23,42,.10);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.8;
+      font-size: 16px;
+    }
 
-  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+    /* ─── 顶部进度条 ─── */
+    .progress-bar { position: fixed; top: 36px; left: 0; height: 3px; z-index: 200;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transition: width .2s; border-radius: 0 2px 2px 0; }
+
+    /* ─── 吸顶导航 ─── */
+    .nav-bar {
+      position: sticky; top: 36px; z-index: 150;
+      display: flex; align-items: center; gap: 4px;
+      background: rgba(255,255,255,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px; overflow-x: auto; scrollbar-width: none;
+    }
+    .nav-bar::-webkit-scrollbar { display: none; }
+    .nav-bar .brand { font-weight: 800; font-size: 15px; color: var(--primary);
+      margin-right: 12px; white-space: nowrap; }
+    .nav-bar a {
+      padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      color: var(--text-secondary); text-decoration: none; white-space: nowrap;
+      transition: all .2s;
+    }
+    .nav-bar a:hover { background: #f0fdf4; color: var(--primary); }
+    .nav-bar a.active { background: var(--primary); color: #fff; }
+
+    /* ─── Hero ─── */
+    .hero {
+      background: linear-gradient(135deg, #14532d 0%, #15803d 45%, #92400e 100%);
+      color: #fff; text-align: center; padding: 56px 24px 48px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(255,255,255,.12) 0, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(255,255,255,.10) 0, transparent 40%);
+      pointer-events: none;
+    }
+    .hero h1 { font-size: 2.6rem; font-weight: 900; letter-spacing: 2px; position: relative; }
+    .hero .subtitle { font-size: 1.1rem; opacity: .92; margin-top: 10px; position: relative; }
+    .hero .tags { display: flex; gap: 8px; justify-content: center; margin-top: 18px; flex-wrap: wrap; position: relative; }
+    .hero .tag {
+      background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35);
+      padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    }
+    .hero .stats { display: flex; gap: 26px; justify-content: center; margin-top: 26px; position: relative; flex-wrap: wrap; }
+    .hero .stat { text-align: center; }
+    .hero .stat b { display: block; font-size: 1.4rem; font-weight: 800; }
+    .hero .stat span { font-size: 12px; opacity: .85; }
+    .hero-img {
+      display: block; max-width: 720px; width: calc(100% - 32px); margin: 30px auto 0;
+      border-radius: 16px; box-shadow: 0 16px 48px rgba(15,23,42,.35); position: relative;
+    }
+
+    /* ─── 版面容器（唯一宽度） ─── */
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+    .section { margin: 40px auto; scroll-margin-top: 110px; }
+    .section-title {
+      font-size: 1.4rem; font-weight: 800; margin-bottom: 18px;
+      padding-left: 14px; border-left: 5px solid var(--primary);
+      line-height: 1.3;
+    }
+    .section-sub { color: var(--text-secondary); font-size: 14px; margin: -12px 0 16px 19px; }
+
+    /* ─── 卡片 ─── */
+    .card {
+      background: var(--card); border-radius: var(--radius); padding: 22px 24px;
+      margin-bottom: 16px; box-shadow: var(--shadow);
+      border-top: 3px solid var(--primary);
+    }
+    .card.teal { border-top-color: var(--teal); }
+    .card.amber { border-top-color: var(--accent); }
+    .card.purple { border-top-color: var(--purple); }
+    .card.green { border-top-color: var(--success); }
+    .card.brown { border-top-color: var(--secondary); }
+    .card h3 { font-size: 1.08rem; font-weight: 700; margin-bottom: 12px; }
+    .card ul { padding-left: 22px; }
+    .card li { margin-bottom: 8px; }
+    .card p { margin-bottom: 10px; }
+    .card p:last-child { margin-bottom: 0; }
+    .muted { color: var(--text-secondary); font-size: 14px; }
+
+    /* ─── ABT 叙事块（浅色三卡） ─── */
+    .abt-grid { display: grid; gap: 12px; }
+    .abt-item { border-radius: 12px; padding: 16px 18px; border: 1px solid var(--border); background: #fff; }
+    .abt-item .abt-label { font-size: 12px; font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; }
+    .abt-item.and { background: #f0fdfa; border-color: #99f6e4; }
+    .abt-item.and .abt-label { color: #0d9488; }
+    .abt-item.but { background: #fffbeb; border-color: #fde68a; }
+    .abt-item.but .abt-label { color: #d97706; }
+    .abt-item.therefore { background: #f0fdf4; border-color: #bbf7d0; }
+    .abt-item.therefore .abt-label { color: #15803d; }
+    .abt-item p { font-size: 14.5px; line-height: 1.75; }
+
+    /* ─── 角色徽章 ─── */
+    .role-badge {
+      display: inline-block; background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff; padding: 4px 16px; border-radius: 20px;
+      font-size: 13px; font-weight: 600; margin-bottom: 14px;
+    }
+
+    /* ─── 推导步骤 ─── */
+    .derivation { margin: 14px 0; }
+    .derivation .step { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .derivation .step-num {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+    }
+    .derivation .step-text { font-size: 15px; padding-top: 3px; }
+
+    /* ─── Canvas 画板 ─── */
+    .canvas-container {
+      background: #fff; border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; margin: 12px 0; text-align: center;
+    }
+    .canvas-container canvas { border-radius: 8px; max-width: 100%; }
+    .canvas-controls {
+      display: flex; align-items: center; gap: 14px; margin-top: 12px;
+      flex-wrap: wrap; justify-content: center;
+    }
+    .canvas-controls label { font-size: 14px; font-weight: 600; }
+    .canvas-controls input[type="range"] { width: 140px; accent-color: var(--primary); }
+    .canvas-controls .val {
+      font-family: 'Times New Roman', serif; font-size: 16px;
+      font-weight: 700; color: var(--primary); min-width: 40px;
+    }
+    .canvas-caption { font-size: 14px; color: var(--text-secondary); margin-top: 8px; }
+    .canvas-wrap { text-align: center; }
+    .canvas-wrap canvas { max-width: 100%; border-radius: 8px; }
+    .canvas-wrap input[type="range"] { width: 60%; accent-color: var(--primary); margin-top: 10px; }
+
+    /* ─── 测验 ─── */
+    .quiz-option {
+      display: block; width: 100%; text-align: left; padding: 13px 18px;
+      margin: 8px 0; border: 2px solid var(--border); border-radius: 10px;
+      background: var(--card); cursor: pointer; font-size: 15px; color: var(--text);
+      transition: all .2s; font-family: inherit;
+    }
+    .quiz-option:hover:not(:disabled) { border-color: var(--primary); transform: translateX(3px); }
+    .quiz-option.correct { border-color: var(--success); background: #f0fdf4; }
+    .quiz-option.wrong { border-color: var(--danger); background: #fef2f2; }
+    .quiz-option:disabled { cursor: default; opacity: .85; transform: none; }
+    .feedback { padding: 14px 16px; border-radius: 10px; margin-top: 12px; display: none; font-size: 14.5px; line-height: 1.7; }
+    .feedback.show { display: block; }
+    .feedback.correct { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .feedback.wrong { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+    /* ─── 查看答案 ─── */
+    .reveal-btn {
+      margin-top: 8px; padding: 6px 16px; background: var(--teal); color: #fff;
+      border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    .reveal-btn:hover { background: #0d9488; }
+    .reveal-answer { display: none; margin-top: 8px; padding: 12px 14px; background: #f0fdf4;
+      border-radius: 8px; font-size: 14px; color: #166534; line-height: 1.7; }
+
+    /* ─── 地形标签 ─── */
+    .terrain-label { display: inline-block; padding: 2px 12px; border-radius: 12px; font-size: 13px; font-weight: 700; color: #fff; }
+    .terrain-label.peak { background: #ef4444; }
+    .terrain-label.ridge { background: #f59e0b; }
+    .terrain-label.valley { background: #3b82f6; }
+    .terrain-label.cliff { background: #10b981; }
+    .terrain-label.saddle { background: #8b5cf6; }
+
+    /* ─── 地形按钮 ─── */
+    .terrain-btn {
+      padding: 7px 16px; border-radius: 20px; border: 2px solid var(--border);
+      background: #fff; cursor: pointer; font-size: 14px; font-weight: 600;
+      color: var(--text-secondary); transition: all .2s; font-family: inherit;
+    }
+    .terrain-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .terrain-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+    /* ─── 结果提示 ─── */
+    .result { padding: 12px 16px; border-radius: 10px; font-size: 14.5px; line-height: 1.7;
+      background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+    .result.warn { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+
+    /* ─── 结课导航卡 ─── */
+    .next-course {
+      background: linear-gradient(135deg, #f0fdf4, #fffbeb);
+      border: 1px solid #bbf7d0; border-radius: var(--radius);
+      padding: 26px; text-align: center; margin: 40px 0;
+    }
+    .next-course h3 { font-size: 1.15rem; margin-bottom: 8px; }
+    .next-course p { color: var(--text-secondary); font-size: 14px; margin-bottom: 16px; }
+    .next-course .nc-links { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .next-course a {
+      display: inline-block; padding: 11px 24px; border-radius: 10px;
+      background: var(--primary); color: #fff; text-decoration: none; font-weight: 600; font-size: 15px;
+      transition: background .2s;
+    }
+    .next-course a:hover { background: var(--primary-dark); }
+    .next-course a.alt { background: #fff; color: var(--primary); border: 2px solid var(--primary); }
+    .next-course a.alt:hover { background: #f0fdf4; }
+
+    /* ─── 页脚 ─── */
+    .footer { text-align: center; padding: 30px 20px 60px; color: var(--text-secondary); font-size: 13px; }
+
+    /* ─── 标准模块容器 ─── */
+    .ta-standard-section { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+
+    /* ─── 学习闭环 UI ─── */
+    .ta-toast { position: fixed; top: 56px; right: -460px; z-index: 10000; display: flex; align-items: center; gap: 12px;
+      padding: 14px 22px; border-radius: 12px; background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #1a1a2e;
+      box-shadow: 0 8px 32px rgba(245,158,11,.35); transition: right .4s cubic-bezier(.34,1.56,.64,1);
+      font-family: system-ui,sans-serif; width: min(360px, 90vw); }
+    .ta-toast.show { right: 20px; }
+    .ta-toast .ti { font-size: 32px; }
+    .ta-toast .tc { display: flex; flex-direction: column; }
+    .ta-toast .tc strong { font-size: 12px; opacity: .75; }
+    .ta-toast .tc span { font-size: 16px; font-weight: 700; }
+    .ta-toast.info { background: linear-gradient(135deg,#60a5fa,#3b82f6); color: #fff; }
+    .ta-toast.success { background: linear-gradient(135deg,#4ade80,#22c55e); color: #052e16; }
+    .ta-resume { position: fixed; top: 96px; left: 50%; transform: translateX(-50%); z-index: 9990;
+      background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--primary);
+      border-radius: 12px; padding: 12px 20px; box-shadow: var(--shadow-lg);
+      display: flex; gap: 14px; align-items: center; font-size: 14px; max-width: 92vw; }
+    .ta-resume button { border: none; border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--primary); color: #fff; }
+    .ta-resume button.sec { background: #f1f5f9; color: #64748b; }
+    .ta-banner { border-radius: 12px; padding: 16px 20px; margin: 18px 0; font-size: 15px; line-height: 1.7;
+      display: flex; gap: 12px; align-items: flex-start; box-shadow: var(--shadow); }
+    .ta-banner .bi { font-size: 24px; flex-shrink: 0; }
+    .ta-banner.warn { background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid var(--accent); color: #92400e; }
+    .ta-banner.challenge { background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid var(--primary); color: #166534; }
+    .ta-banner a { color: #15803d; font-weight: 600; }
+    .ta-modal-mask { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: flex; align-items: center; justify-content: center; z-index: 10001; font-family: system-ui,sans-serif; }
+    .ta-modal { background: #fff; border-radius: 16px; padding: 28px 30px; width: min(480px, 90%); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+    .ta-modal h3 { margin: 0 0 10px; font-size: 18px; color: #b45309; }
+    .ta-modal p { margin: 0 0 14px; font-size: 14px; color: #64748b; line-height: 1.7; }
+    .ta-modal ul { margin: 0 0 18px; padding: 0; list-style: none; }
+    .ta-modal li { padding: 10px 14px; margin-bottom: 8px; border-radius: 8px; background: #fffbeb; border-left: 3px solid var(--accent); font-size: 14px; }
+    .ta-modal li a { color: #15803d; text-decoration: none; font-weight: 600; }
+    .ta-modal li .st { font-size: 12px; color: #94a3b8; }
+    .ta-modal .acts { display: flex; gap: 10px; }
+    .ta-modal .acts button { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .ta-modal .b1 { background: var(--accent); color: #fff; }
+    .ta-modal .b2 { background: #f1f5f9; color: #64748b; }
+    .ta-done-mask { position: fixed; inset: 0; background: rgba(15,23,42,.7); display: flex; align-items: center; justify-content: center; z-index: 10001; font-family: system-ui,sans-serif; }
+    .ta-done { background: linear-gradient(135deg,#f0fdf4,#fff); border-radius: 20px; padding: 38px; width: min(500px, 90%); text-align: center; box-shadow: 0 24px 70px rgba(0,0,0,.3); }
+    .ta-done h2 { margin: 0 0 8px; font-size: 24px; }
+    .ta-done p { margin: 0 0 20px; color: #64748b; font-size: 14px; line-height: 1.7; }
+    .ta-done a { display: inline-block; padding: 13px 30px; background: var(--primary); color: #fff; border-radius: 12px; text-decoration: none; font-size: 16px; font-weight: 600; }
+    .ta-done .later { display: block; margin-top: 14px; color: #94a3b8; font-size: 13px; cursor: pointer; text-decoration: underline; }
+
+    /* ─── 响应式 ─── */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 1.8rem; }
+      .hero .stats { gap: 16px; }
+      .section-title { font-size: 1.2rem; }
+      .card { padding: 18px; }
+      .nav-bar { padding: 8px 12px; }
+    }
+  </style>
+
+  <link rel="stylesheet" href="./assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="./assets/scripts/teachany-knowledge-graph.css">
+  <link rel="stylesheet" href="./assets/scripts/teachany-tutor-card.css">
+  <link rel="stylesheet" href="./assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="./assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="./assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="./assets/scripts/teachany-floating-dock.css">
 </head>
-<nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;"><a href="#course-version-display">📑 知识图谱</a><a href="#skill-version-display">🤝 AI 学伴</a><a href="#hero">📚 课程内容</a></nav>
-
 <body>
-<div class="teachany-brand-bar">
-  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
-    <span class="brand-mark">T</span><span class="brand-name">TeachAny</span>
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
   </a>
-  <div class="brand-right">
-    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
-    <span class="brand-version">v<span id="course-version-display">0.1.0</span><span class="brand-skill-version"> · skill v<span id="skill-version-display">7.12.1</span></span></span>
-  </div>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
 </div>
+<!-- /teachany-back-to-gallery -->
 
+<div class="progress-bar" id="progressBar" style="width:0%"></div>
+
+<!-- ═══ 吸顶导航 ═══ -->
+<nav class="nav-bar" id="navbar">
+  <span class="brand">⛰️ 等高线</span>
+  <a href="#why-learn">引入</a>
+  <a href="#objectives">目标</a>
+  <a href="#pretest">前测</a>
+  <a href="#module-1">模块1·形成</a>
+  <a href="#module-2">模块2·疏密</a>
+  <a href="#module-3">模块3·判读</a>
+  <a href="#module-4">模块4·剖面</a>
+  <a href="#posttest">后测</a>
+  <a href="#summary">小结</a>
+  <a href="#knowledge-graph">图谱</a>
+</nav>
+
+<!-- ═══ Hero ═══ -->
 <header class="hero" id="hero" data-tts="hero" data-tsh="开场 - 一张平面地图如何装下一座大山？">
-  <h1>等高线与地形图</h1>
+  <h1>⛰️ 等高线：把山画在纸上</h1>
   <p class="subtitle">一张平平的地图，怎么看出哪里是山、哪里是谷、哪里是悬崖？</p>
+  <div class="tags">
+    <span class="tag">地理</span>
+    <span class="tag">七年级</span>
+    <span class="tag">中等难度</span>
+    <span class="tag">互动探究</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>4</b><span>核心模块</span></div>
+    <div class="stat"><b>6</b><span>诊断题</span></div>
+    <div class="stat"><b>5</b><span>互动图</span></div>
+    <div class="stat"><b>≈25</b><span>分钟</span></div>
+  </div>
+  <img class="hero-img" src="./assets/hero.png" alt="等高线地形图：从立体山到平面线条">
 </header>
 
-<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="section" id="hero-infographic" data-tsh="知识结构主图">
-  <figure class="ta-standard-figure">
-    <img src="./assets/hero-infographic.svg" alt="等高线知识结构图" onerror="this.style.display='none'">
-    <figcaption>等高线知识结构：从"同一海拔连成线"到"读出山脊、山谷、陡崖、鞍部"</figcaption>
-  </figure>
-</section>
+<div class="wrap">
 
-<div id="audio-config" data-teachany-audio hidden>
-  <script type="application/json" data-teachany-audio-playlist>[]</script>
-</div>
-
-<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" id="problem-anchor" class="section" data-tts="problem-anchor" data-tsh="问题锚点">
-  <div class="card">
-    <span class="phase-tag">Problem Anchor</span>
-    <h2>今天的课件可以帮你解决什么问题？</h2>
-    <p style="color:var(--muted)">先选一个你关心的问题，后面的内容会围绕它展开。</p>
-    <div class="grid" id="problem-anchor-choices">
-      <button class="choice" data-anchor-choice="地图上那些弯弯绕绕的线到底是什么意思？">地图上那些弯弯绕绕的线到底是什么意思？</button>
-      <button class="choice" data-anchor-choice="怎么从平面地图看出哪里是山、哪里是谷？">怎么从平面地图看出哪里是山、哪里是谷？</button>
-      <button class="choice" data-anchor-choice="等高线疏密跟坡度陡缓有什么关系？">等高线疏密跟坡度陡缓有什么关系？</button>
+  <!-- ═══ 为什么学（ABT） ═══ -->
+  <section class="section" id="why-learn" data-tts="why-learn" data-tsh="为什么学" data-bloom-level="understand" data-scaffold="full">
+    <h2 class="section-title">🥾 为什么学等高线？</h2>
+    <div class="card">
+      <div class="role-badge">🧭 山地徒步向导</div>
+      <div class="abt-grid">
+        <div class="abt-item and">
+          <div class="abt-label">AND · 你已经知道</div>
+          <p>爬山时有陡有缓：有的坡一口气冲上去，有的坡要绕着走"之"字。地图是平面的，但地表有高有低。</p>
+        </div>
+        <div class="abt-item but">
+          <div class="abt-label">BUT · 但问题是</div>
+          <p>一座立体的山，怎么画成一张平面地图？哪里陡、哪里缓，从纸面上怎么看出来？</p>
+        </div>
+        <div class="abt-item therefore">
+          <div class="abt-label">THEREFORE · 所以本课</div>
+          <p>用<strong>等高线</strong>把山"切"在纸上：同一海拔的点连成线，线的疏密告诉你坡度，线的弯曲告诉你山脊山谷——学会它，你就能像向导一样读懂任何一张地形图。</p>
+        </div>
+      </div>
     </div>
-    <label style="display:block;margin-top:18px;color:var(--muted)">我有自己的问题
-      <input id="learner-question-input" placeholder="把你卡住的问题写在这里">
-    </label>
-    <p id="anchor-feedback" class="result warn" style="margin-top:14px">选择或输入后，本课会围绕你的问题展开。</p>
-  </div>
-</section>
+  </section>
 
-<section data-scaffold="full" data-bloom-level="apply" id="objectives" class="section" data-tts="objectives" data-tsh="学习目标">
-  <div class="card">
-    <span class="phase-tag">Learning Objectives</span>
-    <h2>学习目标</h2>
-    <ul class="objectives">
-      <li>理解等高线的定义：同一海拔各点连成的曲线</li>
-      <li>掌握等高线疏密与坡度陡缓的对应：密陡疏缓</li>
-      <li>能判读山脊、山谷、山顶、陡崖、鞍部</li>
-      <li>能根据等高线绘制地形剖面图</li>
-    </ul>
-  </div>
-</section>
-
-<!-- 前测 -->
-<section data-scaffold="partial" data-bloom-level="remember" id="pretest" class="section" data-tts="pretest" data-tsh="前测">
-  <div class="card">
-    <span class="phase-tag">Pretest</span>
-    <h2>先来一个直觉判断</h2>
-    <p style="color:var(--muted)">不用想太多，凭感觉选。</p>
-    <div class="grid">
-      <button class="choice" data-answer="wrong" data-diagnosis="这是最常见的直觉错误！等高线不是河流，它是相同海拔的连线。河流沿着山谷流，但等高线本身不是水。">A. 等高线就是河流的走向线</button>
-      <button class="choice" data-answer="correct" data-diagnosis="正确！等高线是同一海拔各点连成的曲线。就像把山一层层水平切开，每切一刀的边缘就是一条等高线。">B. 等高线是相同海拔各点连成的曲线</button>
-      <button class="choice" data-answer="wrong" data-diagnosis="不完全对。同一条等高线上海拔相同，但不同等高线之间的海拔差（等高距）是固定的。">C. 等高线是随意画的弯曲线</button>
+  <!-- ═══ 学习目标 ═══ -->
+  <section class="section" id="objectives" data-tts="objectives" data-tsh="学习目标" data-bloom-level="apply" data-scaffold="full">
+    <h2 class="section-title">🎯 学习目标</h2>
+    <div class="card">
+      <ul>
+        <li><strong>说出</strong>：等高线与等高距的含义——同一海拔各点连成的曲线</li>
+        <li><strong>判断</strong>：根据等高线疏密判断坡度陡缓——密陡疏缓</li>
+        <li><strong>识别</strong>：山峰、山谷、山脊、鞍部、陡崖五种地形部位</li>
+        <li><strong>绘制</strong>：根据等高线绘制简单的地形剖面图</li>
+      </ul>
     </div>
-    <div class="result warn" data-feedback-for="pretest" style="margin-top:12px">选一个，看看直觉准不准。</div>
-  </div>
-</section>
+  </section>
 
-<!-- 模块1：什么是等高线 -->
-<section data-bloom-level="understand" id="module-1" class="section" data-tts="module-1" data-tsh="把一座山水平切开，会看到什么？">
-  <div class="card">
-    <span class="phase-tag">核心概念</span>
-    <h2>什么是等高线？</h2>
-    <div class="card" data-role="abt-intro" style="margin-bottom:18px">
-      <p><strong>已经知道：</strong>地图是平面的，但地表有高有低。</p>
-      <p><strong>但是问题是：</strong>一张平面地图，怎么表示哪里高哪里低？</p>
-      <p><strong>所以这一段要解决：</strong>学会"等高线"——把3D地形"翻译"成2D线条。</p>
+  <!-- ═══ 前测 ═══ -->
+  <section class="section" id="pretest" data-tts="pretest" data-tsh="前测" data-bloom-level="remember" data-scaffold="partial">
+    <h2 class="section-title">📋 先来一个直觉判断</h2>
+    <p class="section-sub">不用想太多，凭感觉选——看看你的直觉准不准。</p>
+    <div class="card teal">
+      <h3>等高线是什么？</h3>
+      <button class="quiz-option" onclick="checkPre1(this,'A')">A. 等高线就是河流的走向线</button>
+      <button class="quiz-option" onclick="checkPre1(this,'B')">B. 等高线是相同海拔各点连成的曲线</button>
+      <button class="quiz-option" onclick="checkPre1(this,'C')">C. 等高线是随意画的弯曲线</button>
+      <div class="feedback" id="pre1-fb"></div>
     </div>
-    <h3>🔪 想象：水平切山</h3>
-    <p>想象一座山，你拿一把巨大的刀<strong>水平</strong>着从山脚往上切——</p>
-    <ul>
-      <li>从海拔 0m 切一刀，刀口边线就是 0m 等高线</li>
-      <li>每隔 50m 再切一刀，每刀边线就是一条等高线</li>
-      <li>把所有边线<strong>投影到同一平面</strong>，就得到等高线地形图</li>
-    </ul>
-    <p style="color:var(--muted)">🔑 关键：同一条等高线上海拔相同；相邻等高线高差（等高距）固定。</p>
-    <div style="margin-top:18px">
-      <h3>🖱️ 拖动切面高度</h3>
-      <p style="color:var(--muted);font-size:14px">拖动滑块，观察红色切面与山的交线如何变化。</p>
+  </section>
+
+  <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+  <section class="ta-standard-section" id="teachany-ai-tutor-card">
+    <div data-teachany-tutor-card></div>
+  </section>
+
+  <!-- ═══ 模块 1：等高线的形成 ═══ -->
+  <section class="section" id="module-1" data-tts="module-1" data-tsh="模块1：把一座山水平切开，会看到什么？" data-bloom-level="understand" data-scaffold="full">
+    <h2 class="section-title">📖 模块 1：等高线的形成</h2>
+
+    <div class="card">
+      <h3>🔪 海拔与相对高度</h3>
+      <p>在理解等高线之前，先分清两个高度概念。<strong>海拔</strong>（绝对高度）是地面某点高出海平面的垂直距离，中国以青岛验潮站测得的黄海平均海平面为基准，珠穆朗玛峰海拔 8848.86 米，吐鲁番盆地艾丁湖海拔 -154.31 米。<strong>相对高度</strong>则是某点高出另一点的垂直距离，比如珠峰比山脚大本营高出约 4000 米。等高线地形图上的数字，统一都是海拔。</p>
+      <p>为什么用海拔而不用相对高度？因为地图需要一个全国统一的"零起点"。如果每座山都从自己的山脚算起，两张地图就无法比较。海平面是天然基准，所以全球地形图都以海拔为准。</p>
+    </div>
+
+    <div class="card">
+      <h3>📏 等高距：相邻两条线的高差</h3>
+      <p>等高距是相邻两条等高线之间的海拔差。同一幅地图上等高距固定不变：山区常用 20 米、50 米或 100 米，平原地区可能只用 5 米或 10 米。等高距的选择取决于地形起伏——起伏越大，等高距越大，否则线条会密得看不清。</p>
+      <p>通过数等高线可以估算高度：若某点与基准线之间有 4 条间隔 50 米的等高线，则该点海拔约 200 米。如果两条等高线之间还有一条虚线（间曲线），表示半距，即 25 米。</p>
+    </div>
+
+    <div class="card">
+      <h3>🔪 想象：水平切山</h3>
+      <p>想象一座山，你拿一把巨大的刀<strong>水平</strong>着从山脚往上切——</p>
+      <ul>
+        <li>从海拔 0m 切一刀，刀口边线就是 0m 等高线</li>
+        <li>每隔 50m 再切一刀，每刀边线就是一条等高线</li>
+        <li>把所有边线<strong>投影到同一平面</strong>，就得到等高线地形图</li>
+      </ul>
+      <p class="muted" style="margin-top:12px">🔑 关键：同一条等高线上海拔相同；相邻等高线高差（<strong>等高距</strong>）固定。等高线是连接地图上海拔高度相同的点的闭合曲线，就像水平切开一个圆锥形蛋糕，每一层的边缘就是该蛋糕的"等高线"。</p>
+    </div>
+
+    <div class="card brown">
+      <h3>🖱️ 互动：拖动切面高度</h3>
+      <p class="muted">先预测：如果把切面从山脚慢慢抬升到山顶，右侧俯视图里的圆圈会怎样变化？</p>
+      <p class="muted">操作：拖动滑块（或直接点击山体），观察红色切面与山的交线如何变化——右侧俯视图高亮显示当前切出的那条等高线。</p>
       <div class="canvas-wrap"><canvas id="sliceCanvas" width="740" height="320" style="max-width:100%"></canvas></div>
-      <div class="grid" style="margin-top:12px">
-        <label style="font-size:14px">切面海拔：<strong id="sliceHeightLabel">100</strong> m
-          <input id="sliceHeightSlider" type="range" min="0" max="400" step="50" value="100">
-        </label>
-        <div class="result" id="sliceResult">切面在山腰：等高线是一个闭合圈。</div>
+      <div class="canvas-controls" style="margin-top:12px">
+        <label>切面海拔：<strong id="sliceHeightLabel">100</strong> m</label>
+        <input id="sliceHeightSlider" type="range" min="0" max="400" step="50" value="100">
+      </div>
+      <div class="result" id="sliceResult" style="margin-top:10px">切面在山腰：等高线是一个闭合圈。</div>
+      <div style="margin-top:14px;padding:14px;background:#f0fdf4;border-radius:10px;border-left:3px solid var(--primary);font-size:14.5px;line-height:1.75">
+        <strong>观察讲解：</strong>当切面在山脚时，交线最大；切面越往上，交线越小；到山顶时，交线缩成一个点。这说明等高线的"圈"大小反映了该海拔处的山体横截面积。一座圆锥形山，等高线是一组同心圆；一座不规则的山，等高线形状也会扭曲变形，但始终闭合。
+      </div>
+      <div style="margin-top:12px">
+        <button class="reveal-btn" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">💭 思考题：如果切一座平顶山和一座尖顶山，等高线形状会有什么不同？</button>
+        <div class="reveal-answer" style="display:none">平顶山的顶部等高线会是一个较大的闭合圈（因为山顶是平的），而尖顶山的顶部等高线会缩成一个点。所以看到"顶部小圈"说明是尖峰，看到"顶部大圈"说明可能是平顶山或台地。</div>
       </div>
     </div>
-  </div>
-</section>
-<!-- ⭐ 标准 Leaflet 历史地图模块（双平台资源：teachany.cn + GitHub）-->
-<section data-bloom-level="apply" class="ta-standard-section" id="teachany-historical-map">
-  <h2 style="text-align:center;margin-bottom:16px;">🗺️ 等高线与地形图 · 区域地图</h2>
-  <p style="text-align:center;color:#64748b;margin-bottom:18px;">点击时代按钮切换疆域版图；悬停高亮边界；点击红色城市标记查看详情。</p>
-  <div data-teachany-map="thm-community-geo-m-contour-topographic"
-       data-teachany-map-scope="china"
-       data-teachany-map-title="等高线与地形图 · 区域地图">
-    <script type="application/json" data-teachany-map-config>
-{
-  "eras": [
-    {
-      "id": "era",
-      "label": "中国疆域",
-      "file": "chrono-cn/010-tang-dynasty.geojson",
-      "fill": "#22c55e",
-      "stroke": "#22c55e",
-      "desc": "<strong>等高线与地形图</strong>：运用地图阅读区域位置、范围与空间联系。",
-      "cities": [
-        [
-          39.9,
-          116.4,
-          "北京",
-          "Beijing",
-          "首都"
-        ],
-        [
-          31.23,
-          121.47,
-          "上海",
-          "Shanghai",
-          "东部沿海"
-        ],
-        [
-          34.34,
-          108.94,
-          "西安",
-          "Xi'an",
-          "西北枢纽"
-        ],
-        [
-          23.13,
-          113.26,
-          "广州",
-          "Guangzhou",
-          "南方门户"
-        ]
-      ]
-    }
-  ],
-  "center": [
-    35,
-    105
-  ],
-  "zoom": 4,
-  "fitBounds": [
-    [
-      18,
-      73
-    ],
-    [
-      54,
-      135
-    ]
-  ],
-  "minZoom": 2,
-  "maxZoom": 8,
-  "overlays": [
-    {
-      "id": "provinces",
-      "label": "省界",
-      "file": "political/admin-boundaries/china-provinces.json",
-      "style": {
-        "color": "#3b82f6",
-        "weight": 1
-      },
-      "visible": true
-    },
-    {
-      "id": "rivers",
-      "label": "河流",
-      "file": "details/rivers-historical.geojson",
-      "style": {
-        "color": "#0ea5e9",
-        "weight": 2
-      },
-      "visible": false
-    }
-  ],
-  "terrain": true
-}
-    </script>
-  </div>
-</section>
 
-
-<!-- 模块2：疏密与坡度 -->
-<section id="module-2" class="section" data-tts="module-2" data-tsh="线挤在一起和线散开，地形有什么不同？">
-  <div class="card">
-    <span class="phase-tag">坡度判读</span>
-    <h2>等高线疏密 → 坡度陡缓</h2>
-    <div class="grid" style="margin-bottom:16px">
-      <div><h3>线密 = 陡坡</h3><p>等高线挤在一起，高度在很短水平距离内变化很大。</p>
-        <div style="width:100%;height:40px;background:repeating-linear-gradient(90deg,#38bdf8 0px,#38bdf8 1px,transparent 1px,transparent 8px);border-radius:8px;margin-top:6px"></div></div>
-      <div><h3>线疏 = 缓坡</h3><p>等高线间隔大，高度变化需要更长水平距离。</p>
-        <div style="width:100%;height:40px;background:repeating-linear-gradient(90deg,#38bdf8 0px,#38bdf8 1px,transparent 1px,transparent 32px);border-radius:8px;margin-top:6px"></div></div>
+    <div class="card">
+      <h3>📐 等高线的四条基本特性</h3>
+      <p><strong>① 同线等高：</strong>同一条等高线上所有点的海拔完全相同。这是等高线的定义，也是判读一切地形图的基础。</p>
+      <p><strong>② 同图等距：</strong>同一幅地图内，相邻等高线的海拔差（等高距）处处相等。不能这张图东部用 50 米、西部用 100 米。</p>
+      <p><strong>③ 闭合曲线：</strong>等高线一定是闭合的，无论圈多大。有时图幅太小，圈被裁断了，但想象中山的那一边它一定闭合。</p>
+      <p><strong>④ 不相交（除陡崖）：</strong>两条不同海拔的等高线永远不会相交。唯一例外是陡崖——那里坡度接近 90°，多条等高线重合在一起，用锯齿状符号表示。</p>
     </div>
-    <p>💡 口诀：<strong>密陡疏缓</strong></p>
-    <div style="margin-top:18px">
-      <h3>🖱️ 调整山的坡度</h3>
-      <p style="color:var(--muted);font-size:14px">拖动滑块，观察等高线间距变化。</p>
+
+    <div class="card teal">
+      <h3>✏️ 地图上的"辅助符号"：示坡线、间曲线与助曲线</h3>
+      <p><strong>示坡线：</strong>在山顶或盆地的闭合等高线上，有时会看到一两条与等高线垂直的小短线，指向海拔降低的方向——这就是示坡线。山顶的示坡线画在圈外侧（向外指），盆地的示坡线画在圈内侧（向里指）。有了它，不看数字也能一眼区分"这是山包还是洼地"。</p>
+      <p><strong>间曲线与助曲线：</strong>当局部地形起伏太小，按等高距画的线太疏时，制图师会在两条等高线之间加画虚线：加在二分之一高度处的叫<strong>间曲线</strong>（如 50 米等高距中画 25 米线），加在四分之一处的叫<strong>助曲线</strong>。它们用长虚线或短虚线表示，读图时别忘了把它们折算成半距、四分之一距。</p>
+      <p><strong>首曲线与计曲线：</strong>按等高距画的基本等高线叫首曲线（细实线）；为了读数方便，每隔 4 条（即 5 倍等高距）加粗一条，叫计曲线，线上常标注海拔数字。读图时先找计曲线上的数字，再数首曲线，就能快速定位任何一点的高度。</p>
+    </div>
+  </section>
+
+  <!-- ═══ 模块 2：疏密与坡度 ═══ -->
+  <section class="section" id="module-2" data-tts="module-2" data-tsh="模块2：线挤在一起和线散开，地形有什么不同？" data-bloom-level="apply" data-scaffold="full">
+    <h2 class="section-title">📖 模块 2：等高线疏密 → 坡度陡缓</h2>
+
+    <div class="card">
+      <div class="abt-grid" style="margin-bottom:16px">
+        <div class="abt-item and"><div class="abt-label">线密 = 陡坡</div><p>等高线挤在一起，高度在很短水平距离内变化很大——登山时遇到的陡壁区域。</p></div>
+        <div class="abt-item but"><div class="abt-label">线疏 = 缓坡</div><p>等高线间隔大，高度变化需要更长水平距离——适合骑行的平缓坡地。</p></div>
+        <div class="abt-item therefore"><div class="abt-label">口诀</div><p>💡 <strong>密陡疏缓</strong>：比较单位距离内等高线数量，就能判断 AB 两地坡度差异。</p></div>
+      </div>
+      <p>相邻两条等高线之间的垂直距离叫<strong>等高距</strong>。同一幅地图上等高距固定：山区常用 20-100 米，平原可能只用 5 米。通过数等高线数量可以估算高度：若某点与基准线之间有 4 条间隔 50 米的等高线，则该点海拔约 200 米。</p>
+    </div>
+
+    <div class="card teal">
+      <h3>🖱️ 互动：调整山的坡度</h3>
+      <p class="muted">先预测：如果把等高线间距调得很小，右侧的山坡会变成什么样？</p>
+      <p class="muted">操作：拖动滑块改变等高线间距，观察左侧等高线疏密与右侧山坡坡度的对应关系。</p>
       <div class="canvas-wrap"><canvas id="slopeCanvas" width="740" height="280" style="max-width:100%"></canvas></div>
-      <div class="grid" style="margin-top:12px">
-        <label style="font-size:14px">坡度：<strong id="slopeLabel">中等</strong>
-          <input id="slopeSlider" type="range" min="1" max="5" step="1" value="3">
-        </label>
-        <div class="result" id="slopeResult">中等坡度：等高线间距适中。</div>
+      <div class="canvas-controls" style="margin-top:12px">
+        <label>坡度：<strong id="slopeLabel">中等</strong></label>
+        <input id="slopeSlider" type="range" min="1" max="5" step="1" value="3">
+      </div>
+      <div class="result" id="slopeResult" style="margin-top:10px">中等坡度：等高线间距适中。</div>
+      <div style="margin-top:14px;padding:14px;background:#f0fdf4;border-radius:10px;border-left:3px solid var(--primary);font-size:14.5px;line-height:1.75">
+        <strong>观察讲解：</strong>等高线间距小，意味着同样的水平距离内海拔变化大，坡度自然陡。反之，间距大则坡度缓。这就是"密陡疏缓"的数学本质：坡度 = 高差 ÷ 水平距离。等高距固定时，水平距离（图上间距）越小，坡度越大。
+      </div>
+      <div style="margin-top:12px">
+        <button class="reveal-btn" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">💭 思考题：登山时，为什么"之"字形路线比直线登顶省力？</button>
+        <div class="reveal-answer" style="display:none">"之"字形路线相当于延长了水平距离。坡度 = 高差 ÷ 水平距离，水平距离越大，实际行走的坡度越缓，虽然路程变长，但每步的爬升高度降低，体力消耗更均匀，也更安全。</div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- 模块3：地形判读 -->
-<section id="module-3" class="section" data-tts="module-3" data-tsh="不同弯曲方式对应什么地形？">
-  <div class="card">
-    <span class="phase-tag">地形判读</span>
-    <h2>等高线弯曲 → 地形判读</h2>
-    <div class="grid" style="margin:16px 0">
-      <div class="card" style="padding:14px"><span class="terrain-label peak">山顶</span><p style="font-size:14px;margin-top:6px">闭合，内高外低</p></div>
-      <div class="card" style="padding:14px"><span class="terrain-label ridge">山脊</span><p style="font-size:14px;margin-top:6px">向低处凸出</p></div>
-      <div class="card" style="padding:14px"><span class="terrain-label valley">山谷</span><p style="font-size:14px;margin-top:6px">向高处凸出</p></div>
-      <div class="card" style="padding:14px"><span class="terrain-label cliff">陡崖</span><p style="font-size:14px;margin-top:6px">多条重叠</p></div>
-      <div class="card" style="padding:14px"><span class="terrain-label saddle">鞍部</span><p style="font-size:14px;margin-top:6px">两组闭合之间</p></div>
+    <div class="card">
+      <h3>🥾 实际应用：登山、修路、选坝址</h3>
+      <p><strong>登山路线选择：</strong>资深登山者看等高线地图，会优先选择等高线稀疏的坡面——坡度缓，省力且安全。如果必须经过密集区，会寻找"之"字形小路或山脊线（山脊通常比山谷两侧坡度缓）。</p>
+      <p><strong>公路选线：</strong>山区公路尽量沿等高线修建，减少爬坡和下坡。两条等高线之间的"走廊"是最佳选线区域。如果必须穿越等高线密集区，就需要打隧道或修盘山公路。</p>
+      <p><strong>水坝选址：</strong>水坝要建在"口袋形"洼地的出口处——上游等高线形成宽阔盆地（蓄水量大），出口处等高线密集（峡谷窄，坝体短，造价低）。三峡大坝选址正是利用了这一原理。</p>
     </div>
-    <div style="margin-top:10px">
-      <h3>🖱️ 点击识别地形</h3>
+  </section>
+
+  <!-- ═══ 模块 3：地形部位判读 ═══ -->
+  <section class="section" id="module-3" data-tts="module-3" data-tsh="模块3：不同弯曲方式对应什么地形？" data-bloom-level="analyze" data-scaffold="partial">
+    <h2 class="section-title">📖 模块 3：等高线弯曲 → 地形判读</h2>
+
+    <div class="card">
+      <h3>🗻 五种基本地形部位</h3>
+      <p>通过等高线形状可以判断五种基本地形：山顶呈闭合小圈（如富士山）；山脊是凸向低处的曲线（像鱼背骨）；山谷是凸向高处的曲线（如峡谷）；鞍部像马鞍状的两山之间低处；陡崖处等高线几乎重合（如华山悬崖）。</p>
+      <div class="abt-grid" style="margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));display:grid">
+        <div class="abt-item" style="text-align:center"><span class="terrain-label peak">山顶</span><p style="font-size:14px;margin-top:6px">闭合，内高外低</p></div>
+        <div class="abt-item" style="text-align:center"><span class="terrain-label ridge">山脊</span><p style="font-size:14px;margin-top:6px">向低处凸出</p></div>
+        <div class="abt-item" style="text-align:center"><span class="terrain-label valley">山谷</span><p style="font-size:14px;margin-top:6px">向高处凸出</p></div>
+        <div class="abt-item" style="text-align:center"><span class="terrain-label cliff">陡崖</span><p style="font-size:14px;margin-top:6px">多条重叠</p></div>
+        <div class="abt-item" style="text-align:center"><span class="terrain-label saddle">鞍部</span><p style="font-size:14px;margin-top:6px">两组闭合之间</p></div>
+      </div>
+      <p class="muted" style="margin-top:12px">💡 口诀：<strong>凸低为脊，凸高为谷</strong>。台湾玉山主峰在地图上表现为层层嵌套的闭合圆圈，而太鲁阁峡谷表现为向高处凸起的曲线群。</p>
+    </div>
+
+    <div class="card purple">
+      <h3>🖱️ 互动：点击识别地形</h3>
+      <p class="muted">先预测：你觉得"凸低为脊"是什么意思？等高线向低处凸出，中间高还是两侧高？</p>
+      <p class="muted">操作：点击图上的圆点，识别五个地形部位；也可以用下方按钮切换高亮。</p>
       <div class="canvas-wrap"><canvas id="terrainCanvas" width="740" height="360" style="max-width:100%"></canvas></div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center">
         <button class="terrain-btn active" data-terrain="all">🗺️ 全图</button>
@@ -284,129 +559,241 @@
         <button class="terrain-btn" data-terrain="saddle">🏇 鞍部</button>
       </div>
       <div class="result" id="terrainResult" style="margin-top:12px">点击按钮切换地形类型。</div>
-    </div>
-  </div>
-</section>
-
-<!-- ConcepTest -->
-<section id="conceptest-1" class="section" data-tts="conceptest-1" data-tsh="概念测试">
-  <div class="card" data-conceptest="true" data-bloom-level="understand">
-    <span class="phase-tag">ConcepTest</span>
-    <h2>概念挑战</h2>
-    <p>等高线向高处凸出的地方是什么地形？</p>
-    <div class="grid">
-      <button class="choice" data-choice="A" data-correct="false" data-diagnosis="山脊是向低处凸出。向高处凸出说明中间比两侧低，是山谷。">A. 山脊</button>
-      <button class="choice" data-choice="B" data-correct="true" data-diagnosis="正确！等高线向高处凸出 = 山谷。中间比两侧低，河流沿山谷流。">B. 山谷</button>
-      <button class="choice" data-choice="C" data-correct="false" data-diagnosis="鞍部是两组闭合等高线之间，不是凸出弯曲。">C. 鞍部</button>
-      <button class="choice" data-choice="D" data-correct="false" data-diagnosis="陡崖是等高线重叠，不是凸出弯曲。">D. 陡崖</button>
-    </div>
-    <div class="result warn" data-feedback-for="conceptest-1" style="margin-top:12px">仔细看弯曲方向。</div>
-  </div>
-</section>
-
-<!-- 模块4：地形剖面图 -->
-<section id="module-4" class="section" data-tts="module-4" data-tsh="沿一条线切开，侧面轮廓什么样？">
-  <div class="card">
-    <span class="phase-tag">地形剖面图</span>
-    <h2>从等高线到地形剖面图</h2>
-    <p>等高线图是俯视图。沿某条线切开看"侧面"轮廓，就是<strong>地形剖面图</strong>。</p>
-    <div style="margin-top:16px">
-      <h3>🖱️ 拖动剖面线</h3>
-      <p style="color:var(--muted);font-size:14px">红色虚线是剖面线，下方实时生成对应剖面图。</p>
-      <div class="canvas-wrap"><canvas id="profileCanvas" width="740" height="460" style="max-width:100%"></canvas></div>
-      <div class="grid" style="margin-top:12px">
-        <label style="font-size:14px">剖面线位置：<strong id="profileLineLabel">中间</strong>
-          <input id="profileLineSlider" type="range" min="20" max="80" step="5" value="50">
-        </label>
-        <div class="result" id="profileResult">拖动滑块观察不同位置的剖面。</div>
+      <div style="margin-top:14px;padding:14px;background:#f0fdf4;border-radius:10px;border-left:3px solid var(--primary);font-size:14.5px;line-height:1.75">
+        <strong>观察讲解：</strong>山脊是山体向低处延伸的"脊梁"，等高线向低处凸出，中间海拔高于两侧，是天然的分水线——雨水落在山脊上，一半流向左边，一半流向右边。山谷则相反，等高线向高处凸出，中间低于两侧，是集水线，常常发育河流。判断时记住口诀：<strong>凸低为脊，凸高为谷</strong>。
+      </div>
+      <div style="margin-top:12px">
+        <button class="reveal-btn" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">💭 思考题：为什么山谷里容易找到河流，而山脊上几乎没有？</button>
+        <div class="reveal-answer" style="display:none">山谷是集水线，两侧山坡的雨水都向中间汇集，长期冲刷形成河流。山脊是分水线，雨水向两侧分流，中间留不住水，所以山脊上几乎没有河流。这也是"凸高为谷，谷有河；凸低为脊，脊分水"的记忆法。</div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- 后测 -->
-<section id="posttest" class="section" data-tts="posttest" data-tsh="后测">
-  <div class="card">
-    <span class="phase-tag">Posttest</span>
-    <h2>学完了吗？检验一下</h2>
-    <p>多条等高线在某处完全重叠，这是什么地形？</p>
-    <div class="grid">
-      <button class="choice" data-posttest-choice="A" data-correct="false" data-diagnosis="山脊是向低处凸出，不重叠。">A. 山脊</button>
-      <button class="choice" data-posttest-choice="B" data-correct="true" data-diagnosis="正确！等高线重叠 = 坡度极陡近乎垂直 = 陡崖。">B. 陡崖</button>
-      <button class="choice" data-posttest-choice="C" data-correct="false" data-diagnosis="山谷是向高处凸出，不是重叠。">C. 山谷</button>
+    <div class="card">
+      <h3>🏔️ 六种地形部位详解</h3>
+      <p><strong>山峰（山顶）：</strong>等高线闭合，数值由四周向中间增大。最内圈就是山顶。如果闭合圈内数值反而降低，那是盆地或洼地，不是山峰。</p>
+      <p><strong>山脊：</strong>等高线向低处凸出。山脊线是分水线，登山时沿山脊走视野好、坡度相对缓，但风大。</p>
+      <p><strong>山谷：</strong>等高线向高处凸出。山谷线是集水线，可能发育河流。徒步时山谷常有水源，但雨天要警惕山洪。</p>
+      <p><strong>鞍部：</strong>两个山峰之间的低洼部位，形如马鞍。鞍部是翻越山脊的最近通道，也是登山者常选的营地位置（避风）。</p>
+      <p><strong>陡崖：</strong>多条等高线重合在一起，坡度接近 90°。地图上常用锯齿状符号表示，攀岩和蹦极常选陡崖。</p>
+      <p><strong>盆地：</strong>等高线闭合，数值由四周向中间减小。盆地底部平坦，常是农业和聚落集中区，如四川盆地。</p>
     </div>
-    <div class="result warn" data-feedback-for="posttest" style="margin-top:12px">什么样的地形会让等高线挤到同一条线上？</div>
+
+    <div class="card amber" data-conceptest="true" data-bloom-level="analyze">
+      <h3>🗳️ 概念挑战（ConcepTest）</h3>
+      <p>等高线向高处凸出的地方是什么地形？</p>
+      <button class="quiz-option" onclick="checkConcept1(this,'A')">A. 山脊</button>
+      <button class="quiz-option" onclick="checkConcept1(this,'B')">B. 山谷</button>
+      <button class="quiz-option" onclick="checkConcept1(this,'C')">C. 鞍部</button>
+      <button class="quiz-option" onclick="checkConcept1(this,'D')">D. 陡崖</button>
+      <div class="feedback" id="concept1-fb"></div>
+    </div>
+  </section>
+
+  <!-- ═══ 模块 4：地形剖面图 ═══ -->
+  <section class="section" id="module-4" data-tts="module-4" data-tsh="模块4：沿一条线切开，侧面轮廓什么样？" data-bloom-level="apply" data-scaffold="full">
+    <h2 class="section-title">📖 模块 4：从等高线到地形剖面图</h2>
+
+    <div class="card">
+      <h3>📐 什么是地形剖面图</h3>
+      <p>等高线图是俯视图。沿某条线切开看"侧面"轮廓，就是<strong>地形剖面图</strong>。绘制步骤：</p>
+      <div class="derivation">
+        <div class="step"><div class="step-num">1</div><div class="step-text">在等高线图上画切割线（如 AB 线）</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">在方格纸上建立高度坐标系</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text">按比例标出各等高线与切割线的交点高度</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-text">连接各点成平滑曲线</div></div>
+      </div>
+      <p class="muted">🌍 例如要修建穿山隧道时，工程师就会先制作山体剖面图来分析最佳施工路线。剖面图能直观显示坡度变化和视野盲区。</p>
+    </div>
+
+    <div class="card green">
+      <h3>🖱️ 互动：拖动剖面线</h3>
+      <p class="muted">先预测：如果把剖面线从两座山之间穿过，剖面图会呈现什么形状？</p>
+      <p class="muted">操作：红色虚线是剖面线，拖动 A/B 两个端点，下方实时生成对应的地形剖面图。</p>
+      <div class="canvas-wrap"><canvas id="profileCanvas" width="740" height="460" style="max-width:100%"></canvas></div>
+      <div class="canvas-controls" style="margin-top:12px">
+        <label>剖面线位置：<strong id="profileLineLabel">中间</strong></label>
+        <input id="profileLineSlider" type="range" min="20" max="80" step="5" value="50">
+      </div>
+      <div class="result" id="profileResult" style="margin-top:10px">拖动滑块观察不同位置的剖面。</div>
+      <div style="margin-top:14px;padding:14px;background:#f0fdf4;border-radius:10px;border-left:3px solid var(--primary);font-size:14.5px;line-height:1.75">
+        <strong>观察讲解：</strong>剖面图把俯视的等高线"立"了起来。当剖面线穿过山峰时，剖面图出现高峰；穿过山谷时，出现低谷；穿过鞍部时，出现"凹"字形。剖面图的横轴是水平距离，纵轴是海拔，纵轴比例通常比横轴大很多，所以坡度看起来比实际更陡。
+      </div>
+      <div style="margin-top:12px">
+        <button class="reveal-btn" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">💭 思考题：站在 A 点能看到 B 点吗？怎么用剖面图判断通视？</button>
+        <div class="reveal-answer" style="display:none">在剖面图上连接 A、B 两点成直线，如果直线中间没有被山体挡住（即直线始终高于剖面曲线），则两点通视；如果直线穿过山体，则不通视。这是军事观察、通信基站选址的重要判断方法。</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>👁️ 通视判断：两点之间能否互相看见</h3>
+      <p>通视问题是剖面图最重要的应用。判断方法：在剖面图上连接观察点和目标点，如果连线始终高于地形剖面线，则通视；如果连线被剖面线挡住，则不通视。</p>
+      <p><strong>实际案例：</strong>森林防火瞭望塔选址，必须保证塔与责任区内的每一点都通视。通信基站选址同理——如果基站与某村庄之间有山脊阻挡，信号就无法覆盖。军事上，阵地选择也讲究"通视良好、隐蔽性强"的矛盾统一。</p>
+      <p><strong>技巧：</strong>等高线图上，如果两点之间隔着山脊（等高线向低处凸出），通常不通视；如果隔着山谷（等高线向高处凸出），通常通视。但最准确的判断还是画剖面图。</p>
+    </div>
+
+    <div class="card teal">
+      <h3>✍️ 动手实战：四步画出一幅剖面图</h3>
+      <p>中考常考"沿 AB 线绘制地形剖面图"，标准解法分四步，一步都不能省：</p>
+      <ul>
+        <li><strong>① 定线取点：</strong>用直尺比着 AB 线，在它与每条等高线的交点处做记号，并读出各交点海拔（用到"同线等高"）。</li>
+        <li><strong>② 建坐标系：</strong>横轴表示水平距离（与 AB 线等长），纵轴表示海拔。纵轴范围要略大于沿线最高点和最低点，纵轴比例尺通常比横轴大，这样地形起伏才明显。</li>
+        <li><strong>③ 描点：</strong>把每个交点按"水平距离 + 海拔"描到坐标系里。</li>
+        <li><strong>④ 连线：</strong>用平滑曲线（不是折线！）连接各点。两交点之间如果隔着山顶或谷底，曲线要画出"圆滑的峰或谷"，高度可略高于或低于相邻交点。</li>
+      </ul>
+      <p class="muted" style="margin-top:10px">💡 检验技巧：画完后对照原图——剖面图上的峰应对应闭合等高线，谷应对应"V"形弯曲，如果峰谷位置与原图相反，八成是把切割线方向看反了。</p>
+    </div>
+  </section>
+
+  <!-- ═══ 拓展：分层设色与等深线 ═══ -->
+  <section class="section" id="extension" data-tts="extension" data-tsh="拓展：分层设色地形图与等深线" data-bloom-level="understand" data-scaffold="full">
+    <h2 class="section-title">🌈 拓展：分层设色地形图与等深线</h2>
+    <div class="card">
+      <h3>🎨 分层设色地形图</h3>
+      <p>在等高线地形图的基础上，按不同海拔高度涂上不同颜色，就是<strong>分层设色地形图</strong>。国际通用配色：绿色表示平原（0–200 米），黄色表示高原（200–500 米），褐色表示山地（500 米以上），蓝色表示海洋，白色表示冰雪。</p>
+      <p>中国地形图上，西部是深褐色（青藏高原，平均 4000 米以上），中部是黄色（黄土高原、云贵高原，1000–2000 米），东部是绿色（平原丘陵，500 米以下）。一眼就能看出"西高东低、三级阶梯"的格局。</p>
+    </div>
+    <div class="card teal">
+      <h3>🌊 等深线：海洋里的等高线</h3>
+      <p>把"海拔"换成"水深"，把"山"换成"海沟"，就得到<strong>等深线</strong>——连接海洋中水深相同各点的曲线。等深线地形图用于航海、渔业、海底工程。等深线越密，海底坡度越陡；等深线数值越大，水越深。</p>
+      <p>大陆架是等深线稀疏的浅海区（水深 200 米以内），大陆坡是等深线密集的陡坡区，海沟是等深线闭合且数值极大的深海区。马里亚纳海沟最深处 11034 米，等深线密集到几乎重合。</p>
+    </div>
+    <div class="card purple">
+      <h3>📱 等高线就在你身边：现代生活中的应用</h3>
+      <p><strong>户外运动 App：</strong>两步路、奥维互动地图等徒步软件都提供等高线图层。出发前看一眼路线穿越的等高线疏密，就能预估今天要走多少爬坡——穿越 10 条间距 20 米的等高线，意味着累计爬升约 200 米。很多徒步路线标注的"累计爬升"就是这样算出来的。</p>
+      <p><strong>城市规划与防洪：</strong>城市内涝点往往出现在等高线闭合的洼地。规划师用等高线（或数字高程模型 DEM）模拟暴雨后水流汇集路径，提前布置排水泵站。2021 年郑州"7·20"特大暴雨后，地形分析成为城市韧性评估的标配工具。</p>
+      <p><strong>滑雪与滑翔伞：</strong>滑雪场雪道图就是一张分层设色地形图——绿道在缓坡（等高线疏），黑道在陡坡（等高线密）。滑翔伞起飞场要求迎风坡等高线均匀稀疏，保证平稳升空。</p>
+      <p><strong>考试链接：</strong>中考常把等高线与实际情境结合——给你一幅某村等高线图，问"哪里适合修水库""哪条路线登山最省力""甲村乙村谁先被洪水淹"。掌握了疏密与弯曲的判读，这些题都是送分题。</p>
+    </div>
+  </section>
+
+  <!-- ═══ 易错辨析 ═══ -->
+  <section class="section" id="misconceptions" data-tts="misconceptions" data-tsh="易错辨析" data-bloom-level="analyze" data-scaffold="partial">
+    <h2 class="section-title">⚠️ 易错辨析</h2>
+    <div class="card brown">
+      <h3>误区一：等高线密集 = 一定是高山</h3>
+      <p><strong>错！</strong>等高线密集只说明坡度陡，不说明海拔高。深谷两侧的等高线同样密集。判读时必须先看等高线上标注的海拔数值，再看疏密。60% 的同学会在这里栽跟头。</p>
+    </div>
+    <div class="card amber">
+      <h3>误区二：凸低为脊、凸高为谷，方向总记反</h3>
+      <p><strong>记忆法：</strong>想象你站在山脊上，脚下是高的，两边是低的——等高线向低处"滑"下去，所以"凸低为脊"。站在山谷里，脚下是低的，两边是高的——等高线向高处"爬"上去，所以"凸高为谷"。</p>
+    </div>
+    <div class="card purple">
+      <h3>误区三：等高线永不相交</h3>
+      <p><strong>不完全对。</strong>等高线原则上不相交，但陡崖处多条等高线重合在一起，这是唯一例外。重合不等于相交——重合是多条线叠在一起，相交是两条线交叉穿过。陡崖用锯齿符号表示，看到锯齿就知道是悬崖。</p>
+    </div>
+  </section>
+
+  <!-- ═══ 后测 ═══ -->
+  <section class="section" id="posttest" data-tts="posttest" data-tsh="后测" data-bloom-level="analyze" data-scaffold="none">
+    <h2 class="section-title">📝 后测</h2>
+    <p class="section-sub">2 道题检验学习效果，答完生成结课报告。</p>
+    <div class="card">
+      <h3>第 1 题</h3>
+      <p>多条等高线在某处完全重叠，这是什么地形？</p>
+      <button class="quiz-option" onclick="checkPost1(this,'A')">A. 山脊</button>
+      <button class="quiz-option" onclick="checkPost1(this,'B')">B. 陡崖</button>
+      <button class="quiz-option" onclick="checkPost1(this,'C')">C. 山谷</button>
+      <div class="feedback" id="post1-fb"></div>
+    </div>
+    <div class="card teal">
+      <h3>第 2 题</h3>
+      <p>等高线向高处凸出的地方是什么地形？</p>
+      <button class="quiz-option" onclick="checkPost2(this,'A')">A. 山脊</button>
+      <button class="quiz-option" onclick="checkPost2(this,'B')">B. 山谷</button>
+      <button class="quiz-option" onclick="checkPost2(this,'C')">C. 鞍部</button>
+      <button class="quiz-option" onclick="checkPost2(this,'D')">D. 陡崖</button>
+      <div class="feedback" id="post2-fb"></div>
+    </div>
+  </section>
+
+  <!-- ═══ 小结 ═══ -->
+  <section class="section" id="summary" data-tts="summary" data-tsh="小结" data-bloom-level="understand" data-scaffold="full">
+    <h2 class="section-title">📌 课堂小结</h2>
+    <div class="card">
+      <h3>一张平平的地图，怎么看出哪里是山、哪里是谷？</h3>
+      <ul>
+        <li><strong>等高线</strong>：相同海拔的点连成曲线，像水平切山的边线；相邻等高线高差（等高距）固定。</li>
+        <li><strong>密陡疏缓</strong>：线密 = 陡坡；线疏 = 缓坡。</li>
+        <li><strong>弯曲判地形</strong>：向低处凸 = 山脊；向高处凸 = 山谷；闭合内高 = 山顶；重叠 = 陡崖；两组闭合之间 = 鞍部。</li>
+        <li><strong>地形剖面图</strong>：沿切割线标出各交点高度，连接成平滑曲线，直观显示坡度变化。</li>
+      </ul>
+    </div>
+    <div class="card brown">
+      <h3>⚠️ 易错提醒</h3>
+      <p><strong>等高线密集 ≠ 一定是高山</strong>——也可能是深谷！判读时先看等高线上标注的海拔数值，再看疏密和弯曲方向。60% 的同学会在这里栽跟头：密集只说明坡度陡，不说明海拔高。</p>
+    </div>
+    <div class="card green">
+      <h3>🚀 迁移任务</h3>
+      <p>打开任意一款带地形图层的地图 App，找到你家附近的一处山地或公园，截下等高线图，回答三个问题：①这幅图的等高距是多少？②最平缓的登山路线在哪一侧？③如果把主峰和次峰连成一条线画剖面图，中间会经过鞍部吗？下节课带着你的答案来分享。</p>
+    </div>
+  </section>
+
+  <!-- ⭐ v7.7 标准独立连续音频模块 -->
+  <section class="ta-standard-section" id="teachany-audio-player">
+    <div data-teachany-audio>
+      <script type="application/json" data-teachany-audio-playlist>
+[
+  { "id": "enhance-1", "sectionId": "module-1", "title": "精讲1：等高线的形成与等高距", "src": "./tts/enhance-1.mp3", "subtitle": "水平切山，同一海拔连成线…" },
+  { "id": "enhance-2", "sectionId": "module-2", "title": "精讲2：疏密与坡度、地形判读", "src": "./tts/enhance-2.mp3", "subtitle": "密陡疏缓，凸低为脊凸高为谷…" },
+  { "id": "enhance-3", "sectionId": "module-4", "title": "精讲3：地形剖面图绘制", "src": "./tts/enhance-3.mp3", "subtitle": "沿切割线标高，连成平滑曲线…" }
+]
+      </script>
+    </div>
+  </section>
+
+  <!-- v7.7.4 标准知识图谱模块 -->
+  <section class="section" id="knowledge-graph" data-tts="knowledge-graph" data-tsh="知识图谱">
+    <h2 class="section-title">🗺️ 知识图谱：等高线与地形图</h2>
+    <div data-teachany-kg="geo-m-topographic-map">
+      <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
+    </div>
+  </section>
+
+  <!-- ═══ 区域情境地图（自包含 Canvas GeoJSON · 硬规则 #35/#36 合规） ═══ -->
+  <section class="section" id="region-map" data-tts="region-map" data-tsh="把真实地形翻译成等高线" data-bloom-level="apply" data-scaffold="partial">
+    <h2 class="section-title">🗺️ 把真实地形"翻译"成等高线</h2>
+    <div class="card brown">
+      <h3>点击地形区，看它的等高线长什么样</h3>
+      <p>学了判读规则，回到真实中国：青藏高原、四川盆地、华北平原……这些地形在等高线图上各是什么模样？<strong>点击下面地图上的标注点</strong>，右侧立刻显示该类地形的典型等高线形态——把宏观地形和纸面技能对上号。</p>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;align-items:flex-start">
+        <div class="canvas-wrap" style="flex:1;min-width:300px"><canvas id="map-canvas" width="740" height="420" style="max-width:100%"></canvas></div>
+        <div style="width:300px;flex-shrink:0">
+          <canvas id="contour-inset" width="300" height="240" style="width:100%;border:1px solid var(--border);border-radius:12px;background:#fffdf5"></canvas>
+          <div id="contour-explain" style="margin-top:10px;padding:12px;background:#f0fdf4;border-radius:10px;border-left:3px solid var(--primary);font-size:14px;line-height:1.7">👈 点击地图上的地形区标注点，这里显示对应的等高线形态与判读要点。</div>
+        </div>
+      </div>
+      <p class="muted" style="text-align:center;margin-top:8px">左：中国省界与主要地形区（本地 GeoJSON 渲染）· 右：所选地形的等高线形态示意</p>
+    </div>
+  </section>
+
+  <!-- ═══ 图文速览 ═══ -->
+  <section class="section" id="figures" data-tts="figures" data-tsh="图文速览">
+    <h2 class="section-title">🖼️ 图文速览</h2>
+    <div class="abt-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));display:grid">
+      <figure class="card" style="padding:14px;text-align:center;margin-bottom:0"><img src="./assets/hero-infographic.svg" alt="等高线知识结构" loading="lazy" style="width:100%;border-radius:10px"><figcaption class="muted" style="margin-top:8px;font-size:13px">知识结构总览</figcaption></figure>
+      <figure class="card teal" style="padding:14px;text-align:center;margin-bottom:0"><img src="./assets/concept-diagram.svg" alt="核心概念" loading="lazy" style="width:100%;border-radius:10px"><figcaption class="muted" style="margin-top:8px;font-size:13px">核心概念：五种地形部位判读</figcaption></figure>
+      <figure class="card amber" style="padding:14px;text-align:center;margin-bottom:0"><img src="./assets/process-diagram.svg" alt="过程示意" loading="lazy" style="width:100%;border-radius:10px"><figcaption class="muted" style="margin-top:8px;font-size:13px">过程示意：等高线形成四步</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ═══ 结课导航 ═══ -->
+  <div class="next-course">
+    <h3>🎓 完成本课后，继续你的地理之旅</h3>
+    <p>前置复习：地图的阅读 ｜ 下一步：地形类型判读</p>
+    <div class="nc-links">
+      <a href="../geo-m-map-reading/index.html" class="alt">← 复习：地图的阅读</a>
+      <a href="../geo-m-terrain-types/index.html">下一课：地形类型判读 →</a>
+    </div>
   </div>
-</section>
 
-<!-- 小结 -->
-<section id="summary" class="section" data-tts="summary" data-tsh="小结">
-  <div class="card">
-    <span class="phase-tag">Summary</span>
-    <h2>小结</h2>
-    <p><strong>一张平平的地图，怎么看出哪里是山、哪里是谷？</strong></p>
-    <ul>
-      <li><strong>等高线</strong>：相同海拔的点连成曲线，像水平切山的边线。</li>
-      <li><strong>密陡疏缓</strong>：线密 = 陡坡；线疏 = 缓坡。</li>
-      <li><strong>弯曲判地形</strong>：向低处凸 = 山脊；向高处凸 = 山谷；闭合内高 = 山顶；重叠 = 陡崖；两组闭合之间 = 鞍部。</li>
-    </ul>
-  </div>
-</section>
+</div><!-- /wrap -->
 
+<div class="footer">
+  TeachAny 等高线与地形图互动课件 · 初中地理 G7 · v7.12<br>
+  学习闭环：自适应掌握度 · 进度保存 · 间隔重复 · 成就激励
+</div>
 
-
-
-
-<section class="section" id="ai-tutor-section">
-  <h2 class="section-title">🤖 AI 学伴</h2>
-  <div data-teachany-tutor-config='{
-    "node": "geo-m-contour-topographic",
-    "subject": "geography",
-    "grade": 7,
-    "persona": "智慧地理导师",
-    "context": "等高线与地形图：等高线原理、等高距、地形判读（山脊/山谷/鞍部/陡崖/山顶）、地形剖面图绘制、等高线地形图的应用",
-    "hints": ["等高线为什么是闭合曲线？", "山脊和山谷在等高线图上怎么区分？", "等高距是什么？为什么同图要统一？", "怎样从等高线图上判断坡度陡缓？", "地形剖面图有什么实际用途？"]
-  }'></div>
-</section>
-
-<footer style="text-align:center;padding:40px 20px;color:var(--text2);font-size:13px;border-top:1px solid var(--border);margin-top:40px">
-  <p>TeachAny v7.12.1 · 等高线与地形图 · 初中地理七年级</p>
-  <p style="margin-top:6px">© 2024-2026 TeachAny · 基于课标 · 遵循 Bloom 认知层次理论</p>
-</footer>
-
-<script src="./assets/course.js"></script>
-<script src="../../assets/scripts/ai-tutor.js"></script>
-<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
-<script src="../../assets/scripts/teachany-tts-narrator.js" data-tts-disabled="true" defer></script>
-<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
-<script src="../../assets/scripts/teachany-historical-map.js" defer></script>
-<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
-<script src="../../assets/scripts/teachany-audio-player.js?v=bar-only-20260513" defer></script>
-<script>window.__TEACHANY_TUTOR_CONFIG__=window.__TEACHANY_TUTOR_CONFIG__||{courseId:'geo-m-contour-topographic',courseTitle:'等高线与地形图',subject:'geography'};</script>
-<script src="../../assets/scripts/feedback-widget.js" defer></script>
-<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
-  <div data-teachany-tutor-card></div>
-</section>
-
-<!-- teachany-enhanced -->
-<section class="section" data-bloom-level="remember" data-scaffold="full"><h2>什么是等高线</h2><p style="line-height:1.9;">等高线是连接地图上海拔高度相同的点的闭合曲线。想象一下把一座山切成许多层，每一层的边缘线投影到平面上就是等高线。例如，用刀水平切开一个圆锥形的蛋糕，每一层的边缘就是该蛋糕的‘等高线’。等高线密集表示坡度陡峭，稀疏则表示平缓。比如登山时，若地图上某区域等高线非常密集，说明这里山坡很陡，需要做好攀爬准备。</p></section>
-<section class="section" data-bloom-level="understand" data-scaffold="partial"><h2>等高距的秘密</h2><p style="line-height:1.9;">相邻两条等高线之间的垂直距离叫等高距。比如某地图标注等高距为50米，那么两条相邻等高线的高度差就是50米。选择等高距需要根据地形的起伏程度：山区常用20-100米，平原可能只用5米。例如黄山莲花峰地图采用50米等高距，而上海城市地图可能只用2米。通过计算等高线数量可以估算高度：若某点与基准线之间有4条间隔50米的等高线，则该点海拔约200米。</p></section>
-<section class="section" data-bloom-level="apply" data-scaffold="full"><h2>识别基本地形</h2><p style="line-height:1.9;">通过等高线形状可以判断五种基本地形：山顶呈闭合小圈（如富士山）；山脊是凸向低处的曲线（像鱼背骨）；山谷是凸向高处的曲线（如峡谷）；鞍部像马鞍状的两山之间低处；陡崖处等高线几乎重合（如华山悬崖）。例如台湾玉山主峰在地图上表现为层层嵌套的闭合圆圈，而太鲁阁峡谷表现为向高处凸起的曲线群。</p></section>
-<section class="section" data-bloom-level="analyze" data-scaffold="partial"><h2>绘制等高线图</h2><p style="line-height:1.9;">测绘员使用水准仪测量各点高程，再将相同高度的点连接成光滑曲线。现代还会用无人机航拍配合激光雷达。例如绘制校园地图时，先在操场设置基准点，然后测量花坛、教学楼等地的高程差，最后用曲线连接相同高度点。要注意：等高线永不相交（悬崖除外）；每条线必须闭合（可在图幅内或外）；用棕色细线绘制并标注高度值。</p></section>
-<section class="section" data-bloom-level="evaluate" data-scaffold="full"><h2>分层设色法</h2><p style="line-height:1.9;">为了更直观，常用颜色填充不同高度区间：绿色表示低海拔（0-200米），黄色中海拔（200-1000米），棕色高海拔（1000米以上）。例如日本地形图，关东平原是绿色，富士山脚下是黄色，山顶是棕色。电子地图还会加入渐变效果，并配合阴影增强立体感。但要注意色标必须统一，避免不同地图颜色标准不同造成的误解。</p></section>
-<section class="section" data-bloom-level="create" data-scaffold="partial"><h2>地形剖面图</h2><p style="line-height:1.9;">沿特定方向切开地形得到的断面图叫剖面图。绘制步骤：①在等高线图上画切割线（如AB线）；②在方格纸上建立高度坐标系；③按比例标出各等高线与切割线的交点高度；④连接各点成平滑曲线。例如要修建穿山隧道时，工程师就会先制作山体剖面图来分析最佳施工路线。剖面图能直观显示坡度变化和视野盲区。</p></section>
-<section class="section" data-bloom-level="remember" data-scaffold="full"><h2>等高线应用实例</h2><p style="line-height:1.9;">登山者通过等高线判断路线难度：2021年珠峰测绘显示南坡比北坡等高线密集，说明更陡峭。城市规划中，等高线帮助选址：香港迪士尼建在等高线稀疏的平坦填海区。农业上，梯田建设要沿等高线开挖，如云南哈尼梯田每层高差约2米，既保水土又美观。军事上，1944年诺曼底登陆前盟军详细研究了海滩等高线，选择坡度最缓的奥马哈海滩。</p></section>
-<section class="section" data-bloom-level="understand" data-scaffold="partial"><h2>数字高程模型</h2><p style="line-height:1.9;">现代地理信息系统（GIS）将等高线数字化为DEM（数字高程模型），用网格点记录高程数据。例如Google Earth可以生成任意地点的3D地形，精度可达0.5米。DEM可用于洪水模拟：输入降雨量后，计算机根据地形计算水流方向。2020年重庆洪水预警就基于DEM预演了淹没范围。未来结合5G和物联网，DEM将实现实时地形监控。</p></section>
-<section class="section" data-bloom-level="apply" data-scaffold="full"><h2>等高线的疏密与坡度陡缓</h2><p style="line-height:1.9;">等高线的疏密程度直观反映地形坡度变化。当等高线密集排列时，说明相同水平距离内海拔变化大，对应陡坡地形（如登山时遇到的悬崖）；反之稀疏则表示缓坡（如草坪斜坡）。例如，在户外徒步规划中，若地图上某段路线等高线几乎重叠，则需准备攀岩工具；而平缓的等高线则适合骑行。地理考试常出现‘判断AB两地坡度差异’类题目，核心就是比较单位距离内等高线数量。</p></section>
-<section class="section" data-bloom-level="analyze" data-scaffold="partial"><h2>特殊地形符号的识别与应用</h2><p style="line-height:1.9;">地形图中常用特定符号表示特殊地貌。三角符号▲代表山峰（如珠穆朗玛峰在图上标注为黑色三角），闭合小圆圈表示火山口；锯齿线表现陡崖，而虚线则指示季节性干涸河床。例如，新疆吐鲁番盆地的等高线呈闭合同心圆状，中心标有蓝色洼地符号。学生在分析‘某地是否适合修建水库’时，需重点识别鞍部（两山之间低凹处）和集水区符号，这些直接关系到工程可行性。</p></section>
-<section class="section" data-bloom-level="evaluate" data-scaffold="full"><h2>等高线的疏密与坡度陡缓</h2><p style="line-height:1.9;">等高线的疏密程度直观反映地形坡度变化。当等高线密集排列时，说明相同水平距离内海拔变化大，对应陡峭的山坡或悬崖，例如登山时遇到的陡壁区域。反之，若等高线稀疏，则表示地势平缓，如丘陵顶部的缓坡地带。例如，在户外徒步规划中，通过地形图判断等高线间距可预估路线难度——若两条100米等高线在图上的间隔仅1厘米（比例尺1:50,000），则实际坡度约为45度，属于危险路段。</p></section>
-<section class="section" data-bloom-level="create" data-scaffold="partial"><h2>等高线地形图的实际应用案例</h2><p style="line-height:1.9;">等高线地形图在工程建设和灾害预防中具有重要作用。例如，修建盘山公路时，工程师会遵循"之字形"路线沿等高线延伸，既保证坡度符合安全标准（一般不超过8%），又减少土方开挖量。再如，通过分析等高线闭合形态可识别潜在滑坡区域——若发现等高线呈不规则凸起且局部密集，可能暗示山体不稳定。日本在2011年海啸后，利用等高线地图精确划定海拔20米以下的危险区，指导居民点迁移决策。</p></section>
-<section class="section" data-bloom-level="remember" data-scaffold="none"><h2>📋 课前诊断</h2><p style="line-height:1.9;">1. 观察校园里的斜坡，你能想象它的等高线图吗？2. 如果两条等高线靠得很近，说明地形有什么特点？3. 为什么登山地图的等高距比城市地图大？</p></section>
-<section class="section" data-bloom-level="evaluate" data-scaffold="none"><h2>✅ 达标检测</h2><p style="line-height:1.9;">1. 请判断：某区域等高线呈V字形且尖端指向高处，这是什么地形？2. 计算：某点与基准线间有7条间隔20米的等高线，该点海拔多少？3. 设计：要为学校后山绘制等高线图，需要准备哪些工具？</p></section>
-<section class="section" data-bloom-level="analyze" data-scaffold="partial" data-conceptest="true"><h2>💡 错因诊断</h2><p style="line-height:1.9;">常见错因是混淆等高线疏密与绝对高度。误区一认为密集区就是高山（可能是深谷）；误区二将等高线当实际距离。诊断发现，60%学生需要加强等高线数值与地形特征的对应练习。</p></section>
-<section class="section" data-bloom-level="create" data-scaffold="partial"><h2>🚀 迁移挑战</h2><p style="line-height:1.9;">迁移任务：分析你所在城市的地形图，探究为什么商业区多建在等高线稀疏区域？要求结合交通、排水等因素撰写300字分析报告，需引用具体等高线数值作为证据。</p></section>
-<!-- ═══ 等高线四联交互 Canvas（2026-07 欠账清偿：补真实绘制+交互闭环） ═══ -->
+<!-- ═══ 等高线四联交互 Canvas（2026-07 高质量交互：真实绘制+交互闭环） ═══ -->
 <script>
 (function(){
 'use strict';
@@ -414,6 +801,9 @@
 (function(){
   var cv = document.getElementById('sliceCanvas'); if(!cv) return;
   var ctx = cv.getContext('2d'), W = cv.width, H = cv.height, level = 0.5;
+  var label = document.getElementById('sliceHeightLabel');
+  var result = document.getElementById('sliceResult');
+  var extSlider = document.getElementById('sliceHeightSlider');
   function draw(){
     ctx.clearRect(0,0,W,H);
     ctx.save(); ctx.translate(30,20);
@@ -441,15 +831,28 @@
     ctx.lineWidth=1; ctx.fillStyle='#334155'; ctx.font='13px sans-serif';
     ctx.fillText('俯视图：高亮=当前切割的等高线', -110, 140);
     ctx.restore();
+    if(label) label.textContent = (level*400).toFixed(0);
+    if(result){
+      var alt = level*400;
+      if(alt <= 0) result.textContent = '切面在山脚：等高线是最大的一圈。';
+      else if(alt >= 400) result.textContent = '切面在山顶：等高线收缩成一个点。';
+      else if(alt < 150) result.textContent = '切面在山腰偏下：等高线是一个较大的闭合圈。';
+      else if(alt < 300) result.textContent = '切面在山腰：等高线是一个闭合圈。';
+      else result.textContent = '切面接近山顶：等高线是很小的闭合圈。';
+    }
+  }
+  function sync(v){ level = v; if(extSlider) extSlider.value = (level*400).toFixed(0); draw(); }
+  if(extSlider){
+    extSlider.addEventListener('input', function(){ level = this.value/400; draw(); });
   }
   var slider = document.createElement('input');
   slider.type='range'; slider.min=0; slider.max=100; slider.value=50; slider.style.width='60%';
-  slider.addEventListener('input', function(){ level=this.value/100; draw(); });
+  slider.addEventListener('input', function(){ sync(this.value/100); });
   cv.parentNode.appendChild(slider);
   cv.addEventListener('click', function(e){
     var rect=cv.getBoundingClientRect();
     var y=(e.clientY-rect.top)*(H/rect.height)-20;
-    if(y>=60&&y<=260){ level=(260-y)/200; slider.value=level*100; draw(); }
+    if(y>=60&&y<=260){ sync((260-y)/200); }
   });
   draw();
 })();
@@ -457,6 +860,10 @@
 (function(){
   var cv = document.getElementById('slopeCanvas'); if(!cv) return;
   var ctx = cv.getContext('2d'), W=cv.width, H=cv.height, gap=40;
+  var label = document.getElementById('slopeLabel');
+  var result = document.getElementById('slopeResult');
+  var extSlider = document.getElementById('slopeSlider');
+  var names = ['极缓','较缓','中等','较陡','极陡'];
   function draw(){
     ctx.clearRect(0,0,W,H);
     ctx.save(); ctx.translate(30,20);
@@ -483,10 +890,17 @@
     ctx.fillStyle='#334155'; ctx.font='12px sans-serif';
     ctx.fillText('等高线越密 → 坡越陡', 20, 205);
     ctx.restore();
+    var idx = Math.round((80-gap)/16);
+    idx = Math.max(0, Math.min(4, idx));
+    if(label) label.textContent = names[idx];
+    if(result) result.textContent = names[idx] + '坡度：等高线间距' + (idx>=3?'很小，线挤在一起':idx<=1?'很大，线散得很开':'适中') + '——密陡疏缓。';
+  }
+  if(extSlider){
+    extSlider.addEventListener('input', function(){ gap = 80 - (this.value-1)*16; draw(); });
   }
   var slider = document.createElement('input');
   slider.type='range'; slider.min=16; slider.max=80; slider.value=40; slider.style.width='60%';
-  slider.addEventListener('input', function(){ gap=+this.value; draw(); });
+  slider.addEventListener('input', function(){ gap=+this.value; if(extSlider) extSlider.value = Math.round((80-gap)/16)+1; draw(); });
   cv.parentNode.appendChild(slider);
   draw();
 })();
@@ -494,12 +908,13 @@
 (function(){
   var cv = document.getElementById('terrainCanvas'); if(!cv) return;
   var ctx = cv.getContext('2d'), W=cv.width, H=cv.height, sel=-1;
+  var result = document.getElementById('terrainResult');
   var parts=[
-    {x:120,y:90, name:'山峰', desc:'等高线闭合，数值由四周向中间增大', col:'#ef4444'},
-    {x:330,y:80, name:'山脊', desc:'等高线向低处凸出（凸低为脊）', col:'#f59e0b'},
-    {x:540,y:90, name:'山谷', desc:'等高线向高处凸出（凸高为谷），常有河流', col:'#3b82f6'},
-    {x:230,y:230, name:'鞍部', desc:'两个山峰之间的低洼部位，形如马鞍', col:'#8b5cf6'},
-    {x:480,y:240, name:'陡崖', desc:'多条等高线重合在一起，坡度接近90°', col:'#10b981'}
+    {x:120,y:90, key:'peak',   name:'山峰', desc:'等高线闭合，数值由四周向中间增大', col:'#ef4444'},
+    {x:330,y:80, key:'ridge',  name:'山脊', desc:'等高线向低处凸出（凸低为脊）', col:'#f59e0b'},
+    {x:540,y:90, key:'valley', name:'山谷', desc:'等高线向高处凸出（凸高为谷），常有河流', col:'#3b82f6'},
+    {x:230,y:230,key:'saddle', name:'鞍部', desc:'两个山峰之间的低洼部位，形如马鞍', col:'#8b5cf6'},
+    {x:480,y:240,key:'cliff',  name:'陡崖', desc:'多条等高线重合在一起，坡度接近90°', col:'#10b981'}
   ];
   function draw(){
     ctx.clearRect(0,0,W,H);
@@ -523,13 +938,35 @@
       ctx.fillText('👆 点击圆点，识别五个地形部位', 30, 337);
     }
     ctx.textAlign='left';
+    if(result){
+      if(sel>=0){ var q=parts[sel]; result.textContent = q.name+'：'+q.desc; }
+      else result.textContent = '点击圆点或按钮，识别五个地形部位。';
+    }
   }
   cv.addEventListener('click', function(e){
     var rect=cv.getBoundingClientRect();
     var mx=(e.clientX-rect.left)*(W/rect.width), my=(e.clientY-rect.top)*(H/rect.height);
     sel=-1;
     parts.forEach(function(p,i){ if(Math.hypot(mx-p.x,my-p.y)<26) sel=i; });
+    syncButtons();
     draw();
+  });
+  var btns = document.querySelectorAll('.terrain-btn');
+  function syncButtons(){
+    btns.forEach(function(b){
+      var k=b.getAttribute('data-terrain');
+      var active = (k==='all' && sel===-1) || (sel>=0 && parts[sel].key===k);
+      b.classList.toggle('active', active);
+    });
+  }
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      var k=b.getAttribute('data-terrain');
+      if(k==='all'){ sel=-1; }
+      else { parts.forEach(function(p,i){ if(p.key===k) sel=i; }); }
+      syncButtons();
+      draw();
+    });
   });
   draw();
 })();
@@ -538,6 +975,9 @@
   var cv = document.getElementById('profileCanvas'); if(!cv) return;
   var ctx = cv.getContext('2d'), W=cv.width, H=cv.height;
   var line = {x1:80, y1:120, x2:300, y2:120}, drag=null;
+  var label = document.getElementById('profileLineLabel');
+  var result = document.getElementById('profileResult');
+  var extSlider = document.getElementById('profileLineSlider');
   function elev(x,y){
     var d1=Math.hypot(x-150,y-90), d2=Math.hypot(x-260,y-150);
     return Math.max(0, 120-d1*1.6, 100-d2*1.3);
@@ -574,6 +1014,14 @@
     ctx.fillText('地形剖面图（沿 A-B 线切开）', 8, 18);
     ctx.fillText('👆 拖动红色 A/B 点改变剖面线', 380, 18);
     ctx.restore();
+    if(label){
+      var midY = (line.y1+line.y2)/2;
+      label.textContent = midY < 80 ? '偏上' : midY > 160 ? '偏下' : '中间';
+    }
+    if(result){
+      var eA = elev(line.x1, line.y1-10).toFixed(0), eB = elev(line.x2, line.y2-10).toFixed(0);
+      result.textContent = 'A 点海拔约 '+eA+' 米，B 点海拔约 '+eB+' 米——剖面图直观显示沿线起伏。';
+    }
   }
   function pos(e){ var r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height)}; }
   cv.addEventListener('pointerdown', function(e){
@@ -588,24 +1036,581 @@
     draw();
   });
   cv.addEventListener('pointerup', function(){ drag=null; });
+  if(extSlider){
+    extSlider.addEventListener('input', function(){
+      var y = 20 + (this.value/100)*180;
+      line.y1 = y; line.y2 = y; draw();
+    });
+  }
   draw();
+})();
+/* ── 5. map-canvas：中国地形三级阶梯 + 省界 + 地形区标注（纯 Canvas 实现） ── */
+(function(){
+  var cv = document.getElementById('map-canvas'); if(!cv) return;
+  var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  /* 本地 GeoJSON 文件清单（相对课件根目录） */
+  const mGeoFiles = ['./assets/maps/political/admin-boundaries/china-provinces.json'];
+  /* 地图视野中心（经度, 纬度）与缩放控制 */
+  let mCx = 104, mCy = 36, mScale = 3.4;
+  var mGeoData = null;
+  var hoveredRegion = null;
+  var mouseX = 0, mouseY = 0;
+
+  function mProject(lon, lat){
+    return [ W/2 + (lon - mCx) * mScale, H/2 - (lat - mCy) * mScale * 1.18 ];
+  }
+
+  /* 三级阶梯颜色定义 */
+  var stepColors = {
+    1: 'rgba(146,64,14,0.28)',   /* 第一阶梯：青藏高原，深褐 */
+    2: 'rgba(245,158,11,0.22)',  /* 第二阶梯：高原盆地，黄褐 */
+    3: 'rgba(34,197,94,0.18)'    /* 第三阶梯：平原丘陵，浅绿 */
+  };
+  var stepBorders = {
+    1: '#92400e',
+    2: '#d97706',
+    3: '#22c55e'
+  };
+
+  /* 主要地形区标注（经纬度 + 名称 + 所属阶梯） */
+  var terrainSpots = [
+    { lon: 88, lat: 33, name: '青藏高原', step: 1, type: 'plateau' },
+    { lon: 100, lat: 38, name: '内蒙古高原', step: 2, type: 'plateau' },
+    { lon: 109, lat: 36, name: '黄土高原', step: 2, type: 'plateau' },
+    { lon: 103, lat: 26, name: '云贵高原', step: 2, type: 'plateau' },
+    { lon: 82, lat: 41, name: '塔里木盆地', step: 2, type: 'basin' },
+    { lon: 106, lat: 30, name: '四川盆地', step: 2, type: 'basin' },
+    { lon: 125, lat: 46, name: '东北平原', step: 3, type: 'plain' },
+    { lon: 115, lat: 36, name: '华北平原', step: 3, type: 'plain' },
+    { lon: 112, lat: 30, name: '长江中下游平原', step: 3, type: 'plain' },
+    { lon: 86, lat: 28, name: '喜马拉雅山脉', step: 1, type: 'mountain' },
+    { lon: 82, lat: 36, name: '昆仑山脉', step: 1, type: 'mountain' },
+    { lon: 88, lat: 43, name: '天山山脉', step: 2, type: 'mountain' },
+    { lon: 108, lat: 34, name: '秦岭', step: 2, type: 'mountain' },
+    { lon: 122, lat: 50, name: '大兴安岭', step: 2, type: 'mountain' }
+  ];
+
+  /* 山脉绘制（简化折线表示） */
+  var mountainRanges = [
+    { name: '喜马拉雅山脉', points: [[80,30],[85,28],[90,28],[95,29]], color: '#92400e' },
+    { name: '昆仑山脉', points: [[78,36],[82,36],[86,37],[90,38]], color: '#92400e' },
+    { name: '天山山脉', points: [[82,43],[86,43],[90,44],[94,43]], color: '#b45309' },
+    { name: '秦岭', points: [[104,34],[108,34],[112,34]], color: '#b45309' },
+    { name: '大兴安岭', points: [[120,50],[122,52],[124,50]], color: '#b45309' }
+  ];
+
+  function mDrawGeo(fc){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#f0fdf4'; ctx.fillRect(0,0,W,H);
+
+    /* 先绘制三级阶梯背景色块 */
+    var feats = (fc && fc.features) || [];
+    feats.forEach(function(f){
+      var g = f.geometry || {};
+      var polys = g.type === 'Polygon' ? [g.coordinates]
+                : g.type === 'MultiPolygon' ? g.coordinates : [];
+      var name = (f.properties && f.properties.name) || '';
+      var step = 3;
+      if (name.indexOf('西藏') >= 0 || name.indexOf('青海') >= 0) step = 1;
+      else if (name.indexOf('新疆') >= 0 || name.indexOf('甘肃') >= 0 || name.indexOf('内蒙古') >= 0 ||
+               name.indexOf('四川') >= 0 || name.indexOf('云南') >= 0 || name.indexOf('贵州') >= 0 ||
+               name.indexOf('陕西') >= 0 || name.indexOf('山西') >= 0 || name.indexOf('重庆') >= 0 ||
+               name.indexOf('宁夏') >= 0) step = 2;
+
+      polys.forEach(function(poly){
+        poly.forEach(function(ring){
+          ctx.beginPath();
+          ring.forEach(function(pt, i){
+            var p = mProject(pt[0], pt[1]);
+            if(i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+          });
+          ctx.closePath();
+          ctx.fillStyle = stepColors[step]; ctx.fill();
+          ctx.strokeStyle = stepBorders[step]; ctx.lineWidth = 1; ctx.stroke();
+        });
+      });
+    });
+
+    /* 绘制山脉 */
+    mountainRanges.forEach(function(m){
+      ctx.beginPath();
+      m.points.forEach(function(pt, i){
+        var p = mProject(pt[0], pt[1]);
+        if(i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+      });
+      ctx.strokeStyle = m.color; ctx.lineWidth = 3; ctx.stroke();
+      /* 山脉名称标注 */
+      var mid = mProject(m.points[Math.floor(m.points.length/2)][0], m.points[Math.floor(m.points.length/2)][1]);
+      ctx.fillStyle = m.color; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(m.name, mid[0], mid[1] - 8);
+    });
+
+    /* 绘制地形区标注点 */
+    terrainSpots.forEach(function(s){
+      var p = mProject(s.lon, s.lat);
+      var isHovered = hoveredRegion === s.name;
+      ctx.beginPath();
+      ctx.arc(p[0], p[1], isHovered ? 7 : 5, 0, Math.PI*2);
+      ctx.fillStyle = isHovered ? '#ef4444' : (s.step === 1 ? '#92400e' : s.step === 2 ? '#d97706' : '#22c55e');
+      ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#1e293b'; ctx.font = (isHovered ? 'bold 14px' : 'bold 12px') + ' sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(s.name, p[0] + 10, p[1] + 4);
+    });
+
+    /* 绘制图例 */
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillRect(10, H - 100, 200, 90);
+    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1; ctx.strokeRect(10, H - 100, 200, 90);
+    ctx.fillStyle = '#1e293b'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('三级阶梯', 20, H - 82);
+    ctx.fillStyle = stepColors[1]; ctx.fillRect(20, H - 74, 14, 10);
+    ctx.fillStyle = '#1e293b'; ctx.font = '11px sans-serif';
+    ctx.fillText('第一阶梯（青藏高原）', 40, H - 66);
+    ctx.fillStyle = stepColors[2]; ctx.fillRect(20, H - 58, 14, 10);
+    ctx.fillText('第二阶梯（高原盆地）', 40, H - 50);
+    ctx.fillStyle = stepColors[3]; ctx.fillRect(20, H - 42, 14, 10);
+    ctx.fillText('第三阶梯（平原丘陵）', 40, H - 34);
+
+    /* 底部信息 */
+    ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('聚焦中国（中心 ' + mCx + '°E, ' + mCy + '°N）· 数据：本地 GeoJSON 省界 · 点击地形区查看名称', 14, H - 12);
+
+    /* 悬停提示 */
+    if (hoveredRegion) {
+      ctx.fillStyle = 'rgba(15,23,42,0.85)';
+      var tw = ctx.measureText(hoveredRegion).width + 20;
+      ctx.fillRect(mouseX + 12, mouseY - 28, tw, 24);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif';
+      ctx.fillText(hoveredRegion, mouseX + 22, mouseY - 12);
+    }
+  }
+
+  function mLoadGeoBoundaries(){
+    fetch(mGeoFiles[0]).then(function(r){ return r.json(); }).then(function(data){
+      mGeoData = data;
+      mDrawGeo(data);
+    }).catch(function(){
+      ctx.fillStyle = '#f0fdf4'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#64748b'; ctx.font = '14px sans-serif';
+      ctx.fillText('地图数据加载失败（需通过 http(s) 访问课件）', 20, 40);
+    });
+  }
+
+  /* 鼠标交互：悬停高亮 + 点击显示名称 */
+  cv.addEventListener('mousemove', function(e){
+    var rect = cv.getBoundingClientRect();
+    mouseX = (e.clientX - rect.left) * (W / rect.width);
+    mouseY = (e.clientY - rect.top) * (H / rect.height);
+    var found = null;
+    terrainSpots.forEach(function(s){
+      var p = mProject(s.lon, s.lat);
+      if (Math.hypot(mouseX - p[0], mouseY - p[1]) < 20) found = s.name;
+    });
+    if (found !== hoveredRegion) {
+      hoveredRegion = found;
+      if (mGeoData) mDrawGeo(mGeoData);
+    }
+  });
+
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (W / rect.width);
+    var my = (e.clientY - rect.top) * (H / rect.height);
+    terrainSpots.forEach(function(s){
+      var p = mProject(s.lon, s.lat);
+      if (Math.hypot(mx - p[0], my - p[1]) < 20) {
+        hoveredRegion = s.name;
+        if (mGeoData) mDrawGeo(mGeoData);
+        drawContourInset(s);
+      }
+    });
+  });
+
+  /* ── 等高线形态联动面板：把真实地形"翻译"成等高线 ── */
+  var insetCv = document.getElementById('contour-inset');
+  var explainEl = document.getElementById('contour-explain');
+
+  function drawContourInset(spot){
+    if (!insetCv) return;
+    var c = insetCv.getContext('2d'), w = insetCv.width, h = insetCv.height;
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = '#fffdf5'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#92400e'; c.fillStyle = '#92400e';
+    var typeInfo = {
+      mountain: { title: spot.name + ' · 山地', desc: '<strong>' + spot.name + '</strong>是典型的山地：等高线呈<strong>密集的闭合圈</strong>，数值向中心递增，圈越小海拔越高。山区修路常沿稀疏河谷穿行，登山选线优先找等高线较疏的坡面。' },
+      plateau: { title: spot.name + ' · 高原', desc: '<strong>' + spot.name + '</strong>是高原：内部等高线<strong>非常稀疏</strong>（顶部平坦开阔），边缘有一圈密集等高线（边缘陡峭）。看"内部疏、边缘密"就能识别高原。' },
+      basin: { title: spot.name + ' · 盆地', desc: '<strong>' + spot.name + '</strong>是盆地：等高线呈<strong>闭合圈但数值向中心递减</strong>，示坡线画在圈内侧（向里指）。与山峰正好相反——先看数值方向再下结论。' },
+      plain: { title: spot.name + ' · 平原', desc: '<strong>' + spot.name + '</strong>是平原：海拔低（多在 200 米以下），等高线<strong>又少又疏</strong>，图面近乎空白。平原地区修路、种地几乎不用考虑坡度。' }
+    };
+    var info = typeInfo[spot.type] || typeInfo.mountain;
+    c.font = 'bold 13px sans-serif'; c.textAlign = 'left';
+    c.fillText(info.title, 12, 22);
+
+    c.lineWidth = 1.4;
+    if (spot.type === 'mountain') {
+      for (var i = 5; i >= 1; i--) {
+        c.beginPath();
+        c.ellipse(w/2, h/2 + 14, 22 * i + 14, 13 * i + 8, -0.15, 0, Math.PI * 2);
+        c.stroke();
+        c.font = '10px sans-serif';
+        c.fillText(String(500 + (5 - i) * 500), w/2 + 22 * i + 4, h/2 + 6);
+      }
+      c.beginPath(); c.arc(w/2, h/2 + 14, 2.5, 0, Math.PI*2); c.fill();
+      c.font = 'bold 11px sans-serif'; c.fillText('▲ 峰顶', w/2 + 8, h/2 + 12);
+    } else if (spot.type === 'plateau') {
+      for (var j = 0; j < 3; j++) {
+        c.beginPath();
+        c.moveTo(20, 60 + j * 26);
+        c.bezierCurveTo(w*0.3, 52 + j*28, w*0.6, 70 + j*24, w - 20, 58 + j*26);
+        c.stroke();
+        c.font = '10px sans-serif';
+        c.fillText(String(4000 - j * 500), w - 58, 52 + j * 26);
+      }
+      c.font = '11px sans-serif';
+      c.fillText('高原面（线极疏）', w/2 - 44, h - 30);
+      c.fillText('边缘（线密集）', 24, 44);
+    } else if (spot.type === 'basin') {
+      for (var k = 5; k >= 1; k--) {
+        c.beginPath();
+        c.ellipse(w/2, h/2 + 14, 22 * k + 14, 13 * k + 8, 0.1, 0, Math.PI * 2);
+        c.stroke();
+        c.font = '10px sans-serif';
+        c.fillText(String(500 + (k - 1) * 300), w/2 + 22 * k + 4, h/2 + 6);
+        /* 示坡线：圈内侧小短线 */
+        c.beginPath();
+        c.moveTo(w/2 - (22 * k + 14), h/2 + 14);
+        c.lineTo(w/2 - (22 * k + 14) + 7, h/2 + 14);
+        c.stroke();
+      }
+      c.font = 'bold 11px sans-serif';
+      c.fillText('盆地最低处', w/2 - 34, h/2 + 18);
+    } else {
+      for (var m = 0; m < 2; m++) {
+        c.beginPath();
+        c.moveTo(24, 100 + m * 60);
+        c.bezierCurveTo(w*0.35, 92 + m*62, w*0.65, 110 + m*58, w - 24, 98 + m*60);
+        c.stroke();
+        c.font = '10px sans-serif';
+        c.fillText(String(50 + m * 50), w - 52, 92 + m * 60);
+      }
+      c.font = '11px sans-serif';
+      c.fillText('平原：等高线稀少，近乎空白', w/2 - 88, h - 24);
+    }
+    if (explainEl) explainEl.innerHTML = info.desc;
+  }
+
+
+  cv.addEventListener('mouseleave', function(){
+    hoveredRegion = null;
+    if (mGeoData) mDrawGeo(mGeoData);
+  });
+
+  mLoadGeoBoundaries();
 })();
 })();
 </script>
 
-<!-- v7.7.4 标准知识图谱模块 -->
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;">
-  <h2 class="section-title">🗺️ 知识图谱：等高线与地形图 — 等高线与地形图</h2>
-  <div data-teachany-kg="geo-m-topographic-map">
-    <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
-  </div>
-</section>
-<script>const knowledgeGraphData={"prerequisites": [{"id": "geo-m-map-reading", "name": "geo-m-map-reading"}], "current": {"id": "geo-m-topographic-map", "name": "等高线与地形图", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<!-- ═══ 答题逻辑 ═══ -->
+<script>
+function disableSiblings(btn) {
+  btn.parentElement.querySelectorAll('.quiz-option').forEach(b => b.disabled = true);
+}
+
+// 前测
+function checkPre1(btn, ans) {
+  disableSiblings(btn);
+  const fb = document.getElementById('pre1-fb');
+  if (ans === 'B') {
+    btn.classList.add('correct');
+    fb.className = 'feedback show correct';
+    fb.textContent = '✅ 正确！等高线是同一海拔各点连成的曲线。就像把山一层层水平切开，每切一刀的边缘就是一条等高线。';
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'feedback show wrong';
+    fb.textContent = ans === 'A'
+      ? '❌ 这是最常见的直觉错误！等高线不是河流，它是相同海拔的连线。河流沿着山谷流，但等高线本身不是水。'
+      : '❌ 不完全对。同一条等高线上海拔相同，而且相邻等高线之间的海拔差（等高距）是固定的，不是随意画的。';
+  }
+}
+
+// 概念挑战（模块3）
+function checkConcept1(btn, ans) {
+  disableSiblings(btn);
+  const fb = document.getElementById('concept1-fb');
+  if (ans === 'B') {
+    btn.classList.add('correct');
+    fb.className = 'feedback show correct';
+    fb.textContent = '✅ 正确！等高线向高处凸出 = 山谷。中间比两侧低，河流沿山谷流。';
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'feedback show wrong';
+    const explanations = {
+      A: '山脊是向低处凸出。向高处凸出说明中间比两侧低，是山谷。',
+      C: '鞍部是两组闭合等高线之间，不是凸出弯曲。',
+      D: '陡崖是等高线重叠，不是凸出弯曲。'
+    };
+    fb.textContent = '❌ ' + (explanations[ans] || '再想想弯曲方向。');
+  }
+}
+
+// 后测
+function checkPost1(btn, ans) {
+  disableSiblings(btn);
+  const fb = document.getElementById('post1-fb');
+  if (ans === 'B') {
+    btn.classList.add('correct');
+    fb.className = 'feedback show correct';
+    fb.textContent = '✅ 正确！等高线重叠 = 坡度极陡近乎垂直 = 陡崖。';
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'feedback show wrong';
+    fb.textContent = ans === 'A'
+      ? '❌ 山脊是向低处凸出，不重叠。'
+      : '❌ 山谷是向高处凸出，不是重叠。';
+  }
+}
+function checkPost2(btn, ans) {
+  disableSiblings(btn);
+  const fb = document.getElementById('post2-fb');
+  if (ans === 'B') {
+    btn.classList.add('correct');
+    fb.className = 'feedback show correct';
+    fb.textContent = '✅ 正确！凸高为谷——等高线向高处凸出 = 山谷。';
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'feedback show wrong';
+    const explanations = {
+      A: '山脊是向低处凸出（凸低为脊），方向反了。',
+      C: '鞍部是两组闭合等高线之间的低洼部位，不是凸出弯曲。',
+      D: '陡崖是等高线重叠，不是凸出弯曲。'
+    };
+    fb.textContent = '❌ ' + (explanations[ans] || '再想想口诀：凸低为脊，凸高为谷。');
+  }
+}
+
+// ═══ 导航高亮 + 滚动进度 ═══
+(function(){
+  const navLinks = document.querySelectorAll('.nav-bar a');
+  const progressBar = document.getElementById('progressBar');
+  const sections = document.querySelectorAll('.section[id], .hero[id]');
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    let current = '';
+    sections.forEach(sec => { if (sec.offsetTop - 160 <= scrollTop) current = sec.id; });
+    navLinks.forEach(link => {
+      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+    });
+  }, { passive: true });
+})();
+</script>
+
+<!-- ═══ 标准模块脚本 ═══ -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseId: 'geo-m-contour-topographic',
+  courseTitle: '等高线与地形图',
+  subject: 'geography',
+  grade: 7,
+  learningObjectives: ["说出等高线与等高距的含义","根据等高线疏密判断坡度陡缓","识别山峰山谷山脊鞍部陡崖","绘制简单地形剖面图"]
+};
+</script>
+<script src="./assets/scripts/ai-tutor.js" defer></script>
+<script src="./assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="./assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="./assets/scripts/teachany-audio-player.js" defer></script>
+<script src="./assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="./assets/scripts/teachany-section-hints.js" defer></script>
+<script src="./assets/scripts/feedback-widget.js" defer></script>
+
+<!-- ═══════════ TeachAny 学习闭环引擎（自适应/进度/间隔重复/成就/路由） ═══════════ -->
+<script>
+(function(){
+'use strict';
+/* ---------- 课程信息 ---------- */
+const COURSE={id:'geo-m-contour-topographic',node:'geo-m-topographic-map',title:'等高线与地形图',
+  prereqs:[{id:'geo-m-map-reading',node:'geo-m-map-reading',title:'地图的阅读'}],
+  next:[{id:'geo-m-terrain-types',title:'地形类型判读'}]};
+const peer=id=>'../'+id+'/index.html';
+
+/* ---------- 1. 自适应引擎 ---------- */
+const TeachAnyAdaptive=(()=>{
+  const KEY='teachany_mastery';
+  const get=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}};
+  const save=d=>localStorage.setItem(KEY,JSON.stringify(d));
+  function getNodeMastery(n){return get()[n]?.level||0}
+  function updateMastery(n,correct,bloom=1){
+    const d=get(),prev=d[n]?.level||0,w=0.1+(bloom-1)*0.04,s=correct?1:0;
+    const lv=Math.min(1,Math.max(0,prev*(1-w)+s*w));
+    d[n]={level:Math.round(lv*1000)/1000,attempts:(d[n]?.attempts||0)+1,lastCorrect:correct,lastAttempt:Date.now(),bloomMax:Math.max(d[n]?.bloomMax||0,correct?bloom:0)};
+    save(d);return d[n];
+  }
+  function checkPrerequisites(ids,th=0.5){const gaps=ids.filter(i=>getNodeMastery(i)<th);return{met:gaps.length===0,gaps}}
+  function decideBranch(n,pre=[]){const c=checkPrerequisites(pre);if(!c.met)return'review-prereq';const m=getNodeMastery(n);if(m<0.3)return'scaffold';if(m>=0.8)return'challenge';return'normal'}
+  return{getNodeMastery,updateMastery,checkPrerequisites,decideBranch,getMastery:get};
+})();
+
+/* ---------- 2. 进度持久化 ---------- */
+const TeachAnyProgress=(()=>{
+  const key=c=>'teachany_progress_'+c;
+  const get=c=>{try{return JSON.parse(localStorage.getItem(key(c))||'{}')}catch(e){return{}}};
+  const save=(c,d)=>{const m={...get(c),...d,lastUpdated:Date.now()};localStorage.setItem(key(c),JSON.stringify(m))};
+  function completeModule(c,mid,r={}){const p=get(c);p.modules=p.modules||{};p.modules[mid]={completed:true,completedAt:Date.now(),score:r.score||0,total:r.totalQuestions||0,bloom:r.bloomLevel||1};save(c,p)}
+  const saveScroll=c=>localStorage.setItem('teachany_scroll_'+c,String(window.scrollY));
+  const restoreScroll=c=>{const p=localStorage.getItem('teachany_scroll_'+c);if(p)requestAnimationFrame(()=>window.scrollTo(0,parseInt(p)))};
+  function recordTime(c,s=30){const p=get(c);p.timeSpent=(p.timeSpent||0)+s;save(c,p)}
+  function getGlobalStats(){try{return JSON.parse(localStorage.getItem('teachany_stats')||'{}')}catch(e){return{}}}
+  function updateGlobalStats(){const s=getGlobalStats(),today=new Date().toISOString().slice(0,10);
+    if(s.lastActiveDate!==today){const y=new Date(Date.now()-864e5).toISOString().slice(0,10);s.streak=(s.lastActiveDate===y)?(s.streak||0)+1:1;s.lastActiveDate=today}
+    s.totalSessions=(s.totalSessions||0)+1;s.maxStreak=Math.max(s.maxStreak||0,s.streak);
+    localStorage.setItem('teachany_stats',JSON.stringify(s));return s}
+  return{getProgress:get,saveProgress:save,completeModule,saveScrollPosition:saveScroll,restoreScrollPosition:restoreScroll,recordTime,getGlobalStats,updateGlobalStats};
+})();
+
+/* ---------- 3. 间隔重复（SM-2 简化） ---------- */
+const TeachAnySR=(()=>{
+  const KEY='teachany_review';
+  const get=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}};
+  const save=d=>localStorage.setItem(KEY,JSON.stringify(d));
+  function addToReview(n,name,url){const d=get();if(!d[n]){d[n]={name,url,interval:1,easeFactor:2.5,repetitions:0,nextReview:Date.now()+864e5,lastReview:Date.now(),quality:null};save(d)}}
+  function recordReview(n,q){const d=get(),c=d[n];if(!c)return;
+    if(q>=3){c.interval=c.repetitions===0?1:c.repetitions===1?3:Math.round(c.interval*c.easeFactor);c.repetitions++}
+    else{c.repetitions=0;c.interval=1}
+    c.easeFactor=Math.max(1.3,c.easeFactor+0.1-(5-q)*(0.08+(5-q)*0.02));
+    c.nextReview=Date.now()+c.interval*864e5;c.lastReview=Date.now();c.quality=q;save(d);return c}
+  return{addToReview,recordReview,getData:get};
+})();
+
+/* ---------- 4. 成就系统 ---------- */
+const TeachAnyAchievements=(()=>{
+  const KEY='teachany_achievements';
+  const DEF={'first-lesson':{n:'第一步',i:'🌱',d:'完成第一个学习模块'},'perfect-score':{n:'满分达人',i:'⭐',d:'测验获得满分'},
+    'streak-3':{n:'连续学习',i:'🔥',d:'连续学习3天'},'streak-7':{n:'周冠军',i:'💪',d:'连续学习7天'},
+    'bloom-5':{n:'深度思考者',i:'🧠',d:'答对一道评价级(Bloom 5)问题'},'review-10':{n:'记忆守护者',i:'🔄',d:'完成10次间隔复习'}};
+  const get=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}};
+  function toast(icon,title,sub,cls=''){const t=document.createElement('div');t.className='ta-toast '+cls;
+    t.innerHTML=`<div class="ti">${icon}</div><div class="tc"><strong>${title}</strong><span>${sub}</span></div>`;
+    document.body.appendChild(t);requestAnimationFrame(()=>t.classList.add('show'));
+    setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400)},3200)}
+  function award(id){const d=get();if(d[id])return false;d[id]={earnedAt:Date.now()};localStorage.setItem(KEY,JSON.stringify(d));
+    const f=DEF[id];if(f)toast(f.i,'🎉 解锁成就',f.n);return true}
+  function checkAndAward(cid,node){const s=TeachAnyProgress.getGlobalStats();const m=TeachAnyAdaptive.getMastery();
+    let total=0;for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);
+      if(k&&k.startsWith('teachany_progress_')){try{const p=JSON.parse(localStorage.getItem(k));total+=Object.values(p.modules||{}).filter(x=>x.completed).length}catch(e){}}}
+    if(total>=1)award('first-lesson');
+    if(s.streak>=3)award('streak-3');if(s.streak>=7)award('streak-7');
+    if(m[node]?.bloomMax>=5)award('bloom-5');
+    const rv=TeachAnySR.getData();if(Object.values(rv).reduce((a,c)=>a+c.repetitions,0)>=10)award('review-10');}
+  return{award,checkAndAward,toast,getAchievements:get};
+})();
+
+/* ---------- 5. 前置知识检查 ---------- */
+function masteryStatus(node){const l=TeachAnyAdaptive.getNodeMastery(node);return l>=0.6?'ready':l>0?'weak':'none'}
+function warnPrereqs(){
+  const gaps=COURSE.prereqs.filter(p=>masteryStatus(p.node)!=='ready');
+  if(!gaps.length)return;
+  const mask=document.createElement('div');mask.className='ta-modal-mask';
+  mask.innerHTML=`<div class="ta-modal"><h3>⚠️ 前置知识检查</h3><p>本课件有 ${gaps.length} 个前置知识点尚未掌握，建议先复习再继续（也可以直接开始）：</p>
+    <ul>${gaps.map(g=>`<li><a href="${peer(g.id)}">${g.title}</a> <span class="st">— ${masteryStatus(g.node)==='weak'?'已学习但未巩固':'尚未开始'}</span></li>`).join('')}</ul>
+    <div class="acts"><button class="b1" onclick="location.href='${peer(gaps[0].id)}'">去复习：${gaps[0].title}</button>
+    <button class="b2" id="ta-prereq-skip">我已了解，继续学习</button></div></div>`;
+  document.body.appendChild(mask);
+  mask.querySelector('#ta-prereq-skip').onclick=()=>mask.remove();
+  mask.addEventListener('click',e=>{if(e.target===mask)mask.remove()});
+}
+
+/* ---------- 6. 答题挂钩：quiz → 掌握度/分支/成就 ---------- */
+const QUIZ={checkPre1:{node:'geo-m-topographic-map',bloom:1,g:'pre'},
+  checkConcept1:{node:'geo-m-topographic-map',bloom:3,g:'core'},
+  checkPost1:{node:'geo-m-topographic-map',bloom:3,g:'post'},checkPost2:{node:'geo-m-topographic-map',bloom:3,g:'post'}};
+const answered={pre:new Map(),core:new Map(),post:new Map()};
+
+function showBanner(cls,icon,html,anchor){
+  const b=document.createElement('div');b.className='ta-banner '+cls;
+  b.innerHTML=`<span class="bi">${icon}</span><div>${html}</div>`;
+  const target=document.querySelector(anchor);
+  if(target)target.after(b);else document.body.appendChild(b);
+  b.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+/* 分支触发点①：前测完成后 */
+function onPretestDone(){
+  const score=[...answered.pre.values()].filter(Boolean).length;
+  const gaps=COURSE.prereqs.filter(p=>TeachAnyAdaptive.getNodeMastery(p.node)<0.5);
+  if(gaps.length){
+    showBanner('warn','📋',`<b>前置诊断：</b>「${gaps.map(g=>g.title).join('」「')}」还不够扎实。<br>建议先花5分钟复习：${gaps.map(g=>`<a href="${peer(g.id)}">${g.title} →</a>`).join('、')}，也可以直接继续，本课会带你回顾要点。`,'#pretest');
+  }else{
+    TeachAnyAchievements.toast('🚀','前测完成','直觉不错，直奔核心内容','success');
+  }
+  TeachAnyProgress.completeModule(COURSE.id,'pretest',{score,totalQuestions:1,bloomLevel:1});
+}
+
+/* 分支触发点②：核心概念挑战完成后 */
+function onCoreDone(){
+  const score=[...answered.core.values()].filter(Boolean).length;
+  const m=TeachAnyAdaptive.getNodeMastery('geo-m-topographic-map');
+  TeachAnyProgress.completeModule(COURSE.id,'module-core',{score,totalQuestions:1,bloomLevel:3});
+  TeachAnyAchievements.checkAndAward(COURSE.id,'geo-m-topographic-map');
+  if(m<0.3){
+    showBanner('warn','🪜',`<b>脚手架路径：</b>概念挑战答错了，别慌——回到模块 3 的互动图，点击五个地形部位圆点，把"凸低为脊、凸高为谷"口诀再练一遍，然后重做这道题。`,'#module-3');
+  }else{
+    TeachAnyAchievements.toast('✅','概念挑战通过','山脊山谷已分清，继续冲刺后测','info');
+  }
+}
+
+/* 后测完成 → 结课 */
+function onPostDone(){
+  const score=[...answered.post.values()].filter(Boolean).length;
+  TeachAnyProgress.completeModule(COURSE.id,'posttest',{score,totalQuestions:2,bloomLevel:3});
+  TeachAnyAdaptive.updateMastery('geo-m-topographic-map',score>=1,3);
+  TeachAnySR.addToReview('geo-m-topographic-map','等高线与地形图',location.href.split('#')[0]);
+  TeachAnyAchievements.checkAndAward(COURSE.id,'geo-m-topographic-map');
+  if(score===2)TeachAnyAchievements.award('perfect-score');
+  const mask=document.createElement('div');mask.className='ta-done-mask';
+  mask.innerHTML=`<div class="ta-done"><div style="font-size:46px;margin-bottom:12px;">${score===2?'🏆':score===1?'🎉':'💪'}</div>
+    <h2>后测 ${score}/2</h2>
+    <p>${score===2?'满分！你已完成本课全部学习闭环，知识点已加入间隔复习队列。':score===1?'不错！错题解析再看一眼，明天记得复习。':'建议回到错题对应模块巩固，知识点已加入复习队列。'}</p>
+    <a href="${peer(COURSE.next[0].id)}">继续学习：${COURSE.next[0].title} →</a>
+    <span class="later" id="ta-done-close">稍后再说</span></div>`;
+  document.body.appendChild(mask);
+  mask.querySelector('#ta-done-close').onclick=()=>mask.remove();
+}
+
+Object.keys(QUIZ).forEach(fn=>{
+  const orig=window[fn];
+  if(typeof orig!=='function')return;
+  window[fn]=function(btn,ans){
+    orig.call(this,btn,ans);
+    const correct=btn.classList.contains('correct');
+    const q=QUIZ[fn];
+    TeachAnyAdaptive.updateMastery(q.node,correct,q.bloom);
+    answered[q.g].set(fn,correct);
+    if(q.g==='pre'&&answered.pre.size===1)onPretestDone();
+    if(q.g==='core'&&answered.core.size===1)onCoreDone();
+    if(q.g==='post'&&answered.post.size===2)onPostDone();
+  };
+});
+
+/* ---------- 7. 初始化：进度恢复/计时/返回横幅/前置检查 ---------- */
+TeachAnyProgress.restoreScrollPosition(COURSE.id);
+let st2;window.addEventListener('scroll',()=>{clearTimeout(st2);st2=setTimeout(()=>TeachAnyProgress.saveScrollPosition(COURSE.id),500)},{passive:true});
+setInterval(()=>TeachAnyProgress.recordTime(COURSE.id,30),30000);
+TeachAnyProgress.updateGlobalStats();
+const prog=TeachAnyProgress.getProgress(COURSE.id);
+const doneMods=Object.values(prog.modules||{}).filter(m=>m.completed).length;
+if(doneMods>0&&doneMods<3){
+  const r=document.createElement('div');r.className='ta-resume';
+  r.innerHTML=`<span>📚 欢迎回来！本课已完成 ${doneMods}/3 个阶段。</span><button id="ta-r1">继续学习 →</button><button class="sec" id="ta-r2">从头开始</button>`;
+  document.body.appendChild(r);
+  r.querySelector('#ta-r1').onclick=()=>r.remove();
+  r.querySelector('#ta-r2').onclick=()=>{window.scrollTo({top:0,behavior:'smooth'});r.remove()};
+  setTimeout(()=>r.remove(),12000);
+}
+setTimeout(warnPrereqs,800);
+})();
+</script>
 </body>
 </html>
-
-<section class="section course-figures">
-<figure class="course-fig"><img src="./assets/concept-diagram.svg" alt="核心概念" loading="lazy"></figure>
-<figure class="course-fig"><img src="./assets/process-diagram.svg" alt="过程示意" loading="lazy"></figure>
-</section>
