@@ -24,12 +24,17 @@
   'use strict';
 
   // 版本标识 - 加载时立即打印到 console，方便排查浏览器缓存问题
-  console.log('%c[TeachAnyTutor] v8.1.1 loaded - default: TeachAny server proxy (Qwen only)', 'color:#10b981;font-weight:bold;');
+  console.log('%c[TeachAnyTutor] v8.1.4 loaded - fix enrichment hang + paid Qwen default', 'color:#10b981;font-weight:bold;');
 
   const DEPRECATED_FREE_MODELS = new Set([
     'z-ai/glm-4.5-air:free',
+    'qwen/qwen3-next-80b-a3b-instruct:free',
+    'google/gemma-3-27b-it:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
   ]);
-  const PRIMARY_FREE_MODEL = 'qwen/qwen3-next-80b-a3b-instruct:free';
+  // 2026-07：OpenRouter 多款 :free 下线，改用同 slug 付费版（服务端 Key）
+  const PRIMARY_MODEL = 'qwen/qwen3-next-80b-a3b-instruct';
+  const PRIMARY_FREE_MODEL = PRIMARY_MODEL; // 兼容旧变量名
   const SERVER_PROXY_BASE = '/api/llm';
   const LEGACY_BUILTIN_KEY_PREFIXES = [
     'sk-or-v1-a4d900',
@@ -45,15 +50,26 @@
     return base.includes('/api/llm');
   }
 
+  function resolveServerProxyBase() {
+    const host = String((typeof location !== 'undefined' && location.hostname) || '');
+    if (host === 'teachany.cn' || host === 'www.teachany.cn') return SERVER_PROXY_BASE;
+    return 'https://www.teachany.cn/api/llm';
+  }
+
   function resolveServerEndpoint(baseUrl) {
-    const base = String(baseUrl || SERVER_PROXY_BASE).trim().replace(/\/$/, '');
+    const base = String(baseUrl || resolveServerProxyBase()).trim().replace(/\/$/, '');
     return /\/chat\/completions$/i.test(base) ? base : `${base}/chat/completions`;
   }
 
-  function normalizeModelId(model) {
+  function toPaidModel(model) {
     const m = String(model || '').trim();
-    if (!m || DEPRECATED_FREE_MODELS.has(m)) return PRIMARY_FREE_MODEL;
+    if (!m || DEPRECATED_FREE_MODELS.has(m)) return PRIMARY_MODEL;
+    if (m.endsWith(':free')) return m.slice(0, -5) || PRIMARY_MODEL;
     return m;
+  }
+
+  function normalizeModelId(model) {
+    return toPaidModel(model);
   }
 
   // ───────────────────────────────────────────────────────
@@ -63,7 +79,6 @@
   const HISTORY_KEY = 'teachany_tutor_history';
   const LANG_KEY = 'teachany_tutor_lang';
 
-  // 默认：TeachAny 服务端中转（Key 仅存 Cloudflare，浏览器不接触）
   const DEFAULTS = {
     baseUrl: SERVER_PROXY_BASE,
     apiKey: '',
@@ -74,7 +89,7 @@
     providerId: 'teachany-server',
   };
 
-  // TeachAny 服务端默认仅使用千问免费模型（不自动切换 Llama/DeepSeek 等）
+  // TeachAny 服务端默认使用 OpenRouter 千问（:free 已下线，走服务端付费 Key）
   const SERVER_PROXY_MAX_RETRIES = 2;
 
   // 服务商预设（配置弹窗一键填表）
@@ -82,7 +97,7 @@
   const PRESETS = [
     {
       id: 'teachany-server',
-      name: '🌐 TeachAny 服务端（默认 · 免 Key）',
+      name: '🌐 TeachAny 服务端（默认 · 免填 Key）',
       baseUrl: SERVER_PROXY_BASE,
       model: PRIMARY_FREE_MODEL,
       models: [PRIMARY_FREE_MODEL],
@@ -348,7 +363,7 @@
       cfg.noAuth = true;
       cfg.serverProxy = true;
       cfg.backendId = cfg.backendId || 'openrouter';
-      cfg.baseUrl = cfg.baseUrl || SERVER_PROXY_BASE;
+      cfg.baseUrl = cfg.baseUrl || resolveServerProxyBase();
       cfg.model = PRIMARY_FREE_MODEL;
     }
     return cfg;
@@ -379,14 +394,71 @@
   // ───────────────────────────────────────────────────────
   // 2. 课件元信息（来自 window.__TEACHANY_TUTOR_CONFIG__）
   // ───────────────────────────────────────────────────────
+  function ensureNodeEnrichment() {
+    const runLoad = () => {
+      if (!window.TeachAnyNodeEnrichment || typeof window.TeachAnyNodeEnrichment.load !== 'function') {
+        return Promise.resolve(null);
+      }
+      return window.TeachAnyNodeEnrichment.load().catch(() => null);
+    };
+
+    if (window.TeachAnyNodeEnrichment) return runLoad();
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        Promise.resolve(value).then(resolve, () => resolve(null));
+      };
+
+      const existing = document.querySelector('script[data-teachany-neo]');
+      if (existing) {
+        // 脚本可能已经 load 完，再监听 load 会永远不触发 → 学伴发送卡住
+        if (window.TeachAnyNodeEnrichment) {
+          settle(runLoad());
+          return;
+        }
+        existing.addEventListener('load', () => settle(runLoad()), { once: true });
+        existing.addEventListener('error', () => settle(null), { once: true });
+        let tries = 0;
+        const poll = setInterval(() => {
+          tries += 1;
+          if (window.TeachAnyNodeEnrichment) {
+            clearInterval(poll);
+            settle(runLoad());
+          } else if (tries >= 40) {
+            clearInterval(poll);
+            settle(null);
+          }
+        }, 50);
+        return;
+      }
+
+      const s = document.createElement('script');
+      s.src = '/assets/scripts/teachany-node-enrichment.js?v=neo-2';
+      s.async = true;
+      s.dataset.teachanyNeo = '1';
+      s.onload = () => settle(runLoad());
+      s.onerror = () => settle(null);
+      document.head.appendChild(s);
+      setTimeout(() => settle(null), 2500);
+    });
+  }
+
   function readCourseMeta() {
     const fromWindow = window.__TEACHANY_TUTOR_CONFIG__ || {};
     const grade = Number(fromWindow.grade || document.querySelector('meta[name="teachany-grade"]')?.content || 9);
+    const nodeId = fromWindow.nodeId
+      || document.querySelector('meta[name="teachany-node"]')?.content
+      || document.querySelector('meta[name="course-id"]')?.content
+      || '';
     return {
       courseTitle: fromWindow.courseTitle || document.title || '本课件',
       subject: fromWindow.subject || (document.querySelector('meta[name="teachany-subject"]')?.content || 'general'),
       grade: grade,
       stage: fromWindow.stage || inferStage(grade),
+      nodeId: String(nodeId || '').trim(),
       curriculumStandard: fromWindow.curriculumStandard || (document.querySelector('meta[name="teachany-curriculum"]')?.content || ''),
       knowledgeScope: fromWindow.knowledgeScope || (document.querySelector('meta[name="teachany-scope"]')?.content || ''),
       learningObjectives: Array.isArray(fromWindow.learningObjectives) ? fromWindow.learningObjectives : [],
@@ -576,13 +648,26 @@
       ? (lang === 'en' ? `\nKnowledge scope: ${meta.knowledgeScope}` : `\n知识范围：${meta.knowledgeScope}`)
       : '';
 
+    let enrichmentBlock = '';
+    try {
+      const neo = window.TeachAnyNodeEnrichment;
+      if (neo && meta.nodeId) {
+        const block = neo.formatTutorBlock(meta.nodeId, lang);
+        if (block) {
+          enrichmentBlock = lang === 'en'
+            ? `\n\n【Diagnostic enrichment】\n${block}\nWhen a matching misconception cue appears, diagnose briefly then correct.`
+            : `\n\n【诊断增强】\n${block}\n若学生表述命中上述易错点，先用一句完成错因诊断，再给最小纠正提示。`;
+        }
+      }
+    } catch (_) { /* ignore */ }
+
     if (lang === 'en') {
       return `${profile.role}.
 
 【Student profile】
 - Stage: ${stageName}, Grade ${grade}
 - Subject: ${subjectName}
-- Course: "${meta.courseTitle}"${curriculumBlock}${scopeBlock}${objectivesBlock}
+- Course: "${meta.courseTitle}"${curriculumBlock}${scopeBlock}${objectivesBlock}${enrichmentBlock}
 
 【Style requirements】
 - Role: ${profile.role}
@@ -598,7 +683,8 @@
 2. If the student's question goes beyond the course scope, redirect in one sentence.
 3. NEVER exceed the difficulty boundary for this stage. If the student asks something beyond their stage, briefly say so and give a stage-appropriate answer.
 4. NEVER show chain-of-thought, "Let me think...", or meta-commentary. Give the most useful answer directly.
-5. Strictly obey the sentence count limit above.`;
+5. Strictly obey the sentence count limit above.
+6. Prefer prerequisite gaps and misconception cues from【Diagnostic enrichment】 when relevant.`;
     }
 
     return `${profile.role}。
@@ -606,7 +692,7 @@
 【学生画像】
 - 学段：${stageName}（G${grade}）
 - 学科：${subjectName}
-- 当前课件：《${meta.courseTitle}》${curriculumBlock}${scopeBlock}${objectivesBlock}
+- 当前课件：《${meta.courseTitle}》${curriculumBlock}${scopeBlock}${objectivesBlock}${enrichmentBlock}
 
 【风格要求】
 - 角色定位：${profile.role}
@@ -622,7 +708,8 @@
 2. 学生问题若超出课件范围，用一句话引回到课件主题。
 3. 严禁超出本学段的知识难度边界。若学生问到超纲内容，先简短说明"这是更高学段才会深入的内容"，再给出符合本学段的简化答复。
 4. 严禁展示思维链、"让我思考一下"、"首先我需要…"等冗余前置文字，直接给学生最有用的答复。
-5. 严格遵守上述句数/字数限制，不展开长篇大论。`;
+5. 严格遵守上述句数/字数限制，不展开长篇大论。
+6. 若命中【诊断增强】中的易错点或前置缺口，优先做一句错因诊断，再给最小提示。`;
   }
 
   // ───────────────────────────────────────────────────────
@@ -849,7 +936,7 @@
   // ───────────────────────────────────────────────────────
   async function callChatAPI(cfg, messages, onDelta, retryCount = 0) {
     const useServerProxy = isServerProxy(cfg);
-    if (useServerProxy) cfg = { ...cfg, model: PRIMARY_FREE_MODEL };
+    if (useServerProxy) cfg = { ...cfg, model: toPaidModel(cfg.model || PRIMARY_MODEL) };
     // 防御：apiKey 含全角空格、Base URL 含中文等都会导致 fetch 抛 TypeError
     const cleanKey = String(cfg.apiKey || '').trim().replace(/[\u3000\s]+/g, '');
     const cleanBaseUrl = String(cfg.baseUrl || '').trim().replace(/\/$/, '');
@@ -908,9 +995,9 @@
         delete headers[k];
       }
     }
-    // 设置 30 秒整体超时
+    // 服务端代理：65s（与 Cloudflare Function 60s 对齐）；直连 30s
     const ac = new AbortController();
-    const overallTimeout = setTimeout(() => ac.abort('overall-timeout'), 30000);
+    const overallTimeout = setTimeout(() => ac.abort('overall-timeout'), useServerProxy ? 65000 : 30000);
 
     // fetch 本身可能因 CORS、header 编码、网络等抛 TypeError
     let resp;
@@ -951,12 +1038,19 @@
       let errJson;
       try { errJson = await resp.json(); } catch (e) {}
 
-      // 429/503：同模型重试（服务端仅千问，不切换其他免费模型）
+      // 404 / free 下线：立刻改付费 slug 重试一次；429/503：同模型短暂重试
       const errMsg = String(errJson?.error?.message || '');
       const modelUnavailable = resp.status === 404
         || /unavailable for free|model.*not found|does not exist/i.test(errMsg);
-      const canRetry = (resp.status === 429 || resp.status === 503
-        || (modelUnavailable && useServerProxy))
+      if (modelUnavailable && String(cfg.model || '').includes(':free') && retryCount < 1) {
+        const paid = toPaidModel(cfg.model);
+        console.warn('[TeachAnyTutor] free model retired, switching to', paid);
+        if (onDelta) onDelta(getLang() === 'en'
+          ? '⏳ Free model retired, switching…'
+          : '⏳ 免费模型已下线，正在切换…');
+        return callChatAPI({ ...cfg, model: paid }, messages, onDelta, retryCount + 1);
+      }
+      const canRetry = (resp.status === 429 || resp.status === 503)
         && (useServerProxy || cleanBaseUrl.includes('openrouter.ai'))
         && retryCount < (useServerProxy ? SERVER_PROXY_MAX_RETRIES : 1);
       if (canRetry) {
@@ -1222,7 +1316,23 @@
 
       renderBubble(messagesEl, 'user', text);
 
-      const contextText = (meta.getContext() || '').slice(0, 3000);
+      try {
+        await Promise.race([
+          ensureNodeEnrichment(),
+          new Promise((r) => setTimeout(r, 1500)),
+        ]);
+      } catch (_) { /* ignore */ }
+      // refresh meta in case nodeId / enrichment became available
+      Object.assign(meta, readCourseMeta());
+
+      let contextText = (meta.getContext() || '').slice(0, 2400);
+      try {
+        const neo = window.TeachAnyNodeEnrichment;
+        if (neo && meta.nodeId) {
+          const block = neo.formatTutorBlock(meta.nodeId, getLang());
+          if (block) contextText = (contextText + '\n\n' + block).slice(0, 3000);
+        }
+      } catch (_) { /* ignore */ }
       const sectionTitle = getCurrentSectionTitle();
       const system = buildSystemPrompt(meta);
 
@@ -1314,6 +1424,6 @@
     /** 获取当前语言 */
     getLang: getLang,
     /** 版本号 */
-    version: '7.3.1'
+    version: '8.1.4'
   };
 })();
