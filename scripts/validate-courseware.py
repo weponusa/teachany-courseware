@@ -62,8 +62,11 @@ def is_pbl_supplement(manifest):
     return manifest.get('lesson_type') == 'pbl-supplement' or is_ext_node(manifest.get('node_id'))
 
 # HTML 线索关键词
+# v2026-07 精确化（修误报）：①移除"高中"——初三生涯/心理健康课件讲"高中升学"是合理
+# 语境（psych-m-g9-* 误报）；②"高一/高二/高三"需排除"升高一/升高二"等物理/化学语境
+# （phy-m-ideal-gas-equation 的"温度升高一定使体积减小"误报）。
 HTML_LEVEL_KEYWORDS = {
-    'high':       ['高中', '高一', '高二', '高三', '必修一', '必修二', '必修三', '必修四', '必修五',
+    'high':       ['高一', '高二', '高三', '必修一', '必修二', '必修三', '必修四', '必修五',
                    '选择性必修', '高考', '普高'],
     'middle':     ['初中', '初一', '初二', '初三', '七年级', '八年级', '九年级', '中考'],
     'elementary': ['小学', '一年级', '二年级', '三年级', '四年级', '五年级', '六年级'],
@@ -100,7 +103,11 @@ def detect_html_level(html_head):
     """从 HTML 前面几百行检测学段线索"""
     for lv, keywords in HTML_LEVEL_KEYWORDS.items():
         for k in keywords:
-            if k in html_head:
+            # "高一/高二/高三"排除"升高一/升高二/升高三"（温度升高等物理语境）
+            if k in ('高一', '高二', '高三'):
+                if re.search(r'(?<!升)' + k, html_head):
+                    return lv, k
+            elif k in html_head:
                 return lv, k
     # course-id 隐含
     m = re.search(r'course-id"\s*content="([^"]+)"', html_head)
@@ -669,8 +676,16 @@ def validate_one(course_dir, strict_feedback=False):
                 f'{course_dir.name}: HTML 无原生 <canvas> 交互组件（硬规则 #33 强制 · 拖拽/画板/参数滑块/实时绘图任一；纯文言字词可用 SVG 替代但需在 manifest 声明）'))
         elif canvas_tags:
             has_canvas_logic = bool(re.search(r'getContext\s*\(|draw\w*\s*\(', full_html))
-            has_canvas_event = bool(re.search(r'addEventListener\s*\(\s*[\'\"](?:pointer|mouse|touch|click|input|change)', full_html))
-            has_student_control = bool(re.search(r'<(?:input|select|button)\b', full_html, re.IGNORECASE))
+            # v2026-07 修误报：onclick/oninput 等 HTML 属性也是真实交互事件
+            # （chem-m-atom-structure 的元素选择按钮 onclick="showAtom(...)" 被误判缺交互）
+            has_canvas_event = bool(
+                re.search(r'addEventListener\s*\(\s*[\'\"](?:pointer|mouse|touch|click|input|change)', full_html)
+                or re.search(r'\son(?:click|pointerdown|pointermove|mousedown|mousemove|input|change)\s*=', full_html, re.IGNORECASE))
+            # v2026-07：JS 动态创建的按钮/输入控件也是真实学生控件
+            # （hist-m-russian-revolution 时间轴按钮组 document.createElement('button') 被误判）
+            has_student_control = bool(
+                re.search(r'<(?:input|select|button)\b', full_html, re.IGNORECASE)
+                or re.search(r"createElement\s*\(\s*['\"](?:button|input|select)['\"]", full_html))
             if not (has_canvas_logic and has_canvas_event and has_student_control):
                 issues.append(('error',
                     f'{course_dir.name}: Canvas 存在但缺少真实互动闭环（需 getContext/draw + pointer/click/input/change 事件 + 学生可操作控件）'))
