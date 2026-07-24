@@ -24,12 +24,17 @@
   'use strict';
 
   // 版本标识 - 加载时立即打印到 console，方便排查浏览器缓存问题
-  console.log('%c[TeachAnyTutor] v8.1.2 loaded - server proxy + off-site fallback', 'color:#10b981;font-weight:bold;');
+  console.log('%c[TeachAnyTutor] v8.1.3 loaded - OpenRouter Qwen paid default (free slug retired)', 'color:#10b981;font-weight:bold;');
 
   const DEPRECATED_FREE_MODELS = new Set([
     'z-ai/glm-4.5-air:free',
+    'qwen/qwen3-next-80b-a3b-instruct:free',
+    'google/gemma-3-27b-it:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
   ]);
-  const PRIMARY_FREE_MODEL = 'qwen/qwen3-next-80b-a3b-instruct:free';
+  // 2026-07：OpenRouter 多款 :free 下线，改用同 slug 付费版（服务端 Key）
+  const PRIMARY_MODEL = 'qwen/qwen3-next-80b-a3b-instruct';
+  const PRIMARY_FREE_MODEL = PRIMARY_MODEL; // 兼容旧变量名
   const SERVER_PROXY_BASE = '/api/llm';
   const LEGACY_BUILTIN_KEY_PREFIXES = [
     'sk-or-v1-a4d900',
@@ -56,10 +61,15 @@
     return /\/chat\/completions$/i.test(base) ? base : `${base}/chat/completions`;
   }
 
-  function normalizeModelId(model) {
+  function toPaidModel(model) {
     const m = String(model || '').trim();
-    if (!m || DEPRECATED_FREE_MODELS.has(m)) return PRIMARY_FREE_MODEL;
+    if (!m || DEPRECATED_FREE_MODELS.has(m)) return PRIMARY_MODEL;
+    if (m.endsWith(':free')) return m.slice(0, -5) || PRIMARY_MODEL;
     return m;
+  }
+
+  function normalizeModelId(model) {
+    return toPaidModel(model);
   }
 
   // ───────────────────────────────────────────────────────
@@ -79,7 +89,7 @@
     providerId: 'teachany-server',
   };
 
-  // TeachAny 服务端默认仅使用千问免费模型（不自动切换 Llama/DeepSeek 等）
+  // TeachAny 服务端默认使用 OpenRouter 千问（:free 已下线，走服务端付费 Key）
   const SERVER_PROXY_MAX_RETRIES = 2;
 
   // 服务商预设（配置弹窗一键填表）
@@ -87,7 +97,7 @@
   const PRESETS = [
     {
       id: 'teachany-server',
-      name: '🌐 TeachAny 服务端（默认 · 免 Key）',
+      name: '🌐 TeachAny 服务端（默认 · 免填 Key）',
       baseUrl: SERVER_PROXY_BASE,
       model: PRIMARY_FREE_MODEL,
       models: [PRIMARY_FREE_MODEL],
@@ -896,7 +906,7 @@
   // ───────────────────────────────────────────────────────
   async function callChatAPI(cfg, messages, onDelta, retryCount = 0) {
     const useServerProxy = isServerProxy(cfg);
-    if (useServerProxy) cfg = { ...cfg, model: PRIMARY_FREE_MODEL };
+    if (useServerProxy) cfg = { ...cfg, model: toPaidModel(cfg.model || PRIMARY_MODEL) };
     // 防御：apiKey 含全角空格、Base URL 含中文等都会导致 fetch 抛 TypeError
     const cleanKey = String(cfg.apiKey || '').trim().replace(/[\u3000\s]+/g, '');
     const cleanBaseUrl = String(cfg.baseUrl || '').trim().replace(/\/$/, '');
@@ -998,12 +1008,19 @@
       let errJson;
       try { errJson = await resp.json(); } catch (e) {}
 
-      // 429/503：同模型重试（服务端仅千问，不切换其他免费模型）
+      // 404 / free 下线：立刻改付费 slug 重试一次；429/503：同模型短暂重试
       const errMsg = String(errJson?.error?.message || '');
       const modelUnavailable = resp.status === 404
         || /unavailable for free|model.*not found|does not exist/i.test(errMsg);
-      const canRetry = (resp.status === 429 || resp.status === 503
-        || (modelUnavailable && useServerProxy))
+      if (modelUnavailable && String(cfg.model || '').includes(':free') && retryCount < 1) {
+        const paid = toPaidModel(cfg.model);
+        console.warn('[TeachAnyTutor] free model retired, switching to', paid);
+        if (onDelta) onDelta(getLang() === 'en'
+          ? '⏳ Free model retired, switching…'
+          : '⏳ 免费模型已下线，正在切换…');
+        return callChatAPI({ ...cfg, model: paid }, messages, onDelta, retryCount + 1);
+      }
+      const canRetry = (resp.status === 429 || resp.status === 503)
         && (useServerProxy || cleanBaseUrl.includes('openrouter.ai'))
         && retryCount < (useServerProxy ? SERVER_PROXY_MAX_RETRIES : 1);
       if (canRetry) {

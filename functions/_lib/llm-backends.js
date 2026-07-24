@@ -16,9 +16,9 @@ export const BACKENDS = {
     extraHeaders: {},
   },
   openrouter: {
-    name: 'OpenRouter Qwen3 Next 80B（免费）',
+    name: 'OpenRouter Qwen3 Next 80B',
     baseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'qwen/qwen3-next-80b-a3b-instruct:free',
+    defaultModel: 'qwen/qwen3-next-80b-a3b-instruct',
     envKey: 'OPENROUTER_KEY',
     extraHeaders: {
       'HTTP-Referer': 'https://www.teachany.cn',
@@ -43,8 +43,8 @@ export function inferBackendIdForModel(model) {
   return 'openrouter';
 }
 
-/** PBL 主模型（OpenRouter 免费档，有日限流） */
-export const PBL_PRIMARY_MODEL = 'qwen/qwen3-next-80b-a3b-instruct:free';
+/** PBL 主模型（OpenRouter；:free 已于 2026-07 下线） */
+export const PBL_PRIMARY_MODEL = 'qwen/qwen3-next-80b-a3b-instruct';
 
 /**
  * PBL 专用模型链（默认链；前端可选模型时用户指定模型优先）
@@ -125,7 +125,7 @@ export function buildUserModelChain(env, userModel, providerId = '') {
 export const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Backend',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Backend, X-Title, X-OpenRouter-Title',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -218,6 +218,7 @@ export async function callBackendLLM(env, messages, opts = {}) {
       // 402/401：Key 余额不足或失效，降级到链上下一个后端
       const retryable = e.status === 402 || e.status === 401
         || e.status === 429 || e.status === 503 || e.status === 502
+        || e.status === 404
         || e.name === 'AbortError';
       if (retryable && i < chain.length - 1) {
         await sleep(Math.min(4000 + i * 2000, 12000));
