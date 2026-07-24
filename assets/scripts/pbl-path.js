@@ -38,7 +38,7 @@ class PBLPathBuilder {
         name: 'TeachAny 默认（Qwen3 Next 80B 免费）',
         serverPreset: true,
         model: '',
-        models: ['', 'qwen/qwen3-next-80b-a3b-instruct:free', 'qwen/qwen3-next-80b-a3b-instruct', 'deepseek-ai/DeepSeek-V4-Flash', 'deepseek-ai/DeepSeek-V4-Pro', 'GLM-4-Flash', '__custom__'],
+        models: ['', 'qwen/qwen3-next-80b-a3b-instruct', 'qwen/qwen3-next-80b-a3b-instruct', 'deepseek-ai/DeepSeek-V4-Flash', 'deepseek-ai/DeepSeek-V4-Pro', 'GLM-4-Flash', '__custom__'],
       },
       {
         id: 'siliconflow',
@@ -60,10 +60,10 @@ class PBLPathBuilder {
         serverBacked: true,
         clientKeyOk: true,
         baseUrl: 'https://openrouter.ai/api/v1',
-        model: 'qwen/qwen3-next-80b-a3b-instruct:free',
+        model: 'qwen/qwen3-next-80b-a3b-instruct',
         models: [
           '',
-          'qwen/qwen3-next-80b-a3b-instruct:free',
+          'qwen/qwen3-next-80b-a3b-instruct',
           'qwen/qwen3-next-80b-a3b-instruct',
           'deepseek/deepseek-v4-flash',
           'deepseek/deepseek-v4-pro',
@@ -80,7 +80,7 @@ class PBLPathBuilder {
           '__custom__',
         ],
         modelLabels: {
-          'qwen/qwen3-next-80b-a3b-instruct:free': 'Qwen3 Next 80B（免费，默认）',
+          'qwen/qwen3-next-80b-a3b-instruct': 'Qwen3 Next 80B（默认）',
           'qwen/qwen3-next-80b-a3b-instruct': 'Qwen3 Next 80B（付费）',
           'deepseek/deepseek-v4-pro': 'DeepSeek V4 Pro（付费）',
           'deepseek/deepseek-v4-flash': 'DeepSeek V4 Flash（付费）',
@@ -9554,7 +9554,7 @@ class PBLGraphRenderer {
     // 力导向参数随节点数缩放（v7.9.14：增大排斥力避免节点重叠）
     const baseLinkDist = Math.max(180, Math.min(320, 140 + nodeCount * 0.8));
     const baseCharge   = Math.max(-4000, Math.min(-600, -400 - nodeCount * 5));
-    const baseCollide  = Math.max(70, Math.min(100, 55 + nodeCount * 0.2));
+    const baseCollide  = Math.max(90, Math.min(140, 60 + nodeCount * 0.35));
 
     if (this.simulation) {
       this.simulation.stop();
@@ -9666,8 +9666,8 @@ class PBLGraphRenderer {
     this._seedNodePositions(nodes);
 
     const uniqueSubjects = new Set(nodes.map(n => n.subject || '').filter(Boolean));
-    const forceXStrength = nodeCount <= 2 ? 0.02 : (uniqueSubjects.size <= 1 ? 0.05 : (nodeCount > 30 ? 0.18 : 0.12));
-    const forceYStrength = nodeCount <= 2 ? 0.02 : (nodeCount > 30 ? 0.12 : 0.08);
+    const forceXStrength = nodeCount <= 2 ? 0.02 : (uniqueSubjects.size <= 1 ? 0.05 : (nodeCount > 30 ? 0.08 : 0.12));
+    const forceYStrength = nodeCount <= 2 ? 0.02 : (nodeCount > 30 ? 0.06 : 0.08);
 
     // 箭头标记
     this.svg.append('defs').selectAll('marker')
