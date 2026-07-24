@@ -72,7 +72,7 @@ body.role-parent {
 body.role-student .pro-only,
 body.role-parent .pro-only { display: none !important; }
 body.role-teacher .simple-only { display: none !important; }
-body:not([class*="role-"]) .app-shell { display: none !important; }
+body.role-picking .app-shell { display: none !important; }
 
 /* Top Bar */
 .top-bar {
@@ -1061,80 +1061,152 @@ body:not([class*="role-"]) .app-shell { display: none !important; }
   margin-top: 4px;
 }
 
-/* ─── 角色入口 ─────────────────────────────── */
+/* ─── 角色入口（仅「切换视角」时出现；默认不挡路） ─── */
 .role-gate {
-  min-height: 100vh;
-  display: flex;
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 32px 20px 48px;
-  background:
-    radial-gradient(ellipse 70% 50% at 20% 0%, rgba(15, 118, 110, 0.18), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 90% 20%, rgba(14, 116, 144, 0.14), transparent 50%),
-    linear-gradient(165deg, #e7eef3 0%, #f5f7f9 45%, #eef4f6 100%);
+  background: rgba(15, 23, 36, 0.45);
+  backdrop-filter: blur(6px);
   color: var(--ink);
 }
-.role-gate[hidden] { display: none !important; }
+body.role-picking .role-gate {
+  display: flex;
+}
 .role-gate-inner {
-  width: min(920px, 100%);
-  text-align: center;
+  width: min(420px, 100%);
+  text-align: left;
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px 24px 22px;
+  box-shadow: 0 24px 60px rgba(15, 23, 36, 0.28);
 }
 .role-brand {
   font-family: Outfit, 'Noto Sans SC', sans-serif;
-  font-size: clamp(40px, 8vw, 64px);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--ink);
-  line-height: 1.05;
-  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #6b8290;
+  margin-bottom: 8px;
 }
 .role-lead {
-  font-size: 17px;
-  color: #4b6170;
-  max-width: 28em;
-  margin: 0 auto 36px;
+  font-family: Outfit, 'Noto Sans SC', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.25;
+  margin: 0 0 6px;
+}
+.role-sub {
+  font-size: 14px;
+  color: #5a7180;
+  margin: 0 0 20px;
+  line-height: 1.5;
 }
 .role-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-}
-@media (max-width: 760px) {
-  .role-cards { grid-template-columns: 1fr; }
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .role-card {
   appearance: none;
   border: 1px solid rgba(20, 33, 43, 0.1);
-  background: #fff;
-  border-radius: 18px;
-  padding: 22px 18px 20px;
+  background: #f7fafb;
+  border-radius: 14px;
+  padding: 14px 16px;
   text-align: left;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
-  box-shadow: 0 10px 30px rgba(20, 33, 43, 0.04);
+  transition: transform 0.15s ease, border-color 0.15s, background 0.15s;
 }
 .role-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(15, 118, 110, 0.35);
-  box-shadow: 0 16px 36px rgba(15, 118, 110, 0.12);
+  border-color: rgba(15, 118, 110, 0.4);
+  background: #fff;
 }
-.role-card .role-emoji {
-  font-size: 28px;
-  display: block;
-  margin-bottom: 10px;
+.role-card.primary {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
 }
+.role-card.primary:hover {
+  background: #0d9488;
+  border-color: #0d9488;
+}
+.role-card.primary h2,
+.role-card.primary p { color: #fff; }
+.role-card.primary p { opacity: 0.88; }
 .role-card h2 {
   font-family: Outfit, 'Noto Sans SC', sans-serif;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   color: var(--ink);
 }
 .role-card p {
-  font-size: 14px;
+  font-size: 13px;
   color: #5a7180;
-  line-height: 1.55;
+  line-height: 1.45;
   margin: 0;
+}
+.role-gate-dismiss {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  border: none;
+  background: transparent;
+  color: #6b8290;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 8px;
+}
+.role-gate-dismiss:hover { color: var(--ink); }
+
+/* 页内视角切换（自学默认，不打断） */
+.view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.08);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+}
+.view-switch button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--dim);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.view-switch button.on {
+  background: #fff;
+  color: var(--teal);
+  box-shadow: 0 1px 3px rgba(20, 33, 43, 0.08);
+}
+.teacher-entry-link {
+  border: none;
+  background: transparent;
+  color: var(--dimmer);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 4px 0;
+}
+.teacher-entry-link:hover { color: var(--dim); }
+.simple-top-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
 /* ─── 学生向导 ─────────────────────────────── */
@@ -1370,30 +1442,41 @@ body.role-parent #learning-path-container:not(:empty) {
 }
 </style>
 </head>
-<body>
+<body class="role-student">
 
-<!-- 首次进入：选角色 -->
-<div class="role-gate" id="roleGate">
-  <div class="role-gate-inner">
-    <div class="role-brand">TeachAny</div>
-    <p class="role-lead">先告诉我你是谁。不同角色看到的内容不一样——学生自学时，界面会尽量简单。</p>
+<script>
+// 首屏即按本地角色上色，避免先闪角色墙
+(function () {
+  try {
+    var r = localStorage.getItem('teachany_path_role');
+    if (r === 'parent' || r === 'teacher' || r === 'student') {
+      document.body.className = 'role-' + r;
+    }
+  } catch (e) { /* ignore */ }
+})();
+</script>
+
+<!-- 切换视角：轻量弹层（默认不出现，直接进自学） -->
+<div class="role-gate" id="roleGate" aria-hidden="true">
+  <div class="role-gate-inner" role="dialog" aria-labelledby="roleLead">
+    <div class="role-brand">学习路径</div>
+    <p class="role-lead" id="roleLead">你想怎么用？</p>
+    <p class="role-sub">大多数人直接自学即可。只有需要完整课标筛选和图谱分析时，再切到老师版。</p>
     <div class="role-cards">
-      <button type="button" class="role-card" data-role="student">
-        <span class="role-emoji">🎒</span>
-        <h2>我是学生</h2>
-        <p>想自己学某个知识点。三步选好科目和年级，直接开始。</p>
+      <button type="button" class="role-card primary" data-role="student">
+        <h2>开始自学</h2>
+        <p>选科目和年级，找知识点，看先补什么、怎么学。</p>
       </button>
       <button type="button" class="role-card" data-role="parent">
-        <span class="role-emoji">👪</span>
-        <h2>我是家长</h2>
-        <p>帮孩子找该补什么、下一步学什么。少术语，多说明。</p>
+        <h2>家长陪学</h2>
+        <p>界面和大白话说明与自学相同，文案更偏「帮孩子」。</p>
       </button>
       <button type="button" class="role-card" data-role="teacher">
-        <span class="role-emoji">👩‍🏫</span>
-        <h2>我是老师</h2>
-        <p>看完整知识链、课标筛选、覆盖率和跨学段分析。</p>
+        <h2>老师完整版</h2>
+        <p>课标筛选、覆盖率、并列知识与跨学段链。</p>
       </button>
     </div>
+    <button type="button" class="role-gate-dismiss" id="roleGateDismiss">继续当前界面</button>
   </div>
 </div>
 
@@ -1413,7 +1496,7 @@ body.role-parent #learning-path-container:not(:empty) {
     <a href="https://read.teachany.cn/">阅读学院</a>
     <a href="my.html">我的</a>
     <a href="commercial-license.html">商业授权</a>
-    <button type="button" class="role-switch-btn" onclick="resetPathRole()" style="margin-left:4px">切换角色</button>
+    <button type="button" class="role-switch-btn" onclick="openRolePicker()" style="margin-left:4px">切换视角</button>
   </div>
 </div>
 
@@ -1422,14 +1505,20 @@ body.role-parent #learning-path-container:not(:empty) {
   <p>查看知识点的前后关系与可用课件。项目式学习请用 <a href="pbl.html" style="color:var(--primary);">PBL 项目拆解</a>。</p>
 </div>
 
-<!-- 学生 / 家长：三步向导 -->
+<!-- 默认：自学三步向导 -->
 <div class="simple-shell simple-only" id="simpleShell">
   <div class="simple-top">
     <div class="simple-brand">
       <img src="assets/teachany-icon.png" alt="">
       <span>TeachAny</span>
     </div>
-    <button type="button" class="role-switch-btn" onclick="resetPathRole()">切换角色</button>
+    <div class="simple-top-actions">
+      <div class="view-switch" id="viewSwitch" role="group" aria-label="使用方式">
+        <button type="button" data-role="student" class="on">自学</button>
+        <button type="button" data-role="parent">陪学</button>
+      </div>
+      <button type="button" class="teacher-entry-link" onclick="applyPathRole('teacher', true)">老师完整版</button>
+    </div>
   </div>
   <div class="simple-hero">
     <h1 id="simpleHeroTitle">今天想学什么？</h1>
@@ -1598,18 +1687,20 @@ function isSimpleRole(role) {
 }
 
 function applyPathRole(role, persist) {
-  currentRole = role || '';
+  currentRole = role || 'student';
   window.TeachAnyPathRole = currentRole;
-  document.body.classList.remove('role-student', 'role-parent', 'role-teacher');
-  const gate = document.getElementById('roleGate');
-  if (!currentRole) {
-    if (gate) gate.hidden = false;
-    if (persist) localStorage.removeItem(ROLE_KEY);
-    return;
-  }
+  document.body.classList.remove('role-student', 'role-parent', 'role-teacher', 'role-picking');
   document.body.classList.add('role-' + currentRole);
-  if (gate) gate.hidden = true;
+  const gate = document.getElementById('roleGate');
+  if (gate) {
+    gate.setAttribute('aria-hidden', 'true');
+  }
   if (persist) localStorage.setItem(ROLE_KEY, currentRole);
+
+  // 同步页内「自学 | 陪学」开关
+  document.querySelectorAll('#viewSwitch button[data-role]').forEach((btn) => {
+    btn.classList.toggle('on', btn.dataset.role === currentRole);
+  });
 
   if (isSimpleRole(currentRole)) {
     currentCurriculum = 'cn';
@@ -1631,10 +1722,26 @@ function applyPathRole(role, persist) {
   if (typeof updateTopicList === 'function') updateTopicList();
 }
 
+function openRolePicker() {
+  document.body.classList.add('role-picking');
+  const gate = document.getElementById('roleGate');
+  if (gate) gate.setAttribute('aria-hidden', 'false');
+}
+
+function closeRolePicker() {
+  document.body.classList.remove('role-picking');
+  const gate = document.getElementById('roleGate');
+  if (gate) gate.setAttribute('aria-hidden', 'true');
+  // 若仍无角色 class（异常），回落自学
+  if (!document.body.classList.contains('role-student')
+    && !document.body.classList.contains('role-parent')
+    && !document.body.classList.contains('role-teacher')) {
+    applyPathRole('student', true);
+  }
+}
+
 function resetPathRole() {
-  applyPathRole('', true);
-  document.getElementById('learning-path-container').innerHTML = '';
-  history.replaceState(null, '', location.pathname);
+  openRolePicker();
 }
 
 function resetWizard() {
@@ -1962,6 +2069,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.role-card[data-role]').forEach((card) => {
     card.addEventListener('click', () => {
       applyPathRole(card.dataset.role, true);
+      closeRolePicker();
       if (nodesLoaded) {
         updateNodeList();
         renderSubjectChips();
@@ -1971,10 +2079,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  document.querySelectorAll('#viewSwitch button[data-role]').forEach((btn) => {
+    btn.addEventListener('click', () => applyPathRole(btn.dataset.role, true));
+  });
+
+  const dismiss = document.getElementById('roleGateDismiss');
+  if (dismiss) dismiss.addEventListener('click', closeRolePicker);
+
+  // 默认直接进自学：不再先甩三个入口
   const savedRole = localStorage.getItem(ROLE_KEY) || '';
-  // 带 node 直链时：若无角色，默认学生（减少跳转摩擦）
-  const bootRole = savedRole || (nodeIdFromURL ? 'student' : '');
-  applyPathRole(bootRole, !!nodeIdFromURL && !savedRole);
+  const bootRole = savedRole || 'student';
+  applyPathRole(bootRole, !savedRole);
 
   const topicSearch = document.getElementById('topicSearch');
   if (topicSearch) {
