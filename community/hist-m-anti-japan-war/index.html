@@ -1284,13 +1284,12 @@ async function geoFetchJson(p) {
   catch(e) { const r = await fetch(geoAssetCdn(p)); return await r.json(); }
 }
 function addBaseTiles(map, opts = {}) {
-  const tO = opts.terrainOpacity ?? 0.35, dO = opts.darkOpacity ?? 0.85;
-  L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
-    subdomains: 'abcd', maxZoom: 19, opacity: dO, attribution: '© CartoDB · © OpenStreetMap'
-  }).addTo(map);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 13, opacity: tO, attribution: 'Esri · Shaded Relief'
-  }).addTo(map);
+  // v2026-07 修复：改用仓库自带 Natural Earth 彩色晕渲底图（RULES #21a），
+  // 配 map 的 crs:EPSG4326（等距圆柱 JPG 与 WGS84 GeoJSON 经纬度线性对齐），
+  // 离线/国内可访问，替代原 CARTO+Esri 在线瓦片（404/加载慢风险）。
+  const opacity = opts.opacity ?? 0.92;
+  L.imageOverlay('../../assets/maps/physical/hillshade/global-color-hillshade-4k.jpg',
+    [[-90, -180], [90, 180]], { opacity, attribution: '© Natural Earth / TeachAny 自带地形晕渲' }).addTo(map);
 }
 
 window.addEventListener('load', () => {
@@ -1299,18 +1298,22 @@ window.addEventListener('load', () => {
   if (!el) return;
 
   const map = L.map(el, {
+    crs: L.CRS.EPSG4326,  // 等距圆柱，匹配自带晕渲底图与 WGS84 GeoJSON
     center: [33, 110],
     zoom: 5,
     minZoom: 3,
     maxZoom: 10,
+    zoomSnap: 0.25,
     zoomControl: true,
     attributionControl: false
   });
+  map.fitBounds([[10, 70], [55, 140]]);  // 聚焦亚太战场
 
-  addBaseTiles(map, { terrainOpacity: 0.3, darkOpacity: 0.88 });
+  addBaseTiles(map, { opacity: 0.92 });
 
   // 加载 1945 年历史行政边界 GeoJSON（二战末期，227 个政治实体）
-  geoFetchJson('data/geography/historical-world/ce-1945-wwii.geojson')
+  // v2026-07：改用仓库自带 chrono-world 资源（离线/国内可访问，原 data/geography/ 路径不存在一直靠CDN）
+  geoFetchJson('assets/maps/chrono-world/020-ce-1945-wwii.geojson')
     .then(geoJson => {
       const powerColors = {
         'China':      { color: '#fbbf24', weight: 2,   fillColor: 'rgba(251,191,36,0.25)',  fillOpacity: 0.30 },
