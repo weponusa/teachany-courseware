@@ -750,13 +750,19 @@
   </section>
 
   <!-- ═══ 区域情境地图（自包含 Canvas GeoJSON · 硬规则 #35/#36 合规） ═══ -->
-  <section class="section" id="region-map" data-tts="region-map" data-tsh="区域情境地图" data-bloom-level="apply" data-scaffold="partial">
-    <h2 class="section-title">🗺️ 看一看：中国的山地在哪里</h2>
+  <section class="section" id="region-map" data-tts="region-map" data-tsh="把真实地形翻译成等高线" data-bloom-level="apply" data-scaffold="partial">
+    <h2 class="section-title">🗺️ 把真实地形"翻译"成等高线</h2>
     <div class="card brown">
-      <h3>等高线地形图的真实用武之地</h3>
-      <p>中国地形西高东低，三级阶梯分明——青藏高原、黄土高原、云贵高原和东部丘陵，都是等高线地形图大显身手的地方。登山、修路、选校址，都离不开它。</p>
-      <div class="canvas-wrap" style="margin-top:12px"><canvas id="map-canvas" width="740" height="420" style="max-width:100%"></canvas></div>
-      <p class="muted" style="text-align:center;margin-top:8px">中国省界轮廓（本地 GeoJSON 渲染）——西部山地高原区等高线密集，东部平原区稀疏</p>
+      <h3>点击地形区，看它的等高线长什么样</h3>
+      <p>学了判读规则，回到真实中国：青藏高原、四川盆地、华北平原……这些地形在等高线图上各是什么模样？<strong>点击下面地图上的标注点</strong>，右侧立刻显示该类地形的典型等高线形态——把宏观地形和纸面技能对上号。</p>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;align-items:flex-start">
+        <div class="canvas-wrap" style="flex:1;min-width:300px"><canvas id="map-canvas" width="740" height="420" style="max-width:100%"></canvas></div>
+        <div style="width:300px;flex-shrink:0">
+          <canvas id="contour-inset" width="300" height="240" style="width:100%;border:1px solid var(--border);border-radius:12px;background:#fffdf5"></canvas>
+          <div id="contour-explain" style="margin-top:10px;padding:12px;background:#f0fdf4;border-radius:10px;border-left:3px solid var(--primary);font-size:14px;line-height:1.7">👈 点击地图上的地形区标注点，这里显示对应的等高线形态与判读要点。</div>
+        </div>
+      </div>
+      <p class="muted" style="text-align:center;margin-top:8px">左：中国省界与主要地形区（本地 GeoJSON 渲染）· 右：所选地形的等高线形态示意</p>
     </div>
   </section>
 
@@ -1217,9 +1223,84 @@
       if (Math.hypot(mx - p[0], my - p[1]) < 20) {
         hoveredRegion = s.name;
         if (mGeoData) mDrawGeo(mGeoData);
+        drawContourInset(s);
       }
     });
   });
+
+  /* ── 等高线形态联动面板：把真实地形"翻译"成等高线 ── */
+  var insetCv = document.getElementById('contour-inset');
+  var explainEl = document.getElementById('contour-explain');
+
+  function drawContourInset(spot){
+    if (!insetCv) return;
+    var c = insetCv.getContext('2d'), w = insetCv.width, h = insetCv.height;
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = '#fffdf5'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#92400e'; c.fillStyle = '#92400e';
+    var typeInfo = {
+      mountain: { title: spot.name + ' · 山地', desc: '<strong>' + spot.name + '</strong>是典型的山地：等高线呈<strong>密集的闭合圈</strong>，数值向中心递增，圈越小海拔越高。山区修路常沿稀疏河谷穿行，登山选线优先找等高线较疏的坡面。' },
+      plateau: { title: spot.name + ' · 高原', desc: '<strong>' + spot.name + '</strong>是高原：内部等高线<strong>非常稀疏</strong>（顶部平坦开阔），边缘有一圈密集等高线（边缘陡峭）。看"内部疏、边缘密"就能识别高原。' },
+      basin: { title: spot.name + ' · 盆地', desc: '<strong>' + spot.name + '</strong>是盆地：等高线呈<strong>闭合圈但数值向中心递减</strong>，示坡线画在圈内侧（向里指）。与山峰正好相反——先看数值方向再下结论。' },
+      plain: { title: spot.name + ' · 平原', desc: '<strong>' + spot.name + '</strong>是平原：海拔低（多在 200 米以下），等高线<strong>又少又疏</strong>，图面近乎空白。平原地区修路、种地几乎不用考虑坡度。' }
+    };
+    var info = typeInfo[spot.type] || typeInfo.mountain;
+    c.font = 'bold 13px sans-serif'; c.textAlign = 'left';
+    c.fillText(info.title, 12, 22);
+
+    c.lineWidth = 1.4;
+    if (spot.type === 'mountain') {
+      for (var i = 5; i >= 1; i--) {
+        c.beginPath();
+        c.ellipse(w/2, h/2 + 14, 22 * i + 14, 13 * i + 8, -0.15, 0, Math.PI * 2);
+        c.stroke();
+        c.font = '10px sans-serif';
+        c.fillText(String(500 + (5 - i) * 500), w/2 + 22 * i + 4, h/2 + 6);
+      }
+      c.beginPath(); c.arc(w/2, h/2 + 14, 2.5, 0, Math.PI*2); c.fill();
+      c.font = 'bold 11px sans-serif'; c.fillText('▲ 峰顶', w/2 + 8, h/2 + 12);
+    } else if (spot.type === 'plateau') {
+      for (var j = 0; j < 3; j++) {
+        c.beginPath();
+        c.moveTo(20, 60 + j * 26);
+        c.bezierCurveTo(w*0.3, 52 + j*28, w*0.6, 70 + j*24, w - 20, 58 + j*26);
+        c.stroke();
+        c.font = '10px sans-serif';
+        c.fillText(String(4000 - j * 500), w - 58, 52 + j * 26);
+      }
+      c.font = '11px sans-serif';
+      c.fillText('高原面（线极疏）', w/2 - 44, h - 30);
+      c.fillText('边缘（线密集）', 24, 44);
+    } else if (spot.type === 'basin') {
+      for (var k = 5; k >= 1; k--) {
+        c.beginPath();
+        c.ellipse(w/2, h/2 + 14, 22 * k + 14, 13 * k + 8, 0.1, 0, Math.PI * 2);
+        c.stroke();
+        c.font = '10px sans-serif';
+        c.fillText(String(500 + (k - 1) * 300), w/2 + 22 * k + 4, h/2 + 6);
+        /* 示坡线：圈内侧小短线 */
+        c.beginPath();
+        c.moveTo(w/2 - (22 * k + 14), h/2 + 14);
+        c.lineTo(w/2 - (22 * k + 14) + 7, h/2 + 14);
+        c.stroke();
+      }
+      c.font = 'bold 11px sans-serif';
+      c.fillText('盆地最低处', w/2 - 34, h/2 + 18);
+    } else {
+      for (var m = 0; m < 2; m++) {
+        c.beginPath();
+        c.moveTo(24, 100 + m * 60);
+        c.bezierCurveTo(w*0.35, 92 + m*62, w*0.65, 110 + m*58, w - 24, 98 + m*60);
+        c.stroke();
+        c.font = '10px sans-serif';
+        c.fillText(String(50 + m * 50), w - 52, 92 + m * 60);
+      }
+      c.font = '11px sans-serif';
+      c.fillText('平原：等高线稀少，近乎空白', w/2 - 88, h - 24);
+    }
+    if (explainEl) explainEl.innerHTML = info.desc;
+  }
+
 
   cv.addEventListener('mouseleave', function(){
     hoveredRegion = null;
