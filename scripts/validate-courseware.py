@@ -412,7 +412,20 @@ def validate_one(course_dir, strict_feedback=False):
                 f'baseImage=assets/maps/physical/hillshade/ + crs EPSG4326（RULES #21a）'))
 
     # v5.30：国际课标体系走独立校验路径（ID 前缀、年级范围、HTML 线索关键词都不同）
-    if mc != 'cn-national':
+    # v2026-07 加固：归一化 curriculum 判定——只有明确的国际体系才走最小校验路径。
+    # 历史漏洞：约190个课件 curriculum 写的是 'cn'、'义务教育课程标准（2022年版）·××'、
+    # '人教版××' 等变体，旧逻辑 `mc != 'cn-national'` 把它们全判成"国际体系"提前 return，
+    # 导致完整校验（地图/前后测/图谱/资源等）全部漏检。现改为：只有 curriculum 是国际
+    # 体系值，或 node_id 含国际 infix，才走国际路径；其余一律按中国课标完整校验。
+    INTL_CURRICULUM_VALUES = {
+        'ib', 'ib-dp', 'ib-myp', 'ib-pyp', 'ap', 'alevel', 'a-level',
+        'cambridge', 'cam-igcse', 'cam-as', 'cam-al', 'igcse', 'intl', 'international'
+    }
+    is_intl_curriculum = (
+        mc in INTL_CURRICULUM_VALUES
+        or any(ix in (mn or '') for ix in INTERNATIONAL_INFIXES)
+    )
+    if is_intl_curriculum:
         # 仅做最小校验：subject 与 node_id 学科前缀一致 + teachany_version 必填 + title 含 TeachAny
         node_subject, _ = parse_node_id(mn)
         # 检查是否真的用了国际 infix
