@@ -406,6 +406,193 @@
 <section class="section" data-bloom-level="evaluate" data-scaffold="none"><h2>✅ 达标检测</h2><p style="line-height:1.9;">1. 请判断：某区域等高线呈V字形且尖端指向高处，这是什么地形？2. 计算：某点与基准线间有7条间隔20米的等高线，该点海拔多少？3. 设计：要为学校后山绘制等高线图，需要准备哪些工具？</p></section>
 <section class="section" data-bloom-level="analyze" data-scaffold="partial" data-conceptest="true"><h2>💡 错因诊断</h2><p style="line-height:1.9;">常见错因是混淆等高线疏密与绝对高度。误区一认为密集区就是高山（可能是深谷）；误区二将等高线当实际距离。诊断发现，60%学生需要加强等高线数值与地形特征的对应练习。</p></section>
 <section class="section" data-bloom-level="create" data-scaffold="partial"><h2>🚀 迁移挑战</h2><p style="line-height:1.9;">迁移任务：分析你所在城市的地形图，探究为什么商业区多建在等高线稀疏区域？要求结合交通、排水等因素撰写300字分析报告，需引用具体等高线数值作为证据。</p></section>
+<!-- ═══ 等高线四联交互 Canvas（2026-07 欠账清偿：补真实绘制+交互闭环） ═══ -->
+<script>
+(function(){
+'use strict';
+/* ── 1. sliceCanvas：水平切山 → 等高线形成 ── */
+(function(){
+  var cv = document.getElementById('sliceCanvas'); if(!cv) return;
+  var ctx = cv.getContext('2d'), W = cv.width, H = cv.height, level = 0.5;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.translate(30,20);
+    ctx.fillStyle='#dcfce7'; ctx.fillRect(0,0,320,280);
+    ctx.beginPath(); ctx.moveTo(20,260); ctx.lineTo(160,60); ctx.lineTo(300,260); ctx.closePath();
+    var g=ctx.createLinearGradient(0,60,0,260); g.addColorStop(0,'#a3a3a3'); g.addColorStop(1,'#78716c');
+    ctx.fillStyle=g; ctx.fill(); ctx.strokeStyle='#57534e'; ctx.stroke();
+    var y = 260 - level*200;
+    ctx.strokeStyle='#ef4444'; ctx.lineWidth=3; ctx.setLineDash([8,5]);
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(320,y); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth=1;
+    ctx.fillStyle='#ef4444'; ctx.font='bold 14px sans-serif';
+    ctx.fillText('切割海拔 '+(level*400).toFixed(0)+' 米', 10, y-8);
+    ctx.restore();
+    ctx.save(); ctx.translate(430,160);
+    var radii=[110,88,66,44,22], i, r;
+    for(i=0;i<radii.length;i++){
+      r=radii[i];
+      var alt = (1 - r/110)*400;
+      var active = Math.abs(alt - level*400) < 45;
+      ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2);
+      ctx.strokeStyle = active ? '#ef4444' : '#94a3b8';
+      ctx.lineWidth = active ? 3.5 : 1.5; ctx.stroke();
+      if(active){ ctx.fillStyle='rgba(239,68,68,0.08)'; ctx.fill(); }
+    }
+    ctx.lineWidth=1; ctx.fillStyle='#334155'; ctx.font='13px sans-serif';
+    ctx.fillText('俯视图：高亮=当前切割的等高线', -110, 140);
+    ctx.restore();
+  }
+  var slider = document.createElement('input');
+  slider.type='range'; slider.min=0; slider.max=100; slider.value=50; slider.style.width='60%';
+  slider.addEventListener('input', function(){ level=this.value/100; draw(); });
+  cv.parentNode.appendChild(slider);
+  cv.addEventListener('click', function(e){
+    var rect=cv.getBoundingClientRect();
+    var y=(e.clientY-rect.top)*(H/rect.height)-20;
+    if(y>=60&&y<=260){ level=(260-y)/200; slider.value=level*100; draw(); }
+  });
+  draw();
+})();
+/* ── 2. slopeCanvas：等高线疏密 vs 坡度 ── */
+(function(){
+  var cv = document.getElementById('slopeCanvas'); if(!cv) return;
+  var ctx = cv.getContext('2d'), W=cv.width, H=cv.height, gap=40;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.translate(30,20);
+    ctx.fillStyle='#f0f9ff'; ctx.fillRect(0,0,320,240);
+    var alt=0, x, y;
+    for(y=230; y>10; y-=gap){
+      ctx.beginPath(); ctx.moveTo(10,y);
+      for(x=10;x<=310;x+=15) ctx.lineTo(x, y + Math.sin(x/35)*8);
+      ctx.strokeStyle='#0284c7'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#0369a1'; ctx.font='11px sans-serif'; ctx.fillText(alt+'m', 300, y-3);
+      alt+=50;
+    }
+    ctx.restore();
+    ctx.save(); ctx.translate(430,40);
+    var steep = 60/gap;
+    var ang = Math.min(70, Math.max(12, steep*16));
+    var rad = ang*Math.PI/180;
+    ctx.fillStyle='#fef3c7'; ctx.fillRect(0,0,280,200);
+    var top = 180-Math.tan(rad)*240;
+    ctx.beginPath(); ctx.moveTo(20,180); ctx.lineTo(260,180); ctx.lineTo(260, top<20?20:top); ctx.closePath();
+    ctx.fillStyle='#d6d3d1'; ctx.fill(); ctx.strokeStyle='#78716c'; ctx.stroke();
+    ctx.fillStyle='#b45309'; ctx.font='bold 15px sans-serif';
+    ctx.fillText('坡度 ≈ '+ang.toFixed(0)+'°（间距'+gap+'px）', 20, 30);
+    ctx.fillStyle='#334155'; ctx.font='12px sans-serif';
+    ctx.fillText('等高线越密 → 坡越陡', 20, 205);
+    ctx.restore();
+  }
+  var slider = document.createElement('input');
+  slider.type='range'; slider.min=16; slider.max=80; slider.value=40; slider.style.width='60%';
+  slider.addEventListener('input', function(){ gap=+this.value; draw(); });
+  cv.parentNode.appendChild(slider);
+  draw();
+})();
+/* ── 3. terrainCanvas：点击识别地形部位 ── */
+(function(){
+  var cv = document.getElementById('terrainCanvas'); if(!cv) return;
+  var ctx = cv.getContext('2d'), W=cv.width, H=cv.height, sel=-1;
+  var parts=[
+    {x:120,y:90, name:'山峰', desc:'等高线闭合，数值由四周向中间增大', col:'#ef4444'},
+    {x:330,y:80, name:'山脊', desc:'等高线向低处凸出（凸低为脊）', col:'#f59e0b'},
+    {x:540,y:90, name:'山谷', desc:'等高线向高处凸出（凸高为谷），常有河流', col:'#3b82f6'},
+    {x:230,y:230, name:'鞍部', desc:'两个山峰之间的低洼部位，形如马鞍', col:'#8b5cf6'},
+    {x:480,y:240, name:'陡崖', desc:'多条等高线重合在一起，坡度接近90°', col:'#10b981'}
+  ];
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#f8fafc'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#cbd5e1';
+    for(var i=0;i<8;i++){ ctx.beginPath(); ctx.ellipse(W/2,190,90+i*38,50+i*24,0,0,Math.PI*2); ctx.stroke(); }
+    parts.forEach(function(p,i){
+      ctx.beginPath(); ctx.arc(p.x,p.y,i===sel?16:11,0,Math.PI*2);
+      ctx.fillStyle = i===sel ? p.col : '#fff';
+      ctx.fill(); ctx.strokeStyle=p.col; ctx.lineWidth=2.5; ctx.stroke(); ctx.lineWidth=1;
+      ctx.fillStyle = i===sel ? '#fff' : p.col; ctx.font='bold 13px sans-serif';
+      ctx.textAlign='center'; ctx.fillText(p.name, p.x, p.y+(i===sel?-24:-18));
+    });
+    if(sel>=0){
+      var p=parts[sel];
+      ctx.fillStyle='rgba(15,23,42,0.88)'; ctx.fillRect(30,310,680,42);
+      ctx.fillStyle='#fff'; ctx.font='bold 15px sans-serif'; ctx.textAlign='left';
+      ctx.fillText('📍 '+p.name+'：'+p.desc, 44, 337);
+    } else {
+      ctx.fillStyle='#64748b'; ctx.font='14px sans-serif'; ctx.textAlign='left';
+      ctx.fillText('👆 点击圆点，识别五个地形部位', 30, 337);
+    }
+    ctx.textAlign='left';
+  }
+  cv.addEventListener('click', function(e){
+    var rect=cv.getBoundingClientRect();
+    var mx=(e.clientX-rect.left)*(W/rect.width), my=(e.clientY-rect.top)*(H/rect.height);
+    sel=-1;
+    parts.forEach(function(p,i){ if(Math.hypot(mx-p.x,my-p.y)<26) sel=i; });
+    draw();
+  });
+  draw();
+})();
+/* ── 4. profileCanvas：拖剖面线看地形剖面 ── */
+(function(){
+  var cv = document.getElementById('profileCanvas'); if(!cv) return;
+  var ctx = cv.getContext('2d'), W=cv.width, H=cv.height;
+  var line = {x1:80, y1:120, x2:300, y2:120}, drag=null;
+  function elev(x,y){
+    var d1=Math.hypot(x-150,y-90), d2=Math.hypot(x-260,y-150);
+    return Math.max(0, 120-d1*1.6, 100-d2*1.3);
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.translate(0,10);
+    ctx.fillStyle='#f0fdf4'; ctx.fillRect(20,0,340,200);
+    var r,i;
+    for(r=80;r>10;r-=16){ ctx.beginPath(); ctx.arc(150,90,r,0,Math.PI*2); ctx.strokeStyle='#86efac'; ctx.stroke(); }
+    for(r=64;r>10;r-=15){ ctx.beginPath(); ctx.arc(260,140,r,0,Math.PI*2); ctx.strokeStyle='#86efac'; ctx.stroke(); }
+    ctx.strokeStyle='#dc2626'; ctx.lineWidth=2.5; ctx.setLineDash([7,4]);
+    ctx.beginPath(); ctx.moveTo(line.x1,line.y1-10); ctx.lineTo(line.x2,line.y2-10); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineWidth=1;
+    [[line.x1,line.y1-10,'A'],[line.x2,line.y2-10,'B']].forEach(function(p){
+      ctx.beginPath(); ctx.arc(p[0],p[1],8,0,Math.PI*2); ctx.fillStyle='#dc2626'; ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText(p[2],p[0],p[1]+4);
+    });
+    ctx.textAlign='left'; ctx.restore();
+    ctx.save(); ctx.translate(20,240);
+    ctx.fillStyle='#fffbeb'; ctx.fillRect(0,0,700,200);
+    ctx.strokeStyle='#e7e5e4';
+    for(i=0;i<=4;i++){ ctx.beginPath(); ctx.moveTo(0,i*45); ctx.lineTo(700,i*45); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(20,180);
+    var n=60, dx=(line.x2-line.x1)/n, dy=(line.y2-line.y1)/n;
+    for(i=0;i<=n;i++){
+      var e=elev(line.x1+dx*i, line.y1+dy*i-10);
+      ctx.lineTo(20 + (660/n)*i, 180-e*1.5);
+    }
+    ctx.lineTo(680,180); ctx.closePath();
+    var g=ctx.createLinearGradient(0,0,0,180); g.addColorStop(0,'#a8a29e'); g.addColorStop(1,'#d6d3d1');
+    ctx.fillStyle=g; ctx.fill(); ctx.strokeStyle='#78716c'; ctx.stroke();
+    ctx.fillStyle='#57534e'; ctx.font='13px sans-serif';
+    ctx.fillText('地形剖面图（沿 A-B 线切开）', 8, 18);
+    ctx.fillText('👆 拖动红色 A/B 点改变剖面线', 380, 18);
+    ctx.restore();
+  }
+  function pos(e){ var r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height)}; }
+  cv.addEventListener('pointerdown', function(e){
+    var m=pos(e);
+    if(Math.hypot(m.x-line.x1,m.y-(line.y1-10))<16) drag='x1';
+    else if(Math.hypot(m.x-line.x2,m.y-(line.y2-10))<16) drag='x2';
+  });
+  cv.addEventListener('pointermove', function(e){
+    if(!drag) return; var m=pos(e);
+    m.x=Math.max(30,Math.min(350,m.x)); m.y=Math.max(20,Math.min(200,m.y));
+    if(drag==='x1'){ line.x1=m.x; line.y1=m.y+10; } else { line.x2=m.x; line.y2=m.y+10; }
+    draw();
+  });
+  cv.addEventListener('pointerup', function(){ drag=null; });
+  draw();
+})();
+})();
+</script>
+
 <!-- v7.7.4 标准知识图谱模块 -->
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;">
   <h2 class="section-title">🗺️ 知识图谱：等高线与地形图 — 等高线与地形图</h2>
