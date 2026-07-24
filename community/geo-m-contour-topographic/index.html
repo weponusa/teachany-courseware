@@ -904,38 +904,104 @@
   cv.parentNode.appendChild(slider);
   draw();
 })();
-/* ── 3. terrainCanvas：点击识别地形部位 ── */
+/* ── 3. terrainCanvas：点击识别地形部位（五种部位真实绘出，标注点落在对应特征上） ── */
 (function(){
   var cv = document.getElementById('terrainCanvas'); if(!cv) return;
   var ctx = cv.getContext('2d'), W=cv.width, H=cv.height, sel=-1;
   var result = document.getElementById('terrainResult');
+  var CONTOUR = '#92400e';
+  /* 五个标注点，坐标与下方绘制特征一一对应 */
   var parts=[
-    {x:120,y:90, key:'peak',   name:'山峰', desc:'等高线闭合，数值由四周向中间增大', col:'#ef4444'},
-    {x:330,y:80, key:'ridge',  name:'山脊', desc:'等高线向低处凸出（凸低为脊）', col:'#f59e0b'},
-    {x:540,y:90, key:'valley', name:'山谷', desc:'等高线向高处凸出（凸高为谷），常有河流', col:'#3b82f6'},
-    {x:230,y:230,key:'saddle', name:'鞍部', desc:'两个山峰之间的低洼部位，形如马鞍', col:'#8b5cf6'},
-    {x:480,y:240,key:'cliff',  name:'陡崖', desc:'多条等高线重合在一起，坡度接近90°', col:'#10b981'}
+    {x:180,y:150, key:'peak',   name:'山峰', desc:'闭合等高线，数值向中心增大（400→100 由里到外）', col:'#ef4444'},
+    {x:180,y:296, key:'ridge',  name:'山脊', desc:'等高线向南（低处）凸出，凸低为脊，是分水线', col:'#f59e0b'},
+    {x:520,y:238, key:'valley', name:'山谷', desc:'等高线向北（高处）凸出，凸高为谷，蓝色虚线=河流', col:'#3b82f6'},
+    {x:350,y:148, key:'saddle', name:'鞍部', desc:'两座山峰（左 400m、右 300m）之间的低洼部位', col:'#8b5cf6'},
+    {x:66,y:200,  key:'cliff',  name:'陡崖', desc:'多条等高线几乎重合，坡度接近 90°', col:'#10b981'}
   ];
+
+  function contourLine(fn){ ctx.beginPath(); fn(); ctx.stroke(); }
+
+  function drawScene(){
+    ctx.strokeStyle = CONTOUR; ctx.lineWidth = 1.3;
+
+    /* ── 左峰（中心 180,150）：4 条闭合等高线，400/300/200/100 ── */
+    [25, 50, 75, 100].forEach(function(r){
+      contourLine(function(){ ctx.ellipse(180, 150, r, r * 0.72, 0, 0, Math.PI * 2); });
+    });
+    /* ── 右峰（中心 520,140）：4 条闭合等高线，300/200/100 ── */
+    [22, 46, 70, 94].forEach(function(r){
+      contourLine(function(){ ctx.ellipse(520, 140, r, r * 0.75, 0, 0, Math.PI * 2); });
+    });
+
+    /* ── 山脊：左峰南侧，等高线向南（低处）鼓出，三层 ── */
+    [[80, 196, 0], [66, 210, 22], [52, 224, 44]].forEach(function(cfg){
+      var halfW = cfg[0], baseY = cfg[1], bulge = 34 + cfg[2];
+      contourLine(function(){
+        ctx.moveTo(180 - halfW, baseY);
+        ctx.quadraticCurveTo(180, baseY + bulge, 180 + halfW, baseY);
+      });
+    });
+
+    /* ── 山谷：右峰南侧，等高线向北（高处）凹陷，三层 ── */
+    [[92, 210, 0], [76, 226, 16], [60, 242, 32]].forEach(function(cfg){
+      var halfW = cfg[0], baseY = cfg[1], notch = 30 + cfg[2];
+      contourLine(function(){
+        ctx.moveTo(520 - halfW, baseY + 26);
+        ctx.quadraticCurveTo(520, baseY - notch, 520 + halfW, baseY + 26);
+      });
+    });
+    /* 山谷河（蓝色虚线，沿山谷线向南流） */
+    ctx.save();
+    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
+    contourLine(function(){
+      ctx.moveTo(520, 186);
+      ctx.quadraticCurveTo(516, 240, 522, 300);
+    });
+    ctx.restore();
+
+    /* ── 陡崖：左峰西侧，3 条等高线几乎重合 ── */
+    [58, 66, 74].forEach(function(x){
+      contourLine(function(){
+        ctx.moveTo(x, 86);
+        ctx.quadraticCurveTo(x - 14, 150, x, 236);
+      });
+    });
+
+    /* ── 海拔数字标注 ── */
+    ctx.fillStyle = CONTOUR; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('400', 180, 131);
+    ctx.fillText('300', 180, 113);
+    ctx.fillText('200', 180, 95);
+    ctx.fillText('100', 180, 77);
+    ctx.fillText('300', 520, 144);
+    ctx.fillText('200', 520, 122);
+    ctx.fillText('100', 520, 100);
+  }
+
   function draw(){
     ctx.clearRect(0,0,W,H);
-    ctx.fillStyle='#f8fafc'; ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle='#cbd5e1';
-    for(var i=0;i<8;i++){ ctx.beginPath(); ctx.ellipse(W/2,190,90+i*38,50+i*24,0,0,Math.PI*2); ctx.stroke(); }
+    ctx.fillStyle='#fffdf5'; ctx.fillRect(0,0,W,H);
+    drawScene();
     parts.forEach(function(p,i){
       ctx.beginPath(); ctx.arc(p.x,p.y,i===sel?16:11,0,Math.PI*2);
       ctx.fillStyle = i===sel ? p.col : '#fff';
       ctx.fill(); ctx.strokeStyle=p.col; ctx.lineWidth=2.5; ctx.stroke(); ctx.lineWidth=1;
-      ctx.fillStyle = i===sel ? '#fff' : p.col; ctx.font='bold 13px sans-serif';
-      ctx.textAlign='center'; ctx.fillText(p.name, p.x, p.y+(i===sel?-24:-18));
+      /* 文字加白描边，避免压在等高线上看不清 */
+      ctx.font = 'bold 13px sans-serif'; ctx.textAlign='center';
+      var ly = p.y + (i===sel?-24:-18);
+      ctx.strokeStyle='rgba(255,255,255,0.92)'; ctx.lineWidth=3;
+      ctx.strokeText(p.name, p.x, ly);
+      ctx.fillStyle = i===sel ? p.col : p.col;
+      ctx.fillText(p.name, p.x, ly);
     });
     if(sel>=0){
       var p=parts[sel];
-      ctx.fillStyle='rgba(15,23,42,0.88)'; ctx.fillRect(30,310,680,42);
+      ctx.fillStyle='rgba(15,23,42,0.88)'; ctx.fillRect(30,316,680,36);
       ctx.fillStyle='#fff'; ctx.font='bold 15px sans-serif'; ctx.textAlign='left';
-      ctx.fillText('📍 '+p.name+'：'+p.desc, 44, 337);
+      ctx.fillText('📍 '+p.name+'：'+p.desc, 44, 339);
     } else {
       ctx.fillStyle='#64748b'; ctx.font='14px sans-serif'; ctx.textAlign='left';
-      ctx.fillText('👆 点击圆点，识别五个地形部位', 30, 337);
+      ctx.fillText('👆 点击圆点，识别五个地形部位', 30, 339);
     }
     ctx.textAlign='left';
     if(result){
@@ -1050,34 +1116,21 @@
   var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
   /* 本地 GeoJSON 文件清单（相对课件根目录） */
   const mGeoFiles = ['./assets/maps/political/admin-boundaries/china-provinces.json'];
-  /* 全国真实等高线（由 z6 高程瓦片生成，13 级：0~5500m） */
-  const mContourFile = './assets/maps/details/china-contours.json';
-  /* 地图视野中心（经度, 纬度）与缩放控制 */
-  let mCx = 104, mCy = 36, mScale = 3.4;
+  /* 真实中国地形晕渲底图（维基共享 CC BY-SA 3.0，等距圆柱投影） */
+  const mReliefSrc = './assets/maps/details/china-relief-base.jpg';
+  /* 底图经纬度范围（该图标准范围） */
+  const mBounds = { lonMin: 73.42, lonMax: 135.09, latMin: 17.67, latMax: 53.75 };
+  /* 地图视野中心（经度, 纬度）与缩放控制 —— 按底图范围适配画布 */
+  let mCx = (mBounds.lonMin + mBounds.lonMax) / 2, mCy = (mBounds.latMin + mBounds.latMax) / 2;
+  let mScale = 9.4;
   var mGeoData = null;
-  var mContourData = null;
+  var mReliefImg = null;
   var hoveredRegion = null;
   var mouseX = 0, mouseY = 0;
 
   function mProject(lon, lat){
     return [ W/2 + (lon - mCx) * mScale, H/2 - (lat - mCy) * mScale * 1.18 ];
   }
-
-  /* 等高线分层设色（低→高：绿→黄→褐→灰白） */
-  function elevColor(e){
-    if (e <= 0)    return '#22c55e';
-    if (e <= 200)  return '#4ade80';
-    if (e <= 500)  return '#a3e635';
-    if (e <= 1000) return '#eab308';
-    if (e <= 1500) return '#f59e0b';
-    if (e <= 2000) return '#d97706';
-    if (e <= 3000) return '#b45309';
-    if (e <= 4000) return '#92400e';
-    if (e <= 5000) return '#78716c';
-    return '#e7e5e4';
-  }
-  /* 计曲线（每 1000m 加粗） */
-  function isIndexContour(e){ return e % 1000 === 0; }
 
   /* 主要地形区标注（经纬度 + 名称 + 所属阶梯） */
   var terrainSpots = [
@@ -1101,22 +1154,11 @@
     ctx.clearRect(0,0,W,H);
     ctx.fillStyle = '#fffdf5'; ctx.fillRect(0,0,W,H);
 
-    /* 绘制全国真实等高线（按海拔分层设色，计曲线加粗） */
-    if (mContourData) {
-      mContourData.features.forEach(function(f){
-        var e = (f.properties && f.properties.elev) || 0;
-        var lines = f.geometry.type === 'MultiLineString' ? f.geometry.coordinates : [f.geometry.coordinates];
-        ctx.strokeStyle = elevColor(e);
-        ctx.lineWidth = isIndexContour(e) ? 1.6 : 0.7;
-        ctx.beginPath();
-        lines.forEach(function(line){
-          line.forEach(function(pt, i){
-            var p = mProject(pt[0], pt[1]);
-            if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
-          });
-        });
-        ctx.stroke();
-      });
+    /* 真实地形晕渲底图（按经纬度范围对齐投影） */
+    if (mReliefImg) {
+      var p1 = mProject(mBounds.lonMin, mBounds.latMax);
+      var p2 = mProject(mBounds.lonMax, mBounds.latMin);
+      ctx.drawImage(mReliefImg, p1[0], p1[1], p2[0] - p1[0], p2[1] - p1[1]);
     }
 
     /* 省界轮廓（浅色，仅作空间参考） */
@@ -1133,7 +1175,7 @@
             if(i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
           });
           ctx.closePath();
-          ctx.strokeStyle = 'rgba(100,116,139,0.45)'; ctx.lineWidth = 0.8; ctx.stroke();
+          ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 0.8; ctx.stroke();
         });
       });
     });
@@ -1156,26 +1198,10 @@
       ctx.fillText(s.name, p[0] + 10, p[1] + 4);
     });
 
-    /* 绘制图例：海拔分层设色 */
-    var legendElevs = [0, 500, 1000, 2000, 3000, 4000, 5000];
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.fillRect(10, H - 108, 210, 98);
-    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1; ctx.strokeRect(10, H - 108, 210, 98);
-    ctx.fillStyle = '#1e293b'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText('等高线海拔（米）', 20, H - 90);
-    legendElevs.forEach(function(e, i){
-      var y = H - 82 + i * 11;
-      ctx.strokeStyle = elevColor(e); ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(22, y); ctx.lineTo(40, y); ctx.stroke();
-      ctx.fillStyle = '#1e293b'; ctx.font = '10px sans-serif';
-      ctx.fillText(e + (i === legendElevs.length - 1 ? ' 以上' : ''), 46, y + 3);
-    });
-    ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif';
-    ctx.fillText('粗线 = 计曲线（每1000m）', 120, H - 90);
-
     /* 底部信息 */
-    ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText('聚焦中国（中心 ' + mCx + '°E, ' + mCy + '°N）· 等高线由高程数据生成 · 点击地形区看判读', 14, H - 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(8, H - 26, 560, 20);
+    ctx.fillStyle = '#475569'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('底图：中国地形晕渲图（维基共享 CC BY-SA 3.0）· 褐色=山地高原，绿色=平原 · 点击标注点看等高线判读', 14, H - 12);
 
     /* 悬停提示 */
     if (hoveredRegion) {
@@ -1188,12 +1214,12 @@
   }
 
   function mLoadGeoBoundaries(){
-    var loadProvinces = fetch(mGeoFiles[0]).then(function(r){ return r.json(); });
-    var loadContours = fetch(mContourFile).then(function(r){ return r.json(); });
-    Promise.all([loadProvinces, loadContours]).then(function(rs){
-      mGeoData = rs[0];
-      mContourData = rs[1];
-      mDrawGeo(mGeoData);
+    var img = new Image();
+    img.onload = function(){ mReliefImg = img; if (mGeoData) mDrawGeo(mGeoData); };
+    img.src = mReliefSrc;
+    fetch(mGeoFiles[0]).then(function(r){ return r.json(); }).then(function(data){
+      mGeoData = data;
+      mDrawGeo(data);
     }).catch(function(){
       ctx.fillStyle = '#f0fdf4'; ctx.fillRect(0,0,W,H);
       ctx.fillStyle = '#64748b'; ctx.font = '14px sans-serif';
