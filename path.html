@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>学习路径 - TeachAny</title>
+<style id="path-boot-css">
+  /* 首屏关键：选择层默认藏起，避免 CSS 大块解析前 FOUC */
+  #roleGate { display: none !important; }
+  body.role-picking #roleGate { display: flex !important; }
+  body.role-picking .app-shell { display: none !important; }
+</style>
 <script>
 (function () {
   var q = location.search;
@@ -1456,8 +1462,8 @@ body.role-parent #learning-path-container:not(:empty) {
 })();
 </script>
 
-<!-- 切换视角：轻量弹层（默认不出现，直接进自学） -->
-<div class="role-gate" id="roleGate" aria-hidden="true">
+<!-- 切换视角：默认 hidden，绝不首屏露出 -->
+<div class="role-gate" id="roleGate" hidden aria-hidden="true">
   <div class="role-gate-inner" role="dialog" aria-labelledby="roleLead">
     <div class="role-brand">学习路径</div>
     <p class="role-lead" id="roleLead">你想怎么用？</p>
@@ -1689,15 +1695,15 @@ function isSimpleRole(role) {
 function applyPathRole(role, persist) {
   currentRole = role || 'student';
   window.TeachAnyPathRole = currentRole;
-  document.body.classList.remove('role-student', 'role-parent', 'role-teacher', 'role-picking');
-  document.body.classList.add('role-' + currentRole);
+  // 一次写回 class，避免 remove→add 中间帧闪错界面
+  document.body.className = 'role-' + currentRole;
   const gate = document.getElementById('roleGate');
   if (gate) {
+    gate.hidden = true;
     gate.setAttribute('aria-hidden', 'true');
   }
   if (persist) localStorage.setItem(ROLE_KEY, currentRole);
 
-  // 同步页内「自学 | 陪学」开关
   document.querySelectorAll('#viewSwitch button[data-role]').forEach((btn) => {
     btn.classList.toggle('on', btn.dataset.role === currentRole);
   });
@@ -1725,14 +1731,19 @@ function applyPathRole(role, persist) {
 function openRolePicker() {
   document.body.classList.add('role-picking');
   const gate = document.getElementById('roleGate');
-  if (gate) gate.setAttribute('aria-hidden', 'false');
+  if (gate) {
+    gate.hidden = false;
+    gate.setAttribute('aria-hidden', 'false');
+  }
 }
 
 function closeRolePicker() {
   document.body.classList.remove('role-picking');
   const gate = document.getElementById('roleGate');
-  if (gate) gate.setAttribute('aria-hidden', 'true');
-  // 若仍无角色 class（异常），回落自学
+  if (gate) {
+    gate.hidden = true;
+    gate.setAttribute('aria-hidden', 'true');
+  }
   if (!document.body.classList.contains('role-student')
     && !document.body.classList.contains('role-parent')
     && !document.body.classList.contains('role-teacher')) {
