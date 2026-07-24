@@ -24,7 +24,7 @@
   'use strict';
 
   // 版本标识 - 加载时立即打印到 console，方便排查浏览器缓存问题
-  console.log('%c[TeachAnyTutor] v8.1.3 loaded - OpenRouter Qwen paid default (free slug retired)', 'color:#10b981;font-weight:bold;');
+  console.log('%c[TeachAnyTutor] v8.1.4 loaded - fix enrichment hang + paid Qwen default', 'color:#10b981;font-weight:bold;');
 
   const DEPRECATED_FREE_MODELS = new Set([
     'z-ai/glm-4.5-air:free',
@@ -395,24 +395,54 @@
   // 2. 课件元信息（来自 window.__TEACHANY_TUTOR_CONFIG__）
   // ───────────────────────────────────────────────────────
   function ensureNodeEnrichment() {
-    if (window.TeachAnyNodeEnrichment) return window.TeachAnyNodeEnrichment.load();
+    const runLoad = () => {
+      if (!window.TeachAnyNodeEnrichment || typeof window.TeachAnyNodeEnrichment.load !== 'function') {
+        return Promise.resolve(null);
+      }
+      return window.TeachAnyNodeEnrichment.load().catch(() => null);
+    };
+
+    if (window.TeachAnyNodeEnrichment) return runLoad();
+
     return new Promise((resolve) => {
+      let settled = false;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        Promise.resolve(value).then(resolve, () => resolve(null));
+      };
+
       const existing = document.querySelector('script[data-teachany-neo]');
       if (existing) {
-        existing.addEventListener('load', () => {
-          (window.TeachAnyNodeEnrichment ? window.TeachAnyNodeEnrichment.load() : Promise.resolve(null)).then(resolve);
-        });
+        // 脚本可能已经 load 完，再监听 load 会永远不触发 → 学伴发送卡住
+        if (window.TeachAnyNodeEnrichment) {
+          settle(runLoad());
+          return;
+        }
+        existing.addEventListener('load', () => settle(runLoad()), { once: true });
+        existing.addEventListener('error', () => settle(null), { once: true });
+        let tries = 0;
+        const poll = setInterval(() => {
+          tries += 1;
+          if (window.TeachAnyNodeEnrichment) {
+            clearInterval(poll);
+            settle(runLoad());
+          } else if (tries >= 40) {
+            clearInterval(poll);
+            settle(null);
+          }
+        }, 50);
         return;
       }
+
       const s = document.createElement('script');
-      s.src = '/assets/scripts/teachany-node-enrichment.js?v=neo-1';
+      s.src = '/assets/scripts/teachany-node-enrichment.js?v=neo-2';
       s.async = true;
       s.dataset.teachanyNeo = '1';
-      s.onload = () => {
-        (window.TeachAnyNodeEnrichment ? window.TeachAnyNodeEnrichment.load() : Promise.resolve(null)).then(resolve);
-      };
-      s.onerror = () => resolve(null);
+      s.onload = () => settle(runLoad());
+      s.onerror = () => settle(null);
       document.head.appendChild(s);
+      setTimeout(() => settle(null), 2500);
     });
   }
 
@@ -1286,7 +1316,12 @@
 
       renderBubble(messagesEl, 'user', text);
 
-      try { await ensureNodeEnrichment(); } catch (_) { /* ignore */ }
+      try {
+        await Promise.race([
+          ensureNodeEnrichment(),
+          new Promise((r) => setTimeout(r, 1500)),
+        ]);
+      } catch (_) { /* ignore */ }
       // refresh meta in case nodeId / enrichment became available
       Object.assign(meta, readCourseMeta());
 
@@ -1389,6 +1424,6 @@
     /** 获取当前语言 */
     getLang: getLang,
     /** 版本号 */
-    version: '7.3.1'
+    version: '8.1.4'
   };
 })();

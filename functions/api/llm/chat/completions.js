@@ -12,6 +12,19 @@ import {
   jsonResponse,
 } from '../../../_lib/llm-backends.js';
 
+/** OpenRouter 已下线的 :free → 同 slug 付费版（兼容旧客户端） */
+function normalizeUpstreamModel(model, backendId) {
+  const m = String(model || '').trim();
+  if (!m) return m;
+  if (backendId === 'openrouter' && m.endsWith(':free')) {
+    return m.slice(0, -5);
+  }
+  if (m === 'qwen/qwen3-next-80b-a3b-instruct:free') {
+    return 'qwen/qwen3-next-80b-a3b-instruct';
+  }
+  return m;
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: CORS });
 }
@@ -26,9 +39,9 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: 'Invalid JSON body' }, 400);
   }
 
-  const model = body.model || '';
+  const rawModel = body.model || '';
   const backendId = request.headers.get('X-Backend')
-    || inferBackendIdForModel(model)
+    || inferBackendIdForModel(rawModel)
     || 'openrouter';
   const backend = BACKENDS[backendId] || BACKENDS.openrouter;
 
@@ -37,7 +50,7 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: `Backend "${backendId}" not configured` }, 503);
   }
 
-  const resolvedModel = model || backend.defaultModel;
+  const resolvedModel = normalizeUpstreamModel(rawModel, backendId) || backend.defaultModel;
   const forwardBody = { ...body, model: resolvedModel };
   const endpoint = `${backend.baseUrl.replace(/\/$/, '')}/chat/completions`;
 
@@ -56,12 +69,26 @@ export async function onRequestPost(context) {
   const timeout = setTimeout(() => controller.abort(), 60000);
 
   try {
-    const resp = await fetch(endpoint, {
+    let resp = await fetch(endpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify(forwardBody),
       signal: controller.signal,
     });
+
+    // 若上游仍报 free unavailable，再剥一次 :free 重试
+    if (!resp.ok && backendId === 'openrouter') {
+      const errText = await resp.clone().text().catch(() => '');
+      if (/unavailable for free/i.test(errText) && String(forwardBody.model).endsWith(':free')) {
+        forwardBody.model = String(forwardBody.model).slice(0, -5);
+        resp = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(forwardBody),
+          signal: controller.signal,
+        });
+      }
+    }
 
     const contentType = resp.headers.get('content-type') || 'application/json';
 
@@ -81,7 +108,7 @@ export async function onRequestPost(context) {
           ...CORS,
           'Content-Type': contentType,
           'X-Backend': backendId,
-          'X-Model': resolvedModel,
+          'X-Model': forwardBody.model,
         },
       });
     }
@@ -93,7 +120,7 @@ export async function onRequestPost(context) {
         'Content-Type': contentType,
         ...CORS,
         'X-Backend': backendId,
-        'X-Model': resolvedModel,
+        'X-Model': forwardBody.model,
       },
     });
   } catch (err) {
