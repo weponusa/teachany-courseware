@@ -169,6 +169,7 @@
   <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
   <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
   <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
 </head>
 <nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;"><a href="#progress-bar">📑 知识图谱</a><a href="#intro">🤝 AI 学伴</a><a href="#core-concept">📚 课程内容</a></nav>
 
@@ -1284,13 +1285,12 @@ async function geoFetchJson(p) {
   catch(e) { const r = await fetch(geoAssetCdn(p)); return await r.json(); }
 }
 function addBaseTiles(map, opts = {}) {
-  const tO = opts.terrainOpacity ?? 0.35, dO = opts.darkOpacity ?? 0.85;
-  L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
-    subdomains: 'abcd', maxZoom: 19, opacity: dO, attribution: '© CartoDB · © OpenStreetMap'
-  }).addTo(map);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 13, opacity: tO, attribution: 'Esri · Shaded Relief'
-  }).addTo(map);
+  // v2026-07 修复：改用仓库自带 Natural Earth 彩色晕渲底图（RULES #21a），
+  // 配 map 的 crs:EPSG4326（等距圆柱 JPG 与 WGS84 GeoJSON 经纬度线性对齐），
+  // 离线/国内可访问，替代原 CARTO+Esri 在线瓦片（404/加载慢风险）。
+  const opacity = opts.opacity ?? 0.92;
+  L.imageOverlay('../../assets/maps/physical/hillshade/global-color-hillshade-4k.jpg',
+    [[-90, -180], [90, 180]], { opacity, attribution: '© Natural Earth / TeachAny 自带地形晕渲' }).addTo(map);
 }
 
 window.addEventListener('load', () => {
@@ -1299,18 +1299,22 @@ window.addEventListener('load', () => {
   if (!el) return;
 
   const map = L.map(el, {
+    crs: L.CRS.EPSG4326,  // 等距圆柱，匹配自带晕渲底图与 WGS84 GeoJSON
     center: [33, 110],
     zoom: 5,
     minZoom: 3,
     maxZoom: 10,
+    zoomSnap: 0.25,
     zoomControl: true,
     attributionControl: false
   });
+  map.fitBounds([[10, 70], [55, 140]]);  // 聚焦亚太战场
 
-  addBaseTiles(map, { terrainOpacity: 0.3, darkOpacity: 0.88 });
+  addBaseTiles(map, { opacity: 0.92 });
 
   // 加载 1945 年历史行政边界 GeoJSON（二战末期，227 个政治实体）
-  geoFetchJson('data/geography/historical-world/ce-1945-wwii.geojson')
+  // v2026-07：改用仓库自带 chrono-world 资源（离线/国内可访问，原 data/geography/ 路径不存在一直靠CDN）
+  geoFetchJson('assets/maps/chrono-world/020-ce-1945-wwii.geojson')
     .then(geoJson => {
       const powerColors = {
         'China':      { color: '#fbbf24', weight: 2,   fillColor: 'rgba(251,191,36,0.25)',  fillOpacity: 0.30 },
@@ -1385,6 +1389,7 @@ window.addEventListener('load', () => {
 </script>
 
 <script src="../../assets/scripts/ai-tutor.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
 <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 <script src="../../assets/scripts/teachany-historical-map.js" defer></script>
 
@@ -1413,6 +1418,19 @@ window.addEventListener('load', () => {
 <section class="section" data-bloom-level="evaluate" data-scaffold="none"><h2>✅ 达标检测</h2><p style="line-height:1.9;">1. 请简述抗日战争的背景和全面爆发的过程。2. 抗日战争期间，中国军队在正面战场和敌后战场分别采取了哪些战略？3. 抗日战争胜利的历史意义是什么？</p></section>
 <section class="section" data-bloom-level="analyze" data-scaffold="partial" data-conceptest="true"><h2>💡 错因诊断</h2><p style="line-height:1.9;">错因：学生容易将抗日战争的胜利归功于单一因素，而忽视了多方面的努力。误区：认为抗战胜利仅靠中国自身的力量，忽略了国际援助的作用。诊断：需要强调抗战胜利是中国人民艰苦奋斗与国际社会支持共同作用的结果，帮助学生全面理解历史事件的复杂性。</p></section>
 <section class="section" data-bloom-level="create" data-scaffold="partial"><h2>🚀 迁移挑战</h2><p style="line-height:1.9;">迁移挑战：请设计一个抗日战争时期的宣传海报，分析海报中应包含哪些元素，以激发民众的抗战热情，并解释这些元素如何体现抗日民族精神和团结一致的重要性。</p></section>
+<!-- v7.20 标准连续音频播放器（已有 tts/*.mp3，补标准 UI） -->
+<section class="ta-standard-section" id="teachany-audio-player">
+  <div data-teachany-audio-player></div>
+</section>
+<script type="application/json" data-teachany-audio-playlist>
+[
+  { "id": "module1", "section": "module1", "src": "./tts/module1.mp3", "label": "模块一：抗战背景与爆发" },
+  { "id": "module2", "section": "module2", "src": "./tts/module2.mp3", "label": "模块二：全民族抗战" },
+  { "id": "module3", "section": "module3", "src": "./tts/module3.mp3", "label": "模块三：战略相持与反攻" },
+  { "id": "module4", "section": "module4", "src": "./tts/module4.mp3", "label": "模块四：抗战胜利与意义" }
+]
+</script>
+
 <!-- v7.7.4 标准知识图谱模块 -->
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;">
   <h2 class="section-title">🗺️ 知识图谱：抗日战争 — 抗日战争</h2>
