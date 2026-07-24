@@ -36,13 +36,24 @@ def strip_html(s: str) -> str:
 
 
 def section_text(html: str, section_id: str) -> str:
-    """提取 <section id="xxx"> ... </section> 的纯文本"""
+    """提取 section 纯文本：先按 id，再按 data-tts 属性（slide-page 结构）"""
     m = re.search(
         r'<section[^>]*id=["\']' + re.escape(section_id) + r'["\'][^>]*>(.*?)</section>',
         html, re.S)
-    if not m:
-        return ""
-    return strip_html(m.group(1))
+    if m:
+        return strip_html(m.group(1))
+    # slide-page 结构：<section class="slide-page" data-tts="xxx"> 或任意标签带 data-tts
+    m = re.search(
+        r'<section[^>]*data-tts=["\']' + re.escape(section_id) + r'["\'][^>]*>(.*?)</section>',
+        html, re.S)
+    if m:
+        return strip_html(m.group(1))
+    m = re.search(
+        r'<div[^>]*data-tts=["\']' + re.escape(section_id) + r'["\'][^>]*>(.*?)</div>',
+        html, re.S)
+    if m:
+        return strip_html(m.group(1))
+    return ""
 
 
 def regen_course(course_id: str, dry_run: bool = False) -> dict:
