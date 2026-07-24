@@ -753,8 +753,8 @@
   <section class="section" id="region-map" data-tts="region-map" data-tsh="把真实地形翻译成等高线" data-bloom-level="apply" data-scaffold="partial">
     <h2 class="section-title">🗺️ 把真实地形"翻译"成等高线</h2>
     <div class="card brown">
-      <h3>点击地形区，看它的等高线长什么样</h3>
-      <p>学了判读规则，回到真实中国：青藏高原、四川盆地、华北平原……这些地形在等高线图上各是什么模样？<strong>点击下面地图上的标注点</strong>，右侧立刻显示该类地形的典型等高线形态——把宏观地形和纸面技能对上号。</p>
+      <h3>这是一幅真实的全国等高线图</h3>
+      <p>下面这幅图不是示意图——它由真实高程数据生成，0~5500 米共 13 级等高线。找一找：青藏高原上密集成团的闭合圈、四川盆地那圈"项链"、东部平原大片空白——这不就是模块 3 学的判读规则吗？<strong>点击标注点</strong>，右侧会放大显示该类地形的典型等高线形态与判读要点。</p>
       <div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;align-items:flex-start">
         <div class="canvas-wrap" style="flex:1;min-width:300px"><canvas id="map-canvas" width="740" height="420" style="max-width:100%"></canvas></div>
         <div style="width:300px;flex-shrink:0">
@@ -762,7 +762,7 @@
           <div id="contour-explain" style="margin-top:10px;padding:12px;background:#f0fdf4;border-radius:10px;border-left:3px solid var(--primary);font-size:14px;line-height:1.7">👈 点击地图上的地形区标注点，这里显示对应的等高线形态与判读要点。</div>
         </div>
       </div>
-      <p class="muted" style="text-align:center;margin-top:8px">左：中国省界与主要地形区（本地 GeoJSON 渲染）· 右：所选地形的等高线形态示意</p>
+      <p class="muted" style="text-align:center;margin-top:8px">左：全国等高线图（真实高程数据生成，绿→褐→灰白 = 低→高）· 右：所选地形的等高线形态放大示意</p>
     </div>
   </section>
 
@@ -1050,9 +1050,12 @@
   var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
   /* 本地 GeoJSON 文件清单（相对课件根目录） */
   const mGeoFiles = ['./assets/maps/political/admin-boundaries/china-provinces.json'];
+  /* 全国真实等高线（由 z6 高程瓦片生成，13 级：0~5500m） */
+  const mContourFile = './assets/maps/details/china-contours.json';
   /* 地图视野中心（经度, 纬度）与缩放控制 */
   let mCx = 104, mCy = 36, mScale = 3.4;
   var mGeoData = null;
+  var mContourData = null;
   var hoveredRegion = null;
   var mouseX = 0, mouseY = 0;
 
@@ -1060,17 +1063,21 @@
     return [ W/2 + (lon - mCx) * mScale, H/2 - (lat - mCy) * mScale * 1.18 ];
   }
 
-  /* 三级阶梯颜色定义 */
-  var stepColors = {
-    1: 'rgba(146,64,14,0.28)',   /* 第一阶梯：青藏高原，深褐 */
-    2: 'rgba(245,158,11,0.22)',  /* 第二阶梯：高原盆地，黄褐 */
-    3: 'rgba(34,197,94,0.18)'    /* 第三阶梯：平原丘陵，浅绿 */
-  };
-  var stepBorders = {
-    1: '#92400e',
-    2: '#d97706',
-    3: '#22c55e'
-  };
+  /* 等高线分层设色（低→高：绿→黄→褐→灰白） */
+  function elevColor(e){
+    if (e <= 0)    return '#22c55e';
+    if (e <= 200)  return '#4ade80';
+    if (e <= 500)  return '#a3e635';
+    if (e <= 1000) return '#eab308';
+    if (e <= 1500) return '#f59e0b';
+    if (e <= 2000) return '#d97706';
+    if (e <= 3000) return '#b45309';
+    if (e <= 4000) return '#92400e';
+    if (e <= 5000) return '#78716c';
+    return '#e7e5e4';
+  }
+  /* 计曲线（每 1000m 加粗） */
+  function isIndexContour(e){ return e % 1000 === 0; }
 
   /* 主要地形区标注（经纬度 + 名称 + 所属阶梯） */
   var terrainSpots = [
@@ -1090,33 +1097,34 @@
     { lon: 122, lat: 50, name: '大兴安岭', step: 2, type: 'mountain' }
   ];
 
-  /* 山脉绘制（简化折线表示） */
-  var mountainRanges = [
-    { name: '喜马拉雅山脉', points: [[80,30],[85,28],[90,28],[95,29]], color: '#92400e' },
-    { name: '昆仑山脉', points: [[78,36],[82,36],[86,37],[90,38]], color: '#92400e' },
-    { name: '天山山脉', points: [[82,43],[86,43],[90,44],[94,43]], color: '#b45309' },
-    { name: '秦岭', points: [[104,34],[108,34],[112,34]], color: '#b45309' },
-    { name: '大兴安岭', points: [[120,50],[122,52],[124,50]], color: '#b45309' }
-  ];
-
   function mDrawGeo(fc){
     ctx.clearRect(0,0,W,H);
-    ctx.fillStyle = '#f0fdf4'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#fffdf5'; ctx.fillRect(0,0,W,H);
 
-    /* 先绘制三级阶梯背景色块 */
+    /* 绘制全国真实等高线（按海拔分层设色，计曲线加粗） */
+    if (mContourData) {
+      mContourData.features.forEach(function(f){
+        var e = (f.properties && f.properties.elev) || 0;
+        var lines = f.geometry.type === 'MultiLineString' ? f.geometry.coordinates : [f.geometry.coordinates];
+        ctx.strokeStyle = elevColor(e);
+        ctx.lineWidth = isIndexContour(e) ? 1.6 : 0.7;
+        ctx.beginPath();
+        lines.forEach(function(line){
+          line.forEach(function(pt, i){
+            var p = mProject(pt[0], pt[1]);
+            if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+          });
+        });
+        ctx.stroke();
+      });
+    }
+
+    /* 省界轮廓（浅色，仅作空间参考） */
     var feats = (fc && fc.features) || [];
     feats.forEach(function(f){
       var g = f.geometry || {};
       var polys = g.type === 'Polygon' ? [g.coordinates]
                 : g.type === 'MultiPolygon' ? g.coordinates : [];
-      var name = (f.properties && f.properties.name) || '';
-      var step = 3;
-      if (name.indexOf('西藏') >= 0 || name.indexOf('青海') >= 0) step = 1;
-      else if (name.indexOf('新疆') >= 0 || name.indexOf('甘肃') >= 0 || name.indexOf('内蒙古') >= 0 ||
-               name.indexOf('四川') >= 0 || name.indexOf('云南') >= 0 || name.indexOf('贵州') >= 0 ||
-               name.indexOf('陕西') >= 0 || name.indexOf('山西') >= 0 || name.indexOf('重庆') >= 0 ||
-               name.indexOf('宁夏') >= 0) step = 2;
-
       polys.forEach(function(poly){
         poly.forEach(function(ring){
           ctx.beginPath();
@@ -1125,24 +1133,9 @@
             if(i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
           });
           ctx.closePath();
-          ctx.fillStyle = stepColors[step]; ctx.fill();
-          ctx.strokeStyle = stepBorders[step]; ctx.lineWidth = 1; ctx.stroke();
+          ctx.strokeStyle = 'rgba(100,116,139,0.45)'; ctx.lineWidth = 0.8; ctx.stroke();
         });
       });
-    });
-
-    /* 绘制山脉 */
-    mountainRanges.forEach(function(m){
-      ctx.beginPath();
-      m.points.forEach(function(pt, i){
-        var p = mProject(pt[0], pt[1]);
-        if(i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
-      });
-      ctx.strokeStyle = m.color; ctx.lineWidth = 3; ctx.stroke();
-      /* 山脉名称标注 */
-      var mid = mProject(m.points[Math.floor(m.points.length/2)][0], m.points[Math.floor(m.points.length/2)][1]);
-      ctx.fillStyle = m.color; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(m.name, mid[0], mid[1] - 8);
     });
 
     /* 绘制地形区标注点 */
@@ -1151,31 +1144,38 @@
       var isHovered = hoveredRegion === s.name;
       ctx.beginPath();
       ctx.arc(p[0], p[1], isHovered ? 7 : 5, 0, Math.PI*2);
-      ctx.fillStyle = isHovered ? '#ef4444' : (s.step === 1 ? '#92400e' : s.step === 2 ? '#d97706' : '#22c55e');
+      ctx.fillStyle = isHovered ? '#ef4444' : '#1e293b';
       ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#1e293b'; ctx.font = (isHovered ? 'bold 14px' : 'bold 12px') + ' sans-serif';
+      /* 白色描边文字保证在等高线上可读 */
+      ctx.font = (isHovered ? 'bold 14px' : 'bold 12px') + ' sans-serif';
       ctx.textAlign = 'left';
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 3;
+      ctx.strokeText(s.name, p[0] + 10, p[1] + 4);
+      ctx.fillStyle = '#1e293b';
       ctx.fillText(s.name, p[0] + 10, p[1] + 4);
     });
 
-    /* 绘制图例 */
+    /* 绘制图例：海拔分层设色 */
+    var legendElevs = [0, 500, 1000, 2000, 3000, 4000, 5000];
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.fillRect(10, H - 100, 200, 90);
-    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1; ctx.strokeRect(10, H - 100, 200, 90);
+    ctx.fillRect(10, H - 108, 210, 98);
+    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1; ctx.strokeRect(10, H - 108, 210, 98);
     ctx.fillStyle = '#1e293b'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText('三级阶梯', 20, H - 82);
-    ctx.fillStyle = stepColors[1]; ctx.fillRect(20, H - 74, 14, 10);
-    ctx.fillStyle = '#1e293b'; ctx.font = '11px sans-serif';
-    ctx.fillText('第一阶梯（青藏高原）', 40, H - 66);
-    ctx.fillStyle = stepColors[2]; ctx.fillRect(20, H - 58, 14, 10);
-    ctx.fillText('第二阶梯（高原盆地）', 40, H - 50);
-    ctx.fillStyle = stepColors[3]; ctx.fillRect(20, H - 42, 14, 10);
-    ctx.fillText('第三阶梯（平原丘陵）', 40, H - 34);
+    ctx.fillText('等高线海拔（米）', 20, H - 90);
+    legendElevs.forEach(function(e, i){
+      var y = H - 82 + i * 11;
+      ctx.strokeStyle = elevColor(e); ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(22, y); ctx.lineTo(40, y); ctx.stroke();
+      ctx.fillStyle = '#1e293b'; ctx.font = '10px sans-serif';
+      ctx.fillText(e + (i === legendElevs.length - 1 ? ' 以上' : ''), 46, y + 3);
+    });
+    ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif';
+    ctx.fillText('粗线 = 计曲线（每1000m）', 120, H - 90);
 
     /* 底部信息 */
     ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText('聚焦中国（中心 ' + mCx + '°E, ' + mCy + '°N）· 数据：本地 GeoJSON 省界 · 点击地形区查看名称', 14, H - 12);
+    ctx.fillText('聚焦中国（中心 ' + mCx + '°E, ' + mCy + '°N）· 等高线由高程数据生成 · 点击地形区看判读', 14, H - 12);
 
     /* 悬停提示 */
     if (hoveredRegion) {
@@ -1188,9 +1188,12 @@
   }
 
   function mLoadGeoBoundaries(){
-    fetch(mGeoFiles[0]).then(function(r){ return r.json(); }).then(function(data){
-      mGeoData = data;
-      mDrawGeo(data);
+    var loadProvinces = fetch(mGeoFiles[0]).then(function(r){ return r.json(); });
+    var loadContours = fetch(mContourFile).then(function(r){ return r.json(); });
+    Promise.all([loadProvinces, loadContours]).then(function(rs){
+      mGeoData = rs[0];
+      mContourData = rs[1];
+      mDrawGeo(mGeoData);
     }).catch(function(){
       ctx.fillStyle = '#f0fdf4'; ctx.fillRect(0,0,W,H);
       ctx.fillStyle = '#64748b'; ctx.font = '14px sans-serif';
