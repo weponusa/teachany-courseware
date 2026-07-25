@@ -9489,14 +9489,48 @@ class PBLGraphRenderer {
     };
   }
 
-  _getSubjectX(subject) {
+  _getSubjectX(subject, nodeId) {
+    const cols = PBL_SUBJECT_LAYOUT_ORDER.length;
     let idx = PBL_SUBJECT_LAYOUT_ORDER.indexOf(subject);
-    let cols = PBL_SUBJECT_LAYOUT_ORDER.length;
     if (idx < 0) {
-      idx = PBL_SUBJECT_LAYOUT_ORDER.length;
-      cols += 1;
+      const key = String(subject || nodeId || '');
+      idx = key.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % Math.max(cols, 1);
     }
     return (this.width / (cols + 1)) * (idx + 1);
+  }
+
+  _getGradeY(grade) {
+    const g = grade === 0 ? 13 : (grade || 7);
+    return (this.height / 15) * (g + 0.5);
+  }
+
+  _resolveNodeDisplayName(node) {
+    if (!node) return '';
+    if (typeof globalThis.KnowledgeNodeDisplay !== 'undefined') {
+      return KnowledgeNodeDisplay.resolveNodeDisplayName(node);
+    }
+    const dn = node.display_name || node.name_zh || node.name;
+    if (dn && /[\u4e00-\u9fff]/.test(dn)) return dn;
+    if (node.name && /[\u4e00-\u9fff]/.test(node.name)) return node.name;
+    return String(dn || node.name_en || node.id || '');
+  }
+
+  _seedNodePositions(nodes) {
+    const cx = this.width / 2;
+    const cy = this.height / 2;
+    const spreadR = Math.min(this.width, this.height) * 0.32;
+    nodes.forEach((n, i) => {
+      if (nodes.length === 1) {
+        n.x = cx;
+        n.y = cy;
+        return;
+      }
+      const angle = (i / nodes.length) * 2 * Math.PI + (Math.random() - 0.5) * 0.35;
+      const r = spreadR * (0.5 + 0.5 * ((i * 3 + 1) % 7) / 6);
+      n.x = cx + Math.cos(angle) * r + (Math.random() - 0.5) * 48;
+      n.y = (n.grade != null ? this._getGradeY(n.grade) : cy + Math.sin(angle) * r * 0.55)
+        + (Math.random() - 0.5) * 56;
+    });
   }
 
   render(graphData, onNodeClick) {
@@ -9520,7 +9554,13 @@ class PBLGraphRenderer {
     // 力导向参数随节点数缩放（v7.9.14：增大排斥力避免节点重叠）
     const baseLinkDist = Math.max(180, Math.min(320, 140 + nodeCount * 0.8));
     const baseCharge   = Math.max(-4000, Math.min(-600, -400 - nodeCount * 5));
-    const baseCollide  = Math.max(70, Math.min(100, 55 + nodeCount * 0.2));
+    const baseCollide  = Math.max(90, Math.min(140, 60 + nodeCount * 0.35));
+
+    if (this.simulation) {
+      this.simulation.stop();
+      this.simulation = null;
+    }
+    this._autoFitDone = false;
 
     // 清除旧内容
     container.innerHTML = '';
@@ -9614,7 +9654,20 @@ class PBLGraphRenderer {
       if (enriched.crossSubject) enriched.layerSuffix = '(跨学科)';
       return enriched;
     });
-    const links = gd.links.map(l => ({ ...l }));
+    const nodeIds = new Set(nodes.map(n => n.id));
+    const links = gd.links
+      .map(l => ({ ...l }))
+      .filter(l => {
+        const src = typeof l.source === 'object' ? l.source.id : l.source;
+        const tgt = typeof l.target === 'object' ? l.target.id : l.target;
+        return nodeIds.has(src) && nodeIds.has(tgt);
+      });
+
+    this._seedNodePositions(nodes);
+
+    const uniqueSubjects = new Set(nodes.map(n => n.subject || '').filter(Boolean));
+    const forceXStrength = nodeCount <= 2 ? 0.02 : (uniqueSubjects.size <= 1 ? 0.05 : (nodeCount > 30 ? 0.08 : 0.12));
+    const forceYStrength = nodeCount <= 2 ? 0.02 : (nodeCount > 30 ? 0.06 : 0.08);
 
     // 箭头标记
     this.svg.append('defs').selectAll('marker')
@@ -9818,12 +9871,12 @@ class PBLGraphRenderer {
 
     // ─── 力导向布局（参数随节点数量动态缩放） ───
     this.simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).id(d => d.id).distance(baseLinkDist).strength(0.5))
+      .force('link', d3.forceLink(links).id(d => d.id).distance(baseLinkDist).strength(links.length ? 0.5 : 0))
       .force('charge', d3.forceManyBody().strength(baseCharge))
       .force('center', d3.forceCenter(this.width / 2, this.height / 2))
       .force('collision', d3.forceCollide().radius(baseCollide))
-      .force('x', d3.forceX(d => this._getSubjectX(d.subject)).strength(nodeCount > 30 ? 0.18 : 0.12))
-      .force('y', d3.forceY(this.height / 2).strength(0.03))
+      .force('x', d3.forceX(d => this._getSubjectX(d.subject, d.id)).strength(forceXStrength))
+      .force('y', d3.forceY(d => this._getGradeY(d.grade)).strength(forceYStrength))
       .on('tick', () => {
         link
           .attr('x1', d => d.source.x)
@@ -9834,32 +9887,43 @@ class PBLGraphRenderer {
         node.attr('transform', d => `translate(${d.x},${d.y})`);
       });
 
-    // ── Auto-fit zoom：模拟稳定后自动缩放至全貌可见 ──
-    let tickCount = 0;
-    const autoFitZoom = () => {
-      tickCount++;
-      // 等 120+ tick（约 3-4 秒）后执行一次 auto-fit
-      if (tickCount === 120) {
-        const gEl = g.node();
-        if (!gEl) return;
-        const bbox = gEl.getBBox();
-        if (bbox.width > 0 && bbox.height > 0) {
-          const padding = 80;
-          const scale = Math.min(
-            (this.width - padding * 2) / bbox.width,
-            (this.height - padding * 2) / bbox.height,
-            1.5 // 最大初始缩放不超过 1.5x
-          );
-          const tx = this.width / 2 - (bbox.x + bbox.width / 2) * scale;
-          const ty = this.height / 2 - (bbox.y + bbox.height / 2) * scale;
-          // 使用 d3.zoomIdentity 平滑过渡到 fit 视图
-          this.svg.transition()
-            .duration(600)
-            .call(zoomBehavior.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+    const runAutoFit = () => {
+      if (this._autoFitDone || !this.svg) return;
+      this._autoFitDone = true;
+      const gEl = g.node();
+      if (!gEl) return;
+      let bbox = gEl.getBBox();
+      if (bbox.width < 24 || bbox.height < 24) {
+        const xs = nodes.map(n => n.x).filter(v => v != null);
+        const ys = nodes.map(n => n.y).filter(v => v != null);
+        if (xs.length && ys.length) {
+          const minX = Math.min(...xs);
+          const maxX = Math.max(...xs);
+          const minY = Math.min(...ys);
+          const maxY = Math.max(...ys);
+          bbox = {
+            x: minX - 60,
+            y: minY - 60,
+            width: Math.max(maxX - minX + 120, 160),
+            height: Math.max(maxY - minY + 120, 160),
+          };
         }
       }
+      if (bbox.width <= 0 || bbox.height <= 0) return;
+      const padding = 80;
+      const scale = Math.min(
+        (this.width - padding * 2) / bbox.width,
+        (this.height - padding * 2) / bbox.height,
+        nodeCount <= 1 ? 1 : 1.5
+      );
+      const tx = this.width / 2 - (bbox.x + bbox.width / 2) * scale;
+      const ty = this.height / 2 - (bbox.y + bbox.height / 2) * scale;
+      this.svg.transition()
+        .duration(600)
+        .call(zoomBehavior.transform, d3.zoomIdentity.translate(tx, ty).scale(Math.max(scale, 0.35)));
     };
-    this.simulation.on('tick.autoFit', autoFitZoom);
+    this.simulation.on('end', runAutoFit);
+    setTimeout(runAutoFit, 2800);
   }
 
   // ─── Tooltip 内容（与 tree.html showTooltip 同结构） ───

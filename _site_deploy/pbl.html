@@ -1451,7 +1451,7 @@ body {
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
 <script src="./assets/scripts/knowledge-node-display.js?v=20260623"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260618-graph-fix"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260625-or-free"></script>
 <script src="./assets/scripts/pbl-support-modules.js?v=20260619-support-pack-v2"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
@@ -2100,11 +2100,19 @@ function enrichPBLGraphData(graphData) {
   };
 }
 
+function _getPBLHandoffUrl() {
+  const host = String(location.hostname || '');
+  if (host === 'teachany.cn' || host === 'www.teachany.cn') {
+    return `${location.origin}/api/pbl/handoff`;
+  }
+  return 'https://www.teachany.cn/api/pbl/handoff';
+}
+
 async function restorePBLFromHandoff(handoffId) {
   const id = String(handoffId || '').trim();
   if (!id) return false;
   try {
-    const res = await fetch(`/api/pbl/handoff?id=${encodeURIComponent(id)}`);
+    const res = await fetch(`${_getPBLHandoffUrl()}?id=${encodeURIComponent(id)}`);
     if (!res.ok) return false;
     const data = await res.json();
     if (!data?.result?.graphData?.nodes?.length) return false;
@@ -3109,13 +3117,18 @@ async function createPBLHandoffUrl(baseUrl) {
   if (!pblResult?.graphData?.nodes?.length) throw new Error('尚无拆解结果');
   const spec = typeof getPBLProjectSpec === 'function' ? getPBLProjectSpec() : (pblResult.projectSpec || null);
   const payload = serializePBLResult(pblResult);
-  const res = await fetch('/api/pbl/handoff', {
+  const res = await fetch(_getPBLHandoffUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ goal: payload.goal || spec?.task || '', result: payload, spec }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || data.error || 'handoff 失败');
+  if (!res.ok) {
+    if (data.error === 'D1_NOT_CONFIGURED') {
+      throw new Error('服务端未配置数据库，请改用导出 HTML 或长图分享');
+    }
+    throw new Error(data.message || data.error || 'handoff 失败');
+  }
   const u = new URL(pblPublicBaseUrl(baseUrl));
   u.searchParams.set('handoff', data.id);
   u.searchParams.delete('auto');

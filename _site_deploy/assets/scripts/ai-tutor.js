@@ -24,7 +24,7 @@
   'use strict';
 
   // 版本标识 - 加载时立即打印到 console，方便排查浏览器缓存问题
-  console.log('%c[TeachAnyTutor] v8.1.1 loaded - default: TeachAny server proxy (Qwen only)', 'color:#10b981;font-weight:bold;');
+  console.log('%c[TeachAnyTutor] v8.1.2 loaded - server proxy + off-site fallback', 'color:#10b981;font-weight:bold;');
 
   const DEPRECATED_FREE_MODELS = new Set([
     'z-ai/glm-4.5-air:free',
@@ -45,8 +45,14 @@
     return base.includes('/api/llm');
   }
 
+  function resolveServerProxyBase() {
+    const host = String((typeof location !== 'undefined' && location.hostname) || '');
+    if (host === 'teachany.cn' || host === 'www.teachany.cn') return SERVER_PROXY_BASE;
+    return 'https://www.teachany.cn/api/llm';
+  }
+
   function resolveServerEndpoint(baseUrl) {
-    const base = String(baseUrl || SERVER_PROXY_BASE).trim().replace(/\/$/, '');
+    const base = String(baseUrl || resolveServerProxyBase()).trim().replace(/\/$/, '');
     return /\/chat\/completions$/i.test(base) ? base : `${base}/chat/completions`;
   }
 
@@ -63,7 +69,6 @@
   const HISTORY_KEY = 'teachany_tutor_history';
   const LANG_KEY = 'teachany_tutor_lang';
 
-  // 默认：TeachAny 服务端中转（Key 仅存 Cloudflare，浏览器不接触）
   const DEFAULTS = {
     baseUrl: SERVER_PROXY_BASE,
     apiKey: '',
@@ -348,7 +353,7 @@
       cfg.noAuth = true;
       cfg.serverProxy = true;
       cfg.backendId = cfg.backendId || 'openrouter';
-      cfg.baseUrl = cfg.baseUrl || SERVER_PROXY_BASE;
+      cfg.baseUrl = cfg.baseUrl || resolveServerProxyBase();
       cfg.model = PRIMARY_FREE_MODEL;
     }
     return cfg;
@@ -908,9 +913,9 @@
         delete headers[k];
       }
     }
-    // 设置 30 秒整体超时
+    // 服务端代理：65s（与 Cloudflare Function 60s 对齐）；直连 30s
     const ac = new AbortController();
-    const overallTimeout = setTimeout(() => ac.abort('overall-timeout'), 30000);
+    const overallTimeout = setTimeout(() => ac.abort('overall-timeout'), useServerProxy ? 65000 : 30000);
 
     // fetch 本身可能因 CORS、header 编码、网络等抛 TypeError
     let resp;

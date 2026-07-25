@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 COMMUNITY = ROOT / "community"
 
 MAP_CONFIG_RE = re.compile(
-    r'<script type="application/json" data-teachany-map-config>\s*([\s\S]*?)\s*</script>',
+    r'<script[^>]*type=["\']application/json["\'][^>]*data-teachany-map-config[^>]*>\s*([\s\S]*?)\s*</script>',
     re.I,
 )
 KG_ID_RE = re.compile(r'data-teachany-kg=["\']([^"\']+)["\']', re.I)

@@ -243,12 +243,16 @@ async function loadRegistry() {
     return cached;
   }
 
-  async function fetchOptionalJson(url) {
+  async function fetchOptionalJson(url, timeoutMs = 20000) {
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort('timeout'), timeoutMs);
       const response = await fetch(url + '?t=' + Date.now(), {
         cache: 'no-store',
+        signal: controller.signal,
         headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
       });
+      clearTimeout(timer);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (e) {

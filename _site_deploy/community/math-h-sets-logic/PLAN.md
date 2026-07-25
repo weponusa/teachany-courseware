@@ -22,7 +22,7 @@
 
 | # | 模块名 | 知识点 | 媒体形式（白名单） | 资产文件名 | 生成命令 | 校验命令 |
 |:---|:---|:---|:---|:---|:---|:---|
-| 1 | Hero 知识结构主图 | 集合运算知识体系 | Hero 图 | `assets/math-h-sets-logic-hero.png` | `curl -o assets/math-h-sets-logic-hero.png https://cdn.jsdelivr.net/gh/weponusa/teachany-images@main/math/set-theory-hero.png` | `python3 scripts/check-hero.py math-h-sets-logic` |
+| 1 | Hero 知识结构主图 | 集合运算知识体系 | Hero 图 | `assets/math-h-sets-logic-hero.webp` | `curl -o assets/math-h-sets-logic-hero.webp https://cdn.jsdelivr.net/gh/weponusa/teachany-images@main/math/set-theory-hero.webp` | `python3 scripts/check-hero.py math-h-sets-logic` |
 | 2 | 情境引入（ABT） | 集合运算生活实例 | SVG 插图 | `assets/illustrations/set-real-life.png` | `python3 scripts/image-gen.py "集合运算生活情境"` | `ls -lh assets/illustrations/set-real-life.png` |
 | 3 | 并集概念讲解 | 并集（A∪B）| Remotion 视频 + Edge TTS 音频 | `assets/video/union.mp4` + `assets/tts/union.mp3` | `npx remotion render UnionVideo out/videos/union.mp4` | `ffprobe -show_streams assets/video/union.mp4` |
 | 4 | 交集概念讲解 | 交集（A∩B）| Remotion 视频 + Edge TTS 音频 | `assets/video/intersection.mp4` + `assets/tts/intersection.mp3` | `npx remotion render IntersectionVideo out/videos/intersection.mp4` | `ffprobe -show_streams assets/video/intersection.mp4` |

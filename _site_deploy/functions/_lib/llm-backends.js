@@ -125,7 +125,7 @@ export function buildUserModelChain(env, userModel, providerId = '') {
 export const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Backend',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Backend, X-Title, X-OpenRouter-Title',
   'Access-Control-Max-Age': '86400',
 };
 

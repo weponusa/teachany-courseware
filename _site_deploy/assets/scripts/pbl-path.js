@@ -9554,7 +9554,7 @@ class PBLGraphRenderer {
     // 力导向参数随节点数缩放（v7.9.14：增大排斥力避免节点重叠）
     const baseLinkDist = Math.max(180, Math.min(320, 140 + nodeCount * 0.8));
     const baseCharge   = Math.max(-4000, Math.min(-600, -400 - nodeCount * 5));
-    const baseCollide  = Math.max(70, Math.min(100, 55 + nodeCount * 0.2));
+    const baseCollide  = Math.max(90, Math.min(140, 60 + nodeCount * 0.35));
 
     if (this.simulation) {
       this.simulation.stop();
@@ -9666,8 +9666,8 @@ class PBLGraphRenderer {
     this._seedNodePositions(nodes);
 
     const uniqueSubjects = new Set(nodes.map(n => n.subject || '').filter(Boolean));
-    const forceXStrength = nodeCount <= 2 ? 0.02 : (uniqueSubjects.size <= 1 ? 0.05 : (nodeCount > 30 ? 0.18 : 0.12));
-    const forceYStrength = nodeCount <= 2 ? 0.02 : (nodeCount > 30 ? 0.12 : 0.08);
+    const forceXStrength = nodeCount <= 2 ? 0.02 : (uniqueSubjects.size <= 1 ? 0.05 : (nodeCount > 30 ? 0.08 : 0.12));
+    const forceYStrength = nodeCount <= 2 ? 0.02 : (nodeCount > 30 ? 0.06 : 0.08);
 
     // 箭头标记
     this.svg.append('defs').selectAll('marker')
