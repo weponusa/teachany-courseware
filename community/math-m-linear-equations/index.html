@@ -387,6 +387,56 @@ body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background: var(
 </section>
 
 <!-- 综合任务 -->
+<!-- 模块4：图象法（互动画布） -->
+<section class="card" id="graph-method">
+  <div class="section-title">📈 模块四：图象法——画出来的解</div>
+  <p style="line-height:1.9;">把两个方程都看成一次函数，在同一坐标系里画出两条直线：<strong>交点坐标就是方程组的解</strong>。点击下面三组方程组，观察交点位置：</p>
+  <div style="text-align:center;margin:12px 0;">
+    <canvas id="sysCanvas" width="520" height="380" style="max-width:100%;background:#fff;border-radius:12px;border:1px solid #e2e8f0;"></canvas>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+    <button class="option-btn" onclick="drawSys(0)">① x+y=6，x-y=2</button>
+    <button class="option-btn" onclick="drawSys(1)">② y=2x，x+y=9</button>
+    <button class="option-btn" onclick="drawSys(2)">③ 3x+y=10，x+y=6</button>
+  </div>
+  <div id="sysReadout" style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:10px;text-align:center;font-weight:700;"></div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('sysCanvas');
+  if (!cv) return;
+  var systems = [
+    {l1:{k:-1,b:6,label:'x+y=6 → y=-x+6',c:'#3b82f6'}, l2:{k:1,b:-2,label:'x-y=2 → y=x-2',c:'#ef4444'}, sol:[4,2]},
+    {l1:{k:2,b:0,label:'y=2x',c:'#3b82f6'}, l2:{k:-1,b:9,label:'x+y=9 → y=-x+9',c:'#ef4444'}, sol:[3,6]},
+    {l1:{k:-3,b:10,label:'3x+y=10 → y=-3x+10',c:'#3b82f6'}, l2:{k:-1,b:6,label:'x+y=6 → y=-x+6',c:'#ef4444'}, sol:[2,4]}
+  ];
+  window.drawSys = function(i){
+    var ctx = cv.getContext('2d'), W=cv.width, H=cv.height, ox=60, oy=H-50, sc=32;
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=1;
+    for(var gx=ox;gx<=W;gx+=sc){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,oy);ctx.stroke();}
+    for(var gy=oy;gy>=0;gy-=sc){ctx.beginPath();ctx.moveTo(ox,gy);ctx.lineTo(W,gy);ctx.stroke();}
+    ctx.strokeStyle='#334155'; ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox,oy);ctx.lineTo(W,oy);ctx.stroke();
+    ctx.fillStyle='#64748b'; ctx.font='12px sans-serif';
+    ctx.fillText('y', ox-16, 14); ctx.fillText('x', W-14, oy+18); ctx.fillText('O', ox-16, oy+16);
+    function line(k,b,color){
+      ctx.strokeStyle=color; ctx.lineWidth=3; ctx.beginPath();
+      var x2=Math.ceil((oy)/sc)+1, y2=k*x2+b;
+      ctx.moveTo(ox, oy-b*sc); ctx.lineTo(ox+x2*sc, oy-y2*sc); ctx.stroke();
+    }
+    var s=systems[i];
+    line(s.l1.k,s.l1.b,s.l1.c); line(s.l2.k,s.l2.b,s.l2.c);
+    ctx.fillStyle='#f59e0b'; ctx.beginPath();
+    ctx.arc(ox+s.sol[0]*sc, oy-s.sol[1]*sc, 7, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#92400e'; ctx.setLineDash([4,4]); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(ox+s.sol[0]*sc, oy); ctx.lineTo(ox+s.sol[0]*sc, oy-s.sol[1]*sc); ctx.lineTo(ox, oy-s.sol[1]*sc); ctx.stroke(); ctx.setLineDash([]);
+    document.getElementById('sysReadout').innerHTML = '交点 ('+s.sol[0]+', '+s.sol[1]+') → 方程组的解：x='+s.sol[0]+'，y='+s.sol[1]+'<br><span style="font-weight:400;font-size:0.85rem;color:#64748b">蓝线：'+s.l1.label+'　红线：'+s.l2.label+'</span>';
+  };
+  drawSys(0);
+})();
+</script>
+
 <section class="card success">
   <div class="section-title">🚀 综合任务：鸡兔同笼</div>
   <p><strong>经典问题：</strong>鸡兔同笼，共有头30个，脚88只。问鸡、兔各有多少只？</p>
