@@ -6,7 +6,7 @@ const ASSETS = [
   './manifest.json',
   './manifest.webmanifest',
   // Hero + 内置插画
-  './assets/hist-m-renaissance-hero.png',
+  './assets/hist-m-renaissance-hero.webp',
   './assets/illust-three-masterpieces.png',
   './assets/illust-luther-95-theses.png',
   // 艺术品（mention-means-image 基线 ④）

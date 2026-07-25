@@ -12,7 +12,7 @@
 
 | # | 模块名 | 知识点 | 媒体形式 | 资产文件名 | 生成命令 | 校验命令 |
 |:---|:---|:---|:---|:---|:---|:---|
-| M1 | Hero 知识结构主图 | 3D 建模学习路径 | Hero 图 | assets/sci-e-3d-printing-blender-hero.png | image_gen 生成知识结构图 | python3 scripts/check-hero.py community/sci-e-3d-printing-blender |
+| M1 | Hero 知识结构主图 | 3D 建模学习路径 | Hero 图 | assets/sci-e-3d-printing-blender-hero.webp | image_gen 生成知识结构图 | python3 scripts/check-hero.py community/sci-e-3d-printing-blender |
 | M2 | 3D 基本概念 | 顶点、边、面、网格 | Canvas 互动 | index.html #cubeCanvas | 手写 canvas 标注交互 | grep -n "cubeCanvas" index.html |
 | M3 | Blender 界面 | 视口、工具栏、属性面板 | SVG 插图 | assets/illustration-child-blender.png | image_gen 生成情境图 | test -f assets/illustration-child-blender.png |
 | M4 | 基本操作技能 | G/R/S 与 XYZ 方向 | Canvas 互动 | index.html #transformCanvas | 手写 canvas 变换模拟 | grep -n "transformCanvas" index.html |
@@ -26,7 +26,7 @@
 ## 3. 五件套自检清单
 
 - [x] AI 学伴：已挂载 `ai-tutor.js` 与 `data-teachany-tutor-card`。
-- [x] Hero 图：已提供 `assets/sci-e-3d-printing-blender-hero.png`。
+- [x] Hero 图：已提供 `assets/sci-e-3d-printing-blender-hero.webp`。
 - [x] TTS 音频：已提供 `tts/*.mp3` 多段讲解。
 - [x] Remotion 视频：已提供 `assets/video/blender-modeling-demo.mp4`。
 - [x] 知识图谱：已使用 `data-teachany-kg="sci-e-3d-printing-blender"` 标准模块。

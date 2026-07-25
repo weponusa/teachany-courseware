@@ -108,7 +108,7 @@
 **附录**：
 - 课件 HTML：`index.html`
 - 元数据：`manifest.json`
-- Hero 图：`assets/chem-daily-life-hero.png`
+- Hero 图：`assets/chem-daily-life-hero.webp`
 - 知识结构图：`assets/hero-infographic.svg`
 - 教学配图：`assets/surfactant-mechanism.png`、`assets/haber-bosch-process.png`、`assets/wastewater-treatment.png`
 - TTS 音频：`tts/s01.mp3` ~ `tts/s06.mp3`
