@@ -20,7 +20,8 @@ EXT_NODE_RE = re.compile(r"^ext-[a-f0-9]{6,12}$", re.I)
 
 PLACEHOLDER_PATTERNS = [
     r"TODO", r"待补", r"待填写", r"占位", r"placeholder", r"lorem ipsum",
-    r"这里(填写|补充|插入)", r"请在此", r"示例文本", r"\bxxx\b", r"【[^】]{0,30}】",
+    r"这里(填写|补充|插入)", r"请在此", r"示例文本", r"\bxxx\b",
+    r"【(待补|待填|填写|插入|示例|占位|课程名|课题|标题|此处|xxx)[^】]{0,20}】",
 ]
 GENERIC_PHRASES = [
     "本节课我们将学习", "通过本节课的学习", "掌握相关知识", "提升学习兴趣",
@@ -93,6 +94,10 @@ def validate_course(course_dir: Path) -> dict[str, Any]:
     html_for_placeholder = re.sub(
         r"\bplaceholder\s*=\s*['\"][^'\"]*['\"]", "", html, flags=re.I
     )
+    # 剔除 style/script 块与 CSS 注释，避免 .map-placeholder 等样式名误报
+    html_for_placeholder = re.sub(r"<style[\s\S]*?</style>", " ", html_for_placeholder, flags=re.I)
+    html_for_placeholder = re.sub(r"<script[\s\S]*?</script>", " ", html_for_placeholder, flags=re.I)
+    html_for_placeholder = re.sub(r"/\*[\s\S]*?\*/", " ", html_for_placeholder)
     for pat in PLACEHOLDER_PATTERNS:
         if pat == r"placeholder":
             if re.search(r"\bplaceholder\b", html_for_placeholder, flags=re.I):
