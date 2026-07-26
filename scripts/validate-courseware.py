@@ -829,6 +829,12 @@ def main():
             continue
         if only and d.name != only:
             continue
+        # 轻量跳转桩（重定向页）跳过内容质检，与 pre-push 钩子一致
+        idx = d / 'index.html'
+        if idx.exists():
+            head = idx.read_text(encoding='utf-8', errors='ignore')[:4000]
+            if re.search(r'http-equiv="refresh"|location\.replace', head):
+                continue
         issues = validate_one(d, strict_feedback=bool(only))
         all_issues.extend(issues)
         scanned += 1
