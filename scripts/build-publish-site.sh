@@ -15,6 +15,7 @@ COMMUNITY_EXCLUDES=(
   --exclude='archive/'
   --exclude='reading-academy/'
   --exclude='*.teachany'
+  --exclude='.teachany-image-gen-probe.json'
 )
 
 echo "📦 Building publish site → $OUT"
