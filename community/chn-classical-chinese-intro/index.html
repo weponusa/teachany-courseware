@@ -1675,6 +1675,84 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>用荧光笔标出课文里所有‘之’，观察出现位置</p></div><div class="tu-q"><h3>💡解释它</h3><p>句首的‘之’常是代词（他/它），句中的‘之’多是助词（的）</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>对比《杨氏之子》和《自相矛盾》里‘之’的出现频率差异</p></div><div class="tu-q"><h3>👁️看见它</h3><p>动画演示‘之’字从甲骨文到现代用法的演变过程</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>用‘之’字造句：校园场景（如‘操场之南’‘老师之书’）</p></div></section>
 <section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把‘杨氏之子’的‘之’解释为‘的’</h3><p>✅ 专有名词中‘之’无实义，是姓名组成部分</p><p>💡 机械套用‘之=的’的规则</p></div><div class="tu-q"><h3>❌ 认为‘之乎者也’必须同时出现</h3><p>✅ 展示不含这些虚词的文言文例句</p><p>💡 受成语‘之乎者也’的误导</p></div></section>
 <section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>之字三变记心上：句首他它句中的，句尾拖音别慌张</p><p><strong>类比：</strong>像乐高连接件，能把不同句子部件拼在一起</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial"><figure style="margin:0"><img src="./assets/hero-infographic.webp" alt="chn-classical-chinese-intro插图" style="width:100%;border-radius:12px"><figcaption style="font-size:13px;opacity:.75;text-align:center;margin-top:6px">chn-classical-chinese-intro · 配图</figcaption></figure></section>
+<script>window.__NAV_NODES__ = [{"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#3b82f6"}, {"icon": "📝", "label": "前测", "target": "pretest", "color": "#22c55e"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#f59e0b"}, {"icon": "🎧", "label": "音频讲解", "target": "teachany-audio-player", "color": "#8b5cf6"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#ef4444"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#06b6d4"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ec4899"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#84cc16"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#3b82f6"}];</script>
+<!-- 课程导览图（互动画布） -->
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;">
   <h2 class="section-title">🗺️ 知识图谱：小古文里的“之乎者也” — 小古文里的‘之乎者也’</h2>
   <div data-teachany-kg="chn-e-classical-chinese-intro">
