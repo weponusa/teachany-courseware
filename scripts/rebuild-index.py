@@ -149,12 +149,16 @@ def detect_images(course_dir: Path):
     def is_real_hero(p: Path) -> bool:
         return p.is_file() and p.suffix.lower() in raster_exts and p.stat().st_size >= MIN_HERO_BYTES
 
+    # v7.21：hero-infographic 优先级降至最低（2026-07 批量思维导图乱码高发）
+    # 封面优先级改为：<id>-hero → hero.* → 其他 *-hero → hero-infographic → 兜底
     assets_dir = course_dir / 'assets'
     if assets_dir.is_dir():
-        for ext in raster_exts:
-            p = assets_dir / f'hero-infographic{ext}'
-            if is_real_hero(p):
-                return f'assets/{p.name}', ''
+        stem_id = course_dir.name
+        for cand in [f'{stem_id}-hero', 'hero']:
+            for ext in raster_exts:
+                p = assets_dir / f'{cand}{ext}'
+                if is_real_hero(p):
+                    return f'assets/{p.name}', ''
 
     # 搜索 assets/ 和 images/ 两个可能的目录
     img_dir = None
@@ -238,6 +242,13 @@ def scan_courses():
             index_path = d / 'index.html'
             if not (manifest_path.exists() and index_path.exists()):
                 continue
+            # 轻量跳转桩不入 registry（重定向页会与目标课件重复，且无标题）
+            try:
+                head = index_path.read_text(encoding='utf-8', errors='ignore')[:4000]
+                if re.search(r'http-equiv="refresh"|location\.replace', head):
+                    continue
+            except Exception:
+                pass
             try:
                 with open(manifest_path, encoding='utf-8') as f:
                     manifest = json.load(f)
@@ -363,6 +374,13 @@ def main():
             continue
         old_path = old_entry.get('path', '')
         if old_path and Path(old_path, 'index.html').exists():
+            # 跳转桩同样不保留
+            try:
+                head = Path(old_path, 'index.html').read_text(encoding='utf-8', errors='ignore')[:4000]
+                if re.search(r'http-equiv="refresh"|location\.replace', head):
+                    continue
+            except Exception:
+                pass
             legacy_preserved.append((cid, old_entry))
     legacy_ids = {cid for cid, _ in legacy_preserved}
     if legacy_ids:
