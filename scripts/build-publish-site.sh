@@ -18,6 +18,7 @@ COMMUNITY_EXCLUDES=(
   --exclude='.teachany-image-gen-probe.json'
   --exclude='section1.webp'
   --exclude='section2.webp'
+  --exclude-from="$ROOT/.publish-excludes"
 )
 
 echo "📦 Building publish site → $OUT"
