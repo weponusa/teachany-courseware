@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EXT_NODE_RE = re.compile(r"^ext-[a-f0-9]{6,12}$", re.I)
 
 PLACEHOLDER_PATTERNS = [
-    r"TODO", r"待补", r"待填写", r"占位", r"placeholder", r"lorem ipsum",
+    r"TODO", r"待补", r"待填写", r"占位符", r"占位图", r"占位文本", r"占位内容", r"placeholder", r"lorem ipsum",
     r"这里(填写|补充|插入)", r"请在此", r"示例文本", r"\bxxx\b",
     r"【(待补|待填|填写|插入|示例|占位|课程名|课题|标题|此处|xxx)[^】]{0,20}】",
 ]
