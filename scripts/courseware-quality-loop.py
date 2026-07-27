@@ -71,27 +71,33 @@ def is_placeholder_mp4(mp4: Path, html: str = "") -> bool:
 
 
 def rewrite_site_root_script_paths(html: str) -> tuple[str, int]:
-    """各种 assets/scripts/ 路径形式 → ../../assets/scripts/ 相对路径。
-
-    挂树后 community/<id>/ → 仓库根 assets/，本地与 GitHub Pages 项目站点均可加载。
-    禁止输出 /assets/scripts/ 绝对路径：Pages 项目站点根为 /teachany-courseware/，
-    /assets/ 会解析到域名根 weponusa.github.io/assets/ 全部 404（2026-07 全站修复）。
-    """
+    """各种 assets/scripts/ 路径形式 → ../../assets/scripts/ 相对路径（幂等）。"""
     n = 0
-    for pat, rep in (
-        (r"\./assets/scripts/", "../../assets/scripts/"),
-        (r"\.\./\./assets/scripts/", "../../assets/scripts/"),
-        (r"\.\./assets/scripts/", "../../assets/scripts/"),
-        (r"/assets/scripts/", "../../assets/scripts/"),
-    ):
-        html, c = re.subn(pat, rep, html)
-        n += c
-    html, c = re.subn(
-        r'((?:href|src)=["\'])assets/scripts/',
-        r"\1../../assets/scripts/",
+
+    def norm_ref(match: re.Match) -> str:
+        nonlocal n
+        attr, quote, ref = match.group(1), match.group(2), match.group(3)
+        if ref.startswith(("http://", "https://", "//")):
+            return match.group(0)
+        if "assets/scripts/" not in ref:
+            return match.group(0)
+        name = ref.split("assets/scripts/", 1)[1]
+        new = f"../../assets/scripts/{name}"
+        if new != ref:
+            n += 1
+        return f'{attr}={quote}{new}{quote}'
+
+    html = re.sub(
+        r'(href|src)=(["\'])((?:\.\./)+|\./|/)?assets/scripts/([^"\']+)\2',
+        lambda m: f'{m.group(1)}={m.group(2)}../../assets/scripts/{m.group(4)}{m.group(2)}'
+        if not m.group(0).startswith('href="../../assets/scripts/')
+        and not m.group(0).startswith('src="../../assets/scripts/')
+        else m.group(0),
         html,
         flags=re.I,
     )
+    # collapse accidental over-rewrites
+    html, c = re.subn(r'(?:\.\./){3,}assets/scripts/', '../../assets/scripts/', html)
     n += c
     return html, n
 

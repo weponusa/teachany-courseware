@@ -396,7 +396,7 @@ def validate_one(course_dir, strict_feedback=False):
     if _map_html:
         _declarative = ('data-teachany-map' in _map_html and 'teachany-historical-map.js' in _map_html)
         # 13a. 手写 Leaflet 铺底（硬规则 #21 严禁，须用声明式标准模块）
-        _handwritten = bool(re.search(r'L\.map\s*\(', _map_html))
+        _handwritten = bool(re.search(r'\bL\.map\s*\(', _map_html))
         if _handwritten and not _declarative:
             issues.append(('error',
                 f'{course_dir.name}: 课件内手写 L.map 铺底（硬规则 #21 严禁 · '

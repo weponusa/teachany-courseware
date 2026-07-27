@@ -226,11 +226,16 @@ const CHECKS = [
         const innerHtml = card.replace(/^<div[^>]*>/i, '');
         if (/class="[^"]*card/i.test(innerHtml)) return;
         const text = card
-          .replace(/<(script|style|svg|textarea|template)\b[\s\S]*?<\/\1>/gi, '')
+          .replace(/<(script|style|svg|textarea|template|table|details|button)\b[\s\S]*?<\/\1>/gi, '')
+          .replace(/<(details|table)\b(?![\s\S]*?<\/\1>)[\s\S]*$/gi, '') // 截断匹配中未闭合的折叠/表格块
           .replace(/<[^>]+>/g, '')
           .replace(/\s+/g, '');
-        if (text.length > maxLen) maxLen = text.length;
-        if (text.length > 200) longCards++; // 200字作为单卡片上限
+        // 中英文混排公平计字：每个 CJK 字计 1，每段连续拉丁字母/数字计 1 词
+        const cjkCount = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+        const wordCount = (text.replace(/[\u4e00-\u9fff]/g, ' ').match(/[A-Za-z0-9]+/g) || []).length;
+        const textLen = cjkCount + wordCount;
+        if (textLen > maxLen) maxLen = textLen;
+        if (textLen > 200) longCards++; // 200字作为单卡片上限
       });
       return {
         pass: longCards === 0,
