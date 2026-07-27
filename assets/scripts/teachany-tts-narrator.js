@@ -389,6 +389,8 @@
 
   function init() {
     if (cfg.disabled) return;
+    // v9: 页面已加载新标准播放器 teachany-audio-player.js 时退出，避免双播放器 UI 互搏
+    if (document.querySelector('script[src*="teachany-audio-player.js"]')) return;
 
     var playlist = readPlaylist();
     state.audioMap = buildAudioMap(playlist);
