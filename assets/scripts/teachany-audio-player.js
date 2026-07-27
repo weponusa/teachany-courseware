@@ -62,6 +62,11 @@
           '<span class="tap-card-meta">' + playlist.length + ' 段 · 自动连播 · 滚动同步</span>' +
         '</header>' +
         '<ol class="tap-tracklist"></ol>';
+      /* v1.1: 默认折叠曲目列表，点击头部展开（避免占满首屏） */
+      card.classList.add("tap-collapsed");
+      card.querySelector(".tap-card-head").addEventListener("click", function () {
+        card.classList.toggle("tap-collapsed");
+      });
       host.appendChild(card);
 
       list = card.querySelector(".tap-tracklist");
@@ -125,9 +130,10 @@
       if (autoplay !== false) {
         var p = audio.play();
         if (p && p.catch) p.catch(function (e) { console.warn("[TeachAnyAudio] autoplay blocked", e); });
+        /* v1.1: 仅真实播放时才弹出底部条，初始化焦点不再强制显示 */
+        bar.classList.add("active");
+        document.body.classList.add("tap-bar-on");
       }
-      bar.classList.add("active");
-      document.body.classList.add("tap-bar-on");
       nowEl.textContent = playlist[i].title || ("第 " + (i + 1) + " 段");
       playBtn.textContent = autoplay !== false ? "⏸" : "▶";
       highlight();
