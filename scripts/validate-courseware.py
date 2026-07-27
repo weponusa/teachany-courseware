@@ -702,10 +702,8 @@ def validate_one(course_dir, strict_feedback=False):
     video_refs = []
     if html.exists() and full_html:
         video_refs = re.findall(r'<(?:source|video)[^>]+src=[\'"]([^\'\"]+\.mp4)[\'"]', full_html, re.IGNORECASE)
-    if not mp4_files:
-        issues.append(('warn',
-            f'{course_dir.name}: 建议添加教学动画 mp4（assets/video/*.mp4）；'
-            f'Canvas/SVG/CSS/PhET 互动可暂代，后续补 Remotion 渲染视频更佳'))
+    # v7.22 起：视频为可选增强项，不强制注入（对齐 skill baseline-rules #2）
+    # 未启用视频的课件不视为缺项，不再给出 mp4 建议警告
     if mp4_files and not video_refs:
         issues.append(('error',
             f'{course_dir.name}: 已有 mp4 文件但 HTML 未用 <video>/<source> 静态嵌入'))
