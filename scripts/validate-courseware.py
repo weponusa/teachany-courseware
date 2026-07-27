@@ -103,9 +103,9 @@ def detect_html_level(html_head):
     """从 HTML 前面几百行检测学段线索"""
     for lv, keywords in HTML_LEVEL_KEYWORDS.items():
         for k in keywords:
-            # "高一/高二/高三"排除"升高一/升高二/升高三"（温度升高等物理语境）
+            # "高一/高二/高三"排除"升高一"（物理语境）、"乐高一样"（撞"高一"子串）、"提高一个"等
             if k in ('高一', '高二', '高三'):
-                if re.search(r'(?<!升)' + k, html_head):
+                if re.search(r'(?<![升提乐])' + k + r'(?!样)', html_head):
                     return lv, k
             # "X年级"排除"至X年级"（"四至九年级"是适用范围表达，非学段标注）
             elif re.fullmatch(r'[一二三四五六七八九]年级', k):

@@ -27,7 +27,7 @@ PLACEHOLDER_PATTERNS = [
 # placeholder 改为负向环视，豁免 drag-placeholder 等功能性元素 ID
 GENERIC_PHRASES = [
     "本节课我们将学习", "通过本节课的学习", "掌握相关知识", "提升学习兴趣",
-    "加深理解", "培养能力", "重要知识点", "核心概念", "拓展延伸",
+    "加深理解", "培养能力", "重要知识点", "拓展延伸",  # v7.22 移除「核心概念」：中性教学术语（分类类别/示意图/提问正当用法），6课件8处全为误报
 ]
 DIAGNOSTIC_WORDS = ["错因", "诊断", "因为", "误区", "提示", "再想", "错误", "不是", "关键在于"]
 PRODUCTION_WORDS = ["解释", "说明", "设计", "分析", "论证", "产出", "开放任务", "迁移", "探究"]
@@ -61,10 +61,12 @@ def count_chinese_like(text: str) -> int:
 
 
 def extract_sections(html: str) -> list[str]:
-    sections = re.findall(r"<section\b[^>]*>(.*?)</section>", html, flags=re.I | re.S)
+    # v7.22：返回完整 section（含开标签），供 module_like 按 id/class 特征判定；
+    # 中文计数不受影响（标签不含中文）
+    sections = re.findall(r"<section\b[\s\S]*?</section>", html, flags=re.I | re.S)
     if sections:
         return sections
-    return re.findall(r"<div\b[^>]*class=['\"][^'\"]*(?:section|module|card)[^'\"]*['\"][^>]*>(.*?)</div>", html, flags=re.I | re.S)
+    return re.findall(r"<div\b[^>]*class=['\"][^'\"]*(?:section|module|card)[^'\"]*['\"][^>]*>[\s\S]*?</div>", html, flags=re.I | re.S)
 
 
 def issue(level: str, msg: str) -> dict[str, str]:
@@ -118,7 +120,11 @@ def validate_course(course_dir: Path) -> dict[str, Any]:
     if len(substantial_sections) < 5:
         issues.append(issue("error", f"{course_dir.name}: 实质 section 仅 {len(substantial_sections)} 个 < 5，每个模块需有可读讲解、例子或任务"))
 
-    module_like = [s for s in sections if re.search(r"module|concept|section|lesson|knowledge|核心|模块|知识", s, re.I)]
+    # v7.22：按结构特征（id/class含module/boost/concept/upgrade）或内容关键词判定核心知识模块，
+    # 避免嵌套section截断碎片误判（science-genetics-variation-intro 曾 module_like=2 误报）
+    module_like = [s for s in sections if re.search(
+        r"id=['\"][^'\"]*(?:module|boost|concept|lesson)|class=['\"][^'\"]*(?:module|upgrade-block|concept|lesson)|核心知识|知识模块|核心概念",
+        s, re.I)]
     if len(module_like) < 3:
         issues.append(issue("error", f"{course_dir.name}: 核心知识模块少于 3 个，无法构成完整课件"))
 
