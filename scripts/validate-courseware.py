@@ -107,6 +107,10 @@ def detect_html_level(html_head):
             if k in ('高一', '高二', '高三'):
                 if re.search(r'(?<!升)' + k, html_head):
                     return lv, k
+            # "X年级"排除"至X年级"（"四至九年级"是适用范围表达，非学段标注）
+            elif re.fullmatch(r'[一二三四五六七八九]年级', k):
+                if re.search(r'(?<!至)' + k, html_head):
+                    return lv, k
             elif k in html_head:
                 return lv, k
     # course-id 隐含

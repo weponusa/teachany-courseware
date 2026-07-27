@@ -19,10 +19,12 @@ ROOT = Path(__file__).resolve().parents[1]
 EXT_NODE_RE = re.compile(r"^ext-[a-f0-9]{6,12}$", re.I)
 
 PLACEHOLDER_PATTERNS = [
-    r"TODO", r"待补", r"待填写", r"占位符", r"占位图", r"占位文本", r"占位内容", r"placeholder", r"lorem ipsum",
+    r"TODO", r"待补", r"待填写", r"占位图", r"占位文本", r"占位内容", r"(?<![\w-])placeholder(?![\w-])", r"lorem ipsum",
     r"这里(填写|补充|插入)", r"请在此", r"示例文本", r"\bxxx\b",
     r"【(待补|待填|填写|插入|示例|占位|课程名|课题|标题|此处|xxx)[^】]{0,20}】",
 ]
+# 注：「占位符」是数学教学正式术语（用占位符标记数位），误报成本高，移除；
+# placeholder 改为负向环视，豁免 drag-placeholder 等功能性元素 ID
 GENERIC_PHRASES = [
     "本节课我们将学习", "通过本节课的学习", "掌握相关知识", "提升学习兴趣",
     "加深理解", "培养能力", "重要知识点", "核心概念", "拓展延伸",
