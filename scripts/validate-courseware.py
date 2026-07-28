@@ -325,6 +325,35 @@ def has_audio_stream(mp4_path):
     return any(line.strip() == 'audio' for line in result.stdout.splitlines())
 
 
+
+SUBJECT_AS_TITLE = {
+    '数学','物理','化学','生物','语文','英语','历史','地理','科学','道法','政治','信息技术',
+    '初中数学','初中物理','初中化学','初中生物','初中语文','初中英语','初中历史','初中地理','初中科学',
+    '高中数学','高中物理','高中化学','高中生物','高中语文','高中英语','高中历史','高中地理',
+    '小学数学','小学科学','小学语文','小学英语','课件','互动课件','未命名',
+}
+SUBJECT_AS_TITLE_RE = __import__('re').compile(
+    r'^《?(?:初中|高中|小学)?(?:数学|物理|化学|生物|语文|英语|历史|地理|科学|道法|道德与法治|政治|信息技术|心理健康)》?$'
+)
+
+
+def check_subject_as_title(m, course_name):
+    """课件标题不能是纯科目/学段名（Gallery 会把 manifest.name 当卡片大标题）。"""
+    issues = []
+    name = str((m or {}).get('name') or (m or {}).get('title') or '').strip()
+    is_ext = str((m or {}).get('node_id') or course_name).startswith('ext-') or 'ext-' in course_name
+    is_pbl = (m or {}).get('lesson_type') == 'pbl-supplement'
+    if not name:
+        if is_ext or is_pbl:
+            issues.append(('warn', f'{course_name}: manifest.name 为空（PBL/ext 建议补课题名）'))
+        else:
+            issues.append(('error', f'{course_name}: manifest.name 为空，Gallery 无法显示课题名'))
+    elif name in SUBJECT_AS_TITLE or SUBJECT_AS_TITLE_RE.match(name):
+        issues.append(('error',
+            f'{course_name}: manifest.name 写成了科目/学段「{name}」而非课题名（科目当标题）'))
+    return issues
+
+
 def check_feedback_manifest(m, course_name, strict=False):
     """Phase 3.5a：学生反馈密码。单课校验 strict=True 时缺失为 error；全量扫描为 warn。"""
     level = 'error' if strict else 'warn'
@@ -381,6 +410,7 @@ def validate_one(course_dir, strict_feedback=False):
     issues = list(errors)  # v5.34.9.2: 把早期错误（如 html 缺失）合并进主返回列表
 
     if 'community' in str(course_dir):
+        issues.extend(check_subject_as_title(m, course_dir.name))
         issues.extend(check_feedback_manifest(m, course_dir.name, strict=strict_feedback))
 
     # 13a-d. 地图专项硬伤检测（v2026-07 加固，RULES #21/#21a 质检化）
