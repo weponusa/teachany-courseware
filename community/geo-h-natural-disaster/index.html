@@ -125,6 +125,7 @@ input, textarea { width: 100%; border-radius: 12px; border: 1px solid var(--line
 .ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
 </style>
 
+<link rel="stylesheet" href="../../assets/scripts/teachany-geo-lab.css">
 </head>
 <nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;"><a href="#course-version-display">📑 知识图谱</a><a href="#skill-version-display">🤝 AI 学伴</a><a href="#tb-autoplay">📚 课程内容</a></nav>
 
@@ -273,7 +274,7 @@ input, textarea { width: 100%; border-radius: 12px; border: 1px solid var(--line
 
 </section>
 <section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="地图实验：切换图层，看空间格局怎样变">
-<section class="section" id="interactive-lab" data-tts="interactive-lab" data-bloom-level="apply" data-scaffold="partial"><div class="lesson-panel"><span class="phase-tag">Interactive Map Lab</span><h2>地图实验：切换图层，看空间格局怎样变</h2><p style="color:var(--muted)">调节纬度/区位、人类活动强度和阶段变量，观察不同图层的相对值变化，并用一句话解释机制。</p><div class="control-row"><label>分析图层<select id="geo-layer"><option value="sun">太阳辐射/纬度</option><option value="rain">降水/水循环</option><option value="population">人口/城市</option><option value="industry">产业/交通</option><option value="risk">灾害/环境风险</option></select></label><label>纬度/区位<input id="geo-lat" type="range" min="-60" max="60" value="25"></label><label>人类活动强度<input id="human-index" type="range" min="0" max="10" value="5"></label><label>季节/发展阶段<input id="season-index" type="range" min="1" max="12" value="7"></label></div><div class="canvas-wrap"><canvas id="map-canvas" class="wide-canvas" width="900" height="450"></canvas></div><div id="lab-feedback" class="feedback">拖动或选择变量，观察地图图层变化。</div></div></section>
+<section class="section" id="interactive-lab" data-tts="interactive-lab" data-bloom-level="apply" data-scaffold="partial"><div class="lesson-panel"><span class="phase-tag">Real Map Lab</span><h2>真实地图实验：纬度 × 月份，看「自然灾害：从空间格局到成因机制」的真实空间格局</h2><p style="color:var(--muted)">底图为 Natural Earth 真实国界；太阳辐射为天文公式精确值，气温/降水为 10° 纬带气候平均值。拖动纬度与月份，用一句话解释机制。</p><div id="teachany-geo-lab"></div></div></section>
 </section>
 <section class="slide-page" data-page-index="10" data-page-type="content" data-tsh="AI 多模态互动区：把材料变成地理解释">
 <section class="section" id="ai-media-zone" data-tts="ai-media-zone" data-bloom-level="create" data-scaffold="partial"><div class="lesson-panel ai-zone"><span class="phase-tag">AI Media</span><h2>AI 多模态互动区：把材料变成地理解释</h2><p>输入一个区域、地图或统计材料描述，生成一张“空间格局—成因机制—人地影响”的图解草案；也可以上传地图截图，按图例、尺度、指标和证据链进行诊断。</p><div class="control-row"><label>提示词输入框<textarea id="ai-media-prompt" rows="3" aria-label="AI 多模态提示词输入框">请根据自然灾害，生成一张包含空间格局、主导因素、区域影响和治理建议的地理图解。</textarea></label><label>上传地图或图表<input id="upload-image" type="file" accept="image/*" aria-label="upload image"></label></div><button class="quiz-option" type="button" onclick="document.getElementById('ai-media-feedback').textContent='已生成图解提示：先标位置和图例，再写成因链，最后补人地协调建议。'">生成地理图解</button><button class="quiz-option" type="button" onclick="document.getElementById('ai-media-feedback').textContent='已进入上传诊断流程：请核对图名、图例、比例尺、投影和指标单位。'">上传图片诊断</button><div id="ai-media-feedback" class="feedback">这里用于生成地图图解或上传图片诊断，重点检查证据链是否完整。</div></div></section>
@@ -296,16 +297,6 @@ input, textarea { width: 100%; border-radius: 12px; border: 1px solid var(--line
 <li>解释自然灾害时，要把自然过程和人类活动连接起来，避免只写单一因素。</li></ul><p class="feedback">如果你能解释“怎样用图例、坐标和区域案例解释自然灾害的空间格局与成因？”，这节课就真正过关了。</p></div></section>
 </section>
 <script>const FEEDBACK={ pretest:"地理分析先定位区域、尺度和材料类型，再读图找证据。", posttest:"图表和文字可能使用不同指标或尺度，必须核对证据口径。" };function checkAnswer(btn,ok,target){btn.parentElement.querySelectorAll('.quiz-option').forEach(b=>b.classList.remove('correct','wrong'));btn.classList.add(ok?'correct':'wrong');const box=document.getElementById(target+'-feedback');if(box)box.textContent=ok?FEEDBACK[target]:'错因诊断：先回到区域尺度、图例指标和成因链，再检查你是否把描述当解释。'+FEEDBACK[target];}
-const canvas = document.getElementById('map-canvas');
-const ctx = canvas.getContext('2d');
-function clearCanvas(){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#081426';ctx.fillRect(0,0,canvas.width,canvas.height);}
-function text(t,x,y,size=24,color='#eef6ff'){ctx.fillStyle=color;ctx.font=`${size}px -apple-system,BlinkMacSystemFont,PingFang SC,sans-serif`;ctx.fillText(t,x,y);}
-const mGeoFiles = ['assets/maps/world-outline.geojson'];
-let mCx = 450, mCy = 220, mZoom = 1;
-function mLoadGeoBoundaries(){ return mGeoFiles; }
-function drawWorld(){mLoadGeoBoundaries();ctx.strokeStyle='#334155';ctx.lineWidth=2;ctx.strokeRect(70,70,760,300);for(let i=0;i<=6;i++){let y=70+i*50;ctx.beginPath();ctx.moveTo(70,y);ctx.lineTo(830,y);ctx.stroke();}for(let i=0;i<=8;i++){let x=70+i*95;ctx.beginPath();ctx.moveTo(x,70);ctx.lineTo(x,370);ctx.stroke();}ctx.strokeStyle='#1d4ed8';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(130,160);ctx.bezierCurveTo(250,90,360,120,470,155);ctx.bezierCurveTo(570,188,650,155,780,205);ctx.stroke();ctx.strokeStyle='#16a34a';ctx.beginPath();ctx.moveTo(160,260);ctx.bezierCurveTo(300,320,450,270,570,330);ctx.bezierCurveTo(650,365,730,315,805,345);ctx.stroke();text('Canvas GeoJSON 本地底图示意：mGeoFiles=assets/maps/world-outline.geojson',80,405,20,'#94a3b8');text('等距圆柱投影：高纬面积被放大，读图要注意投影变形',80,430,20,'#94a3b8');}
-function drawGeo(){clearCanvas();const layer=document.getElementById('geo-layer').value;const lat=+document.getElementById('geo-lat').value;const human=+document.getElementById('human-index').value;const season=+document.getElementById('season-index').value;drawWorld();const y=mCy-lat*2.2*mZoom;ctx.strokeStyle='#fbbf24';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(70,y);ctx.lineTo(830,y);ctx.stroke();let base=Math.max(0,100-Math.abs(lat)*1.25);let seasonal=20*Math.sin((season-3)/12*Math.PI*2);let humanEffect=human*7;let label='',value=0,color='#38bdf8';if(layer==='sun'){value=base+seasonal;label='太阳辐射强度';color='#fbbf24';}else if(layer==='rain'){value=base*0.55+seasonal+human*2;label='水循环活跃度';color='#38bdf8';}else if(layer==='population'){value=base*0.35+humanEffect;label='人口/城市压力';color='#a78bfa';}else if(layer==='industry'){value=humanEffect+season*3;label='产业联系强度';color='#22c55e';}else{value=humanEffect+Math.abs(lat)*0.7;label='环境/灾害风险';color='#f97316';}value=Math.max(0,Math.min(120,value));ctx.fillStyle=color;ctx.fillRect(120,320-value*1.8,90,value*1.8);text(label+` ≈ ${value.toFixed(1)}`,260,155,32,color);text(`地图中心：(${mCx},${mCy})，缩放：${mZoom}；纬度/区位：${lat}°`,260,215,26,'#dbeafe');text(`人类活动强度：${human}，阶段：${season}`,260,250,26,'#dbeafe');text('本课任务：用地图位置 + 图层指标 + 人类活动解释“自然灾害”。',260,295,24,'#bae6fd');document.getElementById('lab-feedback').textContent=`${label}改变时，要同时解释自然基础、空间位置和人类活动。当前相对值 ${value.toFixed(1)}。`;}
-document.querySelectorAll('#geo-layer,#geo-lat,#human-index,#season-index').forEach(el=>el.addEventListener('input',drawGeo));drawGeo();
 </script>
 
 
@@ -478,5 +469,7 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 
 <script>const knowledgeGraphData={"prerequisites": [{"id": "geo-h-crustal-movement", "name": "geo-h-crustal-movement"}, {"id": "geo-h-weather-system", "name": "geo-h-weather-system"}], "current": {"id": "geo-h-natural-disaster", "name": "自然灾害：从空间格局到成因机制", "status": "active"}, "extends": []};
 // auto-injected standard graph data</script>
+<script>window.__TEACHANY_GEO_LAB__={"topic": "自然灾害：从空间格局到成因机制", "task": "拖动纬度与月份，读真实数据，用「纬度位置 + 图层机制」解释自然灾害：从空间格局到成因机制。"};</script>
+<script src="../../assets/scripts/teachany-geo-lab.js" defer></script>
 </body>
 </html>

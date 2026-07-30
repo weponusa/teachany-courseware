@@ -164,11 +164,22 @@ def checks(html, meta, dir_):
         ctrl = bool(vtags) and all(re.search(r'controls', t, re.I) and re.search(r'playsinline', t, re.I) for t in vtags)
         if not (vvalid >= 1 and ctrl):
             failed.append('#21 视频模块可见可控（可选）')
-    # 22 canvas
-    ok = (re.search(r'<canvas\b', html, re.I)
-          and re.search(r'getContext\s*\(|draw\w*\s*\(', html, re.I)
-          and re.search(r'addEventListener\s*\(\s*["\'](?:pointer|mouse|touch|click|input|change)', html, re.I)
-          and re.search(r'<(?:input|select|button)\b', html, re.I))
+    # 22 canvas（外部本地组件脚本如 teachany-geo-lab.js 一并纳入检测）
+    hay = html
+    for src in re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', html, re.I):
+        if re.match(r'^(?:https?:)?//', src, re.I):
+            continue
+        sp = resolve(dir_, src.split('?')[0].split('#')[0])
+        try:
+            if os.path.exists(sp) and os.path.getsize(sp) < 1024 * 1024:
+                hay += '\n' + open(sp, encoding='utf-8', errors='replace').read()
+        except Exception:
+            pass
+    ok = (re.search(r'<canvas\b', hay, re.I)
+          and re.search(r'getContext\s*\(|draw\w*\s*\(', hay, re.I)
+          and re.search(r'addEventListener\s*\(\s*["\'](?:pointer|mouse|touch|click|input|change)', hay, re.I)
+          and (re.search(r'<(?:input|select|button)\b', hay, re.I)
+               or re.search(r'createElement\(\s*["\'](?:input|select|button)', hay, re.I)))
     if not ok:
         failed.append('#22 Canvas 真实互动')
     return failed
