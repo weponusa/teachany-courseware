@@ -190,6 +190,37 @@ def find_missing_local_asset_refs(course_dir, html_text):
     return missing
 
 
+def count_visualization_units(html_text):
+    """v2026-08 口径统一：可视化丰富度 = 去重本地内容图 + 互动可视模块。
+
+    - 内容图：<img src> 指向本地文件、按路径去重，排除外链与站点图标；
+      同一张 hero 在封面/主图区重复展示只计 1。
+    - 互动可视模块（每个计 1，教学价值优于静态 AI 插图，且避免
+      "为凑图数嵌入无关素材图/重复展示 hero" 的逆向激励）：
+      原生 <canvas>（排除 tkg-fallback）、PhET/GeoGebra 嵌入、
+      data-teachany-map 声明式地图、data-teachany-kg 标准知识图谱
+      （与硬规则 #33 豁免口径一致：图谱为 SVG/DOM 交互探索）。
+    返回 (imgs, units)：imgs 为去重后的本地图片路径集合，units 为互动模块数。
+    """
+    imgs = set()
+    for src in re.findall(r"<img[^>]+src=['\"]([^'\"]+)['\"]", html_text):
+        if re.match(r'^https?://', src, re.IGNORECASE):
+            continue
+        if 'teachany-icon' in src:
+            continue
+        imgs.add(src.lstrip('./'))
+    canvas_tags = [c for c in re.findall(r'<canvas\b[^>]*>', html_text, re.IGNORECASE)
+                   if 'tkg-fallback-canvas' not in c]
+    units = len(canvas_tags)
+    if re.search(r'data-teachany-kg\b', html_text):
+        units += 1
+    if re.search(r'data-teachany-map\b', html_text):
+        units += 1
+    if re.search(r'phet|geogebra|ggbBase64', html_text, re.IGNORECASE):
+        units += 1
+    return imgs, units
+
+
 def check_baseline_quality(course_dir, html_text):
     """v6.6 新增：内容质量硬门槛（防止劣质课件混入 community）
 
@@ -212,13 +243,14 @@ def check_baseline_quality(course_dir, html_text):
         errors.append(('error',
             f'{course_dir.name}: TTS 不足（{mp3_count} 个 mp3，至少需 3）— 课件应覆盖导入/核心模块/小结等关键讲解'))
 
-    # 2. 图片数（HTML 引用 + 实际文件）
-    img_refs = len(re.findall(r"<img[^>]+src=['\"][^'\"]+['\"]", html_text))
+    # 2. 可视化丰富度（v2026-08 口径：去重内容图 + 互动可视模块，替代原 <img> 出现次数）
+    vis_imgs, vis_units = count_visualization_units(html_text)
+    visual_total = len(vis_imgs) + vis_units
     img_files = sum(1 for ext in ('png', 'jpg', 'jpeg', 'webp', 'svg')
                     for _ in course_dir.rglob(f'*.{ext}'))
-    if img_refs < 3:
+    if visual_total < 3 or len(vis_imgs) < 1:
         errors.append(('error',
-            f'{course_dir.name}: HTML 仅引用 {img_refs} 张图（B-3a 要求 ≥3）— 课件应至少有 3 张可视化图'))
+            f'{course_dir.name}: 可视化单元不足（去重内容图 {len(vis_imgs)} 张 + 互动可视模块 {vis_units} 个 = {visual_total}，B-3a 要求合计 ≥3 且至少 1 张嵌入内容图）'))
     if img_files < 3:
         errors.append(('error',
             f'{course_dir.name}: 课件目录仅有 {img_files} 张图文件（assets/ 至少 3 张）'))
@@ -617,16 +649,19 @@ def validate_one(course_dir, strict_feedback=False):
     if assets_dir.exists():
         img_files = [f for f in assets_dir.rglob('*') if f.is_file() and f.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp', '.svg')]
     if html.exists() and full_html:
-        img_tags = re.findall(r'<img[^>]+src=[\'"]\.?/?assets/[^\'"]+[\'"]', full_html)
         # 仅纯计算题课可豁免（subject=math 且 node_id 含 "calculation"/"operation"）
         is_pure_calc = (ms == 'math' and any(kw in (mn or '') for kw in ('calculation', 'operation', 'arithmetic')))
         if not is_pure_calc:
             if len(img_files) < 2:
                 issues.append(('error',
                     f'{course_dir.name}: assets/ 仅 {len(img_files)} 张图 < 2（硬规则 #34 强制 · 需调用 image_gen 生成≥2 张情境/过程/意境插图，仅纯计算课可豁免）'))
-            if len(img_tags) < 2:
+            # v2026-08 口径：嵌入 assets 图按路径去重 + 互动可视模块合计 ≥2
+            # （同一张 hero 重复展示、或为凑数嵌入无关素材图，不再计入）
+            vis_imgs34, vis_units34 = count_visualization_units(full_html)
+            embedded_assets = {s for s in vis_imgs34 if s.startswith('assets/')}
+            if len(embedded_assets) + vis_units34 < 2:
                 issues.append(('error',
-                    f'{course_dir.name}: HTML 中 <img src="./assets/..."> 引用仅 {len(img_tags)} 处 < 2（硬规则 #34 强制 · 生成的图必须嵌入 HTML 对应 section）'))
+                    f'{course_dir.name}: 嵌入可视化不足（assets 去重图 {len(embedded_assets)} 张 + 互动可视模块 {vis_units34} 个 < 2，硬规则 #34 · 生成的图必须嵌入 HTML 对应 section，或以 canvas/图谱等互动可视承载）'))
 
     # 8b. 本地资源幽灵引用检测（v7.9.16 增强）——HTML 引用的本地文件不存在会导致 404
     if html.exists() and full_html:
@@ -838,7 +873,10 @@ def validate_one(course_dir, strict_feedback=False):
 
 
 def main():
-    only = sys.argv[1] if len(sys.argv) > 1 else None
+    # v2026-08：支持传入多个课件 id。pre-push 钩子会一次性传入全部变更课件，
+    # 此前仅取 argv[1]，同批其余课件静默漏检。
+    only_ids = set(sys.argv[1:])
+    only = only_ids or None
     examples = Path('examples')
     community = Path('community')  # v6.6: server 端必须扫 community/
     all_issues = []
@@ -859,7 +897,7 @@ def main():
     for d in scan_dirs:
         if not d.is_dir() or d.name.startswith('_') or d.name.startswith('course-'):
             continue
-        if only and d.name != only:
+        if only and d.name not in only:
             continue
         # 轻量跳转桩（重定向页）跳过内容质检，与 pre-push 钩子一致
         idx = d / 'index.html'
