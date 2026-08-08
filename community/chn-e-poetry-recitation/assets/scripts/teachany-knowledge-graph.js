@@ -16,16 +16,14 @@
 
   var SVG_NS = "http://www.w3.org/2000/svg";
   var BASE_PATH_CANDIDATES = [
-    "/assets/scripts/teachany-kg-manifest.json",
-    "./assets/scripts/teachany-kg-manifest.json",
-    "assets/scripts/teachany-kg-manifest.json",
+    "https://www.teachany.cn/assets/scripts/teachany-kg-manifest.json",
+    "https://www.teachany.cn/scripts/teachany-kg-manifest.json",
     "../../assets/scripts/teachany-kg-manifest.json",
     "../../scripts/teachany-kg-manifest.json",
+    "/assets/scripts/teachany-kg-manifest.json",
     "../assets/scripts/teachany-kg-manifest.json",
     "../scripts/teachany-kg-manifest.json",
     "scripts/teachany-kg-manifest.json",
-    "/teachany-courseware/assets/scripts/teachany-kg-manifest.json",
-    "/teachany/scripts/teachany-kg-manifest.json",
     "/scripts/teachany-kg-manifest.json"
   ];
 
