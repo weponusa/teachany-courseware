@@ -95,6 +95,24 @@ GENERIC_ABT_RE = re.compile(
 )
 
 # Orphan generic wrong-error clinic leftovers (chinese template)
+
+GAME_ID_GUARD = (
+    "id=\"s-warmup\"",
+    "id='s-warmup'",
+    "id=\"s-level1\"",
+    "id=\"screen-warmup\"",
+    "id=\"screen-level1\"",
+)
+
+
+def _would_remove_game(before: str, after: str) -> bool:
+    """Reject a strip step if it deletes core game screens."""
+    for marker in GAME_ID_GUARD:
+        if marker in before and marker not in after:
+            return True
+    return False
+
+
 WRONG_CHAR_ERRORS = [
     "先竖后横的笔顺错误",
     "混淆会意字和形声字",
@@ -188,6 +206,9 @@ def strip_course(html: str) -> tuple[str, list[str]]:
     for i, cre in enumerate(UPGRADE_BLOCK_RES):
         html2, n = cre.subn("", html)
         if n:
+            if _would_remove_game(html, html2):
+                actions.append(f"upgrade_block[{i}]_SKIPPED_game_guard")
+                continue
             actions.append(f"upgrade_block[{i}]x{n}")
             html = html2
 
