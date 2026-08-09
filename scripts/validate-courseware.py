@@ -767,24 +767,26 @@ def validate_one(course_dir, strict_feedback=False):
     video_refs = []
     if html.exists() and full_html:
         video_refs = re.findall(r'<(?:source|video)[^>]+src=[\'"]([^\'\"]+\.mp4)[\'"]', full_html, re.IGNORECASE)
-    # v7.22 起：视频为可选增强项，不强制注入（对齐 skill baseline-rules #2）
-    # 未启用视频的课件不视为缺项，不再给出 mp4 建议警告
+    # v7.23：mp4 为可选资源，不再强制嵌入。
+    # 互动以 Canvas / PhET / 模块讲解为主；磁盘上残留未引用 mp4 仅提示，不阻断推送。
     if mp4_files and not video_refs:
-        issues.append(('error',
-            f'{course_dir.name}: 已有 mp4 文件但 HTML 未用 <video>/<source> 静态嵌入'))
+        issues.append(('warn',
+            f'{course_dir.name}: 有未嵌入的 mp4（{len(mp4_files)} 个），可保留或清理；升级路径不再要求 <video> 嵌入'))
     for ref in set(video_refs):
         clean_ref = ref.lstrip('./')
         if not (course_dir / clean_ref).exists():
             issues.append(('error',
                 f'{course_dir.name}: HTML 引用了 {ref} 但文件不存在（视频死链）'))
-    for mp4 in mp4_files:
-        audio_state = has_audio_stream(mp4)
-        if audio_state is False:
-            issues.append(('warn',
-                f'{course_dir.name}: {mp4.relative_to(course_dir)} 无 audio 流（建议补录音频）'))
-        elif audio_state is None:
-            issues.append(('warn',
-                f'{course_dir.name}: 未找到 ffprobe，无法验证 {mp4.relative_to(course_dir)} 是否含 audio 流'))
+    # 仅当页面实际嵌入了视频时，才检查 audio 流质量
+    if video_refs:
+        for mp4 in mp4_files:
+            audio_state = has_audio_stream(mp4)
+            if audio_state is False:
+                issues.append(('warn',
+                    f'{course_dir.name}: {mp4.relative_to(course_dir)} 无 audio 流（建议补录音频）'))
+            elif audio_state is None:
+                issues.append(('warn',
+                    f'{course_dir.name}: 未找到 ffprobe，无法验证 {mp4.relative_to(course_dir)} 是否含 audio 流'))
 
     # 12. 知识图谱基线（v5.34.11 新增，硬规则 #24）
     #     课件必须含交互式 #knowledge-graph section 或相应 SVG 图
