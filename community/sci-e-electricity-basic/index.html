@@ -299,6 +299,17 @@
 .ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
 </style>
 
+
+<style id="scie-depth-css">
+.scie-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.scie-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.28)}
+.scie-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.scie-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.scie-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.scie-depth .scie-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.scie-depth .scie-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+</style>
+
 </head>
 <body>
 <!-- teachany-hero-notext -->
@@ -813,12 +824,12 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
   const canvas = document.getElementById('circuitCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  
+
   let mode = 'normal';
   let connections = [];
   let dragging = null;
   let mouseX = 0, mouseY = 0;
-  
+
   // Circuit elements layout
   const elements = {
     battery:  { x: 120, y: 210, w: 80, h: 60, label: '🔋 电池', color: '#fbbf24' },
@@ -826,11 +837,11 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     switch_el:{ x: 680, y: 210, w: 80, h: 60, label: '🔌 开关', color: '#a78bfa', closed: true },
     wire_top: { x: 400, y: 60,  w: 60, h: 20, label: null, color: '#64748b' },
   };
-  
+
   // Connection nodes
   let nodes = [];
   let wires = []; // user-drawn wires
-  
+
   function getNodes(m) {
     if (m === 'normal') {
       return [
@@ -858,9 +869,9 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
       ];
     }
   }
-  
+
   nodes = getNodes('normal');
-  
+
   function setCircuitModeInternal(m) {
     mode = m;
     nodes = getNodes(m);
@@ -869,13 +880,13 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     draw();
     updateStatus('');
   }
-  
+
   window.setCircuitMode = function(m) {
     document.querySelectorAll('#btn-circuit, #btn-switch, #btn-short').forEach(b => b.classList.remove('active'));
     document.getElementById('btn-' + m.replace('_', '-')).classList.add('active');
     setCircuitModeInternal(m);
   };
-  
+
   window.resetCircuit = function() {
     wires = [];
     nodes = getNodes(mode);
@@ -883,12 +894,12 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     draw();
     updateStatus('电路已重置，重新开始连接！');
   };
-  
+
   function updateStatus(msg) {
     const el = document.getElementById('circuitStatus');
     if (el) el.textContent = msg;
   }
-  
+
   function drawRoundRect(x, y, w, h, r, fill, stroke) {
     ctx.beginPath();
     ctx.roundRect(x - w/2, y - h/2, w, h, r);
@@ -898,7 +909,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     ctx.lineWidth = 2;
     ctx.stroke();
   }
-  
+
   function drawBattery(lit) {
     const bx = 160, by = 210;
     ctx.fillStyle = lit ? 'rgba(251,191,36,0.2)' : 'rgba(251,191,36,0.08)';
@@ -918,7 +929,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     ctx.fillStyle = '#94a3b8';
     ctx.fillText('-', bx - 52, by - 8);
   }
-  
+
   function drawBulb(lit) {
     const bulbX = 430, bulbY = 130;
     if (lit) {
@@ -945,7 +956,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     ctx.fillStyle = lit ? '#fbbf24' : '#38bdf8';
     ctx.fillText(lit ? '💡' : '🔌', bulbX, bulbY);
   }
-  
+
   function drawSwitch(sw) {
     const swX = 680, swY = 210;
     ctx.fillStyle = sw ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.1)';
@@ -962,7 +973,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     ctx.fillStyle = '#94a3b8';
     ctx.fillText(sw ? '闭合' : '断开', swX, swY + 22);
   }
-  
+
   function checkCircuitComplete() {
     if (mode === 'normal') {
       // Check if we have wires forming a basic loop
@@ -972,18 +983,18 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     }
     return false;
   }
-  
+
   function isShortCircuit() {
     return mode === 'short' && wires.length >= 1;
   }
-  
+
   function draw() {
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
-    
+
     const lit = checkCircuitComplete() && !isShortCircuit();
     const short = isShortCircuit();
-    
+
     // Background circuit outline (template)
     ctx.strokeStyle = 'rgba(100,116,139,0.25)';
     ctx.lineWidth = 3;
@@ -1008,7 +1019,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     }
     ctx.stroke();
     ctx.setLineDash([]);
-    
+
     // Draw user wires
     wires.forEach((w, i) => {
       ctx.beginPath();
@@ -1018,7 +1029,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
       ctx.lineWidth = 5;
       ctx.lineCap = 'round';
       ctx.stroke();
-      
+
       // Animate current particles on lit circuit
       if (lit && !short) {
         const t = (Date.now() / 400 + i * 0.3) % 1;
@@ -1030,7 +1041,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
         ctx.fill();
       }
     });
-    
+
     // Current dragging wire
     if (dragging) {
       ctx.beginPath();
@@ -1042,7 +1053,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
       ctx.stroke();
       ctx.setLineDash([]);
     }
-    
+
     // Draw elements
     if (mode === 'normal' || mode === 'switch') {
       drawBattery(lit);
@@ -1062,7 +1073,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
         ctx.globalAlpha = 0.8 + 0.2 * Math.sin(Date.now() / 200);
         ctx.fillText('🔥', 430, 210);
         ctx.restore();
-        
+
         ctx.font = 'bold 20px sans-serif';
         ctx.fillStyle = '#f87171';
         ctx.textAlign = 'center';
@@ -1070,7 +1081,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
         ctx.fillText('⚠️ 短路！非常危险！', 430, 320);
       }
     }
-    
+
     // Draw connection nodes
     nodes.forEach(n => {
       const isActive = dragging && dragging.fromId === n.id;
@@ -1087,7 +1098,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
       ctx.textBaseline = 'middle';
       ctx.fillText(n.label, n.x, n.y);
     });
-    
+
     // Labels
     ctx.font = '13px sans-serif';
     ctx.fillStyle = '#94a3b8';
@@ -1103,16 +1114,16 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
       ctx.fillStyle = '#f87171';
       ctx.fillText('⚠️ 演示：短路时电流直接从正极到负极，不经过用电器', 430, 390);
     }
-    
+
     if (lit) requestAnimationFrame(draw);
   }
-  
+
   // Mouse events
   canvas.addEventListener('mousedown', e => {
     const r = canvas.getBoundingClientRect();
     const mx = (e.clientX - r.left) * (canvas.width / r.width);
     const my = (e.clientY - r.top) * (canvas.height / r.height);
-    
+
     for (const n of nodes) {
       const d = Math.hypot(mx - n.x, my - n.y);
       if (d < 16) {
@@ -1123,20 +1134,20 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
       }
     }
   });
-  
+
   canvas.addEventListener('mousemove', e => {
     const r = canvas.getBoundingClientRect();
     mouseX = (e.clientX - r.left) * (canvas.width / r.width);
     mouseY = (e.clientY - r.top) * (canvas.height / r.height);
     if (dragging) draw();
   });
-  
+
   canvas.addEventListener('mouseup', e => {
     if (!dragging) return;
     const r = canvas.getBoundingClientRect();
     const mx = (e.clientX - r.left) * (canvas.width / r.width);
     const my = (e.clientY - r.top) * (canvas.height / r.height);
-    
+
     // Check if dropped on a different node
     let targetNode = null;
     for (const n of nodes) {
@@ -1145,7 +1156,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
         break;
       }
     }
-    
+
     if (targetNode) {
       // Add wire
       wires.push({ x1: dragging.startX, y1: dragging.startY, x2: targetNode.x, y2: targetNode.y });
@@ -1164,11 +1175,11 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
         updateStatus('导线已连接，继续连接其他节点来完成电路...');
       }
     }
-    
+
     dragging = null;
     draw();
   });
-  
+
   canvas.addEventListener('touchstart', e => {
     e.preventDefault();
     const touch = e.touches[0];
@@ -1184,7 +1195,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
       }
     }
   }, { passive: false });
-  
+
   canvas.addEventListener('touchmove', e => {
     e.preventDefault();
     if (!dragging) return;
@@ -1194,7 +1205,7 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     mouseY = (touch.clientY - r.top) * (canvas.height / r.height);
     draw();
   }, { passive: false });
-  
+
   canvas.addEventListener('touchend', e => {
     if (!dragging) return;
     const r = canvas.getBoundingClientRect();
@@ -1218,18 +1229,18 @@ window.TEACHANY_KG_DATA['sci-e-electricity-basic'] = {
     dragging = null;
     draw();
   }, { passive: false });
-  
+
   // Resize
   function resizeCanvas() {
     const W = Math.min(860, canvas.parentElement.offsetWidth - 32);
     canvas.style.width = W + 'px';
     canvas.style.height = (W * 420 / 860) + 'px';
   }
-  
+
   window.addEventListener('resize', () => { resizeCanvas(); draw(); });
   resizeCanvas();
   draw();
-  
+
   // Animate loop for particle effects
   setInterval(() => {
     if (checkCircuitComplete()) draw();
@@ -1244,14 +1255,14 @@ function judgeCircuit(cardId, choice, correctIsYes, explanation) {
   const resultEl = card.querySelector('.judge-result');
   const buttons = card.querySelectorAll('.judge-btn');
   buttons.forEach(b => b.style.pointerEvents = 'none');
-  
+
   const num = cardId.replace('jc', '');
   const resEl = document.getElementById('jr' + num);
   if (!resEl) return;
-  
+
   const userSaidYes = (choice === 'yes');
   const correct = (userSaidYes === correctIsYes);
-  
+
   resEl.style.display = 'block';
   if (correct) {
     resEl.style.color = '#34d399';
@@ -1319,10 +1330,10 @@ function showBadgeMsg(msg) {
 function renderKGFallback() {
   const container = document.getElementById('kg-container');
   if (!container || container.children.length > 0) return;
-  
+
   const data = window.TEACHANY_KG_DATA?.['sci-e-electricity-basic'];
   if (!data) return;
-  
+
   const W = container.offsetWidth || 880;
   const H = 420;
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1330,7 +1341,7 @@ function renderKGFallback() {
   svg.setAttribute('height', H);
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.style.cssText = 'border-radius:12px;background:rgba(12,28,50,0.8);border:1px solid rgba(251,191,36,0.15);';
-  
+
   const positions = {
     root:    { x: W/2, y: H/2 },
     comp:    { x: W/2 - 280, y: H/2 - 100 },
@@ -1347,9 +1358,9 @@ function renderKGFallback() {
     series:  { x: W/2 - 240, y: H/2 + 180 },
     parallel:{ x: W/2 - 40, y: H/2 + 180 },
   };
-  
+
   const colors = { root: '#fbbf24', child: '#38bdf8', leaf: '#34d399' };
-  
+
   // Draw edges
   data.edges.forEach(e => {
     const p1 = positions[e.from];
@@ -1362,18 +1373,18 @@ function renderKGFallback() {
     line.setAttribute('stroke-width', '1.5');
     svg.appendChild(line);
   });
-  
+
   // Draw nodes
   data.nodes.forEach(n => {
     const pos = positions[n.id];
     if (!pos) return;
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.style.cursor = 'pointer';
-    
+
     const text = n.label;
     const textW = text.length * 11 + 20;
     const textH = 32;
-    
+
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     rect.setAttribute('x', pos.x - textW/2);
     rect.setAttribute('y', pos.y - textH/2);
@@ -1383,7 +1394,7 @@ function renderKGFallback() {
     rect.setAttribute('fill', colors[n.type] + '20');
     rect.setAttribute('stroke', colors[n.type]);
     rect.setAttribute('stroke-width', n.type === 'root' ? '2' : '1');
-    
+
     const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     t.setAttribute('x', pos.x);
     t.setAttribute('y', pos.y + 5);
@@ -1393,11 +1404,11 @@ function renderKGFallback() {
     t.setAttribute('font-weight', n.type === 'root' ? '800' : '500');
     t.setAttribute('font-family', "'PingFang SC',sans-serif");
     t.textContent = text;
-    
+
     g.appendChild(rect); g.appendChild(t);
     svg.appendChild(g);
   });
-  
+
   container.appendChild(svg);
 }
 
@@ -1480,6 +1491,42 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
 <!-- v7.7.4 标准知识图谱模块 -->
 
+
+<section class="slide-page" data-page-type="content" data-tsh="精讲">
+  <section class="section scie-depth core-knowledge-module text-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>简单电路</h2>
+      <p>电路需要电源、用电器、开关和导线组成通路，电流才能持续通过，灯泡才会亮。通路是闭合的；断路某处断开；短路是电流绕过用电器直接连通电源两极，危险且可能损坏电源。电路图用符号表示实物连接。</p>
+    </div>
+  </section>
+</section>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例">
+  <section class="section scie-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：从正极走一圈回到负极</h2>
+      <p>用手指沿导线追踪：能否不间断地经过用电器回到电源。能就是通路；被开关断开就是断路；若绕过灯泡直连两极就是短路。</p>
+      <div class="worked-example"><strong>范例：</strong>电池、灯、开关用导线依次连接，开关闭合灯亮；开关断开灯灭。若两根导线直接把电池正负极连上，属于短路，禁止这样做。</div>
+      <p id="lesson-pitfall" class="scie-pitfall"><strong>常见误区：</strong>常见误区是认为有电池灯就一定亮，忽略是否形成通路。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>小灯泡要发光，电路一般需要？</p>
+        <button type="button" data-correct="0" onclick="scieDepthCheck(this,false,&#x27;scie-depth-feedback-1&#x27;,&quot;闭合通路加电源，用电器才能工作。&quot;)">A. 只有导线没有电源</button><button type="button" data-correct="1" onclick="scieDepthCheck(this,true,&#x27;scie-depth-feedback-1&#x27;,&quot;闭合通路加电源，用电器才能工作。&quot;)">B. 形成闭合通路并有电源</button><button type="button" data-correct="0" onclick="scieDepthCheck(this,false,&#x27;scie-depth-feedback-1&#x27;,&quot;闭合通路加电源，用电器才能工作。&quot;)">C. 必须短路</button><button type="button" data-correct="0" onclick="scieDepthCheck(this,false,&#x27;scie-depth-feedback-1&#x27;,&quot;闭合通路加电源，用电器才能工作。&quot;)">D. 只有开关没有用电器</button>
+        <div class="scie-feedback" id="scie-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：观察推理</h3>
+        <p>开关断开时灯不亮，是因为？</p>
+        <button type="button" data-correct="1" onclick="scieDepthCheck(this,true,&#x27;scie-depth-feedback-2&#x27;,&quot;断开处使电路不闭合。&quot;)">A. 电路成为断路，电流不能持续通过</button><button type="button" data-correct="0" onclick="scieDepthCheck(this,false,&#x27;scie-depth-feedback-2&#x27;,&quot;断开处使电路不闭合。&quot;)">B. 灯泡变成了导体短路</button><button type="button" data-correct="0" onclick="scieDepthCheck(this,false,&#x27;scie-depth-feedback-2&#x27;,&quot;断开处使电路不闭合。&quot;)">C. 电池质量变大</button><button type="button" data-correct="0" onclick="scieDepthCheck(this,false,&#x27;scie-depth-feedback-2&#x27;,&quot;断开处使电路不闭合。&quot;)">D. 空气导电太强</button>
+        <div class="scie-feedback" id="scie-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
+</section>
+
 <section class="section" data-tts="deep-understanding" id="deep-understanding" style="margin:28px 0">
 <div class="card insight-box"><h2>🔍 深层理解 · 五镜头看「sci-e-electricity-basic」</h2>
 <p><b>👀 看见它</b>：在生活的真实场景里，「sci-e-electricity-basic」长什么样？先找到一两个能摸得着的例子。</p>
@@ -1509,6 +1556,25 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 </div>
 <script>(function(){var sec=document.getElementById('posttest');if(!sec)return;sec.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var box=btn.closest('.tu-q');var ok=btn.getAttribute('data-correct')==='true';box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');var fb=box.querySelector('.tu-fb');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'💡 ')+(btn.getAttribute('data-diagnosis')||'');}});});})();</script>
 </section>
+
+
+<script id="scie-depth-js">
+function scieDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+</script>
 
 </body>
 </html>
