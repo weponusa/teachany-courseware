@@ -12,7 +12,10 @@ if start != -1 and end != -1:
     html = html[:start] + html[end + 3:]
 
 html = html.replace("<body>", '<body class="teachany-high">')
-html = html.replace("</style>", extra_css + "\n</style>")
+# Do not put the literal "</style>" in CSS comments: HTML parsers close the
+# style element as soon as they see that sequence, even inside a comment.
+if "/* extra course CSS */" not in html:
+    html = html.replace("</style>", extra_css + "\n</style>", 1)
 html = html.replace('data-tts-disabled="true"', "")
 
 repl = {
