@@ -1,0 +1,1980 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《信号与处理：从学生提问出发》 · 信息技术 高中 G12 · TeachAny v7.21.0</title>
+<meta name="description" content="大学信息类核心课 PBL 课程设计：从听不清的广播提出问题，经采样、LTI/卷积、DFT/窗、FIR/IIR 四关，交付可答辩的处理链路。">
+
+<!-- TeachAny routing meta -->
+<meta name="course-id" content="info-u-signals-pbl">
+<meta name="course-title" content="信号与处理：从学生提问出发">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="大学·信息类">
+<meta name="course-prereqs" content="">
+<meta name="course-next" content="">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.21.0">
+<meta name="teachany-node" content="ext-c84e21c6">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="12">
+<meta name="teachany-stage" content="high">
+<meta name="teachany-domain" content="数字信号处理">
+<meta name="teachany-prerequisites" content="高等数学；大学物理波动基础">
+<meta name="teachany-lesson-type" content="inquiry-project">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+<meta name="teachany-difficulty" content="challenge">
+<meta name="teachany-author" content="TeachAny">
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <!-- 标准五件套 + 音频播放器 -->
+<link rel="stylesheet" href="./assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-floating-dock.css">
+
+
+<style>
+/* ======================================================
+   TeachAny v2 Design System — Paged + Rich Visual
+   ====================================================== */
+
+:root {
+  /* Core palette */
+  --bg: #07111f;
+  --bg-subtle: #0b1628;
+  --panel: #101d32;
+  --card: #14233a;
+  --card-elevated: #1a2d4a;
+  --line: #25415f;
+  --line-subtle: rgba(148, 163, 184, 0.12);
+  --text: #eef6ff;
+  --text-secondary: #c8d8ea;
+  --muted: #9fb4cc;
+  --brand: #38bdf8;
+  --brand-soft: rgba(56, 189, 248, 0.12);
+  --brand-2: #a78bfa;
+  --brand-2-soft: rgba(167, 139, 250, 0.12);
+  --accent: #34d399;
+  --accent-soft: rgba(52, 211, 153, 0.1);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+
+  /* Spacing */
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+
+  /* Slide system */
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --sidenav-width: 48px;
+}
+
+/* ─── Reset & Base ─── */
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--brand); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+/* ─── Scroll Container ─── */
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* In browse mode (default), normal scroll with snap */
+body:not(.play-mode) .slide-container {
+  scroll-snap-type: y proximity;
+}
+
+/* In play mode, lock to exact pages */
+body.play-mode .slide-container {
+  scroll-snap-type: y mandatory;
+  overflow: hidden;
+}
+
+/* ─── Slide Page ─── */
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: hidden;
+}
+
+.slide-page .slide-inner {
+  max-width: 880px;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+  margin: 0 auto;
+}
+/* Force all direct children of slide-inner to fill width */
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+/* Nested cards should not double-pad */
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* ─── Page Type Decorations ─── */
+
+/* Cover page */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(56, 189, 248, 0.15), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(167, 139, 250, 0.12), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(52, 211, 153, 0.06), transparent 60%);
+  text-align: center;
+}
+
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(32px, 7vw, 56px);
+  line-height: 1.15;
+  background: linear-gradient(135deg, var(--text) 0%, var(--brand) 50%, var(--brand-2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+}
+
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary);
+  font-size: clamp(16px, 3vw, 22px);
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* Objectives page */
+.slide-page[data-page-type="objectives"] {
+  background:
+    radial-gradient(circle at 0% 100%, rgba(52, 211, 153, 0.1), transparent 40%),
+    radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.08), transparent 40%);
+}
+
+/* Concept page */
+.slide-page[data-page-type="concept"] {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(56, 189, 248, 0.08), transparent 35%),
+    radial-gradient(circle at 70% 80%, rgba(167, 139, 250, 0.06), transparent 35%);
+}
+
+/* Interactive page */
+.slide-page[data-page-type="interactive"] {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(52, 211, 153, 0.1), transparent 40%),
+    radial-gradient(circle at 80% 100%, rgba(56, 189, 248, 0.06), transparent 35%);
+}
+
+/* Quiz / Test page */
+.slide-page[data-page-type="quiz"] {
+  background:
+    radial-gradient(circle at 20% 80%, rgba(245, 158, 11, 0.08), transparent 35%),
+    radial-gradient(circle at 80% 20%, rgba(167, 139, 250, 0.06), transparent 35%);
+}
+
+/* Summary page */
+.slide-page[data-page-type="summary"] {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.1), transparent 45%),
+    radial-gradient(circle at 20% 20%, rgba(52, 211, 153, 0.06), transparent 30%);
+}
+
+/* ─── Brand Bar ─── */
+.teachany-brand-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  background: rgba(7, 17, 31, 0.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+
+body.play-mode .teachany-brand-bar {
+  transform: translateY(-100%);
+}
+
+.brand-logo { display: flex; align-items: center; gap: 8px; color: #f8fafc; text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #07111f; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); transition: color 0.2s; }
+.brand-link:hover { color: var(--text); text-decoration: none; }
+.brand-version { color: #cbd5e1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgba(255,255,255,.06); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* ─── Cards (enhanced) ─── */
+.card {
+  background: linear-gradient(160deg, rgba(20, 35, 58, 0.95), rgba(11, 22, 40, 0.98));
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.2),
+    0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.card-accent {
+  border-top: 3px solid;
+  border-image: linear-gradient(90deg, var(--brand), var(--brand-2)) 1;
+}
+
+.card-glow {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.2),
+    0 0 40px rgba(56, 189, 248, 0.05);
+}
+
+/* ─── Section Header ─── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.section-header h2 {
+  font-size: clamp(20px, 4vw, 26px);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* ─── Phase Tag (enhanced) ─── */
+.phase-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--brand);
+  background: var(--brand-soft);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.phase-tag[data-variant="success"] { color: var(--accent); background: var(--accent-soft); border-color: rgba(52, 211, 153, 0.2); }
+.phase-tag[data-variant="purple"] { color: var(--brand-2); background: var(--brand-2-soft); border-color: rgba(167, 139, 250, 0.2); }
+.phase-tag[data-variant="warn"] { color: var(--warn); background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.2); }
+
+/* ─── Grid ─── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: 100%;
+}
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+/* Two-column layout */
+.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Flex row for action buttons */
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+/* Inner helper cards */
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+/* Summary items */
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); }
+.summary-item .num { font-weight: 700; flex-shrink: 0; }
+
+/* Step grid for worked examples */
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+
+.objectives {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.objectives li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--card-radius-sm);
+  background: rgba(56, 189, 248, 0.04);
+  border: 1px solid var(--line-subtle);
+  transition: background 0.2s;
+}
+
+.objectives li:hover {
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.objectives li::before {
+  content: "✦";
+  color: var(--brand);
+  font-size: 14px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* ─── Choice Buttons (enhanced) ─── */
+.choice {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: var(--card-radius-sm);
+  background: rgba(56, 189, 248, 0.04);
+  color: var(--text);
+  padding: 16px 20px;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+}
+
+.choice:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.35);
+  transform: translateX(4px);
+}
+
+.choice.selected {
+  border-color: var(--brand);
+  background: rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+}
+
+.choice.correct {
+  border-color: var(--ok);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.choice.wrong {
+  border-color: var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* ─── Inputs ─── */
+input, textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-subtle);
+  color: var(--text);
+  padding: 14px 16px;
+  font-size: 15px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+}
+
+/* ─── Result / Feedback ─── */
+.result {
+  padding: 16px 20px;
+  border-radius: var(--card-radius-sm);
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.result.warn {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.result.error {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+/* ─── Canvas Wrap ─── */
+.canvas-wrap {
+  overflow: auto;
+  background: var(--bg-subtle);
+  border: 1px solid var(--line-subtle);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+/* ─── Hero Figure ─── */
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* ─── Slide Progress Indicator (top) ─── */
+.slide-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+  z-index: 200;
+  transition: width 0.3s ease;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ─── Bottom Toolbar ─── */
+.slide-toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgba(7, 17, 31, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+body.play-mode .slide-toolbar,
+body.toolbar-visible .slide-toolbar {
+  transform: translateY(0);
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 18px;
+}
+
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.toolbar-btn.active {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.toolbar-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.toolbar-page-info {
+  color: var(--muted);
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  min-width: 60px;
+  text-align: center;
+}
+
+.toolbar-progress {
+  flex: 1;
+  max-width: 200px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.toolbar-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ─── Side Navigation ─── */
+.slide-sidenav {
+  position: fixed;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  max-height: 70vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: rgba(7, 17, 31, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+
+body.play-mode .slide-sidenav,
+body.toolbar-visible .slide-sidenav {
+  opacity: 1;
+}
+
+.sidenav-dot {
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sidenav-dot:hover {
+  background: rgba(56, 189, 248, 0.4);
+  width: 36px;
+}
+
+.sidenav-dot.active {
+  background: var(--brand);
+  width: 36px;
+  height: 5px;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
+
+.sidenav-dot[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 5px 10px;
+  background: rgba(7, 17, 31, 0.95);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.sidenav-dot:hover[data-tooltip]::before {
+  opacity: 1;
+}
+
+/* 当前页码指示器 */
+.sidenav-counter {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 4px 0 2px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+  width: 100%;
+}
+
+/* ─── Play Mode Toggle FAB ─── */
+.play-mode-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 90;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.3);
+  transition: all 0.3s ease;
+}
+
+.play-mode-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgba(56, 189, 248, 0.4);
+}
+
+body.play-mode .play-mode-fab {
+  bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom));
+}
+
+.play-mode-fab svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ─── Page Transition Animation ─── */
+.slide-page {
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+body.play-mode .slide-page {
+  animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+  from { opacity: 0.6; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  :root {
+    --page-padding: 16px;
+    --card-radius: 16px;
+  }
+
+  .slide-page {
+    padding: 16px 14px;
+    padding-bottom: calc(16px + var(--toolbar-height));
+  }
+
+  .grid, .grid-2, .grid-3, .objectives, .grid-2col {
+    grid-template-columns: 1fr !important;
+  }
+
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+
+  .card { padding: 18px; }
+
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 22px; height: 3px; }
+  .sidenav-dot.active { width: 28px; }
+  .sidenav-counter { font-size: 9px; }
+
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .brand-right { gap: 8px; font-size: 12px; }
+
+  canvas.wide-canvas { min-width: 560px; }
+}
+
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 {
+    font-size: 28px;
+  }
+
+  .toolbar-progress { max-width: 120px; }
+}
+
+/* ─── Utility ─── */
+.text-gradient {
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  background: rgba(20, 35, 58, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line-subtle);
+}
+
+.animate-in {
+  animation: fadeUp 0.5s ease-out both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+/* extra course CSS injected before </style> */
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="quiz"] {
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+.slide-page[data-page-type="interactive"] .slide-inner,
+.slide-page[data-page-type="concept"] .slide-inner,
+.slide-page[data-page-type="quiz"] .slide-inner {
+  padding-top: 56px;
+}
+.formula {
+  font-family: ui-serif, "Times New Roman", serif;
+  font-size: 18px;
+  text-align: center;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(167, 139, 250, 0.08);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  color: #e9d5ff;
+  margin: 8px 0;
+}
+.kp-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line-subtle);
+  background: rgba(56, 189, 248, 0.04);
+}
+.kp-card h3 { color: var(--brand); font-size: 15px; margin-bottom: 6px; }
+.kp-card p { margin: 0; color: var(--text-secondary); font-size: 14px; }
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.week-chip {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.week-chip b { display: block; color: var(--text); margin-bottom: 4px; }
+.lab-ctrl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0;
+  align-items: center;
+}
+.lab-ctrl .chk { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.lab-ctrl .chk input { width: auto; min-height: 20px; }
+.meter {
+  justify-self: start;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.meter[data-state="ok"] { background: var(--accent-soft); color: var(--accent); }
+.meter[data-state="warn"] { background: rgba(245,158,11,.12); color: var(--warn); }
+.meter[data-state="bad"] { background: rgba(239,68,68,.12); color: var(--danger); }
+.q-board { display: flex; flex-wrap: wrap; gap: 8px; }
+.q-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--line-subtle);
+  font-size: 13px; max-width: 100%;
+}
+.q-chip button { min-height: 32px; width: 32px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.q-lv { font-weight: 700; font-size: 11px; }
+.q-L1 .q-lv { color: var(--warn); }
+.q-L2 .q-lv { color: var(--brand); }
+.q-L3 .q-lv { color: var(--accent); }
+.teacher-note, .interact-point {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.teacher-note { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2); }
+.interact-point { background: var(--brand-soft); border: 1px solid rgba(56,189,248,.2); }
+.iframe-frame { border-radius: 12px; overflow: hidden; border: 1px solid var(--line-subtle); height: 260px; }
+.iframe-frame iframe { width: 100%; height: 260px; border: 0; }
+.selected-branch { outline: 2px solid var(--brand); }
+select { font-size: 15px; }
+@media (max-width: 768px) {
+  .week-grid, .lab-ctrl { grid-template-columns: 1fr; }
+}
+
+</style>
+
+  <meta name="teachany-id" content="info-u-signals-pbl">
+  <meta name="teachany-name" content="信号与处理：从学生提问出发">
+  <meta name="teachany-node" content="ext-c84e21c6">
+  <meta name="teachany-subject" content="info-tech">
+  <meta name="teachany-grade" content="12">
+  <meta name="teachany-version" content="v6">
+  <meta name="teachany-author" content="TeachAny 用户">
+  <meta name="teachany-curriculum" content="cn-national">
+</head>
+<body class="teachany-high">
+
+<!-- Progress Bar -->
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<!-- Brand Bar -->
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://weponusa.github.io/teachany/" aria-label="TeachAny Gallery">
+    <img src="https://weponusa.github.io/teachany-courseware/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://weponusa.github.io/teachany/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.21.0</span></span>
+  </div>
+</div>
+
+<!-- Slide Container -->
+<div class="slide-container" id="slide-container">
+
+  <!-- Page 1: Cover -->
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero" data-tsh="开场 - 先用一个真实问题建立学习动机" data-tts-script="开场。先用一个真实问题建立学习动机。">
+    <div class="slide-inner">
+      <h1>信号与处理：从学生提问出发</h1>
+      <p class="subtitle">广播听不清，你的第一个真正的问题是什么？</p>
+      <figure class="ta-standard-figure" style="margin-top:32px">
+        <img class="hero-cover-img" src="./assets/info-u-signals-pbl-hero.webp" alt="信号与处理 PBL 知识结构：学生提问到采样、LTI 卷积、DFT 窗函数、FIR/IIR 滤波">
+        <figcaption>课程不从定义开始。先把听不清写成可检验的问题，四道关卡逼出核心课深度。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- Page 2: Problem Anchor -->
+  <section class="slide-page" data-page-type="interactive" data-page-index="1" data-tts="problem-anchor" data-tsh="问题锚点 - 先确定你今天想解决的问题" data-tts-script="问题锚点。先确定你今天想解决的问题。">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">Problem Anchor</span>
+          <h2>今天想解决什么问题？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你关心的问题，后面的内容会围绕它展开。</p>
+        <div class="grid" id="problem-anchor-choices">
+
+          <button class="choice" data-anchor-choice="为什么把广播开得更响，字反而更糊？">为什么把广播开得更响，字反而更糊？</button>
+          <button class="choice" data-anchor-choice="语谱图上那条横线是什么？怎样只去掉它？">语谱图上那条横线是什么？怎样只去掉它？</button>
+          <button class="choice" data-anchor-choice="怎样证明一种处理比另一种更好，而不是听起来还行？">怎样证明一种处理比另一种更好，而不是「听起来还行」？</button>
+
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己的问题
+          <input id="learner-question-input" placeholder="把你卡住的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，本课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Page 3: Learning Objectives -->
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives" data-tsh="学习目标 - 明确这节课结束时能做到什么" data-tts-script="学习目标。明确这节课结束时能做到什么。">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">Objectives</span>
+          <h2>学习目标</h2>
+        </div>
+        <ul class="objectives">
+
+          <li>能把现象句升级为可检验命题，并据此设计对照实验</li>
+          <li>能依据采样定理论证 fs、抗混叠与量化</li>
+          <li>能鉴定处理块是否 LTI，并用卷积解释输入输出</li>
+          <li>能用 DFT 做可辩护的频谱分析（Δf、窗、泄漏）</li>
+          <li>能按指标比较 FIR 与 IIR，解释相位与群延迟</li>
+
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Content Sections: 每个教学模块一页 -->
+  <section class="slide-page" data-page-type="concept" data-page-index="3" data-tts="how-pbl" data-tsh="课程怎么学 - 先提问，再按缺口学理论" data-tts-script="课程怎么学。先提问，再按缺口学理论。">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">PBL</span>
+          <h2>这门核心课从问题开始，不从定义开始</h2>
+        </div>
+        <div class="card glass inner-card">
+          <p><strong style="color:var(--accent)">已经知道：</strong>声音能录音、能放大，软件里有「降噪」按钮。</p>
+          <p><strong style="color:var(--warn)">但是：</strong>操场广播听不清时，开大音量往往更糟，你说不清该动采样、频谱还是系统。</p>
+          <p style="margin:0"><strong style="color:var(--brand)">所以：</strong>先把困惑写成可检验的问题，理论只为回答这些问题而出现。</p>
+        </div>
+        <div class="grid grid-3" style="margin-top:16px">
+          <div class="card inner-card">
+            <h3 style="color:var(--brand);font-size:16px">学生</h3>
+            <p style="margin:0;color:var(--text-secondary)">听现象 → 提问 → 做对照实验 → 用公式辩护</p>
+          </div>
+          <div class="card inner-card">
+            <h3 style="color:var(--brand-2);font-size:16px">教师</h3>
+            <p style="margin:0;color:var(--text-secondary)">藏知识覆盖表、公开问题板；缺哪块就给反例，不先抛章节名</p>
+          </div>
+          <div class="card inner-card">
+            <h3 style="color:var(--accent);font-size:16px">深度</h3>
+            <p style="margin:0;color:var(--text-secondary)">四道关卡答辩。Demo 能跑但讲不清采样，不算过关</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="4" data-tts="listen-trigger" data-tsh="触发情境 - 先听四段广播，再写下事实" data-tts-script="触发情境。先听四段广播，再写下事实。">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">Trigger</span>
+          <h2>广播站投诉：操场听不清</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">四段合成播报，标签故意不写理论。只记录事实：更响？更闷？有没有嗡声？</p>
+        <div class="flex-row">
+          <button class="choice" type="button" data-listen="A">听 A 现场</button>
+          <button class="choice" type="button" data-listen="B">听 B 放大</button>
+          <button class="choice" type="button" data-listen="C">听 C 处理后</button>
+          <button class="choice" type="button" data-listen="D">听 D 对照</button>
+          <button class="choice" type="button" id="btn-stop-audio">停止</button>
+        </div>
+        <div class="result warn" id="listen-feedback" style="margin-top:14px">先听完再下判断。B 更响不等于更可懂。</div>
+        <p class="teacher-note">教师：学生说「B 最好」时不要纠正，进入问题板后再用削波谐波打脸。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="question-board" data-tsh="问题工作坊 - 把现象句升级为可检验命题" data-tts-script="问题工作坊。把现象句升级为可检验命题。">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">Ask</span>
+          <h2>班级问题板：L1 现象 → L3 可检验</h2>
+        </div>
+        <div class="grid grid-3" style="margin-bottom:12px">
+          <button class="choice" type="button" data-upgrade-demo="1">示范：更响更糊</button>
+          <button class="choice" type="button" data-upgrade-demo="2">示范：横条纹</button>
+          <button class="choice" type="button" data-upgrade-demo="3">示范：怎样算更好</button>
+        </div>
+        <p class="result warn" id="upgrade-demo-fb" style="margin-bottom:12px">点示范看如何改写。自己的问题必须可被一次实验证伪。</p>
+        <div class="grid grid-2">
+          <label>写下问题
+            <textarea id="q-input" placeholder="例如：如果只去掉某个频段，可懂度升还是降？"></textarea>
+          </label>
+          <label>层次
+            <select id="q-level" style="width:100%;min-height:44px;border-radius:12px;background:var(--bg-subtle);color:var(--text);border:1px solid var(--line);padding:12px">
+              <option value="L1">L1 现象</option>
+              <option value="L2">L2 机制</option>
+              <option value="L3">L3 可检验</option>
+            </select>
+            <button class="choice" type="button" id="btn-add-q" style="margin-top:8px">钉到问题板</button>
+          </label>
+        </div>
+        <div id="q-board" class="q-board" style="margin-top:12px"></div>
+        <p class="result" id="q-board-fb" style="margin-top:12px">第 1 周交付物只有：事实清单、问题板、一条升级后的 L3。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="6" data-tts="pretest" data-tsh="前测 - 暴露「开大音量就行」的直觉" data-tts-script="前测。暴露「开大音量就行」的直觉。">
+    <div class="slide-inner">
+      <div class="card card-accent" data-scaffold="none">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">Pretest</span>
+          <h2>广播听不清，你首先会做什么？</h2>
+        </div>
+        <p style="color:var(--muted)">这题不打分，用来暴露直觉。后面四关会回来打脸或确认。</p>
+        <div class="grid">
+          <button class="choice" data-answer="wrong" data-diagnosis="增益变大若导致削波，系统不再线性，谐波会掩盖辅音。可懂度可以下降。见 B 段与卷积关。">把音量开到最大</button>
+          <button class="choice" data-answer="correct" data-diagnosis="先分清：是欠采样、窄带干扰、还是频带被切。后面采样/频谱/滤波三关就是在回答这件事。">先分清丢的是高频、被噪声盖住，还是被错误滤波切掉</button>
+          <button class="choice" data-answer="wrong" data-diagnosis="一键降噪常常是时变/非线性黑盒，核心课要求你能写出 LTI 链路与指标。可以当附加实验，不能当答案。">直接套一个现成降噪模型</button>
+        </div>
+        <div class="result warn" data-feedback-for="pretest" style="margin-top:16px">先选一个，系统会指出这条直觉会在哪一关被检验。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="7" data-tts="week-path" data-tsh="学期路径 - 问题板对齐四道理论关卡" data-tts-script="学期路径。问题板对齐四道理论关卡。">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">Path</span>
+          <h2>16 周：问题驱动，关卡保深度</h2>
+        </div>
+        <div class="week-grid">
+          <div class="week-chip"><b>W1</b>提出问题</div>
+          <div class="week-chip"><b>W2–4 G1</b>采样·抗混叠·量化</div>
+          <div class="week-chip"><b>W5–7 G2</b>LTI·卷积·冲激响应</div>
+          <div class="week-chip"><b>W8–11 G3</b>DFT·窗·分辨率</div>
+          <div class="week-chip"><b>W12–14 G4</b>FIR/IIR·相位</div>
+          <div class="week-chip"><b>W15–16</b>关闭问题板·答辩</div>
+        </div>
+        <p style="color:var(--text-secondary);margin:14px 0 0">学生看见问题板；教师看见覆盖表。每周对照：采样、LTI、卷积、DFT、窗、滤波、相位。缺哪块就加反例，不直接加讲座标题。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="cycle" data-tsh="探究循环 - 选问、需知、学、做、回板" data-tts-script="探究循环。选问、需知、学、做、回板。">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">Cycle</span>
+          <h2>每一关都走同一循环</h2>
+        </div>
+        <ol class="objectives">
+          <li><strong>选问</strong> — 本周只攻问题板上 1–2 条，写成含变量的命题。</li>
+          <li><strong>需知</strong> — 要回答它必须先会什么？一次只开一个最小理论模块。</li>
+          <li><strong>学</strong> — 短讲定理边界 + 必做推导，推导必须服务本周问题。</li>
+          <li><strong>做</strong> — 用 A–D 或自采数据做对照。库可用，解释不可省。</li>
+          <li><strong>回板</strong> — 已回答 / 部分 / 新问题。这就是活大纲。</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page knowledge-module" data-page-type="concept" data-page-index="9" data-tts="sampling-theory" data-tsh="G1 理论 - 采样定理、混叠、抗混叠" data-tts-script="G1 理论。采样定理、混叠、抗混叠。">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">G1 · 知识点</span>
+          <h2>采样：你听到的频率可能是假的</h2>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/sampling-aliasing.webp" alt="采样与混叠：连续信号、采样点、奈奎斯特频率与欠采样虚假频率">
+          <figcaption>欠采样时，高频会折进 [0, fs/2]。抗混叠必须发生在采样之前。</figcaption>
+        </figure>
+        <div class="formula">fs &gt; 2 f<sub>max</sub>　·　Nyquist = fs/2　·　f<sub>alias</sub> = |f − k·fs|</div>
+        <div class="grid grid-3" style="margin-top:12px">
+          <div class="kp-card"><h3>连续 / 离散</h3><p>x(t) 与 x[n]=x(nTs)。Ts=1/fs 是唯一的时间尺子。</p></div>
+          <div class="kp-card"><h3>抗混叠</h3><p>采样后无法区分 f 与 fs−f。低通必须在 ADC 之前。</p></div>
+          <div class="kp-card"><h3>量化 SNR</h3><p>约 6N dB（满幅正弦）。位数不够是另一种「听不清」。</p></div>
+        </div>
+        <p class="interact-point">互动要点：让学生先猜「fs 降到 4 kHz 语谱图会怎样」，再拖滑块。预测—观察—解释。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="sampling-lab" data-tsh="G1 实验台 - 拖动采样率观察混叠" data-tts-script="G1 实验台。拖动采样率观察混叠。">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">Lab 1</span>
+          <h2>采样实验台</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 8px">固定一个频率 f，降低 fs。重建曲线变成更低的频率时，混叠已经发生。</p>
+        <div class="canvas-wrap"><canvas id="cv-sample" width="760" height="320" aria-label="采样与重建对照画布"></canvas></div>
+        <div class="lab-ctrl">
+          <label>信号频率 f（Hz）<input id="sl-f" type="range" min="200" max="4000" step="50" value="2200" style="min-height:auto;height:6px"></label>
+          <label>采样率 fs（Hz）<input id="sl-fs" type="range" min="1500" max="12000" step="100" value="8000" style="min-height:auto;height:6px"></label>
+          <label class="chk"><input id="chk-aa" type="checkbox"> 采样前抗混叠</label>
+          <span class="meter" id="sample-meter" data-state="ok">未混叠</span>
+        </div>
+        <div class="result" id="sample-readout">拖动滑块，读出 Nyquist 与重建频率。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="ct-fold" data-tsh="G1 概念测试 - 混叠计算" data-tts-script="G1 概念测试。混叠计算。">
+    <div class="slide-inner">
+      <div class="card card-accent" data-conceptest="true" data-bloom-level="apply">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">ConcepTest</span>
+          <h2>5 kHz 正弦，fs = 8 kHz，无抗混叠，重建频率？</h2>
+        </div>
+        <div class="grid">
+          <button class="choice" data-choice="A" data-correct="false" data-diagnosis="5 kHz 已超过 Nyquist 4 kHz，不能原样重建。">A. 5 kHz</button>
+          <button class="choice" data-choice="B" data-correct="true" data-diagnosis="f_alias = |5−8| = 3 kHz，落在 [0,4] kHz。对应习题 ex-aliasing-1。">B. 3 kHz</button>
+          <button class="choice" data-choice="C" data-correct="false" data-diagnosis="8 kHz 是采样率，不是你听到的音高。">C. 8 kHz</button>
+          <button class="choice" data-choice="D" data-correct="false" data-diagnosis="无抗混叠时能量不会消失，而是折到 3 kHz。">D. 什么都听不到</button>
+        </div>
+        <div class="result warn" data-feedback-for="conceptest-1" style="margin-top:16px">先独立算 |f − k fs|，再点选项。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page knowledge-module" data-page-type="concept" data-page-index="12" data-tts="lti-theory" data-tsh="G2 理论 - 线性时不变、卷积、冲激响应" data-tts-script="G2 理论。线性时不变、卷积、冲激响应。">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">G2 · 知识点</span>
+          <h2>处理是一个系统，不是一个旋钮</h2>
+        </div>
+        <div class="formula">y[n] = (x * h)[n] = Σ<sub>k</sub> x[k] h[n−k]</div>
+        <div class="grid grid-2" style="margin-top:12px">
+          <div class="kp-card">
+            <h3>LTI 四问</h3>
+            <p>线性、时不变、因果、稳定。B 段削波：2x 的输出 ≠ 2y，卷积公式立刻失效。</p>
+          </div>
+          <div class="kp-card">
+            <h3>冲激响应</h3>
+            <p>h[n] 是系统对 δ[n] 的回答。一旦 LTI，任意输入都由卷积决定。FFT 卷积只是快算法，边界要处理。</p>
+          </div>
+        </div>
+        <p class="interact-point">互动要点：让学生对自己的「降噪块」做线性检验。说不清是否 LTI，就禁止进入滤波器设计。</p>
+        <div class="insight-box teacher-note" style="margin-top:12px">
+          <h3 style="color:var(--warn);font-size:15px;margin-bottom:8px">深层理解 · 五镜头</h3>
+          <p style="margin:0;color:var(--text-secondary);font-size:14px"><strong>看见它</strong>：同一句话，时域像乱线，听感却分得出闷和嗡。<strong>拆开它</strong>：采样、系统、频谱、滤波是四块积木，不是一个旋钮。<strong>解释它</strong>：LTI 时卷积成立，削波后公式失效。<strong>比较它</strong>：FIR 换线性相位，IIR 换阶数。<strong>迁移它</strong>：心音、电机振动，仍是同一组问题。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="13" data-tts="conv-lab" data-tsh="G2 实验台 - 看卷积如何把 h 抹到 x 上" data-tts-script="G2 实验台。看卷积如何把 h 抹到 x 上。">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">Lab 2</span>
+          <h2>卷积实验台</h2>
+        </div>
+        <div class="canvas-wrap"><canvas id="cv-conv" width="760" height="340" aria-label="输入、冲激响应与卷积输出"></canvas></div>
+        <div class="lab-ctrl">
+          <label>h[n]
+            <select id="sel-h" style="min-height:44px;border-radius:12px;background:var(--bg-subtle);color:var(--text);border:1px solid var(--line)">
+              <option value="ma">FIR 三点平均（低通）</option>
+              <option value="exp">指数衰减</option>
+              <option value="diff">差分器（高通）</option>
+            </select>
+          </label>
+          <button class="choice" type="button" id="btn-lin-test">对削波器做线性检验</button>
+        </div>
+        <div class="result" id="conv-readout">换 h，观察输出如何被抹平或强调跳变。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="14" data-tts="ct-lti" data-tsh="G2 概念测试 - 削波是否可用卷积描述" data-tts-script="G2 概念测试。削波是否可用卷积描述。">
+    <div class="slide-inner">
+      <div class="card card-accent" data-conceptest="true" data-bloom-level="analyze">
+        </div>
+        <div class="grid">
+          <button class="choice" data-correct="false" data-diagnosis="非线性系统没有唯一的冲激响应可叠加出所有输出。">A. 能，h 是一个很窄的脉冲</button>
+          <button class="choice" data-correct="true" data-diagnosis="正确。叠加性失败 ⇒ 不是线性 ⇒ 不能用卷积完全描述。这是 B 段「开大音量」的理论定性。">B. 不能，因为它不是线性系统</button>
+          <button class="choice" data-correct="false" data-diagnosis="时不变不等于线性。延迟一个削波器仍是非线性。">C. 能，因为它是时不变的</button>
+          <button class="choice" data-correct="false" data-diagnosis="因果性与能否卷积无关。">D. 不能，因为它非因果</button>
+        </div>
+        <div class="result warn" style="margin-top:16px">用 2x 与 2·y 对照，不要背定义。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page knowledge-module" data-page-type="concept" data-page-index="15" data-tts="dft-theory" data-tsh="G3 理论 - DFT、分辨率、窗与泄漏" data-tts-script="G3 理论。DFT、分辨率、窗与泄漏。">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">G3 · 知识点</span>
+          <h2>那张图上的横线，是 DFT 看见的频率</h2>
+        </div>
+        <div class="formula">X[k] = Σ<sub>n=0</sub><sup>N−1</sup> x[n] e<sup>−j2πkn/N</sup>　·　Δf = fs/N = 1/T</div>
+        <div class="grid grid-3" style="margin-top:12px">
+          <div class="kp-card"><h3>分辨率</h3><p>由观测时长 T 决定，不是由「FFT 点数感觉」。零填充只插值。</p></div>
+          <div class="kp-card"><h3>窗</h3><p>矩形主瓣窄、旁瓣高；Hann 相反。选窗就是在分辨率与泄漏之间权衡。</p></div>
+          <div class="kp-card"><h3>栅栏</h3><p>真频率若不正好落在 k·Δf 上，能量漏到邻线。这就是「对不准 50.0 Hz」。</p></div>
+        </div>
+        <p class="interact-point">互动要点：先让学生把 N 从 64 拖到 512，写下 Δf；再开零填充口头题：谱线密了，峰有没有变窄？</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="16" data-tts="spec-lab" data-tsh="G3 实验台 - 窗函数与 Δf" data-tts-script="G3 实验台。窗函数与 Δf。">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">Lab 3</span>
+          <h2>频谱实验台</h2>
+        </div>
+        <div class="canvas-wrap"><canvas id="cv-spec" width="760" height="240" aria-label="DFT 幅度谱"></canvas></div>
+        <div class="lab-ctrl">
+          <label>N<input id="sl-n" type="range" min="64" max="256" step="64" value="128" style="min-height:auto;height:6px"></label>
+          <label>目标频率（Hz）<input id="sl-spec-f" type="range" min="30" max="120" step="1" value="50" style="min-height:auto;height:6px"></label>
+          <label>窗
+            <select id="sel-win" style="min-height:44px;border-radius:12px;background:var(--bg-subtle);color:var(--text);border:1px solid var(--line)">
+              <option value="hann">Hann</option>
+              <option value="rect">矩形</option>
+            </select>
+          </label>
+        </div>
+        <div class="result" id="spec-readout">橙色竖线是「真频率」所在的 bin。看它是否对准峰。</div>
+        <p style="color:var(--muted);font-size:13px;margin:10px 0 6px">外部仿真（PhET 波）：把「频率、振幅」从时域再看一遍。</p>
+        <div class="iframe-frame">
+          <iframe title="PhET 波入门" src="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" loading="lazy" allow="fullscreen"></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="17" data-tts="ct-dft" data-tsh="G3 概念测试 - 零填充不是分辨率" data-tts-script="G3 概念测试。零填充不是分辨率。">
+    <div class="slide-inner">
+      <div class="card card-accent" data-conceptest="true" data-bloom-level="evaluate">
+        </div>
+        <div class="grid">
+          <button class="choice" data-correct="false" data-diagnosis="这是把 N 误当成 2048。有效观测仍是 512 点。">A. 7.81 Hz</button>
+          <button class="choice" data-correct="true" data-diagnosis="Δf=16000/512≈31.25 Hz 不变。零填充只让曲线更好看。对应 ex-df-1。">B. 仍约 31.25 Hz</button>
+          <button class="choice" data-correct="false" data-diagnosis="分辨率由 T=N/fs 决定，与填零无关。">C. 变好到接近 0</button>
+          <button class="choice" data-correct="false" data-diagnosis="16 kHz 是采样率，不是 Δf。">D. 16 kHz</button>
+        </div>
+        <div class="result warn" style="margin-top:16px">先算 T，再谈「更密的谱线」。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page knowledge-module" data-page-type="concept" data-page-index="18" data-tts="filter-theory" data-tsh="G4 理论 - FIR/IIR、指标、相位与群延迟" data-tts-script="G4 理论。FIR/IIR、指标、相位与群延迟。">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">G4 · 知识点</span>
+          <h2>去掉嗡声、留下字：先写指标再设计</h2>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/fir-iir-compare.webp" alt="FIR 线性相位与 IIR 极零点、通带阻带纹波过渡带对照">
+          <figcaption>FIR：线性相位、延迟明确。IIR：阶数低、相位弯，极点必须在单位圆内。</figcaption>
+        </figure>
+        <div class="formula">指标：ωp, ωs, δp, δs　·　群延迟 τg(ω) = −dθ(ω)/dω</div>
+        <div class="grid grid-2" style="margin-top:12px">
+          <div class="kp-card"><h3>FIR</h3><p>有限 h[n]，可做成线性相位。语音均衡常用。代价是阶数高、延迟大。</p></div>
+          <div class="kp-card"><h3>IIR</h3><p>递归，极零点决定频响。陷波哼声很合适。必须查稳定性与振铃。</p></div>
+        </div>
+        <p class="interact-point">互动要点：同一指标逼学生交两条链路。听感「更干净但更空」往往是相位/过渡带，不是 SNR 数字更好。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="19" data-tts="filter-lab" data-tsh="G4 实验台 - FIR 平均 vs IIR 陷波" data-tts-script="G4 实验台。FIR 平均 vs IIR 陷波。">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">Lab 4</span>
+          <h2>滤波实验台</h2>
+        </div>
+        <div class="canvas-wrap"><canvas id="cv-filt" width="760" height="240" aria-label="滤波前后波形"></canvas></div>
+        <div class="lab-ctrl">
+          <label>结构
+            <select id="sel-filt" style="min-height:44px;border-radius:12px;background:var(--bg-subtle);color:var(--text);border:1px solid var(--line)">
+              <option value="notch">IIR 50 Hz 陷波</option>
+              <option value="ma">FIR 滑动平均</option>
+            </select>
+          </label>
+          <button class="choice" type="button" id="btn-play-filt">听处理后的合成音</button>
+        </div>
+        <div class="result" id="filt-readout">比较：平均器会连语音一起闷掉；陷波只挖哼声。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="20" data-tts="gates" data-tsh="评价关卡 - 过不了推导就不能进入下一阶段" data-tts-script="评价关卡。过不了推导就不能进入下一阶段。">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">Assessment</span>
+          <h2>四关产物与评分（核心课深度闸门）</h2>
+        </div>
+        <div class="grid grid-2">
+          <div class="kp-card"><h3>G1 采样备忘录 10%</h3><p>奈奎斯特论证、折叠例子、抗混叠是否需要、量化 SNR。抽问：fs 减半语谱图怎样。</p></div>
+          <div class="kp-card"><h3>G2 系统鉴定 10%</h3><p>线性检验、h[n]、卷积核对图。抽问：FFT 卷积与时域卷积何时等价。</p></div>
+          <div class="kp-card"><h3>G3 频谱报告 10%</h3><p>Δf 计算、窗的理由、语音/噪声频带假设。抽问：零填充提高了什么。</p></div>
+          <div class="kp-card"><h3>G4 规格书 10%</h3><p>FIR 与 IIR 各一、极零图、幅频相频、SNR/可懂度对照。</p></div>
+        </div>
+        <p style="margin:12px 0 0;color:var(--text-secondary)">另：问题日志 15% · 可复现脚本 15% · 说明书 15% · 期末抽问 15%。掌握导向：未达标准不计分、限一次补交。</p>
+        <p class="interact-point">易错点：误认为开大音量就能提高可懂度；混淆 FFT 点数与频率分辨率（零填充只让谱线更密）；把滤波当黑盒调参、不写通带阻带与相位代价。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="21" data-tts="teacher" data-tsh="教师互动要点 - 追问、反例、禁止黑盒" data-tts-script="教师互动要点。追问、反例、禁止黑盒。">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">Teacher</span>
+          <h2>课堂上只问这四句</h2>
+        </div>
+        <ol class="objectives">
+          <li>你现在回答的是板上哪一条？</li>
+          <li>证据是听感、波形、频谱，还是系统性质？</li>
+          <li>如果把某变量反转，结果该怎样？</li>
+          <li>这个解释怎样被证伪？</li>
+        </ol>
+        <div class="teacher-note" style="margin-top:12px">
+          缺采样：把 fs 降到 4 kHz 再放。缺相位：线性相位 vs 强非线性对照。缺系统：先×2再×0.5 与反过来。神经网络降噪只允许当附加实验，不能替代 G1–G4。允许 fft/firwin/butter，不允许把一键降噪库当结论。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="22" data-tts="adaptive" data-tsh="自适应路径 - 按卡点选择补前置或挑战" data-tts-script="自适应路径。按卡点选择补前置或挑战。">
+    <div class="slide-inner">
+      <div class="card" data-adaptive-branches="true">
+        <div class="section-header">
+          <span class="phase-tag">Adaptive</span>
+          <h2>这一关你卡在哪？</h2>
+        </div>
+        <div class="grid grid-2">
+          <div class="card inner-card" data-branch="review-prereq" style="border-left:3px solid var(--danger);cursor:pointer">
+            <h3 style="color:var(--danger);font-size:15px">补前置</h3>
+            <p style="margin:0;color:var(--text-secondary)">正弦、复数 e^{jω}、欧拉公式还不熟 → 先做 1 页旋转相量再进 DFT。</p>
+          </div>
+          <div class="card inner-card" data-branch="scaffold" style="border-left:3px solid var(--warn);cursor:pointer">
+            <h3 style="color:var(--warn);font-size:15px">加支架</h3>
+            <p style="margin:0;color:var(--text-secondary)">会听不会算 → 用本页实验台填空：先抄 Δf 公式，再改 N。</p>
+          </div>
+          <div class="card inner-card" data-branch="normal" style="border-left:3px solid var(--accent);cursor:pointer">
+            <h3 style="color:var(--accent);font-size:15px">正常推进</h3>
+            <p style="margin:0;color:var(--text-secondary)">关卡产物能答辩 → 进入下一问题循环。</p>
+          </div>
+          <div class="card inner-card" data-branch="challenge" style="border-left:3px solid var(--brand-2);cursor:pointer">
+            <h3 style="color:var(--brand-2);font-size:15px">挑战拓展</h3>
+            <p style="margin:0;color:var(--text-secondary)">IIR 量化后极点移出单位圆，或 DTMF/Goertzel 识别。仍从新问题开始。</p>
+          </div>
+        </div>
+        <div class="result warn" id="branch-fb" style="margin-top:12px">点选一条路径。挑战不能替代四关。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="23" data-tts="posttest" data-tsh="后测 - 用同一情境检验是否还靠直觉" data-tts-script="后测。用同一情境检验是否还靠直觉。">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">Posttest</span>
+          <h2>现在，广播仍听不清。哪条是可答辩的下一步？</h2>
+        </div>
+        <div class="grid">
+          <button class="choice" data-answer="wrong" data-diagnosis="仍停留在 L1。没有变量、没有证伪方式。">再找一个听起来舒服的预设</button>
+          <button class="choice" data-answer="correct" data-diagnosis="这是 L3：分清混叠/哼声/错误低通，并规定指标与对照。四关全部服务这句话。">估计语音最高频率与干扰频率，选择 fs 与抗混叠，用 DFT 确认后再按指标设计 FIR/IIR，用 SNR 与可懂度对照</button>
+          <button class="choice" data-answer="wrong" data-diagnosis="相位与群延迟会改变听感。只比能量不够。">只要频谱看起来更干净就可以交差</button>
+        </div>
+        <div class="result warn" style="margin-top:16px">对照前测：若你仍选「预设」，问题板还停在 L1。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="24" data-tts="inquiry-record" data-tsh="探究记录 - 假设、证据、结论闭合" data-tts-script="探究记录。假设、证据、结论闭合。">
+    <div class="slide-inner">
+      <div class="card" data-scaffold="partial">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">Inquiry</span>
+          <h2>关闭你自己的问题</h2>
+        </div>
+        <div class="grid">
+          <label class="card inner-card">💡 我的假设
+            <textarea id="hypothesis-input">50 Hz 横线是工频哼声；陷波后可懂度应上升且 300–3400 Hz 能量基本不变。</textarea>
+          </label>
+          <label class="card inner-card">📊 我的证据
+            <textarea id="evidence-input">写下 Δf、窗、滤波器指标、SNR 或听音正确率……</textarea>
+          </label>
+          <label class="card inner-card">✅ 我的结论
+            <textarea id="conclusion-input">这条问题已证 / 部分 / 改写为……</textarea>
+          </label>
+        </div>
+        <button class="choice" type="button" id="btn-save-inq" style="margin-top:12px">保存探究记录</button>
+        <div class="result warn" id="inq-fb" style="margin-top:12px">期末答辩抽的是你第 1 周的原问题。三栏必须闭合。</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Knowledge Graph Page -->
+  <section class="slide-page" data-page-type="summary" data-page-index="25" data-tts="knowledge-graph" data-tsh="知识图谱 - 查看前置、后续与同域知识" data-tts-script="知识图谱。查看前置、后续与同域知识。">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">Knowledge Graph</span>
+          <h2>知识图谱</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">本节点的前置、后续和同域知识。</p>
+        <div data-teachany-kg="ext-c84e21c6">
+          <canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Tutor Page -->
+  <section class="slide-page" data-page-type="interactive" data-page-index="26" data-tts="ai-tutor" data-tsh="AI 学伴 - 先诊断卡点，再给最小提示" data-tts-script="AI 学伴。先诊断卡点，再给最小提示。">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+
+</div><!-- .slide-container -->
+
+<!-- Audio Config (hidden) -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json">
+[
+    {"id": "hero", "title": "开场", "src": "tts/hero.mp3"},
+    {"id": "problem-anchor", "title": "问题锚点", "src": "tts/problem-anchor.mp3"},
+    {"id": "objectives", "title": "学习目标", "src": "tts/objectives.mp3"}
+  ]
+  </script>
+</div>
+
+<!-- Side Navigation Dots -->
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航">
+  <!-- JS will populate -->
+</nav>
+
+<!-- Play Mode FAB -->
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<!-- Bottom Toolbar -->
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </button>
+  <div class="toolbar-progress" id="tb-progress" title="进度">
+    <div class="toolbar-progress-fill" id="tb-progress-fill"></div>
+  </div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 27</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页">
+    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  </button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放">
+    <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+  </button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏">
+    <svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+  </button>
+</div>
+
+<script>
+/* ============================================================
+   TeachAny v2 — Slide Controller
+   ============================================================ */
+(function() {
+  'use strict';
+
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0;
+  let isPlayMode = false;
+  let isAutoPlay = false;
+  let autoPlayTimer = null;
+
+  // Elements
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const toolbar = document.getElementById('slide-toolbar');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  // ─── Build Side Navigation ───
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    // 顶部页码计数器
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = `1/${totalPages}`;
+    sidenav.appendChild(counter);
+    // 导航条
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', page.dataset.tsh?.split(' - ')[0] || `第${i + 1}页`);
+      dot.setAttribute('aria-label', `跳转到第${i + 1}页`);
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  // ─── Update UI State ───
+  function updateUI() {
+    // Progress bar
+    const progress = totalPages > 1 ? ((currentPage) / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+
+    // Page info
+    tbPageInfo.textContent = `${currentPage + 1} / ${totalPages}`;
+
+    // Side nav dots + counter
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => {
+      dot.classList.toggle('active', i === currentPage);
+    });
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = `${currentPage + 1}/${totalPages}`;
+
+    // Button states
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  // ─── Navigate ───
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+
+    if (isPlayMode) {
+      pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      container.scrollTo({
+        top: pages[currentPage].offsetTop,
+        behavior: 'smooth'
+      });
+    }
+
+    updateUI();
+    dispatchPageAudio();
+  }
+
+  function nextPage() {
+    if (currentPage < totalPages - 1) goToPage(currentPage + 1);
+  }
+
+  function prevPage() {
+    if (currentPage > 0) goToPage(currentPage - 1);
+  }
+
+  // ─── Scroll Detection (Browse Mode) ───
+  let scrollTimeout;
+  function onScroll() {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      const viewHeight = container.clientHeight;
+      let closest = 0;
+      let minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) {
+        currentPage = closest;
+        updateUI();
+      }
+    }, 100);
+  }
+
+  container.addEventListener('scroll', onScroll, { passive: true });
+
+  // ─── Play Mode Toggle ───
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+
+    if (isPlayMode) {
+      goToPage(currentPage);
+    }
+  }
+
+  fab.addEventListener('click', togglePlayMode);
+
+  // ─── Toolbar Controls ───
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    const target = Math.round(ratio * (totalPages - 1));
+    goToPage(target);
+  });
+
+  // Auto-play
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) startAutoPlay();
+    else stopAutoPlay();
+  });
+
+  function startAutoPlay() {
+    stopAutoPlay();
+    // Check if current page has audio — wait for audio end; else use timer
+    autoPlayTimer = setInterval(() => {
+      if (currentPage < totalPages - 1) {
+        nextPage();
+      } else {
+        stopAutoPlay();
+        isAutoPlay = false;
+        tbAutoplay.classList.remove('active');
+      }
+    }, 8000); // Default 8s per page if no audio
+  }
+
+  function stopAutoPlay() {
+    if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; }
+  }
+
+  // Fullscreen
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  });
+
+  // ─── Keyboard Controls ───
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch(e.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+      case ' ':
+        e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        e.preventDefault(); prevPage(); break;
+      case 'f':
+      case 'F':
+        if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape':
+        if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  // ─── Audio Integration ───
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) {
+      window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+    }
+  }
+
+  // Listen for audio end to advance in autoplay mode
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) {
+      setTimeout(nextPage, 1000); // 1s gap between pages
+    }
+  });
+
+  // ─── Problem Anchor Logic ───
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'info-u-signals-pbl',
+    courseTitle: '信号与处理：从学生提问出发',
+    subject: 'info-tech',
+    grade: '12',
+    nodeId: 'ext-c84e21c6',
+    lessonType: 'inquiry-project',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => {
+      const current = pages[currentPage];
+      return (current || document.body).innerText.slice(0, 3000);
+    },
+    suggestedQuestions: [
+      '为什么放大之后可懂度可能下降？',
+      'fs 低于 2f 时重建频率为什么不是原来的 f？',
+      '零填充能不能提高频率分辨率？',
+      'FIR 线性相位的代价是什么？'
+    ],
+    teachingStance: '先追问学生的问题属于 L1/L2/L3，再给最小定理提示，不要直接给完整设计。'
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? `你的问题：${q}` : '选择或输入后，本课会围绕你的问题展开。';
+  }
+
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => {
+    setLearnerQuestion(e.target.value.trim());
+  });
+
+  // ─── Init ───
+  buildSidenav();
+  updateUI();
+
+  // Show toolbar briefly on load
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => {
+    if (!isPlayMode) document.body.classList.remove('toolbar-visible');
+  }, 3000);
+
+  // Version display
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  // Debug mode
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 3],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['slide-container', () => !!container],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['toolbar', () => !!toolbar],
+      ['audio playlist', () => !!document.querySelector('[data-audio-playlist-placeholder]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => {
+      console[fn() ? 'log' : 'warn'](`[TeachAny v2] ${fn() ? 'PASS' : 'MISSING'} ${name}`);
+    });
+  }
+
+})();
+</script>
+
+<!-- 标准模块脚本 -->
+<script>
+  /* 实验台绘制入口：getContext 由 dsp-labs.js 在各 canvas 上调用 */
+  window.__dspGetContext = function (id) {
+    const c = document.getElementById(id);
+    return c ? c.getContext('2d') : null;
+  };
+</script>
+<script src="./assets/dsp-labs.js" defer></script>
+<script src="./assets/scripts/ai-tutor.js"></script>
+<script src="./assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="./assets/scripts/teachany-tts-narrator.js"  defer></script>
+<script src="./assets/scripts/teachany-section-hints.js" defer></script>
+<script src="./assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="./assets/scripts/teachany-audio-player.js?v=paged-20260521" defer></script>
+
+
+<!-- v7.20 标准连续音频配置（apply-standard-modules 自动补齐） -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-how-pbl",
+    "section": "how-pbl",
+    "src": "./tts/s04-how-pbl.mp3",
+    "label": "课程怎么学"
+  },
+  {
+    "id": "s05-listen-trigger",
+    "section": "listen-trigger",
+    "src": "./tts/s05-listen-trigger.mp3",
+    "label": "触发情境"
+  },
+  {
+    "id": "s06-question-board",
+    "section": "question-board",
+    "src": "./tts/s06-question-board.mp3",
+    "label": "问题工作坊"
+  },
+  {
+    "id": "s07-pretest",
+    "section": "pretest",
+    "src": "./tts/s07-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s08-week-path",
+    "section": "week-path",
+    "src": "./tts/s08-week-path.mp3",
+    "label": "学期路径"
+  },
+  {
+    "id": "s09-cycle",
+    "section": "cycle",
+    "src": "./tts/s09-cycle.mp3",
+    "label": "探究循环"
+  },
+  {
+    "id": "s10-sampling-theory",
+    "section": "sampling-theory",
+    "src": "./tts/s10-sampling-theory.mp3",
+    "label": "G1 理论"
+  },
+  {
+    "id": "s11-sampling-lab",
+    "section": "sampling-lab",
+    "src": "./tts/s11-sampling-lab.mp3",
+    "label": "G1 实验台"
+  },
+  {
+    "id": "s12-ct-fold",
+    "section": "ct-fold",
+    "src": "./tts/s12-ct-fold.mp3",
+    "label": "G1 概念测试"
+  },
+  {
+    "id": "s13-lti-theory",
+    "section": "lti-theory",
+    "src": "./tts/s13-lti-theory.mp3",
+    "label": "G2 理论"
+  },
+  {
+    "id": "s14-conv-lab",
+    "section": "conv-lab",
+    "src": "./tts/s14-conv-lab.mp3",
+    "label": "G2 实验台"
+  },
+  {
+    "id": "s15-ct-lti",
+    "section": "ct-lti",
+    "src": "./tts/s15-ct-lti.mp3",
+    "label": "G2 概念测试"
+  },
+  {
+    "id": "s16-dft-theory",
+    "section": "dft-theory",
+    "src": "./tts/s16-dft-theory.mp3",
+    "label": "G3 理论"
+  },
+  {
+    "id": "s17-spec-lab",
+    "section": "spec-lab",
+    "src": "./tts/s17-spec-lab.mp3",
+    "label": "G3 实验台"
+  },
+  {
+    "id": "s18-ct-dft",
+    "section": "ct-dft",
+    "src": "./tts/s18-ct-dft.mp3",
+    "label": "G3 概念测试"
+  },
+  {
+    "id": "s19-filter-theory",
+    "section": "filter-theory",
+    "src": "./tts/s19-filter-theory.mp3",
+    "label": "G4 理论"
+  },
+  {
+    "id": "s20-filter-lab",
+    "section": "filter-lab",
+    "src": "./tts/s20-filter-lab.mp3",
+    "label": "G4 实验台"
+  },
+  {
+    "id": "s21-gates",
+    "section": "gates",
+    "src": "./tts/s21-gates.mp3",
+    "label": "评价关卡"
+  },
+  {
+    "id": "s22-teacher",
+    "section": "teacher",
+    "src": "./tts/s22-teacher.mp3",
+    "label": "教师互动要点"
+  },
+  {
+    "id": "s23-adaptive",
+    "section": "adaptive",
+    "src": "./tts/s23-adaptive.mp3",
+    "label": "自适应路径"
+  },
+  {
+    "id": "s24-posttest",
+    "section": "posttest",
+    "src": "./tts/s24-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s25-inquiry-record",
+    "section": "inquiry-record",
+    "src": "./tts/s25-inquiry-record.mp3",
+    "label": "探究记录"
+  },
+  {
+    "id": "s26-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s26-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s27-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s27-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+</body>
+</html>
