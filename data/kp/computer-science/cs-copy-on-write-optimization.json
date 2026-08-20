@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 拷贝写内存优化（Copy-on-Write Memory Optimization）\n\n### 核心概念定义\n拷贝写内存优化（Copy-on-Write, COW）是一种操作系统内存管理技术，其核心思想是**延迟复制**。当多个进程共享同一块内存时，系统不会立即为每个进程创建独立的副本，而是保持共享状态。只有当某个进程尝试修改共享内存时，系统才会为该进程分配新的物理内存并复制原始数据。\n\n### 关键性质与方法\n1. **惰性复制（Lazy Copying）**：仅在写入操作时触发实际复制，减少不必要的内存开销。\n2. **页表标记（Page Table Flagging）**：通过标记共享内存页为「只读」，利用缺页异常（Page Fault）机制检测写入请求。\n3. **引用计数（Reference Counting）**：跟踪共享内存块的引用数，当引用归零时自动释放资源。\n\n### 与相关知识的联系\n- **虚拟内存（Virtual Memory）**：COW 依赖虚拟内存的页表机制实现共享与隔离。\n- **进程派生（Fork）**：Unix 类系统中，`fork()` 系统调用默认使用 COW 技术优化子进程创建。\n- **文件系统快照（Snapshot）**：如 Btrfs 文件系统通过 COW 实现高效快照功能。\n\n### 典型应用示例\n1. **进程创建优化**：Linux 的 `fork()` 后，父子进程共享物理内存直至一方尝试写入。\n2. **字符串修改**：Python 的字符串类型（str）通过 COW 避免不可变对象的重复复制。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "COW 在 Rust 语言所有权机制中的变体应用",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "写时复制与读时复制（Copy-on-Read）的对比",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "内存去重（KSM）与 COW 的协同优化技术",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:55:41Z",
+    "deep_worked_example": {
+      "stem": "拷贝写内存优化的核心目标是什么？",
+      "solution_outline": "减少不必要的内存复制操作，提高内存利用率",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "虚拟机（VM）快速克隆：通过 COW 共享基础镜像磁盘文件",
+      "数据库事务隔离：MVCC 机制利用 COW 实现版本控制"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为 COW 完全消除复制开销（实际仅延迟到写入时）",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未正确设置页表权限导致 COW 机制失效（如错误标记为可写）",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "拷贝写内存优化的核心目标是什么？",
+      "answer": "减少不必要的内存复制操作，提高内存利用率",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "COW 通过延迟复制策略，仅在必要时分配新内存，避免早期冗余复制。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某系统使用 COW 技术派生 3 个子进程，若子进程 B 修改了共享变量 X，此时会发生什么？",
+      "answer": "系统为子进程 B 分配独立内存页并复制 X 的原始值",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "写入操作触发缺页异常，内核检测到 COW 页后执行实际复制。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "对比 COW 与传统内存复制的优缺点。",
+      "answer": "优点：减少瞬时内存占用，加速派生操作；缺点：首次写入延迟较高，需维护引用计数",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需从时间/空间复杂度及实现复杂度多维度分析。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "虚拟机（VM）快速克隆：通过 COW 共享基础镜像磁盘文件",
+    "数据库事务隔离：MVCC 机制利用 COW 实现版本控制"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:55:41Z"
   }
 }

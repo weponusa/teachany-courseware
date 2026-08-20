@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 合一算法（Unification Algorithm）\n\n### 核心概念定义\n合一算法是计算机科学中用于解决「项（Term）」之间「合一（Unification）」问题的算法。其核心目标是找到一组「替换（Substitution）」，使得两个或多个项在应用该替换后变得完全相同。\n\n- **项（Term）**：可以是变量（如 `x`）、常量（如 `a`）或函数（如 `f(x)`）。\n- **替换（Substitution）**：将变量映射到项的规则集合（如 `{x → a, y → f(b)}`）。\n- **合一（Unification）**：若存在替换 `σ` 使得 `t₁σ = t₂σ`，则称 `t₁` 和 `t₂` 可合一，`σ` 称为「合一子（Unifier）」。\n\n### 关键性质与方法\n1. **最一般合一子（MGU, Most General Unifier）**：\n   - 若合一子 `σ` 能通过其他合一子派生（即存在 `θ` 使得 `σ = θ∘ρ`），则 `σ` 是 MGU。\n   - 算法步骤：\n     1. 从左到右扫描项，找到第一个不匹配的符号位置。\n     2. 若一方为变量且不在另一方中出现（「出现检查」），则生成替换（如 `x → f(y)`）。\n     3. 否则合一失败（如 `x` 与 `f(x)` 不可合一）。\n\n2. **与逻辑编程的关系**：\n   - 合一算法是 Prolog 等逻辑编程语言的核心，用于模式匹配和规则推导。\n\n### 典型应用示例\n- **类型推断**：在 Haskell 中，`foldr (:) [] xs = xs` 的推导需合一 `[a]` 与 `b`。\n- **定理证明**：合一用于自动证明中的前提匹配。\n\n---\n## 与相关知识的联系\n- **模式匹配**：合一是双向的模式匹配（如 `f(x)` 可匹配 `f(1)`，反之亦然）。\n- **类型系统**：Hindley-Milner 类型推断依赖合一算法。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Robinson 合一算法是首个线性时间复杂度的合一算法",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "高阶合一（如 λ 项合一）不可判定，但二阶合一可判定",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "合一在知识图谱中用于实体对齐（如合并 `北京` 和 `北京市`）",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:48:38Z",
+    "deep_worked_example": {
+      "stem": "判断以下项对是否可合一，若可合一则给出 MGU：`f(x, g(y))` 与 `f(g(z), x)`",
+      "solution_outline": "不可合一",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "编程语言类型推断（如 OCaml 中多态函数推导）",
+      "自然语言处理中的语义解析（如将句子结构合一为逻辑表达式）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "忽略出现检查导致错误合一（如认为 `x` 和 `f(x)` 可合一）",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未按从左到右顺序处理项，导致替换冲突（如先替换 `y` 再处理 `x`）",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "判断以下项对是否可合一，若可合一则给出 MGU：`f(x, g(y))` 与 `f(g(z), x)`",
+      "answer": "不可合一",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "替换 `x → g(z)` 会导致 `g(y) = g(g(z))`，进一步需 `y → g(z)`，但此时 `x = g(y) = g(g(z))` 与原替换矛盾。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "合一算法中「出现检查」的目的是什么？",
+      "answer": "防止无限循环（如 `x` 与 `f(x)` 合一会导致 `x → f(f(f(...)))`）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "出现检查确保变量不会替换为包含自身的项，避免逻辑矛盾。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "用合一算法证明 `P(f(a), y)` 和 `P(x, g(b))` 可合一，并给出 MGU",
+      "answer": "{x → f(a), y → g(b)}",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "依次匹配 `P` 的参数：`x → f(a)` 和 `y → g(b)` 无冲突。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "编程语言类型推断（如 OCaml 中多态函数推导）",
+    "自然语言处理中的语义解析（如将句子结构合一为逻辑表达式）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:48:38Z"
   }
 }

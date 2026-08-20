@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## DHCP 中继代理（DHCP Relay Agent）与 DHCP 监听安全（DHCP Snooping Security）\n\n### 核心概念定义\n1. **DHCP 中继代理（DHCP Relay Agent）**：一种网络设备（如路由器或三层交换机），用于在不同子网间转发「动态主机配置协议（Dynamic Host Configuration Protocol, DHCP）」请求和响应报文。解决 DHCP 服务器与客户端不在同一广播域时的地址分配问题。\n2. **DHCP 监听安全（DHCP Snooping）**：一种二层安全机制，通过过滤非法 DHCP 报文并建立「绑定表（Binding Table）」来防御「DHCP 欺骗攻击（DHCP Spoofing）」和「DHCP 耗尽攻击（DHCP Exhaustion）」。\n\n### 关键性质与方法\n- **DHCP 中继代理工作原理**：\n  - 客户端广播 DHCP Discover 报文 → 中继代理接收后，修改报文中的「网关 IP 地址（giaddr）」字段为自身接口 IP，并以单播形式转发至指定 DHCP 服务器。\n  - 服务器根据 giaddr 确定客户端所属子网，返回对应地址池的 Offer 报文。\n- **DHCP 监听安全机制**：\n  - **信任端口（Trusted Port）**：仅允许连接合法 DHCP 服务器的端口转发 DHCP Offer/Ack 报文。\n  - **非信任端口（Untrusted Port）**：丢弃来自此类端口的 DHCP 服务器响应报文。\n  - **绑定表**：记录客户端 MAC、IP、租期及所属 VLAN，用于后续「IP 源防护（IP Source Guard）」等安全策略。\n\n### 与相关知识的联系\n- **与 ARP 安全的关联**：DHCP Snooping 的绑定表可为「动态 ARP 检测（Dynamic ARP Inspection, DAI）」提供合法性校验依据。\n- **与 VLAN 的关系**：中继代理需配置 VLAN 间路由，而 DHCP Snooping 需按 VLAN 启用。\n\n### 典型应用示例\n- **企业网络**：总部 DHCP 服务器通过中继代理为分支机构子网分配地址，同时启用 Snooping 防止内部恶意伪造 DHCP 服务器。\n- **校园网**：不同教学楼划分 VLAN，中继代理实现跨 VLAN 地址分配，Snooping 阻断学生私接路由器导致的地址冲突。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "DHCPv6 中继代理使用 Relay-forward 和 Relay-reply 报文类型，与 IPv4 机制不同。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "DHCP Snooping 可结合端口安全（Port Security）限制每端口的 MAC 数量，增强防护。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "部分厂商交换机支持 DHCP Snooping 的 Option 82 功能，用于记录客户端物理接入位置。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:58:19Z",
+    "deep_worked_example": {
+      "stem": "DHCP 中继代理转发 Discover 报文时，必须修改哪个字段以告知服务器客户端所属子网？",
+      "solution_outline": "网关 IP 地址（giaddr）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "云计算环境中，租户虚拟机通过 DHCP 中继获取跨物理网络的地址分配。",
+      "物联网设备集中管理时，利用 DHCP Snooping 防止恶意设备伪造网关地址。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为 DHCP 中继代理只需简单转发报文，忽略 giaddr 字段的修改必要性。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "配置 DHCP Snooping 时遗漏部分 VLAN 或端口，导致安全防护存在漏洞。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "DHCP 中继代理转发 Discover 报文时，必须修改哪个字段以告知服务器客户端所属子网？",
+      "answer": "网关 IP 地址（giaddr）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "giaddr 字段用于标识客户端所在子网，服务器据此选择对应的地址池。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某网络启用了 DHCP Snooping，但用户仍获取到错误的 IP 地址。可能的原因是？",
+      "answer": "未正确配置信任端口，导致非法 DHCP 服务器的响应报文未被过滤。",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "信任端口未指定时，攻击者可从非信任端口仿冒服务器响应。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析 DHCP Snooping 绑定表在防御 ARP 欺骗中的作用。",
+      "answer": "绑定表记录了合法的 IP-MAC 映射关系，DAI 可据此校验 ARP 报文的真实性，拒绝非法映射。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "DAI 依赖绑定表实现动态 ARP 检测，二者协同提升二层安全性。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "云计算环境中，租户虚拟机通过 DHCP 中继获取跨物理网络的地址分配。",
+    "物联网设备集中管理时，利用 DHCP Snooping 防止恶意设备伪造网关地址。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:58:19Z"
   }
 }

@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## Boot进程与内核Initialization\n\n### 核心概念定义\n- **启动（Boot）**：计算机从断电状态到操作系统完全加载的过程，分为硬件初始化（如POST自检）、引导加载程序（Bootloader）执行、内核加载三个阶段。\n- **内核初始化（Kernel Initialization）**：操作系统内核启动后，初始化硬件抽象层（HAL）、内存管理、进程调度等核心子系统，最终启动用户空间（Userspace）的第一个进程（如Linux的`init`或`systemd`）。\n\n### 关键流程\n1. **BIOS/UEFI阶段**：\n   - 执行「加电自检（Power-On Self-Test, POST）」检测硬件。\n   - 根据「启动顺序（Boot Order）」查找引导设备（如硬盘、U盘）。\n2. **引导加载程序（Bootloader）**：\n   - 常见工具如GRUB（Linux）、Windows Boot Manager。\n   - 加载内核映像（Kernel Image）与初始内存磁盘（initramfs）。\n3. **内核初始化**：\n   - 解压内核并初始化硬件驱动（如存储、网络）。\n   - 挂载根文件系统（Root Filesystem）。\n   - 启动用户空间首个进程（PID=1）。\n\n### 与其他知识的联系\n- **与固件的关系**：BIOS（传统）与UEFI（现代）是启动链的起点。\n- **与虚拟化的关系**：虚拟机启动过程模拟物理机，但可能跳过POST阶段。\n\n### 应用示例\n- **双系统启动**：通过GRUB配置选择不同内核。\n- **嵌入式系统**：定制initramfs以加载特定驱动。\n\n---\n*注：Linux内核参数`init=`可指定替代`systemd`的初始化程序。*",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "UEFI Secure Boot可防止恶意内核加载",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Linux内核参数`console=ttyS0`用于串口调试",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Windows的Winload.efi是UEFI环境下的引导加载程序",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:49:10Z",
+    "deep_worked_example": {
+      "stem": "以下哪项不属于Bootloader的职责？\nA. 加载内核映像\nB. 执行硬件自检（POST）\nC. 提供启动菜单选择操作系统\nD. 传递内核参数",
+      "solution_outline": "B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "服务器运维中通过Kernel Panic日志分析启动失败原因",
+      "Android系统使用`fastboot`模式手动加载内核和 recovery 分区"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为内核初始化完成后立即进入图形界面。实际上需先启动用户空间服务（如登录管理器）。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "修改GRUB配置后未运行`grub-mkconfig`或`update-grub`，导致更改未生效。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "以下哪项不属于Bootloader的职责？\nA. 加载内核映像\nB. 执行硬件自检（POST）\nC. 提供启动菜单选择操作系统\nD. 传递内核参数",
+      "answer": "B",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "POST由BIOS/UEFI执行，Bootloader负责后续阶段。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某Linux系统启动时卡在「Loading initial ramdisk」阶段，最可能的原因是？\nA. 内核镜像损坏\nB. initramfs文件缺失\nC. GRUB配置错误\nD. 硬盘接口故障",
+      "answer": "B",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "initramfs包含启动必需的临时驱动和工具，缺失会导致内核无法挂载根文件系统。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "对比BIOS与UEFI在启动流程中的差异，至少列出两点。",
+      "answer": "1. BIOS使用MBR分区表，UEFI支持GPT；2. BIOS依赖引导扇区代码，UEFI可直接读取FAT分区中的EFI可执行文件。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "UEFI具有更快的启动速度和更强的安全性（如Secure Boot）。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "服务器运维中通过Kernel Panic日志分析启动失败原因",
+    "Android系统使用`fastboot`模式手动加载内核和 recovery 分区"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:49:10Z"
   }
 }

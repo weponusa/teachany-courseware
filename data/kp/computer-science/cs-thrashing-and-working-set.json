@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 抖动与工作集合模型（Thrashing and the Working Set Model）\n\n### 核心概念定义\n\n**抖动（Thrashing）**是指操作系统因过度进行「页面置换（page replacement）」而导致的性能急剧下降现象。当系统分配的物理内存不足以容纳进程的「工作集（working set）」时，进程频繁触发缺页中断，CPU利用率因等待I/O操作而骤降。\n\n**工作集模型（Working Set Model）**由Peter Denning提出，定义为进程在时间窗口Δ内访问的页面集合。其数学表示为：\n\n```\nW(t, Δ) = {页面i | 页面i在时间区间(t-Δ, t)内被访问}\n```\n\n### 关键性质与方法\n\n1. **抖动成因**：\n   - 内存过载（memory overcommitment）\n   - 局部性原理（principle of locality）失效\n   - 不当的页面置换算法（如FIFO可能引发Belady异常）\n\n2. **工作集特性**：\n   - 时变性（随时间动态变化）\n   - 空间局部性（spatial locality）体现\n   - 窗口大小Δ需权衡：过大包含无效页面，过小丢失关键页面\n\n3. **解决方案**：\n   - 工作集时钟算法（WSClock）\n   - 负载控制（通过准入控制限制并发进程数）\n\n### 与相关知识联系\n\n- **页面置换算法**：工作集模型是LRU的实用化近似\n- **局部性原理**：工作集是时间局部性（temporal locality）的量化表达\n- **性能监测**：现代操作系统通过PMC（Performance Monitoring Counter）统计缺页率检测抖动\n\n### 典型应用示例\n\n- **数据库管理系统**：Oracle的SGA（System Global Area）大小配置需匹配工作集\n- **虚拟化平台**：VMware ESXi根据工作集动态分配内存气球（memory balloon）",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Belady现象：FIFO置换算法在特定访问模式下缺页率随帧数增加而升高",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Linux的OOM Killer机制本质是抗抖动设计",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "非统一内存访问（NUMA）架构对工作集分布敏感",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:46:16Z",
+    "deep_worked_example": {
+      "stem": "当系统出现抖动时，以下哪项指标会显著升高？\nA) CPU利用率\nB) 缺页率（page fault rate）\nC) 磁盘吞吐量\nD) 缓存命中率",
+      "solution_outline": "B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "智能手机多任务切换时出现卡顿（因后台App工作集未完全载入内存）",
+      "云服务器突发性能下降（租户间内存竞争引发抖动）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆工作集与常驻集（resident set）：常驻集是实际在内存的页面，工作集是理论模型",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "错误设置工作集窗口Δ：在交互式系统中使用过大的Δ（如1秒）会导致模型失效",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "当系统出现抖动时，以下哪项指标会显著升高？\nA) CPU利用率\nB) 缺页率（page fault rate）\nC) 磁盘吞吐量\nD) 缓存命中率",
+      "answer": "B",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "抖动本质是频繁缺页导致，CPU利用率反而会因I/O等待下降"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某进程在时间窗口Δ=10ms内访问页面序列为[1,3,1,2,4,1,3,5]，其工作集大小是多少？",
+      "answer": "4",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "去重后页面集合为{1,2,3,4,5}，但5是最后一次访问，超出10ms窗口的起始点应剔除"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析工作集模型与OPT（最优置换）算法的理论关系",
+      "answer": "工作集是OPT的近似实现：OPT需未来知识，工作集用历史访问作为预测依据",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "两者都基于访问局部性，工作集用近期历史逼近OPT的全局最优"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "智能手机多任务切换时出现卡顿（因后台App工作集未完全载入内存）",
+    "云服务器突发性能下降（租户间内存竞争引发抖动）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:46:16Z"
   }
 }

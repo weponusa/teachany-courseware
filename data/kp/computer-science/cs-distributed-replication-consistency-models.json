@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 分布式数据库复制模型与一致性\n\n### 核心概念定义\n1. **分布式数据库（Distributed Database）**：数据存储在物理上分散的多个节点，通过网络连接形成逻辑统一体的数据库系统。\n2. **复制模型（Replication Model）**：定义数据副本在节点间的分布方式与同步机制，主要包括：\n   - **主从复制（Master-Slave）**：单主节点处理写请求，从节点异步同步数据\n   - **多主复制（Multi-Master）**：多个节点可同时接受写请求，需解决冲突\n   - **无主复制（Leaderless）**：任意节点可处理读写，通过「读修复（Read Repair）」或「反熵（Anti-Entropy）」保持一致性\n3. **一致性（Consistency）**：\n   - **强一致性（Strong Consistency）**：任何读操作都能读到最新写入值\n   - **最终一致性（Eventual Consistency）**：若无新写入，经过一段时间后所有副本趋于一致\n   - **CAP定理**：分布式系统最多同时满足一致性（Consistency）、可用性（Availability）、分区容错性（Partition Tolerance）中的两项\n\n### 关键性质与方法\n- **同步 vs 异步复制**：同步复制保证强一致性但延迟高；异步复制提高可用性但存在数据不一致窗口\n- **一致性协议**：如Paxos、Raft等共识算法用于保证多节点间数据一致性\n- **冲突解决策略**：时间戳（Last-Write-Win）、向量时钟（Vector Clock）、应用层合并等\n\n### 典型应用示例\n- **金融系统**：采用主从复制+强一致性保证交易准确性\n- **内容分发网络（CDN）**：使用最终一致性实现全球数据缓存\n- **物联网（IoT）**：多主复制处理边缘设备的离线写入\n\n### 与相关知识联系\n- 与「分布式系统共识算法」交叉：复制模型依赖底层共识协议\n- 与「数据库事务隔离级别」对比：分布式一致性是事务隔离在空间维度的扩展",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Google Spanner通过原子钟实现全球强一致性",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "DynamoDB采用向量时钟跟踪数据版本历史",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "MongoDB的副本集是典型的主从复制实现",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:59:14Z",
+    "deep_worked_example": {
+      "stem": "在CAP定理中，当网络分区发生时必须在哪两个特性之间做出选择？",
+      "solution_outline": "一致性与可用性",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "银行跨行转账系统使用两阶段提交（2PC）保证强一致性",
+      "社交媒体的『点赞』功能采用最终一致性降低延迟"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「最终一致性」与「弱一致性」：前者保证最终状态一致，后者可能永远不一致",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "误认为增加副本数总能提高系统可用性，实际上同步复制会因节点故障导致整体不可用",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "在CAP定理中，当网络分区发生时必须在哪两个特性之间做出选择？",
+      "answer": "一致性与可用性",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "CAP定理指出分区容错性（P）必须保留，因此只能在C和A之间权衡"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某电商采用多主复制数据库，用户A和B同时将商品X库存从100改为90和80，请设计两种冲突解决方案",
+      "answer": "1. 时间戳策略：采纳最后到达的修改\n2. 应用层合并：标记冲突由人工处理",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "多主复制需显式处理写冲突，需考虑业务场景选择策略"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析主从复制模型为何不适合高频写入场景",
+      "answer": "单主节点成为性能瓶颈，且同步复制延迟随节点数增加而上升",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需从写入吞吐量和网络延迟角度分析架构限制"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "银行跨行转账系统使用两阶段提交（2PC）保证强一致性",
+    "社交媒体的『点赞』功能采用最终一致性降低延迟"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:59:14Z"
   }
 }

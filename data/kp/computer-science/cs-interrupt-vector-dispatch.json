@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 中断向量表与Dispatch\n\n### 核心概念定义\n- **中断向量表（Interrupt Vector Table, IVT）**：操作系统内核中存储「中断处理程序（Interrupt Handler）」入口地址的数据结构，每个中断类型对应固定的表项索引（如x86架构中0-255号中断）。\n- **Dispatch（调度）**：中断触发后，CPU根据中断号在中断向量表中查找对应处理程序并跳转执行的过程，属于硬件-软件协同机制的关键环节。\n\n### 关键性质与方法\n1. **硬件依赖**：IVT的物理地址由CPU架构决定（如x86实模式固定在0x0000）。\n2. **多级跳转**：现代操作系统常通过IVT指向「中断描述符表（IDT）」实现保护模式下的安全调度。\n3. **原子性保护**：Dispatch过程中CPU会自动关闭中断防止嵌套冲突。\n\n### 与相关知识的联系\n- **系统调用**：用户态程序通过软中断（如Linux的int 0x80）触发Dispatch流程。\n- **进程调度**：时钟中断（IRQ0）的Dispatch可能引发调度器抢占当前进程。\n\n### 应用示例\n- **键盘输入处理**：按键触发IRQ1中断 → CPU查找IVT第9项 → 执行键盘驱动中断处理程序。\n- **缺页异常**：MMU触发缺页中断 → Dispatch到内存管理单元加载缺失页。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "ARM架构使用「中断向量控制器（GIC）」替代传统PIC",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Linux内核将0x80号中断用于传统系统调用",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "APIC允许在多核CPU中定向中断到特定核心",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:09:26Z",
+    "deep_worked_example": {
+      "stem": "中断向量表中每个表项通常包含什么关键信息？",
+      "solution_outline": "中断处理程序的入口地址（段选择子+偏移量）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "实时系统中通过优先级中断Dispatch保证关键任务响应",
+      "虚拟机监控程序（VMM）劫持特定中断实现硬件虚拟化"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「中断号」与「IRQ号」：x86中IRQ0-15实际映射到中断号0x20-0x2F。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未在中断处理程序中保存/恢复寄存器状态导致上下文破坏。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "中断向量表中每个表项通常包含什么关键信息？",
+      "answer": "中断处理程序的入口地址（段选择子+偏移量）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "IVT的核心功能是通过中断号索引到对应处理程序的执行起点。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "若某系统需新增自定义硬件中断（IRQ15），请说明配置IVT的步骤。",
+      "answer": "1. 编写中断处理程序 2. 将程序入口地址写入IVT第47项（0x20+15）3. 启用PIC中对应IRQ线",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需同时考虑软件（IVT填充）和硬件（PIC编程）层面的配置。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "比较实模式和保护模式下中断Dispatch的主要差异。",
+      "answer": "实模式直接使用IVT物理地址，保护模式通过IDT间接寻址且需权限检查。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "保护模式引入内存管理和特权级机制导致调度流程更复杂。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "实时系统中通过优先级中断Dispatch保证关键任务响应",
+    "虚拟机监控程序（VMM）劫持特定中断实现硬件虚拟化"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:09:26Z"
   }
 }

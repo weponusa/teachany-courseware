@@ -12,19 +12,92 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 寄存器分配（Register Allocation）\n\n### 核心概念定义\n寄存器分配是「编译器（Compiler）」在代码生成阶段的关键优化技术，其目标是将程序中的「虚拟寄存器（Virtual Register）」或无限临时变量映射到目标机器的有限物理寄存器集合上。当物理寄存器不足时，需通过「溢出（Spilling）」策略将部分变量暂存到内存中。\n\n### 关键性质与方法\n1. **图着色模型（Graph Coloring）**：\n   - 将寄存器分配问题抽象为图着色问题，其中节点代表变量，边代表变量间的冲突（即同时存活期）。若两个变量存活期重叠，则不能分配同一寄存器。\n   - 经典算法如Chaitin算法通过反复移除低度数节点完成着色。\n\n2. **线性扫描（Linear Scan）**：\n   - 适用于即时编译（JIT）场景，通过遍历变量的存活区间快速分配寄存器，牺牲部分优化精度换取速度。\n\n3. **动态分配策略**：\n   - 在「寄存器压力（Register Pressure）」高的区域（如循环体）优先分配高频使用的变量。\n\n### 与相关知识的联系\n- 与「指令选择（Instruction Selection）」和「指令调度（Instruction Scheduling）」共同构成代码生成的三阶段。\n- 依赖「活跃变量分析（Live Variable Analysis）」确定变量的存活范围。\n\n### 典型应用示例\n在LLVM编译器中，`Greedy`寄存器分配器通过启发式规则合并冗余拷贝并优化溢出代码，使ARM架构下的循环性能提升15%。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "SSA（静态单赋值）形式可简化寄存器分配中的变量活跃性分析",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "现代处理器中的寄存器重命名技术部分缓解了分配压力",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:33:34Z",
+    "deep_worked_example": {
+      "stem": "寄存器分配的主要目标是什么？",
+      "solution_outline": "将程序中的虚拟寄存器或临时变量高效映射到有限的物理寄存器集合上，必要时通过溢出策略处理寄存器不足的情况。",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "游戏引擎的实时脚本编译依赖线性扫描算法快速生成机器码",
+      "嵌入式编译器针对特定芯片（如DSP）定制寄存器分配策略以减少功耗"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为所有冲突变量必须溢出，忽略通过重排序指令消除部分冲突的可能性。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未正确标记变量的存活区间终点，导致低估冲突（如忽略分支语句后的变量使用）。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "寄存器分配的主要目标是什么？",
+      "answer": "将程序中的虚拟寄存器或临时变量高效映射到有限的物理寄存器集合上，必要时通过溢出策略处理寄存器不足的情况。",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "核心是解决无限变量与有限硬件资源的矛盾。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "假设变量A存活区间为[1,5]，变量B为[3,7]，变量C为[6,10]。若只有2个物理寄存器，需溢出几个变量？",
+      "answer": "1个（A与B冲突需不同寄存器，C可与A共用寄存器但需在时间点6前溢出A）。",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "通过时间区间重叠分析冲突关系。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "对比图着色与线性扫描算法的适用场景差异。",
+      "answer": "图着色优化程度高但耗时，适合静态编译；线性扫描速度快但精度低，适合即时编译。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需权衡优化质量与编译时间。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "游戏引擎的实时脚本编译依赖线性扫描算法快速生成机器码",
+    "嵌入式编译器针对特定芯片（如DSP）定制寄存器分配策略以减少功耗"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:33:34Z"
   }
 }

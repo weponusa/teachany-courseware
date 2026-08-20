@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 资源极限与进程Accounting（Resource Limits and Process Accounting）\n\n### 核心概念定义\n1. **资源极限（Resource Limits）**：操作系统对进程可使用的系统资源（如CPU时间、内存、文件描述符数量等）施加的硬性或软性限制，防止单一进程耗尽资源导致系统不稳定。\n   - 硬限制（Hard Limit）：超级用户可设置，普通用户不可超越的绝对上限。\n   - 软限制（Soft Limit）：用户可在硬限制范围内自行调整的临时上限。\n\n2. **进程Accounting（Process Accounting）**：操作系统记录进程生命周期中资源使用情况（如CPU时间、内存占用、启动/终止时间）的机制，用于审计、计费或性能分析。\n\n### 关键性质与方法\n- **设置资源极限**：通过`ulimit`命令（Linux）或`setrlimit()`系统调用实现，可限制：\n  - `RLIMIT_CPU`（进程CPU时间）\n  - `RLIMIT_DATA`（堆内存大小）\n  - `RLIMIT_NOFILE`（文件描述符数量）\n- **进程Accounting数据**：通常存储在`/var/account/pacct`（Linux）等日志文件中，工具如`sa`（summary accounting）可生成汇总报告。\n\n### 与相关知识的联系\n- **进程调度**：资源极限直接影响调度器对进程的CPU时间分配。\n- **系统安全**：通过限制用户进程资源，防止拒绝服务攻击（DoS）。\n\n### 典型应用示例\n- **Web服务器优化**：限制每个子进程的内存使用，避免因内存泄漏导致服务崩溃。\n- **多租户环境**：云计算中通过资源隔离保证不同用户进程的公平性。\n\n---",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：`getrlimit()`系统调用可查询当前资源限制值。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：BSD系统的Accounting记录还包括进程所有者UID和退出状态码。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：现代Linux系统常用`cgroup`替代传统资源极限机制，提供更细粒度控制。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:34:26Z",
+    "deep_worked_example": {
+      "stem": "以下哪项是「软限制」的特点？\nA. 只能由root用户修改\nB. 用户可在硬限制范围内临时调整\nC. 进程崩溃时自动重置\nD. 仅适用于CPU资源",
+      "solution_outline": "B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "容器技术（如Docker）通过cgroups实现资源隔离，本质是资源极限的应用。",
+      "高校计算集群使用进程Accounting统计各研究组的资源消耗，分配预算。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「硬限制」与「软限制」的修改权限：误认为普通用户可任意提高硬限制。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未检查硬限制直接设置软限制，导致`setrlimit()`调用失败。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "以下哪项是「软限制」的特点？\nA. 只能由root用户修改\nB. 用户可在硬限制范围内临时调整\nC. 进程崩溃时自动重置\nD. 仅适用于CPU资源",
+      "answer": "B",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "软限制允许用户在硬限制范围内动态调整，而硬限制需root权限修改（A错误）。软限制与资源类型无关（D错误），且不会因进程崩溃重置（C错误）。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某进程因达到`RLIMIT_CPU`限制被终止，若需允许其继续运行10秒，应如何操作？（假设当前软限制为20秒）",
+      "answer": "使用`setrlimit(RLIMIT_CPU, &new_limit)`将软限制设置为30秒",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "新软限制=原限制+10秒，且不得超过硬限制。需通过系统调用或shell命令（如`ulimit -t 30`）实现。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析进程Accounting在云计算计费系统中的潜在作用。",
+      "answer": "通过记录各租户进程的CPU/内存使用量，实现按量计费；结合资源极限防止超额使用，保障公平性。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Accounting数据提供精确的资源使用证据，而资源极限确保计费模型的可执行性。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "容器技术（如Docker）通过cgroups实现资源隔离，本质是资源极限的应用。",
+    "高校计算集群使用进程Accounting统计各研究组的资源消耗，分配预算。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:34:26Z"
   }
 }

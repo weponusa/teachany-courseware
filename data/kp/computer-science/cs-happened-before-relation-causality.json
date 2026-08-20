@@ -12,19 +12,98 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## Happened-Before 关系与因果序\n\n### 核心概念定义\n\n「Happened-Before 关系（Happened-Before Relation）」由 Leslie Lamport 提出，用于描述分布式系统中事件间的偏序关系。若事件 A 发生在事件 B 之前（记为 A→B），则需满足以下任一条件：\n1. **本地顺序**：A 和 B 在同一进程内，且 A 在 B 之前执行；\n2. **跨进程通信**：A 是发送消息的事件，B 是对应接收消息的事件；\n3. **传递性**：存在事件 C 使得 A→C 且 C→B。\n\n「因果序（Causal Ordering）」是 Happened-Before 关系的扩展，要求所有因果相关的事件必须按此关系排序，而并发事件可任意排序。\n\n### 关键性质\n1. **非对称性**：若 A→B，则 B→A 不成立；\n2. **传递性**：A→B 且 B→C ⇒ A→C；\n3. **非全序性**：可能存在并发事件（既无 A→B 也无 B→A）。\n\n### 与逻辑时钟的联系\n逻辑时钟（如 Lamport 时钟、向量时钟）是实现 Happened-Before 检测的工具，通过时间戳量化事件顺序。\n\n### 典型应用\n- **分布式快照**：Chandy-Lamport 算法依赖因果序确保一致性；\n- **版本控制**：Git 的提交历史本质上是因果序的 DAG；\n- **分布式数据库**：解决写冲突时需维护因果一致性。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Lamport 的经典论文《Time, Clocks, and the Ordering of Events in a Distributed System》首次形式化 Happened-Before 关系",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "向量时钟的空间复杂度为 O(N)（N 为进程数），是其在大规模系统中的主要限制",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "因果一致性（Causal Consistency）是弱于线性一致性强于最终一致性的模型",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:06:35Z",
+    "deep_worked_example": {
+      "stem": "若进程 P1 发送消息 m1，进程 P2 接收 m1 后发送 m2，进程 P1 接收 m2。根据 Happened-Before 关系，以下哪项正确？\nA. send(m1)→send(m2)  \nB. receive(m1)→send(m1)  \nC. send(m2)→receive(m2)",
+      "solution_outline": "A",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "区块链交易排序：PoW 机制下交易需满足因果序以避免双花攻击",
+      "在线协作编辑（如 Google Docs）：需维护操作因果序确保最终一致性"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为时间戳大的事件一定发生在时间戳小的事件之后（忽略并发可能性）",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "实现因果广播时未正确处理消息的传递闭包，导致丢失间接因果依赖",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "若进程 P1 发送消息 m1，进程 P2 接收 m1 后发送 m2，进程 P1 接收 m2。根据 Happened-Before 关系，以下哪项正确？\nA. send(m1)→send(m2)  \nB. receive(m1)→send(m1)  \nC. send(m2)→receive(m2)",
+      "answer": "A",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "根据跨进程通信条件，send(m1)→receive(m1)→send(m2)→receive(m2)，传递性可得 A 正确。B 违反本地顺序，C 颠倒了顺序。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某系统使用 Lamport 时钟，已知事件 A 时间戳为 5，事件 B 为 7。能否确定 A→B？",
+      "answer": "不能",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Lamport 时钟仅保证若 A→B 则 L(A)<L(B)，但反之不成立。需检查是否存在实际因果路径。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析为何向量时钟比 Lamport 时钟更适合检测并发事件。",
+      "answer": "向量时钟维护各进程的本地时钟向量，可通过分量比较直接判断并发（无因果关系的 A 和 B 满足 A∥B ⇔ ¬(A→B) ∧ ¬(B→A)），而 Lamport 时钟无法区分因果序与并发。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "区块链交易排序：PoW 机制下交易需满足因果序以避免双花攻击",
+    "在线协作编辑（如 Google Docs）：需维护操作因果序确保最终一致性"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:06:35Z"
   }
 }

@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 读修复与反熵机制（Read Repair and Anti-Entropy Mechanisms）\n\n### 核心概念定义\n1. **读修复（Read Repair）**：在分布式存储系统中，当客户端读取数据时发现不同副本间存在不一致，系统自动触发数据同步的过程。其核心思想是「读取时修复」，通过比较副本数据版本号或校验和，用最新数据覆盖旧数据。\n2. **反熵机制（Anti-Entropy）**：一种后台运行的周期性数据同步协议，通过「Gossip 协议」或「Merkle 树」等算法，系统性检测并修复副本间的数据差异，对抗分布式系统中的熵增现象。\n\n### 关键性质与方法\n- **读修复的触发条件**：\n  - 强一致性系统（如 DynamoDB）：每次读取都会验证副本一致性\n  - 最终一致性系统（如 Cassandra）：仅在配置的读一致性级别（如 QUORUM）未满足时触发\n- **反熵的两种实现方式**：\n  - **推送式（Push-based）**：将最新数据广播到其他节点\n  - **拉取式（Pull-based）**：定期请求其他节点的数据摘要进行比对\n\n### 与相关知识的联系\n- 与「CAP 定理」的关系：反熵机制是实现最终一致性（AP 系统）的核心组件\n- 与「CRDTs（Conflict-Free Replicated Data Types）」的协同：当读修复无法自动解决冲突时，需要依赖 CRDTs 的合并语义\n\n### 典型应用示例\n- **Amazon DynamoDB**：使用基于 Merkle 树的反熵机制，每 24 小时自动修复分区数据\n- **Apache Cassandra**：通过 `nodetool repair` 命令手动触发反熵过程，修复丢失的写入",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Merkle 树在反熵中的应用：每个叶子节点对应数据块的哈希，非叶子节点存储子节点哈希的组合值",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Gossip 协议的流行病传播模型：节点随机选择其他节点交换数据差异信息",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Hinted Handoff 技术：当目标节点不可用时临时将写入请求转存到其他节点，属于反熵的变体实现",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:32:32Z",
+    "deep_worked_example": {
+      "stem": "在最终一致性系统中，读修复机制最可能在哪类操作中触发？",
+      "solution_outline": "读取操作（Read Operation）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "云数据库服务（如 AWS Aurora）使用反熵机制自动修复因网络分区导致的数据漂移",
+      "区块链节点同步新块时采用类似读修复的机制，优先选择最长链上的数据"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为读修复可以替代反熵机制。实际上读修复仅处理被读取的数据，而反熵负责全局数据一致性",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在配置反熵周期时忽视网络开销。过高的同步频率会导致带宽饱和，实际需要根据数据变更速率调整",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "在最终一致性系统中，读修复机制最可能在哪类操作中触发？",
+      "answer": "读取操作（Read Operation）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "读修复的字面含义即表明其触发场景为读取数据时，写入操作通常采用其他一致性机制（如 Quorum 写入）"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某分布式数据库使用 Merkle 树进行反熵同步，若某叶子节点哈希值不匹配但其父节点哈希匹配，这说明什么问题？",
+      "answer": "数据不一致发生在该叶子节点对应的数据块之外的其他子节点",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Merkle 树的特性是父节点哈希由子节点哈希计算得出，父节点匹配说明不一致不在当前子树范围内"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "设计一个简单的读修复流程：系统有 3 副本，采用最后写入获胜（LWW）策略，客户端读取时发现副本 A 数据版本=5，B=5，C=3。描述修复步骤",
+      "answer": "1. 识别 C 为过期副本 2. 将 A 或 B 的版本 5 数据写入 C 3. 返回版本 5 数据给客户端",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "根据 LWW 策略，更高版本号代表更新数据，需用多数副本（A/B）的数据修复少数副本（C）"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "云数据库服务（如 AWS Aurora）使用反熵机制自动修复因网络分区导致的数据漂移",
+    "区块链节点同步新块时采用类似读修复的机制，优先选择最长链上的数据"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:32:32Z"
   }
 }

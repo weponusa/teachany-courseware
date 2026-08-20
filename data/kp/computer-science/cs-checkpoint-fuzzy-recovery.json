@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 检查点（Checkpointing）: Sharp与Fuzzy检查点\n\n### 核心概念定义\n1. **检查点（Checkpointing）**：数据库系统中用于故障恢复的技术，定期将内存中的事务状态持久化到稳定存储（如磁盘）的过程。\n2. **Sharp Checkpoint（严格检查点）**：在检查点时刻强制暂停所有事务，确保内存数据与磁盘完全一致的状态快照。\n3. **Fuzzy Checkpoint（模糊检查点）**：允许事务在检查点过程中继续执行，通过记录「脏页表（Dirty Page Table）」标记修改过的数据页，无需全局暂停。\n\n### 关键性质对比\n| 特性                | Sharp Checkpoint         | Fuzzy Checkpoint         |\n|---------------------|--------------------------|--------------------------|\n| 一致性              | 强一致性                | 最终一致性              |\n| 系统吞吐量影响      | 高（需阻塞事务）        | 低（异步执行）          |\n| 恢复复杂度          | 低（直接回滚到检查点）  | 高（需结合日志重做）    |\n\n### 与WAL的关联\n- Fuzzy Checkpoint 通常与「预写式日志（Write-Ahead Log, WAL）」配合使用，通过日志记录检查点期间的事务操作，确保故障时能重建一致状态。\n\n### 典型应用示例\n- **Sharp Checkpoint**：嵌入式数据库（如SQLite）在低并发场景使用。\n- **Fuzzy Checkpoint**：高并发OLTP系统（如PostgreSQL）默认采用。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "ARIES恢复算法是Fuzzy Checkpoint的经典实现方案",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "检查点间隔时间需权衡：过短增加I/O开销，过长延长恢复时间",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "非易失性内存（NVM）可能改变未来检查点技术的设计范式",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:52:57Z",
+    "deep_worked_example": {
+      "stem": "Sharp Checkpoint的主要缺点是什么？",
+      "solution_outline": "需要暂停所有事务执行，影响系统吞吐量",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "金融交易系统采用Fuzzy Checkpoint+WAL组合，在保证高性能的同时满足ACID要求",
+      "物联网设备使用Sharp Checkpoint简化恢复流程，牺牲部分性能换取可靠性"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为Fuzzy Checkpoint不需要任何日志支持，实际上仍需WAL保证原子性",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "实施Fuzzy Checkpoint时未正确维护脏页表，导致恢复丢失部分已提交事务",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "Sharp Checkpoint的主要缺点是什么？",
+      "answer": "需要暂停所有事务执行，影响系统吞吐量",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Sharp Checkpoint要求系统在检查点时刻处于静止状态，这对高并发系统性能影响显著。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某数据库系统采用Fuzzy Checkpoint时突然崩溃，恢复过程中需要哪些额外信息？",
+      "answer": "脏页表和WAL日志",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "脏页表记录检查点期间被修改的页，WAL日志提供具体修改内容，两者结合才能重建一致状态。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析Sharp Checkpoint在分布式数据库中难以应用的原因",
+      "answer": "分布式系统节点间同步暂停代价过高，且难以保证全局一致性时刻",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "分布式环境节点通信延迟会导致各节点无法同时进入静止状态，违背Sharp Checkpoint的基本前提。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "金融交易系统采用Fuzzy Checkpoint+WAL组合，在保证高性能的同时满足ACID要求",
+    "物联网设备使用Sharp Checkpoint简化恢复流程，牺牲部分性能换取可靠性"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:52:57Z"
   }
 }

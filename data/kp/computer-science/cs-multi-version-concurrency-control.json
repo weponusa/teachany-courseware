@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 多版本并发控制（MVCC）详解\n\n### 核心概念定义\n多版本并发控制（Multi-Version Concurrency Control, MVCC）是一种数据库并发控制机制，通过维护数据的多个版本来实现读写操作的并发执行，避免传统锁机制导致的性能瓶颈。其核心思想是：\n1. **版本快照（Snapshot）**：每个事务看到的是数据库在某一时间点的「一致性快照」\n2. **版本链（Version Chain）**：通过指针将同一数据项的不同版本串联起来\n3. **可见性判断（Visibility Rules）**：基于事务ID（Transaction ID）和版本创建时间决定哪些版本对当前事务可见\n\n### 关键实现方法\n1. **版本存储**：\n   - PostgreSQL 使用 Heap Tuple + CTID 链式存储\n   - MySQL InnoDB 通过回滚段（Rollback Segment）实现\n2. **事务标识**：\n   - 事务ID（XID）单调递增\n   - 快照通过 xmin/xmax 界定可见范围\n3. **垃圾回收（Vacuum）**：定期清理不再被任何事务引用的旧版本\n\n### 与相关知识联系\n- 相比两阶段锁（2PL）：MVCC 实现更高的并发度，但需要处理版本膨胀问题\n- 与隔离级别关系：RC（读已提交）和 RR（可重复读）级别依赖 MVCC 实现\n- 在分布式数据库中：需结合时间戳排序（Timestamp Ordering）等协议\n\n### 典型应用示例\n```sql\n-- PostgreSQL 中查看元组版本信息\nSELECT xmin, xmax, * FROM table_name;\n-- MySQL 查看事务状态\nSHOW ENGINE INNODB STATUS\\G\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "PostgreSQL的xmin/xmax系统列实现细节",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "MySQL的ReadView机制与undo log关系",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Oracle的SCN（System Change Number）版本控制",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:16:41Z",
+    "deep_worked_example": {
+      "stem": "MVCC 解决并发问题的核心机制是什么？",
+      "solution_outline": "维护数据的多个版本，使读写操作可以并发执行",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "银行系统实现账户余额快照查询",
+      "电商平台订单状态的历史版本追踪"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为MVCC完全不需要锁机制（实际仍需写锁处理当前版本更新）",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未正确设置vacuum参数导致存储空间持续增长",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "MVCC 解决并发问题的核心机制是什么？",
+      "answer": "维护数据的多个版本，使读写操作可以并发执行",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "通过版本隔离替代锁竞争，读操作访问历史版本，写操作创建新版本"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某事务T1（XID=100）启动时存在活跃事务[90,95]，此时T1读取的数据版本应满足什么条件？",
+      "answer": "版本创建XID ≤ 100 且 (版本删除XID=null 或 删除XID > 100)",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需排除未提交事务(90,95)的修改，同时保证自身事务的读一致性"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析MVCC在以下场景的优劣：高频更新的计数器场景 vs 历史数据查询场景",
+      "answer": "计数器场景易产生版本膨胀，历史查询场景能充分利用版本链",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "短事务频繁更新导致回收压力大，而历史版本查询正是MVCC的优势场景"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "银行系统实现账户余额快照查询",
+    "电商平台订单状态的历史版本追踪"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:16:41Z"
   }
 }

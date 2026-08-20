@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## Readers-Writers问题与锁模式\n\n### 核心概念定义\n「Readers-Writers问题（Readers-Writers Problem）」是操作系统中的经典同步问题，描述了多个「读者（Reader）」进程和「写者（Writer）」进程对共享资源的访问冲突。读者仅读取数据，可并发执行；写者会修改数据，必须独占访问。\n\n### 关键性质与方法\n1. **锁模式分类**：\n   - 「读者优先（Reader-Preference）」：保证读者持续进入，可能导致写者饥饿\n   - 「写者优先（Writer-Preference）」：新到达的写者会阻塞后续读者\n   - 「公平策略（Fairness）」：采用队列或时间戳实现交替访问\n2. **同步原语**：通常使用「互斥锁（Mutex）」和「信号量（Semaphore）」实现，如：\n   - 用读写锁（rwlock）区分读者/写者\n   - 采用计数器和条件变量跟踪活跃读者数\n\n### 与相关知识的联系\n- 属于「进程同步（Process Synchronization）」的子问题\n- 与「生产者-消费者问题（Producer-Consumer Problem）」同属共享资源访问模型\n\n### 典型应用示例\n数据库系统中的事务管理：\n```python\n# 伪代码示例\nrwlock.acquire_read()\nSELECT * FROM table  # 多个事务可并发读\nrwlock.release_read()\n\nrwlock.acquire_write()\nUPDATE table SET...   # 写操作独占\nrwlock.release_write()\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Linux内核的rwlock_t实现采用自旋锁+原子计数器",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Java中的ReentrantReadWriteLock提供公平/非公平模式选项",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "数据库MVCC（多版本并发控制）可视为本问题的扩展解决方案",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:32:34Z",
+    "deep_worked_example": {
+      "stem": "在读者优先的解决方案中，可能导致什么问题？",
+      "solution_outline": "写者饥饿（Writer Starvation）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "多线程Web服务器中静态资源的缓存访问",
+      "金融系统里的行情数据发布（高频读取+低频更新）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为读写锁完全等同于两个独立互斥锁（读锁+写锁），实际上读写锁需要维护读者计数等复杂状态",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "实现时忘记在读者离开时检查等待的写者（缺少唤醒机制），导致死锁",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "在读者优先的解决方案中，可能导致什么问题？",
+      "answer": "写者饥饿（Writer Starvation）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "持续到达的读者会长期占用资源，导致写者无法获得执行机会"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某系统要求写操作必须优先，现有3个读者（R1-R3）和2个写者（W1-W2）按序到达：R1→W1→R2→R3→W2。请问最终执行顺序可能是？",
+      "answer": "R1→W1→W2→R2→R3",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "写者优先策略会让W1执行后立即处理W2，而非允许R2/R3插入"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "对比读者优先和写者优先方案的优缺点，各列举两条",
+      "answer": "读者优先优点：读吞吐量高、实现简单；缺点：写延迟不可控、可能饥饿。写者优先优点：数据一致性强、写延迟确定；缺点：读并发性降低、实现复杂",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需从系统目标和资源特性角度分析权衡"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "多线程Web服务器中静态资源的缓存访问",
+    "金融系统里的行情数据发布（高频读取+低频更新）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:32:34Z"
   }
 }

@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 布隆滤波器分布式系统（Bloom Filters in Distributed Systems）\n\n### 核心概念定义\n布隆滤波器（Bloom Filter）是一种空间效率极高的概率型数据结构，用于快速判断一个元素是否属于某个集合。其核心特点包括：\n- **空间高效**：使用位数组（Bit Array）和多个哈希函数（Hash Functions）表示集合，远小于传统数据结构（如哈希表）的空间占用。\n- **概率性判断**：可能存在误判（False Positive），即错误地认为某个元素在集合中，但绝不会漏判（False Negative）。\n\n在分布式系统（Distributed Systems）中，布隆滤波器常用于解决以下问题：\n- **成员查询（Membership Query）**：快速判断数据是否存在于远程节点，减少网络传输开销。\n- **数据同步（Data Synchronization）**：在副本同步或缓存一致性场景中，高效比对差异数据。\n\n### 关键性质与方法\n1. **构造过程**：\n   - 初始化一个长度为m的位数组，所有位设为0。\n   - 使用k个独立的哈希函数，将每个元素映射到位数组的k个位置并置1。\n2. **查询过程**：检查目标元素的k个哈希位置是否均为1。若存在0，则元素不在集合中；否则可能在集合中。\n3. **误判率计算**：误判概率与位数组大小m、哈希函数数量k及元素数量n相关，公式为：\n   $$(1 - e^{-kn/m})^k$$\n\n### 与相关知识的联系\n- **与传统哈希表的对比**：布隆滤波器以误判为代价换取空间效率，适合容忍一定误差的大规模场景。\n- **与分布式哈希表（DHT）的结合**：在P2P网络中，布隆滤波器可加速路由查询。\n\n### 典型应用示例\n- **分布式数据库（如Cassandra）**：用布隆滤波器判断键是否存在于某个SSTable文件，减少磁盘I/O。\n- **CDN缓存**：边缘节点使用布隆滤波器过滤未缓存的内容请求，降低回源率。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：Cuckoo Filter是另一种支持删除操作的概率数据结构",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：HyperLogLog利用类似思想解决基数统计问题",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：布隆滤波器在比特币SPV钱包中的应用原理",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:48:56Z",
+    "deep_worked_example": {
+      "stem": "布隆滤波器在以下哪种情况下一定会返回「不存在」的结果？",
+      "solution_outline": "当目标元素的任意一个哈希位置在位数组中为0时",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "区块链轻节点使用布隆滤波器快速验证交易是否在区块中",
+      "垃圾邮件过滤系统用布隆滤波器拦截已知垃圾邮件地址"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为布隆滤波器可以删除元素。实际上标准布隆滤波器不支持删除操作（需使用变体如Counting Bloom Filter）。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未根据实际元素数量n调整位数组大小m，导致误判率超出预期。例如m过小会使误判率急剧上升。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "布隆滤波器在以下哪种情况下一定会返回「不存在」的结果？",
+      "answer": "当目标元素的任意一个哈希位置在位数组中为0时",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "布隆滤波器的「不存在」判断是确定的，只要有一个哈希位未被置1即可确认。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "假设布隆滤波器的位数组长度为1000，使用3个哈希函数。现有100个元素已插入，求当前误判率的近似值（保留4位小数）。",
+      "answer": "0.0036",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "代入公式计算：$(1 - e^{-3*100/1000})^3 ≈ (1 - e^{-0.3})^3 ≈ 0.0036$。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析为何分布式系统更倾向使用布隆滤波器而非精确数据结构（如哈希表）进行成员查询？",
+      "answer": "分布式系统中网络通信成本高，布隆滤波器的空间效率和本地查询特性可显著减少跨节点请求。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "哈希表需存储完整键值或传输全部数据，而布隆滤波器仅需传递位数组和哈希函数。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "区块链轻节点使用布隆滤波器快速验证交易是否在区块中",
+    "垃圾邮件过滤系统用布隆滤波器拦截已知垃圾邮件地址"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:48:56Z"
   }
 }

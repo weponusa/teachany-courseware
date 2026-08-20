@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 虚拟内存与分页（Virtual Memory and Paging）\n\n### 核心概念定义\n虚拟内存（Virtual Memory）是一种计算机系统内存管理技术，它将物理内存（Physical Memory）和磁盘存储结合使用，使得程序能够像访问连续内存空间一样操作比实际物理内存更大的地址空间。分页（Paging）是实现虚拟内存的主要机制之一，它将虚拟地址空间和物理地址空间划分为固定大小的块（称为「页（Page）」和「页框（Page Frame）」），并通过页表（Page Table）建立映射关系。\n\n### 关键性质与方法\n1. **地址转换**：CPU生成的虚拟地址通过MMU（Memory Management Unit）转换为物理地址，转换过程涉及页表查询和可能的TLB（Translation Lookaside Buffer）加速。\n2. **页面置换**：当物理内存不足时，操作系统会根据特定算法（如LRU、FIFO）选择牺牲页（Victim Page）换出到磁盘。\n3. **缺页异常（Page Fault）**：当访问的页不在物理内存中时触发，由操作系统负责从磁盘加载缺失页。\n\n### 联系与应用\n- **与缓存的类比**：分页机制与CPU缓存行（Cache Line）替换策略有相似性，但操作粒度更大（通常页大小为4KB）。\n- **典型应用**：现代操作系统（如Linux、Windows）均使用虚拟内存支持多任务隔离和内存超量分配（Overcommit）。\n\n### 示例场景\n运行多个大型程序时，系统通过虚拟内存使得每个程序都拥有独立的地址空间，物理内存不足时自动将不活跃程序的页面换出到交换分区（Swap Partition）。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "多级页表（Multi-level Page Table）通过树状结构减少页表内存占用，但会增加地址转换时间",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "大页（Huge Page，如2MB）可减少TLB缺失，常用于高性能计算场景",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "反向页表（Inverted Page Table）通过物理页号反向查找虚拟页号，节省空间但增加查询复杂度",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:49:38Z",
+    "deep_worked_example": {
+      "stem": "虚拟内存的主要作用是（多选）：\nA. 扩展可用内存容量\nB. 实现进程间内存隔离\nC. 提高CPU时钟频率\nD. 减少磁盘I/O次数",
+      "solution_outline": "A, B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "手机应用切换时，后台应用的内存可能被换出到闪存存储（如Android的zRAM压缩交换）",
+      "数据库系统利用虚拟内存管理大型索引文件，避免一次性加载全部数据"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「虚拟地址」与「逻辑地址」：虚拟地址是CPU生成的完整地址，逻辑地址是段式管理中的偏移量（现代系统通常禁用分段）。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "计算页号时忽略页大小对齐：例如直接将虚拟地址0x1001除以4KB得到浮点数页号（正确做法是整除或右移12位）。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "虚拟内存的主要作用是（多选）：\nA. 扩展可用内存容量\nB. 实现进程间内存隔离\nC. 提高CPU时钟频率\nD. 减少磁盘I/O次数",
+      "answer": "A, B",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "虚拟内存通过分页机制扩展逻辑内存空间（A正确），且每个进程有独立页表实现隔离（B正确）。它不直接影响CPU频率（C错误），反而可能因缺页增加磁盘I/O（D错误）。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某系统页大小为4KB，虚拟地址0x2345对应的页号是（十六进制）：",
+      "answer": "0x2",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "页号 = 虚拟地址 >> 12（因为4KB=2^12），0x2345右移12位得0x2。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析LRU和FIFO页面置换算法在访问序列2,3,2,1,5,2,4时的缺页次数（物理内存3页）",
+      "answer": "LRU: 5次；FIFO: 6次",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "LRU会保留最近使用的页：2(缺),3(缺),2(命中),1(缺),5(缺替换1),2(缺替换3),4(缺替换5)。FIFO按进入顺序替换：2(缺),3(缺),2(命中),1(缺),5(缺替换2),2(缺替换3),4(缺替换1)。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "手机应用切换时，后台应用的内存可能被换出到闪存存储（如Android的zRAM压缩交换）",
+    "数据库系统利用虚拟内存管理大型索引文件，避免一次性加载全部数据"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:49:38Z"
   }
 }

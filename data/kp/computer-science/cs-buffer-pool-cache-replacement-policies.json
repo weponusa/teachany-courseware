@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 缓冲池（Buffer Pool）管理与缓存替换策略（Cache Replacement Policies）\n\n### 核心概念定义\n1. **缓冲池（Buffer Pool）**：数据库系统中用于缓存磁盘数据页的内存区域，通过减少磁盘I/O提升性能。其核心组件包括:\n   - **帧（Frame）**：固定大小的内存块，用于存储从磁盘读取的数据页（Page）\n   - **页表（Page Table）**：维护磁盘页与内存帧的映射关系\n   - **钉住计数（Pin Count）**：记录页被事务引用的次数\n\n2. **缓存替换策略**：当缓冲池满时决定替换哪些页的算法，常见策略包括:\n   - **LRU（Least Recently Used）**：淘汰最久未使用的页\n   - **Clock**：近似LRU的环形扫描算法\n   - **LFU（Least Frequently Used）**：淘汰使用频率最低的页\n   - **MRU（Most Recently Used）**：适用于顺序扫描场景\n\n### 关键性质\n- **局部性原理**：时间局部性（Temporal Locality）和空间局部性（Spatial Locality）是缓存有效性的理论基础\n- **脏页（Dirty Page）**：被修改后未写回磁盘的页，需要特殊处理\n- **预取（Prefetching）**：基于访问模式提前加载可能需要的页\n\n### 典型应用示例\nMySQL InnoDB的缓冲池实现：\n- 默认使用改进的LRU算法（分Young/Sublist）\n- 通过`innodb_buffer_pool_size`参数配置大小\n- 支持多实例化减少锁争用\n\n### 与其他知识的联系\n- 与操作系统虚拟内存管理的页置换算法（如FIFO、OPT）有相似性\n- 与CPU缓存行（Cache Line）替换策略存在层级扩展关系",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "2Q算法：LRU的改进版，通过两个队列区分热点数据和临时数据",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "PostgreSQL的环形缓冲池（Ring Buffer）设计",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "现代硬件对缓存策略的影响：NVMe SSD的低延迟特性可能改变传统优化假设",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:49:47Z",
+    "deep_worked_example": {
+      "stem": "以下哪种场景最适合使用MRU替换策略？\nA. 随机点查询\nB. 全表顺序扫描\nC. 索引范围查询\nD. 事务回滚操作",
+      "solution_outline": "B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "数据库参数调优：根据工作负载特征调整缓冲池大小和替换策略",
+      "云数据库服务（如AWS RDS）提供的缓冲池监控指标"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆『缓冲池命中率』与『缓存命中率』：前者特指数据库请求在缓冲池中找到数据的比例，后者是更通用的概念",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "实现LRU时错误使用严格的时间戳排序，实际工程中多采用近似实现（如Clock算法）以避免性能开销",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "以下哪种场景最适合使用MRU替换策略？\nA. 随机点查询\nB. 全表顺序扫描\nC. 索引范围查询\nD. 事务回滚操作",
+      "answer": "B",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "MRU策略会优先淘汰最近使用的页，适合顺序扫描这种『访问后短期内不再使用』的场景"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "判断：LFU策略在存在热点数据时表现优于LRU策略",
+      "answer": "正确",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "LFU通过频率统计能更好保持热点数据，但需要维护计数器带来额外开销"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "缓冲池的钉住计数（Pin Count）主要解决什么问题？",
+      "answer": "防止正在被事务使用的页被意外替换",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "当Pin Count>0时表示页正在被使用，替换策略会跳过这些页"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "数据库参数调优：根据工作负载特征调整缓冲池大小和替换策略",
+    "云数据库服务（如AWS RDS）提供的缓冲池监控指标"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:49:47Z"
   }
 }

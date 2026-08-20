@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 计数信号量与资源Pools\n\n### 核心概念定义\n「计数信号量（Counting Semaphore）」是一种同步机制，用于控制对共享资源的并发访问。与二元信号量（仅允许0或1）不同，计数信号量的值可以大于1，表示可用资源的数量。其核心操作包括：\n- `P()`（或`wait()`）：申请资源，信号量值减1；若值为0则阻塞\n- `V()`（或`signal()`）：释放资源，信号量值加1\n\n「资源池（Resource Pool）」是通过计数信号量管理的预分配资源集合（如数据库连接池、线程池）。\n\n### 关键性质\n1. **原子性**：P/V操作是原子的，避免竞态条件\n2. **阻塞机制**：当资源不足时，P()会使调用者进入等待队列\n3. **无所有者**：与互斥锁不同，释放资源的线程不必是获取者\n\n### 与互斥锁的区别\n| 特性        | 计数信号量          | 互斥锁            |\n|-------------|---------------------|-------------------|\n| 取值范围    | ≥0                  | 0或1              |\n| 释放权限    | 任意线程可释放      | 必须由获取者释放  |\n| 典型用途    | 资源池管理          | 临界区保护        |\n\n### 典型应用示例\n```python\n# 数据库连接池实现示例\nfrom threading import Semaphore\n\nclass ConnectionPool:\n    def __init__(self, size):\n        self.pool = [DBConnection() for _ in range(size)]\n        self.sem = Semaphore(size)\n\n    def get_conn(self):\n        self.sem.acquire()  # P()\n        return self.pool.pop()\n\n    def release_conn(self, conn):\n        self.pool.append(conn)\n        self.sem.release()  # V()\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "信号量由Dijkstra在1965年提出，原语名为proberen（P）和verhogen（V）",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "现代操作系统通常提供futex（快速用户态互斥）优化信号量实现",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Java中的Semaphore类允许公平/非公平模式选择",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:55:46Z",
+    "deep_worked_example": {
+      "stem": "计数信号量的初始值为5，当前有3个线程执行了P()操作且未执行V()，此时信号量值为？",
+      "solution_outline": "2",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "Web服务器线程池管理",
+      "打印机任务队列控制"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆信号量与互斥锁：错误地认为信号量需要由获取线程释放",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未处理信号量操作失败：忽略P()可能导致的死锁情况",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "计数信号量的初始值为5，当前有3个线程执行了P()操作且未执行V()，此时信号量值为？",
+      "answer": "2",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "初始值5 - 3次P() = 2"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "设计一个最多允许10个并发下载的下载管理器，应使用什么同步机制？如何实现？",
+      "answer": "使用计数信号量（初始值=10），每个下载任务开始前执行P()，完成后执行V()",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "信号量值代表剩余可用下载槽位"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "为什么在资源池实现中，计数信号量比互斥锁更合适？",
+      "answer": "互斥锁只允许单线程访问，而信号量可控制多资源并发访问",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "资源池需要管理多个相同资源实例"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "Web服务器线程池管理",
+    "打印机任务队列控制"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:55:46Z"
   }
 }

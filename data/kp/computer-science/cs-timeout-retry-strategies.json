@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 超时与Retry策略（Timeout and Retry Strategies）\n\n### 核心概念定义\n「超时（Timeout）」指在分布式系统中，当某个操作在预设时间内未完成时，系统主动终止该操作并返回错误的机制。其核心作用是防止资源被无限占用。\n\n「重试策略（Retry Strategy）」是当操作因临时性故障（如网络抖动）失败后，系统自动或半自动重复执行的机制，通常与超时机制协同使用。\n\n### 关键性质与方法\n1. **超时配置原则**：\n   - 静态超时：固定阈值（如HTTP请求默认30秒）\n   - 动态超时：基于历史响应时间动态调整（如TCP的RTO计算）\n\n2. **重试策略类型**：\n   - 立即重试（Immediate Retry）：适用于瞬时错误\n   - 指数退避（Exponential Backoff）：通过公式 `delay = base * 2^attempt` 避免雪崩\n   - 随机抖动（Jitter）：在退避时间中加入随机值防止同步重试\n\n3. **熔断机制（Circuit Breaker）**：当错误率超过阈值时暂时禁用重试，防止系统过载（如Netflix Hystrix）。\n\n### 与相关知识的联系\n- 与「幂等性（Idempotency）」：重试要求操作具备幂等性，否则可能导致数据不一致\n- 与「负载均衡（Load Balancing）」：不当的重试策略会加剧后端负载不均\n\n### 典型应用示例\n- 数据库连接池：连接获取超时+3次指数退避重试\n- 微服务调用：gRPC默认采用16次重试（含退避）\n- CDN边缘节点：对源站请求采用抖动重试策略",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "TCP协议的超时重传（RTO）是最早的实用化重试策略实现",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "gRPC的retry配置支持包含「retryable_status_codes」的细粒度控制",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "AWS SDK默认采用自适应重试策略，最大尝试次数可达10次",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:46:58Z",
+    "deep_worked_example": {
+      "stem": "在指数退避重试策略中，若基础延迟为100ms，第三次重试的延迟时间是多少？",
+      "solution_outline": "400ms",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "电商支付系统：对第三方支付接口采用退避重试+熔断，保障最终一致性",
+      "物联网设备通信：MQTT协议内置QoS级别的消息重传机制"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「超时」与「截止时间（Deadline）」：前者是单次操作的等待上限，后者是整个任务的时间约束",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未在HTTP GET等非幂等操作上禁用重试，导致数据不一致",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "在指数退避重试策略中，若基础延迟为100ms，第三次重试的延迟时间是多少？",
+      "answer": "400ms",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "根据公式：100ms * 2^(3-1) = 400ms"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "为什么分布式系统中需要将重试策略与熔断机制结合使用？",
+      "answer": "防止持续重试导致系统雪崩",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "当服务不可用时，无限制重试会加剧系统负载，熔断机制可强制进入冷却期"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "以下哪种场景不适合使用立即重试策略？\nA. 临时网络丢包\nB. 数据库主键冲突\nC. 服务端内存溢出",
+      "answer": "C",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "内存溢出是持续性错误，立即重试无法解决问题且会浪费资源"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "电商支付系统：对第三方支付接口采用退避重试+熔断，保障最终一致性",
+    "物联网设备通信：MQTT协议内置QoS级别的消息重传机制"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:46:58Z"
   }
 }

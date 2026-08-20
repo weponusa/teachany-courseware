@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 隔离级「SERIALIZABLE」详解\n\n### 核心概念定义\n「SERIALIZABLE」（可串行化）是数据库事务隔离级别中最严格的一种，它通过强制事务串行执行（而非并行）来保证数据一致性。在该级别下，系统会模拟事务的串行执行效果，即使实际执行可能是并发的。\n\n### 关键性质\n1. **完全隔离性**：所有事务如同按顺序依次执行，避免「脏读（Dirty Read）」、「不可重复读（Non-repeatable Read）」和「幻读（Phantom Read）」问题。\n2. **实现机制**：通常通过「两阶段锁（2PL, Two-Phase Locking）」或「乐观并发控制（OCC, Optimistic Concurrency Control）」实现。\n3. **性能代价**：高并发场景下可能导致大量事务阻塞或回滚，需权衡一致性与性能。\n\n### 与相关知识联系\n- 对比其他隔离级别（如 READ COMMITTED、REPEATABLE READ），SERIALIZABLE 通过牺牲并发性换取最强一致性。\n- 与「分布式事务」结合时，需配合「两阶段提交（2PC）」等协议。\n\n### 应用示例\n```sql\n-- 设置事务隔离级为 SERIALIZABLE\nSET TRANSACTION ISOLATION LEVEL SERIALIZABLE;\nBEGIN;\n-- 转账操作：检查余额并更新\nSELECT balance FROM accounts WHERE user_id = 1 FOR UPDATE;\nUPDATE accounts SET balance = balance - 100 WHERE user_id = 1;\nCOMMIT;\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "PostgreSQL 的 SERIALIZABLE 实际采用「可串行化快照隔离（SSI）」而非纯锁机制",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "MySQL 的 InnoDB 在 SERIALIZABLE 下会将普通 SELECT 转为 SELECT ... FOR SHARE",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "分布式数据库如 Spanner 通过 TrueTime 实现跨节点的 SERIALIZABLE",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:10:28Z",
+    "deep_worked_example": {
+      "stem": "SERIALIZABLE 隔离级通过哪种机制避免幻读问题？",
+      "solution_outline": "通过强制事务串行执行或使用范围锁（Range Lock）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "金融交易系统：确保转账、清算等操作原子性",
+      "库存管理系统：防止超卖或库存负数"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为 SERIALIZABLE 仅通过锁表实现，实际可能结合多版本控制（MVCC）等优化策略。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在 PostgreSQL 中误用 SERIALIZABLE 但未处理序列化失败错误（SQLSTATE 40001）。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "SERIALIZABLE 隔离级通过哪种机制避免幻读问题？",
+      "answer": "通过强制事务串行执行或使用范围锁（Range Lock）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "SERIALIZABLE 通过物理串行化或逻辑锁机制（如锁定查询涉及的索引范围）阻止其他事务插入符合查询条件的新数据。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某银行系统要求绝对避免并发转账导致余额错误，应选择哪种隔离级？",
+      "answer": "SERIALIZABLE",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "金融场景对一致性要求极高，SERIALIZABLE 可彻底解决并发写入冲突。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析以下场景是否需使用 SERIALIZABLE：\n『机票预订系统在查询余票时，需确保同一座位不被重复出售』",
+      "answer": "需要",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "余票属于高频竞争资源，SERIALIZABLE 可防止并发查询与预订导致的超卖问题。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "金融交易系统：确保转账、清算等操作原子性",
+    "库存管理系统：防止超卖或库存负数"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:10:28Z"
   }
 }

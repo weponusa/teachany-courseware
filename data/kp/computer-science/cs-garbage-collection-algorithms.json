@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 垃圾回收算法（Garbage Collection Algorithms）\n\n### 核心概念定义\n垃圾回收算法是编程语言运行时系统自动管理内存的机制，用于识别并释放不再使用的内存对象（称为「垃圾」）。其核心目标是解决「内存泄漏（Memory Leak）」问题，避免程序因持续占用未释放内存而导致崩溃。\n\n### 关键性质与方法\n1. **标记-清除算法（Mark-Sweep）**  \n   - **标记阶段**：从根对象（如全局变量、栈变量）出发，遍历所有可达对象并标记为「存活」。  \n   - **清除阶段**：扫描堆内存，回收未被标记的对象。  \n   - **缺点**：产生内存碎片。\n\n2. **引用计数算法（Reference Counting）**  \n   - 每个对象维护一个引用计数器，当引用归零时立即回收。  \n   - **缺点**：无法处理循环引用（如对象A引用B，B引用A）。\n\n3. **分代收集算法（Generational GC）**  \n   - 基于「弱分代假说」（大多数对象生命周期短），将堆分为新生代（Young Generation）和老年代（Old Generation），对不同代采用不同回收策略（如复制算法用于新生代）。\n\n### 与相关知识的联系\n- **编译原理**：垃圾回收与编译器对内存布局的优化（如逃逸分析）密切相关。  \n- **操作系统**：需协调虚拟内存管理，避免频繁触发缺页中断。\n\n### 典型应用示例\n- Java 的 `G1` 收集器采用分代与区域化内存设计，适合大堆内存场景。  \n- Python 使用引用计数为主+分代回收为辅的混合策略。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "「三色标记法」是并发垃圾回收的基础，通过白/灰/黑三色标识对象状态。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "ZGC（Z Garbage Collector）通过染色指针技术实现TB级堆内存的亚毫秒级停顿。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "内存屏障（Memory Barrier）用于解决并发垃圾回收时的线程同步问题。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:04:57Z",
+    "deep_worked_example": {
+      "stem": "以下哪种垃圾回收算法无法处理循环引用问题？",
+      "solution_outline": "引用计数算法（Reference Counting）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "浏览器JavaScript引擎（如V8）使用分代垃圾回收优化网页应用内存占用。",
+      "实时系统（如游戏引擎）需选择低延迟回收算法（如增量式GC）避免卡顿。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为所有垃圾回收算法都能立即释放内存（如标记-清除算法存在延迟）。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "手动调用垃圾回收（如Java的System.gc()）可能导致性能下降，因忽略了自动回收的优化策略。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "以下哪种垃圾回收算法无法处理循环引用问题？",
+      "answer": "引用计数算法（Reference Counting）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "引用计数仅通过计数器判断对象是否存活，循环引用会导致计数器始终不为零。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "假设某语言采用标记-清除算法，堆内存中存在三个相互引用的孤立对象（无外部引用），这些对象会被回收吗？为什么？",
+      "answer": "会回收",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "标记阶段从根对象出发，孤立对象不可达，因此不会被标记为存活，清除阶段将回收它们。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "对比分代收集算法与标记-清除算法的性能差异，并说明原因。",
+      "answer": "分代收集算法通常性能更优，因为它针对不同生命周期的对象采用差异化策略（如高频回收新生代），减少了全堆扫描的开销。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "标记-清除需遍历全堆，而分代收集利用对象生命周期分布特性优化了回收频率和范围。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "浏览器JavaScript引擎（如V8）使用分代垃圾回收优化网页应用内存占用。",
+    "实时系统（如游戏引擎）需选择低延迟回收算法（如增量式GC）避免卡顿。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:04:57Z"
   }
 }

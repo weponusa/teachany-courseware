@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 布隆滤波器（Bloom Filters）详解\n\n### 核心概念定义\n布隆滤波器（Bloom Filters）是一种**概率型数据结构（Probabilistic Data Structure）**，用于高效判断一个元素是否属于某个集合。其核心特点是：\n- **空间效率极高**：使用位数组（Bit Array）和多个哈希函数（Hash Functions）实现。\n- **允许假阳性（False Positive）**：可能误判不存在的元素为存在，但**绝不会假阴性（False Negative）**（即存在的元素一定被判定为存在）。\n\n### 关键性质与方法\n1. **数据结构组成**：\n   - 一个长度为m的位数组（初始全为0）。\n   - k个独立的哈希函数，每个函数将元素映射到位数组的某个位置。\n2. **插入操作**：将元素通过k个哈希函数映射到位数组的k个位置，并将这些位置置为1。\n3. **查询操作**：检查元素对应的k个位置是否均为1。若全是1，则判定元素可能存在；若有任一为0，则元素一定不存在。\n\n### 与相关知识的联系\n- **哈希表（Hash Table）**：布隆滤波器是哈希表的空间优化变体，但牺牲了精确性。\n- **集合（Set）**：适用于海量数据去重场景，但需容忍一定误判率。\n\n### 典型应用示例\n- **网络爬虫（Web Crawler）**：快速判断URL是否已爬取。\n- **缓存系统（Cache System）**：避免缓存穿透（Cache Penetration）。\n- **分布式系统（Distributed Systems）**：如Cassandra数据库用其减少磁盘查询。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：计数布隆滤波器（Counting Bloom Filter）支持元素删除",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：布隆滤波器的假阳性率公式为(1-e^(-kn/m))^k",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：Cuckoo Filter是另一种空间优化的概率数据结构",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:48:53Z",
+    "deep_worked_example": {
+      "stem": "布隆滤波器的哪个特性保证了「已存在的元素绝不会被误判为不存在」？",
+      "solution_outline": "不会假阴性（False Negative）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "Chrome浏览器用布隆滤波器检测恶意URL",
+      "比特币轻节点（SPV）使用其快速验证交易是否存在"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为布隆滤波器的假阳性率（False Positive Rate）可通过增加哈希函数数量无限降低（实际存在最优k值）。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未初始化位数组导致全1状态，此时所有查询均返回「可能存在」（需确保初始全0）。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "布隆滤波器的哪个特性保证了「已存在的元素绝不会被误判为不存在」？",
+      "answer": "不会假阴性（False Negative）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "布隆滤波器的设计确保所有哈希位被置1后，查询时必然返回存在。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "若布隆滤波器的位数组长度为10，哈希函数数量为3，插入元素x后位数组变为[0,1,0,1,0,0,1,0,0,0]，请问查询元素y（哈希结果为1/3/7）时返回什么？",
+      "answer": "可能存在（因为位1、3、7不全为1）",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "位3为0，根据规则直接判定不存在。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析为什么布隆滤波器不适合存储实际数据而仅用于「存在性检测」？",
+      "answer": "它不存储元素本身，仅通过位数组记录状态，无法支持数据检索。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "位数组仅能表示二元状态（0/1），无法还原原始数据。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "Chrome浏览器用布隆滤波器检测恶意URL",
+    "比特币轻节点（SPV）使用其快速验证交易是否存在"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:48:53Z"
   }
 }

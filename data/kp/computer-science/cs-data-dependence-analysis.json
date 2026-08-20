@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 数据依赖分析（Data Dependence Analysis）\n\n### 核心概念定义\n数据依赖分析是「编译原理」（Compiler Principles）中的关键技术，用于确定程序中不同指令或语句之间是否存在数据依赖关系。主要分为三种类型：\n1. **真依赖（True Dependence）**：后一条指令依赖前一条指令的计算结果（写后读，RAW）\n2. **反依赖（Anti-Dependence）**：前一条指令依赖后一条指令的存储空间（读后写，WAR）\n3. **输出依赖（Output Dependence）**：两条指令对同一存储单元进行写操作（写后写，WAW）\n\n### 关键方法\n- **依赖图（Dependence Graph）**：用有向边表示语句间的依赖关系\n- **循环携带依赖（Loop-Carried Dependence）**：跨循环迭代的依赖关系分析\n- **别名分析（Alias Analysis）**：解决指针或引用导致的间接依赖问题\n\n### 与并行计算的关系\n数据依赖分析是「指令级并行」（Instruction-Level Parallelism）和「自动向量化」（Auto-Vectorization）的前提条件。例如在SIMD指令优化中，必须确保循环迭代间无真依赖。\n\n### 典型示例\n```c\nfor (i=1; i<n; i++) {\n  A[i] = A[i-1] + B[i];  // 存在真依赖（RAW）\n}\n```\n该循环无法直接并行化，因为第i次迭代依赖第i-1次的结果。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "静态单赋值形式（SSA）可显式表示数据依赖关系",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Bernstein条件是判断指令可并行化的经典理论",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "现代处理器使用Tomasulo算法动态处理数据依赖",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:56:37Z",
+    "deep_worked_example": {
+      "stem": "下列哪种依赖类型会导致指令重排序受限？\nA. 真依赖\nB. 反依赖\nC. 输出依赖\nD. 控制依赖",
+      "solution_outline": "A",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "GPU编程中确定线程间数据依赖以避免竞态条件",
+      "数据库查询优化器利用依赖分析决定执行计划"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为所有循环依赖都不可并行化，实际上只有循环携带依赖（Loop-Carried Dependence）影响并行性",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "忽略指针别名导致的隐式依赖，如`*p = x; y = *q;`当p可能指向q时会产生潜在依赖",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "下列哪种依赖类型会导致指令重排序受限？\nA. 真依赖\nB. 反依赖\nC. 输出依赖\nD. 控制依赖",
+      "answer": "A",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "真依赖（RAW）是本质性依赖，无法通过重排序消除，其他类型可通过寄存器重命名等技术解决"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "分析以下代码段的依赖关系：\n```c\nx = a + b;\ny = x * 2;\nz = y + x;```",
+      "answer": "第2行对第1行有真依赖（使用x），第3行对第2行有真依赖（使用y），同时对第1行有真依赖（使用x）",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需要识别所有变量的定义-使用链"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "为什么以下循环存在可并行化的机会？\n```c\nfor (i=0; i<n; i++) {\n  C[i] = A[i] + B[i];\n}```",
+      "answer": "每次迭代只访问独立的数组元素，无跨迭代数据依赖",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "数组访问下标仅与循环变量i相关且无重叠"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "GPU编程中确定线程间数据依赖以避免竞态条件",
+    "数据库查询优化器利用依赖分析决定执行计划"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:56:37Z"
   }
 }

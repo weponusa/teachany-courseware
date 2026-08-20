@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 查询执行计划（Query Execution Plan）与EXPLAIN分析\n\n### 核心概念定义\n查询执行计划是数据库系统执行SQL查询时生成的操作步骤序列，通常以树形结构表示，描述数据访问路径（如全表扫描、索引扫描）、连接方式（如嵌套循环、哈希连接）等关键信息。`EXPLAIN`是SQL标准提供的命令，用于展示数据库优化器（Optimizer）生成的执行计划而不实际执行查询。\n\n### 关键性质与方法\n1. **执行计划组成要素**：\n   - **操作符（Operators）**：如`Seq Scan`（顺序扫描）、`Index Scan`（索引扫描）\n   - **成本估算（Cost Estimation）**：包括启动成本（start-up cost）和总成本（total cost）\n   - **行数估算（Rows Estimation）**：优化器预测的中间结果集大小\n\n2. **EXPLAIN输出解读**（以PostgreSQL为例）：\n   ```sql\n   EXPLAIN SELECT * FROM users WHERE age > 30;\n   ```\n   输出可能包含`Filter`（过滤条件）、`Bitmap Heap Scan`（位图堆扫描）等关键信息。\n\n### 与相关知识联系\n- **索引优化**：执行计划中`Index Scan`的出现与否直接反映索引使用效率\n- **连接查询**：`Hash Join`与`Nested Loop`的选择取决于表大小和连接条件\n\n### 典型应用示例\n分析慢查询时，通过`EXPLAIN ANALYZE`获取实际执行耗时：\n```sql\nEXPLAIN ANALYZE SELECT * FROM orders JOIN customers ON orders.cid = customers.id;\n```\n可观察到`Join`操作的实际行数和执行时间。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "MySQL的EXPLAIN FORMAT=JSON可获取更详细的JSON格式执行计划",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Oracle数据库使用EXPLAIN PLAN FOR命令，结果存储在PLAN_TABLE中",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "执行计划中的\"Materialize\"操作表示中间结果物化，可能影响内存使用",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:30:25Z",
+    "deep_worked_example": {
+      "stem": "以下哪项不是EXPLAIN命令的主要作用？\nA. 显示查询的执行计划\nB. 实际执行SQL语句\nC. 帮助优化查询性能",
+      "solution_outline": "B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "电商平台分析促销活动期间的慢查询，通过执行计划定位全表扫描问题",
+      "金融系统审计SQL性能时，利用EXPLAIN验证索引使用有效性"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆EXPLAIN与EXPLAIN ANALYZE：前者仅展示计划，后者会实际执行查询并返回真实耗时",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未注意成本估算的单位差异（如PostgreSQL中1单位=0.01ms），误判绝对数值大小",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "以下哪项不是EXPLAIN命令的主要作用？\nA. 显示查询的执行计划\nB. 实际执行SQL语句\nC. 帮助优化查询性能",
+      "answer": "B",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "EXPLAIN仅展示执行计划而不实际执行查询，这是与EXPLAIN ANALYZE的关键区别"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某查询计划显示`Seq Scan on employees`且成本较高，最可能的优化方案是：\nA. 增加WHERE条件\nB. 在扫描字段上创建索引\nC. 减少返回列数",
+      "answer": "B",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "顺序扫描通常意味着缺少有效索引，建立合适索引可能转换为Index Scan"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析以下执行计划片段：\n```\n->  Nested Loop (cost=0.15..20.05 rows=1)\n    ->  Seq Scan on departments (cost=0.00..1.01 rows=1)\n    ->  Index Scan using idx_emp_dept on employees (cost=0.15..19.03 rows=1)\n```\n该查询最可能是：\nA. 单表过滤查询\nB. 两表等值连接\nC. 三表联合查询",
+      "answer": "B",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Nested Loop连接方式配合两表的扫描操作，典型特征为等值连接"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "电商平台分析促销活动期间的慢查询，通过执行计划定位全表扫描问题",
+    "金融系统审计SQL性能时，利用EXPLAIN验证索引使用有效性"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:30:25Z"
   }
 }

@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## Weakest Precondition Calculus（最弱前置条件微积分）\n\n### 核心概念定义\nWeakest Precondition Calculus（最弱前置条件微积分，简称WP）是形式化方法中用于程序正确性验证的技术，由Edsger Dijkstra提出。其核心思想是：给定程序语句S和后置条件Q，计算满足「执行S后Q必然成立」的**最弱前置条件（Weakest Precondition, wp(S, Q)）**。\n\n### 关键性质或方法\n1. **谓词转换器语义**：WP将程序语句视为从后置条件到前置条件的谓词转换器。\n2. **单调性**：若Q₁ ⇒ Q₂，则wp(S, Q₁) ⇒ wp(S, Q₂)。\n3. **分配律**：wp(S, Q₁ ∧ Q₂) ≡ wp(S, Q₁) ∧ wp(S, Q₂)。\n4. **典型规则**：\n   - 赋值语句：wp(`x := e`, Q) ≡ Q[e/x]\n   - 顺序组合：wp(`S1; S2`, Q) ≡ wp(S1, wp(S2, Q))\n   - 条件语句：wp(`if B then S1 else S2`, Q) ≡ (B ⇒ wp(S1, Q)) ∧ (¬B ⇒ wp(S2, Q))\n\n### 与相关知识的联系\n- **霍尔逻辑（Hoare Logic）**：WP可视为霍尔三元组{P}S{Q}的逆向计算工具，其中P ⇒ wp(S, Q)。\n- **模型检测**：WP用于静态验证，而模型检测侧重动态状态空间遍历。\n\n### 典型应用示例\n验证程序片段：\n```\n{x > 0}\ny := x + 1;\n{y > 1}\n```\n计算wp(`y := x + 1`, y > 1) ≡ (x + 1 > 1) ≡ (x > 0)，与原前置条件一致，验证成立。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Dijkstra Guarded Command Language是WP的理论基础之一。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "自动化WP工具如Why3/Frama-C可生成验证条件（Verification Conditions）。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "循环的WP需引入归纳法，计算复杂度显著高于顺序语句。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:50:00Z",
+    "deep_worked_example": {
+      "stem": "计算wp(`x := 2 * y + 1`, x > 5)的最弱前置条件。",
+      "solution_outline": "2 * y + 1 > 5",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "航天软件验证：NASA使用WP验证关键控制程序的正确性。",
+      "智能合约审计：形式化验证工具如KEVM利用WP分析以太坊合约的安全性。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「最弱前置条件」与「任意前置条件」，误认为所有满足P ⇒ wp(S, Q)的P都是最弱的。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "处理循环语句时遗漏循环不变式（Loop Invariant）的构造，导致无法正确计算WP。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "计算wp(`x := 2 * y + 1`, x > 5)的最弱前置条件。",
+      "answer": "2 * y + 1 > 5",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "根据赋值规则，将后置条件中的x替换为表达式2 * y + 1。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "判断正误：wp(S, false) ≡ false对所有语句S成立。",
+      "answer": "正确",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "这是WP的「排假律」性质，不存在使false成立的前置条件。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析以下程序的WP：\n`if x > 0 then y := x else y := -x`，后置条件为y ≥ 0。",
+      "answer": "(x > 0 ⇒ x ≥ 0) ∧ (x ≤ 0 ⇒ -x ≥ 0)",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "分别对两个分支应用赋值规则，再通过条件语句规则组合。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "航天软件验证：NASA使用WP验证关键控制程序的正确性。",
+    "智能合约审计：形式化验证工具如KEVM利用WP分析以太坊合约的安全性。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:50:00Z"
   }
 }

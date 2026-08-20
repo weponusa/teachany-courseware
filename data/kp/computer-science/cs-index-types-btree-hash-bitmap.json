@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 索引类型：B树索引、哈希索引与位图索引\n\n### 核心概念定义\n1. **B树索引（B-Tree Index）**：一种平衡多路搜索树结构，支持高效的范围查询（如 `BETWEEN`、`>`）和精确查询。其特点是所有叶子节点位于同一层，且节点包含多个键值（通常为数据列值）与指针。\n2. **哈希索引（Hash Index）**：基于哈希表实现的索引，仅支持等值查询（如 `=`）。通过哈希函数将键值映射到固定大小的桶中，查询时间复杂度为O(1)，但不支持排序或范围查询。\n3. **位图索引（Bitmap Index）**：用位向量（bitmap）表示数据列值的索引，适用于低基数（Cardinality）列（如性别、状态）。每个唯一值对应一个位图，通过位运算（AND/OR）加速多条件组合查询。\n\n### 关键性质\n- **B树索引**：\n  - 自平衡，保证查询效率稳定。\n  - 适合频繁更新的场景（如OLTP系统）。\n  - MySQL的InnoDB默认使用B+树（B-Tree变种）。\n- **哈希索引**：\n  - 查询速度极快，但哈希冲突可能影响性能。\n  - 内存数据库（如Redis）常用。\n- **位图索引**：\n  - 压缩存储，节省空间。\n  - 数据仓库（如Oracle）中用于加速分析查询。\n\n### 与相关知识的联系\n- **与数据库引擎**：不同数据库对索引的实现不同（如MySQL的MyISAM使用B树，Memcached使用哈希）。\n- **与查询优化**：索引选择直接影响执行计划（如是否走索引扫描）。\n\n### 应用示例\n- **B树索引**：电商平台的商品价格范围筛选。\n- **哈希索引**：用户登录时通过用户名快速定位密码。\n- **位图索引**：统计「年龄>30且性别=女」的用户数量。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "B+树是B树的变种，非叶子节点仅存储键值不存数据，提升范围查询效率。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "哈希索引在分布式数据库中可能通过一致性哈希（Consistent Hashing）优化。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "位图索引可与布隆过滤器（Bloom Filter）结合，加速大数据去重。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:08:24Z",
+    "deep_worked_example": {
+      "stem": "以下哪种索引类型最适合执行`SELECT * FROM users WHERE age BETWEEN 20 AND 30`查询？",
+      "solution_outline": "B树索引",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "B树索引：银行交易记录中按时间范围检索交易。",
+      "位图索引：医院信息系统统计「男性且血型为A型」的患者。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为哈希索引在任何场景下都比B树索引快（实际仅限等值查询）。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在高基数列上盲目使用位图索引，导致存储空间浪费。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "以下哪种索引类型最适合执行`SELECT * FROM users WHERE age BETWEEN 20 AND 30`查询？",
+      "answer": "B树索引",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "B树索引支持范围查询，而哈希索引仅支持等值查询，位图索引在低基数列上效率更高。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "假设某列有100万个不同的值，若对其建立位图索引，可能面临什么问题？",
+      "answer": "存储空间爆炸",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "位图索引的存储开销与列的唯一值数量成正比，高基数列会导致位图过大。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析为何OLTP系统通常选择B树索引而非哈希索引？",
+      "answer": "OLTP系统需支持范围查询和排序操作，且B树索引对频繁更新的适应性更好。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "哈希索引无法满足范围查询需求，且哈希表扩容时可能导致性能抖动。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "B树索引：银行交易记录中按时间范围检索交易。",
+    "位图索引：医院信息系统统计「男性且血型为A型」的患者。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:08:24Z"
   }
 }

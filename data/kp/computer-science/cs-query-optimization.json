@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 查询优化（Query Optimization）\n\n### 核心概念定义\n查询优化是数据库管理系统（DBMS）中用于提高「结构化查询语言（SQL）」查询执行效率的过程。其核心目标是通过选择最优的「执行计划（Execution Plan）」，在保证结果正确性的前提下最小化查询的响应时间和系统资源消耗。\n\n### 关键性质与方法\n1. **逻辑优化**：\n   - 基于关系代数等价变换（如谓词下推、投影消除）\n   - 示例：将`SELECT * FROM (SELECT a,b FROM t) WHERE a>10`优化为`SELECT a,b FROM t WHERE a>10`\n2. **物理优化**：\n   - 访问路径选择（全表扫描 vs 索引扫描）\n   - 连接算法选择（嵌套循环连接、哈希连接、排序合并连接）\n3. **代价模型**：\n   - 基于统计信息（基数估计、直方图）计算不同执行计划的代价\n\n### 与相关知识联系\n- 依赖「数据库索引（Index）」加速数据定位\n- 与「查询执行引擎（Query Execution Engine）」协同工作\n- 受「事务隔离级别（Isolation Level）」影响（如锁冲突可能改变优化策略）\n\n### 典型应用示例\n电商场景：优化`SELECT product_name FROM orders JOIN products ON orders.pid=products.id WHERE user_id=100`，可能优先使用`user_id`索引过滤订单，再通过哈希连接关联商品表。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "PostgreSQL的EXPLAIN ANALYZE命令可查看实际执行计划",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "基数估计错误是导致优化器选择次优计划的常见原因",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "物化视图（Materialized View）是一种预计算优化技术",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:30:30Z",
+    "deep_worked_example": {
+      "stem": "查询优化的主要目标是什么？",
+      "solution_outline": "在保证查询结果正确性的前提下，最小化查询响应时间和系统资源消耗",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "OLTP系统（如银行交易）需要亚秒级响应，依赖精细的查询优化",
+      "数据仓库中复杂分析查询的优化可减少小时级任务到分钟级"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为索引越多查询越快（实际可能增加维护开销，且优化器可能选择低效索引）",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在复合索引中错误排列字段顺序（如将低选择性的字段放在索引前列）",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "查询优化的主要目标是什么？",
+      "answer": "在保证查询结果正确性的前提下，最小化查询响应时间和系统资源消耗",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "核心是权衡效率与正确性，而非单纯追求速度"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "对于查询`SELECT * FROM employees WHERE age>30 AND dept='IT'`，若存在`dept`字段的B+树索引但无`age`索引，优化器最可能采用什么策略？",
+      "answer": "先使用`dept='IT'`的索引过滤数据，再对结果集扫描检查`age>30`",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "选择性高的条件优先利用索引"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "为什么嵌套循环连接在小数据集上效率可能高于哈希连接？",
+      "answer": "哈希连接需要预先构建哈希表的固定开销，当数据量极小时此开销可能超过嵌套循环的线性成本",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需理解不同连接算法的成本组成"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "OLTP系统（如银行交易）需要亚秒级响应，依赖精细的查询优化",
+    "数据仓库中复杂分析查询的优化可减少小时级任务到分钟级"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:30:30Z"
   }
 }

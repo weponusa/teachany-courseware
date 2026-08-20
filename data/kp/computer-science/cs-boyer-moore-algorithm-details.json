@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "# Boyer-Moore字符串匹配算法\n\n## 核心概念定义\nBoyer-Moore字符串匹配算法（Boyer-Moore String Matching Algorithm）是一种高效的「单模式串匹配算法」（Single Pattern String Matching Algorithm），用于在主文本串（Text）中快速查找给定模式串（Pattern）的出现位置。其核心思想是通过「坏字符规则」（Bad Character Rule）和「好后缀规则」（Good Suffix Rule）实现跳跃式匹配，平均时间复杂度可达O(n/m)，最坏情况下为O(n)。\n\n## 关键性质与方法\n1. **坏字符规则**：当发现不匹配字符时，根据模式串中该字符最后一次出现的位置计算向右滑动距离。若字符不在模式串中，则直接跳过整个模式串长度。\n2. **好后缀规则**：当已匹配部分后缀时，根据模式串中与该后缀匹配的其他子串位置调整滑动距离。\n3. **预处理阶段**：需预先构建坏字符表（Bad Character Table）和好后缀表（Good Suffix Table）。\n\n## 与其他算法的联系\n- 相比「暴力匹配算法」（Brute-Force）的O(mn)时间复杂度，Boyer-Moore利用逆向匹配和跳跃机制显著提升效率。\n- 与「KMP算法」（Knuth-Morris-Pratt）相比，Boyer-Moore在实践中的平均性能更优，尤其适用于字符集较大的场景。\n\n## 应用示例\n```python\ndef boyer_moore(text, pattern):\n    # 预处理坏字符表\n    bc_table = {char: idx for idx, char in enumerate(pattern)}\n    ...\n    # 匹配阶段（简化版）\n    i = 0\n    while i <= len(text) - len(pattern):\n        j = len(pattern) - 1\n        while j >= 0 and text[i+j] == pattern[j]:\n            j -= 1\n        if j == -1:\n            return i  # 匹配成功\n        i += max(1, j - bc_table.get(text[i+j], -1))\n    return -1\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Horspool算法是Boyer-Moore的简化版，仅使用坏字符规则",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Sunday算法改进了坏字符规则的跳跃效率",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Rabin-Karp算法通过哈希值比较实现另一种高效匹配",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:49:14Z",
+    "deep_worked_example": {
+      "stem": "Boyer-Moore算法最坏情况下的时间复杂度是？",
+      "solution_outline": "O(n)",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "文本编辑器的查找功能（如VS Code的Ctrl+F）",
+      "病毒特征码扫描中的快速模式匹配"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "错误认为坏字符规则总是优先于好后缀规则。实际上两者需取最大值。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "预处理阶段忘记处理好后缀表中未出现的字符，导致运行时错误。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "Boyer-Moore算法最坏情况下的时间复杂度是？",
+      "answer": "O(n)",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "当模式串所有字符相同且主串也相同时（如aaaaa中找aaa），需逐字符比较。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "给定模式串\"EXAMPLE\"，主串\"HERE IS A SIMPLE EXAMPLE\"，请说明第一次匹配失败时根据坏字符规则移动的距离（字符从0开始编号）",
+      "answer": "6",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "第一次比较时'E'与空格不匹配，空格不在模式串中，直接滑动整个模式串长度7，但实际可移动len(pattern)-1=6。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "为什么Boyer-Moore算法通常比KMP算法在实际应用中更快？",
+      "answer": "利用了字符比较失败时的跳跃机制",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Boyer-Moore的坏字符规则允许跳过多个字符，而KMP仅能线性移动。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "文本编辑器的查找功能（如VS Code的Ctrl+F）",
+    "病毒特征码扫描中的快速模式匹配"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:49:14Z"
   }
 }

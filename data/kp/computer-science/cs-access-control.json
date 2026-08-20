@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 访问控制：ACLs与Capability链表\n\n### 核心概念定义\n- **访问控制列表（ACLs, Access Control Lists）**：一种基于主体的权限管理机制，为每个资源维护一个列表，记录哪些用户或进程拥有何种操作权限（如读、写、执行）。\n- **Capability链表（Capability Lists）**：一种基于客体的权限管理机制，用户持有不可伪造的令牌（Capability），令牌中直接包含资源标识和操作权限。\n\n### 关键性质对比\n| 特性                | ACLs                          | Capability链表                |\n|---------------------|-------------------------------|------------------------------|\n| **权限验证位置**     | 资源侧检查主体权限            | 主体侧出示Capability令牌      |\n| **权限撤销难度**     | 容易（直接修改资源ACL）       | 困难（需回收所有副本）        |\n| **最小权限原则**     | 较难实现                      | 天然支持                     |\n\n### 典型应用示例\n- **ACLs**：UNIX文件系统权限（`rwx`）、防火墙规则\n- **Capability**：微内核操作系统（如seL4）、OAuth2令牌\n\n### 与RBAC的联系\n两者均可与「基于角色的访问控制（RBAC, Role-Based Access Control）」结合：ACLs可将权限分配给角色而非个体用户；Capability可包含角色属性进行动态鉴权。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "权能分离（Capability vs. Authority）：Capability仅代表权限载体，仍需与用户身份认证分离设计",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Confused Deputy问题：Capability系统需防范恶意程序滥用合法令牌发起攻击",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "ACLs的继承特性：Windows NTFS权限可设置为可继承或显式覆盖",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:43:42Z",
+    "deep_worked_example": {
+      "stem": "下列哪项是ACLs的主要缺点？\nA) 权限撤销困难\nB) 难以实现最小权限原则\nC) 需要集中式权限管理",
+      "solution_outline": "B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "云服务IAM系统：AWS的S3桶策略使用ACLs，而临时访问凭证（STS Token）采用Capability机制",
+      "智能合约权限管理：以太坊的ERC20代币approve()函数实现Capability模式的委托授权"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆权限验证方向：误认为Capability仍需资源侧主动检查权限（实际是主体出示令牌即可）",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "ACLs配置时错误地将权限赋予单个用户而非组，导致维护困难（如离职员工权限未及时撤销）",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "下列哪项是ACLs的主要缺点？\nA) 权限撤销困难\nB) 难以实现最小权限原则\nC) 需要集中式权限管理",
+      "answer": "B",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "ACLs需为每个资源单独设置权限，容易过度授权（选B）。Capability链表才存在权限撤销困难问题（A错）。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某医院系统用Capability管理患者病历访问，医生持有的Capability令牌被恶意复制。此时最有效的应对措施是？",
+      "answer": "废止当前所有该病历的Capability并重新签发",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Capability泄露后必须使所有副本失效（类似证书吊销），仅加密通信（A）或日志审计（D）无法阻止已泄露令牌的滥用。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析Linux的`/etc/shadow`文件权限设置（`-rw-r----- root shadow`）如何体现ACLs和Capability的混合特性？",
+      "answer": "文件所有者(root)拥有读写权限（类Capability），而shadow组成员只有读权限（类ACLs的组权限分配）",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "该案例展示了实际系统中常混合使用两种模型：root用户持有类似Capability的完整控制权，而组权限通过ACLs机制实现细粒度分配。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "云服务IAM系统：AWS的S3桶策略使用ACLs，而临时访问凭证（STS Token）采用Capability机制",
+    "智能合约权限管理：以太坊的ERC20代币approve()函数实现Capability模式的委托授权"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:43:42Z"
   }
 }

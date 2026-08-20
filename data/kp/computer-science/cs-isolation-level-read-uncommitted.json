@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 隔离级读UNCOMMITTED（Dirty Reads）\n\n### 核心概念定义\n「隔离级读UNCOMMITTED（READ UNCOMMITTED）」是数据库事务隔离级别（Isolation Level）中最低的一种。在该级别下，事务可以读取其他事务尚未提交（uncommitted）的修改，这种现象称为「脏读（Dirty Read）」。\n\n### 关键性质\n1. **无隔离性**：事务之间几乎没有任何隔离，允许读取未提交的数据。\n2. **高并发性**：由于无需等待其他事务完成，该级别能提供最高的并发性能。\n3. **数据不一致风险**：读取的数据可能被回滚，导致逻辑错误。\n\n### 与相关知识的联系\n- 与「READ COMMITTED」对比：后者禁止脏读，但允许不可重复读（Non-repeatable Read）。\n- 与「SERIALIZABLE」对比：后者通过完全隔离避免所有并发问题，但性能最低。\n\n### 典型应用示例\n```sql\n-- 事务A（未提交）\nBEGIN;\nUPDATE accounts SET balance = 1000 WHERE id = 1;\n\n-- 事务B（READ UNCOMMITTED级别）\nSET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\nSELECT balance FROM accounts WHERE id = 1; -- 可能读取到1000（脏读）\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "ANSI SQL标准定义了4种隔离级别：READ UNCOMMITTED、READ COMMITTED、REPEATABLE READ、SERIALIZABLE",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "MySQL的InnoDB引擎通过多版本并发控制（MVCC）实现隔离级别",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Oracle数据库默认隔离级别为READ COMMITTED",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:10:18Z",
+    "deep_worked_example": {
+      "stem": "在READ UNCOMMITTED隔离级别下，事务可能读取到哪种数据？",
+      "solution_outline": "其他事务未提交的数据（脏读）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "临时数据分析场景，允许快速读取中间结果",
+      "高并发日志系统，容忍部分数据不一致"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为READ UNCOMMITTED能提高所有场景的性能，忽略其数据不一致风险。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在测试环境中误用该级别而未模拟回滚情况，导致未发现脏读问题。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "在READ UNCOMMITTED隔离级别下，事务可能读取到哪种数据？",
+      "answer": "其他事务未提交的数据（脏读）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "该级别允许读取未提交的修改，这是其核心特征。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某银行系统误设为READ UNCOMMITTED级别，事务A正在将账户余额从200改为100（未提交），此时事务B查询该余额。若事务A最终回滚，事务B的行为会导致什么问题？",
+      "answer": "事务B读取到临时值100，但实际余额仍为200，导致数据不一致。",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "这是典型的脏读引发的问题。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析READ UNCOMMITTED级别为何不适合金融系统。",
+      "answer": "金融系统要求数据绝对一致，脏读可能导致错误决策（如基于临时余额放贷）。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需结合脏读的风险与金融场景的特性分析。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "临时数据分析场景，允许快速读取中间结果",
+    "高并发日志系统，容忍部分数据不一致"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:10:18Z"
   }
 }

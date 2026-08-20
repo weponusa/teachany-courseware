@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## Boyce-Codd 正态形式与高阶正态形式\n\n### 核心概念定义\n1. **Boyce-Codd 正态形式（Boyce-Codd Normal Form, BCNF）**：\n   - 定义：若关系模式 R 满足对于其所有函数依赖「X → Y」，X 必为超键（即 X 能唯一确定 R 的整个元组），则称 R 符合 BCNF。\n   - 关键性质：BCNF 是比第三正态形式（3NF）更强的约束，消除了 3NF 中可能存在的「主属性对非主属性的部分函数依赖」。\n\n2. **高阶正态形式（Higher Normal Forms）**：\n   - 包括第四正态形式（4NF）和第五正态形式（5NF），分别解决多值依赖和连接依赖问题。\n   - **4NF**：消除非平凡多值依赖「X →→ Y」中 X 非超键的情况。\n   - **5NF**（投影-连接正态形式）：确保关系可通过其投影无损失地重构。\n\n### 关键方法\n- **BCNF 分解算法**：\n  1. 找出违反 BCNF 的函数依赖 X → Y（X 非超键）。\n  2. 将 R 分解为 R1(XY) 和 R2(XZ)，其中 Z = R - Y。\n  3. 递归检查 R1 和 R2 是否符合 BCNF。\n\n### 与相关知识的联系\n- **与 3NF 的关系**：BCNF 是 3NF 的严格子集，但 3NF 允许「主属性传递依赖非主属性」而 BCNF 不允许。\n- **与范式层级的关系**：1NF ⊂ 2NF ⊂ 3NF ⊂ BCNF ⊂ 4NF ⊂ 5NF。\n\n### 应用示例\n- **BCNF 示例**：\n  关系模式 R(学生ID, 课程, 教师) 中，若每位教师只教一门课程（教师 → 课程），但学生可选多门课程（学生ID ↛ 课程），则 R 不符合 BCNF（因「教师」非超键）。分解为 R1(教师, 课程) 和 R2(学生ID, 教师)。\n\n- **4NF 示例**：\n  关系 R(学生, 课程, 爱好) 存在多值依赖「学生 →→ 课程 | 爱好」，若课程与爱好无关，需分解为 R1(学生, 课程) 和 R2(学生, 爱好)。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "域-键正态形式（DKNF）是理想化的终极范式，但实际设计中极少使用。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "反规范化（Denormalization）是出于性能考虑故意降低范式级别的常见实践。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "多值依赖的判定：若 X→→Y 且 X→→Z（Z=R-XY），则 Y 和 Z 必须相互独立。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:47:54Z",
+    "deep_worked_example": {
+      "stem": "判断：若关系 R 的所有属性都是主属性，则 R 一定符合 BCNF。",
+      "solution_outline": "错误",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "电商数据库设计：订单表需满足 BCNF 以避免「同一订单对应不同客户」的异常。",
+      "学生选课系统：4NF 可解决「学生-课程-导师」多值依赖问题（如导师独立于课程分配）。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为「所有函数依赖的左部包含候选键」等价于 BCNF（实际要求左部必须是超键，即能唯一标识整个元组）。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "分解时遗漏原关系的某些函数依赖，导致分解后无法保持依赖。例如未将「(订单号,产品)→数量」传递到子关系。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "判断：若关系 R 的所有属性都是主属性，则 R 一定符合 BCNF。",
+      "answer": "错误",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "反例：R(A,B,C) 满足 {AB→C, C→B}，所有属性为主属性但 C→B 违反 BCNF（C 非超键）。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "将 R(订单号, 客户, 产品, 数量) 分解为 BCNF，已知依赖：订单号 → 客户； (订单号, 产品) → 数量。",
+      "answer": "R1(订单号, 客户), R2(订单号, 产品, 数量)",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "原 R 中「订单号 → 客户」违反 BCNF（订单号非超键），按算法分解。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析关系 R(项目, 员工, 技能) 的范式级别，已知依赖：员工 → 技能； (项目, 员工) → 技能。",
+      "answer": "符合 3NF 但不符合 BCNF",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "「员工 → 技能」中员工非超键，但技能是主属性（因 (项目,员工) 为候选键），故满足 3NF 但违反 BCNF。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "电商数据库设计：订单表需满足 BCNF 以避免「同一订单对应不同客户」的异常。",
+    "学生选课系统：4NF 可解决「学生-课程-导师」多值依赖问题（如导师独立于课程分配）。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:47:54Z"
   }
 }

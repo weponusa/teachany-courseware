@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 一阶与二阶正态形式（First and Second Normal Forms）\n\n### 核心概念定义\n1. **一阶正态形式（1NF, First Normal Form）**：关系型数据库中的基本要求，满足以下条件：\n   - 所有属性都是原子的（不可再分）\n   - 每列具有唯一名称\n   - 行的顺序无关紧要\n   - 示例：将「联系方式」拆分为「电话」和「邮箱」两个独立字段\n\n2. **二阶正态形式（2NF, Second Normal Form）**：在1NF基础上，要求：\n   - 所有非主键属性完全函数依赖于整个主键（针对复合主键情况）\n   - 消除部分函数依赖\n   - 示例：学生选课表中，若主键为（学号，课程号），则「学生姓名」仅依赖学号，需拆分\n\n### 关键性质\n- **1NF的原子性**：字段值不可包含多个数据（如用逗号分隔的列表）\n- **2NF的完全依赖**：当主键由多个属性组成时，非主键字段必须依赖全部主键属性\n\n### 与三阶正态形式的联系\n2NF是通往3NF的中间步骤，3NF进一步消除传递依赖（如A→B→C的情况）\n\n### 典型示例\n```sql\n-- 违反1NF的表（联系方式非原子）\nCREATE TABLE students (\n  id INT PRIMARY KEY,\n  name VARCHAR(50),\n  contacts VARCHAR(100) -- 包含'电话,邮箱'\n);\n\n-- 符合2NF的拆分（假设主键为(order_id, product_id)）\nCREATE TABLE order_details (\n  order_id INT,\n  product_id INT,\n  product_name VARCHAR(50), -- 违反2NF（仅依赖product_id）\n  quantity INT,\n  PRIMARY KEY (order_id, product_id)\n);\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "更高阶的BCNF（Boyce-Codd范式）是3NF的强化版本",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "反范式化：在实际数据库设计中有时为提高查询性能故意违反范式",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "函数依赖的Armstrong公理体系是范式理论的数学基础",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:56:46Z",
+    "deep_worked_example": {
+      "stem": "判断：一个关系表若存在重复行，但仍满足字段原子性，是否符合1NF？",
+      "solution_outline": "不符合",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "学生信息系统中将「地址」字段拆分为省/市/街道（1NF原子化）",
+      "库存管理系统分离「产品信息」与「仓储记录」消除部分依赖（2NF）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为1NF仅需字段原子性，忽略行唯一性和列无序性要求",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在单属性主键表中错误地应用2NF检查（实际上单主键表自动满足2NF）",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "判断：一个关系表若存在重复行，但仍满足字段原子性，是否符合1NF？",
+      "answer": "不符合",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "1NF要求所有行必须唯一（隐含在关系模型定义中），重复行违反实体完整性"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "给定表R(A,B,C,D) 其中AB为复合主键，函数依赖为 AB→C, B→D。如何分解使其满足2NF？",
+      "answer": "分解为 R1(A,B,C) 和 R2(B,D)",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "D仅依赖于B（部分依赖），需拆分为两个表消除部分依赖"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析电商订单表(order_id, product_id, product_name, category) 的范式问题，其中主键为(order_id, product_id)",
+      "answer": "违反2NF：product_name和category仅依赖product_id",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "非主键属性未完全依赖整个复合主键，需拆分为订单-产品关联表和独立产品表"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "学生信息系统中将「地址」字段拆分为省/市/街道（1NF原子化）",
+    "库存管理系统分离「产品信息」与「仓储记录」消除部分依赖（2NF）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:56:46Z"
   }
 }

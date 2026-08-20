@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 内核模态与Privilege能级（Kernel Mode and Privilege Levels）\n\n### 核心概念定义\n1. **内核模态（Kernel Mode）**：操作系统内核运行的特权模式，可执行所有CPU指令（如直接操作硬件、修改内存管理单元等）。用户程序通常运行在「用户态（User Mode）」，仅能执行非特权指令。\n2. **Privilege能级（Privilege Levels）**：CPU设计的硬件级安全机制，通过环形权限（如x86的Ring 0-Ring 3）划分不同代码的执行权限。Ring 0对应内核态，Ring 3对应用户态。\n\n### 关键性质\n- **隔离性**：用户态程序需通过「系统调用（System Call）」陷入内核态访问硬件资源，避免直接操作引发系统崩溃。\n- **上下文切换开销**：用户态↔内核态切换涉及寄存器保存、堆栈切换等操作，高频调用可能影响性能（如网络包处理场景）。\n\n### 与相关知识的联系\n- **进程管理**：进程切换时需检查目标进程的权限级别（如fork()创建的子进程继承父进程权限）。\n- **内存保护**：MMU（内存管理单元）依赖Privilege能级实现用户空间与内核空间的地址隔离。\n\n### 典型应用示例\n- **驱动开发**：设备驱动程序需在内核态直接操作硬件寄存器。\n- **系统调用**：如Linux的`open()`函数最终通过`int 0x80`或`syscall`指令触发内核态执行。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "ARM架构的Exception Levels（EL0-EL3）与x86 Privilege Levels的对应关系",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Linux的`/proc/sys/kernel/sysrq`机制允许通过特定组合键触发内核态调试",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Windows的Win32k.sys：将部分图形子系统从内核态移至用户态以提高稳定性",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:10:53Z",
+    "deep_worked_example": {
+      "stem": "下列哪项操作必须在「内核态」执行？\nA) 申请堆内存\nB) 修改页表基地址寄存器\nC) 调用标准库函数printf\nD) 计算浮点数",
+      "solution_outline": "B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "虚拟机监控程序（Hypervisor）利用Ring -1实现硬件虚拟化",
+      "安全漏洞利用：如通过内核态漏洞提权（Privilege Escalation）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「内核态」与「管理员权限」。如：认为Windows的Administrator账户等同于内核态（实际仍运行在用户态）。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未处理系统调用返回值。如：忽略`open()`可能返回的`-EPERM`（权限不足），导致后续文件操作崩溃。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "下列哪项操作必须在「内核态」执行？\nA) 申请堆内存\nB) 修改页表基地址寄存器\nC) 调用标准库函数printf\nD) 计算浮点数",
+      "answer": "B",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "修改页表基地址寄存器（如CR3）涉及内存管理单元配置，属于特权指令，仅内核态可执行。A/C/D均可在用户态完成。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某程序频繁调用`read()`读取文件，导致性能下降。请分析可能的原因及优化思路。",
+      "answer": "频繁用户态-内核态切换（每次`read()`触发系统调用）引入开销。可改用内存映射文件（mmap）减少切换次数。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "系统调用涉及上下文保存/恢复、权限检查等步骤，mmap通过映射文件到用户空间避免重复切换。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "设计一个机制防止用户态程序恶意执行`cli`（禁用中断）指令。",
+      "answer": "CPU在用户态执行`cli`时触发「一般保护异常」（General Protection Fault），由操作系统终止该进程。",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "通过Privilege能级限制：`cli`属于特权指令，仅在Ring 0有效。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "虚拟机监控程序（Hypervisor）利用Ring -1实现硬件虚拟化",
+    "安全漏洞利用：如通过内核态漏洞提权（Privilege Escalation）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:10:53Z"
   }
 }

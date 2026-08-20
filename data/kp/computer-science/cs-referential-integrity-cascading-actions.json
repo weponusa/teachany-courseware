@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 引用完整性（Referential Integrity）与级联删除/更新操作（Cascading Delete/Update Actions）\n\n### 核心概念\n引用完整性（Referential Integrity）是关系型数据库中的一种约束机制，确保表间关联数据的有效性。具体表现为：若表A的外键（Foreign Key）引用表B的主键（Primary Key），则表A的外键值必须存在于表B的主键中，或为NULL（根据约束配置）。\n\n级联操作（Cascading Actions）是维护引用完整性的自动化手段，包括：\n- **级联删除（CASCADE DELETE）**：当主表记录被删除时，自动删除从表中所有引用该记录的记录\n- **级联更新（CASCADE UPDATE）**：当主表主键值修改时，自动更新从表中所有对应外键值\n\n### 关键性质\n1. **外键约束的四种动作**：\n   - NO ACTION（默认）：拒绝破坏完整性的操作\n   - CASCADE：级联执行相同操作\n   - SET NULL：将外键设为NULL\n   - SET DEFAULT：将外键设为默认值\n\n2. **实现方式**：通过SQL的FOREIGN KEY子句定义，例如：\n   ```sql\n   CREATE TABLE Orders (\n     OrderID INT PRIMARY KEY,\n     CustomerID INT,\n     FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)\n       ON DELETE CASCADE\n       ON UPDATE SET NULL\n   );\n   ```\n\n### 应用示例\n电商系统中，当删除用户账户时：\n- 使用CASCADE DELETE会自动删除该用户的所有订单\n- 使用SET NULL则保留订单但置空客户ID\n\n### 与事务（Transaction）的关系\n级联操作会触发隐式事务，若多层级联可能导致锁竞争问题。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "触发器（Trigger）可作为级联操作的替代实现方案",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "NoSQL数据库通常通过应用层代码而非数据库约束实现类似逻辑",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "ORM框架如Hibernate提供级联操作的声明式配置方式",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:33:27Z",
+    "deep_worked_example": {
+      "stem": "下列关于引用完整性的描述错误的是：\nA) 确保外键值必须存在于被引用表中\nB) 外键列允许为NULL时可不满足引用完整性\nC) 主表记录删除时必须手动维护从表数据\nD) 是关系数据库的重要特性",
+      "solution_outline": "C",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "银行账户系统：删除客户主账户时自动处理关联子账户",
+      "CMS内容管理系统：栏目删除时处理下属内容文章的存储策略"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为SET NULL和SET DEFAULT不需要满足引用完整性，实际上它们仍是引用完整性的实现方式",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在多层关联表结构中错误配置级联方向，导致意外连锁删除",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "下列关于引用完整性的描述错误的是：\nA) 确保外键值必须存在于被引用表中\nB) 外键列允许为NULL时可不满足引用完整性\nC) 主表记录删除时必须手动维护从表数据\nD) 是关系数据库的重要特性",
+      "answer": "C",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "C错误，可通过级联操作自动维护。A/B/D均为正确描述。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某学生信息表（Students）被课程注册表（Registrations）引用，现需要删除已毕业学生记录但保留其历史选课数据，应如何设置外键约束？",
+      "answer": "ALTER TABLE Registrations ADD CONSTRAINT fk_student FOREIGN KEY (student_id) REFERENCES Students(id) ON DELETE SET NULL",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "使用SET NULL可在删除主表记录时保留从表数据但置空外键。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析以下场景的问题：产品表（Products）和订单明细表（OrderDetails）使用CASCADE DELETE，当执行批量删除过期商品时触发了上千条级联删除导致系统卡顿。",
+      "answer": "问题在于级联删除未考虑批量操作的性能影响，应改用批处理程序分时段删除或改用逻辑删除标记。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "级联操作在大量数据时可能引发性能问题，需要特殊处理。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "银行账户系统：删除客户主账户时自动处理关联子账户",
+    "CMS内容管理系统：栏目删除时处理下属内容文章的存储策略"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:33:27Z"
   }
 }

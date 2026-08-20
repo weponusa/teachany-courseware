@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## LALR文法施工（LALR Grammar Construction）\n\n### 核心概念定义\nLALR（Look-Ahead LR）文法施工是编译原理中用于构建语法分析表的一种方法，属于「自底向上语法分析（Bottom-Up Parsing）」的范畴。它通过合并「LR(1)项目集（LR(1) Item Sets）」中具有相同核心的项目集，生成比规范LR(1)更紧凑的「LALR(1)分析表（LALR(1) Parsing Table）」。\n\n### 关键性质与方法\n1. **项目集合并原则**：若两个LR(1)项目集的核心（即产生式及点的位置）相同，仅「向前看符号（Look-Ahead Symbol）」不同，则合并为一个LALR(1)项目集。\n2. **冲突处理**：合并可能导致「移进-归约冲突（Shift-Reduce Conflict）」或「归约-归约冲突（Reduce-Reduce Conflict）」，此时需检查文法的LALR(1)兼容性。\n3. **与LR(1)的关系**：LALR(1)分析表状态数等于LR(0)，但通过保留部分向前看信息，其分析能力介于SLR(1)与LR(1)之间。\n\n### 与相关知识的联系\n- **与LR(0)对比**：LALR(1)通过引入向前看符号解决了LR(0)的冲突问题。\n- **与SLR(1)对比**：LALR(1)的向前看符号计算更精确，避免了SLR(1)的过度归约。\n\n### 典型应用示例\n在「Yacc/Bison」等编译器生成工具中，默认使用LALR(1)文法施工生成语法分析器，因其在状态数（空间效率）与分析能力（时间效率）间达到较好平衡。\n\n## 施工步骤示例\n1. 构造LR(1)项目集族。\n2. 合并核心相同的项目集。\n3. 根据合并后的项目集构建GOTO与ACTION表。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "LALR(1)是Knuth提出的规范LR(1)的实用变体，由Frank DeRemer于1969年首次形式化。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Bison工具的%glr-parser选项可绕过LALR(1)冲突，实现广义LR分析。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "LALR(k)（k>1）理论存在，但因状态爆炸问题，实践中几乎仅使用k=1。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:11:34Z",
+    "deep_worked_example": {
+      "stem": "LALR(1)文法施工中，合并项目集的主要依据是什么？",
+      "solution_outline": "项目集的核心相同（产生式及点的位置相同），仅向前看符号不同。",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "编程语言编译器（如GCC的语法分析阶段）使用LALR(1)分析表解析源代码。",
+      "配置文件解析工具（如JSON/YAML解析器）利用LALR(1)高效处理嵌套结构。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为LALR(1)与LR(1)分析能力完全相同，忽略合并项目集可能导致的新冲突。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在构造项目集时，错误地将核心不同但向前看符号相同的项目集合并。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "LALR(1)文法施工中，合并项目集的主要依据是什么？",
+      "answer": "项目集的核心相同（产生式及点的位置相同），仅向前看符号不同。",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "合并的核心目的是减少状态数，同时保留必要的向前看信息。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "给定文法：S → aB | bA；A → a | bAA；B → b | aBB。其LR(1)项目集I0包含[S'→•S, $]。请列出合并后的LALR(1)项目集中与I0对应的所有项目。",
+      "answer": "[S'→•S, $], [S→•aB, $], [S→•bA, $]",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "合并仅影响向前看符号，核心项目（产生式及点位置）不变。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "为什么LALR(1)分析表可能比LR(1)分析表更易出现冲突？",
+      "answer": "因合并项目集后，不同向前看符号被强制统一，可能导致原LR(1)中无冲突的状态在LALR(1)中冲突。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "例如：合并后同一状态可能同时需要根据不同向前看符号执行移进和归约。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "编程语言编译器（如GCC的语法分析阶段）使用LALR(1)分析表解析源代码。",
+    "配置文件解析工具（如JSON/YAML解析器）利用LALR(1)高效处理嵌套结构。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:11:34Z"
   }
 }

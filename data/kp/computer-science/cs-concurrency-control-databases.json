@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 并发控制数据库（Concurrency Control in Databases）\n\n### 核心概念定义\n并发控制是数据库管理系统（DBMS, Database Management System）中确保多个事务（Transaction）同时执行时，数据一致性和隔离性的关键技术。主要解决「丢失更新（Lost Update）」、「脏读（Dirty Read）」、「不可重复读（Non-repeatable Read）」和「幻读（Phantom Read）」等问题。\n\n### 关键性质与方法\n1. **锁机制（Locking）**：\n   - **共享锁（Shared Lock/S Lock）**：允许并发读取，但禁止写入。\n   - **排他锁（Exclusive Lock/X Lock）**：禁止其他事务读取或写入。\n   - 两阶段锁协议（2PL, Two-Phase Locking）确保可串行化（Serializable）调度。\n\n2. **时间戳排序（Timestamp Ordering）**：\n   - 为每个事务分配唯一时间戳，按时间顺序执行操作。\n\n3. **多版本并发控制（MVCC, Multi-Version Concurrency Control）**：\n   - 保留数据的多个版本，读操作不阻塞写操作（如 PostgreSQL 的实现）。\n\n4. **乐观并发控制（Optimistic Concurrency Control）**：\n   - 假设冲突较少，事务提交时检查冲突（适用于读多写少场景）。\n\n### 与相关知识的联系\n- 与「事务（Transaction）」的 ACID 特性（原子性、一致性、隔离性、持久性）直接相关。\n- 分布式数据库的并发控制需额外考虑「CAP 定理」和「共识算法（如 Paxos）」。\n\n### 典型应用示例\n- 银行转账系统：通过锁机制防止同一账户并发操作导致余额错误。\n- 电商库存管理：MVCC 避免高并发下单时的超卖问题。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：Google Spanner 通过 TrueTime API 实现全球分布式数据库的并发控制。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：MySQL 的 InnoDB 存储引擎同时使用锁和 MVCC。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：死锁（Deadlock）的检测与解决（如超时或等待图算法）。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:54:25Z",
+    "deep_worked_example": {
+      "stem": "以下哪种锁允许其他事务读取数据但禁止写入？",
+      "solution_outline": "共享锁（S Lock）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "在线订票系统：通过乐观并发控制处理座位冲突。",
+      "区块链技术：分布式环境下的并发控制通过共识算法实现。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为「可串行化调度」等同于「事务串行执行」。实际上，可串行化调度允许并发执行，只要结果与某种串行顺序一致。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在实现锁机制时，未正确处理锁的粒度（如表锁 vs 行锁），导致性能下降或死锁。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "以下哪种锁允许其他事务读取数据但禁止写入？",
+      "answer": "共享锁（S Lock）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "共享锁允许多个事务并发读取，但任何事务持有共享锁时，其他事务无法获取排他锁进行写入。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某数据库使用两阶段锁协议，事务 T1 已释放锁后尝试重新获取锁。这种行为可能导致什么问题？",
+      "answer": "违反两阶段锁协议，可能导致不可串行化调度",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "两阶段锁协议要求事务在释放任一锁后不能再申请新锁，否则可能破坏可串行化。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析 MVCC 如何解决「不可重复读」问题。",
+      "answer": "MVCC 为读操作提供数据的历史版本，即使其他事务修改了数据，读操作仍可访问之前的版本。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "读操作无需加锁，通过版本链访问事务开始时的数据快照（Snapshot）。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "在线订票系统：通过乐观并发控制处理座位冲突。",
+    "区块链技术：分布式环境下的并发控制通过共识算法实现。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:54:25Z"
   }
 }

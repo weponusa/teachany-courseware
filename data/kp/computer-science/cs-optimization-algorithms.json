@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 优化算法：SGD、Adam、RMSprop\n\n### 核心概念定义\n\n1. **随机梯度下降（Stochastic Gradient Descent, SGD）**：最基本的优化算法，每次迭代使用单个样本或小批量（mini-batch）计算梯度并更新参数。公式为：\n   $$\\theta_{t+1} = \\theta_t - \\eta \\nabla_\\theta J(\\theta; x^{(i)}, y^{(i)})$$\n   其中$\\eta$为学习率，$J$为损失函数。\n\n2. **Adam（Adaptive Moment Estimation）**：结合动量（Momentum）和RMSprop的自适应学习率算法，通过一阶矩（均值）和二阶矩（未中心化的方差）估计动态调整参数。关键步骤：\n   - 计算梯度的一阶矩估计（动量）和二阶矩估计\n   - 偏差修正后更新参数\n\n3. **RMSprop（Root Mean Square Propagation）**：对Adagrad的改进，通过指数加权移动平均调整学习率，解决Adagrad学习率单调下降问题。更新规则：\n   $$E[g^2]_t = \\gamma E[g^2]_{t-1} + (1-\\gamma)g_t^2$$\n   $$\\theta_{t+1} = \\theta_t - \\frac{\\eta}{\\sqrt{E[g^2]_t + \\epsilon}} g_t$$\n\n### 关键性质对比\n- **SGD**：简单但可能收敛慢，易陷入局部最优；学习率需手动调整\n- **Adam**：通常收敛快，适合稀疏梯度，默认参数（如$\\beta_1=0.9, \\beta_2=0.999$）对多数问题有效\n- **RMSprop**：适合非平稳目标，是Adam的基础组件之一\n\n### 与深度学习的联系\n这些算法是训练神经网络的核心工具，选择依据包括：\n- 数据特征（如稀疏性）\n- 模型复杂度\n- 计算资源限制\n\n### 典型应用示例\n- SGD：传统机器学习模型（如线性回归）\n- Adam：Transformer、CNN等现代深度学习架构\n- RMSprop：循环神经网络（RNN）训练",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Nesterov动量是SGD的改进版，在计算梯度时先进行临时更新",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "学习率预热（Learning Rate Warmup）常与Adam配合使用，避免训练初期的不稳定",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "SWATS（Switch from Adam to SGD）方法后期切换优化器以提升泛化性能",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:20:42Z",
+    "deep_worked_example": {
+      "stem": "Adam优化器中，用于计算一阶矩估计的默认超参数$\\beta_1$值是多少？",
+      "solution_outline": "0.9",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "计算机视觉：ResNet等模型普遍采用Adam优化器",
+      "自然语言处理：BERT使用LAMB优化器（Adam变种）进行大规模预训练"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "认为Adam绝对优于SGD：实际上对于某些问题（如需要精细调优时），SGD配合适当学习率调度可能得到更好结果",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "忘记在RMSprop实现中添加极小量$\\epsilon$（如1e-8）防止分母为零",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "Adam优化器中，用于计算一阶矩估计的默认超参数$\\beta_1$值是多少？",
+      "answer": "0.9",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Adam原始论文中设定$\\beta_1=0.9$作为动量项的衰减率"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "对于特征尺度差异大的数据集，应优先选择哪种优化算法？说明理由。",
+      "answer": "Adam或RMSprop",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "自适应学习率算法能自动调整不同参数方向的更新幅度，适合特征尺度不均的情况"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "比较SGD和Adam在训练初期的参数更新行为差异",
+      "answer": "SGD初期更新方向完全依赖当前batch梯度；Adam会累积历史梯度信息，初期更新更平滑",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Adam的动量机制使早期更新受历史梯度影响，而SGD没有记忆功能"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "计算机视觉：ResNet等模型普遍采用Adam优化器",
+    "自然语言处理：BERT使用LAMB优化器（Adam变种）进行大规模预训练"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:20:42Z"
   }
 }

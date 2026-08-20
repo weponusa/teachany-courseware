@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 反规范化（Denormalization）与性能折衷\n\n### 核心概念定义\n反规范化（Denormalization）是数据库设计中的一种技术，指在关系型数据库中**故意引入冗余数据**以减少表连接操作，从而提升查询性能。与规范化（Normalization）强调消除冗余的理念相反，反规范化通过牺牲部分存储空间和数据一致性来换取读取效率。\n\n### 关键性质与方法\n1. **冗余策略**：复制高频查询所需的字段到多个表中（如订单表冗余用户姓名）\n2. **预计算字段**：存储计算结果（如订单总金额）避免实时计算\n3. **权衡维度**：需评估查询性能提升与数据更新开销的比例\n\n### 与相关知识的联系\n- 与「范式理论（Normal Forms）」形成设计光谱的两极\n- 常与「读写分离（Read-Write Splitting）」配合使用\n- 在「数据仓库（Data Warehouse）」的星型模式中广泛采用\n\n### 典型应用示例\n电商系统商品详情页：\n```sql\n-- 规范化设计需要多表连接\nSELECT p.name, c.name AS category, AVG(r.rating) \nFROM products p \nJOIN categories c ON p.category_id = c.id \nLEFT JOIN reviews r ON p.id = r.product_id\n\n-- 反规范化后可直接查询\nSELECT name, category_name, average_rating \nFROM denormalized_products\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "列式数据库（如ClickHouse）通过存储冗余实现高效分析查询",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "物化视图（Materialized View）是反规范化的自动化实现方式",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "CAP理论中反规范化常用于优先保证可用性（Availability）",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:57:41Z",
+    "deep_worked_example": {
+      "stem": "下列哪项不是反规范化的典型代价？\nA) 数据更新开销增加\nB) 存储空间占用上升\nC) 事务隔离级别降低\nD) 潜在的数据不一致风险",
+      "solution_outline": "C",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "新闻网站的热门文章列表缓存作者信息",
+      "金融仪表盘预计算并存储KPI指标"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「反规范化」与「非规范化」，后者指未经验证的随意设计",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "过度反规范化导致更新操作需要修改多处数据，引发性能劣化",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "下列哪项不是反规范化的典型代价？\nA) 数据更新开销增加\nB) 存储空间占用上升\nC) 事务隔离级别降低\nD) 潜在的数据不一致风险",
+      "answer": "C",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "事务隔离级别由数据库引擎实现，与反规范化无直接关联"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某社交网络需要优化用户主页加载速度，该页面需显示：用户基本信息、最近3篇帖子及每条帖子的点赞数。请设计反规范化方案",
+      "answer": "在用户表中冗余帖子内容和点赞数，或创建包含所有数据的宽表",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "通过预聚合高频访问数据减少实时连接操作"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析在线教育平台中，课程信息表反规范化存储教师姓名可能引发的问题",
+      "answer": "当教师改名时需更新所有相关课程记录，否则会出现数据不一致",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "反规范化需考虑派生数据的维护成本"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "新闻网站的热门文章列表缓存作者信息",
+    "金融仪表盘预计算并存储KPI指标"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:57:41Z"
   }
 }

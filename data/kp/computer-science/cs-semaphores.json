@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 信号量（Semaphores）\n\n信号量是操作系统中的一种同步机制，用于控制多个进程或线程对共享资源的访问。它由荷兰计算机科学家 Edsger Dijkstra 在 1965 年提出，是解决并发编程中「临界区问题」的核心工具之一。\n\n### 核心概念定义\n\n- **信号量（Semaphore）**：一种整数变量，用于表示资源的可用数量。它支持两种原子操作：`P`（等待）和 `V`（释放）。\n- **P 操作（Wait）**：当信号量的值大于 0 时，将其减 1；否则，进程或线程进入等待状态，直到信号量的值大于 0。\n- **V 操作（Signal）**：将信号量的值加 1，并唤醒一个等待的进程或线程。\n\n### 关键性质\n\n1. **原子性**：`P` 和 `V` 操作是不可分割的，确保并发环境下的正确性。\n2. **互斥性**：信号量可用于实现互斥锁（Mutex），确保同一时刻只有一个进程或线程访问共享资源。\n3. **同步性**：信号量可用于协调多个进程或线程的执行顺序。\n\n### 与相关知识的联系\n\n- **临界区问题**：信号量是解决临界区问题的经典方法之一，与「互斥锁」和「条件变量」类似。\n- **生产者-消费者问题**：信号量常用于解决生产者-消费者问题，通过两个信号量分别控制缓冲区空和满的状态。\n\n### 典型应用示例\n\n```c\n#include <semaphore.h>\n#include <pthread.h>\n\nsem_t sem;\nint shared_resource = 0;\n\nvoid* thread_func(void* arg) {\n    sem_wait(&sem); // P 操作\n    shared_resource++;\n    sem_post(&sem); // V 操作\n    return NULL;\n}\n\nint main() {\n    sem_init(&sem, 0, 1); // 初始化信号量为 1\n    pthread_t thread1, thread2;\n    pthread_create(&thread1, NULL, thread_func, NULL);\n    pthread_create(&thread2, NULL, thread_func, NULL);\n    pthread_join(thread1, NULL);\n    pthread_join(thread2, NULL);\n    sem_destroy(&sem);\n    return 0;\n}\n```\n\n上述代码展示了如何使用信号量实现线程间的互斥访问。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "信号量可以分为二进制信号量和计数信号量，前者用于实现互斥锁，后者用于资源池管理。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "信号量的实现依赖于操作系统的底层支持，通常涉及硬件指令或内核功能。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "信号量的性能开销较大，因此在一些高性能场景中，可能会使用更轻量级的同步机制，如自旋锁（Spinlock）。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:36:42Z",
+    "deep_worked_example": {
+      "stem": "信号量的 `P` 操作和 `V` 操作分别是什么作用？",
+      "solution_outline": "`P` 操作用于等待信号量，如果信号量的值大于 0，则将其减 1；否则，进程或线程进入等待状态。`V` 操作用于释放信号量，将信号量的值加 1，并唤醒一个等待的进程或线程。",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "数据库管理系统中的事务控制",
+      "操作系统中进程调度与资源分配"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为信号量的值可以为负数。实际上，信号量的值应始终为非负整数。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在多线程编程中，忘记释放信号量，导致死锁（Deadlock）。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "信号量的 `P` 操作和 `V` 操作分别是什么作用？",
+      "answer": "`P` 操作用于等待信号量，如果信号量的值大于 0，则将其减 1；否则，进程或线程进入等待状态。`V` 操作用于释放信号量，将信号量的值加 1，并唤醒一个等待的进程或线程。",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "`P` 和 `V` 操作是信号量的核心操作，分别用于获取和释放资源。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "使用信号量解决生产者-消费者问题时，通常需要几个信号量？",
+      "answer": "通常需要两个信号量：一个用于表示缓冲区空的数量，另一个用于表示缓冲区满的数量。",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "生产者-消费者问题需要协调缓冲区的状态，因此需要两个信号量分别控制空和满的状态。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "在多线程环境中，为什么信号量的操作必须是原子的？",
+      "answer": "如果信号量的操作不是原子的，多个线程可能同时修改信号量的值，导致资源访问的竞争条件（Race Condition），从而破坏程序的正确性。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "原子性是信号量操作的核心特性，确保并发环境下的正确性。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "数据库管理系统中的事务控制",
+    "操作系统中进程调度与资源分配"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:36:42Z"
   }
 }

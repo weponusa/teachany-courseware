@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 多主方程复制（Multi-Master Replication）\n\n### 核心概念定义\n多主方程复制是「分布式系统（Distributed Systems）」中一种数据复制策略，允许多个节点（称为主节点或master）同时接收写入操作，并通过协调机制将变更同步到其他节点。与单主复制（Single-Master Replication）相比，其核心特征是**去中心化的写入权限**。\n\n### 关键性质与方法\n1. **并发写入处理**：通过「冲突解决算法（Conflict Resolution Algorithms）」如时间戳排序、最后写入胜出（LWW）或应用层自定义规则处理多主节点的写入冲突。\n2. **最终一致性（Eventual Consistency）」：系统不保证实时一致性，但确保在没有新写入时，所有节点最终达成一致状态。\n3. **拓扑结构**：常见拓扑包括全连接网状（每个主节点同步到其他所有主节点）或环形同步。\n\n### 与相关知识的联系\n- 与「CAP定理（CAP Theorem）」关联：多主复制通常优先保证可用性（A）和分区容错性（P），牺牲部分一致性（C）。\n- 区别于「主从复制（Master-Slave Replication）」：后者仅允许单一主节点写入，从节点只读。\n\n### 典型应用示例\n- **跨地域数据库**：如全球部署的电商系统，不同地区的主节点独立处理订单以减少延迟。\n- **协作编辑工具**：如Google Docs，允许多用户同时编辑并异步合并变更。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：多主复制常与「无冲突复制数据类型（CRDTs）」结合，实现更安全的冲突处理。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：部分系统（如CockroachDB）通过混合逻辑时钟（Hybrid Logical Clocks）优化多主复制的时间戳精度。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：区块链技术可视为一种特殊的多主复制，依赖共识算法而非传统冲突解决。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:16:18Z",
+    "deep_worked_example": {
+      "stem": "多主方程复制中，以下哪项是解决写入冲突的常见方法？\nA. 随机丢弃冲突写入\nB. 最后写入胜出（LWW）\nC. 禁止所有并发写入\nD. 仅同步到单一主节点",
+      "solution_outline": "B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "云计算多区域数据库服务（如AWS Aurora Multi-Master）",
+      "离线优先的移动应用（如笔记类App在设备间同步）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为多主复制能保证强一致性。实际上，其默认提供最终一致性，强一致性需额外协议（如Paxos）支持。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "冲突解决时未考虑业务逻辑。例如直接采用LWW可能导致重要业务数据被意外覆盖（如金融交易中的冲正操作）。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "多主方程复制中，以下哪项是解决写入冲突的常见方法？\nA. 随机丢弃冲突写入\nB. 最后写入胜出（LWW）\nC. 禁止所有并发写入\nD. 仅同步到单一主节点",
+      "answer": "B",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "LWW是实际系统中广泛采用的冲突解决策略，其他选项或导致数据丢失（A、C）或违背多主复制的设计原则（D）。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某分布式数据库采用多主复制，东京和纽约的主节点同时将用户A的余额从100元分别更新为150元和200元。若使用时间戳冲突解决（东京写入时间早于纽约），最终余额是多少？",
+      "answer": "200元",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "时间戳策略会保留最新时间戳的写入，纽约的更新（200元）将覆盖东京的更新。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析多主复制在以下场景的优缺点：某社交平台需支持用户在欧洲和亚洲实时发布内容，且两地网络延迟较高。",
+      "answer": "优点：降低写入延迟（用户就近写入本地主节点），提高可用性（单区域故障不影响其他区域）。缺点：需处理跨区域冲突（如同时修改同一帖子），可能产生暂时不一致。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需结合多主复制的特性与场景需求（延迟敏感、高可用）进行权衡分析。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "云计算多区域数据库服务（如AWS Aurora Multi-Master）",
+    "离线优先的移动应用（如笔记类App在设备间同步）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:16:18Z"
   }
 }

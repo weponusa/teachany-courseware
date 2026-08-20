@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 消息队列与消息传递进程间通信（Message Queues and Message Passing IPC）\n\n### 核心概念定义\n消息队列（Message Queue）是操作系统提供的**进程间通信（Inter-Process Communication, IPC）**机制之一，本质是一个由内核维护的链表结构，允许不同进程以异步方式通过发送（send）和接收（receive）「消息（Message）」进行数据交换。消息传递（Message Passing）则是进程间通过直接或间接（如队列）传递结构化数据包的通信范式。\n\n### 关键性质与方法\n1. **异步性**：发送方无需等待接收方立即处理消息（对比管道/Pipe的阻塞特性）。\n2. **结构化数据**：消息通常包含类型标识符和内容体（如POSIX的`mq_send()`需指定优先级）。\n3. **生命周期**：队列可持久化（如RabbitMQ）或随内核终止（如System V消息队列）。\n4. **同步控制**：通过信号量或互斥锁实现多进程安全访问。\n\n### 与相关知识的联系\n- **对比共享内存（Shared Memory）**：消息队列无需处理同步问题，但存在内核态拷贝开销。\n- **对比管道（Pipe）**：支持多对多通信且消息边界清晰（管道是字节流）。\n\n### 典型应用示例\n- 微服务架构中解耦服务（如订单服务通过Kafka通知库存服务）。\n- 实时系统任务调度（Linux内核使用`struct msg_msg`管理任务优先级）。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "ZeroMQ库在用户态实现类队列语义，减少内核切换开销",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Linux中`ipcs -q`命令可查看系统消息队列状态",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "CAP理论中，大多数消息队列优先保证可用性（A）和分区容错性（P）",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:15:08Z",
+    "deep_worked_example": {
+      "stem": "下列哪项不是消息队列的特性？\nA. 异步通信\nB. 消息类型标识\nC. 物理内存共享\nD. 内核持久化存储",
+      "solution_outline": "C",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "电商秒杀系统：用RabbitMQ缓冲瞬时高并发订单请求",
+      "物联网设备数据采集：MQTT协议基于发布/订阅模式的消息队列"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆消息队列与邮箱（Mailbox）机制：后者通常指线程级通信且无持久化（如Windows线程邮箱）",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未正确处理消息类型字段：如POSIX消息队列需显式设置优先级（0为最低），否则可能导致消息饥饿",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "下列哪项不是消息队列的特性？\nA. 异步通信\nB. 消息类型标识\nC. 物理内存共享\nD. 内核持久化存储",
+      "answer": "C",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "消息队列通过内核传递数据，不直接共享物理内存（共享内存的特性）"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某系统需处理10万/秒的日志上报，且需避免生产者阻塞。请选择最适合的IPC方案并说明理由。",
+      "answer": "消息队列（如Kafka）",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "高吞吐场景需要异步通信+持久化能力，消息队列的缓冲机制可解耦生产消费速度差异"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析System V消息队列中`msgrcv()`的`IPC_NOWAIT`标志位对性能的影响。",
+      "answer": "非阻塞模式减少进程等待时间但可能增加轮询开销",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "设置该标志后，若队列无消息立即返回而非阻塞，适用于实时系统但需权衡CPU占用率"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "电商秒杀系统：用RabbitMQ缓冲瞬时高并发订单请求",
+    "物联网设备数据采集：MQTT协议基于发布/订阅模式的消息队列"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:15:08Z"
   }
 }

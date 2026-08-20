@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 幂等运算（Idempotent Operations）在分布式系统中的核心概念\n\n### 定义\n幂等性（Idempotence）指对同一操作执行一次或多次，系统状态变更结果相同。在「分布式系统（Distributed Systems）」中，网络不可靠性导致请求可能重复发送，幂等设计可避免重复操作引发的数据不一致。\n\n### 关键性质\n1. **数学本质**：若操作 `f` 满足 `f(f(x)) = f(x)`，则 `f` 是幂等的\n2. **实现方法**：\n   - 唯一请求ID（Request ID）去重\n   - 数据库「乐观锁（Optimistic Locking）」\n   - HTTP 方法的语义设计（如 PUT 天然幂等）\n\n### 与相关知识的联系\n- **事务（Transaction）**：幂等性与ACID中的原子性协同保障数据一致性\n- **消息队列（Message Queue）**：消费者需实现幂等处理以防止消息重复消费\n\n### 应用示例\n- 支付系统：用户重复点击支付按钮时，通过交易流水号确保仅扣款一次\n- 文件上传：客户端重传相同文件时，服务端通过哈希校验跳过重复存储",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "CAP定理中，幂等设计是权衡「一致性」与「可用性」的重要手段",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "RESTful API设计中，GET/PUT/DELETE应保持幂等，POST为非幂等",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "分布式唯一ID生成算法（雪花算法Snowflake）常作为幂等实现的基石",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:07:58Z",
+    "deep_worked_example": {
+      "stem": "以下哪种HTTP方法天然具有幂等性？\nA) POST\nB) PATCH\nC) PUT\nD) DELETE",
+      "solution_outline": "C",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "电商库存扣减：秒杀场景中前端重复提交订单时的库存保护",
+      "物联网设备状态上报：网络抖动时设备重传相同状态数据"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「幂等」与「事务隔离性」：认为幂等性可以解决并发写入冲突（实际需配合锁机制）",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未考虑全局唯一ID的生成成本：在跨数据中心场景下简单使用本地ID可能导致冲突",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "以下哪种HTTP方法天然具有幂等性？\nA) POST\nB) PATCH\nC) PUT\nD) DELETE",
+      "answer": "C",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "PUT 和 DELETE 是幂等的，但选项中只有C正确。PUT 将资源完全替换，多次执行结果不变"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "设计一个订单创建API，要求：\n1. 客户端可能因超时重试\n2. 需防止重复创建订单\n请描述实现方案",
+      "answer": "方案：客户端生成唯一订单ID，服务端首次处理时记录ID状态，后续相同ID请求直接返回已有结果",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "通过客户端生成的唯一ID实现去重是典型幂等设计模式"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析以下场景是否违反幂等性：\n『数据库自增计数器，每次请求使字段+1』",
+      "answer": "违反",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "多次执行会导致计数器值与执行次数相关，不满足结果相同的要求"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "电商库存扣减：秒杀场景中前端重复提交订单时的库存保护",
+    "物联网设备状态上报：网络抖动时设备重传相同状态数据"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:07:58Z"
   }
 }

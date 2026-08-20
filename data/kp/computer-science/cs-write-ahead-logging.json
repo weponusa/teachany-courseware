@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 写前日志（Write-Ahead Logging, WAL）与数据库恢复\n\n### 核心概念定义\n写前日志（Write-Ahead Logging, WAL）是一种数据库事务处理的关键机制，其核心原则是：**任何数据页的修改必须先将对应的日志记录持久化到磁盘**，之后才能将数据页写入磁盘。日志记录包含足够的信息以支持事务的「原子性（Atomicity）」和「持久性（Durability）」。\n\n### 关键性质与方法\n1. **日志先行原则**：所有修改操作（如INSERT/UPDATE）需先记录到日志文件，再写入数据文件。\n2. **日志内容**：通常包括事务ID、操作类型（如REDO/UNDO）、修改前后的数据（Before Image/After Image）。\n3. **检查点（Checkpoint）**：定期将内存中的脏页（Dirty Page）同步到磁盘，缩短恢复时日志回放的范围。\n\n### 与ACID的联系\n- **原子性**：通过UNDO日志回滚未提交事务。\n- **持久性**：REDO日志确保已提交事务的修改不丢失。\n- 与「两阶段提交（2PC）」协同实现分布式事务。\n\n### 典型应用示例\n- **PostgreSQL的WAL机制**：所有数据变更先写入WAL文件（如`000000010000000000000001`），崩溃后通过`pg_resetwal`工具恢复。\n- **SQLite的ROLLBACK JOURNAL**：旧版SQLite使用WAL的变种实现事务。\n\n## 数据库恢复流程\n1. **分析阶段**：扫描日志，确定待REDO/UNDO的事务。\n2. **重做阶段（REDO）**：从最近检查点开始，重新执行已提交事务的操作。\n3. **撤销阶段（UNDO）**：回滚未提交事务的修改。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "ARIES算法：现代数据库（如IBM DB2）使用的WAL改进协议，支持逻辑与物理混合日志。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "MySQL的binlog与InnoDB redo log的协同机制。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "非关系型数据库（如MongoDB）的oplog与WAL的异同。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:50:10Z",
+    "deep_worked_example": {
+      "stem": "WAL机制如何保证事务的持久性？",
+      "solution_outline": "通过强制要求事务提交前先将日志持久化到磁盘，即使系统崩溃也能通过REDO日志恢复已提交的数据修改。",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "金融系统中账户转账事务的崩溃恢复",
+      "物联网设备离线时本地数据库的自动修复"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为WAL日志只需记录修改后的数据（After Image），实际UNDO操作需要Before Image。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未正确设置检查点间隔：间隔过长导致恢复时间增加，过短则引入性能开销。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "WAL机制如何保证事务的持久性？",
+      "answer": "通过强制要求事务提交前先将日志持久化到磁盘，即使系统崩溃也能通过REDO日志恢复已提交的数据修改。",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "持久性要求事务提交后结果永久保存，WAL的日志先行设计确保了这一点。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某数据库检查点后的日志序列为：T1-BEGIN, T1-UPDATE(A), T2-BEGIN, T2-DELETE(B), T1-COMMIT, CRASH。恢复时需要如何处理？",
+      "answer": "REDO T1-UPDATE(A)（因T1已提交），UNDO T2-DELETE(B)（因T2未提交）。",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "根据WAL规则，已提交事务需重做，未提交事务需回滚。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "对比WAL与Shadow Paging两种恢复技术的优缺点。",
+      "answer": "WAL优点：日志体积小，支持增量更新；缺点：恢复时需扫描日志。Shadow Paging优点：恢复速度快（只需切换指针）；缺点：存在内存碎片化问题。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需从I/O效率、恢复复杂度等维度分析。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "金融系统中账户转账事务的崩溃恢复",
+    "物联网设备离线时本地数据库的自动修复"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:50:10Z"
   }
 }

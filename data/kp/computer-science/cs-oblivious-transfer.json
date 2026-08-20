@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 不经意传递（Oblivious Transfer）\n\n### 核心概念定义\n不经意传递（Oblivious Transfer, OT）是密码学中的一种基础协议，允许发送方（Sender）向接收方（Receiver）传递信息，但发送方不知道接收方具体获取了哪些信息。最常见的变体是「1-out-of-2 OT」，即发送方提供两个消息（m₀, m₁），接收方选择获取其中一个消息，但发送方无法知道接收方选择了哪一个。\n\n### 关键性质\n1. **隐私性**：发送方无法推断接收方的选择。\n2. **正确性**：接收方只能获取其选择的消息，无法获取其他消息。\n3. **不可伪造性**：接收方无法伪造或篡改发送方的原始消息。\n\n### 与相关知识的联系\n- **与安全多方计算（Secure Multi-party Computation, MPC）的关系**：OT 是 MPC 的构建模块之一，许多 MPC 协议依赖 OT 实现隐私保护。\n- **与公钥密码学的区别**：OT 是协议而非算法，通常需要结合公钥密码学（如 RSA、椭圆曲线）实现。\n\n### 典型应用示例\n- **隐私信息检索（Private Information Retrieval, PIR）**：用户从数据库中获取数据时，服务器无法知道用户查询的具体内容。\n- **电子投票系统**：确保选票的隐私性，同时防止重复投票。\n\n## 方法实现\n经典的 1-out-of-2 OT 协议（基于 RSA）步骤：\n1. 发送方生成两对公钥（pk₀, pk₁）和私钥（sk₀, sk₁）。\n2. 接收方根据选择 bit b 生成随机数 r，计算 C = rᵉ mod N（使用 pk_b 加密）。\n3. 发送方用两把私钥解密 C 得到 k₀, k₁，并发送 E(k₀, m₀) 和 E(k₁, m₁)。\n4. 接收方用 r 解密 E(k_b, m_b) 获得所选消息。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：OT 可推广到「1-out-of-N」模式，接收方从 N 个消息中选择一个。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：OT 的「自适应」变体允许接收方多次选择，每次选择依赖之前的结果。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "历史：OT 由 Michael Rabin 在 1981 年首次提出，后经 Shimon Even 等人改进。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:19:51Z",
+    "deep_worked_example": {
+      "stem": "在不经意传递协议中，发送方能否知道接收方选择了哪个消息？",
+      "solution_outline": "不能",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "医疗数据共享：医院向研究人员提供患者数据时，隐藏具体患者身份。",
+      "广告定向投放：用户获取广告内容时，广告商无法确定用户兴趣标签。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「不经意传递」与「加密传输」：误认为 OT 只是加密数据后发送。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "实现 OT 时未验证接收方提交的随机数 r 的合法性，导致安全性漏洞。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "在不经意传递协议中，发送方能否知道接收方选择了哪个消息？",
+      "answer": "不能",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "OT 的核心性质是发送方无法推断接收方的选择。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "若一个协议允许接收方获取两个消息中的任意一个，但发送方可能以 50% 概率猜中接收方的选择，这是否满足 OT 的定义？",
+      "answer": "不满足",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "OT 要求发送方对接收方的选择完全「不经意」（概率无关）。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析以下场景是否适合使用 OT：A 想向 B 出售一个数字商品，但要求 B 付款后才能知道商品内容。",
+      "answer": "不适合",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "OT 不解决支付问题，且发送方（A）需提前明确消息内容。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "医疗数据共享：医院向研究人员提供患者数据时，隐藏具体患者身份。",
+    "广告定向投放：用户获取广告内容时，广告商无法确定用户兴趣标签。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:19:51Z"
   }
 }

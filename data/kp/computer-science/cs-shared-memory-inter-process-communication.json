@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## Shared内存互进程通讯（Shared Memory Inter-Process Communication）\n\n### 核心概念定义\nShared内存互进程通讯是一种「进程间通信（Inter-Process Communication, IPC）」机制，允许多个进程通过映射相同的物理内存区域实现高效数据共享。其核心特点是：\n1. **共享内存区域（Shared Memory Region）**：由操作系统分配的连续物理内存，可被多个进程的虚拟地址空间映射。\n2. **零拷贝（Zero Copy）**：数据直接在内存中交换，无需通过内核缓冲区复制（如管道或消息队列）。\n\n### 关键性质与方法\n- **创建与映射**：\n  - 使用`shmget()`（UNIX/Linux）或`CreateFileMapping()`（Windows）创建共享内存对象。\n  - 通过`shmat()`或`MapViewOfFile()`将共享内存映射到进程地址空间。\n- **同步控制**：需配合「信号量（Semaphore）」或「互斥锁（Mutex）」避免竞态条件。\n- **性能优势**：适用于高频、大数据量通信（如视频处理、科学计算）。\n\n### 与相关知识的联系\n- **对比其他IPC**：\n  - 管道（Pipe）：单向流式通信，内核缓冲导致延迟。\n  - 消息队列（Message Queue）：有格式消息传递，但存在序列化开销。\n- **与虚拟内存的关系**：共享内存依赖操作系统的「内存管理单元（MMU）」实现地址映射。\n\n### 典型应用示例\n- **数据库系统**：如PostgreSQL使用共享内存缓存查询结果。\n- **多媒体处理**：视频编辑软件通过共享内存传递帧数据。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Linux的`/dev/shm`目录是tmpfs文件系统，实际使用共享内存实现",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Windows的共享内存通过内存映射文件（Memory-Mapped File）实现",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "POSIX标准定义了`shm_open()`替代传统System V共享内存",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:37:17Z",
+    "deep_worked_example": {
+      "stem": "Shared内存通信相比管道通信的主要优势是什么？",
+      "solution_outline": "零拷贝机制减少数据复制开销",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "GPU与CPU的显存共享（如CUDA的Unified Memory）",
+      "分布式系统中的内存数据库（如Redis集群模式）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为共享内存自动保证数据一致性，忽略同步机制（如信号量）的必要性",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未检查`shmat()`返回值导致映射失败时访问非法地址（Segmentation Fault）",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "Shared内存通信相比管道通信的主要优势是什么？",
+      "answer": "零拷贝机制减少数据复制开销",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "共享内存直接映射物理内存，而管道需通过内核缓冲区中转。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某进程调用`shmdt()`后，共享内存区域会被立即释放吗？",
+      "answer": "否",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "`shmdt()`仅解除当前进程的映射，需调用`shmctl(IPC_RMID)`显式释放。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析以下场景是否适合使用共享内存：两个进程需要交换10KB的配置数据，每分钟一次。",
+      "answer": "不适合",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "低频小数据通信更适合消息队列，共享内存的同步开销反而降低效率。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "GPU与CPU的显存共享（如CUDA的Unified Memory）",
+    "分布式系统中的内存数据库（如Redis集群模式）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:37:17Z"
   }
 }

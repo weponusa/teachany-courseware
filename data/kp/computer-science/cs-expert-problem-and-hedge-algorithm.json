@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## Expert问题与Hedge算法\n\n### 核心概念定义\n\n**Expert问题（Expert Problem）** 是机器学习中的一类在线学习问题，其核心思想是通过组合多个「专家（expert）」的建议来进行决策。每个专家在每一轮会给出一个预测，学习者需要根据这些预测和自己的损失函数，决定如何组合这些专家的建议以最小化累积损失。\n\n**Hedge算法（Hedge Algorithm）** 是解决Expert问题的一种经典方法，属于「加权多数算法（Weighted Majority Algorithm）」的泛化形式。它通过动态调整专家的权重，使得表现好的专家获得更高的权重，从而在长期达到近似最优的累积损失。\n\n### 关键性质或方法\n\n1. **权重更新规则**：Hedge算法在每一轮根据专家的损失（或收益）指数更新其权重。具体来说，若专家 \\(i\\) 在第 \\(t\\) 轮的损失为 \\(\\ell_{i,t}\\)，则其权重更新为：\n   \\[ w_{i,t+1} = w_{i,t} \\cdot e^{-\\eta \\ell_{i,t}} \\]\n   其中 \\(\\eta\\) 是学习率参数。\n\n2. **理论保证**：Hedge算法具有理论上的「遗憾（regret）」上界，即在 \\(T\\) 轮后，其累积损失与最佳固定专家（事后最优）的累积损失之差不超过 \\(O(\\sqrt{T \\ln N})\\)，其中 \\(N\\) 是专家数量。\n\n3. **与梯度下降的联系**：Hedge算法可以视为在线梯度下降（Online Gradient Descent）在概率单纯形上的特例，其权重更新对应于指数梯度更新。\n\n### 典型应用示例\n\n- **股票投资组合**：将每个专家视为一个投资策略，Hedge算法动态调整资金分配，长期跑赢单一策略。\n- **广告投放**：多个广告投放策略作为专家，算法选择综合效果最优的组合。\n\n## 与相关知识的联系\n\n- **多臂老虎机（Multi-Armed Bandit）**：Expert问题是其完全信息版本（所有专家的损失可见）。\n- **在线凸优化（Online Convex Optimization）**：Hedge算法是其离散动作空间的实现。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：Hedge算法的变体AdaHedge可自适应调整学习率。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：当专家集无限时，可使用核方法（Kernel-Based）扩展。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：与博弈论中「无悔学习（No-Regret Learning）」的深刻联系。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:01:32Z",
+    "deep_worked_example": {
+      "stem": "Hedge算法中，权重更新公式 \\(w_{i,t+1} = w_{i,t} \\cdot e^{-\\eta \\ell_{i,t}}\\) 的学习率 \\(\\eta\\) 过大可能导致什么问题？",
+      "solution_outline": "权重快速集中于短期表现好的专家，可能因噪声过拟合而长期性能下降。",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "动态定价系统：将不同定价策略建模为专家，适应市场变化。",
+      "推荐系统：混合多种推荐模型的输出，提升稳定性。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆Hedge算法与纯粹贪心算法（如始终选择上轮最佳专家），忽略权重平滑更新的重要性。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未对学习率 \\(\\eta\\) 进行调参，直接使用默认值导致实际性能不佳。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "Hedge算法中，权重更新公式 \\(w_{i,t+1} = w_{i,t} \\cdot e^{-\\eta \\ell_{i,t}}\\) 的学习率 \\(\\eta\\) 过大可能导致什么问题？",
+      "answer": "权重快速集中于短期表现好的专家，可能因噪声过拟合而长期性能下降。",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "过大的 \\(\\eta\\) 会放大短期损失的影响，降低算法的鲁棒性。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "假设有3个专家，初始权重均为1，学习率 \\(\\eta=0.5\\)。第一轮专家1、2、3的损失分别为0.2、0.6、0.4。计算第二轮各专家的权重。",
+      "answer": "[0.9048, 0.7408, 0.8187]",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "根据公式计算：\\(w_{1}=1\\cdot e^{-0.5\\times0.2}\\approx0.9048\\)，同理可得其他权重。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "为什么Hedge算法在专家数量 \\(N\\) 很大时仍能保证次线性遗憾？",
+      "answer": "因遗憾上界为 \\(O(\\sqrt{T \\ln N})\\)，\\(\\ln N\\) 的增长远慢于 \\(N\\)。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "对数依赖使算法对大规模专家集具有可扩展性。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "动态定价系统：将不同定价策略建模为专家，适应市场变化。",
+    "推荐系统：混合多种推荐模型的输出，提升稳定性。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:01:32Z"
   }
 }

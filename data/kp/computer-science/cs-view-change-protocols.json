@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 视图变化与选主Failover协议（View Change and Leader Failover Protocols）\n\n### 核心概念定义\n1. **视图（View）**：在分布式共识协议（如Paxos、Raft）中，视图指当前系统对「主节点（Leader）」身份的共识状态。每个视图包含唯一的Leader标识和配置信息。\n2. **视图变化（View Change）**：当系统检测到当前Leader失效（如超时未响应）时，节点通过协议触发视图切换，选举新Leader并更新全局状态。\n3. **选主Failover协议**：指在Leader故障时，系统自动选举新Leader并保证数据一致性的规则集合，典型实现包括Raft的「领导者选举（Leader Election）」和PBFT的「视图切换协议」。\n\n### 关键性质与方法\n- **安全性**：必须确保同一时刻至多一个有效Leader（避免脑裂）。\n- **活性**：最终必须选出新Leader（避免无限循环）。\n- **典型方法**：\n  - **Raft**：通过随机化选举超时（Election Timeout）减少冲突。\n  - **PBFT**：使用三阶段协议（pre-prepare、prepare、commit）达成视图切换共识。\n\n### 与相关知识的联系\n- 与「共识算法（Consensus Algorithms）」：视图变化是共识算法的容错核心机制。\n- 与「心跳检测（Heartbeat）」：Leader通过定期心跳维持权威，超时触发视图变化。\n\n### 典型应用示例\n- **分布式数据库**：如MongoDB使用Raft协议实现副本集自动Failover。\n- **区块链**：Hyperledger Fabric的排序服务依赖PBFT视图切换。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：Zab协议（ZooKeeper使用）通过epoch编号管理视图变化，确保事务ID单调递增",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：Google Spanner的TrueTime API可优化视图切换的时钟同步问题",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：HotStuff等现代BFT协议通过流水线化视图变化降低延迟",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:49:40Z",
+    "deep_worked_example": {
+      "stem": "在Raft协议中，触发视图变化（Leader重新选举）的直接原因是什么？",
+      "solution_outline": "Follower节点在选举超时（Election Timeout）内未收到Leader的心跳信号",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "Kubernetes的etcd集群使用Raft协议实现高可用，自动处理Leader故障切换",
+      "金融系统清算网络采用PBFT视图切换，确保即使部分节点被入侵也能维持一致账本"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为视图变化仅需简单多数投票，忽略PBFT等协议需验证历史日志（如检查水线watermark）的安全要求。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "实现时未正确处理「视图暂存状态」，导致新旧视图交替期间重复提交请求（如双重执行命令）。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "在Raft协议中，触发视图变化（Leader重新选举）的直接原因是什么？",
+      "answer": "Follower节点在选举超时（Election Timeout）内未收到Leader的心跳信号",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Raft通过心跳机制维持Leader权威，超时意味着可能发生故障，需启动选举。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "假设一个5节点的PBFT集群，当前视图号为3的Leader失效。描述视图切换过程中节点如何达成新视图（View 4）的共识？",
+      "answer": "节点广播VIEW-CHANGE消息→收集2f+1个有效消息后进入新视图→新Leader广播NEW-VIEW消息包含最新状态证明",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "PBFT要求多数节点（2f+1）确认旧视图失效，新Leader需提供状态证明以保证一致性。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "对比Raft和PBFT的视图变化协议，分析两者在通信复杂度上的差异及原因。",
+      "answer": "Raft为O(n)通信（只需多数派投票），PBFT为O(n²)（所有节点交换VIEW-CHANGE消息）。原因：PBFT需对抗拜占庭故障，必须交叉验证消息。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "故障模型不同导致设计差异：崩溃故障 vs 拜占庭故障。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "Kubernetes的etcd集群使用Raft协议实现高可用，自动处理Leader故障切换",
+    "金融系统清算网络采用PBFT视图切换，确保即使部分节点被入侵也能维持一致账本"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:49:40Z"
   }
 }

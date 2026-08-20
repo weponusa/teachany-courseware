@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## Subtyping与类型界（Subtyping and Type Bounds）\n\n### 核心概念定义\n\n**子类型（Subtyping）**是类型系统中描述类型间关系的重要概念。若类型 S 是类型 T 的子类型（记作 S <: T），则所有 S 类型的值都可以安全地用在期望 T 类型值的上下文中。这一关系体现了**里氏替换原则（Liskov Substitution Principle, LSP）**：子类型必须能够替换其父类型而不影响程序正确性。\n\n**类型界（Type Bounds）**用于约束泛型类型参数的取值范围，分为：\n- **上界（Upper Bound）**：`T <: A` 表示类型参数 T 必须是 A 的子类型\n- **下界（Lower Bound）**：`T >: B` 表示 T 必须是 B 的超类型\n\n### 关键性质与方法\n1. **协变（Covariance）**：若 `S <: T` 则 `C[S] <: C[T]`（如 Scala 的 `List[+A]`）\n2. **逆变（Contravariance）**：若 `S <: T` 则 `C[T] <: C[S]`（如函数参数类型）\n3. **不变（Invariance）**：类型构造器不保持子类型关系（如 Java 的 `ArrayList<T>`）\n\n### 与相关知识的联系\n- 与**多态（Polymorphism）**：子类型是实现运行时多态的基础\n- 与**泛型（Generics）**：类型界是泛型类型安全的重要保障\n\n### 典型示例\n```scala\ntrait Animal { def sound: String }\nclass Dog extends Animal { def sound = \"Woof\" }\n\n// 上界示例\ndef makeSound[T <: Animal](animal: T): String = animal.sound\n\n// 协变示例\nclass Cage[+A](val animal: A)\nval dogCage: Cage[Animal] = new Cage[Dog](new Dog)\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "类型系统分为名义子类型（Nominal）和结构子类型（Structural）两种体系",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Scala 的复合类型（A with B）与交集类型（A & B）的关系",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "存在类型（Existential Type）与类型界的关联应用",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:43:42Z",
+    "deep_worked_example": {
+      "stem": "若 Cat <: Animal 且 Box[T] 是协变类型构造器，以下哪项成立？\nA) Box[Cat] <: Box[Animal]\nB) Box[Animal] <: Box[Cat]",
+      "solution_outline": "A",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "GUI 事件处理中的回调接口设计（通常需要逆变）",
+      "数据库 ORM 框架中的实体继承映射"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为所有泛型集合都自动支持协变（如错误地将 ArrayList<Dog> 赋给 ArrayList<Animal>）",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "混淆上界/下界符号方向（将 `T <: A` 错写为 `T >: A`）导致编译错误",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "若 Cat <: Animal 且 Box[T] 是协变类型构造器，以下哪项成立？\nA) Box[Cat] <: Box[Animal]\nB) Box[Animal] <: Box[Cat]",
+      "answer": "A",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "协变性质决定了当 Cat 是 Animal 的子类型时，Box[Cat] 也是 Box[Animal] 的子类型"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "设计一个支持逆变的 Comparator[T] 接口，使其能正确处理 Fruit 和 Apple 的子类型关系",
+      "answer": "trait Comparator[-T] { def compare(a: T, b: T): Int }",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "逆变接口允许用父类型比较器处理子类型对象，符合类型安全"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析 Java 数组的协变设计为何可能导致 ArrayStoreException",
+      "answer": "Java 数组是运行时协变但静态类型检查不足，允许将错误类型的元素存入数组",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "如 String[] 可被赋给 Object[] 变量，但尝试存入非 String 元素时抛出异常"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "GUI 事件处理中的回调接口设计（通常需要逆变）",
+    "数据库 ORM 框架中的实体继承映射"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:43:42Z"
   }
 }

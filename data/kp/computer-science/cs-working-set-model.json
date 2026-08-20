@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 工作集合模型与抖动（Working Set Model and Thrashing）\n\n### 核心概念定义\n1. **工作集合（Working Set）**：指一个进程在时间窗口 Δ 内频繁访问的页面集合，用于衡量进程的局部性特征。工作集合模型由 Peter Denning 提出，是操作系统内存管理的重要理论。\n2. **抖动（Thrashing）**：当系统分配给进程的物理页框数小于其工作集合大小时，进程因频繁缺页（page fault）而陷入「页面换入换出」的恶性循环，导致 CPU 利用率急剧下降的现象。\n\n### 关键性质与方法\n- **工作集合大小计算**：\n  $$ W(t, Δ) = \\{页面 p \\mid p 在时间区间 (t-Δ, t] 内被访问\\} $$\n  其中 Δ 为观察窗口，通常取进程缺页间隔时间的统计值。\n- **抖动预防策略**：\n  - 局部置换算法（如工作集合时钟算法）\n  - 负载控制（通过准入控制限制并发进程数）\n  - 页面分配策略（如根据工作集合动态分配页框）\n\n### 与相关知识的联系\n- **与页面置换算法的关系**：工作集合模型是全局置换算法（如 WSClock）的基础，区别于局部置换算法（如 LRU）。\n- **与 Belady 异常的关系**：抖动可视为 Belady 异常（FIFO 算法中页框增加反而缺页率上升）的极端表现。\n\n### 典型应用示例\n- **Linux 内核的页面回收**：通过维护活跃页面列表（active_list）近似实现工作集合跟踪。\n- **数据库缓冲池管理**：根据查询的工作集合动态调整缓冲池大小以避免抖动。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：多处理器系统中可能出现并发抖动（Concurrent Thrashing）",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：工作集合原理可应用于缓存设计（如 CPU L2 Cache 的预取策略）",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "扩展：Denning 在 1968 年发表的《The Working Set Model for Program Behavior》是奠基性论文",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:50:07Z",
+    "deep_worked_example": {
+      "stem": "工作集合模型主要用于解决什么问题？",
+      "solution_outline": "解决因内存分配不足导致的抖动问题",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "云计算环境中的虚拟机内存超售（Memory Overcommit）需监控工作集合以避免宿主抖动",
+      "游戏引擎的纹理流式加载需根据工作集合预测下一帧所需资源"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆工作集合与常驻集（Resident Set）：常驻集是实际分配的页框，工作集合是理论上的访问需求。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "计算工作集合大小时忽略时间窗口 Δ 的动态性，错误认为 Δ 是固定值。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "工作集合模型主要用于解决什么问题？",
+      "answer": "解决因内存分配不足导致的抖动问题",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "工作集合模型通过量化进程的页面访问局部性，为内存分配提供理论依据，避免抖动。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某进程在时间窗口 Δ=10ms 内访问页面序列为 [1,3,1,2,4,1,3,5]，其工作集合大小是多少？",
+      "answer": "4",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "去重后页面集合为 {1,2,3,4,5}，但 5 仅在末尾出现，若 Δ 严格覆盖最后 10ms 则可能不包含 5（需假设时间戳）。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析以下场景是否会发生抖动：系统有 4GB 内存，运行 10 个进程，每个进程的工作集合为 500MB。",
+      "answer": "会发生抖动",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "总工作集合需求 5GB 超过物理内存，系统必然出现频繁页面置换。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "云计算环境中的虚拟机内存超售（Memory Overcommit）需监控工作集合以避免宿主抖动",
+    "游戏引擎的纹理流式加载需根据工作集合预测下一帧所需资源"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:50:07Z"
   }
 }

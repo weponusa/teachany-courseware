@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 距离向量路由协议（Distance-Vector Routing Protocols）\n\n### 核心概念定义\n距离向量路由协议是一种分布式路由算法，每个路由器维护一张「路由表（Routing Table）」，记录到达目标网络的「距离（Distance）」和下一跳「向量（Vector）」。距离通常以跳数（Hop Count）或链路成本（Link Cost）度量，代表路径长度；向量指数据包转发的方向（相邻路由器接口）。\n\n### 关键性质与方法\n1. **周期性广播**：路由器定期向邻居发送完整路由表（如RIP默认30秒）。\n2. **贝尔曼-福特算法（Bellman-Ford Algorithm）**：通过迭代比较邻居通告的路由信息更新本地路由表，公式：`D(x,y) = min{D(x,v) + c(v,y)}`，其中`D`为距离，`c`为链路成本。\n3. **水平分割（Split Horizon）**：禁止路由器向来源接口回传路由信息，避免环路。\n4. **毒性逆转（Poison Reverse）**：主动将失效路由的距离设为无穷大（如RIP中16跳）加速收敛。\n\n### 与相关知识联系\n- **对比链路状态协议（Link-State Protocols）**：距离向量协议仅知晓邻居信息，而链路状态协议（如OSPF）拥有全网拓扑图，收敛更快但开销更大。\n- **RIP与BGP**：RIP是经典的距离向量协议，而BGP是路径向量协议（Path-Vector），通过AS_PATH属性避免环路。\n\n### 典型应用示例\n- **RIP（Routing Information Protocol）**：适用于小型网络，最大跳数限制为15。\n- **IGRP（Interior Gateway Routing Protocol）**：Cisco私有协议，支持带宽、延迟等复合度量。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "EIGRP（增强型IGRP）结合了距离向量和链路状态特性，被称为混合路由协议。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "RIPng是RIP的IPv6版本，使用UDP端口521而非原版的520。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "计数到无穷（Count to Infinity）是距离向量协议的经典问题，可通过定义最大跳数缓解。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:59:06Z",
+    "deep_worked_example": {
+      "stem": "距离向量路由协议中，路由器通过什么机制避免路由环路？（多选）",
+      "solution_outline": "水平分割（Split Horizon）、毒性逆转（Poison Reverse）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "家庭宽带路由器常使用RIP协议自动学习ISP提供的路由。",
+      "早期企业分支机构间通过IGRP实现动态路由，现多被EIGRP取代。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为距离向量协议使用最短路径优先（SPF）算法：实际使用贝尔曼-福特算法，SPF属于链路状态协议。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "配置RIP时忽略最大跳数限制：若网络直径超过15跳，部分路由将被标记为不可达。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "距离向量路由协议中，路由器通过什么机制避免路由环路？（多选）",
+      "answer": "水平分割（Split Horizon）、毒性逆转（Poison Reverse）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "水平分割阻止回传路由信息，毒性逆转通过标记失效路由为无穷大来打破环路。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某路由器通过邻居收到两条到网络10.0.0.0的路由：邻居A通告跳数3，邻居B通告跳数5。若本地到A、B的链路成本均为1，应选择哪条路由？计算最终跳数。",
+      "answer": "选择邻居A的路由，最终跳数为4",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "根据贝尔曼-福特算法，D(10.0.0.0) = min{1+3, 1+5} = 4。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析距离向量协议在大型网络中可能遇到的性能问题。",
+      "answer": "1. 收敛慢：周期性广播导致拓扑变化传播延迟；2. 路由震荡：频繁更新可能引发不稳定；3. 带宽消耗：完整路由表广播占用资源。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "距离向量协议的分布式特性使其在规模扩展时面临可扩展性问题。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "家庭宽带路由器常使用RIP协议自动学习ISP提供的路由。",
+    "早期企业分支机构间通过IGRP实现动态路由，现多被EIGRP取代。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:59:06Z"
   }
 }

@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 数据分片与分配策略（Data Sharding and Partitioning Strategies）\n\n### 核心概念定义\n数据分片（Sharding）是将大规模数据集水平分割为多个较小数据子集（称为「分片（Shard）」）的过程，每个分片可独立存储在不同节点上。分配策略（Partitioning Strategy）则定义了如何将数据划分并分布到这些分片中。\n\n### 关键性质与方法\n1. **哈希分片（Hash Partitioning）**：\n   - 对分片键（Partition Key）计算哈希值，按哈希范围分配数据\n   - 优点：数据分布均匀\n   - 缺点：不支持范围查询\n\n2. **范围分片（Range Partitioning）**：\n   - 按分片键的值域范围划分（如时间戳、ID区间）\n   - 优点：支持高效范围扫描\n   - 缺点：可能产生数据倾斜（Hot Spot）\n\n3. **一致性哈希（Consistent Hashing）**：\n   - 将数据和节点映射到同一哈希环，解决节点增减时的数据迁移问题\n   - 典型应用：分布式缓存系统（如Redis Cluster）\n\n### 与相关知识联系\n- 与「分布式事务（Distributed Transaction）」的关系：跨分片操作需要两阶段提交等协议\n- 与「副本集（Replica Set）」的区别：分片解决数据量问题，副本解决可用性问题\n\n### 典型应用示例\n- MongoDB的分片集群架构\n- 电商平台的用户订单按用户ID哈希分片存储",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "分片键的基数（Cardinality）应足够高以避免数据分布不均",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "动态分片（Dynamic Sharding）允许运行时自动调整分片数量",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "全局索引（Global Index）与本地索引（Local Index）在分片环境下的性能差异",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:56:40Z",
+    "deep_worked_example": {
+      "stem": "下列哪种分片策略最适合需要频繁进行时间范围查询的日志系统？\nA) 哈希分片\nB) 范围分片\nC) 轮询分片",
+      "solution_outline": "B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "云计算平台的多租户数据隔离（每个租户的数据分配到独立分片）",
+      "物联网时序数据库按设备ID+时间范围分片"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「分片」与「副本」概念，误认为增加分片数能提高系统可用性",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "选择分片键时忽视业务查询模式，导致需要跨分片聚合（如按订单ID分片后无法高效查询某商家的所有订单）",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "下列哪种分片策略最适合需要频繁进行时间范围查询的日志系统？\nA) 哈希分片\nB) 范围分片\nC) 轮询分片",
+      "answer": "B",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "范围分片（如按时间区间划分）可直接定位到特定时间段的物理存储位置，避免全分片扫描"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "简述一致性哈希相比传统哈希分片的两个核心改进点",
+      "answer": "1. 节点增减时仅需迁移相邻哈希区间的数据\n2. 通过虚拟节点（Virtual Node）解决物理节点负载不均问题",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "传统哈希在节点变化时需要重新计算所有数据的哈希位置"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "某社交平台采用用户ID哈希分片，但发现明星用户所在分片负载过高，请分析原因并提出改进方案",
+      "answer": "原因：明星用户产生远超普通用户的数据（如粉丝互动）\n方案：对热点用户单独分片或采用复合分片键（如用户ID+时间）",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "这是典型的数据倾斜（Data Skew）问题"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "云计算平台的多租户数据隔离（每个租户的数据分配到独立分片）",
+    "物联网时序数据库按设备ID+时间范围分片"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:56:40Z"
   }
 }

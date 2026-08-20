@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 分离逻辑（Separation Logic）详解\n\n### 核心概念定义\n分离逻辑是一种用于**程序验证**（Program Verification）的**形式化方法**（Formal Method），专门针对**指针程序**（Pointer Programs）和**堆内存操作**（Heap Manipulation）设计。其核心是引入「分离合取」（Separating Conjunction，符号为`∗`）的概念，允许逻辑断言描述**不相交的内存区域**。\n\n### 关键性质与方法\n1. **分离合取（∗）**：断言`P ∗ Q`表示内存可被划分为两个不相交的部分，分别满足`P`和`Q`。\n2. **帧规则（Frame Rule）**：若程序片段`C`在满足`P`的内存中执行且不修改`P`依赖的内存区域，则执行后`P`仍成立。\n3. **归纳谓词**（Inductive Predicates）：用于描述递归数据结构（如链表、树）。\n\n### 与相关知识的联系\n- 与**霍尔逻辑**（Hoare Logic）的关系：分离逻辑是霍尔逻辑的扩展，增加了对堆内存的显式建模。\n- 与**线性逻辑**（Linear Logic）的联系：分离合取受线性逻辑的乘法合取启发，但更专注于内存分离性。\n\n### 典型应用示例\n```c\n// 交换两个指针指向的值\nvoid swap(int *x, int *y) {\n    int tmp = *x;\n    *x = *y;\n    *y = tmp;\n}\n```\n分离逻辑可验证此函数的正确性，断言为：`{x ↦ vx ∗ y ↦ vy} swap(x, y) {x ↦ vy ∗ y ↦ vx}`。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "分离逻辑的扩展：**并发分离逻辑**（Concurrent Separation Logic）支持多线程程序验证。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "工具支持：Isabelle/HOL、Coq等证明辅助工具均有分离逻辑的库实现。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "历史背景：分离逻辑由John C. Reynolds等人于2000年代初提出，获2016年哥德尔奖。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:36:33Z",
+    "deep_worked_example": {
+      "stem": "分离逻辑中的「分离合取」（∗）与经典逻辑中的「合取」（∧）有何本质区别？",
+      "solution_outline": "分离合取要求操作的内存区域必须不相交，而经典合取无此限制。",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "操作系统内核开发中验证内存管理模块的安全性",
+      "智能合约的形式化验证（如Rust语言与分离逻辑工具Prusti结合）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆分离合取（∗）与经典合取（∧），误认为`P ∗ Q`允许`P`和`Q`描述重叠的内存区域。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "错误应用帧规则：未检查程序片段是否真正不修改帧条件中的内存，导致验证失效。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "分离逻辑中的「分离合取」（∗）与经典逻辑中的「合取」（∧）有何本质区别？",
+      "answer": "分离合取要求操作的内存区域必须不相交，而经典合取无此限制。",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "例如，`x ↦ 1 ∗ y ↦ 2`成立需`x`和`y`指向不同地址，而`x ↦ 1 ∧ y ↦ 2`允许两者指向同一地址。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "用分离逻辑写出以下代码的规范：`free(p);`（假设`p`指向一个整数）",
+      "answer": "{p ↦ _} free(p) {emp}",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "`emp`表示空堆，释放后`p`原先占用的内存不再可用。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "为什么分离逻辑的「帧规则」能提高模块化验证效率？",
+      "answer": "帧规则允许局部推理，只需验证程序片段修改的部分，无需重新验证未受影响的内存。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "例如，若`{P} C {Q}`成立且`C`不修改`R`依赖的内存，则`{P ∗ R} C {Q ∗ R}`自动成立。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "操作系统内核开发中验证内存管理模块的安全性",
+    "智能合约的形式化验证（如Rust语言与分离逻辑工具Prusti结合）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:36:33Z"
   }
 }

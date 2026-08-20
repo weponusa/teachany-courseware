@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 进程创建：fork()与exec()\n\n### 核心概念定义\n1. **进程（Process）**：操作系统进行资源分配和调度的基本单位，包含程序代码、数据和执行状态。\n2. **fork()**：Unix/Linux系统调用，用于创建新进程。新进程（子进程）是调用者进程（父进程）的副本，拥有相同的代码段、数据段和堆栈段（Copy-On-Write机制）。返回值区分父子进程：父进程返回子进程PID，子进程返回0。\n3. **exec()函数族**（如execvp、execl）：替换当前进程的代码段和数据段为指定程序，保持原PID不变。常与fork()联用实现「创建新进程-加载新程序」的完整流程。\n\n### 关键性质与方法\n- **fork()的特性**：\n  - 子进程继承父进程的文件描述符表（需注意关闭未使用的描述符）\n  - 父子进程执行顺序不确定，需依赖同步机制（如wait()）\n- **exec()的变体**：根据参数传递方式（列表/数组）和环境变量处理方式不同分为6种函数。\n\n### 与相关知识的联系\n- **进程与线程**：fork()创建的是独立地址空间的进程，而非线程（共享地址空间）。\n- **进程终止**：exit()与_exit()的区别（是否刷新I/O缓冲区）影响fork()后的行为。\n\n### 典型应用示例\n```c\n#include <unistd.h>\nint main() {\n  pid_t pid = fork();\n  if (pid == 0) { // 子进程\n    execlp(\"ls\", \"ls\", \"-l\", NULL);\n  } else {       // 父进程\n    wait(NULL); // 等待子进程结束\n  }\n  return 0;\n}\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "vfork()：早期Unix的轻量级fork，子进程共享父进程地址空间直到exec()",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "clone()：Linux特有的进程创建方式，可精细控制资源共享程度",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "写时复制（Copy-On-Write）：现代操作系统优化fork()性能的关键技术",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:25:25Z",
+    "deep_worked_example": {
+      "stem": "fork()系统调用创建的子进程初始状态是什么？",
+      "solution_outline": "父进程的完整副本（包括代码、数据、文件描述符等）",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "Shell命令执行：终端解析命令后fork()+exec()执行外部程序",
+      "Web服务器：通过fork()创建子进程处理并发请求（如早期Apache的prefork模式）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为exec()会创建新进程（实际是替换当前进程映像）",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未正确处理fork()后的文件描述符，导致资源泄漏或意外共享",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "fork()系统调用创建的子进程初始状态是什么？",
+      "answer": "父进程的完整副本（包括代码、数据、文件描述符等）",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "fork()通过写时复制（Copy-On-Write）技术实现进程复制，子进程初始状态与父进程相同"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "分析以下代码的输出可能性：\n```c\nprintf(\"Start\");\nfork();\nprintf(\"End\");\n```",
+      "answer": "可能输出\"StartEndEnd\"或\"StartEndEnd\"（两个End顺序不确定）",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "fork()会将缓冲区内容复制到子进程，若未使用\\n或fflush()，则父子进程可能各自刷新缓冲区"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "设计一个程序：父进程创建两个子进程，分别执行\"ls -l\"和\"ps aux\"命令",
+      "answer": "需两次调用fork()，并在每个子进程分支中使用不同的exec()调用",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需注意第二次fork()要在父进程和第一个子进程中都执行，且正确使用wait()防止僵尸进程"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "Shell命令执行：终端解析命令后fork()+exec()执行外部程序",
+    "Web服务器：通过fork()创建子进程处理并发请求（如早期Apache的prefork模式）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:25:25Z"
   }
 }

@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 向量时钟（Vector Clocks）与捕获因果性（Capturing Causality）\n\n### 核心概念定义\n1. **向量时钟（Vector Clock）**: 分布式系统中用于部分排序事件的机制，每个进程维护一个向量（数组），记录自身和其他进程已知的事件计数。形式化为 `V = [v₁, v₂, ..., vₙ]`，其中 `vᵢ` 表示进程 `Pᵢ` 已知的事件数。\n2. **因果性（Causality）**: 事件间的「happened-before」关系（记作 `→`），若事件 `a` 直接影响事件 `b`，则 `a → b`。\n\n### 关键性质与方法\n- **比较规则**: 向量 `V` 和 `W` 的关系：\n  - `V ≤ W` 当且仅当 `∀i, V[i] ≤ W[i]`；\n  - `V < W` 当且仅当 `V ≤ W` 且 `∃i, V[i] < W[i]`；\n  - 若 `V` 和 `W` 不可比较，则对应事件并发。\n- **更新规则**: 进程 `Pᵢ` 发生事件时，递增 `V[i]`，并在发送消息时附带当前向量；接收方合并向量（逐元素取最大值）。\n\n### 与相关知识联系\n- **Lamport 时钟**: 仅提供全序但无法捕获并发性，向量时钟是其扩展。\n- **版本向量（Version Vectors）**: 用于数据复制的类似技术。\n\n### 应用示例\n- **分布式数据库**: 检测写操作冲突（如 Amazon Dynamo）；\n- **调试工具**: 重现分布式系统的执行顺序。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "混合逻辑时钟（Hybrid Logical Clock）结合了物理时钟和逻辑时钟的优点",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "CRDTs（Conflict-Free Replicated Data Types）依赖向量时钟解决冲突",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Google Spanner 使用 TrueTime 而非向量时钟，因需全球一致性",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:49:21Z",
+    "deep_worked_example": {
+      "stem": "向量时钟的主要目的是解决什么问题？",
+      "solution_outline": "捕获分布式系统中事件的因果性（Causality）关系，区分并发事件。",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "分布式版本控制系统（如 Git）检测文件修改冲突",
+      "物联网设备间的事件同步"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「全序」与「偏序」：误认为向量时钟可对所有事件排序。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未正确处理向量合并：接收消息时漏掉逐元素取最大值步骤。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "向量时钟的主要目的是解决什么问题？",
+      "answer": "捕获分布式系统中事件的因果性（Causality）关系，区分并发事件。",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "Lamport 时钟无法区分并发事件，向量时钟通过多维向量解决此问题。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "已知进程 P₁ 的向量时钟为 [3,1,0]，P₂ 为 [3,2,1]。判断事件 [3,1,0] 和 [3,2,1] 的关系。",
+      "answer": "[3,1,0] < [3,2,1]",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "因 ∀i, V[i] ≤ W[i] 且 V[2] < W[2]，符合因果性。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "为什么向量时钟在节点动态增删时需特殊处理？",
+      "answer": "向量长度固定为初始节点数，动态变化会导致比较规则失效。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需引入扩展机制（如动态向量时钟或版本向量）。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "分布式版本控制系统（如 Git）检测文件修改冲突",
+    "物联网设备间的事件同步"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:49:21Z"
   }
 }

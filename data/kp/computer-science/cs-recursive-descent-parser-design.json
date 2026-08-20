@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 递归下降解析器设计（Recursive Descent Parser Design）\n\n### 核心概念定义\n递归下降解析器是一种「自顶向下（Top-down）」的语法分析器，通过一组相互递归的「过程（Procedure）」或「函数（Function）」来实现对输入文本的解析。每个非终结符（Non-terminal）对应一个函数，函数内部按产生式（Production）右部的结构调用其他非终结符函数或匹配终结符（Terminal）。\n\n### 关键性质与方法\n1. **直接编码文法**：将「上下文无关文法（Context-Free Grammar, CFG）」的规则直接转化为代码逻辑，适合「LL(k)文法」类。\n2. **递归调用**：通过函数递归处理嵌套结构（如表达式、语句块）。\n3. **前瞻（Lookahead）**：通过预读有限个符号（通常 k=1）解决冲突。\n4. **错误恢复**：通过同步符号集或恐慌模式（Panic Mode）实现。\n\n### 与相关知识的联系\n- **与词法分析的关系**：依赖词法分析器（Lexer）提供符号流。\n- **与抽象语法树（AST）的关系**：通常在递归调用过程中构建AST。\n- **与其他解析器的对比**：不同于「LR解析器」的移进-归约（Shift-Reduce）方式。\n\n### 典型应用示例\n```python\ndef expr():\n    term()\n    while lookahead in ['+', '-']:\n        match(lookahead)\n        term()\n```\n用于解析形如 `3 + 5 - 2` 的算术表达式。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "左递归消除技术：将 `A → Aα | β` 改写为 `A → βA'` 和 `A' → αA' | ε`",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "LL(1)文法需满足：对每个非终结符的各产生式，其FIRST集不相交",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "回溯式递归下降解析器（如PEG）通过记忆化提高效率",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:33:12Z",
+    "deep_worked_example": {
+      "stem": "递归下降解析器最适合处理哪类文法？",
+      "solution_outline": "LL(k)文法",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "编程语言编译器（如GCC的C前端部分使用递归下降）",
+      "配置文件解析（如JSON解析器的简化实现）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "忽略左递归文法（如 `E → E + T`）会导致无限递归。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "未正确处理前瞻符号时可能错误选择产生式分支（如将 `if` 语句误判为赋值语句）。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "递归下降解析器最适合处理哪类文法？",
+      "answer": "LL(k)文法",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "因其自顶向下特性需避免左递归和回溯，LL(k)文法是理想选择。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "为文法 `S → aSb | ε` 编写伪代码的递归下降解析函数。",
+      "answer": "```python\ndef S():\n    if lookahead == 'a':\n        match('a')\n        S()\n        match('b')\n```",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "需处理两种产生式分支并通过 `match` 消费终结符。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "若输入为 `aab`，分析上述 `S()` 函数的调用栈变化。",
+      "answer": "S() → match('a') → S() → match('a') → S() → ε → match('b') → 结束",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "每次递归调用消耗一个 'a' 并在返回时匹配 'b'。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "编程语言编译器（如GCC的C前端部分使用递归下降）",
+    "配置文件解析（如JSON解析器的简化实现）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:33:12Z"
   }
 }

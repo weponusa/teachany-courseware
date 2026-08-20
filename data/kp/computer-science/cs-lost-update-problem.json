@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## Lost更新问题（Lost Update Problem: Overwriting Concurrent Writes）\n\n### 核心概念定义\nLost更新问题属于「并发控制（Concurrency Control）」中的经典问题，指在数据库系统中，当多个事务（Transaction）同时读取并修改同一数据项时，后提交的事务会覆盖前一个事务的修改，导致前一个事务的更新丢失。\n\n### 关键性质\n1. **不可重复读（Non-repeatable Read）**的极端表现：事务A读取数据后，事务B修改并提交，事务A再次读取时数据已变化。\n2. 本质是「写-写冲突（Write-Write Conflict）」：两个事务均对同一数据执行写操作。\n\n### 典型场景示例\n```sql\n-- 事务A（转账+100）         事务B（转账+200）\nBEGIN;                      BEGIN;\nSELECT balance FROM acc     SELECT balance FROM acc\n-- 读到1000                 -- 读到1000\nUPDATE acc SET balance=1100 UPDATE acc SET balance=1200\nCOMMIT;                     COMMIT;\n-- 最终余额为1200（事务A的+100丢失）\n```\n\n### 解决方法\n1. **悲观锁（Pessimistic Locking）**：事务A读取时加排他锁（X锁），阻止其他事务读写。\n2. **乐观锁（Optimistic Locking）**：通过版本号或时间戳检测冲突，如：\n   ```sql\n   UPDATE acc SET balance=1100, version=2 \n   WHERE id=1 AND version=1;\n   ```\n3. **可串行化隔离级别（Serializable Isolation Level）**：数据库自动防止所有并发问题，但性能代价高。\n\n### 与其他并发问题的关系\n- 与「脏读（Dirty Read）」不同：Lost Update涉及两个合法提交的事务。\n- 与「幻读（Phantom Read）」不同：幻读针对范围查询，Lost Update针对单数据项。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "PostgreSQL的SSI（Serializable Snapshot Isolation）通过谓词锁解决Lost Update",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "Redis的WATCH/MULTI命令实现CAS式乐观锁",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "MVCC（多版本并发控制）机制下仍可能出现Lost Update，需配合显式锁",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T19:13:46Z",
+    "deep_worked_example": {
+      "stem": "下列哪种场景属于Lost Update问题？\nA. 事务A读取未提交的数据\nB. 事务B覆盖了事务A已提交的修改\nC. 事务A两次读取同一数据结果不同",
+      "solution_outline": "B",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "电商秒杀活动：多个用户同时抢购同一商品时，库存扣减需防止覆盖",
+      "在线文档协作：多人同时编辑同一段落时的冲突处理"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为Lost Update仅发生在未提交读（Read Uncommitted）隔离级别，实际上在已提交读（Read Committed）和可重复读（Repeatable Read）下仍可能发生",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "实现乐观锁时忘记在WHERE条件中包含版本号字段，导致锁失效",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "下列哪种场景属于Lost Update问题？\nA. 事务A读取未提交的数据\nB. 事务B覆盖了事务A已提交的修改\nC. 事务A两次读取同一数据结果不同",
+      "answer": "B",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "A是脏读，C是不可重复读，B符合Lost Update定义"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "银行系统使用乐观锁防止Lost Update，账户表有version字段。事务A读取version=1的余额后，事务B已成功提交并将version改为2。此时事务A尝试更新余额，会发生什么？",
+      "answer": "事务A的UPDATE语句因WHERE条件不匹配而失败",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "乐观锁通过版本号检测冲突，事务A的更新条件version=1已不成立"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析以下两种方案解决Lost Update的优缺点：\n1. 使用SELECT FOR UPDATE加锁\n2. 使用CAS（Compare-And-Set）操作",
+      "answer": "1. 优点：强一致性；缺点：可能引发死锁\n2. 优点：无锁高性能；缺点：需处理失败重试",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "悲观锁与乐观锁的典型对比，需结合场景选择"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "电商秒杀活动：多个用户同时抢购同一商品时，库存扣减需防止覆盖",
+    "在线文档协作：多人同时编辑同一段落时的冲突处理"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T19:13:46Z"
   }
 }

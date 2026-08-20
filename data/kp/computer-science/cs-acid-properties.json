@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 酸性质（ACID Properties）详解\n\n### 核心概念定义\n酸性质（ACID Properties）是数据库事务（Transaction）的四个关键特性，确保数据库操作的可靠性与一致性。ACID 是以下四个英文单词的首字母缩写：\n1. **原子性（Atomicity）**：事务是不可分割的工作单位，要么全部执行成功，要么全部失败回滚。\n2. **一致性（Consistency）**：事务执行前后，数据库必须从一个一致状态转换到另一个一致状态。\n3. **隔离性（Isolation）**：并发事务的执行互不干扰，每个事务感觉不到其他事务在并发执行。\n4. **持久性（Durability）**：事务一旦提交，其结果永久保存在数据库中，即使系统故障也不会丢失。\n\n### 关键性质与方法\n- **原子性**的实现通常依赖**日志（Log）**机制，记录事务操作步骤，失败时按日志回滚。\n- **一致性**通过数据库约束（如主键、外键）和业务逻辑共同保证。\n- **隔离性**通过**锁（Lock）**或**多版本并发控制（MVCC）**实现，常见隔离级别包括读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）和串行化（Serializable）。\n- **持久性**依赖**预写式日志（WAL, Write-Ahead Logging）**，确保数据写入磁盘前先记录日志。\n\n### 与相关知识的联系\n- **与 CAP 定理的关系**：ACID 强调一致性（C）和分区容错性（P），而牺牲部分可用性（A）。\n- **与 NoSQL 的对比**：NoSQL 数据库（如 MongoDB）通常放宽 ACID 要求，追求高性能和可扩展性。\n\n### 典型应用示例\n银行转账事务：\n1. **原子性**：转账操作包含扣款和收款，必须同时成功或失败。\n2. **一致性**：转账前后账户总金额不变。\n3. **隔离性**：其他事务不能看到转账中的中间状态。\n4. **持久性**：转账成功后，结果永久生效。",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "BASE 理论（Basically Available, Soft state, Eventually consistent）是 NoSQL 对 ACID 的补充，强调最终一致性。",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "分布式数据库（如 Spanner）通过两阶段提交（2PC）实现跨节点的 ACID。",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "MySQL 的 InnoDB 引擎通过 MVCC 实现可重复读隔离级别。",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:43:49Z",
+    "deep_worked_example": {
+      "stem": "以下哪项不属于 ACID 特性？\nA. 原子性\nB. 一致性\nC. 可用性\nD. 持久性",
+      "solution_outline": "C",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "电商订单处理：下单、扣库存、支付必须作为一个原子事务。",
+      "机票预订系统：避免同一座位被重复售卖（隔离性）。"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "误认为所有数据库默认实现最高隔离级别（串行化），实际多数数据库默认使用读已提交或可重复读。",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "在代码中未正确处理事务边界（如忘记提交或回滚），导致部分操作持久化而部分未生效。",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "以下哪项不属于 ACID 特性？\nA. 原子性\nB. 一致性\nC. 可用性\nD. 持久性",
+      "answer": "C",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "ACID 包含原子性、一致性、隔离性、持久性，可用性是 CAP 定理中的概念。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "某事务执行到一半时系统崩溃，重启后数据库应如何保证原子性？",
+      "answer": "根据日志回滚未完成的事务操作。",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "原子性要求事务要么全部完成，要么全部不完成，系统需通过日志恢复机制回滚部分完成的事务。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "分析以下场景是否满足隔离性：事务A读取某数据后，事务B修改了该数据并提交，事务A再次读取时看到新值。",
+      "answer": "不满足可重复读隔离级别，但满足读已提交隔离级别。",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "隔离性级别不同，对并发事务的可见性要求不同。可重复读要求同一事务内多次读取结果一致。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "电商订单处理：下单、扣库存、支付必须作为一个原子事务。",
+    "机票预订系统：避免同一座位被重复售卖（隔离性）。"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:43:49Z"
   }
 }

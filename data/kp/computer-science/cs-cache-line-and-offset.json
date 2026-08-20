@@ -12,19 +12,99 @@
   "tree_file": "data/trees/cn-unified/computer-science.json",
   "interactive_resources": [],
   "textbook_content": {},
-  "supplements": {},
-  "errors": [],
-  "exercises": [],
+  "supplements": {
+    "curriculum_md_raw": "## 缓存线组织与字节偏移（Cache Line Organization and Byte Offset）\n\n### 核心概念定义\n1. **缓存线（Cache Line）**：CPU 缓存中的最小数据单元，通常为 64 字节（现代x86架构）。缓存以「缓存线」为单位从主存加载数据，而非单个字节。\n2. **字节偏移（Byte Offset）**：用于定位缓存线内特定数据的偏移量。例如，若缓存线大小为 64 字节，则偏移量范围为 0-63（6位二进制表示）。\n\n### 关键性质\n- **空间局部性利用**：缓存线通过一次性加载连续内存块，利用程序的空间局部性（Spatial Locality）提升性能。\n- **对齐访问优化**：数据地址对齐缓存线大小（如 64 字节对齐）可避免跨缓存线访问，减少内存事务。\n\n### 与相关知识的联系\n- **虚拟内存分页**：类似缓存线与主存的关系，分页机制将虚拟内存划分为固定大小的页（如4KB）。\n- **缓存映射策略**：直接映射、组相联等策略决定主存块与缓存线的对应关系。\n\n### 应用示例\n```c\nint array[100];\nfor (int i = 0; i < 100; i++) array[i] *= 2; // 顺序访问触发缓存线预取\n```",
+    "curriculum_md_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_snippets": [
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "缓存线大小可通过CPUID指令查询（x86的EAX=0x80000006时ECX低半字）",
+        "score": 89,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "False Sharing问题：多核CPU中不同核心修改同一缓存线的不同部分会引发无效化风暴",
+        "score": 88,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      },
+      {
+        "source": "kp_llm_enrich_2026-08-19/llm",
+        "text": "ARM架构的缓存线通常为32-128字节（如Cortex-A72为64字节）",
+        "score": 87,
+        "match_terms": [],
+        "source_type": "llm_generated"
+      }
+    ],
+    "deep_textbook_source": "kp_llm_enrich_2026-08-19",
+    "deep_textbook_enriched_at": "2026-08-19T18:50:00Z",
+    "deep_worked_example": {
+      "stem": "若缓存线大小为64字节，地址0x1234的字节偏移量是多少？（假设地址按字节编址）",
+      "solution_outline": "0x34",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    "real_world": [
+      "数据库查询优化：将频繁访问的字段排列在同一缓存线内（如MySQL的行存储设计）",
+      "游戏开发：通过内存对齐减少GPU缓存未命中（如Unity的ECS架构）"
+    ]
+  },
+  "errors": [
+    {
+      "id": "err-llm-1",
+      "description": "混淆「缓存线大小」与「CPU字长」：例如误认为64位CPU的缓存线一定是8字节",
+      "type": "conceptual",
+      "source": "kp_llm_enrich_2026-08-19"
+    },
+    {
+      "id": "err-llm-2",
+      "description": "计算偏移量时忽略十六进制与二进制的转换，如直接取地址末两位十六进制数",
+      "type": "procedural",
+      "source": "kp_llm_enrich_2026-08-19"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-llm-1",
+      "stem": "若缓存线大小为64字节，地址0x1234的字节偏移量是多少？（假设地址按字节编址）",
+      "answer": "0x34",
+      "type": "concept",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "偏移量为地址的低6位（64=2^6），0x1234二进制末8位为00110100，取低6位即0x34。"
+    },
+    {
+      "id": "q-llm-2",
+      "stem": "以下代码可能引发什么问题？\n```c\nstruct { char a; int b; } s;\nint *p = &s.b; // 假设s.b未对齐缓存线\n```",
+      "answer": "未对齐访问可能导致性能下降或总线错误（如某些RISC架构）",
+      "type": "apply",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "int类型通常需4字节对齐，若s.b地址未对齐，可能跨缓存线访问或触发硬件异常。"
+    },
+    {
+      "id": "q-llm-3",
+      "stem": "为什么增大缓存线可能降低命中率？",
+      "answer": "过大的缓存线会减少总缓存线数量，且可能加载无用数据（如随机访问模式）",
+      "type": "analyze",
+      "source": "kp_llm_enrich_2026-08-19",
+      "explain": "缓存容量固定时，增大缓存线会减少总条目数，同时可能引入更多冷数据。"
+    }
+  ],
   "memory_anchors": [],
-  "real_world": [],
+  "real_world": [
+    "数据库查询优化：将频繁访问的字段排列在同一缓存线内（如MySQL的行存储设计）",
+    "游戏开发：通过内存对齐减少GPU缓存未命中（如Unity的ECS架构）"
+  ],
   "bloom_verbs": {},
   "notes": [],
   "_meta": {
     "schema_version": "1.0",
     "generated_at": "2026-06-17T13:05:18.929252+00:00",
     "sources": [
-      "tree"
+      "tree",
+      "kp_llm_enrich_2026-08-19"
     ],
-    "excerpt_count": 0
+    "excerpt_count": 0,
+    "kp_llm_enrich_at": "2026-08-19T18:50:00Z"
   }
 }
