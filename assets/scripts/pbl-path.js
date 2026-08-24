@@ -5545,8 +5545,11 @@ class PBLPathBuilder {
 
     let vectorHits = this._vectorHitCache;
     if (!vectorHits?.length) {
+      // 召回层突破规则窄池边界：向量召回始终在全量广域池（学科门禁后）执行，
+      // 避免规则预筛 candidates >= 20 时召回被限制在窄池内、漏掉语义相关节点
+      const recallPool = this._getBroadCurriculumPool(goal, [], 0);
       vectorHits = await this._retrieveByVectorSimilarity(
-        candidates.length >= 20 ? candidates : broadPool,
+        recallPool,
         goal,
         projectBlueprint,
         90
