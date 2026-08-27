@@ -252,14 +252,18 @@
     // 支持 cfg.basemap 自定义底图，可用仓库自带本地瓦片（离线/国内可访问）：
     //   "basemap": { "url": "../../assets/maps/physical/terrain-tiles/{z}/{x}/{y}.png",
     //                "minZoom": 4, "maxZoom": 6, "opacity": 1, "attribution": "© TeachAny 地形底图" }
-    // 不传 basemap 时默认 CARTO dark_nolabels 在线底图（保持向后兼容）。
+    // v2.8.1: 默认底图改为仓库自制地形瓦片（TeachAny 自研体系，不再默认外部 CARTO 服务；
+    // 国内可访问、无 apikey 限制）。需回退在线底图可显式配置 cfg.basemap.url。
     var bmCfg = (cfg.basemap && typeof cfg.basemap === "object") ? cfg.basemap : {};
-    var bmUrl = bmCfg.url || "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png";
+    var bmUrl = bmCfg.url || "../../assets/maps/physical/terrain-tiles/{z}/{x}/{y}.png";
     var bmOpts = {
       maxZoom: bmCfg.maxZoom != null ? bmCfg.maxZoom : 19,
-      opacity: bmCfg.opacity != null ? bmCfg.opacity : 0.72,
-      attribution: bmCfg.attribution || "© CARTO © OSM contributors"
+      opacity: bmCfg.opacity != null ? bmCfg.opacity : 0.6,
+      attribution: bmCfg.attribution || "© TeachAny 地形底图"
     };
+    // 默认本地瓦片为稀疏集（Z4-6），钳制原生 zoom 范围，超出自动拉伸
+    if (!bmCfg.url && bmCfg.minNativeZoom == null) bmCfg.minNativeZoom = 4;
+    if (!bmCfg.url && bmCfg.maxNativeZoom == null) bmCfg.maxNativeZoom = 6;
     if (bmCfg.minZoom != null) bmOpts.minZoom = bmCfg.minZoom;
     // v2.8: 稀疏瓦片集（如只有 zoom4-6 的自带地形瓦片）用 minNativeZoom/maxNativeZoom，
     // 地图 zoom 超出原生范围时自动拉伸/缩放瓦片，避免低 zoom 时底图空白。
@@ -270,7 +274,9 @@
     if (bmUrl.indexOf("{s}") >= 0) bmOpts.subdomains = bmCfg.subdomains || "abcd";
     L.tileLayer(bmUrl, bmOpts).addTo(map);
 
-    if (cfg.terrain !== false) {
+    // v2.8.1: Esri 地形叠加层改为默认关闭（外部 ArcGIS 服务有 apikey/访问限制，
+    // 且底图已用自制地形瓦片，无需再叠 Esri）。需开启可显式配置 "terrain": true。
+    if (cfg.terrain === true || (cfg.terrain && typeof cfg.terrain === "object")) {
       var terrainOpacity = 0.42;
       if (cfg.terrain && typeof cfg.terrain === "object" && cfg.terrain.opacity != null) {
         terrainOpacity = cfg.terrain.opacity;
