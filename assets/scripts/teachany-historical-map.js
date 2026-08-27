@@ -401,11 +401,31 @@
           .then(function (data) {
             var fill = era.fill || "#6366f1";
             var stroke = era.stroke || "#4f46e5";
+            // v2.8.2: 政权分色——feature.properties.POWER 命中配色表时按政权着色
+            // （三国等分裂时期可分别显示魏/蜀/吴等政权边界；统一朝代 POWER 不命中走默认）
+            var POWER_COLORS = {
+              "魏": { fill: "#3b82f6", stroke: "#60a5fa" },
+              "蜀": { fill: "#10b981", stroke: "#34d399" },
+              "蜀汉": { fill: "#10b981", stroke: "#34d399" },
+              "吴": { fill: "#f59e0b", stroke: "#fbbf24" }
+            };
             currentEraLayer = L.geoJSON(data, {
               style: function (feature) {
                 // 尊重 feature.properties.LEVEL 分层：country 深色，prefecture 浅色
                 var lvl = feature.properties && feature.properties.LEVEL;
                 var nameCh = (feature.properties && feature.properties.NAME_CH) || "";
+                // v2.8.2: 政权分色优先（如三国魏/蜀/吴各郡）
+                var pw = feature.properties && feature.properties.POWER;
+                if (pw && POWER_COLORS[pw]) {
+                  var pc = POWER_COLORS[pw];
+                  return {
+                    fillColor: pc.fill,
+                    fillOpacity: era.fillOpacity != null ? era.fillOpacity : 0.3,
+                    color: pc.stroke,
+                    weight: era.weight != null ? era.weight : 1,
+                    opacity: 0.85
+                  };
+                }
                 // 匈奴等周边政权用虚线边框、浅色填充，与主体疆域区分
                 var isNeighbor = /匈奴|鲜卑|乌桓|羌|哀牢|朝鲜|卫氏|高句丽|百济|新罗|倭/.test(nameCh);
                 var isNeighborEn = /^(Xiongnu|Southern Xiongnu|Xianbei|Wuhuan|Goguryeo|Baekje|Silla|Wa|Gojoseon)$/i.test((feature.properties && feature.properties.NAME) || "");
