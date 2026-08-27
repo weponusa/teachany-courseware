@@ -30,7 +30,7 @@ mkdir -p "$OUT"
 rsync -a "${COMMUNITY_EXCLUDES[@]}" "$ROOT/community/" "$OUT/community/"
 
 # 2. 站点公共资源
-rsync -a --exclude='maps/physical/hillshade/' --exclude='maps/physical/coastline/' --exclude='maps/physical/rivers/' --exclude='maps/physical/lakes/' "$ROOT/assets/" "$OUT/assets/"
+rsync -a --exclude='maps/physical/coastline/' --exclude='maps/physical/rivers/' --exclude='maps/physical/lakes/' "$ROOT/assets/" "$OUT/assets/"
 
 # 3. 数据（排除 venv、断链、构建期资料；kp 卫星文件仅用于离线管线，站点读 trees/*.json）
 rsync -a \
