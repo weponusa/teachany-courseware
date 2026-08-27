@@ -405,8 +405,8 @@
             // （三国等分裂时期可分别显示魏/蜀/吴等政权边界；统一朝代 POWER 不命中走默认）
             var POWER_COLORS = {
               "魏": { fill: "#3b82f6", stroke: "#60a5fa" },
-              "蜀": { fill: "#10b981", stroke: "#34d399" },
-              "蜀汉": { fill: "#10b981", stroke: "#34d399" },
+              "蜀": { fill: "#a78bfa", stroke: "#c4b5fd" },
+              "蜀汉": { fill: "#a78bfa", stroke: "#c4b5fd" },
               "吴": { fill: "#f59e0b", stroke: "#fbbf24" }
             };
             currentEraLayer = L.geoJSON(data, {
