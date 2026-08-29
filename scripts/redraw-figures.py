@@ -23,36 +23,74 @@ PROMPT = """你是专业的教学插图设计师（中国{stage}{subject}教材�
 
 输出：只返回一个 JSON（无 markdown 围栏）：{{"svg": "<svg viewBox=\\"0 0 640 420\\" ...>...</svg>"}}
 
-## 精细度要求（关键，必须达标）
-- **图元总数 45~110 个**（rect/circle/ellipse/line/polyline/polygon/path/text 合计），不要画火柴棍简图
-- 必须分层：
-  1. 背景层：整体底板 rect + 可选浅色分区底色/网格线（rgba(148,163,184,.08)）
-  2. 主体层：核心结构，用渐变填充（见下）+ 2px 描边 + 圆角
-  3. 细节层：内部构件、纹理、方向箭头（带 marker-end）、关键节点圆点
-  4. 标注层：引线（细实线 + 端点小圆点）+ 中文标注 + 必要的数据/公式标注
-  5. 图例层：右下角或底部图例框（rect + 小色块 + 说明文字）
-- **必须使用渐变**：在 <defs> 中定义 2-4 个 <linearGradient>，用 url(#id) 引用填充
-- **必须使用箭头**：<defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs>，连线用 marker-end="url(#ar)"
-- 文字：font-size 12-16，fill #e2e8f0；关键术语用 #fbbf24；数据用 #7dd3fc
-- 尺寸：viewBox="0 0 640 420"，元素坐标分布在整个画布，不要挤在一角
-- 配色（暗色底 #0a1520）：主色 #3b82f6 蓝 / #34d399 绿 / #f59e0b 橙 / #ef4444 红 / #a78bfa 紫，
-  填充用半透明（.25~.35），描边用亮色，文字 #e2e8f0
+## 视觉风格规范（严格遵循）
+整体风格类似「深色科技风教学信息图」：
+- 暗色背景底板（#0a1520），外层有浅灰半透明边框圆角容器
+- 用 4~5 种功能色区分不同部件/概念：蓝色系(#3b82f6)结构体、橙色系(#f59e0b)运动件、红色系(#ef4444)热/力源、绿色系(#34d399)控制/阀门、紫色系(#a78bfa)传动/连接
+- 每种颜色配一个 linearGradient（上浓下淡，stop-opacity .25→.10），用于填充主要形状
+- 描边比填充亮 1~2 级（如 fill=#3b82f6/.25 → stroke=#60a5fa），stroke-width 1.5~2.5
+- 引线统一用 rgba(100,116,139,.7) 细实线，端点带小圆点(r=3, fill=#7dd3fc)
+- 关键术语文字用 #fbbf24 黄色高亮，普通标注用 #e2e8f0 浅白，数据/数值用 #7dd3fc 青色
+- 右下角或底部放半透明图例框（rgba(15,23,42,.7)+#334155 边框），内含小色块+说明
 
-## 禁止
-- 不要写 <style> 标签、不要 class、不要 width/height 属性（只用 viewBox）
-- 不要让文字重叠（标注引线要错开）
-- 不要简化成 3-5 个图形了事
+## 分层要求（5 层，每层都要有实质内容）
+1. 背景层：<rect x="0" y="0" fill="#0a1520"/> + 外框容器(rect rx=8, fill=rgba(148,163,184,.07), stroke=#334155)
+   + 可选极淡网格线辅助定位
+2. 主体层：核心大形（矩形/圆形/多边形）用渐变填充+亮色描边+圆角(rx=8~12)，表示主要结构
+3. 细节层：内部构件（小矩形/线条/圆点），表示零件、接口、运动方向
+   - 运动方向用弧线 path + marker-end 箭头
+   - 关键节点用 circle(r=4~6) 高亮
+4. 标注层：引线(line + 端点circle) + text 标注，引线从目标指向文字，不交叉
+5. 图例/公式层：图例框 + 公式结论文字
 
-## 示例结构（仅示意分层思路，图形请按主题原创）
+## 箭头定义（必须在 defs 中）
+<marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+  <path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/>
+</marker>
+连线用 marker-end="url(#ar)" 或 stroke="#7dd3fc" 的箭头
+
+## 技术约束
+- viewBox="0 0 640 420"，元素铺满整个画布（x:20~620, y:20~400），不要挤在左上角
+- 图元总数 35~90 个（rect/circle/ellipse/line/polyline/polygon/path/text 合计）
+- font-size: 标题14-16 bold, 标注12-13, 图例12
+- 不要 <style>, 不要 class(除 math-fig), 不要 width/height, 只要 viewBox
+- 文字绝对不能重叠，引线要错开
+
+## 示例（四冲程内燃机图的分层结构参考，请按你的主题原创图形）
 <svg viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg">
 <defs>
   <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#3b82f6" stop-opacity=".45"/><stop offset="100%" stop-color="#3b82f6" stop-opacity=".15"/>
+    <stop offset="0%" stop-color="#3b82f6" stop-opacity=".3"/><stop offset="100%" stop-color="#3b82f6" stop-opacity=".1"/>
   </linearGradient>
-  <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker>
+  <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f59e0b" stop-opacity=".3"/><stop offset="100%" stop-color="#f59e0b" stop-opacity=".1"/>
+  </linearGradient>
+  <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ef4444" stop-opacity=".3"/><stop offset="100%" stop-color="#ef4444" stop-opacity=".1"/>
+  </linearGradient>
+  <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/>
+  </marker>
 </defs>
-<rect x="0" y="0" width="640" height="420" fill="#0a1520"/>
-... 主体、细节、引线标注、图例 ...
+<!-- 背景层 -->
+<rect x="0" y="0" fill="#0a1520"/>
+<rect x="20" y="20" height="380" rx="8" fill="rgba(148,163,184,.08)" stroke="#334155" stroke-width="1"/>
+<!-- 主体层 -->
+<rect x="100" y="100" width="200" height="200" rx="10" fill="url(#g1)" stroke="#3b82f6" stroke-width="2"/>
+<!-- 细节层 -->
+<rect x="150" y="120" width="100" height="160" fill="rgba(203,213,225,.1)" stroke="#64748b" stroke-width="1"/>
+<rect x="155" y="180" width="90" height="30" rx="4" fill="url(#g2)" stroke="#f59e0b" stroke-width="2"/>
+<circle cx="200" cy="250" r="12" fill="url(#g3)" stroke="#ef4444" stroke-width="2"/>
+<path d="M200 250 Q 240 270 280 250" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+<!-- 标注层 -->
+<line x1="80" y1="150" x2="145" y2="150" stroke="#64748b" stroke-width="1"/>
+<circle cx="80" cy="150" r="3" fill="#7dd3fc"/>
+<text x="60" y="145" font-size="12" fill="#e2e8f0">吸气阀</text>
+<!-- 图例层 -->
+<rect x="400" y="300" width="180" height="80" rx="5" fill="rgba(30,41,59,.7)" stroke="#334155" stroke-width="1"/>
+<text x="420" y="320" font-size="14" fill="#e2e8f0" font-weight="bold">图例标题</text>
+<rect x="420" y="330" width="12" height="12" fill="#3b82f6" rx="2"/>
+<text x="440" y="340" font-size="12" fill="#e2e8f0">部件名称</text>
 </svg>"""
 
 
