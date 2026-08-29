@@ -14,6 +14,7 @@ import concurrent.futures as cf
 import random
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -28,8 +29,20 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
 PLACEHOLDER = [r"待补充", r"待完善", r"敬请期待", r"TODO", r"[xX]{3,}", r"示例文本"]
 
 
-def get(url, timeout=30):
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
+def get(url, timeout=30, bust=False):
+    """bust=True 时加时间戳参数 + no-cache 头，穿透 CDN 缓存取源站最新版本。
+
+    不加会拿到上一版页面（实测刚推送后 8 分钟仍返回旧内容），
+    导致把已修复的课件误判为「未配平」。
+    """
+    if bust:
+        sep = "&" if "?" in url else "?"
+        url = f"{url}{sep}_t={int(time.time() * 1000)}"
+    headers = {"User-Agent": UA}
+    if bust:
+        headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        headers["Pragma"] = "no-cache"
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, r.read()
@@ -68,7 +81,7 @@ def check(cid):
     local_p = COMMUNITY / cid / "index.html"
     local = local_p.read_text(encoding="utf-8", errors="replace") if local_p.exists() else ""
 
-    status, raw = get(BASE.format(cid=cid))
+    status, raw = get(BASE.format(cid=cid), bust=True)
     stats["http"] = status
     if status != 200:
         issues.append(f"不可访问 HTTP {status}")
