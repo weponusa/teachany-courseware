@@ -25,9 +25,18 @@ BOILERPLATE = [
     r"忽略课标，凭感觉答题",
 ]
 # 这些容器由 JS 填充，内容为空属正常
+# 这些容器由 JS 填充，初始为空属正常，不应报为「空模块」
 DYNAMIC = {"ta-sort-list", "ta-items", "ta-out", "ta-stage", "tkg-fallback-canvas",
            "navMapCanvas", "problem-anchor-choices", "knowledge-graph", "course-nav-map",
-           "ai-tutor", "teachany-ai-tutor-card"}
+           "ai-tutor", "teachany-ai-tutor-card",
+           # 测验/自评的结果容器（display:none，答题后填充）
+           "pretest-result", "posttest-result", "posttest-summary", "quiz-result",
+           "practice-fb", "show-fb", "diagnosis-result", "score-box", "result-box",
+           # 自适应学习的自评检查点
+           "adaptive-checkpoint", "adaptive-checkpoint-2", "adaptive-checkpoint-3"}
+# 按前缀匹配：*-fb（反馈区）、*-result（结果区）、checkpoint 类
+DYNAMIC_PREFIX = ("checkpoint",)
+DYNAMIC_SUFFIX = ("-fb", "-result", "-feedback", "-summary")
 VOID = {"br", "hr", "img", "input", "meta", "link", "source", "canvas", "iframe", "path"}
 
 
@@ -104,7 +113,10 @@ def has_media(n):
 
 
 def is_dynamic(n):
-    return any(k in n.cls or k in n.ident for k in DYNAMIC)
+    if any(k in n.cls or k in n.ident for k in DYNAMIC):
+        return True
+    i = n.ident
+    return (i.startswith(DYNAMIC_PREFIX) or i.endswith(DYNAMIC_SUFFIX))
 
 
 def scan(cid):
