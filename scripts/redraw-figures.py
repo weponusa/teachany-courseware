@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 API_KEY = os.environ["OPENROUTER_API_KEY"]
-MODEL = os.environ.get("FIG_MODEL", "anthropic/claude-3.5-sonnet")
+MODEL = os.environ.get("FIG_MODEL", "anthropic/claude-sonnet-4")
 
 PROMPT = """你是专业的教学插图设计师（中国{stage}{subject}教材插图风格）。
 请为课件《{title}》重绘一张**精细的专业教学示意图**，主题：{caption}
