@@ -53,7 +53,9 @@ def course_title(html, cid):
     """
     m = re.search(r"<title>([^<]+)", html)
     if m:
-        t = re.split(r"[·|｜—\-–—]", m.group(1))[0].strip().strip("《》 　")
+        # 只取主标题：副标题形如「XX：从空间格局到成因机制」，整串用会生成
+        # 「关于主要地貌类型：从空间格局到成因机制，下列说法正确的是？」这种病句
+        t = re.split(r"[·|｜—\-–—：:》]", m.group(1))[0].strip().strip("《》 　")
         if 2 <= len(t) <= 24:
             return t
     # 兜底：h1
@@ -72,6 +74,14 @@ FRAG_START = re.compile(r"^(已经|即|分布|从|在|把|被|让|使|通过|由
 
 # 人称代词：说明是对话/练习指令，不是知识点
 PERSON = re.compile(r"(我|你|他|她|我们|你们|他们|咱)")
+# 课件模板的固定措辞，遍布各课件但毫无知识含量，绝不能当知识点。
+# 这份清单是**统计得出**的：扫描全库 946 个课件，把出现在 >5% 课件中的
+# 提取结果列为套话（手写黑名单是打地鼠，永远补不完）。
+JARGON = re.compile(r"^(已有经验|真正卡点|本课任务|学习目标|核心问题|思维实验|"
+                    r"探究画板|注意要点|带着问题学|问题锚点|迁移任务|分层任务|"
+                    r"知识精讲|方法|范例|总结|小结|课后|课前|课堂|"
+                    r"课标锚点|具体案例|前测|易错点辨析|分析方法|即练|避坑提醒|"
+                    r"三段式作业|机制解释|And|But|Therefore)")
 # 动作序列：讲解步骤（先…再…），不是概念
 SEQ = re.compile(r"^(先|再|然后|接着|最后|首先|其次|最终|接下来)")
 
@@ -90,7 +100,7 @@ def usable(p):
         return False
     if re.search(r"[【】\[\]（）()]", p):                 # PBL 模板标记（【And】/【But】）
         return False
-    if FRAG_START.match(p) or SEQ.match(p):
+    if FRAG_START.match(p) or SEQ.match(p) or JARGON.match(p):
         return False
     if PERSON.search(p):                             # 对话/指令
         return False
@@ -171,15 +181,18 @@ def pretest_block(pts, title):
     干扰项不是乱凑，而是教学上真实的误区类型：
       绝对化（所有…都…）/ 否定关联（…与…无关）/ 范围错位（只发生在…）
     """
-    if len(pts) < 2:
+    ks = pick_concepts(pts, title, 3)
+    if len(ks) < 2:
         return ""
-    k1, k2 = pts[0], pts[1]
-    k3 = pts[2] if len(pts) > 2 else pts[1]
+    k1 = ks[0]
+    k2 = ks[1]
+    lab = [short_label(k, title) for k in ks]
+    l3 = lab[2] if len(lab) > 2 else lab[1]
     q = f"关于{title}，下列说法正确的是？"
-    right = f"{k1}是{title}的重要内容"
+    right = f"{lab[0]}属于{title}的重要内容"
     wrongs = [
-        f"{k2}与{title}无关",
-        f"所有{title}都必然涉及{k3}，没有例外",
+        f"{lab[1]}与{title}完全无关",
+        f"所有{title}都必然涉及{l3}，没有例外",
     ]
     opts = [("A", right, True), ("B", wrongs[0], False), ("C", wrongs[1], False)]
     btns = ""
