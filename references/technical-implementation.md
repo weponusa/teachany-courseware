@@ -120,18 +120,10 @@ Hero 区（课题名称 + 学科/年级/课型标签）
     .feedback { padding: 16px; border-radius: 10px; margin-top: 12px; display: none; }
     .feedback.show { display: block; }
 
-    /* ═══ 8. 前后翻页按钮 ═══ */
-    .page-nav {
-      display: flex; justify-content: space-between; align-items: center;
-      max-width: 900px; margin: 30px auto; padding: 0 24px;
-    }
-    .page-nav button {
-      padding: 10px 24px; border-radius: 10px; border: 2px solid var(--primary);
-      background: transparent; color: var(--primary); font-size: 15px; cursor: pointer;
-      transition: all 0.2s;
-    }
-    .page-nav button:hover { background: var(--primary); color: #fff; }
-    .page-nav .current { font-size: 14px; color: #64748b; }
+    /* ═══ 8. 模块间距（连续滚动，模块之间不插翻页条） ═══ */
+    .section { max-width: 1080px; margin-left: auto; margin-right: auto;
+      padding: 34px 20px; }
+    .section + .section { margin-top: 8px; }
 
     /* ═══ 9. 进度条 ═══ */
     .progress-bar {
@@ -259,12 +251,6 @@ Hero 区（课题名称 + 学科/年级/课型标签）
     <!-- 6 块结构：ABT引入 → 核心讲解 → 深层理解 → 立刻练习 → 纠错反馈 → 小结迁移 -->
   </section>
 
-  <!-- 前后翻页（每个模块之间） -->
-  <div class="page-nav">
-    <button onclick="scrollToSection('pretest')">← 前测</button>
-    <span class="current">模块 1 / N</span>
-    <button onclick="scrollToSection('module-2')">模块 2 →</button>
-  </div>
 
   <section class="section" id="module-2">
     <h2 class="section-title">📖 模块 2：【子问题/子活动/阶段名称】</h2>
@@ -684,7 +670,7 @@ Hero 区（课题名称 + 学科/年级/课型标签）
 | **模块数量** | 最少 3 个，最多 5 个（与驱动结构的子问题/子活动/阶段数一致） |
 | **导航项动态匹配** | nav-bar 中的锚点链接必须与实际 section id 一一对应（包含 `#knowledge-graph`） |
 | **CSS 变量替换** | 将 `:root` 中的变量替换为 10.3 对应学段模板的配色 |
-| **前后翻页** | 每两个相邻模块之间放一个 `.page-nav` 翻页条 |
+| **连续滚动** | 模块依次纵向排列，相邻模块之间**不插**翻页条；顶部导航提供锚点跳转 |
 | **进度条** | 始终保留顶部进度条，让学生知道"学到了哪里" |
 | **音频播放器** | L3 语音生成后，注入 `audioPlaylist` 数组（含 `sectionId` 字段关联对应 section）并确保骨架中的音频播放器引擎正常工作（IntersectionObserver 滚动自动播放 + 底部悬浮控制条：播放/暂停+进度条+调速+字幕）。**禁止**只添加隐藏 `<audio>` 标签而不提供播放 UI |
 | **视频播放器** | 视频**必须嵌入到对应知识模块的 section 内部**（而非集中放置），使用 `<video controls preload="metadata" playsinline>` + `<source>` 标签嵌入，外包 `.video-player` 容器 + `.video-caption` 说明。**优先使用 CSS/JS/Canvas/SVG 交互动画**演示过程性变化，仅当交互无法覆盖时才用 `<video>` 嵌入静态视频。**禁止**仅用 JS 动态创建视频元素 |
@@ -693,7 +679,7 @@ Hero 区（课题名称 + 学科/年级/课型标签）
 
 #### 10.2.2 统一导航规范
 
-所有课件**必须**使用 **Sticky 顶部导航 + 前后翻页按钮** 的导航模式。禁止使用以下替代方案：
+所有课件**必须**使用 **Sticky 顶部导航 + 连续滚动** 的浏览模式：单一页面自上而下纵向滚动，模块连续排列。⛔ 严禁分页放映形态（整屏分页 `.slide-page{min-height:100dvh}`、滚动吸附 `scroll-snap-type`、以及模块之间的 `.page-nav` 前后翻页条）。禁止使用以下替代方案：
 
 | ❌ 禁止 | ✅ 统一使用 | 理由 |
 |:---|:---|:---|
@@ -701,12 +687,13 @@ Hero 区（课题名称 + 学科/年级/课型标签）
 | 纯手动滚动（无导航） | Sticky 导航 + 进度条 | 学生容易迷失位置 |
 | 侧边栏导航 | 顶部导航（移动端友好） | 侧边栏在移动端体验差 |
 | 多页 HTML（page1.html, page2.html） | 单文件 + 锚点 section | 单文件便于离线使用和打包 |
+| 分页放映（整屏分页 / 滚动吸附 / 前后翻页条） | 单页连续滚动 | 分页放映让各课件观感割裂，不利于标准化与打印 |
 
 **导航交互规范**：
 1. **Sticky 导航栏**：始终固定在页面顶部，滚动时不消失
 2. **当前 section 高亮**：滚动到哪个 section，对应导航项自动高亮
 3. **进度条**：页面顶部 3px 彩色进度条，实时反映阅读进度
-4. **前后翻页**：每两个模块之间放置翻页按钮（← 上一模块 / 下一模块 →），按钮带当前位置指示（"模块 2 / 4"）
+4. **连续滚动**：模块之间不放置翻页按钮，直接依次排列；需要跳转时用顶部导航的锚点，配合 `scrollIntoView({ behavior: 'smooth' })`
 5. **平滑滚动**：所有导航和翻页点击使用 `scrollIntoView({ behavior: 'smooth' })`
 
 #### 10.2.3 知识图谱可视化规范（必选·三列布局）

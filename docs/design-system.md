@@ -353,3 +353,52 @@ html { scroll-behavior: smooth; }
 - **Keyboard navigation**: Quiz options should be keyboard-accessible
 - **Screen readers**: Use semantic HTML (`<nav>`, `<section>`, `<h1>`-`<h3>`)
 - **Reduced motion**: Respect `prefers-reduced-motion` media query
+
+---
+
+## Layout & Presentation Baseline
+
+所有课件共享同一套**呈现基线**，使不同学科、不同批次生成的课件呈现一致的
+产品观感，而不是各写各的版式。
+
+### 1. 呈现形态：单一连续网页
+
+- 所有模块自上而下连续排列，**整页统一滚动**
+- ⛔ 严禁分页放映形态：
+  - `.slide-page { min-height: 100dvh }`（整屏分页）
+  - `.slide-container { height: 100dvh; overflow-y: auto; scroll-snap-type: y proximity }`
+    （容器锁视口高度 + 独立滚动）
+  - `scroll-snap-align: start`（滚动吸附）
+  - 模块之间的 `.page-nav` 前后翻页条
+- 导航统一为 **Sticky 顶部导航 + 锚点跳转**，不再提供翻页按钮
+
+### 2. 宽度与对齐
+
+| 项 | 值 |
+|:---|:---|
+| 主容器 `max-width` | `1080px` |
+| 水平对齐 | `margin-left/right: auto`（居中） |
+| 左右内边距 | `20px` |
+| 模块上下间距 | `34px`（`.slide-page` / `.section`） |
+| 窄屏降级 | 视口 ≤ `1120px` 时 `max-width: 100%` |
+
+历史上不同批次写过 `900 / 960 / 920 / 860 / 780 / 1160px`，一律收敛到 `1080px`。
+
+### 3. 标准模块
+
+必选模块及其顺序（缺一不可）：
+
+```
+hero-infographic  →  objectives  →  pretest  →
+lesson-focus ×N   →  lesson-method  →  deep-understanding  →
+worked-example  →  practice  →  posttest  →
+knowledge-graph  →  summary
+```
+
+每个模块使用统一的 `.section` 容器与 `.panel` / `.card` 组件，
+标题层级固定为 `h1`（课件名）→ `h2`（模块名）→ `h3`（小节名）。
+
+### 4. 落地方式
+
+- 规范源文件：`scripts/standardize-layout.py`（注入覆盖样式，可 `--remove` 回退）
+- 生成侧约束：skill 规则 #21 + Section 10.2.2（已改为连续网页，禁止分页放映）
