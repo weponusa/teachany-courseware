@@ -35,10 +35,12 @@ _spec = importlib.util.spec_from_file_location(
 SHELL = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(SHELL)
 
-# 与已有标准模块功能重复的语义词
+# 与已有标准模块功能重复的语义词。
+# 刻意不含「挑战/闯关/真题/拓展/探究」——「真题练习」「迁移挑战」这类虽然也是
+# 补丁块，但有实际内容（真实考题、拓展任务），删了会损失价值，予以保留。
 REPEAT = re.compile(
     r"课前诊断|达标检测|概念检测|错因诊断|易错诊断|前测|后测|"
-    r"诊断|检测|自评|随堂|闯关|挑战|评估")
+    r"诊断|检测|自评|随堂|小测|测验")
 
 MEDIA = re.compile(r"<iframe|<canvas|<video|<audio|<img\b")
 
