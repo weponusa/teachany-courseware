@@ -1,0 +1,157 @@
+/* =========================================================================
+   TeachAny Courseware Shell — 课件统一设计系统
+   -------------------------------------------------------------------------
+   所有课件共享这一套设计令牌与模块容器，目的是消除 946 个课件各自为政
+   带来的「风格不统一 / 宽度不同 / 模块重复」。
+
+   引入方式：在 </head> 前插入
+     <link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+   设计原则：
+     1. 令牌优先  —— 颜色/间距/圆角一律走 CSS 变量，课件已有同名变量时
+                     沿用课件自己的（不覆盖），没有才用这里的默认值。
+                     这样深浅主题都能自然适配。
+     2. 只管容器  —— 本文件只定义「模块外壳」（宽度、留白、卡片、标题层级）
+                     与「内容排版」（段落、列表、强调），不干预课件内部
+                     的交互组件样式（拖拽、动画、canvas 等）。
+     3. 可覆盖    —— 课件里的特殊设计仍可通过更高优先级的选择器覆盖。
+   ========================================================================= */
+
+/* ---------- 设计令牌（课件已定义则沿用课件自己的） ---------- */
+:root {
+  --ta-maxw: 1080px;        /* 主容器统一宽度 */
+  --ta-gutter: 20px;        /* 左右安全边距 */
+  --ta-block-gap: 26px;     /* 模块之间的纵向间距 */
+  --ta-card-pad: 24px 28px; /* 卡片内边距 */
+  --ta-radius: 14px;        /* 卡片圆角 */
+  --ta-radius-sm: 8px;      /* 小圆角 */
+
+  --ta-text: var(--text, #e2e8f0);
+  --ta-dim: var(--dim, var(--muted, #94a3b8));
+  --ta-card-bg: var(--card, rgba(148, 163, 184, .07));
+  --ta-border: var(--border, rgba(148, 163, 184, .22));
+  --ta-primary: var(--primary, #3b82f6);
+  --ta-accent: var(--accent, #f59e0b);
+
+  --ta-font: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei",
+             "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---------- 统一宽度与对齐 ---------- */
+/* 覆盖历史上散落的 640 / 600 / 900 / 960 / 860 / 980px 等多种宽度 */
+.section,
+.slide-inner,
+.slide-container,
+.ta-standard-section,
+.panel,
+.card {
+  max-width: var(--ta-maxw);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* 容器本身不要锁死视口高度，保证是连续网页而非分页放映 */
+.slide-container {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  scroll-snap-type: none !important;
+}
+.slide-page {
+  min-height: 0 !important;
+  display: block !important;
+  scroll-snap-align: none !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+}
+html, body { scroll-snap-type: none !important; }
+
+/* ---------- 模块统一节奏 ---------- */
+.section {
+  padding-left: var(--ta-gutter);
+  padding-right: var(--ta-gutter);
+  margin-top: var(--ta-block-gap);
+  margin-bottom: var(--ta-block-gap);
+  font-family: var(--ta-font);
+}
+
+/* 卡片式模块：统一的留白、描边、圆角 */
+.card,
+.panel {
+  padding: var(--ta-card-pad);
+  border: 1px solid var(--ta-border);
+  border-radius: var(--ta-radius);
+  background: var(--ta-card-bg);
+  box-sizing: border-box;
+}
+
+/* ---------- 标题层级 ---------- */
+.section h1 {
+  font-size: 27px; font-weight: 800; line-height: 1.35;
+  margin: 0 0 18px; color: var(--ta-text);
+}
+.section h2 {
+  font-size: 21px; font-weight: 800; line-height: 1.45;
+  margin: 0 0 16px; color: var(--ta-text);
+}
+.section h3 {
+  font-size: 17px; font-weight: 700; line-height: 1.5;
+  margin: 20px 0 10px; color: var(--ta-text);
+}
+
+/* ---------- 正文排版 ---------- */
+.section p {
+  margin: 0 0 14px;
+  line-height: 1.95;
+  font-size: 15px;
+  color: var(--ta-text);
+}
+.section p:last-child { margin-bottom: 0; }
+
+.section ul, .section ol {
+  margin: 0 0 14px;
+  padding-left: 22px;
+  line-height: 1.9;
+  color: var(--ta-text);
+}
+.section li { margin-bottom: 8px; }
+
+.section strong, .section b {
+  font-weight: 700;
+  color: var(--ta-primary);
+}
+
+/* ---------- 通用内容块 ---------- */
+.worked-example,
+.ta-ex {
+  margin-top: 16px;
+  padding: 13px 18px;
+  line-height: 1.9;
+  border-left: 4px solid var(--ta-accent);
+  background: rgba(148, 163, 184, .10);
+  border-radius: 0 var(--ta-radius-sm) var(--ta-radius-sm) 0;
+}
+
+.bioh-pitfall,
+.ta-pitfall {
+  margin-top: 14px;
+  padding: 12px 17px;
+  line-height: 1.85;
+  border-left: 4px solid #ef4444;
+  background: rgba(239, 68, 68, .09);
+  border-radius: 0 var(--ta-radius-sm) var(--ta-radius-sm) 0;
+}
+
+/* ---------- 窄屏降级 ---------- */
+@media (max-width: 1120px) {
+  .section,
+  .slide-inner,
+  .slide-container,
+  .ta-standard-section,
+  .panel,
+  .card {
+    max-width: 100%;
+  }
+  .card, .panel { padding: 20px 18px; }
+  .section h2 { font-size: 19px; }
+}
