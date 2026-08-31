@@ -75,14 +75,20 @@ def scan_nested(html):
 
 
 def fix(html):
-    """迭代移出嵌套页，返回 (新html, 移动次数, 长度净增量)"""
+    """迭代移出嵌套页，返回 (新html, 移动次数, 长度净增量)
+
+    关键：从文件序最末的嵌套页开始处理。若按文件正序处理，每页都
+    插到「祖先闭合后」同一位置，后移出的会插在先移出的前面——
+    同一祖先的并列页全部倒序（曾致 116 个课件页序反转，已回滚重做）。
+    倒序处理则后移出的先落位、先移出的插到它前面，保持原序。
+    """
     moves = 0
     net = 0
     while True:
         nested = scan_nested(html)
         if not nested:
             break
-        xs, xe, ac = nested[0]
+        xs, xe, ac = nested[-1]          # 取最末的嵌套页（见 docstring）
         seg = html[xs:xe]
         # 剪出（连同前导换行，保持整洁）
         cut_s = xs
