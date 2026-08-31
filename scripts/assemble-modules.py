@@ -38,6 +38,11 @@ _spec2 = importlib.util.spec_from_file_location(
 SLOTS = importlib.util.module_from_spec(_spec2)
 _spec2.loader.exec_module(SLOTS)
 
+_spec3 = importlib.util.spec_from_file_location(
+    "check", ROOT / "scripts" / "check-slots.py")
+CHECK = importlib.util.module_from_spec(_spec3)
+_spec3.loader.exec_module(CHECK)
+
 TAG = re.compile(r'<section\b[^>]*>|</section>')
 
 
@@ -103,6 +108,13 @@ def verify(old, new):
 def process(cid, dry=False):
     p = COMMUNITY / cid / "index.html"
     old = p.read_text(encoding="utf-8", errors="replace")
+    # A 方案：只对 check-slots 报「顺序违规」(R1/R2/R3) 的课件动手。
+    # 合规课件不碰——否则组装器会把手工精修过、顺序合理但不符合
+    # 槽位表严格序的课件（如 phy-m-ideal-gas-equation 的情境开场
+    # 设计）强制重排，覆盖人工成果。R4/R5 是重复问题，重排无用。
+    order_issues = [r for r, _ in CHECK.check(old) if r in ("R1", "R2", "R3")]
+    if not order_issues:
+        return None
     new, moved = assemble(old)
     if moved == 0:
         return None
