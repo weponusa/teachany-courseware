@@ -890,7 +890,7 @@
 <div class="container">
 
   <!-- ====== OBJECTIVES ====== -->
-  <section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+  <section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/hist-h-cold-war-h-hero.png" alt="冷战格局知识结构（无字）" loading="eager">
@@ -899,7 +899,82 @@
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" id="objectives">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" id="objectives" data-slot="10">
     <h2 class="section-title">🎯 学习目标</h2>
     <div class="objectives-grid">
       <div class="obj-card">
@@ -922,7 +997,7 @@
   </section>
 
   <!-- ====== PRETEST ====== -->
-  <section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" id="pretest">
+  <section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" id="pretest" data-slot="20">
     <h2 class="section-title">📝 前测（前置知识：二战）</h2>
     <p style="color:var(--text2);font-size:0.88rem;margin-bottom:1rem;">检测你对二战史的掌握程度，共3题</p>
 
@@ -958,7 +1033,10 @@
   </section>
 
   <!-- ====== MODULE 1: 起源 ====== -->
-  <section data-scaffold="full" data-bloom-level="apply" id="mod1">
+  <section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 冷战起源</h2><div class="tu-q"><p><strong>And：</strong>学生已了解二战结局</p><p><strong>But：</strong>为何盟友变对手？</p><p><strong>Therefore：</strong>理解两极格局形成</p></div><div class="tu-q"><p>核心是美苏意识形态对立与势力范围争夺。例如1947年杜鲁门主义出台，美国拨款4亿美元援助希腊土耳其对抗共产主义扩张，这是冷战开始的标志性事件。苏联则通过成立共产党情报局（1947）和经济互助委员会（1949）进行反制，双方形成'遏制与反遏制'的对抗模式。</p></div><div class="tu-q"><p>🌍 就像班里两个学霸原本合作参加辩论赛，夺冠后却因谁该当队长闹翻，各自拉拢同学形成小团体。美苏就像这两个学霸，二战时共同对抗法西斯（德国），胜利后因社会制度不同（资本主义vs社会主义）开始对立。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>冷战开始的标志事件是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="易混淆后续事件：北约（1949）是军事对抗表现，柏林墙（1961）是德国分裂产物">A. 杜鲁门主义出台</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="易混淆后续事件：北约（1949）是军事对抗表现，柏林墙（1961）是德国分裂产物">B. 北约成立</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="易混淆后续事件：北约（1949）是军事对抗表现，柏林墙（1961）是德国分裂产物">C. 柏林墙修建</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="易混淆后续事件：北约（1949）是军事对抗表现，柏林墙（1961）是德国分裂产物">D. 古巴导弹危机</button></div><div class="tu-fb" hidden></div></div></section>
+
+
+<section data-scaffold="full" data-bloom-level="apply" id="mod1" data-slot="35">
 <figure class="teachany-figure" style="margin:28px 0;text-align:center">
   <img src="./assets/section1.webp" alt="冷战时期美苏两大阵营的全球对峙态势" loading="lazy" style="max-width:100%;border-radius:12px">
   <figcaption style="margin-top:10px;font-size:14px;color:#94a3b8">冷战时期美苏两大阵营的全球对峙态势</figcaption>
@@ -1055,7 +1133,7 @@
   </section>
 
   <!-- ====== MODULE 2: 对抗表现 ====== -->
-  <section data-scaffold="partial" data-bloom-level="remember" id="mod2">
+  <section data-scaffold="partial" data-bloom-level="remember" id="mod2" data-slot="35">
     <div class="module-header">
       <div class="module-num">02</div>
       <div class="module-title-block">
@@ -1153,7 +1231,7 @@
   </section>
 
   <!-- ====== MODULE 3: 多极化 ====== -->
-  <section data-bloom-level="understand" id="mod3">
+  <section data-bloom-level="understand" id="mod3" data-slot="35">
     <div class="module-header">
       <div class="module-num">03</div>
       <div class="module-title-block">
@@ -1256,7 +1334,7 @@
   </section>
 
   <!-- ====== MODULE 4: 终结 ====== -->
-  <section id="mod4">
+  <section id="mod4" data-slot="35">
     <div class="module-header">
       <div class="module-num">04</div>
       <div class="module-title-block">
@@ -1326,7 +1404,7 @@
   </section>
 
   <!-- ====== MODULE 5: 评价 ====== -->
-  <section id="mod5">
+  <section id="mod5" data-slot="35">
     <div class="module-header">
       <div class="module-num">05</div>
       <div class="module-title-block">
@@ -1443,69 +1521,58 @@
   </section>
 
   <!-- ====== MEMORY ANCHOR ====== -->
-  <section id="anchor">
-    <h2 class="section-title">🧠 记忆锚点</h2>
-    <div class="memory-anchor">
-      <div class="memory-phrase">"杜马北华，铁幕开冷战"</div>
-      <div class="memory-explain">
-        <p><strong style="color:var(--hist)">杜</strong>——杜鲁门主义（1947，冷战<em>正式开始</em>标志）</p>
-        <p><strong style="color:var(--hist)">马</strong>——马歇尔计划（1947，经济遏制苏联）</p>
-        <p><strong style="color:var(--hist)">北</strong>——北大西洋公约组织（1949，西方军事同盟）</p>
-        <p><strong style="color:var(--hist)">华</strong>——华沙条约组织（1955，东方军事同盟）</p>
-        <p style="margin-top:0.5rem"><strong style="color:var(--secondary)">铁幕</strong>——铁幕演说（1946，冷战<em>信号</em>，非标志）</p>
+  <section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 解密1979年苏联入侵阿富汗决策</h2><p>分析勃列日涅夫政权为何在缓和时期发动战争</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="从南下战略、意识形态、领导层年龄结构三个维度提出假设"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="查阅苏联政治局会议记录、美国中情局评估报告、巴基斯坦边境难民数据"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="论证地缘政治利益如何压倒核战争风险考量"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+<!-- v7.20 标准连续音频播放器 -->
+
+<script type="application/json" data-teachany-audio-playlist>
+[
+  { "id": "module1", "section": "module1", "src": "./tts/module1.mp3", "label": "第1部分" },
+  { "id": "module2", "section": "module2", "src": "./tts/module2.mp3", "label": "第2部分" },
+  { "id": "module3", "section": "module3", "src": "./tts/module3.mp3", "label": "第3部分" },
+  { "id": "module4", "section": "module4", "src": "./tts/module4.mp3", "label": "第4部分" },
+  { "id": "module5", "section": "module5", "src": "./tts/module5.mp3", "label": "第5部分" }
+]
+</script>
+
+
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section histh-depth core-knowledge-module text-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>冷战格局</h2>
+      <p>二战后美苏在意识形态、地缘与军备上对峙，形成两极格局。杜鲁门主义、马歇尔计划、北约与华约是冷战表现；冷战中有热战（如朝鲜、越南）与危机（古巴导弹）。对抗与缓和交织，直至苏东剧变两极终结。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>冷战格局形成与演变：美苏两极对峙的历史进程</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="ar2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#ef4444"/></marker></defs><rect x="0" y="0" width="640" height="420" fill="#0a1520"/><rect x="10" y="10" width="620" height="400" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.3"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="160" x2="620" y2="160" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="240" x2="620" y2="240" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155" stroke-width="0.5"/><animate attributeName="opacity" from="0" to="0.3" dur="0.5s" begin="0.1s" fill="freeze"/></g><ellipse cx="150" cy="180" rx="90" ry="70" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2" rx="12"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.2s" fill="freeze"/></ellipse><ellipse cx="490" cy="180" rx="90" ry="70" fill="url(#bg2)" stroke="#f87171" stroke-width="2" rx="12"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.35s" fill="freeze"/></ellipse><rect x="80" y="120" width="140" height="40" rx="8" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.5s" fill="freeze"/></rect><rect x="420" y="120" width="140" height="40" rx="8" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.65s" fill="freeze"/></rect><text x="150" y="145" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">美国阵营</text><text x="490" y="145" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">苏联阵营</text><rect x="100" y="170" width="100" height="25" rx="6" fill="url(#bg4)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.8s" fill="freeze"/></rect><rect x="440" y="170" width="100" height="25" rx="6" fill="url(#bg4)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.95s" fill="freeze"/></rect><text x="150" y="187" text-anchor="middle" fill="#e2e8f0" font-size="12">杜鲁门主义</text><text x="490" y="187" text-anchor="middle" fill="#e2e8f0" font-size="12">社会主义阵营</text><rect x="90" y="200" width="120" height="25" rx="6" fill="url(#bg4)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.1s" fill="freeze"/></rect><rect x="430" y="200" width="120" height="25" rx="6" fill="url(#bg4)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.25s" fill="freeze"/></rect><text x="150" y="217" text-anchor="middle" fill="#e2e8f0" font-size="12">马歇尔计划</text><text x="490" y="217" text-anchor="middle" fill="#e2e8f0" font-size="12">华沙条约组织</text><rect x="110" y="230" width="80" height="25" rx="6" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.4s" fill="freeze"/></rect><rect x="450" y="230" width="80" height="25" rx="6" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.55s" fill="freeze"/></rect><text x="150" y="247" text-anchor="middle" fill="#e2e8f0" font-size="12">北约</text><text x="490" y="247" text-anchor="middle" fill="#e2e8f0" font-size="12">华约</text><path d="M240 180 Q320 120 400 180" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.7s" fill="freeze"/></path><path d="M400 180 Q320 240 240 180" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar2)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.85s" fill="freeze"/></path><text x="320" y="150" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">意识形态对峙</text><text x="320" y="220" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">军备竞赛</text><circle cx="320" cy="180" r="8" fill="url(#bg2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2s" fill="freeze"/></circle><text x="320" y="185" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">冷战</text><rect x="50" y="280" width="120" height="60" rx="8" fill="url(#bg2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.15s" fill="freeze"/></rect><text x="110" y="300" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">热战</text><text x="110" y="318" text-anchor="middle" fill="#e2e8f0" font-size="11">朝鲜战争</text><text x="110" y="332" text-anchor="middle" fill="#e2e8f0" font-size="11">越南战争</text><rect x="200" y="280" width="120" height="60" rx="8" fill="url(#bg2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.3s" fill="freeze"/></rect><text x="260" y="300" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">危机</text><text x="260" y="318" text-anchor="middle" fill="#e2e8f0" font-size="11">古巴导弹</text><text x="260" y="332" text-anchor="middle" fill="#e2e8f0" font-size="11">柏林危机</text><rect x="350" y="280" width="120" height="60" rx="8" fill="url(#bg4)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.45s" fill="freeze"/></rect><text x="410" y="300" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">缓和</text><text x="410" y="318" text-anchor="middle" fill="#e2e8f0" font-size="11">限制军备</text><text x="410" y="332" text-anchor="middle" fill="#e2e8f0" font-size="11">贸易往来</text><rect x="500" y="280" width="120" height="60" rx="8" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.6s" fill="freeze"/></rect><text x="560" y="300" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">终结</text><text x="560" y="318" text-anchor="middle" fill="#e2e8f0" font-size="11">苏东剧变</text><text x="560" y="332" text-anchor="middle" fill="#e2e8f0" font-size="11">两极格局瓦解</text><line x1="110" y1="260" x2="110" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.75s" fill="freeze"/></line><line x1="260" y1="260" x2="260" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.9s" fill="freeze"/></line><line x1="410" y1="260" x2="410" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.05s" fill="freeze"/></line><line x1="560" y1="260" x2="560" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.2s" fill="freeze"/></line><circle cx="110" cy="260" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.75s" fill="freeze"/></circle><circle cx="260" cy="260" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.9s" fill="freeze"/></circle><circle cx="410" cy="260" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.05s" fill="freeze"/></circle><circle cx="560" cy="260" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.2s" fill="freeze"/></circle><text x="320" y="50" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">冷战格局演变进程</text><text x="320" y="70" text-anchor="middle" fill="#e2e8f0" font-size="12">二战后美苏两极对峙 → 全面竞争 → 局部缓和 → 格局终结</text><rect x="480" y="360" width="140" height="50" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.35s" fill="freeze"/></rect><rect x="485" y="365" width="12" height="8" fill="#3b82f6" opacity="0.25"/><text x="502" y="372" fill="#e2e8f0" font-size="10">阵营对立</text><rect x="485" y="375" width="12" height="8" fill="#ef4444" opacity="0.25"/><text x="502" y="382" fill="#e2e8f0" font-size="10">冲突热点</text><rect x="485" y="385" width="12" height="8" fill="#34d399" opacity="0.25"/><text x="502" y="392" fill="#e2e8f0" font-size="10">缓和进程</text><rect x="485" y="395" width="12" height="8" fill="#a78bfa" opacity="0.25"/><text x="502" y="402" fill="#e2e8f0" font-size="10">格局变迁</text></svg></figure>
+
+</section>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section histh-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：表现—危机—影响</h2>
+      <p>列举政治、经济、军事集团化表现；举柏林、古巴等危机；说明对第三世界与中国外部环境的影响，以及两极下的和平因素。</p>
+      <div class="worked-example"><strong>范例：</strong>北约与华约对峙使欧洲分裂为两大军事集团。</div>
+      <p id="lesson-pitfall" class="histh-pitfall"><strong>常见误区：</strong>常见误区是认为冷战期间没有任何热战或交流。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>冷战开始的重要标志之一是？</p>
+        <button type="button" data-correct="0" onclick="histhDepthCheck(this,false,&#x27;histh-depth-feedback&#x27;,&quot;杜鲁门主义标志着冷战正式开始。&quot;)">A. 辛亥革命</button><button type="button" data-correct="1" onclick="histhDepthCheck(this,true,&#x27;histh-depth-feedback&#x27;,&quot;杜鲁门主义标志着冷战正式开始。&quot;)">B. 杜鲁门主义出台</button><button type="button" data-correct="0" onclick="histhDepthCheck(this,false,&#x27;histh-depth-feedback&#x27;,&quot;杜鲁门主义标志着冷战正式开始。&quot;)">C. 鸦片战争</button><button type="button" data-correct="0" onclick="histhDepthCheck(this,false,&#x27;histh-depth-feedback&#x27;,&quot;杜鲁门主义标志着冷战正式开始。&quot;)">D. 新航路开辟</button>
+        <div class="histh-feedback" id="histh-depth-feedback" role="status"></div>
       </div>
     </div>
   </section>
+<figure class="ta-standard-figure"><figcaption>冷战格局形成的表现-危机-影响机制分解示意图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="ar2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#ef4444"/></marker></defs><rect x="0" y="0" width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.3"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="140" x2="620" y2="140" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="200" x2="620" y2="200" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="260" x2="620" y2="260" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155" stroke-width="0.5"/></g><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">冷战格局形成机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><rect x="50" y="70" width="120" height="80" rx="10" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="110" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">美国<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="110" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">杜鲁门主义<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><text x="110" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">马歇尔计划<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><rect x="470" y="70" width="120" height="80" rx="10" fill="url(#bg2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="530" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">苏联<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="530" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">社会主义阵营<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><text x="530" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">经互会<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><path d="M170 110 Q320 90 470 110" stroke="#7dd3fc" stroke-width="2" fill="none" stroke-dasharray="8 6" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="28" to="0" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><text x="320" y="85" text-anchor="middle" fill="#7dd3fc" font-size="12">意识形态对立<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><rect x="80" y="180" width="100" height="60" rx="8" fill="url(#bg4)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="130" y="205" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">北约<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="130" y="225" text-anchor="middle" fill="#e2e8f0" font-size="11">1949年成立<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><rect x="460" y="180" width="100" height="60" rx="8" fill="url(#bg4)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="510" y="205" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">华约<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="510" y="225" text-anchor="middle" fill="#e2e8f0" font-size="11">1955年成立<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><path d="M180 210 L460 210" stroke="#ef4444" stroke-width="3" fill="none" stroke-dasharray="10 8" marker-end="url(#ar2)"><animate attributeName="stroke-dashoffset" from="36" to="0" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></path><path d="M460 210 L180 210" stroke="#ef4444" stroke-width="3" fill="none" stroke-dasharray="10 8" marker-end="url(#ar2)"><animate attributeName="stroke-dashoffset" from="36" to="0" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></path><text x="320" y="200" text-anchor="middle" fill="#ef4444" font-size="12" font-weight="bold">军事对峙<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><ellipse cx="200" cy="290" rx="80" ry="40" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></ellipse><text x="200" y="280" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">柏林危机<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><text x="200" y="300" text-anchor="middle" fill="#e2e8f0" font-size="11">1948-1949<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></text><ellipse cx="440" cy="290" rx="80" ry="40" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></ellipse><text x="440" y="280" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">古巴危机<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><text x="440" y="300" text-anchor="middle" fill="#e2e8f0" font-size="11">1962年<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></text><circle cx="320" cy="290" r="25" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="3s"/></circle><text x="320" y="295" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">核威慑<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></text><rect x="50" y="350" width="150" height="50" rx="8" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></rect><text x="125" y="370" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">第三世界影响<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></text><text x="125" y="385" text-anchor="middle" fill="#e2e8f0" font-size="10">代理人战争、不结盟运动<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><rect x="440" y="350" width="150" height="50" rx="8" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></rect><text x="515" y="370" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">中国外部环境<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></text><text x="515" y="385" text-anchor="middle" fill="#e2e8f0" font-size="10">一边倒→独立自主<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><line x1="110" y1="150" x2="130" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></line><circle cx="130" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></circle><line x1="530" y1="150" x2="510" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></line><circle cx="510" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></circle><line x1="200" y1="330" x2="125" y2="350" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></line><circle cx="125" cy="350" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></circle><line x1="440" y1="330" x2="515" y2="350" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></line><circle cx="515" cy="350" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></circle><rect x="240" y="350" width="160" height="50" rx="8" fill="url(#bg4)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></rect><text x="320" y="370" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">和平因素<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><text x="320" y="385" text-anchor="middle" fill="#e2e8f0" font-size="10">核恐怖平衡、经济交流<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></text><rect x="480" y="20" width="140" height="110" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></rect><text x="490" y="40" fill="#e2e8f0" font-size="13" font-weight="bold">图例说明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></text><rect x="490" y="50" width="12" height="8" fill="#3b82f6" fill-opacity="0.25"/><text x="510" y="58" fill="#e2e8f0" font-size="10">超级大国<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><rect x="490" y="65" width="12" height="8" fill="#34d399" fill-opacity="0.25"/><text x="510" y="73" fill="#e2e8f0" font-size="10">军事集团<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></text><rect x="490" y="80" width="12" height="8" fill="#f59e0b" fill-opacity="0.25"/><text x="510" y="88" fill="#e2e8f0" font-size="10">危机事件<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></text><rect x="490" y="95" width="12" height="8" fill="#a78bfa" fill-opacity="0.25"/><text x="510" y="103" fill="#e2e8f0" font-size="10">影响范围<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></text><text x="490" y="120" fill="#7dd3fc" font-size="9">冷战=表现+危机+影响<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></text></svg></figure>
 
-  <!-- ====== ERROR CLINIC ====== -->
-  <section id="errors">
-    <h2 class="section-title">🚨 易错诊断室</h2>
-    <div class="error-list">
-      <div class="error-item">
-        <div class="error-icon">❌</div>
-        <div>
-          <div class="error-title">错误1：把铁幕演说当作冷战开始的标志</div>
-          <div class="error-desc">
-            铁幕演说（1946.3）只是冷战的<strong>信号/前兆</strong>，丘吉尔此时已不是英国首相，不代表官方政策。
-            <br><span class="error-correct">✅ 正确：冷战正式开始的标志是杜鲁门主义（1947.3），这才是美国政府的官方对苏遏制政策宣示。</span>
-          </div>
-        </div>
-      </div>
-      <div class="error-item">
-        <div class="error-icon">❌</div>
-        <div>
-          <div class="error-title">错误2：认为两极格局只有两个国家</div>
-          <div class="error-desc">
-            两极格局是以美苏为首的<strong>两大阵营</strong>对峙，每个阵营包含多个国家。
-            <br><span class="error-correct">✅ 正确：以美国为首的资本主义阵营 vs 以苏联为首的社会主义阵营，各有数十个成员国。</span>
-          </div>
-        </div>
-      </div>
-      <div class="error-item">
-        <div class="error-icon">❌</div>
-        <div>
-          <div class="error-title">错误3：把"多极化趋势"等同于"多极格局已形成"</div>
-          <div class="error-desc">
-            冷战期间（1947-1991）世界格局始终是<strong>两极格局</strong>，新兴力量的崛起只是冲击了两极格局，形成了多极化的<em>趋势</em>。
-            <br><span class="error-correct">✅ 正确：多极格局尚未形成，当前世界是"一超多强"向多极化过渡中。</span>
-          </div>
-        </div>
-      </div>
-      <div class="error-item">
-        <div class="error-icon">❌</div>
-        <div>
-          <div class="error-title">错误4：把柏林墙倒塌当作冷战终结的标志</div>
-          <div class="error-desc">
-            柏林墙倒塌（1989.11）是东欧剧变的重要事件，只是冷战终结的重要前奏。
-            <br><span class="error-correct">✅ 正确：冷战终结的标志是苏联正式解体（1991年12月25日），两极格局从此彻底瓦解。</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+</section>
 
-  <!-- ====== COMPREHENSIVE TASKS ====== -->
-  <section id="tasks">
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>用'铁幕演说-杜鲁门主义-马歇尔计划'三阶梯拆解冷战起源</p></div><div class="tu-q"><h3>💡解释它</h3><p>北约是军事盾牌，华约是政治回应，经互会是经济对抗</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>古巴导弹危机vs柏林危机：核威慑与常规对抗的典型差异</p></div><div class="tu-q"><h3>👁️看见它</h3><p>从韩国越南的分裂看意识形态如何重塑地缘格局</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>类比班级里两个学霸暗中较劲却不敢直接打架</p></div></section>
+<section id="tasks" data-slot="75">
     <h2 class="section-title">📋 综合任务</h2>
     <div class="task-levels">
       <div class="task-card">
@@ -1524,16 +1591,33 @@
   </section>
 
   <!-- ====== POST TEST ====== -->
-  <section class="section" data-tts="ai-media" id="ai-media-zone">
-<div class="card card-glow"><h2>🎨 AI 多模态互动</h2>
-<p>复制提示词到 AI 学伴，生成「冷战格局 — TeachAny 历史课件」的时间轴或事件提纲；也可以上传你手绘的示意图，请 AI 学伴点评。</p>
-<textarea id="ai-prompt-box" rows="3" style="width:100%">请用表格总结「冷战格局 — TeachAny 历史课件」的背景、经过、影响，并给出一条时间轴和一个易混点辨析。</textarea>
-<button class="choice" id="copy-ai-prompt" type="button">📋 复制提示词</button>
-<p class="feedback" id="ai-zone-feedback">复制后可粘贴到 AI 学伴继续对话。</p>
-</div>
-<script>(function(){var b=document.getElementById('copy-ai-prompt');if(!b)return;b.addEventListener('click',function(){var t=document.getElementById('ai-prompt-box');if(!t)return;t.focus();t.select();try{document.execCommand('copy');}catch(e){}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value);var f=document.getElementById('ai-zone-feedback');if(f)f.textContent='✅ 已复制，去 AI 学伴粘贴吧';});})();</script>
+  <section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="B">
+<h3>选择题 1</h3><p>1962年古巴导弹危机期间，美苏领导人热线电话记录显示双方都在避免提及：</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="联合国当时发挥重要调停作用">A. 联合国调解机制</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="核威慑是冷战核心特征，直接讨论当量会引发误判">B. 核武器具体当量</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="驻军问题属于常规军事部署">C. 东德驻军换防计划</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="条约内容本身是公开信息">D. 北约华约条约原文</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C">
+<h3>选择题 2</h3><p>马歇尔计划与经互会最本质的区别体现在：</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="资金规模是表象非本质">A. 援助资金规模大小</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="工业基础是客观条件">B. 受援国工业基础</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="前者推动市场经济一体化，后者强化计划经济阵营">C. 经济体系整合方式</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="军事同盟属于衍生功能">D. 军事同盟绑定程度</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C">
+<h3>选择题 3</h3><p>下列哪项事件最能体现冷战'代理人战争'特征？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="属于物资封锁与反封锁">A. 1948年柏林空运</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="属于阵营内部镇压">B. 1956年匈牙利事件</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="苏军直接介入第三国内战对抗美国支持的势力">C. 1979年阿富汗战争</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="属于突发军事误击">D. 1983年韩国客机击落</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>北约成立时签署的《____条约》第5条确立集体防御原则</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>北大西洋公约</p><p>该条款规定对任一成员国的攻击视为对所有成员国的攻击</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>赫鲁晓夫在联合国脱下皮鞋敲桌子的举动，实质是美苏____外交的体现</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>核威慑</p><p>通过夸张行为展示强硬姿态，背后是核武库支撑</p></details></div>
 </section>
-<section id="posttest">
+
+<section id="posttest" data-slot="90">
     <h2 class="section-title">📊 后测（共5题）</h2>
     <div id="posttest-score" style="margin-bottom:1rem;display:none">
       <span class="score-badge">🏆 得分：<span id="post-score-val">0</span>/5</span>
@@ -2347,172 +2431,86 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <!-- teachany-upgrade-v2 -->
 <!-- upgrade topic: 冷战格局 -->
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
-<div class="tu-q" data-answer="B">
-<h3>选择题 1</h3><p>1962年古巴导弹危机期间，美苏领导人热线电话记录显示双方都在避免提及：</p><div class="tu-opts">
-<button type="button" class="tu-opt" data-choice="A" data-diagnosis="联合国当时发挥重要调停作用">A. 联合国调解机制</button>
-<button type="button" class="tu-opt" data-choice="B" data-diagnosis="核威慑是冷战核心特征，直接讨论当量会引发误判">B. 核武器具体当量</button>
-<button type="button" class="tu-opt" data-choice="C" data-diagnosis="驻军问题属于常规军事部署">C. 东德驻军换防计划</button>
-<button type="button" class="tu-opt" data-choice="D" data-diagnosis="条约内容本身是公开信息">D. 北约华约条约原文</button>
-</div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C">
-<h3>选择题 2</h3><p>马歇尔计划与经互会最本质的区别体现在：</p><div class="tu-opts">
-<button type="button" class="tu-opt" data-choice="A" data-diagnosis="资金规模是表象非本质">A. 援助资金规模大小</button>
-<button type="button" class="tu-opt" data-choice="B" data-diagnosis="工业基础是客观条件">B. 受援国工业基础</button>
-<button type="button" class="tu-opt" data-choice="C" data-diagnosis="前者推动市场经济一体化，后者强化计划经济阵营">C. 经济体系整合方式</button>
-<button type="button" class="tu-opt" data-choice="D" data-diagnosis="军事同盟属于衍生功能">D. 军事同盟绑定程度</button>
-</div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C">
-<h3>选择题 3</h3><p>下列哪项事件最能体现冷战'代理人战争'特征？</p><div class="tu-opts">
-<button type="button" class="tu-opt" data-choice="A" data-diagnosis="属于物资封锁与反封锁">A. 1948年柏林空运</button>
-<button type="button" class="tu-opt" data-choice="B" data-diagnosis="属于阵营内部镇压">B. 1956年匈牙利事件</button>
-<button type="button" class="tu-opt" data-choice="C" data-diagnosis="苏军直接介入第三国内战对抗美国支持的势力">C. 1979年阿富汗战争</button>
-<button type="button" class="tu-opt" data-choice="D" data-diagnosis="属于突发军事误击">D. 1983年韩国客机击落</button>
-</div><div class="tu-fb" hidden></div></div>
-<div class="tu-fill"><h3>填空题 1</h3><p>北约成立时签署的《____条约》第5条确立集体防御原则</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>北大西洋公约</p><p>该条款规定对任一成员国的攻击视为对所有成员国的攻击</p></details></div>
-<div class="tu-fill"><h3>填空题 2</h3><p>赫鲁晓夫在联合国脱下皮鞋敲桌子的举动，实质是美苏____外交的体现</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>核威慑</p><p>通过夸张行为展示强硬姿态，背后是核武库支撑</p></details></div>
-</section>
-
-<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 解密1979年苏联入侵阿富汗决策</h2><p>分析勃列日涅夫政权为何在缓和时期发动战争</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="从南下战略、意识形态、领导层年龄结构三个维度提出假设"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="查阅苏联政治局会议记录、美国中情局评估报告、巴基斯坦边境难民数据"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="论证地缘政治利益如何压倒核战争风险考量"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
-<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
-<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
-<!-- v7.7.4 标准知识图谱模块 -->
-<!-- v7.20 标准连续音频播放器 -->
-
-<script type="application/json" data-teachany-audio-playlist>
-[
-  { "id": "module1", "section": "module1", "src": "./tts/module1.mp3", "label": "第1部分" },
-  { "id": "module2", "section": "module2", "src": "./tts/module2.mp3", "label": "第2部分" },
-  { "id": "module3", "section": "module3", "src": "./tts/module3.mp3", "label": "第3部分" },
-  { "id": "module4", "section": "module4", "src": "./tts/module4.mp3", "label": "第4部分" },
-  { "id": "module5", "section": "module5", "src": "./tts/module5.mp3", "label": "第5部分" }
-]
-</script>
-
-
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
-  <section class="section histh-depth core-knowledge-module text-module" id="lesson-focus"
-    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
-    <div class="card">
-      <span class="phase-tag">知识精讲</span>
-      <h2>冷战格局</h2>
-      <p>二战后美苏在意识形态、地缘与军备上对峙，形成两极格局。杜鲁门主义、马歇尔计划、北约与华约是冷战表现；冷战中有热战（如朝鲜、越南）与危机（古巴导弹）。对抗与缓和交织，直至苏东剧变两极终结。</p>
-    </div>
-  </section>
-<figure class="ta-standard-figure"><figcaption>冷战格局形成与演变：美苏两极对峙的历史进程</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="ar2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#ef4444"/></marker></defs><rect x="0" y="0" width="640" height="420" fill="#0a1520"/><rect x="10" y="10" width="620" height="400" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.3"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="160" x2="620" y2="160" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="240" x2="620" y2="240" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155" stroke-width="0.5"/><animate attributeName="opacity" from="0" to="0.3" dur="0.5s" begin="0.1s" fill="freeze"/></g><ellipse cx="150" cy="180" rx="90" ry="70" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2" rx="12"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.2s" fill="freeze"/></ellipse><ellipse cx="490" cy="180" rx="90" ry="70" fill="url(#bg2)" stroke="#f87171" stroke-width="2" rx="12"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.35s" fill="freeze"/></ellipse><rect x="80" y="120" width="140" height="40" rx="8" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.5s" fill="freeze"/></rect><rect x="420" y="120" width="140" height="40" rx="8" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.65s" fill="freeze"/></rect><text x="150" y="145" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">美国阵营</text><text x="490" y="145" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">苏联阵营</text><rect x="100" y="170" width="100" height="25" rx="6" fill="url(#bg4)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.8s" fill="freeze"/></rect><rect x="440" y="170" width="100" height="25" rx="6" fill="url(#bg4)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.95s" fill="freeze"/></rect><text x="150" y="187" text-anchor="middle" fill="#e2e8f0" font-size="12">杜鲁门主义</text><text x="490" y="187" text-anchor="middle" fill="#e2e8f0" font-size="12">社会主义阵营</text><rect x="90" y="200" width="120" height="25" rx="6" fill="url(#bg4)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.1s" fill="freeze"/></rect><rect x="430" y="200" width="120" height="25" rx="6" fill="url(#bg4)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.25s" fill="freeze"/></rect><text x="150" y="217" text-anchor="middle" fill="#e2e8f0" font-size="12">马歇尔计划</text><text x="490" y="217" text-anchor="middle" fill="#e2e8f0" font-size="12">华沙条约组织</text><rect x="110" y="230" width="80" height="25" rx="6" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.4s" fill="freeze"/></rect><rect x="450" y="230" width="80" height="25" rx="6" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.55s" fill="freeze"/></rect><text x="150" y="247" text-anchor="middle" fill="#e2e8f0" font-size="12">北约</text><text x="490" y="247" text-anchor="middle" fill="#e2e8f0" font-size="12">华约</text><path d="M240 180 Q320 120 400 180" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.7s" fill="freeze"/></path><path d="M400 180 Q320 240 240 180" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar2)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.85s" fill="freeze"/></path><text x="320" y="150" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">意识形态对峙</text><text x="320" y="220" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">军备竞赛</text><circle cx="320" cy="180" r="8" fill="url(#bg2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2s" fill="freeze"/></circle><text x="320" y="185" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">冷战</text><rect x="50" y="280" width="120" height="60" rx="8" fill="url(#bg2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.15s" fill="freeze"/></rect><text x="110" y="300" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">热战</text><text x="110" y="318" text-anchor="middle" fill="#e2e8f0" font-size="11">朝鲜战争</text><text x="110" y="332" text-anchor="middle" fill="#e2e8f0" font-size="11">越南战争</text><rect x="200" y="280" width="120" height="60" rx="8" fill="url(#bg2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.3s" fill="freeze"/></rect><text x="260" y="300" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">危机</text><text x="260" y="318" text-anchor="middle" fill="#e2e8f0" font-size="11">古巴导弹</text><text x="260" y="332" text-anchor="middle" fill="#e2e8f0" font-size="11">柏林危机</text><rect x="350" y="280" width="120" height="60" rx="8" fill="url(#bg4)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.45s" fill="freeze"/></rect><text x="410" y="300" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">缓和</text><text x="410" y="318" text-anchor="middle" fill="#e2e8f0" font-size="11">限制军备</text><text x="410" y="332" text-anchor="middle" fill="#e2e8f0" font-size="11">贸易往来</text><rect x="500" y="280" width="120" height="60" rx="8" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.6s" fill="freeze"/></rect><text x="560" y="300" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">终结</text><text x="560" y="318" text-anchor="middle" fill="#e2e8f0" font-size="11">苏东剧变</text><text x="560" y="332" text-anchor="middle" fill="#e2e8f0" font-size="11">两极格局瓦解</text><line x1="110" y1="260" x2="110" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.75s" fill="freeze"/></line><line x1="260" y1="260" x2="260" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.9s" fill="freeze"/></line><line x1="410" y1="260" x2="410" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.05s" fill="freeze"/></line><line x1="560" y1="260" x2="560" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.2s" fill="freeze"/></line><circle cx="110" cy="260" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.75s" fill="freeze"/></circle><circle cx="260" cy="260" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.9s" fill="freeze"/></circle><circle cx="410" cy="260" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.05s" fill="freeze"/></circle><circle cx="560" cy="260" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.2s" fill="freeze"/></circle><text x="320" y="50" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">冷战格局演变进程</text><text x="320" y="70" text-anchor="middle" fill="#e2e8f0" font-size="12">二战后美苏两极对峙 → 全面竞争 → 局部缓和 → 格局终结</text><rect x="480" y="360" width="140" height="50" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.35s" fill="freeze"/></rect><rect x="485" y="365" width="12" height="8" fill="#3b82f6" opacity="0.25"/><text x="502" y="372" fill="#e2e8f0" font-size="10">阵营对立</text><rect x="485" y="375" width="12" height="8" fill="#ef4444" opacity="0.25"/><text x="502" y="382" fill="#e2e8f0" font-size="10">冲突热点</text><rect x="485" y="385" width="12" height="8" fill="#34d399" opacity="0.25"/><text x="502" y="392" fill="#e2e8f0" font-size="10">缓和进程</text><rect x="485" y="395" width="12" height="8" fill="#a78bfa" opacity="0.25"/><text x="502" y="402" fill="#e2e8f0" font-size="10">格局变迁</text></svg></figure>
-
-</section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section histh-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：表现—危机—影响</h2>
-      <p>列举政治、经济、军事集团化表现；举柏林、古巴等危机；说明对第三世界与中国外部环境的影响，以及两极下的和平因素。</p>
-      <div class="worked-example"><strong>范例：</strong>北约与华约对峙使欧洲分裂为两大军事集团。</div>
-      <p id="lesson-pitfall" class="histh-pitfall"><strong>常见误区：</strong>常见误区是认为冷战期间没有任何热战或交流。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练：辨析要点</h3>
-        <p>冷战开始的重要标志之一是？</p>
-        <button type="button" data-correct="0" onclick="histhDepthCheck(this,false,&#x27;histh-depth-feedback&#x27;,&quot;杜鲁门主义标志着冷战正式开始。&quot;)">A. 辛亥革命</button><button type="button" data-correct="1" onclick="histhDepthCheck(this,true,&#x27;histh-depth-feedback&#x27;,&quot;杜鲁门主义标志着冷战正式开始。&quot;)">B. 杜鲁门主义出台</button><button type="button" data-correct="0" onclick="histhDepthCheck(this,false,&#x27;histh-depth-feedback&#x27;,&quot;杜鲁门主义标志着冷战正式开始。&quot;)">C. 鸦片战争</button><button type="button" data-correct="0" onclick="histhDepthCheck(this,false,&#x27;histh-depth-feedback&#x27;,&quot;杜鲁门主义标志着冷战正式开始。&quot;)">D. 新航路开辟</button>
-        <div class="histh-feedback" id="histh-depth-feedback" role="status"></div>
+<section id="errors" data-slot="95">
+    <h2 class="section-title">🚨 易错诊断室</h2>
+    <div class="error-list">
+      <div class="error-item">
+        <div class="error-icon">❌</div>
+        <div>
+          <div class="error-title">错误1：把铁幕演说当作冷战开始的标志</div>
+          <div class="error-desc">
+            铁幕演说（1946.3）只是冷战的<strong>信号/前兆</strong>，丘吉尔此时已不是英国首相，不代表官方政策。
+            <br><span class="error-correct">✅ 正确：冷战正式开始的标志是杜鲁门主义（1947.3），这才是美国政府的官方对苏遏制政策宣示。</span>
+          </div>
+        </div>
+      </div>
+      <div class="error-item">
+        <div class="error-icon">❌</div>
+        <div>
+          <div class="error-title">错误2：认为两极格局只有两个国家</div>
+          <div class="error-desc">
+            两极格局是以美苏为首的<strong>两大阵营</strong>对峙，每个阵营包含多个国家。
+            <br><span class="error-correct">✅ 正确：以美国为首的资本主义阵营 vs 以苏联为首的社会主义阵营，各有数十个成员国。</span>
+          </div>
+        </div>
+      </div>
+      <div class="error-item">
+        <div class="error-icon">❌</div>
+        <div>
+          <div class="error-title">错误3：把"多极化趋势"等同于"多极格局已形成"</div>
+          <div class="error-desc">
+            冷战期间（1947-1991）世界格局始终是<strong>两极格局</strong>，新兴力量的崛起只是冲击了两极格局，形成了多极化的<em>趋势</em>。
+            <br><span class="error-correct">✅ 正确：多极格局尚未形成，当前世界是"一超多强"向多极化过渡中。</span>
+          </div>
+        </div>
+      </div>
+      <div class="error-item">
+        <div class="error-icon">❌</div>
+        <div>
+          <div class="error-title">错误4：把柏林墙倒塌当作冷战终结的标志</div>
+          <div class="error-desc">
+            柏林墙倒塌（1989.11）是东欧剧变的重要事件，只是冷战终结的重要前奏。
+            <br><span class="error-correct">✅ 正确：冷战终结的标志是苏联正式解体（1991年12月25日），两极格局从此彻底瓦解。</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
-<figure class="ta-standard-figure"><figcaption>冷战格局形成的表现-危机-影响机制分解示意图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="ar2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#ef4444"/></marker></defs><rect x="0" y="0" width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.3"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="140" x2="620" y2="140" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="200" x2="620" y2="200" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="260" x2="620" y2="260" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155" stroke-width="0.5"/></g><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">冷战格局形成机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><rect x="50" y="70" width="120" height="80" rx="10" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="110" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">美国<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="110" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">杜鲁门主义<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><text x="110" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">马歇尔计划<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><rect x="470" y="70" width="120" height="80" rx="10" fill="url(#bg2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="530" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">苏联<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="530" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">社会主义阵营<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><text x="530" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">经互会<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><path d="M170 110 Q320 90 470 110" stroke="#7dd3fc" stroke-width="2" fill="none" stroke-dasharray="8 6" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="28" to="0" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><text x="320" y="85" text-anchor="middle" fill="#7dd3fc" font-size="12">意识形态对立<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><rect x="80" y="180" width="100" height="60" rx="8" fill="url(#bg4)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="130" y="205" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">北约<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="130" y="225" text-anchor="middle" fill="#e2e8f0" font-size="11">1949年成立<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><rect x="460" y="180" width="100" height="60" rx="8" fill="url(#bg4)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="510" y="205" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">华约<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="510" y="225" text-anchor="middle" fill="#e2e8f0" font-size="11">1955年成立<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><path d="M180 210 L460 210" stroke="#ef4444" stroke-width="3" fill="none" stroke-dasharray="10 8" marker-end="url(#ar2)"><animate attributeName="stroke-dashoffset" from="36" to="0" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></path><path d="M460 210 L180 210" stroke="#ef4444" stroke-width="3" fill="none" stroke-dasharray="10 8" marker-end="url(#ar2)"><animate attributeName="stroke-dashoffset" from="36" to="0" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></path><text x="320" y="200" text-anchor="middle" fill="#ef4444" font-size="12" font-weight="bold">军事对峙<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><ellipse cx="200" cy="290" rx="80" ry="40" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></ellipse><text x="200" y="280" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">柏林危机<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><text x="200" y="300" text-anchor="middle" fill="#e2e8f0" font-size="11">1948-1949<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></text><ellipse cx="440" cy="290" rx="80" ry="40" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></ellipse><text x="440" y="280" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">古巴危机<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><text x="440" y="300" text-anchor="middle" fill="#e2e8f0" font-size="11">1962年<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></text><circle cx="320" cy="290" r="25" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="3s"/></circle><text x="320" y="295" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">核威慑<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></text><rect x="50" y="350" width="150" height="50" rx="8" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></rect><text x="125" y="370" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">第三世界影响<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></text><text x="125" y="385" text-anchor="middle" fill="#e2e8f0" font-size="10">代理人战争、不结盟运动<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><rect x="440" y="350" width="150" height="50" rx="8" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></rect><text x="515" y="370" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">中国外部环境<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></text><text x="515" y="385" text-anchor="middle" fill="#e2e8f0" font-size="10">一边倒→独立自主<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><line x1="110" y1="150" x2="130" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></line><circle cx="130" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></circle><line x1="530" y1="150" x2="510" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></line><circle cx="510" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></circle><line x1="200" y1="330" x2="125" y2="350" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></line><circle cx="125" cy="350" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></circle><line x1="440" y1="330" x2="515" y2="350" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></line><circle cx="515" cy="350" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></circle><rect x="240" y="350" width="160" height="50" rx="8" fill="url(#bg4)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></rect><text x="320" y="370" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">和平因素<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><text x="320" y="385" text-anchor="middle" fill="#e2e8f0" font-size="10">核恐怖平衡、经济交流<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></text><rect x="480" y="20" width="140" height="110" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></rect><text x="490" y="40" fill="#e2e8f0" font-size="13" font-weight="bold">图例说明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></text><rect x="490" y="50" width="12" height="8" fill="#3b82f6" fill-opacity="0.25"/><text x="510" y="58" fill="#e2e8f0" font-size="10">超级大国<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><rect x="490" y="65" width="12" height="8" fill="#34d399" fill-opacity="0.25"/><text x="510" y="73" fill="#e2e8f0" font-size="10">军事集团<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></text><rect x="490" y="80" width="12" height="8" fill="#f59e0b" fill-opacity="0.25"/><text x="510" y="88" fill="#e2e8f0" font-size="10">危机事件<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></text><rect x="490" y="95" width="12" height="8" fill="#a78bfa" fill-opacity="0.25"/><text x="510" y="103" fill="#e2e8f0" font-size="10">影响范围<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></text><text x="490" y="120" fill="#7dd3fc" font-size="9">冷战=表现+危机+影响<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></text></svg></figure>
 
-</section>
+  <!-- ====== COMPREHENSIVE TASKS ====== -->
+  <section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为马歇尔计划是纯经济援助</h3><p>✅ 实质是遏制共产主义的经济手段</p><p>💡 混淆表面目的与深层战略</p></div><div class="tu-q"><h3>❌ 把多极化趋势等同于冷战结束</h3><p>✅ 欧共体崛起等事件发生在冷战期间</p><p>💡 线性思维忽略历史重叠性</p></div></section>
+<section id="anchor" data-slot="98">
+    <h2 class="section-title">🧠 记忆锚点</h2>
+    <div class="memory-anchor">
+      <div class="memory-phrase">"杜马北华，铁幕开冷战"</div>
+      <div class="memory-explain">
+        <p><strong style="color:var(--hist)">杜</strong>——杜鲁门主义（1947，冷战<em>正式开始</em>标志）</p>
+        <p><strong style="color:var(--hist)">马</strong>——马歇尔计划（1947，经济遏制苏联）</p>
+        <p><strong style="color:var(--hist)">北</strong>——北大西洋公约组织（1949，西方军事同盟）</p>
+        <p><strong style="color:var(--hist)">华</strong>——华沙条约组织（1955，东方军事同盟）</p>
+        <p style="margin-top:0.5rem"><strong style="color:var(--secondary)">铁幕</strong>——铁幕演说（1946，冷战<em>信号</em>，非标志）</p>
+      </div>
+    </div>
+  </section>
 
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>用'铁幕演说-杜鲁门主义-马歇尔计划'三阶梯拆解冷战起源</p></div><div class="tu-q"><h3>💡解释它</h3><p>北约是军事盾牌，华约是政治回应，经互会是经济对抗</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>古巴导弹危机vs柏林危机：核威慑与常规对抗的典型差异</p></div><div class="tu-q"><h3>👁️看见它</h3><p>从韩国越南的分裂看意识形态如何重塑地缘格局</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>类比班级里两个学霸暗中较劲却不敢直接打架</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为马歇尔计划是纯经济援助</h3><p>✅ 实质是遏制共产主义的经济手段</p><p>💡 混淆表面目的与深层战略</p></div><div class="tu-q"><h3>❌ 把多极化趋势等同于冷战结束</h3><p>✅ 欧共体崛起等事件发生在冷战期间</p><p>💡 线性思维忽略历史重叠性</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>铁幕一拉两边站，军经文化全对抗</p><p><strong>类比：</strong>就像两个邻居互相较劲，一个装监控（北约），一个修高墙（华约）</p></div></section>
+  <!-- ====== ERROR CLINIC ====== -->
+  <section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>铁幕一拉两边站，军经文化全对抗</p><p><strong>类比：</strong>就像两个邻居互相较劲，一个装监控（北约），一个修高墙（华约）</p></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#3b82f6"}, {"icon": "📝", "label": "前测", "target": "pretest", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#8b5cf6"}, {"icon": "🎧", "label": "音频讲解", "target": "teachany-audio-player", "color": "#ef4444"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#06b6d4"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ec4899"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#84cc16"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#3b82f6"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
-</section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
-
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 冷战起源</h2><div class="tu-q"><p><strong>And：</strong>学生已了解二战结局</p><p><strong>But：</strong>为何盟友变对手？</p><p><strong>Therefore：</strong>理解两极格局形成</p></div><div class="tu-q"><p>核心是美苏意识形态对立与势力范围争夺。例如1947年杜鲁门主义出台，美国拨款4亿美元援助希腊土耳其对抗共产主义扩张，这是冷战开始的标志性事件。苏联则通过成立共产党情报局（1947）和经济互助委员会（1949）进行反制，双方形成'遏制与反遏制'的对抗模式。</p></div><div class="tu-q"><p>🌍 就像班里两个学霸原本合作参加辩论赛，夺冠后却因谁该当队长闹翻，各自拉拢同学形成小团体。美苏就像这两个学霸，二战时共同对抗法西斯（德国），胜利后因社会制度不同（资本主义vs社会主义）开始对立。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>冷战开始的标志事件是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="易混淆后续事件：北约（1949）是军事对抗表现，柏林墙（1961）是德国分裂产物">A. 杜鲁门主义出台</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="易混淆后续事件：北约（1949）是军事对抗表现，柏林墙（1961）是德国分裂产物">B. 北约成立</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="易混淆后续事件：北约（1949）是军事对抗表现，柏林墙（1961）是德国分裂产物">C. 柏林墙修建</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="易混淆后续事件：北约（1949）是军事对抗表现，柏林墙（1961）是德国分裂产物">D. 古巴导弹危机</button></div><div class="tu-fb" hidden></div></div></section>
-
-
-<section class="ta-standard-section" id="teachany-audio-player">
+<section class="ta-standard-section" id="teachany-audio-player" data-slot="120">
   <div data-teachany-audio-player></div>
 </section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：冷战格局</h2><div data-teachany-kg="hist-h-cold-war-h"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
-
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="section" data-tts="ai-media" id="ai-media-zone" data-slot="125">
+<div class="card card-glow"><h2>🎨 AI 多模态互动</h2>
+<p>复制提示词到 AI 学伴，生成「冷战格局 — TeachAny 历史课件」的时间轴或事件提纲；也可以上传你手绘的示意图，请 AI 学伴点评。</p>
+<textarea id="ai-prompt-box" rows="3" style="width:100%">请用表格总结「冷战格局 — TeachAny 历史课件」的背景、经过、影响，并给出一条时间轴和一个易混点辨析。</textarea>
+<button class="choice" id="copy-ai-prompt" type="button">📋 复制提示词</button>
+<p class="feedback" id="ai-zone-feedback">复制后可粘贴到 AI 学伴继续对话。</p>
+</div>
+<script>(function(){var b=document.getElementById('copy-ai-prompt');if(!b)return;b.addEventListener('click',function(){var t=document.getElementById('ai-prompt-box');if(!t)return;t.focus();t.select();try{document.execCommand('copy');}catch(e){}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value);var f=document.getElementById('ai-zone-feedback');if(f)f.textContent='✅ 已复制，去 AI 学伴粘贴吧';});})();</script>
+</section>
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 
@@ -2539,3 +2537,5 @@ function histhDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：冷战格局</h2><div data-teachany-kg="hist-h-cold-war-h"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

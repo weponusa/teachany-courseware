@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-mass-density-hero.png" alt="质量与密度：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,105 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-motion-description", "name": "phy-m-motion-description"}], "current": {"id": "phy-m-mass-density", "name": "质量与密度：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出质量与密度的定义及单位</p></div><div class="tu-q"><p>🎯 能判断不同物质密度大小关系</p></div><div class="tu-q"><p>🎯 能计算给定物体的密度并分析其物理意义</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么铁块比木块重，明明看起来差不多大？</p></div><div class="tu-q"><p>❓ 密度到底是什么？和重量有什么关系？</p></div><div class="tu-q"><p>❓ 老师说密度是物质的特性，那为什么水和冰的密度不一样？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 眼见不为实</h2><div class="tu-q"><p><strong>And：</strong>学生知道铁比木头重</p><p><strong>But：</strong>但同样体积的铁块和木块谁更重？</p><p><strong>Therefore：</strong>建立质量与体积的定量关系</p></div><div class="tu-q"><p>密度是物质特性，等于质量除以体积。比如200g的铁块体积是25cm³，密度就是8g/cm³；而200g的木块体积可能达到400cm³，密度只有0.5g/cm³。这说明铁原子排列更紧密。</p></div><div class="tu-q"><p>🌍 选健身哑铃时，实心金属的比发泡塑料的小很多却更重，就是因为密度差异。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>两个相同大小的盒子，一个装棉花一个装螺丝，哪个更重？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="忽略密度差异，被体积迷惑">A.装螺丝的</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="忽略密度差异，被体积迷惑">B.装棉花的</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="忽略密度差异，被体积迷惑">C.一样重</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="忽略密度差异，被体积迷惑">D.要看盒子大小</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>同样大小的铁块和木块谁更重？</h2>
 <p>密度 ρ=m/V，反映物质疏密程度。用天平测质量、量筒测体积可测密度。</p>
@@ -174,7 +272,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>质量与密度</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>定义</h3><p>ρ=m/V</p></div><div class="mini-panel"><h3>单位</h3><p>kg/m³ 或 g/cm³</p></div><div class="mini-panel"><h3>应用</h3><p>鉴别物质、计算</p></div></div>
@@ -188,7 +286,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="深化追问">
+<section class="slide-page" data-page-type="content" data-tsh="深化追问" data-slot="35">
   <section class="section phym-depth core-knowledge-module" id="module-depth"
     data-bloom-level="analyze" data-scaffold="partial" data-tts="module-depth">
     <div class="card">
@@ -207,7 +305,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -221,51 +319,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：量筒排水法测体积，再算密度</h2>
-      <p>测固体密度：天平测质量，量筒排水法测体积（放入前后体积差），代入 ρ = m/V。注意 1 g/cm³ = 1000 kg/m³ 的换算。</p>
-      <div class="worked-example"><strong>范例：</strong>某金属块质量 54 g，放入量筒后水面从 20 mL 升到 40 mL，V = 20 cm³，ρ = 54/20 = 2.7 g/cm³，是铝。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是认为同种物质质量越大密度越大，忽略密度是质量与体积的比值。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>关于密度，下列说法正确的是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;同种物质的 m 与 V 成正比，比值不变。&quot;)">A. 同种物质密度随质量增大而增大</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;同种物质的 m 与 V 成正比，比值不变。&quot;)">B. 密度是物质的特性，与质量、体积无关</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;同种物质的 m 与 V 成正比，比值不变。&quot;)">C. 密度随体积增大而减小</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;同种物质的 m 与 V 成正比，比值不变。&quot;)">D. 不同物质密度一定不同</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>金属块质量 54 g，放入量筒后水面从 20 mL 升至 40 mL，其密度为？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;V = 20 cm³，ρ = 54/20 = 2.7 g/cm³。&quot;)">A. 1.35 g/cm³</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;V = 20 cm³，ρ = 54/20 = 2.7 g/cm³。&quot;)">B. 2.7 g/cm³</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;V = 20 cm³，ρ = 54/20 = 2.7 g/cm³。&quot;)">C. 5.4 g/cm³</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;V = 20 cm³，ρ = 54/20 = 2.7 g/cm³。&quot;)">D. 27 g/cm³</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>密度是物质性质，与质量体积多少无关（同温同状态）。</li><li>单位换算 1g/cm³=10³kg/m³。</li><li>测体积注意排水法。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-mass-density-section2.png" alt="质量与密度对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：m=200g V=40cm³求密度</h2>
 <ol class="steps"><li>ρ=m/V=5g/cm³</li><li>判断可能是何种物质</li><li>检查单位</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「质量与密度」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -289,74 +349,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 })();
 </script></section>
 
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 密度</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/density/latest/density_zh_CN.html" title="PhET · 密度" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 拖不同物块看沉浮与密度关系。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/density/latest/density_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/density/latest/density_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>同种物质，质量越大则体积通常</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 成正比变大</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 密度变大</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 密度变小</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 无法判断</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>密度单位可用</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">A. g/cm³</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">B. 只有牛顿</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 安培</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 伏特</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>m=100g V=50cm³，ρ=</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">A. 2g/cm³</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">B. 0.5g/cm³</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 500</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 无法算</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>切一半后密度</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 减半</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 不变（同种均匀）</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 加倍</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 变为零</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>鉴别物质常用</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 测密度</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只看颜色</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 只称一次质量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 测电压</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明质量与密度最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -472,117 +465,122 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么铁块比木块重，明明看起来差不多大？</p></div><div class="tu-q"><p>❓ 密度到底是什么？和重量有什么关系？</p></div><div class="tu-q"><p>❓ 老师说密度是物质的特性，那为什么水和冰的密度不一样？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出质量与密度的定义及单位</p></div><div class="tu-q"><p>🎯 能判断不同物质密度大小关系</p></div><div class="tu-q"><p>🎯 能计算给定物体的密度并分析其物理意义</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为密度大的物体一定更重</h3><p>✅ 需同时比较体积</p><p>💡 忽略m=ρV中体积的影响</p></div><div class="tu-q"><h3>❌ 混淆质量与密度单位</h3><p>✅ 质量单位g/kg，密度单位g/cm³</p><p>💡 未理解密度是比值概念</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>质量体积相比值，密度特性要记牢</p><p><strong>类比：</strong>像蜂巢格子，同样空间里蜜越多越重</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）200g液体体积250cm³，其密度为多少kg/m³？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="需统一为kg和m³单位计算">0.8</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="需统一为kg和m³单位计算">800</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="需统一为kg和m³单位计算">125</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="需统一为kg和m³单位计算">1.25</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）冻豆腐出现孔洞后密度如何变化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="质量不变时体积增大会导致密度减小">变大</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="质量不变时体积增大会导致密度减小">变小</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="质量不变时体积增大会导致密度减小">不变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="质量不变时体积增大会导致密度减小">先变大后变小</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="A"><h3>后测题 3</h3><p>（实验题）测量不规则石块密度时，若先测体积后测质量会导致？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="石块沾水后质量测量值偏大">密度偏大</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="石块沾水后质量测量值偏大">密度偏小</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="石块沾水后质量测量值偏大">无影响</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="石块沾水后质量测量值偏大">无法测量</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 眼见不为实</h2><div class="tu-q"><p><strong>And：</strong>学生知道铁比木头重</p><p><strong>But：</strong>但同样体积的铁块和木块谁更重？</p><p><strong>Therefore：</strong>建立质量与体积的定量关系</p></div><div class="tu-q"><p>密度是物质特性，等于质量除以体积。比如200g的铁块体积是25cm³，密度就是8g/cm³；而200g的木块体积可能达到400cm³，密度只有0.5g/cm³。这说明铁原子排列更紧密。</p></div><div class="tu-q"><p>🌍 选健身哑铃时，实心金属的比发泡塑料的小很多却更重，就是因为密度差异。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>两个相同大小的盒子，一个装棉花一个装螺丝，哪个更重？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="忽略密度差异，被体积迷惑">A.装螺丝的</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="忽略密度差异，被体积迷惑">B.装棉花的</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="忽略密度差异，被体积迷惑">C.一样重</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="忽略密度差异，被体积迷惑">D.要看盒子大小</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 数字会说话</h2><div class="tu-q"><p><strong>And：</strong>知道密度公式ρ=m/V</p><p><strong>But：</strong>不会用数据解释现象</p><p><strong>Therefore：</strong>培养定量分析能力</p></div><div class="tu-q"><p>计算时单位要统一：1g/cm³=1000kg/m³。例如水的密度是1g/cm³，换算就是1000kg/m³。记住常见物质密度：铝2.7、铜8.9、水银13.6（单位都是g/cm³）。</p></div><div class="tu-q"><p>🌍 油漂浮在水上，因为食用油密度约0.9g/cm³，比水小。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>金块密度19.3g/cm³，100g金块体积是多少？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="公式变形错误，V=m/ρ">A.约5.2cm³</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="公式变形错误，V=m/ρ">B.19.3cm³</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="公式变形错误，V=m/ρ">C.0.19cm³</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="公式变形错误，V=m/ρ">D.1930cm³</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 真假密度</h2><div class="tu-q"><p><strong>And：</strong>会计算单一物质密度</p><p><strong>But：</strong>遇到混合物就混淆</p><p><strong>Therefore：</strong>理解密度的本质特性</p></div><div class="tu-q"><p>密度是物质的固有属性，不随形状改变。比如把10g金块压成金箔，密度仍是19.3g/cm³。但空心物体平均密度会变小，比如铁皮盒子密度比实心铁块小。</p></div><div class="tu-q"><p>🌍 轮船用钢铁制造却能浮起，因为船体是空心的，平均密度小于水。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>将50cm³酒精与50cm³水混合，总体积98cm³，混合液体密度？(ρ酒精=0.8g/cm³)</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未考虑分子间隙导致的体积减少">A.约0.92g/cm³</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未考虑分子间隙导致的体积减少">B.0.9g/cm³</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未考虑分子间隙导致的体积减少">C.1.8g/cm³</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未考虑分子间隙导致的体积减少">D.无法计算</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4"><h2>📖 侦探实验室</h2><div class="tu-q"><p><strong>And：</strong>掌握密度计算</p><p><strong>But：</strong>不会解决实际问题</p><p><strong>Therefore：</strong>培养科学探究能力</p></div><div class="tu-q"><p>通过测量质量体积可以鉴别物质。比如测得某金属块质量54g，体积20cm³，计算密度2.7g/cm³，对照密度表可判断是铝。注意要多次测量取平均值减小误差。</p></div><div class="tu-q"><p>🌍 珠宝商用密度测试区分真金（19.3g/cm³）和镀金物品。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>测量小石块密度时，应该怎样操作？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="实验步骤混乱，未理解测量原理">A.先测质量再排水法测体积</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="实验步骤混乱，未理解测量原理">B.直接放入量筒测体积</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="实验步骤混乱，未理解测量原理">C.用天平测体积</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="实验步骤混乱，未理解测量原理">D.目测估算</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 数字会说话</h2><div class="tu-q"><p><strong>And：</strong>知道密度公式ρ=m/V</p><p><strong>But：</strong>不会用数据解释现象</p><p><strong>Therefore：</strong>培养定量分析能力</p></div><div class="tu-q"><p>计算时单位要统一：1g/cm³=1000kg/m³。例如水的密度是1g/cm³，换算就是1000kg/m³。记住常见物质密度：铝2.7、铜8.9、水银13.6（单位都是g/cm³）。</p></div><div class="tu-q"><p>🌍 油漂浮在水上，因为食用油密度约0.9g/cm³，比水小。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>金块密度19.3g/cm³，100g金块体积是多少？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="公式变形错误，V=m/ρ">A.约5.2cm³</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="公式变形错误，V=m/ρ">B.19.3cm³</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="公式变形错误，V=m/ρ">C.0.19cm³</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="公式变形错误，V=m/ρ">D.1930cm³</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 真假密度</h2><div class="tu-q"><p><strong>And：</strong>会计算单一物质密度</p><p><strong>But：</strong>遇到混合物就混淆</p><p><strong>Therefore：</strong>理解密度的本质特性</p></div><div class="tu-q"><p>密度是物质的固有属性，不随形状改变。比如把10g金块压成金箔，密度仍是19.3g/cm³。但空心物体平均密度会变小，比如铁皮盒子密度比实心铁块小。</p></div><div class="tu-q"><p>🌍 轮船用钢铁制造却能浮起，因为船体是空心的，平均密度小于水。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>将50cm³酒精与50cm³水混合，总体积98cm³，混合液体密度？(ρ酒精=0.8g/cm³)</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未考虑分子间隙导致的体积减少">A.约0.92g/cm³</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未考虑分子间隙导致的体积减少">B.0.9g/cm³</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未考虑分子间隙导致的体积减少">C.1.8g/cm³</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未考虑分子间隙导致的体积减少">D.无法计算</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4" data-slot="55"><h2>📖 侦探实验室</h2><div class="tu-q"><p><strong>And：</strong>掌握密度计算</p><p><strong>But：</strong>不会解决实际问题</p><p><strong>Therefore：</strong>培养科学探究能力</p></div><div class="tu-q"><p>通过测量质量体积可以鉴别物质。比如测得某金属块质量54g，体积20cm³，计算密度2.7g/cm³，对照密度表可判断是铝。注意要多次测量取平均值减小误差。</p></div><div class="tu-q"><p>🌍 珠宝商用密度测试区分真金（19.3g/cm³）和镀金物品。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>测量小石块密度时，应该怎样操作？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="实验步骤混乱，未理解测量原理">A.先测质量再排水法测体积</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="实验步骤混乱，未理解测量原理">B.直接放入量筒测体积</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="实验步骤混乱，未理解测量原理">C.用天平测体积</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="实验步骤混乱，未理解测量原理">D.目测估算</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：量筒排水法测体积，再算密度</h2>
+      <p>测固体密度：天平测质量，量筒排水法测体积（放入前后体积差），代入 ρ = m/V。注意 1 g/cm³ = 1000 kg/m³ 的换算。</p>
+      <div class="worked-example"><strong>范例：</strong>某金属块质量 54 g，放入量筒后水面从 20 mL 升到 40 mL，V = 20 cm³，ρ = 54/20 = 2.7 g/cm³，是铝。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是认为同种物质质量越大密度越大，忽略密度是质量与体积的比值。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>关于密度，下列说法正确的是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;同种物质的 m 与 V 成正比，比值不变。&quot;)">A. 同种物质密度随质量增大而增大</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;同种物质的 m 与 V 成正比，比值不变。&quot;)">B. 密度是物质的特性，与质量、体积无关</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;同种物质的 m 与 V 成正比，比值不变。&quot;)">C. 密度随体积增大而减小</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;同种物质的 m 与 V 成正比，比值不变。&quot;)">D. 不同物质密度一定不同</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>金属块质量 54 g，放入量筒后水面从 20 mL 升至 40 mL，其密度为？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;V = 20 cm³，ρ = 54/20 = 2.7 g/cm³。&quot;)">A. 1.35 g/cm³</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;V = 20 cm³，ρ = 54/20 = 2.7 g/cm³。&quot;)">B. 2.7 g/cm³</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;V = 20 cm³，ρ = 54/20 = 2.7 g/cm³。&quot;)">C. 5.4 g/cm³</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;V = 20 cm³，ρ = 54/20 = 2.7 g/cm³。&quot;)">D. 27 g/cm³</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）200g液体体积250cm³，其密度为多少kg/m³？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="需统一为kg和m³单位计算">0.8</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="需统一为kg和m³单位计算">800</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="需统一为kg和m³单位计算">125</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="需统一为kg和m³单位计算">1.25</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）冻豆腐出现孔洞后密度如何变化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="质量不变时体积增大会导致密度减小">变大</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="质量不变时体积增大会导致密度减小">变小</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="质量不变时体积增大会导致密度减小">不变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="质量不变时体积增大会导致密度减小">先变大后变小</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A"><h3>后测题 3</h3><p>（实验题）测量不规则石块密度时，若先测体积后测质量会导致？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="石块沾水后质量测量值偏大">密度偏大</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="石块沾水后质量测量值偏大">密度偏小</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="石块沾水后质量测量值偏大">无影响</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="石块沾水后质量测量值偏大">无法测量</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>密度是物质性质，与质量体积多少无关（同温同状态）。</li><li>单位换算 1g/cm³=10³kg/m³。</li><li>测体积注意排水法。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-mass-density-section2.png" alt="质量与密度对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>m=100g V=50cm³，ρ=</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">A. 2g/cm³</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">B. 0.5g/cm³</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 500</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 无法算</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>切一半后密度</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 减半</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 不变（同种均匀）</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 加倍</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 变为零</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为密度大的物体一定更重</h3><p>✅ 需同时比较体积</p><p>💡 忽略m=ρV中体积的影响</p></div><div class="tu-q"><h3>❌ 混淆质量与密度单位</h3><p>✅ 质量单位g/kg，密度单位g/cm³</p><p>💡 未理解密度是比值概念</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>质量体积相比值，密度特性要记牢</p><p><strong>类比：</strong>像蜂巢格子，同样空间里蜜越多越重</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 密度</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/density/latest/density_zh_CN.html" title="PhET · 密度" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 拖不同物块看沉浮与密度关系。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/density/latest/density_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/density/latest/density_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
 
 
-<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-motion-description", "name": "phy-m-motion-description"}], "current": {"id": "phy-m-mass-density", "name": "质量与密度：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>同种物质，质量越大则体积通常</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 成正比变大</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 密度变大</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 密度变小</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 无法判断</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>密度单位可用</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">A. g/cm³</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">B. 只有牛顿</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 安培</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 伏特</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：质量与密度</h2><div data-teachany-kg="phy-m-mass-density"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>鉴别物质常用</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 测密度</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只看颜色</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 只称一次质量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 测电压</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明质量与密度最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -616,3 +614,5 @@ function pmDepthCheck(button, isCorrect, feedbackId, explanation) {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：质量与密度</h2><div data-teachany-kg="phy-m-mass-density"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

@@ -187,14 +187,112 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <button class="toolbar-btn" id="tb-fullscreen-dup1" type="button" aria-label="全屏">⛶</button>
 </div>
 <div class="slide-container" id="slide-container">
-<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="slide-page" data-page-index="0" data-page-type="content" data-tsh="开场 - 先用一个真实问题建立学习动机">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-current-measurement", "name": "phy-m-current-measurement"}, {"id": "phy-m-voltage", "name": "phy-m-voltage"}], "current": {"id": "phy-m-resistance", "name": "电阻：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section data-bloom-level="apply" class="slide-page" data-page-index="2" data-page-type="content" data-tsh="学习目标 - 明确这节课结束时能做到什么" data-slot="10">
+<section id="objectives" class="section" data-tts="objectives" data-tsh="学习目标 - 明确这节课结束时能做到什么">
+  <div class="card">
+    <span class="phase-tag">Learning Objectives</span>
+    <h2>学习目标</h2>
+    <ul class="objectives">
+<li>说出电阻的决定因素（材料、长度、横截面积、温度）</li>
+<li>解释滑动变阻器如何改变接入长度</li>
+<li>区分 R=U/I 计算式与电阻决定因素</li>
+</ul>
+  </div>
+</section>
+</section>
+
+
+<style>.lesson-panel{background:linear-gradient(180deg,rgba(20,35,58,.96),rgba(13,27,47,.96));border:1px solid rgba(148,163,184,.18);padding:22px;box-shadow:0 16px 40px rgba(0,0,0,.18)}.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.mini-panel{background:rgba(15,23,42,.68);border:1px solid rgba(148,163,184,.18);padding:16px}.mini-panel h3{margin:0 0 8px;color:#bae6fd}.quiz-option{display:block;width:100%;margin:8px 0;border:1px solid rgba(56,189,248,.28);background:#0b1628;color:#eef6ff;padding:12px 14px;text-align:left;cursor:pointer}.quiz-option.correct{border-color:#22c55e;background:rgba(34,197,94,.14)}.quiz-option.wrong{border-color:#f97316;background:rgba(249,115,22,.14)}.feedback{min-height:44px;margin-top:10px;padding:10px 12px;background:rgba(56,189,248,.10);color:#dbeafe}.control-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;margin:12px 0}.control-row label{color:#cbd5e1;font-size:14px}.steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}</style>
+
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么导线越长灯泡反而越暗？</p></div><div class="tu-q"><p>❓ 电阻和电流到底是什么关系？不是说电阻大电流小吗？</p></div><div class="tu-q"><p>❓ 调光台灯里那个旋钮是怎么改变电阻的？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 电阻初体验</h2><div class="tu-q"><p><strong>And：</strong>学生知道灯泡亮度与电流有关</p><p><strong>But：</strong>不清楚电流变化背后的阻碍因素</p><p><strong>Therefore：</strong>建立电阻是阻碍电流的物理量概念</p></div><div class="tu-q"><p>电阻就像水管中的海绵，阻碍水流通过。比如用2节相同电池分别给粗细不同的铅笔芯供电，细铅笔芯（电阻大）的小灯泡更暗，说明阻碍作用更强。电阻符号R，单位欧姆（Ω），1Ω=1V/A。数字举例：普通导线电阻约0.01Ω，人体干燥皮肤约100kΩ。</p></div><div class="tu-q"><p>🌍 冬天脱毛衣时噼啪响，是因为干燥空气电阻大，电荷突然击穿空气形成电流。加湿器降低空气电阻后就不容易产生静电。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>以下哪种情况电阻最大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D可能忽略导体材料差异，干木棒虽电阻大但题目未明确尺寸">A. 长而细的铁丝</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D可能忽略导体材料差异，干木棒虽电阻大但题目未明确尺寸">B. 短而粗的铁丝</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D可能忽略导体材料差异，干木棒虽电阻大但题目未明确尺寸">C. 长度相同的铜丝和铁丝（铜丝更粗）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D可能忽略导体材料差异，干木棒虽电阻大但题目未明确尺寸">D. 横截面积相同的湿木棒和干木棒</button></div><div class="tu-fb" hidden></div></div></section>
+<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="slide-page" data-page-index="0" data-page-type="content" data-tsh="开场 - 先用一个真实问题建立学习动机" data-slot="35">
 <header class="hero" id="hero" data-tts="hero" data-tsh="开场 - 先用一个真实问题建立学习动机">
   <h1>电阻：从可观察现象到可测变量</h1>
   <p class="subtitle">同样电压，为什么有的灯更亮？电阻到底在挡什么？</p>
 </header>
 </section>
 
-<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="slide-page" data-page-index="1" data-page-type="content" data-tsh="知识结构主图 - 先看完整学习地图">
+<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="slide-page" data-page-index="1" data-page-type="content" data-tsh="知识结构主图 - 先看完整学习地图" data-slot="35">
 
 <section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
 <figure class="ta-standard-figure ta-figure-labeled">
@@ -237,24 +335,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section data-bloom-level="apply" class="slide-page" data-page-index="2" data-page-type="content" data-tsh="学习目标 - 明确这节课结束时能做到什么">
-<section id="objectives" class="section" data-tts="objectives" data-tsh="学习目标 - 明确这节课结束时能做到什么">
-  <div class="card">
-    <span class="phase-tag">Learning Objectives</span>
-    <h2>学习目标</h2>
-    <ul class="objectives">
-<li>说出电阻的决定因素（材料、长度、横截面积、温度）</li>
-<li>解释滑动变阻器如何改变接入长度</li>
-<li>区分 R=U/I 计算式与电阻决定因素</li>
-</ul>
-  </div>
-</section>
-</section>
-
-
-<style>.lesson-panel{background:linear-gradient(180deg,rgba(20,35,58,.96),rgba(13,27,47,.96));border:1px solid rgba(148,163,184,.18);padding:22px;box-shadow:0 16px 40px rgba(0,0,0,.18)}.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.mini-panel{background:rgba(15,23,42,.68);border:1px solid rgba(148,163,184,.18);padding:16px}.mini-panel h3{margin:0 0 8px;color:#bae6fd}.quiz-option{display:block;width:100%;margin:8px 0;border:1px solid rgba(56,189,248,.28);background:#0b1628;color:#eef6ff;padding:12px 14px;text-align:left;cursor:pointer}.quiz-option.correct{border-color:#22c55e;background:rgba(34,197,94,.14)}.quiz-option.wrong{border-color:#f97316;background:rgba(249,115,22,.14)}.feedback{min-height:44px;margin-top:10px;padding:10px 12px;background:rgba(56,189,248,.10);color:#dbeafe}.control-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;margin:12px 0}.control-row label{color:#cbd5e1;font-size:14px}.steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}</style>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="真实情境">
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>调光台灯为什么能由亮变暗？</h2>
 <p>旋钮往往连着<strong>滑动变阻器</strong>：改变接入电路的电阻丝长度，从而改变电路电阻与电流，灯的亮度跟着变。</p>
@@ -264,7 +345,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 <div class="mini-panel"><h3>本课任务</h3><p>影响因素 → 变阻器 → 计算式辨析。</p></div>
 </div></div></section></section>
 
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="前测">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="前测" data-slot="35">
 <section class="section" id="pretest" data-tts="pretest" data-conceptest="true"><div class="lesson-panel"><span class="phase-tag">前测 · ConcepTest</span>
 <h2>关于电阻，正确的是？</h2>
 <button class="quiz-option" onclick="checkAnswer(this,false,'pretest')">A. 电阻随电压增大而增大</button>
@@ -274,7 +355,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 <div id="pretest-feedback" class="feedback">先选再看解析。</div>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="核心概念">
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="核心概念" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>电阻：阻碍作用有多大</h2>
 <div class="mini-grid">
@@ -292,7 +373,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="深化追问">
+<section class="slide-page" data-page-type="content" data-tsh="深化追问" data-slot="35">
   <section class="section phym-depth core-knowledge-module" id="module-depth"
     data-bloom-level="analyze" data-scaffold="partial" data-tts="module-depth">
     <div class="card">
@@ -311,7 +392,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -325,32 +406,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：控制变量看单一因素</h2>
-      <p>比较两根导体电阻时，只允许一个因素不同，其余相同。滑动变阻器通过改变接入电路的电阻线长度来改变电阻，必须“一上一下”接线。</p>
-      <div class="worked-example"><strong>范例：</strong>某导体两端加 6 V 电压时电流 0.3 A，R = U/I = 20 Ω；把电压改为 3 V 后电流变为 0.15 A，电阻仍是 20 Ω。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是由 R = U/I 得出“电阻与电压成正比、与电流成反比”，这是把定义式当成决定式。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>关于导体的电阻，下列说法正确的是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电阻是导体自身性质，与电压电流无关。&quot;)">A. 与两端电压成正比</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电阻是导体自身性质，与电压电流无关。&quot;)">B. 与通过的电流成反比</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;电阻是导体自身性质，与电压电流无关。&quot;)">C. 由材料、长度、横截面积和温度决定</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电阻是导体自身性质，与电压电流无关。&quot;)">D. 导体中没有电流时电阻为零</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>某导体两端电压 6 V 时电流 0.3 A；电压降为 3 V 后，它的电阻为？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;R = 6/0.3 = 20 Ω，电阻不随电压改变。&quot;)">A. 10 Ω</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;R = 6/0.3 = 20 Ω，电阻不随电压改变。&quot;)">B. 20 Ω</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;R = 6/0.3 = 20 Ω，电阻不随电压改变。&quot;)">C. 40 Ω</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;R = 6/0.3 = 20 Ω，电阻不随电压改变。&quot;)">D. 无法确定</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="易混">
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="易混" data-slot="35">
 <section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
 <h2>R=U/I 是计算式</h2>
 <ul class="steps">
@@ -366,13 +422,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </figure>
 </div></section></section>
 
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：U=6 V，I=0.3 A，求 R</h2>
 <ol class="steps"><li>R=U/I=6/0.3=20 Ω。</li><li>强调：这是该状态下的电阻值。</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="R-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="R-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调长度与横截面积，看电阻趋势</h2>
 <p style="color:var(--muted)">定性：同种材料，R ∝ L / S（温度一定）</p>
 <div class="control-row">
@@ -401,68 +457,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="L1">
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1</span><h2>基础巩固</h2>
-<div class="practice-block">
-<h3>1. 影响因素</h3>
-<p>同种材料、同样粗细，导线越长则</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 电阻越小</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 电阻越大</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 电阻不变</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 无法判断</button>
-<div id="l1a-feedback" class="feedback"></div>
-</div>
-<div class="practice-block">
-<h3>2. 横截面积</h3>
-<p>同种材料、同样长度，横截面积越大则</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 电阻越大</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 电阻越小</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 电阻一定为零</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 与电阻无关</button>
-<div id="l1b-feedback" class="feedback"></div>
-</div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 导线电阻</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/resistance-in-a-wire/latest/resistance-in-a-wire_zh_CN.html" title="PhET · 导线电阻" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 调长度/横截面积/电阻率，观察电阻如何变化，对照 R=ρL/S。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/resistance-in-a-wire/latest/resistance-in-a-wire_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/resistance-in-a-wire/latest/resistance-in-a-wire_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="10" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2</span><h2>能力应用</h2>
-<div class="practice-block">
-<h3>3. 变阻器</h3>
-<p>滑动变阻器改变电阻的主要方式是</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 改变电源电压</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 改变接入电阻丝的长度</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 改变灯泡额定功率</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 改变电流表量程</button>
-<div id="l2a-feedback" class="feedback"></div>
-</div>
-<div class="practice-block">
-<h3>4. 概念陷阱</h3>
-<p>“由 R=U/I 可知电阻与电压成正比”</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 正确</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 错误：这是计算式</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 只在串联正确</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 只在并联正确</button>
-<div id="l2b-feedback" class="feedback"></div>
-</div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="11" data-page-type="content" data-tsh="L3">
+<section class="slide-page" data-page-index="11" data-page-type="content" data-tsh="L3" data-slot="35">
 <section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3</span><h2>迁移</h2>
 <div class="practice-block">
 <h3>5. 控制变量</h3>
@@ -480,7 +475,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 <div id="l3-open-feedback" class="feedback" hidden></div></div>
 </div></section></section>
 
-<section class="slide-page" data-page-index="12" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="12" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary">
   <div class="lesson-panel">
     <span class="phase-tag">小结清单</span>
@@ -601,99 +596,102 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么导线越长灯泡反而越暗？</p></div><div class="tu-q"><p>❓ 电阻和电流到底是什么关系？不是说电阻大电流小吗？</p></div><div class="tu-q"><p>❓ 调光台灯里那个旋钮是怎么改变电阻的？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为电阻与电压成正比</h3><p>✅ 电阻是导体属性，与U/I无关</p><p>💡 混淆R=U/I的计算式与定义式</p></div><div class="tu-q"><h3>❌ 忽略温度对电阻的影响</h3><p>✅ 白炽灯电阻随温度升高而增大</p><p>💡 未建立电阻率与温度的关系</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>长粗电阻小，短细电阻高，材料也重要</p><p><strong>类比：</strong>电阻像收费站，车道越多（横截面积）通行越顺畅</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）当某导体两端电压从3V增至6V时，其电阻将：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A/C是典型的概念混淆">A.变为原来2倍</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A/C是典型的概念混淆">B.保持不变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A/C是典型的概念混淆">C.减为原来1/2</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A/C是典型的概念混淆">D.先增大后减小</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）下列哪个现象与电阻无关？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D未理解保险丝工作原理">A.电炉丝发红而导线不热</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D未理解保险丝工作原理">B.雷雨天避免站在大树下</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D未理解保险丝工作原理">C.超导材料用于磁悬浮</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D未理解保险丝工作原理">D.保险丝熔断保护电路</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="D"><h3>后测题 3</h3><p>（实验题）探究电阻影响因素时，需控制不变的量是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="漏选说明未掌握控制变量法">A.导体材料</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="漏选说明未掌握控制变量法">B.接入电路长度</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="漏选说明未掌握控制变量法">C.环境温度</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="漏选说明未掌握控制变量法">D.以上都需要</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 电阻初体验</h2><div class="tu-q"><p><strong>And：</strong>学生知道灯泡亮度与电流有关</p><p><strong>But：</strong>不清楚电流变化背后的阻碍因素</p><p><strong>Therefore：</strong>建立电阻是阻碍电流的物理量概念</p></div><div class="tu-q"><p>电阻就像水管中的海绵，阻碍水流通过。比如用2节相同电池分别给粗细不同的铅笔芯供电，细铅笔芯（电阻大）的小灯泡更暗，说明阻碍作用更强。电阻符号R，单位欧姆（Ω），1Ω=1V/A。数字举例：普通导线电阻约0.01Ω，人体干燥皮肤约100kΩ。</p></div><div class="tu-q"><p>🌍 冬天脱毛衣时噼啪响，是因为干燥空气电阻大，电荷突然击穿空气形成电流。加湿器降低空气电阻后就不容易产生静电。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>以下哪种情况电阻最大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D可能忽略导体材料差异，干木棒虽电阻大但题目未明确尺寸">A. 长而细的铁丝</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D可能忽略导体材料差异，干木棒虽电阻大但题目未明确尺寸">B. 短而粗的铁丝</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D可能忽略导体材料差异，干木棒虽电阻大但题目未明确尺寸">C. 长度相同的铜丝和铁丝（铜丝更粗）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D可能忽略导体材料差异，干木棒虽电阻大但题目未明确尺寸">D. 横截面积相同的湿木棒和干木棒</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 测量有方法</h2><div class="tu-q"><p><strong>And：</strong>学生已掌握电压表、电流表使用</p><p><strong>But：</strong>不知如何定量测量阻碍作用</p><p><strong>Therefore：</strong>通过欧姆定律实现电阻的可测量</p></div><div class="tu-q"><p>电阻不能直接测量，但可以通过电压和电流计算。就像测楼梯阻力（电阻），用体重（电压）除以爬楼费力程度（电流）得出阻力大小。公式R=U/I，比如测得灯泡两端电压3V，电流0.15A，则电阻R=3V/0.15A=20Ω。特别注意：电阻是导体属性，与电压电流无关。</p></div><div class="tu-q"><p>🌍 电子秤原理：压力（类似电压）使传感器电阻变化，通过测得电流换算成重量。体重越大，传感器电阻变化越明显。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>某导体两端电压从2V升到4V时</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A/C可能混淆电阻的决定式和计算式">A. 电阻变为原来2倍</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A/C可能混淆电阻的决定式和计算式">B. 通过的电流变为原来2倍</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A/C可能混淆电阻的决定式和计算式">C. 电阻减小为原来1/2</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A/C可能混淆电阻的决定式和计算式">D. 电流保持不变</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 变量控制</h2><div class="tu-q"><p><strong>And：</strong>知道电阻与材料有关</p><p><strong>But：</strong>不理解形状因素的影响规律</p><p><strong>Therefore：</strong>掌握长度、横截面积的定量影响</p></div><div class="tu-q"><p>电阻大小就像过马路：路越长（导体长度↑）障碍越多（电阻↑），路越宽（横截面积↑）越容易通过（电阻↓）。具体关系：R=ρL/S，ρ是材料电阻率。例如直径0.5mm、长1m的铁丝电阻约0.13Ω，若长度加倍电阻也加倍，直径加倍电阻变1/4。</p></div><div class="tu-q"><p>🌍 高压输电线又粗（减小电阻）又用铝（ρ小），而电炉丝又细（增大电阻）又用镍铬合金（ρ大）。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>将一根电阻丝对折使用，总电阻如何变化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能只考虑长度减半，忽略横截面积加倍的双重影响">A. 变为原来1/4</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能只考虑长度减半，忽略横截面积加倍的双重影响">B. 变为原来1/2</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能只考虑长度减半，忽略横截面积加倍的双重影响">C. 变为原来2倍</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能只考虑长度减半，忽略横截面积加倍的双重影响">D. 变为原来4倍</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 变量控制</h2><div class="tu-q"><p><strong>And：</strong>知道电阻与材料有关</p><p><strong>But：</strong>不理解形状因素的影响规律</p><p><strong>Therefore：</strong>掌握长度、横截面积的定量影响</p></div><div class="tu-q"><p>电阻大小就像过马路：路越长（导体长度↑）障碍越多（电阻↑），路越宽（横截面积↑）越容易通过（电阻↓）。具体关系：R=ρL/S，ρ是材料电阻率。例如直径0.5mm、长1m的铁丝电阻约0.13Ω，若长度加倍电阻也加倍，直径加倍电阻变1/4。</p></div><div class="tu-q"><p>🌍 高压输电线又粗（减小电阻）又用铝（ρ小），而电炉丝又细（增大电阻）又用镍铬合金（ρ大）。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>将一根电阻丝对折使用，总电阻如何变化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能只考虑长度减半，忽略横截面积加倍的双重影响">A. 变为原来1/4</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能只考虑长度减半，忽略横截面积加倍的双重影响">B. 变为原来1/2</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能只考虑长度减半，忽略横截面积加倍的双重影响">C. 变为原来2倍</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能只考虑长度减半，忽略横截面积加倍的双重影响">D. 变为原来4倍</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#3b82f6"}, {"icon": "📝", "label": "前测", "target": "pretest", "color": "#22c55e"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#f59e0b"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="61"><h2>📖 测量有方法</h2><div class="tu-q"><p><strong>And：</strong>学生已掌握电压表、电流表使用</p><p><strong>But：</strong>不知如何定量测量阻碍作用</p><p><strong>Therefore：</strong>通过欧姆定律实现电阻的可测量</p></div><div class="tu-q"><p>电阻不能直接测量，但可以通过电压和电流计算。就像测楼梯阻力（电阻），用体重（电压）除以爬楼费力程度（电流）得出阻力大小。公式R=U/I，比如测得灯泡两端电压3V，电流0.15A，则电阻R=3V/0.15A=20Ω。特别注意：电阻是导体属性，与电压电流无关。</p></div><div class="tu-q"><p>🌍 电子秤原理：压力（类似电压）使传感器电阻变化，通过测得电流换算成重量。体重越大，传感器电阻变化越明显。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>某导体两端电压从2V升到4V时</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A/C可能混淆电阻的决定式和计算式">A. 电阻变为原来2倍</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A/C可能混淆电阻的决定式和计算式">B. 通过的电流变为原来2倍</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A/C可能混淆电阻的决定式和计算式">C. 电阻减小为原来1/2</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A/C可能混淆电阻的决定式和计算式">D. 电流保持不变</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：控制变量看单一因素</h2>
+      <p>比较两根导体电阻时，只允许一个因素不同，其余相同。滑动变阻器通过改变接入电路的电阻线长度来改变电阻，必须“一上一下”接线。</p>
+      <div class="worked-example"><strong>范例：</strong>某导体两端加 6 V 电压时电流 0.3 A，R = U/I = 20 Ω；把电压改为 3 V 后电流变为 0.15 A，电阻仍是 20 Ω。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是由 R = U/I 得出“电阻与电压成正比、与电流成反比”，这是把定义式当成决定式。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>关于导体的电阻，下列说法正确的是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电阻是导体自身性质，与电压电流无关。&quot;)">A. 与两端电压成正比</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电阻是导体自身性质，与电压电流无关。&quot;)">B. 与通过的电流成反比</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;电阻是导体自身性质，与电压电流无关。&quot;)">C. 由材料、长度、横截面积和温度决定</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电阻是导体自身性质，与电压电流无关。&quot;)">D. 导体中没有电流时电阻为零</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>某导体两端电压 6 V 时电流 0.3 A；电压降为 3 V 后，它的电阻为？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;R = 6/0.3 = 20 Ω，电阻不随电压改变。&quot;)">A. 10 Ω</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;R = 6/0.3 = 20 Ω，电阻不随电压改变。&quot;)">B. 20 Ω</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;R = 6/0.3 = 20 Ω，电阻不随电压改变。&quot;)">C. 40 Ω</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;R = 6/0.3 = 20 Ω，电阻不随电压改变。&quot;)">D. 无法确定</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
 
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）当某导体两端电压从3V增至6V时，其电阻将：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A/C是典型的概念混淆">A.变为原来2倍</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A/C是典型的概念混淆">B.保持不变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A/C是典型的概念混淆">C.减为原来1/2</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A/C是典型的概念混淆">D.先增大后减小</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）下列哪个现象与电阻无关？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D未理解保险丝工作原理">A.电炉丝发红而导线不热</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D未理解保险丝工作原理">B.雷雨天避免站在大树下</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D未理解保险丝工作原理">C.超导材料用于磁悬浮</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D未理解保险丝工作原理">D.保险丝熔断保护电路</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="D"><h3>后测题 3</h3><p>（实验题）探究电阻影响因素时，需控制不变的量是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="漏选说明未掌握控制变量法">A.导体材料</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="漏选说明未掌握控制变量法">B.接入电路长度</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="漏选说明未掌握控制变量法">C.环境温度</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="漏选说明未掌握控制变量法">D.以上都需要</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为电阻与电压成正比</h3><p>✅ 电阻是导体属性，与U/I无关</p><p>💡 混淆R=U/I的计算式与定义式</p></div><div class="tu-q"><h3>❌ 忽略温度对电阻的影响</h3><p>✅ 白炽灯电阻随温度升高而增大</p><p>💡 未建立电阻率与温度的关系</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>长粗电阻小，短细电阻高，材料也重要</p><p><strong>类比：</strong>电阻像收费站，车道越多（横截面积）通行越顺畅</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 导线电阻</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/resistance-in-a-wire/latest/resistance-in-a-wire_zh_CN.html" title="PhET · 导线电阻" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 调长度/横截面积/电阻率，观察电阻如何变化，对照 R=ρL/S。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/resistance-in-a-wire/latest/resistance-in-a-wire_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/resistance-in-a-wire/latest/resistance-in-a-wire_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
 
-<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-current-measurement", "name": "phy-m-current-measurement"}, {"id": "phy-m-voltage", "name": "phy-m-voltage"}], "current": {"id": "phy-m-resistance", "name": "电阻：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="L1" data-slot="115">
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：电阻</h2><div data-teachany-kg="phy-m-resistance"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1</span><h2>基础巩固</h2>
+<div class="practice-block">
+<h3>1. 影响因素</h3>
+<p>同种材料、同样粗细，导线越长则</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 电阻越小</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 电阻越大</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 电阻不变</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 无法判断</button>
+<div id="l1a-feedback" class="feedback"></div>
+</div>
+<div class="practice-block">
+<h3>2. 横截面积</h3>
+<p>同种材料、同样长度，横截面积越大则</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 电阻越大</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 电阻越小</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 电阻一定为零</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 与电阻无关</button>
+<div id="l1b-feedback" class="feedback"></div>
+</div>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="slide-page" data-page-index="10" data-page-type="content" data-tsh="L2" data-slot="115">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2</span><h2>能力应用</h2>
+<div class="practice-block">
+<h3>3. 变阻器</h3>
+<p>滑动变阻器改变电阻的主要方式是</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 改变电源电压</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 改变接入电阻丝的长度</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 改变灯泡额定功率</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 改变电流表量程</button>
+<div id="l2a-feedback" class="feedback"></div>
+</div>
+<div class="practice-block">
+<h3>4. 概念陷阱</h3>
+<p>“由 R=U/I 可知电阻与电压成正比”</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 正确</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 错误：这是计算式</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 只在串联正确</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 只在并联正确</button>
+<div id="l2b-feedback" class="feedback"></div>
+</div>
+</div></section></section>
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -720,3 +718,5 @@ function pmDepthCheck(button, isCorrect, feedbackId, explanation) {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：电阻</h2><div data-teachany-kg="phy-m-resistance"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

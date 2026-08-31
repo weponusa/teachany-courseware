@@ -188,14 +188,112 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <button class="toolbar-btn" id="tb-fullscreen-dup1" type="button" aria-label="全屏">⛶</button>
 </div>
 <div class="slide-container" id="slide-container">
-<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="slide-page" data-page-index="0" data-page-type="content" data-tsh="开场 - 先用一个真实问题建立学习动机">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-circuit-basics", "name": "phy-m-circuit-basics"}], "current": {"id": "phy-m-series-parallel", "name": "串联与并联电路：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section data-bloom-level="apply" class="slide-page" data-page-index="2" data-page-type="content" data-tsh="学习目标 - 明确这节课结束时能做到什么" data-slot="10">
+<section id="objectives" class="section" data-tts="objectives" data-tsh="学习目标 - 明确这节课结束时能做到什么">
+  <div class="card">
+    <span class="phase-tag">Learning Objectives</span>
+    <h2>学习目标</h2>
+    <ul class="objectives">
+<li>能根据路径识别串并联</li>
+<li>掌握串并联电流、电压、电阻基本规律</li>
+<li>能解释彩灯与家用电路的故障差异</li>
+</ul>
+  </div>
+</section>
+</section>
+
+
+<style>.lesson-panel{background:linear-gradient(180deg,rgba(20,35,58,.96),rgba(13,27,47,.96));border:1px solid rgba(148,163,184,.18);padding:22px;box-shadow:0 16px 40px rgba(0,0,0,.18)}.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.mini-panel{background:rgba(15,23,42,.68);border:1px solid rgba(148,163,184,.18);padding:16px}.mini-panel h3{margin:0 0 8px;color:#bae6fd}.quiz-option{display:block;width:100%;margin:8px 0;border:1px solid rgba(56,189,248,.28);background:#0b1628;color:#eef6ff;padding:12px 14px;text-align:left;cursor:pointer}.quiz-option.correct{border-color:#22c55e;background:rgba(34,197,94,.14)}.quiz-option.wrong{border-color:#f97316;background:rgba(249,115,22,.14)}.feedback{min-height:44px;margin-top:10px;padding:10px 12px;background:rgba(56,189,248,.10);color:#dbeafe}.control-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;margin:12px 0}.control-row label{color:#cbd5e1;font-size:14px}.steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}</style>
+
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么旧彩灯坏了一个就全不亮了？</p></div><div class="tu-q"><p>❓ 串联和并联哪个更省电？</p></div><div class="tu-q"><p>❓ 怎么判断电路里是串联还是并联？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 彩灯之谜</h2><div class="tu-q"><p><strong>And：</strong>学生见过节日彩灯</p><p><strong>But：</strong>为什么一盏坏掉整串不亮？</p><p><strong>Therefore：</strong>理解串联电路基本特征</p></div><div class="tu-q"><p>串联电路就像排成一列的小火车，电流只有一条路可走。比如用导线把2节电池（1.5V×2）、开关和小灯泡（3V）连成一圈，电流从正极出发必须经过所有元件才能回到负极。如果灯泡A灯丝断了，就像火车轨道中间断开，灯泡B也无法获得电流。</p></div><div class="tu-q"><p>🌍 老式圣诞树彩灯就是典型串联电路，当某个灯泡烧坏时，整串灯泡都会熄灭。这时需要逐个检查更换坏掉的灯泡。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>串联电路中，增加电池数量会导致？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆串联与并联特性">A.灯泡变亮</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆串联与并联特性">B.灯泡变暗</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆串联与并联特性">C.电流路径增加</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆串联与并联特性">D.灯泡交替闪烁</button></div><div class="tu-fb" hidden></div></div></section>
+<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="slide-page" data-page-index="0" data-page-type="content" data-tsh="开场 - 先用一个真实问题建立学习动机" data-slot="35">
 <header class="hero" id="hero" data-tts="hero" data-tsh="开场 - 先用一个真实问题建立学习动机">
   <h1>串联与并联电路：从可观察现象到可测变量</h1>
   <p class="subtitle">彩灯怎样连接？串联和并联到底差在哪？</p>
 </header>
 </section>
 
-<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="slide-page" data-page-index="1" data-page-type="content" data-tsh="知识结构主图 - 先看完整学习地图">
+<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="slide-page" data-page-index="1" data-page-type="content" data-tsh="知识结构主图 - 先看完整学习地图" data-slot="35">
 
 <section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
 <figure class="ta-standard-figure ta-figure-labeled">
@@ -238,24 +336,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section data-bloom-level="apply" class="slide-page" data-page-index="2" data-page-type="content" data-tsh="学习目标 - 明确这节课结束时能做到什么">
-<section id="objectives" class="section" data-tts="objectives" data-tsh="学习目标 - 明确这节课结束时能做到什么">
-  <div class="card">
-    <span class="phase-tag">Learning Objectives</span>
-    <h2>学习目标</h2>
-    <ul class="objectives">
-<li>能根据路径识别串并联</li>
-<li>掌握串并联电流、电压、电阻基本规律</li>
-<li>能解释彩灯与家用电路的故障差异</li>
-</ul>
-  </div>
-</section>
-</section>
-
-
-<style>.lesson-panel{background:linear-gradient(180deg,rgba(20,35,58,.96),rgba(13,27,47,.96));border:1px solid rgba(148,163,184,.18);padding:22px;box-shadow:0 16px 40px rgba(0,0,0,.18)}.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.mini-panel{background:rgba(15,23,42,.68);border:1px solid rgba(148,163,184,.18);padding:16px}.mini-panel h3{margin:0 0 8px;color:#bae6fd}.quiz-option{display:block;width:100%;margin:8px 0;border:1px solid rgba(56,189,248,.28);background:#0b1628;color:#eef6ff;padding:12px 14px;text-align:left;cursor:pointer}.quiz-option.correct{border-color:#22c55e;background:rgba(34,197,94,.14)}.quiz-option.wrong{border-color:#f97316;background:rgba(249,115,22,.14)}.feedback{min-height:44px;margin-top:10px;padding:10px 12px;background:rgba(56,189,248,.10);color:#dbeafe}.control-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;margin:12px 0}.control-row label{color:#cbd5e1;font-size:14px}.steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}</style>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="真实情境">
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>一串旧彩灯：一盏坏了全都不亮？</h2>
 <p>旧式彩灯常<strong>串联</strong>：一条路径，一处断路全灭。家里灯大多<strong>并联</strong>：一盏坏了，其他还能亮。</p>
@@ -265,7 +346,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 <div class="mini-panel"><h3>本课任务</h3><p>识别连接 → 规律表 → 生活迁移。</p></div>
 </div></div></section></section>
 
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="前测">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="前测" data-slot="35">
 <section class="section" id="pretest" data-tts="pretest" data-conceptest="true"><div class="lesson-panel"><span class="phase-tag">前测</span>
 <h2>两灯串联，一盏灯丝烧断，另一盏</h2>
 <button class="quiz-option" onclick="checkAnswer(this,true,'pretest')">A. 也不亮</button>
@@ -275,7 +356,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 <div id="pretest-feedback" class="feedback">先选再看解析。</div>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>串联一条路 · 并联多条路</h2>
 <div class="mini-grid">
@@ -293,7 +374,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -307,54 +388,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：先判连接方式，再选对应公式</h2>
-      <p>串联相当于导体变长，总电阻比任何一个分电阻都大；并联相当于导体变粗，总电阻比任何一个支路电阻都小。两个相同电阻并联，总电阻是其一半。</p>
-      <div class="worked-example"><strong>范例：</strong>R₁ = R₂ = 10 Ω：串联时 R 总 = 20 Ω；并联时 1/R = 1/10 + 1/10，R 总 = 5 Ω。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把并联总电阻算成两电阻之和，或忘记并联总电阻小于任一支路电阻。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>关于并联电路的总电阻，下列说法正确的是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;并联相当于导体变粗，总电阻变小。&quot;)">A. 大于任何一个支路电阻</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;并联相当于导体变粗，总电阻变小。&quot;)">B. 等于各支路电阻之和</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;并联相当于导体变粗，总电阻变小。&quot;)">C. 小于任何一个支路电阻</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;并联相当于导体变粗，总电阻变小。&quot;)">D. 等于各支路电阻的平均值</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>两个 10 Ω 的电阻并联后的总电阻是？</p>
-        <button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;相同电阻并联，总电阻为其一半，即 5 Ω。&quot;)">A. 5 Ω</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;相同电阻并联，总电阻为其一半，即 5 Ω。&quot;)">B. 10 Ω</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;相同电阻并联，总电阻为其一半，即 5 Ω。&quot;)">C. 20 Ω</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;相同电阻并联，总电阻为其一半，即 5 Ω。&quot;)">D. 100 Ω</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>不要只背口诀，先画路径</h2>
-<ul class="steps">
-<li>断路：串联全灭；并联通常只灭该支路。</li>
-<li>短路危险：并联支路被导线直接接通时电流过大。</li>
-</ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:16px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-series-parallel-section2.png" alt="生活对照（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:40%;left:30%">串联彩灯</span><span class="ta-fig-tag" style="top:40%;left:70%">并联用电器</span></div>
-  </div>
-  <figcaption>彩灯串 vs 房间灯：连接方式不同，故障表现不同。</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题</span>
 <h2>两灯分别 3 V、电流路径分析</h2>
 <ol class="steps"><li>若串联接 6 V：电流相同，电压可相加分配。</li><li>若并联接 3 V：每灯约 3 V，干路电流为支路之和。</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="sp-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="sp-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>串联断一盏 vs 并联断一盏</h2>
 <div class="control-row">
 <label>连接方式
@@ -395,68 +435,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="L1">
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1</span><h2>基础巩固</h2>
-<div class="practice-block">
-<h3>1. 串联电流</h3>
-<p>串联电路中，电流</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 处处相等（理想）</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 到处不同</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 只在电源最大</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 无法比较</button>
-<div id="l1a-feedback" class="feedback"></div>
-</div>
-<div class="practice-block">
-<h3>2. 并联电压</h3>
-<p>并联电路中，各支路电压</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 一定不同</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 相等（理想）</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 之和等于电源电压</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 为零</button>
-<div id="l1b-feedback" class="feedback"></div>
-</div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 串并联电路</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html" title="PhET · 串并联电路" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 搭串并联，用电流表电压表验证规律。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="10" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2</span><h2>能力应用</h2>
-<div class="practice-block">
-<h3>3. 总电阻</h3>
-<p>两电阻串联后总电阻</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 比任何一个都小</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 比任何一个都大</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 一定等于较小者</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 一定为零</button>
-<div id="l2a-feedback" class="feedback"></div>
-</div>
-<div class="practice-block">
-<h3>4. 并联总阻</h3>
-<p>两电阻并联后总电阻</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 比任何一个都大</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 比任何一个都小</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 等于两电阻之和</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 一定更大</button>
-<div id="l2b-feedback" class="feedback"></div>
-</div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="11" data-page-type="content" data-tsh="L3">
+<section class="slide-page" data-page-index="11" data-page-type="content" data-tsh="L3" data-slot="35">
 <section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3</span><h2>迁移</h2>
 <div class="practice-block">
 <h3>5. 生活</h3>
@@ -474,7 +453,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 <div id="l3-open-feedback" class="feedback" hidden></div></div>
 </div></section></section>
 
-<section class="slide-page" data-page-index="12" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="12" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary">
   <div class="lesson-panel">
     <span class="phase-tag">小结清单</span>
@@ -595,100 +574,119 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么旧彩灯坏了一个就全不亮了？</p></div><div class="tu-q"><p>❓ 串联和并联哪个更省电？</p></div><div class="tu-q"><p>❓ 怎么判断电路里是串联还是并联？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为串联电路各点电流不同</h3><p>✅ 串联电流处处相等，用电流表测量验证</p><p>💡 混淆电流与电压概念</p></div><div class="tu-q"><h3>❌ 认为并联电路总电压等于各支路电压和</h3><p>✅ 并联电路各支路电压相等且等于总电压</p><p>💡 将串联分压规律错误迁移到并联</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>串联一条路，并联多条路，断串联全灭，断并联照旧</p><p><strong>类比：</strong>串联像单车道，堵车全停；并联像多车道，一车道堵其他照常</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>两灯并联，电压表测L1为3V，则L2电压为？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="并联电压规律掌握不牢">A.1.5V</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="并联电压规律掌握不牢">B.3V</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="并联电压规律掌握不牢">C.6V</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="并联电压规律掌握不牢">D.0V</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C"><h3>后测题 2</h3><p>圣诞彩灯采用特殊并联方式，其特点是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="实际应用迁移能力不足">A.灯丝并联但外壳串联</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="实际应用迁移能力不足">B.内置分流保护电阻</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="实际应用迁移能力不足">C.每个灯有独立电流路径</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="实际应用迁移能力不足">D.通过总开关控制</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="A"><h3>后测题 3</h3><p>三灯串联，总电阻为18Ω，则每个灯泡电阻约为？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="串联电阻计算未掌握">A.6Ω</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="串联电阻计算未掌握">B.9Ω</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="串联电阻计算未掌握">C.18Ω</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="串联电阻计算未掌握">D.54Ω</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 彩灯之谜</h2><div class="tu-q"><p><strong>And：</strong>学生见过节日彩灯</p><p><strong>But：</strong>为什么一盏坏掉整串不亮？</p><p><strong>Therefore：</strong>理解串联电路基本特征</p></div><div class="tu-q"><p>串联电路就像排成一列的小火车，电流只有一条路可走。比如用导线把2节电池（1.5V×2）、开关和小灯泡（3V）连成一圈，电流从正极出发必须经过所有元件才能回到负极。如果灯泡A灯丝断了，就像火车轨道中间断开，灯泡B也无法获得电流。</p></div><div class="tu-q"><p>🌍 老式圣诞树彩灯就是典型串联电路，当某个灯泡烧坏时，整串灯泡都会熄灭。这时需要逐个检查更换坏掉的灯泡。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>串联电路中，增加电池数量会导致？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆串联与并联特性">A.灯泡变亮</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆串联与并联特性">B.灯泡变暗</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆串联与并联特性">C.电流路径增加</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆串联与并联特性">D.灯泡交替闪烁</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 双路选择</h2><div class="tu-q"><p><strong>And：</strong>知道电流像水流</p><p><strong>But：</strong>电流怎么同时走多条路？</p><p><strong>Therefore：</strong>掌握并联电路分流特点</p></div><div class="tu-q"><p>并联电路像立交桥，电流可以分叉走不同路线。比如用两股导线将两个3V灯泡并排接在3V电池上，每个灯泡都有独立回路。即使灯泡A坏了，电流仍可通过灯泡B的路径。实际测量会发现：总电流=支路1电流+支路2电流（如0.3A=0.15A+0.15A）。</p></div><div class="tu-q"><p>🌍 教室里的日光灯管通常采用并联，这样某根灯管损坏时，其他灯管仍能正常照明。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>家庭电路中电视机和电灯是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="将生活经验与电路模型混淆">A.串联</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="将生活经验与电路模型混淆">B.并联</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="将生活经验与电路模型混淆">C.先串后并</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="将生活经验与电路模型混淆">D.时串时并</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 电压探秘</h2><div class="tu-q"><p><strong>And：</strong>会用电压表测电池</p><p><strong>But：</strong>为什么串联电池电压相加？</p><p><strong>Therefore：</strong>建立电压分配概念</p></div><div class="tu-q"><p>电压像推动电流的力气。串联时电池力气叠加：2节1.5V电池串联产生3V总电压。而并联时电压不变：2节1.5V电池并联还是1.5V，但供电时间更长。实验测量两个3V灯泡串联接6V电源时，每个灯泡两端电压确实是3V（用电压表实测）。</p></div><div class="tu-q"><p>🌍 手电筒常用2节电池串联获得更高电压，而遥控器用2节电池并联延长使用时间。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>两灯串联接6V电源，每灯电压是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未理解串联分压规律">A.6V</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未理解串联分压规律">B.3V</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未理解串联分压规律">C.2V</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未理解串联分压规律">D.不确定</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4"><h2>📖 故障诊断</h2><div class="tu-q"><p><strong>And：</strong>能辨别串并联</p><p><strong>But：</strong>电路故障时如何快速判断？</p><p><strong>Therefore：</strong>应用电路分析解决实际问题</p></div><div class="tu-q"><p>诊断三步法：1.看路径-画电流走向图 2.测关键点-用电压表测元件两端电压 3.比数据-串联断点处电压突增（如断开的灯泡两端测得6V电源电压），并联正常支路电压不变。例如当并联电路中某个3V灯泡不亮，测得两端电压为0V说明短路，测得3V说明灯丝断了。</p></div><div class="tu-q"><p>🌍 汽车维修师常用这种方法快速排查车灯线路故障，先判断是单个灯坏还是线路问题。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>并联电路中某灯不亮，测得两端电压为3V说明？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆电压异常对应故障类型">A.灯泡短路</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆电压异常对应故障类型">B.灯丝断开</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆电压异常对应故障类型">C.导线断开</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆电压异常对应故障类型">D.电源故障</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 双路选择</h2><div class="tu-q"><p><strong>And：</strong>知道电流像水流</p><p><strong>But：</strong>电流怎么同时走多条路？</p><p><strong>Therefore：</strong>掌握并联电路分流特点</p></div><div class="tu-q"><p>并联电路像立交桥，电流可以分叉走不同路线。比如用两股导线将两个3V灯泡并排接在3V电池上，每个灯泡都有独立回路。即使灯泡A坏了，电流仍可通过灯泡B的路径。实际测量会发现：总电流=支路1电流+支路2电流（如0.3A=0.15A+0.15A）。</p></div><div class="tu-q"><p>🌍 教室里的日光灯管通常采用并联，这样某根灯管损坏时，其他灯管仍能正常照明。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>家庭电路中电视机和电灯是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="将生活经验与电路模型混淆">A.串联</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="将生活经验与电路模型混淆">B.并联</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="将生活经验与电路模型混淆">C.先串后并</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="将生活经验与电路模型混淆">D.时串时并</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 电压探秘</h2><div class="tu-q"><p><strong>And：</strong>会用电压表测电池</p><p><strong>But：</strong>为什么串联电池电压相加？</p><p><strong>Therefore：</strong>建立电压分配概念</p></div><div class="tu-q"><p>电压像推动电流的力气。串联时电池力气叠加：2节1.5V电池串联产生3V总电压。而并联时电压不变：2节1.5V电池并联还是1.5V，但供电时间更长。实验测量两个3V灯泡串联接6V电源时，每个灯泡两端电压确实是3V（用电压表实测）。</p></div><div class="tu-q"><p>🌍 手电筒常用2节电池串联获得更高电压，而遥控器用2节电池并联延长使用时间。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>两灯串联接6V电源，每灯电压是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未理解串联分压规律">A.6V</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未理解串联分压规律">B.3V</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未理解串联分压规律">C.2V</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未理解串联分压规律">D.不确定</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4" data-slot="55"><h2>📖 故障诊断</h2><div class="tu-q"><p><strong>And：</strong>能辨别串并联</p><p><strong>But：</strong>电路故障时如何快速判断？</p><p><strong>Therefore：</strong>应用电路分析解决实际问题</p></div><div class="tu-q"><p>诊断三步法：1.看路径-画电流走向图 2.测关键点-用电压表测元件两端电压 3.比数据-串联断点处电压突增（如断开的灯泡两端测得6V电源电压），并联正常支路电压不变。例如当并联电路中某个3V灯泡不亮，测得两端电压为0V说明短路，测得3V说明灯丝断了。</p></div><div class="tu-q"><p>🌍 汽车维修师常用这种方法快速排查车灯线路故障，先判断是单个灯坏还是线路问题。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>并联电路中某灯不亮，测得两端电压为3V说明？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆电压异常对应故障类型">A.灯泡短路</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆电压异常对应故障类型">B.灯丝断开</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆电压异常对应故障类型">C.导线断开</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆电压异常对应故障类型">D.电源故障</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#3b82f6"}, {"icon": "📝", "label": "前测", "target": "pretest", "color": "#22c55e"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#f59e0b"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：先判连接方式，再选对应公式</h2>
+      <p>串联相当于导体变长，总电阻比任何一个分电阻都大；并联相当于导体变粗，总电阻比任何一个支路电阻都小。两个相同电阻并联，总电阻是其一半。</p>
+      <div class="worked-example"><strong>范例：</strong>R₁ = R₂ = 10 Ω：串联时 R 总 = 20 Ω；并联时 1/R = 1/10 + 1/10，R 总 = 5 Ω。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把并联总电阻算成两电阻之和，或忘记并联总电阻小于任一支路电阻。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>关于并联电路的总电阻，下列说法正确的是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;并联相当于导体变粗，总电阻变小。&quot;)">A. 大于任何一个支路电阻</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;并联相当于导体变粗，总电阻变小。&quot;)">B. 等于各支路电阻之和</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;并联相当于导体变粗，总电阻变小。&quot;)">C. 小于任何一个支路电阻</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;并联相当于导体变粗，总电阻变小。&quot;)">D. 等于各支路电阻的平均值</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>两个 10 Ω 的电阻并联后的总电阻是？</p>
+        <button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;相同电阻并联，总电阻为其一半，即 5 Ω。&quot;)">A. 5 Ω</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;相同电阻并联，总电阻为其一半，即 5 Ω。&quot;)">B. 10 Ω</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;相同电阻并联，总电阻为其一半，即 5 Ω。&quot;)">C. 20 Ω</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;相同电阻并联，总电阻为其一半，即 5 Ω。&quot;)">D. 100 Ω</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
 
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>两灯并联，电压表测L1为3V，则L2电压为？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="并联电压规律掌握不牢">A.1.5V</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="并联电压规律掌握不牢">B.3V</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="并联电压规律掌握不牢">C.6V</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="并联电压规律掌握不牢">D.0V</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 2</h3><p>圣诞彩灯采用特殊并联方式，其特点是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="实际应用迁移能力不足">A.灯丝并联但外壳串联</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="实际应用迁移能力不足">B.内置分流保护电阻</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="实际应用迁移能力不足">C.每个灯有独立电流路径</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="实际应用迁移能力不足">D.通过总开关控制</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A"><h3>后测题 3</h3><p>三灯串联，总电阻为18Ω，则每个灯泡电阻约为？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="串联电阻计算未掌握">A.6Ω</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="串联电阻计算未掌握">B.9Ω</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="串联电阻计算未掌握">C.18Ω</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="串联电阻计算未掌握">D.54Ω</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为串联电路各点电流不同</h3><p>✅ 串联电流处处相等，用电流表测量验证</p><p>💡 混淆电流与电压概念</p></div><div class="tu-q"><h3>❌ 认为并联电路总电压等于各支路电压和</h3><p>✅ 并联电路各支路电压相等且等于总电压</p><p>💡 将串联分压规律错误迁移到并联</p></div></section>
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="易混" data-slot="98">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>不要只背口诀，先画路径</h2>
+<ul class="steps">
+<li>断路：串联全灭；并联通常只灭该支路。</li>
+<li>短路危险：并联支路被导线直接接通时电流过大。</li>
+</ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:16px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-series-parallel-section2.png" alt="生活对照（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:40%;left:30%">串联彩灯</span><span class="ta-fig-tag" style="top:40%;left:70%">并联用电器</span></div>
+  </div>
+  <figcaption>彩灯串 vs 房间灯：连接方式不同，故障表现不同。</figcaption>
+</figure>
+</div></section></section>
 
-<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-circuit-basics", "name": "phy-m-circuit-basics"}], "current": {"id": "phy-m-series-parallel", "name": "串联与并联电路：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>串联一条路，并联多条路，断串联全灭，断并联照旧</p><p><strong>类比：</strong>串联像单车道，堵车全停；并联像多车道，一车道堵其他照常</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 串并联电路</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html" title="PhET · 串并联电路" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 搭串并联，用电流表电压表验证规律。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：串联与并联电路</h2><div data-teachany-kg="phy-m-series-parallel"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="L1" data-slot="115">
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1</span><h2>基础巩固</h2>
+<div class="practice-block">
+<h3>1. 串联电流</h3>
+<p>串联电路中，电流</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 处处相等（理想）</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 到处不同</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 只在电源最大</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 无法比较</button>
+<div id="l1a-feedback" class="feedback"></div>
+</div>
+<div class="practice-block">
+<h3>2. 并联电压</h3>
+<p>并联电路中，各支路电压</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 一定不同</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 相等（理想）</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 之和等于电源电压</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 为零</button>
+<div id="l1b-feedback" class="feedback"></div>
+</div>
+</div></section></section>
+
+<section class="slide-page" data-page-index="10" data-page-type="content" data-tsh="L2" data-slot="115">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2</span><h2>能力应用</h2>
+<div class="practice-block">
+<h3>3. 总电阻</h3>
+<p>两电阻串联后总电阻</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 比任何一个都小</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 比任何一个都大</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 一定等于较小者</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 一定为零</button>
+<div id="l2a-feedback" class="feedback"></div>
+</div>
+<div class="practice-block">
+<h3>4. 并联总阻</h3>
+<p>两电阻并联后总电阻</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 比任何一个都大</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 比任何一个都小</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 等于两电阻之和</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 一定更大</button>
+<div id="l2b-feedback" class="feedback"></div>
+</div>
+</div></section></section>
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -714,3 +712,5 @@ function phymDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：串联与并联电路</h2><div data-teachany-kg="phy-m-series-parallel"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

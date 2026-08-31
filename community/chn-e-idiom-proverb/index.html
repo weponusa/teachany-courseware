@@ -474,12 +474,7 @@
   <img class="hero-img" src="./assets/chn-e-idiom-proverb-hero.png" alt="成语与谚语闯关大冒险封面">
 </header>
 
-<section class="hero-cover"><img class="hero-cover-img" src="./assets/hero.webp" alt="课程封面"></section>
-
-<div class="wrap">
-
-  <!-- ═══ 为什么学（ABT） ═══ -->
-  <section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/chn-e-idiom-proverb-hero.png" alt="成语与谚语知识结构（无字）" loading="eager">
@@ -488,7 +483,98 @@
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="section" id="why-learn" data-tts="why-learn" data-tsh="为什么学" data-bloom-level="understand" data-scaffold="full">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>window.__NAV_NODES__ = [{"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#3b82f6"}, {"icon": "📝", "label": "前测", "target": "pretest", "color": "#22c55e"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#f59e0b"}, {"icon": "🎧", "label": "音频讲解", "target": "teachany-audio-player", "color": "#8b5cf6"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#ef4444"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#06b6d4"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ec4899"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#84cc16"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#3b82f6"}];</script>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+<section class="section" id="objectives" data-tts="objectives" data-tsh="学习目标" data-bloom-level="apply" data-scaffold="full" data-slot="10">
+    <h2 class="section-title">🎯 学习目标</h2>
+    <div class="card">
+      <ul>
+        <li><strong>认识成语</strong>：了解成语的特点和来源，理解常用成语的意思</li>
+        <li><strong>学习谚语</strong>：掌握常见谚语，理解谚语中蕴含的道理和智慧</li>
+        <li><strong>正确运用</strong>：能在句子和作文中正确运用成语和谚语</li>
+        <li><strong>区分辨别</strong>：能区分成语和谚语，了解它们各自的特点</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══ 前测 ═══ -->
+  <section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么成语里老有动物？</p></div><div class="tu-q"><p>❓ 谚语和网络流行语有啥区别？</p></div><div class="tu-q"><p>❓ 背了成语但作文用错怎么办？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+
+<section class="section" id="why-learn" data-tts="why-learn" data-tsh="为什么学" data-bloom-level="understand" data-scaffold="full" data-slot="16">
     <h2 class="section-title">✍️ 为什么学成语和谚语？</h2>
     <div class="card">
       <div class="role-badge">🖋️ 作文小达人修炼记</div>
@@ -510,20 +596,7 @@
   </section>
 
   <!-- ═══ 学习目标 ═══ -->
-  <section class="section" id="objectives" data-tts="objectives" data-tsh="学习目标" data-bloom-level="apply" data-scaffold="full">
-    <h2 class="section-title">🎯 学习目标</h2>
-    <div class="card">
-      <ul>
-        <li><strong>认识成语</strong>：了解成语的特点和来源，理解常用成语的意思</li>
-        <li><strong>学习谚语</strong>：掌握常见谚语，理解谚语中蕴含的道理和智慧</li>
-        <li><strong>正确运用</strong>：能在句子和作文中正确运用成语和谚语</li>
-        <li><strong>区分辨别</strong>：能区分成语和谚语，了解它们各自的特点</li>
-      </ul>
-    </div>
-  </section>
-
-  <!-- ═══ 前测 ═══ -->
-  <section class="section" id="pretest" data-tts="pretest" data-tsh="前测" data-bloom-level="remember" data-scaffold="partial">
+  <section class="section" id="pretest" data-tts="pretest" data-tsh="前测" data-bloom-level="remember" data-scaffold="partial" data-slot="20">
     <h2 class="section-title">📋 前置小调查</h2>
     <p class="section-sub">2 道小题，帮你找到自己的起点。答完会给出个性化学习建议。</p>
     <div class="card teal">
@@ -551,7 +624,7 @@
 
 
   <!-- ═══ 模块 1：成语故事会 ═══ -->
-  <section class="section" id="module-1" data-tts="module-1" data-tsh="模块1：成语故事会" data-bloom-level="understand" data-scaffold="full">
+  <section class="section" id="module-1" data-tts="module-1" data-tsh="模块1：成语故事会" data-bloom-level="understand" data-scaffold="full" data-slot="30">
     <h2 class="section-title">📖 模块 1：成语故事会——来源决定用法</h2>
     <div class="card">
       <h3>🐰 守株待兔（出自《韩非子》）</h3>
@@ -575,7 +648,27 @@
   </section>
 
   <!-- ═══ 模块 2：闯关大冒险 ═══ -->
-  <section class="section" id="module-2" data-tts="module-2" data-tsh="模块2：闯关大冒险" data-bloom-level="apply" data-scaffold="partial">
+  <section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 成语与谚语的异同探究</h2><p>请同学们收集10个成语和10个谚语，分析它们在字数、结构、使用场合等方面的异同。</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="成语和谚语在字数、结构和使用场合上可能存在差异。"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="收集到的成语和谚语实例，以及相关的使用场景。"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="通过对比分析，总结成语和谚语的主要区别和联系。"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section chne-depth core-knowledge-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>成语与谚语：凝练的智慧语言</h2>
+      <p>成语多为四字，来自历史故事或古代诗文，意思精炼；谚语是民间流传的俗语，总结生活经验。理解并恰当运用成语谚语，能使表达简洁有力，也传承文化。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>成语与谚语的结构特征与智慧语言应用价值示意图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="8" y="8" width="624" height="404" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1"/><g opacity="0.3"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="160" x2="620" y2="160" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="240" x2="620" y2="240" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155" stroke-width="0.5"/></g><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">成语与谚语：凝练的智慧语言<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></text><rect x="60" y="80" width="240" height="140" rx="12" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><rect x="340" y="80" width="240" height="140" rx="12" fill="url(#bg2)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="180" y="105" text-anchor="middle" fill="#fbbf24" font-size="15" font-weight="bold">成语<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="460" y="105" text-anchor="middle" fill="#fbbf24" font-size="15" font-weight="bold">谚语<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><rect x="80" y="120" width="50" height="25" rx="6" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="105" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">四字<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><rect x="140" y="120" width="60" height="25" rx="6" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="170" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">精炼<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><rect x="210" y="120" width="70" height="25" rx="6" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></rect><text x="245" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">历史典故<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><rect x="360" y="120" width="60" height="25" rx="6" fill="rgba(168,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></rect><text x="390" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">民间<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><rect x="430" y="120" width="60" height="25" rx="6" fill="rgba(168,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></rect><text x="460" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">俗语<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><rect x="500" y="120" width="60" height="25" rx="6" fill="rgba(168,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></rect><text x="530" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">经验<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><ellipse cx="120" cy="170" rx="30" ry="15" fill="rgba(245,158,11,0.15)" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></ellipse><text x="120" y="175" text-anchor="middle" fill="#e2e8f0" font-size="11">画蛇添足<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></text><ellipse cx="200" cy="170" rx="30" ry="15" fill="rgba(245,158,11,0.15)" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></ellipse><text x="200" y="175" text-anchor="middle" fill="#e2e8f0" font-size="11">守株待兔<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><ellipse cx="120" cy="195" rx="30" ry="15" fill="rgba(245,158,11,0.15)" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></ellipse><text x="120" y="200" text-anchor="middle" fill="#e2e8f0" font-size="11">卧薪尝胆<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><ellipse cx="200" cy="195" rx="30" ry="15" fill="rgba(245,158,11,0.15)" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></ellipse><text x="200" y="200" text-anchor="middle" fill="#e2e8f0" font-size="11">胸有成竹<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><ellipse cx="400" cy="170" rx="35" ry="15" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></ellipse><text x="400" y="175" text-anchor="middle" fill="#e2e8f0" font-size="11">早起的鸟儿有虫吃<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><ellipse cx="520" cy="170" rx="35" ry="15" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></ellipse><text x="520" y="175" text-anchor="middle" fill="#e2e8f0" font-size="11">一分耕耘一分收获<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><ellipse cx="400" cy="195" rx="35" ry="15" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></ellipse><text x="400" y="200" text-anchor="middle" fill="#e2e8f0" font-size="11">三个臭皮匠顶个诸葛亮<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></text><ellipse cx="520" cy="195" rx="35" ry="15" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></ellipse><text x="520" y="200" text-anchor="middle" fill="#e2e8f0" font-size="11">熟能生巧<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></text><rect x="120" y="250" width="400" height="80" rx="12" fill="url(#bg3)" stroke="#a78bfa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.95s" fill="freeze"/></rect><text x="320" y="275" text-anchor="middle" fill="#fbbf24" font-size="15" font-weight="bold">智慧语言的作用<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></text><circle cx="180" cy="300" r="25" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.25s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="6s"/></circle><text x="180" y="295" text-anchor="middle" fill="#e2e8f0" font-size="12">表达<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></text><text x="180" y="308" text-anchor="middle" fill="#e2e8f0" font-size="12">简洁有力<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.55s" fill="freeze"/></text><circle cx="320" cy="300" r="25" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.7s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="6.15s"/></circle><text x="320" y="295" text-anchor="middle" fill="#e2e8f0" font-size="12">传承<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.85s" fill="freeze"/></text><text x="320" y="308" text-anchor="middle" fill="#e2e8f0" font-size="12">文化<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6s" fill="freeze"/></text><circle cx="460" cy="300" r="25" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.15s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="6.3s"/></circle><text x="460" y="295" text-anchor="middle" fill="#e2e8f0" font-size="12">恰当<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.3s" fill="freeze"/></text><text x="460" y="308" text-anchor="middle" fill="#e2e8f0" font-size="12">运用<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.45s" fill="freeze"/></text><path d="M300 150 Q320 180 340 150" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="6.6s"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.6s" fill="freeze"/></path><path d="M180 220 Q250 240 320 250" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="6.75s"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.75s" fill="freeze"/></path><path d="M460 220 Q390 240 320 250" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="6.9s"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.9s" fill="freeze"/></path><line x1="120" y1="350" x2="460" y2="350" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.05s" fill="freeze"/></line><circle cx="120" cy="350" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.2s" fill="freeze"/></circle><circle cx="460" cy="350" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.35s" fill="freeze"/></circle><text x="290" y="345" text-anchor="middle" fill="#e2e8f0" font-size="12">理解并恰当运用<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.5s" fill="freeze"/></text><rect x="480" y="340" width="140" height="70" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.65s" fill="freeze"/></rect><text x="490" y="355" fill="#e2e8f0" font-size="12" font-weight="bold">图例说明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.8s" fill="freeze"/></text><rect x="490" y="365" width="12" height="8" fill="#3b82f6" fill-opacity="0.25"/><text x="508" y="372" fill="#e2e8f0" font-size="10">成语结构<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.95s" fill="freeze"/></text><rect x="490" y="378" width="12" height="8" fill="#34d399" fill-opacity="0.25"/><text x="508" y="385" fill="#e2e8f0" font-size="10">谚语特征<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="8.1s" fill="freeze"/></text><rect x="490" y="391" width="12" height="8" fill="#a78bfa" fill-opacity="0.25"/><text x="508" y="398" fill="#e2e8f0" font-size="10">应用价值<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="8.25s" fill="freeze"/></text></svg></figure>
+
+</section>
+<section class="section" id="figures" data-tts="figures" data-tsh="图文速览" data-slot="35">
+    <h2 class="section-title">🖼️ 图文速览</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+      <figure style="background:#fff;border-radius:16px;padding:14px;box-shadow:var(--shadow)"><img src="./assets/hero-infographic.webp" alt="成语谚语知识结构" loading="lazy" style="width:100%;border-radius:10px"><figcaption style="text-align:center;color:#78716c;font-size:13px;margin-top:8px">知识结构总览</figcaption></figure>
+    </div>
+  </section>
+
+<section class="section" id="module-2" data-tts="module-2" data-tsh="模块2：闯关大冒险" data-bloom-level="apply" data-scaffold="partial" data-slot="40">
     <h2 class="section-title">🎮 模块 2：闯关大冒险</h2>
     <p class="section-sub">热身翻卡 → 三大关卡 → Boss 战 → 成绩单。答对赚星星，解锁 8 枚成就徽章！</p>
 
@@ -683,7 +776,7 @@
   </section>
 
   <!-- ═══ 模块 3：谚语里的智慧 ═══ -->
-  <section class="section" id="module-3" data-tts="module-3" data-tsh="模块3：谚语里的智慧" data-bloom-level="understand" data-scaffold="full">
+  <section class="section" id="module-3" data-tts="module-3" data-tsh="模块3：谚语里的智慧" data-bloom-level="understand" data-scaffold="full" data-slot="50">
     <h2 class="section-title">🌾 模块 3：谚语里的智慧——老百姓的"生活教科书"</h2>
     <div class="card teal">
       <h3>谚语和成语有什么不一样？</h3>
@@ -741,7 +834,7 @@
   </section>
 
   <!-- ═══ 模块 4：易错点诊断室 ═══ -->
-  <section class="section" id="module-4" data-tts="module-4" data-tsh="模块4：易错点诊断室" data-bloom-level="analyze" data-scaffold="partial">
+  <section class="section" id="module-4" data-tts="module-4" data-tsh="模块4：易错点诊断室" data-bloom-level="analyze" data-scaffold="partial" data-slot="55">
     <h2 class="section-title">🚨 模块 4：易错点诊断室</h2>
     <div class="card" style="border-left:5px solid #e17055">
       <h3 style="color:#c0392b">高频易错：感情色彩用错</h3>
@@ -772,43 +865,28 @@
   </section>
 
   <!-- ═══ 后测 ═══ -->
-  <section class="section" data-tts="ai-media" id="ai-media-zone">
-<div class="card card-glow"><h2>🎨 AI 多模态互动</h2>
-<p>复制提示词到 AI 学伴，生成「成语与谚语」的思维导图或赏析提纲；也可以上传你手绘的示意图，请 AI 学伴点评。</p>
-<textarea id="ai-prompt-box" rows="3" style="width:100%">请用表格总结「成语与谚语」的核心意象、写作手法和一个易错点，并画一张文字版思维导图。</textarea>
-<button class="choice" id="copy-ai-prompt" type="button">📋 复制提示词</button>
-<p class="feedback" id="ai-zone-feedback">复制后可粘贴到 AI 学伴继续对话。</p>
-</div>
-<script>(function(){var b=document.getElementById('copy-ai-prompt');if(!b)return;b.addEventListener('click',function(){var t=document.getElementById('ai-prompt-box');if(!t)return;t.focus();t.select();try{document.execCommand('copy');}catch(e){}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value);var f=document.getElementById('ai-zone-feedback');if(f)f.textContent='✅ 已复制，去 AI 学伴粘贴吧';});})();</script>
-</section>
-<!-- ═══ 小结 ═══ -->
-  <section class="section" id="summary" data-tts="summary" data-tsh="课堂小结" data-bloom-level="understand" data-scaffold="full">
-    <h2 class="section-title">📌 课堂小结</h2>
+  <section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section chne-depth core-knowledge-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
     <div class="card">
-      <h3>核心知识回顾</h3>
-      <ul>
-        <li><strong>成语</strong>：多为四字短语，出自古代典籍，有特定含义和感情色彩——来源决定用法</li>
-        <li><strong>谚语</strong>：民间口口相传的完整句子，通俗易懂，总结规律、传授经验、讲道理</li>
-        <li><strong>区分</strong>：成语书面化、四字为主；谚语口语化、是完整的一句话</li>
-        <li><strong>记忆三步法</strong>：知故事 → 懂含义 → 会运用</li>
-      </ul>
-    </div>
-    <div class="card amber">
-      <h3>⚠️ 易错提醒</h3>
-      <p>用成语前一定先想清楚它的<strong>感情色彩</strong>（褒义/贬义/中性）——"守株待兔""画蛇添足""八面玲珑"都是贬义词，千万别用来夸人！</p>
-    </div>
-    <div class="card purple">
-      <h3>🚀 迁移挑战（Bloom 创造级）</h3>
-      <p>以"我的一天"为题写一段话，至少用上 <strong>2 个成语</strong>和 <strong>1 句谚语</strong>，写完后自己检查：成语的感情色彩用对了吗？</p>
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：懂出处大意、会造句、不误用</h2>
+      <p>学成语先弄清字面和实际含义，了解简单出处更好记。造句要符合语境，不望文生义。谚语可结合农事、天气、学习态度等分类积累。</p>
+      <div class="worked-example"><strong>范例：</strong>“守株待兔”比喻不主动努力、心存侥幸；造句要批评侥幸心理，不能夸赞坚持等待。</div>
+      <p id="lesson-pitfall" class="chne-pitfall"><strong>常见误区：</strong>常见误区是望文生义（如把“胸有成竹”理解成真有竹子），或成语滥用。应先理解再使用。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>运用成语时最重要的是？</p>
+        <button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;要用准含义，并让成语符合语境。&quot;)">A. 不管意思只要四个字</button><button type="button" data-correct="1" onclick="chneDepthCheck(this,true,&#x27;chne-depth-feedback&#x27;,&quot;要用准含义，并让成语符合语境。&quot;)">B. 理解含义并符合语境</button><button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;要用准含义，并让成语符合语境。&quot;)">C. 越多越好堆在一起</button><button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;要用准含义，并让成语符合语境。&quot;)">D. 只写拼音</button>
+        <div class="chne-feedback" id="chne-depth-feedback" role="status"></div>
+      </div>
     </div>
   </section>
+<figure class="ta-standard-figure"><figcaption>成语与谚语学习的理解-应用-积累三阶段机制及常见误区分析图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#334155" stroke-width="0.5" opacity="0.3"/></pattern></defs><rect width="640" height="420" fill="#0a1520"/><rect width="640" height="420" fill="url(#gridPattern)"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">成语与谚语学习机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><rect x="40" y="70" width="180" height="120" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="130" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">理解阶段</text><text x="50" y="110" fill="#e2e8f0" font-size="12">1. 弄清字面含义</text><text x="50" y="130" fill="#e2e8f0" font-size="12">2. 理解实际含义</text><text x="50" y="150" fill="#e2e8f0" font-size="12">3. 了解简单出处</text><text x="50" y="170" fill="#7dd3fc" font-size="12">避免望文生义</text><rect x="260" y="70" width="180" height="120" rx="10" fill="url(#greenGrad)" stroke="#6ee7b7" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="350" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">应用阶段</text><text x="270" y="110" fill="#e2e8f0" font-size="12">1. 符合语境造句</text><text x="270" y="130" fill="#e2e8f0" font-size="12">2. 准确表达意图</text><text x="270" y="150" fill="#e2e8f0" font-size="12">3. 避免滥用堆砌</text><text x="270" y="170" fill="#7dd3fc" font-size="12">理解后再使用</text><rect x="480" y="70" width="140" height="120" rx="10" fill="url(#orangeGrad)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="550" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">积累分类</text><text x="490" y="110" fill="#e2e8f0" font-size="12">• 农事谚语</text><text x="490" y="130" fill="#e2e8f0" font-size="12">• 天气谚语</text><text x="490" y="150" fill="#e2e8f0" font-size="12">• 学习态度</text><text x="490" y="170" fill="#7dd3fc" font-size="12">系统归纳</text><path d="M220 130 Q240 130 260 130" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></path><path d="M440 130 Q460 130 480 130" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><rect x="80" y="220" width="480" height="80" rx="10" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="320" y="240" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">典型范例：守株待兔</text><text x="90" y="260" fill="#e2e8f0" font-size="12">字面含义：守着树桩等兔子撞死</text><text x="90" y="280" fill="#e2e8f0" font-size="12">实际含义：比喻不主动努力、心存侥幸</text><text x="350" y="260" fill="#7dd3fc" font-size="12">正确用法：批评侥幸心理</text><text x="350" y="280" fill="#ef4444" font-size="12">错误用法：夸赞坚持等待</text><ellipse cx="130" cy="340" rx="80" ry="30" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></ellipse><text x="130" y="335" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">常见误区</text><text x="130" y="350" text-anchor="middle" fill="#e2e8f0" font-size="11">望文生义</text><ellipse cx="320" cy="340" rx="80" ry="30" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></ellipse><text x="320" y="335" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">滥用堆砌</text><text x="320" y="350" text-anchor="middle" fill="#e2e8f0" font-size="11">不管语境</text><ellipse cx="510" cy="340" rx="80" ry="30" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></ellipse><text x="510" y="335" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">生搬硬套</text><text x="510" y="350" text-anchor="middle" fill="#e2e8f0" font-size="11">不求甚解</text><circle cx="130" cy="200" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.65s"/></circle><line x1="130" y1="200" x2="130" y2="310" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></line><circle cx="320" cy="200" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.95s"/></circle><line x1="320" y1="200" x2="320" y2="310" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></line><circle cx="510" cy="200" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2.25s"/></circle><line x1="510" y1="200" x2="510" y2="310" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></line><rect x="450" y="375" width="170" height="35" rx="5" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></rect><text x="460" y="390" fill="#fbbf24" font-size="12" font-weight="bold">核心原则</text><text x="460" y="405" fill="#e2e8f0" font-size="11">理解含义 + 符合语境 = 正确运用</text><rect x="455" y="378" width="8" height="8" fill="#3b82f6" opacity="0.6"/><rect x="455" y="388" width="8" height="8" fill="#34d399" opacity="0.6"/><rect x="455" y="398" width="8" height="8" fill="#ef4444" opacity="0.6"/></svg></figure>
 
-  <!-- ⭐ v7.7 标准独立连续音频模块 -->
-
-
-
-
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>成语多四字结构，谚语多为短句</p></div><div class="tu-q"><h3>💡解释它</h3><p>成语源自历史典故，谚语来自生活经验</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>成语书面性强，谚语口语化明显</p></div><div class="tu-q"><h3>👁️看见它</h3><p>成语如'画龙点睛'有画面感，谚语如'早起的鸟儿有虫吃'有场景感</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>用'守株待兔'批评侥幸心理，用'众人拾柴火焰高'倡导 teamwork</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
 <div class="tu-q" data-answer="B">
 <h3>选择题 1</h3><p>下列哪项是成语？</p><div class="tu-opts">
 <button type="button" class="tu-opt" data-choice="A" data-diagnosis="错因：这是谚语，不是成语。">A. 种瓜得瓜，种豆得豆</button>
@@ -834,42 +912,35 @@
 <div class="tu-fill"><h3>填空题 2</h3><p>谚语'____'告诉我们做事要脚踏实地，从小事做起。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>千里之行，始于足下</p><p>'千里之行，始于足下'是正确答案，它告诉我们做事要脚踏实地，从小事做起。</p></details></div>
 </section>
 
-<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 成语与谚语的异同探究</h2><p>请同学们收集10个成语和10个谚语，分析它们在字数、结构、使用场合等方面的异同。</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="成语和谚语在字数、结构和使用场合上可能存在差异。"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="收集到的成语和谚语实例，以及相关的使用场景。"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="通过对比分析，总结成语和谚语的主要区别和联系。"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么成语里老有动物？</p></div><div class="tu-q"><p>❓ 谚语和网络流行语有啥区别？</p></div><div class="tu-q"><p>❓ 背了成语但作文用错怎么办？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
-  <section class="section chne-depth core-knowledge-module" id="lesson-focus"
-    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把'三人成虎'理解成团结力量大</h3><p>✅ 实指谣言重复变'真相'</p><p>💡 望文生义忽略典故</p></div><div class="tu-q"><h3>❌ 认为'天下乌鸦一般黑'是成语</h3><p>✅ 这是谚语，因无典故且结构松散</p><p>💡 混淆形式特征</p></div></section>
+<section class="section" id="summary" data-tts="summary" data-tsh="课堂小结" data-bloom-level="understand" data-scaffold="full" data-slot="97">
+    <h2 class="section-title">📌 课堂小结</h2>
     <div class="card">
-      <span class="phase-tag">知识精讲</span>
-      <h2>成语与谚语：凝练的智慧语言</h2>
-      <p>成语多为四字，来自历史故事或古代诗文，意思精炼；谚语是民间流传的俗语，总结生活经验。理解并恰当运用成语谚语，能使表达简洁有力，也传承文化。</p>
+      <h3>核心知识回顾</h3>
+      <ul>
+        <li><strong>成语</strong>：多为四字短语，出自古代典籍，有特定含义和感情色彩——来源决定用法</li>
+        <li><strong>谚语</strong>：民间口口相传的完整句子，通俗易懂，总结规律、传授经验、讲道理</li>
+        <li><strong>区分</strong>：成语书面化、四字为主；谚语口语化、是完整的一句话</li>
+        <li><strong>记忆三步法</strong>：知故事 → 懂含义 → 会运用</li>
+      </ul>
+    </div>
+    <div class="card amber">
+      <h3>⚠️ 易错提醒</h3>
+      <p>用成语前一定先想清楚它的<strong>感情色彩</strong>（褒义/贬义/中性）——"守株待兔""画蛇添足""八面玲珑"都是贬义词，千万别用来夸人！</p>
+    </div>
+    <div class="card purple">
+      <h3>🚀 迁移挑战（Bloom 创造级）</h3>
+      <p>以"我的一天"为题写一段话，至少用上 <strong>2 个成语</strong>和 <strong>1 句谚语</strong>，写完后自己检查：成语的感情色彩用对了吗？</p>
     </div>
   </section>
-<figure class="ta-standard-figure"><figcaption>成语与谚语的结构特征与智慧语言应用价值示意图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="8" y="8" width="624" height="404" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1"/><g opacity="0.3"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="160" x2="620" y2="160" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="240" x2="620" y2="240" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155" stroke-width="0.5"/></g><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">成语与谚语：凝练的智慧语言<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></text><rect x="60" y="80" width="240" height="140" rx="12" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><rect x="340" y="80" width="240" height="140" rx="12" fill="url(#bg2)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="180" y="105" text-anchor="middle" fill="#fbbf24" font-size="15" font-weight="bold">成语<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="460" y="105" text-anchor="middle" fill="#fbbf24" font-size="15" font-weight="bold">谚语<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><rect x="80" y="120" width="50" height="25" rx="6" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="105" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">四字<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><rect x="140" y="120" width="60" height="25" rx="6" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="170" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">精炼<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><rect x="210" y="120" width="70" height="25" rx="6" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></rect><text x="245" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">历史典故<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><rect x="360" y="120" width="60" height="25" rx="6" fill="rgba(168,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></rect><text x="390" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">民间<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><rect x="430" y="120" width="60" height="25" rx="6" fill="rgba(168,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></rect><text x="460" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">俗语<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><rect x="500" y="120" width="60" height="25" rx="6" fill="rgba(168,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></rect><text x="530" y="137" text-anchor="middle" fill="#e2e8f0" font-size="12">经验<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><ellipse cx="120" cy="170" rx="30" ry="15" fill="rgba(245,158,11,0.15)" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></ellipse><text x="120" y="175" text-anchor="middle" fill="#e2e8f0" font-size="11">画蛇添足<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></text><ellipse cx="200" cy="170" rx="30" ry="15" fill="rgba(245,158,11,0.15)" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></ellipse><text x="200" y="175" text-anchor="middle" fill="#e2e8f0" font-size="11">守株待兔<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><ellipse cx="120" cy="195" rx="30" ry="15" fill="rgba(245,158,11,0.15)" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></ellipse><text x="120" y="200" text-anchor="middle" fill="#e2e8f0" font-size="11">卧薪尝胆<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><ellipse cx="200" cy="195" rx="30" ry="15" fill="rgba(245,158,11,0.15)" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></ellipse><text x="200" y="200" text-anchor="middle" fill="#e2e8f0" font-size="11">胸有成竹<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><ellipse cx="400" cy="170" rx="35" ry="15" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></ellipse><text x="400" y="175" text-anchor="middle" fill="#e2e8f0" font-size="11">早起的鸟儿有虫吃<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><ellipse cx="520" cy="170" rx="35" ry="15" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></ellipse><text x="520" y="175" text-anchor="middle" fill="#e2e8f0" font-size="11">一分耕耘一分收获<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><ellipse cx="400" cy="195" rx="35" ry="15" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></ellipse><text x="400" y="200" text-anchor="middle" fill="#e2e8f0" font-size="11">三个臭皮匠顶个诸葛亮<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></text><ellipse cx="520" cy="195" rx="35" ry="15" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></ellipse><text x="520" y="200" text-anchor="middle" fill="#e2e8f0" font-size="11">熟能生巧<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></text><rect x="120" y="250" width="400" height="80" rx="12" fill="url(#bg3)" stroke="#a78bfa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.95s" fill="freeze"/></rect><text x="320" y="275" text-anchor="middle" fill="#fbbf24" font-size="15" font-weight="bold">智慧语言的作用<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></text><circle cx="180" cy="300" r="25" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.25s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="6s"/></circle><text x="180" y="295" text-anchor="middle" fill="#e2e8f0" font-size="12">表达<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></text><text x="180" y="308" text-anchor="middle" fill="#e2e8f0" font-size="12">简洁有力<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.55s" fill="freeze"/></text><circle cx="320" cy="300" r="25" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.7s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="6.15s"/></circle><text x="320" y="295" text-anchor="middle" fill="#e2e8f0" font-size="12">传承<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.85s" fill="freeze"/></text><text x="320" y="308" text-anchor="middle" fill="#e2e8f0" font-size="12">文化<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6s" fill="freeze"/></text><circle cx="460" cy="300" r="25" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.15s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="6.3s"/></circle><text x="460" y="295" text-anchor="middle" fill="#e2e8f0" font-size="12">恰当<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.3s" fill="freeze"/></text><text x="460" y="308" text-anchor="middle" fill="#e2e8f0" font-size="12">运用<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.45s" fill="freeze"/></text><path d="M300 150 Q320 180 340 150" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="6.6s"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.6s" fill="freeze"/></path><path d="M180 220 Q250 240 320 250" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="6.75s"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.75s" fill="freeze"/></path><path d="M460 220 Q390 240 320 250" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="6.9s"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.9s" fill="freeze"/></path><line x1="120" y1="350" x2="460" y2="350" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.05s" fill="freeze"/></line><circle cx="120" cy="350" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.2s" fill="freeze"/></circle><circle cx="460" cy="350" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.35s" fill="freeze"/></circle><text x="290" y="345" text-anchor="middle" fill="#e2e8f0" font-size="12">理解并恰当运用<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.5s" fill="freeze"/></text><rect x="480" y="340" width="140" height="70" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.65s" fill="freeze"/></rect><text x="490" y="355" fill="#e2e8f0" font-size="12" font-weight="bold">图例说明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.8s" fill="freeze"/></text><rect x="490" y="365" width="12" height="8" fill="#3b82f6" fill-opacity="0.25"/><text x="508" y="372" fill="#e2e8f0" font-size="10">成语结构<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.95s" fill="freeze"/></text><rect x="490" y="378" width="12" height="8" fill="#34d399" fill-opacity="0.25"/><text x="508" y="385" fill="#e2e8f0" font-size="10">谚语特征<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="8.1s" fill="freeze"/></text><rect x="490" y="391" width="12" height="8" fill="#a78bfa" fill-opacity="0.25"/><text x="508" y="398" fill="#e2e8f0" font-size="10">应用价值<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="8.25s" fill="freeze"/></text></svg></figure>
 
-</section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section chne-depth core-knowledge-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：懂出处大意、会造句、不误用</h2>
-      <p>学成语先弄清字面和实际含义，了解简单出处更好记。造句要符合语境，不望文生义。谚语可结合农事、天气、学习态度等分类积累。</p>
-      <div class="worked-example"><strong>范例：</strong>“守株待兔”比喻不主动努力、心存侥幸；造句要批评侥幸心理，不能夸赞坚持等待。</div>
-      <p id="lesson-pitfall" class="chne-pitfall"><strong>常见误区：</strong>常见误区是望文生义（如把“胸有成竹”理解成真有竹子），或成语滥用。应先理解再使用。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练：辨析要点</h3>
-        <p>运用成语时最重要的是？</p>
-        <button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;要用准含义，并让成语符合语境。&quot;)">A. 不管意思只要四个字</button><button type="button" data-correct="1" onclick="chneDepthCheck(this,true,&#x27;chne-depth-feedback&#x27;,&quot;要用准含义，并让成语符合语境。&quot;)">B. 理解含义并符合语境</button><button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;要用准含义，并让成语符合语境。&quot;)">C. 越多越好堆在一起</button><button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;要用准含义，并让成语符合语境。&quot;)">D. 只写拼音</button>
-        <div class="chne-feedback" id="chne-depth-feedback" role="status"></div>
-      </div>
-    </div>
-  </section>
-<figure class="ta-standard-figure"><figcaption>成语与谚语学习的理解-应用-积累三阶段机制及常见误区分析图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#334155" stroke-width="0.5" opacity="0.3"/></pattern></defs><rect width="640" height="420" fill="#0a1520"/><rect width="640" height="420" fill="url(#gridPattern)"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">成语与谚语学习机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><rect x="40" y="70" width="180" height="120" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="130" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">理解阶段</text><text x="50" y="110" fill="#e2e8f0" font-size="12">1. 弄清字面含义</text><text x="50" y="130" fill="#e2e8f0" font-size="12">2. 理解实际含义</text><text x="50" y="150" fill="#e2e8f0" font-size="12">3. 了解简单出处</text><text x="50" y="170" fill="#7dd3fc" font-size="12">避免望文生义</text><rect x="260" y="70" width="180" height="120" rx="10" fill="url(#greenGrad)" stroke="#6ee7b7" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="350" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">应用阶段</text><text x="270" y="110" fill="#e2e8f0" font-size="12">1. 符合语境造句</text><text x="270" y="130" fill="#e2e8f0" font-size="12">2. 准确表达意图</text><text x="270" y="150" fill="#e2e8f0" font-size="12">3. 避免滥用堆砌</text><text x="270" y="170" fill="#7dd3fc" font-size="12">理解后再使用</text><rect x="480" y="70" width="140" height="120" rx="10" fill="url(#orangeGrad)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="550" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">积累分类</text><text x="490" y="110" fill="#e2e8f0" font-size="12">• 农事谚语</text><text x="490" y="130" fill="#e2e8f0" font-size="12">• 天气谚语</text><text x="490" y="150" fill="#e2e8f0" font-size="12">• 学习态度</text><text x="490" y="170" fill="#7dd3fc" font-size="12">系统归纳</text><path d="M220 130 Q240 130 260 130" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></path><path d="M440 130 Q460 130 480 130" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><rect x="80" y="220" width="480" height="80" rx="10" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="320" y="240" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">典型范例：守株待兔</text><text x="90" y="260" fill="#e2e8f0" font-size="12">字面含义：守着树桩等兔子撞死</text><text x="90" y="280" fill="#e2e8f0" font-size="12">实际含义：比喻不主动努力、心存侥幸</text><text x="350" y="260" fill="#7dd3fc" font-size="12">正确用法：批评侥幸心理</text><text x="350" y="280" fill="#ef4444" font-size="12">错误用法：夸赞坚持等待</text><ellipse cx="130" cy="340" rx="80" ry="30" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></ellipse><text x="130" y="335" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">常见误区</text><text x="130" y="350" text-anchor="middle" fill="#e2e8f0" font-size="11">望文生义</text><ellipse cx="320" cy="340" rx="80" ry="30" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></ellipse><text x="320" y="335" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">滥用堆砌</text><text x="320" y="350" text-anchor="middle" fill="#e2e8f0" font-size="11">不管语境</text><ellipse cx="510" cy="340" rx="80" ry="30" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></ellipse><text x="510" y="335" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">生搬硬套</text><text x="510" y="350" text-anchor="middle" fill="#e2e8f0" font-size="11">不求甚解</text><circle cx="130" cy="200" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.65s"/></circle><line x1="130" y1="200" x2="130" y2="310" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></line><circle cx="320" cy="200" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.95s"/></circle><line x1="320" y1="200" x2="320" y2="310" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></line><circle cx="510" cy="200" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2.25s"/></circle><line x1="510" y1="200" x2="510" y2="310" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></line><rect x="450" y="375" width="170" height="35" rx="5" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></rect><text x="460" y="390" fill="#fbbf24" font-size="12" font-weight="bold">核心原则</text><text x="460" y="405" fill="#e2e8f0" font-size="11">理解含义 + 符合语境 = 正确运用</text><rect x="455" y="378" width="8" height="8" fill="#3b82f6" opacity="0.6"/><rect x="455" y="388" width="8" height="8" fill="#34d399" opacity="0.6"/><rect x="455" y="398" width="8" height="8" fill="#ef4444" opacity="0.6"/></svg></figure>
+  <!-- ⭐ v7.7 标准独立连续音频模块 -->
 
-</section>
-<section class="slide-page" data-page-type="content" data-tsh="拓展应用">
+
+
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>成语有故事，谚语讲道理，四字对短句，千万别混淆</p><p><strong>类比：</strong>成语像压缩包（需解压典故），谚语像说明书（直接指导生活）</p></div></section>
+<section class="slide-page" data-page-type="content" data-tsh="拓展应用" data-slot="100">
   <section class="section chne-depth core-knowledge-module" id="lesson-extend"
     data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-extend">
     <div class="card">
@@ -880,93 +951,7 @@
   </section>
 </section>
 
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>成语多四字结构，谚语多为短句</p></div><div class="tu-q"><h3>💡解释它</h3><p>成语源自历史典故，谚语来自生活经验</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>成语书面性强，谚语口语化明显</p></div><div class="tu-q"><h3>👁️看见它</h3><p>成语如'画龙点睛'有画面感，谚语如'早起的鸟儿有虫吃'有场景感</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>用'守株待兔'批评侥幸心理，用'众人拾柴火焰高'倡导 teamwork</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把'三人成虎'理解成团结力量大</h3><p>✅ 实指谣言重复变'真相'</p><p>💡 望文生义忽略典故</p></div><div class="tu-q"><h3>❌ 认为'天下乌鸦一般黑'是成语</h3><p>✅ 这是谚语，因无典故且结构松散</p><p>💡 混淆形式特征</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>成语有故事，谚语讲道理，四字对短句，千万别混淆</p><p><strong>类比：</strong>成语像压缩包（需解压典故），谚语像说明书（直接指导生活）</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
-</section>
-<script>window.__NAV_NODES__ = [{"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#3b82f6"}, {"icon": "📝", "label": "前测", "target": "pretest", "color": "#22c55e"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#f59e0b"}, {"icon": "🎧", "label": "音频讲解", "target": "teachany-audio-player", "color": "#8b5cf6"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#ef4444"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#06b6d4"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ec4899"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#84cc16"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#3b82f6"}];</script>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
-
-<section class="section" id="figures" data-tts="figures" data-tsh="图文速览">
-    <h2 class="section-title">🖼️ 图文速览</h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
-      <figure style="background:#fff;border-radius:16px;padding:14px;box-shadow:var(--shadow)"><img src="./assets/hero-infographic.webp" alt="成语谚语知识结构" loading="lazy" style="width:100%;border-radius:10px"><figcaption style="text-align:center;color:#78716c;font-size:13px;margin-top:8px">知识结构总览</figcaption></figure>
-    </div>
-  </section>
-
-<section class="ta-standard-section" id="teachany-audio-player">
+<section class="ta-standard-section" id="teachany-audio-player" data-slot="120">
     <div data-teachany-audio>
       <script type="application/json" data-teachany-audio-playlist>
 [
@@ -979,9 +964,17 @@
     </div>
   </section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：成语与谚语</h2><div data-teachany-kg="chn-e-idiom-proverb"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
-
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="section" data-tts="ai-media" id="ai-media-zone" data-slot="125">
+<div class="card card-glow"><h2>🎨 AI 多模态互动</h2>
+<p>复制提示词到 AI 学伴，生成「成语与谚语」的思维导图或赏析提纲；也可以上传你手绘的示意图，请 AI 学伴点评。</p>
+<textarea id="ai-prompt-box" rows="3" style="width:100%">请用表格总结「成语与谚语」的核心意象、写作手法和一个易错点，并画一张文字版思维导图。</textarea>
+<button class="choice" id="copy-ai-prompt" type="button">📋 复制提示词</button>
+<p class="feedback" id="ai-zone-feedback">复制后可粘贴到 AI 学伴继续对话。</p>
+</div>
+<script>(function(){var b=document.getElementById('copy-ai-prompt');if(!b)return;b.addEventListener('click',function(){var t=document.getElementById('ai-prompt-box');if(!t)return;t.focus();t.select();try{document.execCommand('copy');}catch(e){}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value);var f=document.getElementById('ai-zone-feedback');if(f)f.textContent='✅ 已复制，去 AI 学伴粘贴吧';});})();</script>
+</section>
+<!-- ═══ 小结 ═══ -->
+  <section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
     <div data-teachany-tutor-card></div>
   </section>
 
@@ -1820,3 +1813,11 @@ function chneDepthCheck(button, isCorrect, feedbackId, explanation) {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：成语与谚语</h2><div data-teachany-kg="chn-e-idiom-proverb"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<section class="hero-cover"><img class="hero-cover-img" src="./assets/hero.webp" alt="课程封面"></section>
+
+<div class="wrap">
+
+  <!-- ═══ 为什么学（ABT） ═══ -->
+  

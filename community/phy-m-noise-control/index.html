@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-noise-control-hero.png" alt="噪声与声污染：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,105 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-sound-properties", "name": "phy-m-sound-properties"}], "current": {"id": "phy-m-noise-control", "name": "噪声与声污染：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出噪声污染的3个主要来源</p></div><div class="tu-q"><p>🎯 能判断常见生活场景中的噪声等级是否超标</p></div><div class="tu-q"><p>🎯 能分析不同材料对噪声传播的影响</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么有时候关窗还能听见马路噪音？</p></div><div class="tu-q"><p>❓ 音乐开多大才算噪声污染？</p></div><div class="tu-q"><p>❓ 老师说分贝仪测的是响度，可响度不是主观感受吗？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 什么是噪声</h2><div class="tu-q"><p><strong>And：</strong>学生知道声音有大小之分</p><p><strong>But：</strong>不清楚噪声与乐音的本质区别</p><p><strong>Therefore：</strong>建立噪声的物理定义</p></div><div class="tu-q"><p>噪声是引起人烦躁或危害健康的声音，关键在频率无规律。比如电钻声达到80分贝时，其频率杂乱无章，而钢琴同一分贝下频率有固定比例。通过分贝仪测量，教室午休时持续55分贝以上的不规则声波就是噪声污染。</p></div><div class="tu-q"><p>🌍 学校操场施工时，冲击钻的‘哒哒’声（约90分贝）让人头疼，这就是典型噪声。而音乐课合唱声即使达到75分贝，因频率和谐不算噪声。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>以下哪种声音属于噪声？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="错选A可能混淆了音量与规律性，噪声关键在‘突然’和‘无规律’">A. 课间操广播（65分贝，节奏整齐）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="错选A可能混淆了音量与规律性，噪声关键在‘突然’和‘无规律’">B. 同学尖叫（突然的85分贝）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="错选A可能混淆了音量与规律性，噪声关键在‘突然’和‘无规律’">C. 语文课朗读（70分贝）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="错选A可能混淆了音量与规律性，噪声关键在‘突然’和‘无规律’">D. 下雨声（50分贝）</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>怎样让教室更安静？</h2>
 <p>噪声弱控制：消声、吸声、隔声；从声源、传播、人耳三方面。</p>
@@ -174,7 +272,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>噪声控制</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>产生</h3><p>振动发声</p></div><div class="mini-panel"><h3>传播</h3><p>需要介质</p></div><div class="mini-panel"><h3>特性/应用</h3><p>音调响度音色或控制</p></div></div>
@@ -188,7 +286,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -202,51 +300,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：按传播路径分三个环节</h2>
-      <p>控制噪声有三个环节：在声源处减弱（消声器、禁鸣）、在传播过程中减弱（隔音墙、植树）、在人耳处减弱（耳塞、捂耳）。判断某措施属于哪一环节，看它作用在路径的哪一段。</p>
-      <div class="worked-example"><strong>范例：</strong>高速公路两侧安装隔音板，声音已经产生但尚未到达人耳，属于在传播过程中减弱噪声。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把戴耳塞说成“在声源处减弱”，忽略措施作用的位置。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>摩托车安装消声器属于哪一环节减弱噪声？</p>
-        <button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;消声器作用在发声部位，属声源处减弱。&quot;)">A. 在声源处</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;消声器作用在发声部位，属声源处减弱。&quot;)">B. 在传播过程中</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;消声器作用在发声部位，属声源处减弱。&quot;)">C. 在人耳处</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;消声器作用在发声部位，属声源处减弱。&quot;)">D. 以上都不是</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>下列措施中，与“植树造林降低马路噪声”属于同一环节的是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两者都在传播过程中减弱噪声。&quot;)">A. 工人戴防噪声耳罩</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;两者都在传播过程中减弱噪声。&quot;)">B. 教室安装双层隔音玻璃</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两者都在传播过程中减弱噪声。&quot;)">C. 汽车禁止鸣笛</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两者都在传播过程中减弱噪声。&quot;)">D. 把电视音量调小</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>真空不能传声。</li><li>响度与距离、振幅有关。</li><li>噪声是干扰人们的声音。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-noise-control-section2.png" alt="噪声控制对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：月球上两人面对面能直接交谈吗？</h2>
 <ol class="steps"><li>不能靠空气传声</li><li>真空不能传声</li><li>可用无线电等</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「噪声控制」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -274,75 +334,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>真空中</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 能传声</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 不能传声</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 传声更快</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 只传超声波</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>音调主要与</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 振幅</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 频率</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 音色波形细节</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 温度唯一</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 波动/声音相关</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" title="PhET · 波动/声音相关" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 调节频率与振幅，观察波形变化，对照音调响度。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>响度主要与</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 频率</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 振幅等</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 颜色</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电阻</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>区分乐器常用</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 音色</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 只有响度</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 只有音调</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 电压</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>控制噪声可</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 在声源/传播途径/人耳处采取措施</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只提高音量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 关掉所有光</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 增大摩擦必有效</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明噪声控制最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -458,117 +450,123 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么有时候关窗还能听见马路噪音？</p></div><div class="tu-q"><p>❓ 音乐开多大才算噪声污染？</p></div><div class="tu-q"><p>❓ 老师说分贝仪测的是响度，可响度不是主观感受吗？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出噪声污染的3个主要来源</p></div><div class="tu-q"><p>🎯 能判断常见生活场景中的噪声等级是否超标</p></div><div class="tu-q"><p>🎯 能分析不同材料对噪声传播的影响</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为声音大就是噪声</h3><p>✅ 噪声=不需要的声音+造成干扰</p><p>💡 混淆物理量与主观感受</p></div><div class="tu-q"><h3>❌ 以为真空能完全隔音</h3><p>✅ 真空只能阻断空气传声，固体仍可传声</p><p>💡 忽视固体传声途径</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>要静有三招：声源传播接收处</p><p><strong>类比：</strong>噪声像二手烟，看不见但伤身体</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）居民区昼间噪声限值是多少分贝？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆了不同功能区标准">A. 50dB</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆了不同功能区标准">B. 55dB</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆了不同功能区标准">C. 60dB</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆了不同功能区标准">D. 70dB</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>电影院采用绒布座椅主要为了：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未理解吸声材料应用场景">A. 美观</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未理解吸声材料应用场景">B. 吸收反射声</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未理解吸声材料应用场景">C. 防止静电</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未理解吸声材料应用场景">D. 降低成本</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>（迁移题）医院ICU最适合的噪声控制措施是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="需综合控制声源和传播途径">A. 播放白噪声掩盖</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="需综合控制声源和传播途径">B. 双层真空玻璃窗</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="需综合控制声源和传播途径">C. 医护人员穿软底鞋</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="需综合控制声源和传播途径">D. 全天禁止说话</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 什么是噪声</h2><div class="tu-q"><p><strong>And：</strong>学生知道声音有大小之分</p><p><strong>But：</strong>不清楚噪声与乐音的本质区别</p><p><strong>Therefore：</strong>建立噪声的物理定义</p></div><div class="tu-q"><p>噪声是引起人烦躁或危害健康的声音，关键在频率无规律。比如电钻声达到80分贝时，其频率杂乱无章，而钢琴同一分贝下频率有固定比例。通过分贝仪测量，教室午休时持续55分贝以上的不规则声波就是噪声污染。</p></div><div class="tu-q"><p>🌍 学校操场施工时，冲击钻的‘哒哒’声（约90分贝）让人头疼，这就是典型噪声。而音乐课合唱声即使达到75分贝，因频率和谐不算噪声。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>以下哪种声音属于噪声？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="错选A可能混淆了音量与规律性，噪声关键在‘突然’和‘无规律’">A. 课间操广播（65分贝，节奏整齐）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="错选A可能混淆了音量与规律性，噪声关键在‘突然’和‘无规律’">B. 同学尖叫（突然的85分贝）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="错选A可能混淆了音量与规律性，噪声关键在‘突然’和‘无规律’">C. 语文课朗读（70分贝）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="错选A可能混淆了音量与规律性，噪声关键在‘突然’和‘无规律’">D. 下雨声（50分贝）</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 噪声从哪来</h2><div class="tu-q"><p><strong>And：</strong>能列举常见噪声源</p><p><strong>But：</strong>不理解传播路径对污染的影响</p><p><strong>Therefore：</strong>分析噪声产生与传播规律</p></div><div class="tu-q"><p>噪声通过固体、液体、气体传播，距离增加6米声压级降约3分贝。例如：教室隔壁电锯作业产生100分贝噪声，穿过砖墙衰减30分贝后，教室实测70分贝。若同时关闭门窗（再降15分贝），实际听到55分贝。</p></div><div class="tu-q"><p>🌍 你家楼上装修敲墙声，通过楼板（固体）传到楼下比空气传播更响。关窗后声音变小，说明阻断了空气传播路径。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>哪种措施降噪效果最明显？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选C的同学可能忽略题目未说明原始隔音条件，5cm隔音棉通常可降噪25分贝">A. 距离声源10米</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选C的同学可能忽略题目未说明原始隔音条件，5cm隔音棉通常可降噪25分贝">B. 加装5cm厚隔音棉</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选C的同学可能忽略题目未说明原始隔音条件，5cm隔音棉通常可降噪25分贝">C. 关闭双层玻璃窗</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选C的同学可能忽略题目未说明原始隔音条件，5cm隔音棉通常可降噪25分贝">D. 戴普通耳塞</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 噪声怎么测</h2><div class="tu-q"><p><strong>And：</strong>会用手机测分贝</p><p><strong>But：</strong>不懂测量规范导致误差大</p><p><strong>Therefore：</strong>掌握科学测量方法</p></div><div class="tu-q"><p>规范测量要：1) 麦克风距声源1米 2) 避开反射面 3) 取等效连续声级Leq。比如测操场噪声，应在跑道中央举测量仪，持续测3分钟取平均值。若贴着墙壁测，反射声会使结果虚高10-15分贝。</p></div><div class="tu-q"><p>🌍 体育老师吹哨（约120分贝）时，如果你把手机贴着嘴测，会显示130分贝——这是错误数据，实际1米外约100分贝。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>正确测量教室噪声应？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A可能受‘讲台是中心’误导，实际要避开墙壁反射影响">A. 把仪器放讲台</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A可能受‘讲台是中心’误导，实际要避开墙壁反射影响">B. 手持仪器在教室中央</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A可能受‘讲台是中心’误导，实际要避开墙壁反射影响">C. 贴窗测3秒</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A可能受‘讲台是中心’误导，实际要避开墙壁反射影响">D. 课桌下测1分钟</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4"><h2>📖 降噪三招</h2><div class="tu-q"><p><strong>And：</strong>知道隔音棉能降噪</p><p><strong>But：</strong>不会综合运用降噪手段</p><p><strong>Therefore：</strong>形成系统解决方案</p></div><div class="tu-q"><p>降噪三大原则：1) 声源处控制（如给机器加橡胶垫）2) 传播中阻断（如建隔音墙）3) 接收点防护（戴耳塞）。例如KTV装修时，墙面用10cm多孔吸音棉（降40分贝）+ 双层玻璃（降30分贝），使包间外噪声从110分贝降到40分贝。</p></div><div class="tu-q"><p>🌍 你们教室用绒布窗帘（降10分贝）+ 天花板吸音板（降15分贝），使走廊噪声60分贝降到35分贝，相当于图书馆安静水平。</p></div><div class="tu-q" data-answer="D"><h3>🏋️ 即练</h3><p>哪种属于‘声源控制’？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A属于行为管理，物理降噪要看是否直接改变声源振动">A. 给吵闹同学递纸条</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A属于行为管理，物理降噪要看是否直接改变声源振动">B. 教室装隔音窗</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A属于行为管理，物理降噪要看是否直接改变声源振动">C. 自己戴降噪耳机</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A属于行为管理，物理降噪要看是否直接改变声源振动">D. 给音箱包海绵</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 噪声从哪来</h2><div class="tu-q"><p><strong>And：</strong>能列举常见噪声源</p><p><strong>But：</strong>不理解传播路径对污染的影响</p><p><strong>Therefore：</strong>分析噪声产生与传播规律</p></div><div class="tu-q"><p>噪声通过固体、液体、气体传播，距离增加6米声压级降约3分贝。例如：教室隔壁电锯作业产生100分贝噪声，穿过砖墙衰减30分贝后，教室实测70分贝。若同时关闭门窗（再降15分贝），实际听到55分贝。</p></div><div class="tu-q"><p>🌍 你家楼上装修敲墙声，通过楼板（固体）传到楼下比空气传播更响。关窗后声音变小，说明阻断了空气传播路径。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>哪种措施降噪效果最明显？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选C的同学可能忽略题目未说明原始隔音条件，5cm隔音棉通常可降噪25分贝">A. 距离声源10米</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选C的同学可能忽略题目未说明原始隔音条件，5cm隔音棉通常可降噪25分贝">B. 加装5cm厚隔音棉</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选C的同学可能忽略题目未说明原始隔音条件，5cm隔音棉通常可降噪25分贝">C. 关闭双层玻璃窗</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选C的同学可能忽略题目未说明原始隔音条件，5cm隔音棉通常可降噪25分贝">D. 戴普通耳塞</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 噪声怎么测</h2><div class="tu-q"><p><strong>And：</strong>会用手机测分贝</p><p><strong>But：</strong>不懂测量规范导致误差大</p><p><strong>Therefore：</strong>掌握科学测量方法</p></div><div class="tu-q"><p>规范测量要：1) 麦克风距声源1米 2) 避开反射面 3) 取等效连续声级Leq。比如测操场噪声，应在跑道中央举测量仪，持续测3分钟取平均值。若贴着墙壁测，反射声会使结果虚高10-15分贝。</p></div><div class="tu-q"><p>🌍 体育老师吹哨（约120分贝）时，如果你把手机贴着嘴测，会显示130分贝——这是错误数据，实际1米外约100分贝。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>正确测量教室噪声应？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A可能受‘讲台是中心’误导，实际要避开墙壁反射影响">A. 把仪器放讲台</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A可能受‘讲台是中心’误导，实际要避开墙壁反射影响">B. 手持仪器在教室中央</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A可能受‘讲台是中心’误导，实际要避开墙壁反射影响">C. 贴窗测3秒</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A可能受‘讲台是中心’误导，实际要避开墙壁反射影响">D. 课桌下测1分钟</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4" data-slot="55"><h2>📖 降噪三招</h2><div class="tu-q"><p><strong>And：</strong>知道隔音棉能降噪</p><p><strong>But：</strong>不会综合运用降噪手段</p><p><strong>Therefore：</strong>形成系统解决方案</p></div><div class="tu-q"><p>降噪三大原则：1) 声源处控制（如给机器加橡胶垫）2) 传播中阻断（如建隔音墙）3) 接收点防护（戴耳塞）。例如KTV装修时，墙面用10cm多孔吸音棉（降40分贝）+ 双层玻璃（降30分贝），使包间外噪声从110分贝降到40分贝。</p></div><div class="tu-q"><p>🌍 你们教室用绒布窗帘（降10分贝）+ 天花板吸音板（降15分贝），使走廊噪声60分贝降到35分贝，相当于图书馆安静水平。</p></div><div class="tu-q" data-answer="D"><h3>🏋️ 即练</h3><p>哪种属于‘声源控制’？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A属于行为管理，物理降噪要看是否直接改变声源振动">A. 给吵闹同学递纸条</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A属于行为管理，物理降噪要看是否直接改变声源振动">B. 教室装隔音窗</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A属于行为管理，物理降噪要看是否直接改变声源振动">C. 自己戴降噪耳机</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A属于行为管理，物理降噪要看是否直接改变声源振动">D. 给音箱包海绵</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：按传播路径分三个环节</h2>
+      <p>控制噪声有三个环节：在声源处减弱（消声器、禁鸣）、在传播过程中减弱（隔音墙、植树）、在人耳处减弱（耳塞、捂耳）。判断某措施属于哪一环节，看它作用在路径的哪一段。</p>
+      <div class="worked-example"><strong>范例：</strong>高速公路两侧安装隔音板，声音已经产生但尚未到达人耳，属于在传播过程中减弱噪声。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把戴耳塞说成“在声源处减弱”，忽略措施作用的位置。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>摩托车安装消声器属于哪一环节减弱噪声？</p>
+        <button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;消声器作用在发声部位，属声源处减弱。&quot;)">A. 在声源处</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;消声器作用在发声部位，属声源处减弱。&quot;)">B. 在传播过程中</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;消声器作用在发声部位，属声源处减弱。&quot;)">C. 在人耳处</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;消声器作用在发声部位，属声源处减弱。&quot;)">D. 以上都不是</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>下列措施中，与“植树造林降低马路噪声”属于同一环节的是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两者都在传播过程中减弱噪声。&quot;)">A. 工人戴防噪声耳罩</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;两者都在传播过程中减弱噪声。&quot;)">B. 教室安装双层隔音玻璃</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两者都在传播过程中减弱噪声。&quot;)">C. 汽车禁止鸣笛</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两者都在传播过程中减弱噪声。&quot;)">D. 把电视音量调小</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）居民区昼间噪声限值是多少分贝？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆了不同功能区标准">A. 50dB</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆了不同功能区标准">B. 55dB</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆了不同功能区标准">C. 60dB</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆了不同功能区标准">D. 70dB</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>电影院采用绒布座椅主要为了：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未理解吸声材料应用场景">A. 美观</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未理解吸声材料应用场景">B. 吸收反射声</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未理解吸声材料应用场景">C. 防止静电</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未理解吸声材料应用场景">D. 降低成本</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>（迁移题）医院ICU最适合的噪声控制措施是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="需综合控制声源和传播途径">A. 播放白噪声掩盖</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="需综合控制声源和传播途径">B. 双层真空玻璃窗</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="需综合控制声源和传播途径">C. 医护人员穿软底鞋</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="需综合控制声源和传播途径">D. 全天禁止说话</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>真空不能传声。</li><li>响度与距离、振幅有关。</li><li>噪声是干扰人们的声音。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-noise-control-section2.png" alt="噪声控制对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>响度主要与</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 频率</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 振幅等</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 颜色</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电阻</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>区分乐器常用</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 音色</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 只有响度</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 只有音调</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 电压</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为声音大就是噪声</h3><p>✅ 噪声=不需要的声音+造成干扰</p><p>💡 混淆物理量与主观感受</p></div><div class="tu-q"><h3>❌ 以为真空能完全隔音</h3><p>✅ 真空只能阻断空气传声，固体仍可传声</p><p>💡 忽视固体传声途径</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>要静有三招：声源传播接收处</p><p><strong>类比：</strong>噪声像二手烟，看不见但伤身体</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 波动/声音相关</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" title="PhET · 波动/声音相关" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 调节频率与振幅，观察波形变化，对照音调响度。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
 
 
-<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-sound-properties", "name": "phy-m-sound-properties"}], "current": {"id": "phy-m-noise-control", "name": "噪声与声污染：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>真空中</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 能传声</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 不能传声</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 传声更快</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 只传超声波</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>音调主要与</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 振幅</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 频率</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 音色波形细节</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 温度唯一</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：噪声与声污染</h2><div data-teachany-kg="phy-m-noise-control"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>控制噪声可</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 在声源/传播途径/人耳处采取措施</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只提高音量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 关掉所有光</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 增大摩擦必有效</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明噪声控制最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -601,3 +599,5 @@ function phymDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：噪声与声污染</h2><div data-teachany-kg="phy-m-noise-control"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

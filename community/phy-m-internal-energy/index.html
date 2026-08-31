@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-internal-energy-hero.png" alt="内能与热量：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,105 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-phase-change", "name": "phy-m-phase-change"}], "current": {"id": "phy-m-internal-energy", "name": "内能与热量：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出内能定义及影响因素</p></div><div class="tu-q"><p>🎯 能判断做功和热传递对内能的影响</p></div><div class="tu-q"><p>🎯 能分析简单热现象中的能量转化</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么冬天搓手会暖和？</p></div><div class="tu-q"><p>❓ 冰融化时温度不变，内能去哪了？</p></div><div class="tu-q"><p>❓ 热水瓶塞为啥会自己蹦出来？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 摩擦生热探因</h2><div class="tu-q"><p><strong>And：</strong>学生知道摩擦会发热</p><p><strong>But：</strong>不清楚能量如何转化</p><p><strong>Therefore：</strong>建立机械能与内能转化的概念</p></div><div class="tu-q"><p>当两个物体摩擦时，机械能转化为内能。比如用砂纸快速摩擦木板10次，木板温度从20℃升到23℃。这是因为摩擦力做功使物体内部分子运动加剧，宏观表现为温度升高。内能是物体内所有分子动能和势能的总和，温度变化是可测量的内能变化标志。</p></div><div class="tu-q"><p>🌍 冬天搓手取暖：手掌摩擦时，每次搓动能产生约0.5焦耳的热量，搓20次就能让手部温度上升2℃左右。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下列哪种情况内能增加最多？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能忽略摩擦力度和时间对能量转化的影响">A. 用力摩擦铜棒30秒</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能忽略摩擦力度和时间对能量转化的影响">B. 轻轻抚摸毛毯5秒</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能忽略摩擦力度和时间对能量转化的影响">C. 冰块在桌上静止1分钟</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能忽略摩擦力度和时间对能量转化的影响">D. 用风扇吹金属片</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>为什么摩擦手会发热？</h2>
 <p>内能是物体内部能量。做功和热传递可改变内能。温度是分子热运动剧烈程度的标志。</p>
@@ -174,7 +272,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>内能</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>内能</h3><p>内部能量</p></div><div class="mini-panel"><h3>改变</h3><p>做功或热传递</p></div><div class="mini-panel"><h3>温度</h3><p>分子热运动标志</p></div></div>
@@ -188,7 +286,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="深化追问">
+<section class="slide-page" data-page-type="content" data-tsh="深化追问" data-slot="35">
   <section class="section phym-depth core-knowledge-module" id="module-depth"
     data-bloom-level="analyze" data-scaffold="partial" data-tts="module-depth">
     <div class="card">
@@ -207,7 +305,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -221,51 +319,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：先判方式，再判方向</h2>
-      <p>判断内能改变方式看是否有力做功（压缩、摩擦）还是有温度差引起的能量传递。热传递总是从高温物体传向低温物体，直到温度相同。</p>
-      <div class="worked-example"><strong>范例：</strong>反复弯折铁丝，弯折处发热，是通过做功把机械能转化为内能；把铁丝放入热水中变热，则是通过热传递改变内能。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是说“物体含有多少热量”，热量是过程量只能说“吸收或放出”，也不能说温度被传递。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>下列说法正确的是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;两种方式在改变内能上等效。&quot;)">A. 0 ℃ 的冰没有内能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;两种方式在改变内能上等效。&quot;)">B. 温度高的物体含有的热量多</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;两种方式在改变内能上等效。&quot;)">C. 做功和热传递都能改变物体的内能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;两种方式在改变内能上等效。&quot;)">D. 热传递中传递的是温度</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>用锯条锯木头时锯条发热，这是通过什么方式改变内能？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;克服摩擦做功，机械能转化为内能。&quot;)">A. 热传递</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;克服摩擦做功，机械能转化为内能。&quot;)">B. 做功</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;克服摩擦做功，机械能转化为内能。&quot;)">C. 热辐射</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;克服摩擦做功，机械能转化为内能。&quot;)">D. 对流</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>同一物体温度升高内能通常增加。</li><li>热传递从高温到低温。</li><li>做功也可改变内能。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-internal-energy-section2.png" alt="内能对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
-<section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
-<h2>例：压缩气体温度升高</h2>
-<ol class="steps"><li>对气体做功</li><li>内能增加</li><li>温度可能升高</li></ol>
-</div></section></section>
-
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「内能」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -293,70 +347,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>摩擦生热主要是</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 做功改变内能</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 热传递唯一</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 电荷消灭</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>温度升高通常意味着</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">A. 分子热运动更剧烈</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">B. 内能一定减少</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 质量变大</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 物质状态</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/states-of-matter-basics/latest/states-of-matter-basics_zh_CN.html" title="PhET · 物质状态" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 观察加热后粒子运动更剧烈，联系内能温度。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/states-of-matter-basics/latest/states-of-matter-basics_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/states-of-matter-basics/latest/states-of-matter-basics_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>热传递方向</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">A. 高温到低温</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">B. 低温到高温自发</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 无方向</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>温度是</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 内能本身</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 分子热运动剧烈程度的标志</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 密度</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>钻木取火利用</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 做功增加内能</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只靠阳光折射</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 静电平衡</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明内能最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -472,116 +463,123 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么冬天搓手会暖和？</p></div><div class="tu-q"><p>❓ 冰融化时温度不变，内能去哪了？</p></div><div class="tu-q"><p>❓ 热水瓶塞为啥会自己蹦出来？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出内能定义及影响因素</p></div><div class="tu-q"><p>🎯 能判断做功和热传递对内能的影响</p></div><div class="tu-q"><p>🎯 能分析简单热现象中的能量转化</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 温度高内能一定大</h3><p>✅ 需同时考虑质量/物态</p><p>💡 忽略分子势能影响</p></div><div class="tu-q"><h3>❌ 热量是物体含有的</h3><p>✅ 热量是热传递中转移的能量</p><p>💡 混淆状态量与过程量</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>内能藏微观，温度显动能，体积定势能，做功传热都能增</p><p><strong>类比：</strong>内能像银行账户，热量像转账记录</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）汽油机压缩冲程中，气缸内气体（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="压缩做功转化为内能">A.内能减少温度降低</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="压缩做功转化为内能">B.内能增加温度升高</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="压缩做功转化为内能">C.内能不变温度不变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="压缩做功转化为内能">D.内能减少温度不变</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）密封瓶内气体被抽出一半，剩余气体（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="质量减少导致内能减少，温度是宏观表现">A.内能减半温度不变</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="质量减少导致内能减少，温度是宏观表现">B.内能减少温度降低</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="质量减少导致内能减少，温度是宏观表现">C.内能不变温度升高</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="质量减少导致内能减少，温度是宏观表现">D.内能增加体积增大</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>（实验题）用砂纸摩擦铜块，观察到温度计示数上升，说明（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="摩擦做功改变内能">A.热量从铜块流向砂纸</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="摩擦做功改变内能">B.机械能转化为内能</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="摩擦做功改变内能">C.铜块向外界放出热量</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="摩擦做功改变内能">D.分子势能转化为动能</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 摩擦生热探因</h2><div class="tu-q"><p><strong>And：</strong>学生知道摩擦会发热</p><p><strong>But：</strong>不清楚能量如何转化</p><p><strong>Therefore：</strong>建立机械能与内能转化的概念</p></div><div class="tu-q"><p>当两个物体摩擦时，机械能转化为内能。比如用砂纸快速摩擦木板10次，木板温度从20℃升到23℃。这是因为摩擦力做功使物体内部分子运动加剧，宏观表现为温度升高。内能是物体内所有分子动能和势能的总和，温度变化是可测量的内能变化标志。</p></div><div class="tu-q"><p>🌍 冬天搓手取暖：手掌摩擦时，每次搓动能产生约0.5焦耳的热量，搓20次就能让手部温度上升2℃左右。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下列哪种情况内能增加最多？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能忽略摩擦力度和时间对能量转化的影响">A. 用力摩擦铜棒30秒</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能忽略摩擦力度和时间对能量转化的影响">B. 轻轻抚摸毛毯5秒</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能忽略摩擦力度和时间对能量转化的影响">C. 冰块在桌上静止1分钟</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能忽略摩擦力度和时间对能量转化的影响">D. 用风扇吹金属片</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 压缩气体实验</h2><div class="tu-q"><p><strong>And：</strong>知道气体可被压缩</p><p><strong>But：</strong>不理解压缩时能量变化</p><p><strong>Therefore：</strong>揭示做功改变内能的定量关系</p></div><div class="tu-q"><p>快速压缩气体时，机械功转化为内能。例如用打气筒压缩空气：每次下压做功约50焦耳，连续压10次可使筒内空气温度升高15℃。这时气体分子运动速度加快，压强增大。通过测量温度计和压强计数据，我们发现内能变化=做功量，即ΔU=W。</p></div><div class="tu-q"><p>🌍 自行车打气筒发热：给轮胎打气20次，气筒壁温度可达40℃，相当于100焦耳能量转化为内能。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>压缩气体时温度升高是因为：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D者可能混淆分子间距与温度的关系">A. 外界对气体做功</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D者可能混淆分子间距与温度的关系">B. 气体对外放热</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D者可能混淆分子间距与温度的关系">C. 气体体积自然膨胀</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D者可能混淆分子间距与温度的关系">D. 分子间距离增大</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 热量测算</h2><div class="tu-q"><p><strong>And：</strong>会用温度计量温度</p><p><strong>But：</strong>不会计算热量转移量</p><p><strong>Therefore：</strong>掌握热量与温变的定量换算</p></div><div class="tu-q"><p>热量是内能转移的量度，公式Q=cmΔt。例如200g水从20℃加热到50℃，水的比热容4.2J/(g·℃)，吸收热量=4.2×200×30=25200焦耳。1卡路里=4.2焦耳，所以这相当于6000卡。注意：热量传递方向永远从高温物体到低温物体。</p></div><div class="tu-q"><p>🌍 电热水壶烧水：1500W功率加热2分钟，能使500g水升温约28℃，消耗18万焦耳电能。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>200g铁块（c=0.45J/g℃）吸收3600J热量后升温多少？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能用错公式Δt=Q/m而未除比热容">A. 40℃</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能用错公式Δt=Q/m而未除比热容">B. 30℃</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能用错公式Δt=Q/m而未除比热容">C. 20℃</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能用错公式Δt=Q/m而未除比热容">D. 10℃</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 压缩气体实验</h2><div class="tu-q"><p><strong>And：</strong>知道气体可被压缩</p><p><strong>But：</strong>不理解压缩时能量变化</p><p><strong>Therefore：</strong>揭示做功改变内能的定量关系</p></div><div class="tu-q"><p>快速压缩气体时，机械功转化为内能。例如用打气筒压缩空气：每次下压做功约50焦耳，连续压10次可使筒内空气温度升高15℃。这时气体分子运动速度加快，压强增大。通过测量温度计和压强计数据，我们发现内能变化=做功量，即ΔU=W。</p></div><div class="tu-q"><p>🌍 自行车打气筒发热：给轮胎打气20次，气筒壁温度可达40℃，相当于100焦耳能量转化为内能。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>压缩气体时温度升高是因为：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D者可能混淆分子间距与温度的关系">A. 外界对气体做功</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D者可能混淆分子间距与温度的关系">B. 气体对外放热</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D者可能混淆分子间距与温度的关系">C. 气体体积自然膨胀</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D者可能混淆分子间距与温度的关系">D. 分子间距离增大</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 热量测算</h2><div class="tu-q"><p><strong>And：</strong>会用温度计量温度</p><p><strong>But：</strong>不会计算热量转移量</p><p><strong>Therefore：</strong>掌握热量与温变的定量换算</p></div><div class="tu-q"><p>热量是内能转移的量度，公式Q=cmΔt。例如200g水从20℃加热到50℃，水的比热容4.2J/(g·℃)，吸收热量=4.2×200×30=25200焦耳。1卡路里=4.2焦耳，所以这相当于6000卡。注意：热量传递方向永远从高温物体到低温物体。</p></div><div class="tu-q"><p>🌍 电热水壶烧水：1500W功率加热2分钟，能使500g水升温约28℃，消耗18万焦耳电能。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>200g铁块（c=0.45J/g℃）吸收3600J热量后升温多少？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能用错公式Δt=Q/m而未除比热容">A. 40℃</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能用错公式Δt=Q/m而未除比热容">B. 30℃</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能用错公式Δt=Q/m而未除比热容">C. 20℃</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能用错公式Δt=Q/m而未除比热容">D. 10℃</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：先判方式，再判方向</h2>
+      <p>判断内能改变方式看是否有力做功（压缩、摩擦）还是有温度差引起的能量传递。热传递总是从高温物体传向低温物体，直到温度相同。</p>
+      <div class="worked-example"><strong>范例：</strong>反复弯折铁丝，弯折处发热，是通过做功把机械能转化为内能；把铁丝放入热水中变热，则是通过热传递改变内能。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是说“物体含有多少热量”，热量是过程量只能说“吸收或放出”，也不能说温度被传递。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>下列说法正确的是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;两种方式在改变内能上等效。&quot;)">A. 0 ℃ 的冰没有内能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;两种方式在改变内能上等效。&quot;)">B. 温度高的物体含有的热量多</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;两种方式在改变内能上等效。&quot;)">C. 做功和热传递都能改变物体的内能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;两种方式在改变内能上等效。&quot;)">D. 热传递中传递的是温度</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>用锯条锯木头时锯条发热，这是通过什么方式改变内能？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;克服摩擦做功，机械能转化为内能。&quot;)">A. 热传递</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;克服摩擦做功，机械能转化为内能。&quot;)">B. 做功</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;克服摩擦做功，机械能转化为内能。&quot;)">C. 热辐射</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;克服摩擦做功，机械能转化为内能。&quot;)">D. 对流</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）汽油机压缩冲程中，气缸内气体（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="压缩做功转化为内能">A.内能减少温度降低</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="压缩做功转化为内能">B.内能增加温度升高</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="压缩做功转化为内能">C.内能不变温度不变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="压缩做功转化为内能">D.内能减少温度不变</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）密封瓶内气体被抽出一半，剩余气体（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="质量减少导致内能减少，温度是宏观表现">A.内能减半温度不变</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="质量减少导致内能减少，温度是宏观表现">B.内能减少温度降低</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="质量减少导致内能减少，温度是宏观表现">C.内能不变温度升高</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="质量减少导致内能减少，温度是宏观表现">D.内能增加体积增大</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>（实验题）用砂纸摩擦铜块，观察到温度计示数上升，说明（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="摩擦做功改变内能">A.热量从铜块流向砂纸</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="摩擦做功改变内能">B.机械能转化为内能</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="摩擦做功改变内能">C.铜块向外界放出热量</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="摩擦做功改变内能">D.分子势能转化为动能</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>同一物体温度升高内能通常增加。</li><li>热传递从高温到低温。</li><li>做功也可改变内能。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-internal-energy-section2.png" alt="内能对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
+<h2>例：压缩气体温度升高</h2>
+<ol class="steps"><li>对气体做功</li><li>内能增加</li><li>温度可能升高</li></ol>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>热传递方向</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">A. 高温到低温</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">B. 低温到高温自发</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 无方向</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>温度是</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 内能本身</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 分子热运动剧烈程度的标志</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 密度</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 温度高内能一定大</h3><p>✅ 需同时考虑质量/物态</p><p>💡 忽略分子势能影响</p></div><div class="tu-q"><h3>❌ 热量是物体含有的</h3><p>✅ 热量是热传递中转移的能量</p><p>💡 混淆状态量与过程量</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>内能藏微观，温度显动能，体积定势能，做功传热都能增</p><p><strong>类比：</strong>内能像银行账户，热量像转账记录</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 物质状态</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/states-of-matter-basics/latest/states-of-matter-basics_zh_CN.html" title="PhET · 物质状态" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 观察加热后粒子运动更剧烈，联系内能温度。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/states-of-matter-basics/latest/states-of-matter-basics_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/states-of-matter-basics/latest/states-of-matter-basics_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
 
 
-<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-phase-change", "name": "phy-m-phase-change"}], "current": {"id": "phy-m-internal-energy", "name": "内能与热量：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>摩擦生热主要是</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 做功改变内能</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 热传递唯一</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 电荷消灭</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>温度升高通常意味着</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">A. 分子热运动更剧烈</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">B. 内能一定减少</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 质量变大</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：内能与热量</h2><div data-teachany-kg="phy-m-internal-energy"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>钻木取火利用</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 做功增加内能</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只靠阳光折射</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 静电平衡</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明内能最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -615,3 +613,5 @@ function pmDepthCheck(button, isCorrect, feedbackId, explanation) {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：内能与热量</h2><div data-teachany-kg="phy-m-internal-energy"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

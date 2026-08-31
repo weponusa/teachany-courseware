@@ -473,9 +473,7 @@ footer a { color: var(--success); text-decoration: none; font-weight: 600; }
 </div>
 
 <div class="container">
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么狗和狼长得像却不同种？</p></div><div class="tu-q"><p>❓ 病毒算不算生物？分类时放哪儿？</p></div><div class="tu-q"><p>❓ 分类等级里‘科’和‘属’哪个范围更大？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-
-<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="section" id="hero-cover">
+<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="section" id="hero-cover" data-slot="0">
     <figure class="ta-standard-figure" style="margin:0 auto;max-width:1000px;">
       <section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
 <figure class="ta-standard-figure ta-figure-labeled">
@@ -491,7 +489,82 @@ footer a { color: var(--success); text-decoration: none; font-weight: 600; }
       </figcaption>
     </figure>
   </section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出生物分类的7个基本等级</p></div><div class="tu-q"><p>🎯 能根据形态特征判断生物亲缘关系远近</p></div><div class="tu-q"><p>🎯 能分析分类学在保护生物多样性中的作用</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出生物分类的7个基本等级</p></div><div class="tu-q"><p>🎯 能根据形态特征判断生物亲缘关系远近</p></div><div class="tu-q"><p>🎯 能分析分类学在保护生物多样性中的作用</p></div></section>
 
   <!-- ===== Hero ===== -->
   
@@ -500,19 +573,7 @@ footer a { color: var(--success); text-decoration: none; font-weight: 600; }
   
 
   <!-- ===== 本课知识动画（视频 + 旁白） ===== -->
-  <section data-scaffold="full" data-bloom-level="apply" class="section" id="video-overview">
-    <h2 class="section-title">🎬 本课知识动画（Remotion 程序化渲染）</h2>
-    <div class="card">
-      <h3>🎥 4 分 31 秒带你走完整节课 · 12 个动态场景</h3>
-      <p style="color:var(--dim);margin-bottom:12px;">这段动画用 Remotion 程序化渲染（1280×720 @30fps），12 个场景依次浮现：开场 → 200 万物种规模 → 三把分类钥匙 → 林奈七级阶梯 → 家猫七级地址 → 亲缘黄金规则 → 大熊猫反直觉 → 家犬 ≡ 灰狼 → 校园探究 → 五步法 → 三个带走 → 告别。每个画面与旁白严格同步，可暂停回看任意节点。</p>
-      <div class="video-player">
-        </div>
-      <p style="color:var(--dim);font-size:0.85em;margin-top:12px;">📌 视频与下方音频模块的旁白同源，但视频承载的是**动态信息密度**——12 个场景累计 50+ 个新画面信息单元（彩色等级条、地址行、对比卡片、关系树等）。</p>
-    </div>
-  </section>
-
-  <!-- ===== Learning Objectives ===== -->
-  <section data-scaffold="partial" data-bloom-level="remember" class="section" id="goals">
+  <section data-scaffold="partial" data-bloom-level="remember" class="section" id="goals" data-slot="10">
     <h2 class="section-title">🎯 学习目标</h2>
     <div class="grid-3">
       <div class="card obj-card">
@@ -534,7 +595,9 @@ footer a { color: var(--success); text-decoration: none; font-weight: 600; }
   </section>
 
   <!-- ===== Pre-test ===== -->
-  <section data-bloom-level="understand" class="section" id="pretest">
+  <section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么狗和狼长得像却不同种？</p></div><div class="tu-q"><p>❓ 病毒算不算生物？分类时放哪儿？</p></div><div class="tu-q"><p>❓ 分类等级里‘科’和‘属’哪个范围更大？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+
+<section data-bloom-level="understand" class="section" id="pretest" data-slot="20">
     <h2 class="section-title">📋 前测：你已经知道什么？</h2>
     <p style="color:var(--dim);margin-bottom:14px;">这两题做完，系统会判断你需要"加速版"还是"完整版"路径。</p>
 
@@ -580,7 +643,7 @@ footer a { color: var(--success); text-decoration: none; font-weight: 600; }
   </section>
 
   <!-- ===== Module 1: ABT + 概念 ===== -->
-  <section data-bloom-level="apply" class="section" id="module1">
+  <section data-bloom-level="apply" class="section" id="module1" data-slot="30">
     <h2 class="section-title">📖 模块一：为什么需要分类？</h2>
 
     <div class="abt-box">
@@ -619,7 +682,11 @@ footer a { color: var(--success); text-decoration: none; font-weight: 600; }
   </section>
 
   <!-- ===== Module 2: 七个等级 ===== -->
-  <section class="section" id="module2">
+  <section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 校园草本植物分类探究</h2><p>选取5种常见草本植物，对比茎横切面、花瓣数、叶脉类型</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="双子叶植物茎维管束呈环状排列"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="记录各样本的平行脉/网状脉、须根/直根、花瓣基数"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="归纳单子叶与双子叶植物的鉴别特征"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+<section class="section" id="module2" data-slot="40">
     <h2 class="section-title">📖 模块二：界 · 门 · 纲 · 目 · 科 · 属 · 种</h2>
 
     <div class="card">
@@ -703,7 +770,7 @@ footer a { color: var(--success); text-decoration: none; font-weight: 600; }
   </section>
 
   <!-- ===== Module 3: 亲缘比较 ===== -->
-  <section class="section" id="module3">
+  <section class="section" id="module3" data-slot="50">
     <h2 class="section-title">📖 模块三：怎么判断亲缘远近？</h2>
 
     <div class="abt-box">
@@ -805,77 +872,14 @@ footer a { color: var(--success); text-decoration: none; font-weight: 600; }
   </section>
 
   <!-- ===== 探究活动 ===== -->
-  <section class="section" id="inquiry">
-    <h2 class="section-title">🔬 探究活动：本地动物分类调查</h2>
-    <p style="color:var(--dim);margin-bottom:14px;">课标要求：「充分利用本地的生物资源，组织学生识别生物的特征，尝试开展分类活动。」下面是一个完整的探究 6 步流程。</p>
+  <section class="section" id="worked-example" data-scaffold="full" data-slot="62"><div class="card ta-refine"><h2>范例：给一只家猫定位它的七级「地址」</h2><p><strong>情境：</strong>生物分类体系有七个等级，试着给一只家猫找到它的位置。</p><p><strong>分析：</strong>界：动物界（异养、大多能自由运动）；门：脊索动物门（有脊柱）；纲：哺乳纲（胎生哺乳、体表被毛）；目：食肉目（犬齿发达）；科：猫科（爪能伸缩）；属：猫属；种：猫。</p><p><strong>结论：</strong>分类等级越高，包含的生物越多、共同特征越少；等级越低，包含的生物越少、共同特征越多。「种」是最基本的分类单位，同种生物亲缘关系最近。</p></div></section><section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>像拆快递盒一样层层打开界门纲目科属种</p></div><div class="tu-q"><h3>💡解释它</h3><p>分类等级越高包含生物越多，共同特征越少</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>猫和老虎同科不同属，比人与黑猩猩的差异小</p></div><div class="tu-q"><h3>👁️看见它</h3><p>观察校园植物叶片脉络对比科属特征</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>用分类思维整理书包：课本-练习册-文具分层</p></div></section>
 
-    <!-- 步骤 1: 情境提问 -->
-    <div class="card">
-      <h3>第 1 步 · 情境提问</h3>
-      <p>📷 你家小区或学校附近，能看到很多动物：<strong>麻雀、家鸽、流浪猫、宠物狗、池塘里的金鱼、墙角的蚂蚁、夏天的蝉</strong>……</p>
-      <p style="margin-top:8px;">问题：<strong>这 7 种动物里，谁和谁是"远亲"？谁和谁是"近邻"？请先凭直觉排个序。</strong></p>
-    </div>
 
-    <!-- 步骤 2-5: 探究记录单 -->
-    <div class="inquiry-form">
-      <h4>🗒️ 你的探究记录单（请边想边写）</h4>
 
-      <div class="inquiry-step">
-        <div class="label">第 2 步 · 提出假设</div>
-        <p style="font-size:13.5px;color:var(--dim);margin-bottom:6px;">凭直觉，你觉得哪两种动物亲缘最近？为什么？（写下你的初始猜想）</p>
-        <textarea placeholder="例：我觉得猫和狗最近，因为都是哺乳动物……"></textarea>
-      </div>
 
-      <div class="inquiry-step">
-        <div class="label">第 3 步 · 设计验证</div>
-        <p style="font-size:13.5px;color:var(--dim);margin-bottom:6px;">列出你打算从哪几个特征去比较？（提示：至少 3 个特征，例如：是否有羽毛、是否胎生、骨骼结构……）</p>
-        <textarea placeholder="特征 1：......
-特征 2：......
-特征 3：......"></textarea>
-      </div>
 
-      <div class="inquiry-step">
-        <div class="label">第 4 步 · 收集证据</div>
-        <p style="font-size:13.5px;color:var(--dim);margin-bottom:6px;">查阅资料，把 7 种动物填到下面的分类等级表中（重点填到「纲」就够了）：</p>
-        <textarea placeholder="麻雀：动物界 → 脊索动物门 → ?纲
-家鸽：......
-流浪猫：......
-宠物狗：......
-金鱼：......
-蚂蚁：......
-蝉：......"></textarea>
-      </div>
 
-      <div class="inquiry-step">
-        <div class="label">第 5 步 · 得出结论</div>
-        <p style="font-size:13.5px;color:var(--dim);margin-bottom:6px;">根据上面的等级，重新排出"亲缘从近到远"的顺序。和你第 2 步的初始猜想相比，哪些被推翻了？</p>
-        <textarea placeholder="正确顺序：......
-被我推翻的猜想：......
-我学到的最重要的一点：......"></textarea>
-      </div>
-
-      <div class="inquiry-step">
-        <div class="label">第 6 步 · 反思迁移</div>
-        <p style="font-size:13.5px;color:var(--dim);margin-bottom:6px;">如果让你给小学生讲"为什么蝙蝠不是鸟"，你会怎么说？写下你的解释思路。</p>
-        <textarea placeholder="......"></textarea>
-      </div>
-    </div>
-
-    <div class="insight-box">
-      <h4>🧭 老师的标准答案（看完自己的之后再展开）</h4>
-      <p>正确顺序（亲缘从近到远）：</p>
-      <ul style="padding-left:22px;margin-top:6px;color:var(--text);font-size:14.5px;line-height:1.9;">
-        <li><strong>猫 ↔ 狗</strong>（同纲：哺乳；同目：食肉；不同科）</li>
-        <li><strong>麻雀 ↔ 家鸽</strong>（同纲：鸟纲；同目可能不同）</li>
-        <li><strong>蚂蚁 ↔ 蝉</strong>（同纲：昆虫纲）</li>
-        <li>金鱼独立（鱼纲）</li>
-      </ul>
-      <p style="margin-top:8px;"><strong>关键启示</strong>：分类系统揭示了进化的脉络——共同祖先越近，等级上越接近。这就是<span class="highlight">"生物进化观点"</span>：今天的分类系统不是人为规定，而是反映了生命演化的真实历史。</p>
-    </div>
-  </section>
-
-  <!-- ===== Comprehensive Practice ===== -->
-  <section class="section" id="worked-example" data-scaffold="full"><div class="card ta-refine"><h2>范例：给一只家猫定位它的七级「地址」</h2><p><strong>情境：</strong>生物分类体系有七个等级，试着给一只家猫找到它的位置。</p><p><strong>分析：</strong>界：动物界（异养、大多能自由运动）；门：脊索动物门（有脊柱）；纲：哺乳纲（胎生哺乳、体表被毛）；目：食肉目（犬齿发达）；科：猫科（爪能伸缩）；属：猫属；种：猫。</p><p><strong>结论：</strong>分类等级越高，包含的生物越多、共同特征越少；等级越低，包含的生物越少、共同特征越多。「种」是最基本的分类单位，同种生物亲缘关系最近。</p></div></section><section class="section" id="practice">
+<section class="section" id="practice" data-slot="75">
     <h2 class="section-title">🎯 综合练习</h2>
 
     <!-- Level 1 -->
@@ -972,7 +976,103 @@ footer a { color: var(--success); text-decoration: none; font-weight: 600; }
   </section>
 
   <!-- ===== Post-test ===== -->
-  <section class="section" id="posttest">
+  <section class="section" id="inquiry" data-slot="77">
+    <h2 class="section-title">🔬 探究活动：本地动物分类调查</h2>
+    <p style="color:var(--dim);margin-bottom:14px;">课标要求：「充分利用本地的生物资源，组织学生识别生物的特征，尝试开展分类活动。」下面是一个完整的探究 6 步流程。</p>
+
+    <!-- 步骤 1: 情境提问 -->
+    <div class="card">
+      <h3>第 1 步 · 情境提问</h3>
+      <p>📷 你家小区或学校附近，能看到很多动物：<strong>麻雀、家鸽、流浪猫、宠物狗、池塘里的金鱼、墙角的蚂蚁、夏天的蝉</strong>……</p>
+      <p style="margin-top:8px;">问题：<strong>这 7 种动物里，谁和谁是"远亲"？谁和谁是"近邻"？请先凭直觉排个序。</strong></p>
+    </div>
+
+    <!-- 步骤 2-5: 探究记录单 -->
+    <div class="inquiry-form">
+      <h4>🗒️ 你的探究记录单（请边想边写）</h4>
+
+      <div class="inquiry-step">
+        <div class="label">第 2 步 · 提出假设</div>
+        <p style="font-size:13.5px;color:var(--dim);margin-bottom:6px;">凭直觉，你觉得哪两种动物亲缘最近？为什么？（写下你的初始猜想）</p>
+        <textarea placeholder="例：我觉得猫和狗最近，因为都是哺乳动物……"></textarea>
+      </div>
+
+      <div class="inquiry-step">
+        <div class="label">第 3 步 · 设计验证</div>
+        <p style="font-size:13.5px;color:var(--dim);margin-bottom:6px;">列出你打算从哪几个特征去比较？（提示：至少 3 个特征，例如：是否有羽毛、是否胎生、骨骼结构……）</p>
+        <textarea placeholder="特征 1：......
+特征 2：......
+特征 3：......"></textarea>
+      </div>
+
+      <div class="inquiry-step">
+        <div class="label">第 4 步 · 收集证据</div>
+        <p style="font-size:13.5px;color:var(--dim);margin-bottom:6px;">查阅资料，把 7 种动物填到下面的分类等级表中（重点填到「纲」就够了）：</p>
+        <textarea placeholder="麻雀：动物界 → 脊索动物门 → ?纲
+家鸽：......
+流浪猫：......
+宠物狗：......
+金鱼：......
+蚂蚁：......
+蝉：......"></textarea>
+      </div>
+
+      <div class="inquiry-step">
+        <div class="label">第 5 步 · 得出结论</div>
+        <p style="font-size:13.5px;color:var(--dim);margin-bottom:6px;">根据上面的等级，重新排出"亲缘从近到远"的顺序。和你第 2 步的初始猜想相比，哪些被推翻了？</p>
+        <textarea placeholder="正确顺序：......
+被我推翻的猜想：......
+我学到的最重要的一点：......"></textarea>
+      </div>
+
+      <div class="inquiry-step">
+        <div class="label">第 6 步 · 反思迁移</div>
+        <p style="font-size:13.5px;color:var(--dim);margin-bottom:6px;">如果让你给小学生讲"为什么蝙蝠不是鸟"，你会怎么说？写下你的解释思路。</p>
+        <textarea placeholder="......"></textarea>
+      </div>
+    </div>
+
+    <div class="insight-box">
+      <h4>🧭 老师的标准答案（看完自己的之后再展开）</h4>
+      <p>正确顺序（亲缘从近到远）：</p>
+      <ul style="padding-left:22px;margin-top:6px;color:var(--text);font-size:14.5px;line-height:1.9;">
+        <li><strong>猫 ↔ 狗</strong>（同纲：哺乳；同目：食肉；不同科）</li>
+        <li><strong>麻雀 ↔ 家鸽</strong>（同纲：鸟纲；同目可能不同）</li>
+        <li><strong>蚂蚁 ↔ 蝉</strong>（同纲：昆虫纲）</li>
+        <li>金鱼独立（鱼纲）</li>
+      </ul>
+      <p style="margin-top:8px;"><strong>关键启示</strong>：分类系统揭示了进化的脉络——共同祖先越近，等级上越接近。这就是<span class="highlight">"生物进化观点"</span>：今天的分类系统不是人为规定，而是反映了生命演化的真实历史。</p>
+    </div>
+  </section>
+
+  <!-- ===== Comprehensive Practice ===== -->
+  <section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="B">
+<h3>选择题 1</h3><p>下列哪组植物全属于裸子植物？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="水稻为被子植物">A. 水杉、雪松、水稻</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="裸子植物种子裸露无果皮包被">B. 侧柏、苏铁、银杏</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="玉米大豆为被子植物">C. 玉米、大豆、罗汉松</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="前两者为孢子植物">D. 葫芦藓、肾蕨、油松</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 2</h3><p>区分双子叶与单子叶植物的关键依据是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="花瓣数可能变异">A. 花瓣数量</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="子叶数目是根本分类标准">B. 种子内子叶数目</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="高度受环境影响">C. 植株高度</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="与分类无关">D. 开花季节</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C">
+<h3>选择题 3</h3><p>月季的分类等级中，最基本单位是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="科属于高级分类阶元">A. 蔷薇科</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="纲比种更高级">B. 双子叶植物纲</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="种是最基本分类单位">C. 月季种</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="属介于科与种之间">D. 蔷薇属</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>植物分类等级从大到小依次为：界→____→纲→目→科→属→种</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>门</p><p>分类七级单位需完整记忆</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>向日葵的叶脉呈____状，属于____子叶植物</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>网状 双</p><p>双子叶植物典型特征</p></details></div>
+</section>
+
+<section class="section" id="posttest" data-slot="90">
     <h2 class="section-title">📊 后测：学会了吗？</h2>
     <p style="color:var(--dim);margin-bottom:14px;">和前测对照，看看自己的进步。</p>
 
@@ -1016,7 +1116,8 @@ footer a { color: var(--success); text-decoration: none; font-weight: 600; }
     </div>
     <p style="text-align:center;color:var(--success);font-weight:700;margin-top:8px;">🎉 课程完成！</p>
   </section>
-<section class="section" id="summary" data-scaffold="full"><div class="card ta-refine"><h2>小结：生物分类的等级与意义</h2><p><strong>七个等级：</strong>由大到小依次是：界、门、纲、目、科、属、种。</p><p><strong>规律：</strong>等级越高，共同特征越少、亲缘关系越远；等级越低，共同特征越多、亲缘关系越近。</p><p><strong>种是最基本单位：</strong>同种生物形态结构和生理功能相似，能相互交配并产生可育后代。</p><p><strong>分类依据：</strong>主要根据形态结构、生理功能等特征的相似程度。</p><p><strong>意义：</strong>便于识别和系统研究生物；弄清亲缘关系，才能为保护生物多样性制定针对性措施。</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为‘种’是最大分类单位</h3><p>✅ 种是最基本单位，界才是最大</p><p>💡 日常用语‘种类’干扰</p></div><div class="tu-q"><h3>❌ 把脊椎动物全归入哺乳纲</h3><p>✅ 鱼类/鸟类/爬行类也属脊椎动物</p><p>💡 哺乳动物认知更熟悉</p></div></section>
+<section class="section" id="summary" data-scaffold="full" data-slot="97"><div class="card ta-refine"><h2>小结：生物分类的等级与意义</h2><p><strong>七个等级：</strong>由大到小依次是：界、门、纲、目、科、属、种。</p><p><strong>规律：</strong>等级越高，共同特征越少、亲缘关系越远；等级越低，共同特征越多、亲缘关系越近。</p><p><strong>种是最基本单位：</strong>同种生物形态结构和生理功能相似，能相互交配并产生可育后代。</p><p><strong>分类依据：</strong>主要根据形态结构、生理功能等特征的相似程度。</p><p><strong>意义：</strong>便于识别和系统研究生物；弄清亲缘关系，才能为保护生物多样性制定针对性措施。</p></div></section>
 
 
   <!-- ===== 🎧 独立连续音频模块（标准模块 v7.7） ===== -->
@@ -1273,125 +1374,24 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 
 <!-- teachany-upgrade-v2 -->
 <!-- upgrade topic: 生物分类 — 八年级生物互动课件 -->
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
-<div class="tu-q" data-answer="B">
-<h3>选择题 1</h3><p>下列哪组植物全属于裸子植物？</p><div class="tu-opts">
-<button type="button" class="tu-opt" data-choice="A" data-diagnosis="水稻为被子植物">A. 水杉、雪松、水稻</button>
-<button type="button" class="tu-opt" data-choice="B" data-diagnosis="裸子植物种子裸露无果皮包被">B. 侧柏、苏铁、银杏</button>
-<button type="button" class="tu-opt" data-choice="C" data-diagnosis="玉米大豆为被子植物">C. 玉米、大豆、罗汉松</button>
-<button type="button" class="tu-opt" data-choice="D" data-diagnosis="前两者为孢子植物">D. 葫芦藓、肾蕨、油松</button>
-</div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B">
-<h3>选择题 2</h3><p>区分双子叶与单子叶植物的关键依据是</p><div class="tu-opts">
-<button type="button" class="tu-opt" data-choice="A" data-diagnosis="花瓣数可能变异">A. 花瓣数量</button>
-<button type="button" class="tu-opt" data-choice="B" data-diagnosis="子叶数目是根本分类标准">B. 种子内子叶数目</button>
-<button type="button" class="tu-opt" data-choice="C" data-diagnosis="高度受环境影响">C. 植株高度</button>
-<button type="button" class="tu-opt" data-choice="D" data-diagnosis="与分类无关">D. 开花季节</button>
-</div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C">
-<h3>选择题 3</h3><p>月季的分类等级中，最基本单位是</p><div class="tu-opts">
-<button type="button" class="tu-opt" data-choice="A" data-diagnosis="科属于高级分类阶元">A. 蔷薇科</button>
-<button type="button" class="tu-opt" data-choice="B" data-diagnosis="纲比种更高级">B. 双子叶植物纲</button>
-<button type="button" class="tu-opt" data-choice="C" data-diagnosis="种是最基本分类单位">C. 月季种</button>
-<button type="button" class="tu-opt" data-choice="D" data-diagnosis="属介于科与种之间">D. 蔷薇属</button>
-</div><div class="tu-fb" hidden></div></div>
-<div class="tu-fill"><h3>填空题 1</h3><p>植物分类等级从大到小依次为：界→____→纲→目→科→属→种</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>门</p><p>分类七级单位需完整记忆</p></details></div>
-<div class="tu-fill"><h3>填空题 2</h3><p>向日葵的叶脉呈____状，属于____子叶植物</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>网状 双</p><p>双子叶植物典型特征</p></details></div>
-</section>
-
-<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 校园草本植物分类探究</h2><p>选取5种常见草本植物，对比茎横切面、花瓣数、叶脉类型</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="双子叶植物茎维管束呈环状排列"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="记录各样本的平行脉/网状脉、须根/直根、花瓣基数"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="归纳单子叶与双子叶植物的鉴别特征"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
-<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
-<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
-<!-- v7.7.4 标准知识图谱模块 -->
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>像拆快递盒一样层层打开界门纲目科属种</p></div><div class="tu-q"><h3>💡解释它</h3><p>分类等级越高包含生物越多，共同特征越少</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>猫和老虎同科不同属，比人与黑猩猩的差异小</p></div><div class="tu-q"><h3>👁️看见它</h3><p>观察校园植物叶片脉络对比科属特征</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>用分类思维整理书包：课本-练习册-文具分层</p></div></section>
-
-
-
-
-
-
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为‘种’是最大分类单位</h3><p>✅ 种是最基本单位，界才是最大</p><p>💡 日常用语‘种类’干扰</p></div><div class="tu-q"><h3>❌ 把脊椎动物全归入哺乳纲</h3><p>✅ 鱼类/鸟类/爬行类也属脊椎动物</p><p>💡 哺乳动物认知更熟悉</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>界门纲目科，属种往下摸，特征越相似，亲缘越不错</p><p><strong>类比：</strong>分类像淘宝目录：动物界→宠物→狗粮→某品牌</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>界门纲目科，属种往下摸，特征越相似，亲缘越不错</p><p><strong>类比：</strong>分类像淘宝目录：动物界→宠物→狗粮→某品牌</p></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#3b82f6"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#22c55e"}, {"icon": "📝", "label": "前测", "target": "pretest", "color": "#f59e0b"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#8b5cf6"}, {"icon": "🎧", "label": "音频讲解", "target": "teachany-audio-player", "color": "#ef4444"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#06b6d4"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ec4899"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#84cc16"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#3b82f6"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
-</section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+<section data-scaffold="full" data-bloom-level="apply" class="section" id="video-overview" data-slot="105">
+    <h2 class="section-title">🎬 本课知识动画（Remotion 程序化渲染）</h2>
+    <div class="card">
+      <h3>🎥 4 分 31 秒带你走完整节课 · 12 个动态场景</h3>
+      <p style="color:var(--dim);margin-bottom:12px;">这段动画用 Remotion 程序化渲染（1280×720 @30fps），12 个场景依次浮现：开场 → 200 万物种规模 → 三把分类钥匙 → 林奈七级阶梯 → 家猫七级地址 → 亲缘黄金规则 → 大熊猫反直觉 → 家犬 ≡ 灰狼 → 校园探究 → 五步法 → 三个带走 → 告别。每个画面与旁白严格同步，可暂停回看任意节点。</p>
+      <div class="video-player">
+        </div>
+      <p style="color:var(--dim);font-size:0.85em;margin-top:12px;">📌 视频与下方音频模块的旁白同源，但视频承载的是**动态信息密度**——12 个场景累计 50+ 个新画面信息单元（彩色等级条、地址行、对比卡片、关系树等）。</p>
+    </div>
+  </section>
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="video-module"><h2>🎬 教学动画</h2><video controls playsinline preload="metadata" style="width:100%;border-radius:12px;background:#000" src="./assets/video/bio-classification.mp4"></video><p style="opacity:.8;font-size:13px;margin-top:8px">建议完整观看一遍，再回看关键步骤。</p></section>
+  <!-- ===== Learning Objectives ===== -->
+  <section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="video-module" data-slot="105"><h2>🎬 教学动画</h2><video controls playsinline preload="metadata" style="width:100%;border-radius:12px;background:#000" src="./assets/video/bio-classification.mp4"></video><p style="opacity:.8;font-size:13px;margin-top:8px">建议完整观看一遍，再回看关键步骤。</p></section>
 
-<section class="ta-standard-section" id="teachany-audio-player">
+<section class="ta-standard-section" id="teachany-audio-player" data-slot="120">
     <h2>🎧 本课完整旁白（4 分 31 秒）</h2>
     <p style="color:var(--dim);margin-bottom:14px;">不想看字？戴上耳机，听一遍完整讲解。适合通勤、睡前复习。</p>
     <div data-teachany-audio>
@@ -1407,11 +1407,11 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
     </div>
   </section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：生物分类</h2><div data-teachany-kg="bio-m-bio-classification"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
-
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：生物分类</h2><div data-teachany-kg="bio-m-bio-classification"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

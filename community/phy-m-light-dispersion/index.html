@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-light-dispersion-hero.png" alt="光的色散：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,105 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-light-refraction", "name": "phy-m-light-refraction"}], "current": {"id": "phy-m-light-dispersion", "name": "光的色散：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出光的色散现象中七色光的排列顺序</p></div><div class="tu-q"><p>🎯 能判断不同介质对色散程度的影响因素</p></div><div class="tu-q"><p>🎯 能分析彩虹形成与光的色散的关联原理</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么彩虹总是弯的而不是直的？</p></div><div class="tu-q"><p>❓ 手机屏幕放大后能看到红绿蓝小点，这和色散有关系吗？</p></div><div class="tu-q"><p>❓ 为什么色散实验中白光要斜着射入三棱镜？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 彩虹的秘密</h2><div class="tu-q"><p><strong>And：</strong>学生见过彩虹</p><p><strong>But：</strong>不知颜色如何形成</p><p><strong>Therefore：</strong>用三棱镜实验揭示本质</p></div><div class="tu-q"><p>白光由七色光混合组成，通过三棱镜时因折射率不同（红光约1.51，紫光1.53）发生色散。例如用顶角60°的三棱镜，阳光入射角45°时，屏幕可形成约10cm宽的彩色光带。折射率差异导致紫光偏折角度比红光大2°左右。</p></div><div class="tu-q"><p>🌍 喷泉旁能看到迷你彩虹：水珠像无数小棱镜，阳光照射时发生色散。夏天洒水车经过时，空中水雾也会形成短暂彩虹带。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>彩虹最外圈是什么颜色？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="记反了色散顺序：红偏折最小在外圈">红色</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="记反了色散顺序：红偏折最小在外圈">蓝色</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="记反了色散顺序：红偏折最小在外圈">绿色</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="记反了色散顺序：红偏折最小在外圈">紫色</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>三棱镜后为何出现彩带？</h2>
 <p>白光由多种色光组成，色散可分开不同色光。</p>
@@ -174,7 +272,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>光的色散</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>现象</h3><p>白光由多种色光组成，色散可分开不同色光。…</p></div><div class="mini-panel"><h3>规律</h3><p>抓住角度/成像关键量</p></div><div class="mini-panel"><h3>应用</h3><p>联系生活与实验</p></div></div>
@@ -188,7 +286,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="深化追问">
+<section class="slide-page" data-page-type="content" data-tsh="深化追问" data-slot="35">
   <section class="section phym-depth core-knowledge-module" id="module-depth"
     data-bloom-level="analyze" data-scaffold="partial" data-tts="module-depth">
     <div class="card">
@@ -207,7 +305,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -221,51 +319,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：区分色散、混合与吸收</h2>
-      <p>判断物体颜色：不透明物体的颜色由它反射的色光决定，透明物体的颜色由它透过的色光决定。区分光的三原色与颜料三原色，不要混用。</p>
-      <div class="worked-example"><strong>范例：</strong>红色玻璃只透过红光，用它观察绿色物体时，绿光被挡住、无光进入眼睛，物体看起来是黑色的。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把光的三原色说成红、黄、蓝，那是颜料三原色的误记。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>光的三原色是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;光的三原色为红、绿、蓝。&quot;)">A. 红、黄、蓝</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;光的三原色为红、绿、蓝。&quot;)">B. 红、绿、蓝</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;光的三原色为红、绿、蓝。&quot;)">C. 品红、黄、青</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;光的三原色为红、绿、蓝。&quot;)">D. 红、橙、紫</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>在暗室中用纯绿光照射一件红色上衣，上衣看起来是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;红衣只反射红光，绿光被吸收，故呈黑色。&quot;)">A. 红色</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;红衣只反射红光，绿光被吸收，故呈黑色。&quot;)">B. 绿色</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;红衣只反射红光，绿光被吸收，故呈黑色。&quot;)">C. 黑色</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;红衣只反射红光，绿光被吸收，故呈黑色。&quot;)">D. 白色</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>先作法线再谈角。</li><li>虚像不能承接到光屏。</li><li>先定性再定量。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-light-dispersion-section2.png" alt="光的色散对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：与光的色散相关的典型判断</h2>
 <ol class="steps"><li>写出已知与求解</li><li>套用对应规律</li><li>检查是否符合光路可逆等常识</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「光的色散」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -293,74 +353,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>研究光现象时常用</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 法线作基准</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 随意画线</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 只靠感觉</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 不需要实验</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>光学实验应注意</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">A. 控制变量与观察光路</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">B. 同时改所有量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 不用记录</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 禁止作图</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 光的色散相关仿真</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/bending-light/latest/bending-light_zh_CN.html" title="PhET · 光的色散相关仿真" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 按提示调节角度/透镜，观察光路变化。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/bending-light/latest/bending-light_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/bending-light/latest/bending-light_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>光的色散的学习重点是</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 死记名词</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 规律+作图+应用</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 只看视频</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>虚像的特点是</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 能成在光屏上</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 不能被光屏承接</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 一定比物大</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 一定倒立</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>解释生活光现象应</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 联系对应光学规律</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只说神奇</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 与物理无关</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 只改电路</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明光的色散最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -476,116 +469,121 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么彩虹总是弯的而不是直的？</p></div><div class="tu-q"><p>❓ 手机屏幕放大后能看到红绿蓝小点，这和色散有关系吗？</p></div><div class="tu-q"><p>❓ 为什么色散实验中白光要斜着射入三棱镜？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出光的色散现象中七色光的排列顺序</p></div><div class="tu-q"><p>🎯 能判断不同介质对色散程度的影响因素</p></div><div class="tu-q"><p>🎯 能分析彩虹形成与光的色散的关联原理</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为色散是光被染色</h3><p>✅ 强调折射率差异导致的物理分离</p><p>💡 混淆物理变化与化学变化</p></div><div class="tu-q"><h3>❌ 认为色散必须用三棱镜</h3><p>✅ 演示水滴/光盘等介质的色散现象</p><p>💡 实验器材单一化认知</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>红橙黄绿蓝靛紫，折射角度各不同</p><p><strong>类比：</strong>像不同体重的人跑步速度不同，光通过介质时也会'分流'</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）雨后彩虹形成的主要原因是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未建立气象现象与物理原理的联系">A.光的直线传播</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未建立气象现象与物理原理的联系">B.光的色散</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未建立气象现象与物理原理的联系">C.光的反射</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未建立气象现象与物理原理的联系">D.光的衍射</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）调整三棱镜顶角时，光谱带会如何变化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="缺乏变量控制实验经验">A.颜色顺序反转</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="缺乏变量控制实验经验">B.色带宽度改变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="缺乏变量控制实验经验">C.产生新的颜色</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="缺乏变量控制实验经验">D.变成白光</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>（应用题）解释肥皂泡彩色条纹与色散的关系</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未能区分色散与薄膜干涉">A.光的干涉现象</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未能区分色散与薄膜干涉">B.薄膜折射率差异</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未能区分色散与薄膜干涉">C.表面染料显色</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未能区分色散与薄膜干涉">D.反射光强度不同</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 彩虹的秘密</h2><div class="tu-q"><p><strong>And：</strong>学生见过彩虹</p><p><strong>But：</strong>不知颜色如何形成</p><p><strong>Therefore：</strong>用三棱镜实验揭示本质</p></div><div class="tu-q"><p>白光由七色光混合组成，通过三棱镜时因折射率不同（红光约1.51，紫光1.53）发生色散。例如用顶角60°的三棱镜，阳光入射角45°时，屏幕可形成约10cm宽的彩色光带。折射率差异导致紫光偏折角度比红光大2°左右。</p></div><div class="tu-q"><p>🌍 喷泉旁能看到迷你彩虹：水珠像无数小棱镜，阳光照射时发生色散。夏天洒水车经过时，空中水雾也会形成短暂彩虹带。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>彩虹最外圈是什么颜色？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="记反了色散顺序：红偏折最小在外圈">红色</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="记反了色散顺序：红偏折最小在外圈">蓝色</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="记反了色散顺序：红偏折最小在外圈">绿色</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="记反了色散顺序：红偏折最小在外圈">紫色</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 色散量测量</h2><div class="tu-q"><p><strong>And：</strong>知道光会分散</p><p><strong>But：</strong>不会量化色散程度</p><p><strong>Therefore：</strong>建立偏折角测量方法</p></div><div class="tu-q"><p>色散程度可用最大最小偏折角差值表示。实验时固定三棱镜顶角60°，用激光笔入射角30°时，红光偏折15°，紫光17°，则色散度=2°。控制变量：同材质棱镜中，顶角越大色散越明显，80°棱镜的色散度可达3.5°。</p></div><div class="tu-q"><p>🌍 老花镜片边缘看灯光有彩边：镜片相当于棱镜组合，不同位置色散程度不同。眼镜度数越高，彩边现象越明显。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>哪种棱镜色散最明显？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="忽略了几何关系：顶角越大折射次数越多">顶角30°</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="忽略了几何关系：顶角越大折射次数越多">顶角50°</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="忽略了几何关系：顶角越大折射次数越多">顶角70°</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="忽略了几何关系：顶角越大折射次数越多">材质相同无差别</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 变量控制</h2><div class="tu-q"><p><strong>And：</strong>会观察色散现象</p><p><strong>But：</strong>不懂系统改变条件</p><p><strong>Therefore：</strong>掌握多因素实验设计</p></div><div class="tu-q"><p>影响色散的三变量：1)入射角（30°→50°时色散度增加1.2倍）2)棱镜材质（火石玻璃比冕牌玻璃色散强40%）3)光的组成（钠黄光无彩带）。例：用相同60°棱镜，白光入射角从45°调到60°时，色散带宽度从8cm增至12cm。</p></div><div class="tu-q"><p>🌍 钻石火彩：切割面控制入射角，利用金刚石强色散（色散度0.044）分解灯光。切工好的钻石转动时会出现跳动彩色光斑。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>如何增大色散带宽度？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆条件：厚度和距离不影响色散程度">换更厚棱镜</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆条件：厚度和距离不影响色散程度">增大入射角</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆条件：厚度和距离不影响色散程度">改用黄光</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆条件：厚度和距离不影响色散程度">拉远屏幕距离</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 色散量测量</h2><div class="tu-q"><p><strong>And：</strong>知道光会分散</p><p><strong>But：</strong>不会量化色散程度</p><p><strong>Therefore：</strong>建立偏折角测量方法</p></div><div class="tu-q"><p>色散程度可用最大最小偏折角差值表示。实验时固定三棱镜顶角60°，用激光笔入射角30°时，红光偏折15°，紫光17°，则色散度=2°。控制变量：同材质棱镜中，顶角越大色散越明显，80°棱镜的色散度可达3.5°。</p></div><div class="tu-q"><p>🌍 老花镜片边缘看灯光有彩边：镜片相当于棱镜组合，不同位置色散程度不同。眼镜度数越高，彩边现象越明显。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>哪种棱镜色散最明显？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="忽略了几何关系：顶角越大折射次数越多">顶角30°</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="忽略了几何关系：顶角越大折射次数越多">顶角50°</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="忽略了几何关系：顶角越大折射次数越多">顶角70°</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="忽略了几何关系：顶角越大折射次数越多">材质相同无差别</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 变量控制</h2><div class="tu-q"><p><strong>And：</strong>会观察色散现象</p><p><strong>But：</strong>不懂系统改变条件</p><p><strong>Therefore：</strong>掌握多因素实验设计</p></div><div class="tu-q"><p>影响色散的三变量：1)入射角（30°→50°时色散度增加1.2倍）2)棱镜材质（火石玻璃比冕牌玻璃色散强40%）3)光的组成（钠黄光无彩带）。例：用相同60°棱镜，白光入射角从45°调到60°时，色散带宽度从8cm增至12cm。</p></div><div class="tu-q"><p>🌍 钻石火彩：切割面控制入射角，利用金刚石强色散（色散度0.044）分解灯光。切工好的钻石转动时会出现跳动彩色光斑。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>如何增大色散带宽度？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆条件：厚度和距离不影响色散程度">换更厚棱镜</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆条件：厚度和距离不影响色散程度">增大入射角</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆条件：厚度和距离不影响色散程度">改用黄光</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆条件：厚度和距离不影响色散程度">拉远屏幕距离</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：区分色散、混合与吸收</h2>
+      <p>判断物体颜色：不透明物体的颜色由它反射的色光决定，透明物体的颜色由它透过的色光决定。区分光的三原色与颜料三原色，不要混用。</p>
+      <div class="worked-example"><strong>范例：</strong>红色玻璃只透过红光，用它观察绿色物体时，绿光被挡住、无光进入眼睛，物体看起来是黑色的。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把光的三原色说成红、黄、蓝，那是颜料三原色的误记。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>光的三原色是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;光的三原色为红、绿、蓝。&quot;)">A. 红、黄、蓝</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;光的三原色为红、绿、蓝。&quot;)">B. 红、绿、蓝</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;光的三原色为红、绿、蓝。&quot;)">C. 品红、黄、青</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;光的三原色为红、绿、蓝。&quot;)">D. 红、橙、紫</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>在暗室中用纯绿光照射一件红色上衣，上衣看起来是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;红衣只反射红光，绿光被吸收，故呈黑色。&quot;)">A. 红色</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;红衣只反射红光，绿光被吸收，故呈黑色。&quot;)">B. 绿色</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;红衣只反射红光，绿光被吸收，故呈黑色。&quot;)">C. 黑色</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;红衣只反射红光，绿光被吸收，故呈黑色。&quot;)">D. 白色</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）雨后彩虹形成的主要原因是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未建立气象现象与物理原理的联系">A.光的直线传播</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未建立气象现象与物理原理的联系">B.光的色散</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未建立气象现象与物理原理的联系">C.光的反射</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未建立气象现象与物理原理的联系">D.光的衍射</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）调整三棱镜顶角时，光谱带会如何变化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="缺乏变量控制实验经验">A.颜色顺序反转</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="缺乏变量控制实验经验">B.色带宽度改变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="缺乏变量控制实验经验">C.产生新的颜色</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="缺乏变量控制实验经验">D.变成白光</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>（应用题）解释肥皂泡彩色条纹与色散的关系</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未能区分色散与薄膜干涉">A.光的干涉现象</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未能区分色散与薄膜干涉">B.薄膜折射率差异</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未能区分色散与薄膜干涉">C.表面染料显色</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未能区分色散与薄膜干涉">D.反射光强度不同</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>先作法线再谈角。</li><li>虚像不能承接到光屏。</li><li>先定性再定量。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-light-dispersion-section2.png" alt="光的色散对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>光的色散的学习重点是</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 死记名词</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 规律+作图+应用</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 只看视频</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>虚像的特点是</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 能成在光屏上</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 不能被光屏承接</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 一定比物大</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 一定倒立</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为色散是光被染色</h3><p>✅ 强调折射率差异导致的物理分离</p><p>💡 混淆物理变化与化学变化</p></div><div class="tu-q"><h3>❌ 认为色散必须用三棱镜</h3><p>✅ 演示水滴/光盘等介质的色散现象</p><p>💡 实验器材单一化认知</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>红橙黄绿蓝靛紫，折射角度各不同</p><p><strong>类比：</strong>像不同体重的人跑步速度不同，光通过介质时也会'分流'</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 光的色散相关仿真</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/bending-light/latest/bending-light_zh_CN.html" title="PhET · 光的色散相关仿真" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 按提示调节角度/透镜，观察光路变化。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/bending-light/latest/bending-light_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/bending-light/latest/bending-light_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
 
 
-<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-light-refraction", "name": "phy-m-light-refraction"}], "current": {"id": "phy-m-light-dispersion", "name": "光的色散：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>研究光现象时常用</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 法线作基准</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 随意画线</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 只靠感觉</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 不需要实验</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>光学实验应注意</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">A. 控制变量与观察光路</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">B. 同时改所有量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 不用记录</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 禁止作图</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：光的色散</h2><div data-teachany-kg="phy-m-light-dispersion"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>解释生活光现象应</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 联系对应光学规律</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只说神奇</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 与物理无关</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 只改电路</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明光的色散最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -619,3 +617,5 @@ function pmDepthCheck(button, isCorrect, feedbackId, explanation) {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：光的色散</h2><div data-teachany-kg="phy-m-light-dispersion"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

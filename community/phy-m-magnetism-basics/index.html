@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-magnetism-basics-hero.png" alt="磁现象：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,105 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "phy-m-magnetism-basics", "name": "磁现象：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出磁铁吸引铁钴镍的性质及磁场方向判断方法</p></div><div class="tu-q"><p>🎯 能判断磁极相互作用规律并用磁感线描述磁场</p></div><div class="tu-q"><p>🎯 能分析简单磁化现象并解释指南针工作原理</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么磁铁能吸铁钉却不能吸铜片？</p></div><div class="tu-q"><p>❓ 同名磁极相斥时，中间的磁场去哪了？</p></div><div class="tu-q"><p>❓ 指南针的N极到底指向地理南极还是北极？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 磁铁吸铁</h2><div class="tu-q"><p><strong>And：</strong>学生见过磁铁吸铁钉</p><p><strong>But：</strong>不明白为什么只有铁类物质能被吸</p><p><strong>Therefore：</strong>理解磁性的本质是磁畴定向排列</p></div><div class="tu-q"><p>磁铁内部有无数个微型磁体叫磁畴。当磁畴方向杂乱时磁性抵消（如普通铁钉）；当磁畴朝同一方向排列时（如磁铁），就表现出磁性。例如用磁铁摩擦铁钉30次后，铁钉能吸起5枚大头针，说明铁钉被磁化了。</p></div><div class="tu-q"><p>🌍 冰箱贴能吸在门上是因为门板里有铁质材料。如果换成铝合金门，冰箱贴就吸不住了。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下列哪种物品一定能被磁铁吸引？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="易被铜、铝等非铁金属迷惑">A. 铁钥匙</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="易被铜、铝等非铁金属迷惑">B. 铝箔纸</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="易被铜、铝等非铁金属迷惑">C. 塑料尺</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="易被铜、铝等非铁金属迷惑">D. 木筷子</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>磁铁为什么能吸铁钉？</h2>
 <p>磁体周围存在磁场，磁场对放入其中的磁体/某些金属有力的作用。磁感线描述磁场方向与疏密。</p>
@@ -174,7 +272,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>磁现象</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>磁性</h3><p>能吸引铁钴镍等</p></div><div class="mini-panel"><h3>磁场</h3><p>磁体周围的磁场</p></div><div class="mini-panel"><h3>磁感线</h3><p>形象描述磁场</p></div></div>
@@ -188,7 +286,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -202,51 +300,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：用小磁针检验磁场方向</h2>
-      <p>磁场方向规定为小磁针静止时 N 极所指的方向。地球本身是一个大磁体，地磁北极在地理南极附近，因此指南针的 N 极指向地理北方。</p>
-      <div class="worked-example"><strong>范例：</strong>把小磁针放在条形磁体附近，静止时小磁针 N 极所指方向就是该点的磁场方向，与该处磁感线方向一致。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是认为磁感线是真实存在的曲线，或把地磁南北极与地理南北极完全等同。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>关于磁感线，下列说法正确的是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;磁感线是假想的模型，外部由 N 指向 S。&quot;)">A. 是磁场中真实存在的曲线</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;磁感线是假想的模型，外部由 N 指向 S。&quot;)">B. 是为描述磁场而假想的曲线</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;磁感线是假想的模型，外部由 N 指向 S。&quot;)">C. 在磁体外部由 S 极指向 N 极</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;磁感线是假想的模型，外部由 N 指向 S。&quot;)">D. 可以相交</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>指南针静止时 N 极指向地理北方，这说明？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;异名磁极相吸，故地理北方附近是地磁南极。&quot;)">A. 地磁北极在地理北极附近</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;异名磁极相吸，故地理北方附近是地磁南极。&quot;)">B. 地磁南极在地理北极附近</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;异名磁极相吸，故地理北方附近是地磁南极。&quot;)">C. 地球没有磁场</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;异名磁极相吸，故地理北方附近是地磁南极。&quot;)">D. 指南针 N 极带正电</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>磁感线不相交；从外部N到S。</li><li>同名磁极相斥，异名相吸。</li><li>地磁场使指南针定向。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-magnetism-basics-section2.png" alt="磁现象对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：两磁铁同名磁极靠近会？</h2>
 <ol class="steps"><li>相互排斥</li><li>可用磁场解释</li><li>指南针受地磁场作用</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「磁现象」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -274,75 +334,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>磁感线从磁体外部</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. S到N</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. N到S</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 任意</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 不存在方向</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>指南针指向大致</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 东西</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 南北</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 随处</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 无规律</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 法拉第定律（磁场感应入门）</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" title="PhET · 法拉第定律（磁场感应入门）" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 移动磁铁观察感应与磁场相关现象，建立磁场直觉。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>磁感线是</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 真实存在的细线</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 描述磁场的工具</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 电流</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电荷轨迹</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>铁钉被磁铁吸起说明</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 磁场有力的作用</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 没有磁场</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 一定带电</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 发生短路</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>两磁铁异名磁极靠近</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">A. 排斥</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">B. 吸引</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 无关</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 一定发光</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明磁现象最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -458,117 +450,123 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么磁铁能吸铁钉却不能吸铜片？</p></div><div class="tu-q"><p>❓ 同名磁极相斥时，中间的磁场去哪了？</p></div><div class="tu-q"><p>❓ 指南针的N极到底指向地理南极还是北极？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出磁铁吸引铁钴镍的性质及磁场方向判断方法</p></div><div class="tu-q"><p>🎯 能判断磁极相互作用规律并用磁感线描述磁场</p></div><div class="tu-q"><p>🎯 能分析简单磁化现象并解释指南针工作原理</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为磁铁吸引力大小与物体重量成正比</h3><p>✅ 演示铝罐不被吸引但铁钉被吸</p><p>💡 混淆重力与磁力的作用机制</p></div><div class="tu-q"><h3>❌ 认为指南针红色端指向地理南极</h3><p>✅ 展示地磁南极实际位于地理北极附近</p><p>💡 未区分地理极与地磁极的对应关系</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>铁钴镍才听话，同名相斥异名拉</p><p><strong>类比：</strong>磁感线像蒲公英的绒毛，从N极出发回到S极</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>【升学题】关于磁感线描述正确的是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="对磁感线的物理意义理解错误">A.实际存在的细线</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="对磁感线的物理意义理解错误">B.N极指向S极的假想线</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="对磁感线的物理意义理解错误">C.可相交的曲线</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="对磁感线的物理意义理解错误">D.仅存在于磁铁内部</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="A"><h3>后测题 2</h3><p>【迁移题】冰箱门磁条的工作原理是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未将磁极作用规律迁移到实际场景">A.异名磁极相吸</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未将磁极作用规律迁移到实际场景">B.摩擦生磁</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未将磁极作用规律迁移到实际场景">C.静电吸附</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未将磁极作用规律迁移到实际场景">D.真空吸附</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="A"><h3>后测题 3</h3><p>【实验题】用磁铁摩擦钢针时，应？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="不了解磁化需要定向排列磁畴">A.单向摩擦20次</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="不了解磁化需要定向排列磁畴">B.来回摩擦</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="不了解磁化需要定向排列磁畴">C.敲击磁化</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="不了解磁化需要定向排列磁畴">D.高温加热</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 磁铁吸铁</h2><div class="tu-q"><p><strong>And：</strong>学生见过磁铁吸铁钉</p><p><strong>But：</strong>不明白为什么只有铁类物质能被吸</p><p><strong>Therefore：</strong>理解磁性的本质是磁畴定向排列</p></div><div class="tu-q"><p>磁铁内部有无数个微型磁体叫磁畴。当磁畴方向杂乱时磁性抵消（如普通铁钉）；当磁畴朝同一方向排列时（如磁铁），就表现出磁性。例如用磁铁摩擦铁钉30次后，铁钉能吸起5枚大头针，说明铁钉被磁化了。</p></div><div class="tu-q"><p>🌍 冰箱贴能吸在门上是因为门板里有铁质材料。如果换成铝合金门，冰箱贴就吸不住了。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下列哪种物品一定能被磁铁吸引？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="易被铜、铝等非铁金属迷惑">A. 铁钥匙</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="易被铜、铝等非铁金属迷惑">B. 铝箔纸</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="易被铜、铝等非铁金属迷惑">C. 塑料尺</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="易被铜、铝等非铁金属迷惑">D. 木筷子</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 磁场探测</h2><div class="tu-q"><p><strong>And：</strong>知道磁铁周围有磁场</p><p><strong>But：</strong>看不见摸不着难以测量</p><p><strong>Therefore：</strong>学习用铁屑可视化磁场</p></div><div class="tu-q"><p>磁场虽然无形，但可以通过铁屑排列显现。在条形磁铁上方放玻璃板，撒100g铁屑轻敲，铁屑会形成从N极到S极的弧形线。磁极附近铁屑密集（约3mm间距），中间稀疏（约1cm间距），说明磁场强度不同。</p></div><div class="tu-q"><p>🌍 修车师傅用磁铁棒在机油里吸铁屑，通过铁屑数量判断发动机磨损程度。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>观察右图铁屑分布，哪个位置磁场最强？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="容易误选磁极正中间">A. 磁铁正中间</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="容易误选磁极正中间">B. 距离N极2cm处</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="容易误选磁极正中间">C. 距离S极5cm处</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="容易误选磁极正中间">D. 磁铁外10cm处</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 磁力测量</h2><div class="tu-q"><p><strong>And：</strong>感受过磁铁相吸相斥</p><p><strong>But：</strong>不知道力的大小如何量化</p><p><strong>Therefore：</strong>引入磁力计测量数值</p></div><div class="tu-q"><p>用磁力计可以精确测量磁力大小。例如两块N极相对的磁铁，距离5cm时斥力为0.2N，靠近到2cm时增至0.8N。通过改变磁铁间距、角度等参数，发现磁力与距离平方成反比。</p></div><div class="tu-q"><p>🌍 磁悬浮列车通过调节电磁铁电流大小（相当于改变磁力）来控制悬浮高度。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>两磁铁N极距离从4cm变为2cm，斥力如何变化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="容易忽略平方反比关系">A. 变为4倍</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="容易忽略平方反比关系">B. 变为2倍</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="容易忽略平方反比关系">C. 减半</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="容易忽略平方反比关系">D. 不变</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4"><h2>📖 变量控制</h2><div class="tu-q"><p><strong>And：</strong>知道磁力受多种因素影响</p><p><strong>But：</strong>不会设计对比实验</p><p><strong>Therefore：</strong>掌握单一变量法研究磁现象</p></div><div class="tu-q"><p>研究磁力影响因素时要控制变量。比如验证磁铁形状的影响：用重量相同的条形（10cm长）和蹄形磁铁，在相同距离（3cm）吸同一铁块，测量发现蹄形磁铁吸力大0.5N，说明磁极集中能增强磁性。</p></div><div class="tu-q"><p>🌍 耳机磁铁做成环形，能让磁场更集中提高发声效率。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>研究温度对磁力影响时，哪组操作正确？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="容易混淆自变量和无关变量">A. 同块磁铁分别冷冻/加热</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="容易混淆自变量和无关变量">B. 用不同材质磁铁对比</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="容易混淆自变量和无关变量">C. 改变测量距离</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="容易混淆自变量和无关变量">D. 更换铁块大小</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 磁场探测</h2><div class="tu-q"><p><strong>And：</strong>知道磁铁周围有磁场</p><p><strong>But：</strong>看不见摸不着难以测量</p><p><strong>Therefore：</strong>学习用铁屑可视化磁场</p></div><div class="tu-q"><p>磁场虽然无形，但可以通过铁屑排列显现。在条形磁铁上方放玻璃板，撒100g铁屑轻敲，铁屑会形成从N极到S极的弧形线。磁极附近铁屑密集（约3mm间距），中间稀疏（约1cm间距），说明磁场强度不同。</p></div><div class="tu-q"><p>🌍 修车师傅用磁铁棒在机油里吸铁屑，通过铁屑数量判断发动机磨损程度。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>观察右图铁屑分布，哪个位置磁场最强？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="容易误选磁极正中间">A. 磁铁正中间</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="容易误选磁极正中间">B. 距离N极2cm处</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="容易误选磁极正中间">C. 距离S极5cm处</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="容易误选磁极正中间">D. 磁铁外10cm处</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 磁力测量</h2><div class="tu-q"><p><strong>And：</strong>感受过磁铁相吸相斥</p><p><strong>But：</strong>不知道力的大小如何量化</p><p><strong>Therefore：</strong>引入磁力计测量数值</p></div><div class="tu-q"><p>用磁力计可以精确测量磁力大小。例如两块N极相对的磁铁，距离5cm时斥力为0.2N，靠近到2cm时增至0.8N。通过改变磁铁间距、角度等参数，发现磁力与距离平方成反比。</p></div><div class="tu-q"><p>🌍 磁悬浮列车通过调节电磁铁电流大小（相当于改变磁力）来控制悬浮高度。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>两磁铁N极距离从4cm变为2cm，斥力如何变化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="容易忽略平方反比关系">A. 变为4倍</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="容易忽略平方反比关系">B. 变为2倍</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="容易忽略平方反比关系">C. 减半</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="容易忽略平方反比关系">D. 不变</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4" data-slot="55"><h2>📖 变量控制</h2><div class="tu-q"><p><strong>And：</strong>知道磁力受多种因素影响</p><p><strong>But：</strong>不会设计对比实验</p><p><strong>Therefore：</strong>掌握单一变量法研究磁现象</p></div><div class="tu-q"><p>研究磁力影响因素时要控制变量。比如验证磁铁形状的影响：用重量相同的条形（10cm长）和蹄形磁铁，在相同距离（3cm）吸同一铁块，测量发现蹄形磁铁吸力大0.5N，说明磁极集中能增强磁性。</p></div><div class="tu-q"><p>🌍 耳机磁铁做成环形，能让磁场更集中提高发声效率。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>研究温度对磁力影响时，哪组操作正确？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="容易混淆自变量和无关变量">A. 同块磁铁分别冷冻/加热</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="容易混淆自变量和无关变量">B. 用不同材质磁铁对比</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="容易混淆自变量和无关变量">C. 改变测量距离</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="容易混淆自变量和无关变量">D. 更换铁块大小</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：用小磁针检验磁场方向</h2>
+      <p>磁场方向规定为小磁针静止时 N 极所指的方向。地球本身是一个大磁体，地磁北极在地理南极附近，因此指南针的 N 极指向地理北方。</p>
+      <div class="worked-example"><strong>范例：</strong>把小磁针放在条形磁体附近，静止时小磁针 N 极所指方向就是该点的磁场方向，与该处磁感线方向一致。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是认为磁感线是真实存在的曲线，或把地磁南北极与地理南北极完全等同。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>关于磁感线，下列说法正确的是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;磁感线是假想的模型，外部由 N 指向 S。&quot;)">A. 是磁场中真实存在的曲线</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;磁感线是假想的模型，外部由 N 指向 S。&quot;)">B. 是为描述磁场而假想的曲线</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;磁感线是假想的模型，外部由 N 指向 S。&quot;)">C. 在磁体外部由 S 极指向 N 极</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;磁感线是假想的模型，外部由 N 指向 S。&quot;)">D. 可以相交</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>指南针静止时 N 极指向地理北方，这说明？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;异名磁极相吸，故地理北方附近是地磁南极。&quot;)">A. 地磁北极在地理北极附近</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;异名磁极相吸，故地理北方附近是地磁南极。&quot;)">B. 地磁南极在地理北极附近</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;异名磁极相吸，故地理北方附近是地磁南极。&quot;)">C. 地球没有磁场</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;异名磁极相吸，故地理北方附近是地磁南极。&quot;)">D. 指南针 N 极带正电</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>【升学题】关于磁感线描述正确的是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="对磁感线的物理意义理解错误">A.实际存在的细线</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="对磁感线的物理意义理解错误">B.N极指向S极的假想线</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="对磁感线的物理意义理解错误">C.可相交的曲线</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="对磁感线的物理意义理解错误">D.仅存在于磁铁内部</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A"><h3>后测题 2</h3><p>【迁移题】冰箱门磁条的工作原理是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未将磁极作用规律迁移到实际场景">A.异名磁极相吸</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未将磁极作用规律迁移到实际场景">B.摩擦生磁</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未将磁极作用规律迁移到实际场景">C.静电吸附</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未将磁极作用规律迁移到实际场景">D.真空吸附</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A"><h3>后测题 3</h3><p>【实验题】用磁铁摩擦钢针时，应？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="不了解磁化需要定向排列磁畴">A.单向摩擦20次</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="不了解磁化需要定向排列磁畴">B.来回摩擦</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="不了解磁化需要定向排列磁畴">C.敲击磁化</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="不了解磁化需要定向排列磁畴">D.高温加热</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>磁感线不相交；从外部N到S。</li><li>同名磁极相斥，异名相吸。</li><li>地磁场使指南针定向。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-magnetism-basics-section2.png" alt="磁现象对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>磁感线是</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 真实存在的细线</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 描述磁场的工具</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 电流</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电荷轨迹</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>铁钉被磁铁吸起说明</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 磁场有力的作用</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 没有磁场</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 一定带电</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 发生短路</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为磁铁吸引力大小与物体重量成正比</h3><p>✅ 演示铝罐不被吸引但铁钉被吸</p><p>💡 混淆重力与磁力的作用机制</p></div><div class="tu-q"><h3>❌ 认为指南针红色端指向地理南极</h3><p>✅ 展示地磁南极实际位于地理北极附近</p><p>💡 未区分地理极与地磁极的对应关系</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>铁钴镍才听话，同名相斥异名拉</p><p><strong>类比：</strong>磁感线像蒲公英的绒毛，从N极出发回到S极</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 法拉第定律（磁场感应入门）</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" title="PhET · 法拉第定律（磁场感应入门）" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 移动磁铁观察感应与磁场相关现象，建立磁场直觉。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
 
 
-<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "phy-m-magnetism-basics", "name": "磁现象：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>磁感线从磁体外部</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. S到N</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. N到S</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 任意</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 不存在方向</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>指南针指向大致</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 东西</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 南北</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 随处</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 无规律</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：磁现象</h2><div data-teachany-kg="phy-m-magnetism-basics"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>两磁铁异名磁极靠近</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">A. 排斥</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">B. 吸引</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 无关</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 一定发光</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明磁现象最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -601,3 +599,5 @@ function phymDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：磁现象</h2><div data-teachany-kg="phy-m-magnetism-basics"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

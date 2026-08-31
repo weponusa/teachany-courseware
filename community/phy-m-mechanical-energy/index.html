@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-mechanical-energy-hero.png" alt="机械能（动能/势能）：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,105 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-work-energy", "name": "phy-m-work-energy"}], "current": {"id": "phy-m-mechanical-energy", "name": "机械能：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出动能和势能的定义及计算公式</p></div><div class="tu-q"><p>🎯 能判断物体运动过程中机械能是否守恒</p></div><div class="tu-q"><p>🎯 能分析简单情境中动能与势能的相互转化</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么过山车在最高点速度最慢？</p></div><div class="tu-q"><p>❓ 跳起来时动能和势能怎么变？</p></div><div class="tu-q"><p>❓ 弹簧压缩时能量藏哪儿去了？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 动能初探</h2><div class="tu-q"><p><strong>And：</strong>学生知道运动的物体有能量</p><p><strong>But：</strong>不清楚如何定量描述</p><p><strong>Therefore：</strong>建立动能与速度、质量的关系</p></div><div class="tu-q"><p>动能是运动物体具有的能量，大小与质量、速度平方成正比。比如时速60km的汽车（约1200kg）动能约16万焦耳，是时速30km时的4倍——速度加倍动能变4倍！注意单位换算：1m/s=3.6km/h。</p></div><div class="tu-q"><p>🌍 暴雨时的小石子能砸碎车窗（质量小但速度大），而缓慢滚动的保龄球（质量大但速度小）只能轻轻碰倒球瓶。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>卡车和自行车同速行驶，谁的动能大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选C可能忽略质量因素">A.卡车</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选C可能忽略质量因素">B.自行车</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选C可能忽略质量因素">C.一样大</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选C可能忽略质量因素">D.看路面情况</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>过山车最高点与最低点能量如何变？</h2>
 <p>动能与势能统称机械能。动能与质量速度有关，重力势能与质量高度有关。</p>
@@ -174,7 +272,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>机械能</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>动能</h3><p>运动的能量</p></div><div class="mini-panel"><h3>势能</h3><p>重力势能等</p></div><div class="mini-panel"><h3>机械能</h3><p>动能+势能</p></div></div>
@@ -188,7 +286,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -202,51 +300,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：抓高度与速度的此消彼长</h2>
-      <p>分析过程先看高度如何变化（判断势能）、速度如何变化（判断动能），再说明能量由谁转化为谁。有摩擦时总机械能减少，减少的部分转化为内能。</p>
-      <div class="worked-example"><strong>范例：</strong>质量 2 kg 的物体从 5 m 高处自由下落，减少的重力势能 = mgh = 2×10×5 = 100 J，不计阻力时全部转化为动能。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是认为速度大的物体动能一定大，忽略质量的影响；或认为有摩擦时机械能仍守恒。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>过山车从最高点下滑的过程中，能量转化情况是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;高度降低、速度增大，势能转化为动能。&quot;)">A. 动能转化为重力势能</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;高度降低、速度增大，势能转化为动能。&quot;)">B. 重力势能转化为动能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;高度降低、速度增大，势能转化为动能。&quot;)">C. 内能转化为动能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;高度降低、速度增大，势能转化为动能。&quot;)">D. 机械能不断增大</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>质量 2 kg 的物体从 5 m 高处落下（g 取 10 N/kg，不计阻力），落地时动能约为？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;减少的势能 mgh = 100 J 全部转化为动能。&quot;)">A. 10 J</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;减少的势能 mgh = 100 J 全部转化为动能。&quot;)">B. 50 J</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;减少的势能 mgh = 100 J 全部转化为动能。&quot;)">C. 100 J</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;减少的势能 mgh = 100 J 全部转化为动能。&quot;)">D. 1000 J</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>质量越大、速度越大，动能越大。</li><li>越高重力势能越大（同一星球表面近似）。</li><li>弹性势能与形变有关。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-mechanical-energy-section2.png" alt="机械能对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：同一小球，高度升高</h2>
 <ol class="steps"><li>重力势能增大</li><li>若静止动能不变为零</li><li>机械能是否守恒看条件</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「机械能」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -274,75 +334,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>速度越大（质量一定）动能</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 越小</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 越大</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 不变</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 为负</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>高度越高（质量一定）重力势能</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 越小</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 越大</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 不变</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 为零</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 能量滑板公园</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html" title="PhET · 能量滑板公园" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 观察高度与速度变化时动能势能的此消彼长。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>静止在桌面的书</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 动能不为零必</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 动能可为零，有重力势能</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 没有势能</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 质量为零</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>过山车下降过程通常</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 重力势能转动能</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 动能变质量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 电荷增加</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 温度必降为绝对零</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>研究能量转化可用</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 能量滑板模型</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只背定义</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 关掉所有力的概念</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 只测电压</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明机械能最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -458,117 +450,123 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么过山车在最高点速度最慢？</p></div><div class="tu-q"><p>❓ 跳起来时动能和势能怎么变？</p></div><div class="tu-q"><p>❓ 弹簧压缩时能量藏哪儿去了？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出动能和势能的定义及计算公式</p></div><div class="tu-q"><p>🎯 能判断物体运动过程中机械能是否守恒</p></div><div class="tu-q"><p>🎯 能分析简单情境中动能与势能的相互转化</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为静止物体没有机械能</h3><p>✅ 静止物体可能有重力势能</p><p>💡 忽略势能的存在条件</p></div><div class="tu-q"><h3>❌ 计算动能时漏乘1/2</h3><p>✅ 必须使用完整公式E_k=1/2mv²</p><p>💡 公式记忆不完整</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>高处势能低处动，速度质量都要用</p><p><strong>类比：</strong>像压紧的弹簧玩具，松手时储存的能量变成运动</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（升学题）质量为2kg的物体从5m高处自由落下，落地时动能约为？（g=10N/kg）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="能量转化计算错误">A.50J</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="能量转化计算错误">B.100J</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="能量转化计算错误">C.150J</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="能量转化计算错误">D.200J</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）游乐场大摆锤上升过程中，能量如何转化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="不理解动态转化过程">A.动能全部转为势能</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="不理解动态转化过程">B.动能减少势能增加</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="不理解动态转化过程">C.机械能逐渐增大</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="不理解动态转化过程">D.势能持续减小</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>（概念题）关于弹性势能，正确的是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="对弹性势能本质理解偏差">A.与形变成反比</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="对弹性势能本质理解偏差">B.只存在于弹簧</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="对弹性势能本质理解偏差">C.来自物体形变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="对弹性势能本质理解偏差">D.永远不变</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 动能初探</h2><div class="tu-q"><p><strong>And：</strong>学生知道运动的物体有能量</p><p><strong>But：</strong>不清楚如何定量描述</p><p><strong>Therefore：</strong>建立动能与速度、质量的关系</p></div><div class="tu-q"><p>动能是运动物体具有的能量，大小与质量、速度平方成正比。比如时速60km的汽车（约1200kg）动能约16万焦耳，是时速30km时的4倍——速度加倍动能变4倍！注意单位换算：1m/s=3.6km/h。</p></div><div class="tu-q"><p>🌍 暴雨时的小石子能砸碎车窗（质量小但速度大），而缓慢滚动的保龄球（质量大但速度小）只能轻轻碰倒球瓶。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>卡车和自行车同速行驶，谁的动能大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选C可能忽略质量因素">A.卡车</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选C可能忽略质量因素">B.自行车</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选C可能忽略质量因素">C.一样大</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选C可能忽略质量因素">D.看路面情况</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 势能解密</h2><div class="tu-q"><p><strong>And：</strong>知道高处物体下落会加速</p><p><strong>But：</strong>不理解储存的能量形式</p><p><strong>Therefore：</strong>揭示重力势能与高度的关系</p></div><div class="tu-q"><p>被举高的物体具有重力势能，大小=质量×重力加速度×高度。比如3楼阳台的花盆（5kg，约10米高）势能约500焦耳，是同样花盆放在1楼时的3倍。记住：高度是相对参考面的垂直距离！</p></div><div class="tu-q"><p>🌍 水库发电利用水的势能——新安江水库水位差70米，1吨水下落就能发0.2度电（约72万焦耳）。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>同一本书放在哪势能最大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A可能没注意测量起点">A.课桌上</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A可能没注意测量起点">B.地面</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A可能没注意测量起点">C.书架顶层</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A可能没注意测量起点">D.平放手心</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 机械能守恒</h2><div class="tu-q"><p><strong>And：</strong>已掌握动能势能单独计算</p><p><strong>But：</strong>不理解二者转化规律</p><p><strong>Therefore：</strong>发现能量转化中的守恒特性</p></div><div class="tu-q"><p>只有重力做功时，动能+势能的总和（机械能）保持不变。比如秋千从最高点（速度0，势能最大）到最低点（速度最大，势能最小），机械能始终等于最高点的势能值。忽略空气阻力时，1kg的摆锤从1米高摆下，最低点速度刚好是√20≈4.47m/s。</p></div><div class="tu-q"><p>🌍 过山车设计关键：第一个坡最高，后续坡逐渐降低，就是利用机械能守恒保证安全速度。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>忽略摩擦时，小球滚下斜面会怎样？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D可能混淆实际与理想情况">A.到底端速度不变</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D可能混淆实际与理想情况">B.中途停止</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D可能混淆实际与理想情况">C.越滚越快</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D可能混淆实际与理想情况">D.机械能减少</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4"><h2>📖 测量转化</h2><div class="tu-q"><p><strong>And：</strong>能定性分析能量变化</p><p><strong>But：</strong>不会用公式定量测算</p><p><strong>Therefore：</strong>实现现象到数据的科学转化</p></div><div class="tu-q"><p>用公式Eₖ=½mv²和Eₚ=mgh进行换算。例如让500g钢球从80cm高落下，理论着地速度应为√(2gh)≈4m/s。实际测量若得3.6m/s，说明约19%能量转化为内能（空气阻力+声音）。注意g取9.8N/kg时高度要用米作单位。</p></div><div class="tu-q"><p>🌍 蹦极绳长度设计：体重60kg的人从50米跳下，在绳绷直前瞬间动能约30千焦，需精确计算绳的弹性势能储存量。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>计算2kg水桶从3楼（9m）坠地的动能（g=10N/kg）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能漏乘高度">A.180J</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能漏乘高度">B.90J</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能漏乘高度">C.60J</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能漏乘高度">D.30J</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 势能解密</h2><div class="tu-q"><p><strong>And：</strong>知道高处物体下落会加速</p><p><strong>But：</strong>不理解储存的能量形式</p><p><strong>Therefore：</strong>揭示重力势能与高度的关系</p></div><div class="tu-q"><p>被举高的物体具有重力势能，大小=质量×重力加速度×高度。比如3楼阳台的花盆（5kg，约10米高）势能约500焦耳，是同样花盆放在1楼时的3倍。记住：高度是相对参考面的垂直距离！</p></div><div class="tu-q"><p>🌍 水库发电利用水的势能——新安江水库水位差70米，1吨水下落就能发0.2度电（约72万焦耳）。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>同一本书放在哪势能最大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A可能没注意测量起点">A.课桌上</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A可能没注意测量起点">B.地面</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A可能没注意测量起点">C.书架顶层</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A可能没注意测量起点">D.平放手心</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 机械能守恒</h2><div class="tu-q"><p><strong>And：</strong>已掌握动能势能单独计算</p><p><strong>But：</strong>不理解二者转化规律</p><p><strong>Therefore：</strong>发现能量转化中的守恒特性</p></div><div class="tu-q"><p>只有重力做功时，动能+势能的总和（机械能）保持不变。比如秋千从最高点（速度0，势能最大）到最低点（速度最大，势能最小），机械能始终等于最高点的势能值。忽略空气阻力时，1kg的摆锤从1米高摆下，最低点速度刚好是√20≈4.47m/s。</p></div><div class="tu-q"><p>🌍 过山车设计关键：第一个坡最高，后续坡逐渐降低，就是利用机械能守恒保证安全速度。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>忽略摩擦时，小球滚下斜面会怎样？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D可能混淆实际与理想情况">A.到底端速度不变</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D可能混淆实际与理想情况">B.中途停止</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D可能混淆实际与理想情况">C.越滚越快</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D可能混淆实际与理想情况">D.机械能减少</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4" data-slot="55"><h2>📖 测量转化</h2><div class="tu-q"><p><strong>And：</strong>能定性分析能量变化</p><p><strong>But：</strong>不会用公式定量测算</p><p><strong>Therefore：</strong>实现现象到数据的科学转化</p></div><div class="tu-q"><p>用公式Eₖ=½mv²和Eₚ=mgh进行换算。例如让500g钢球从80cm高落下，理论着地速度应为√(2gh)≈4m/s。实际测量若得3.6m/s，说明约19%能量转化为内能（空气阻力+声音）。注意g取9.8N/kg时高度要用米作单位。</p></div><div class="tu-q"><p>🌍 蹦极绳长度设计：体重60kg的人从50米跳下，在绳绷直前瞬间动能约30千焦，需精确计算绳的弹性势能储存量。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>计算2kg水桶从3楼（9m）坠地的动能（g=10N/kg）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能漏乘高度">A.180J</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能漏乘高度">B.90J</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能漏乘高度">C.60J</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能漏乘高度">D.30J</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：抓高度与速度的此消彼长</h2>
+      <p>分析过程先看高度如何变化（判断势能）、速度如何变化（判断动能），再说明能量由谁转化为谁。有摩擦时总机械能减少，减少的部分转化为内能。</p>
+      <div class="worked-example"><strong>范例：</strong>质量 2 kg 的物体从 5 m 高处自由下落，减少的重力势能 = mgh = 2×10×5 = 100 J，不计阻力时全部转化为动能。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是认为速度大的物体动能一定大，忽略质量的影响；或认为有摩擦时机械能仍守恒。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>过山车从最高点下滑的过程中，能量转化情况是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;高度降低、速度增大，势能转化为动能。&quot;)">A. 动能转化为重力势能</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;高度降低、速度增大，势能转化为动能。&quot;)">B. 重力势能转化为动能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;高度降低、速度增大，势能转化为动能。&quot;)">C. 内能转化为动能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;高度降低、速度增大，势能转化为动能。&quot;)">D. 机械能不断增大</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>质量 2 kg 的物体从 5 m 高处落下（g 取 10 N/kg，不计阻力），落地时动能约为？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;减少的势能 mgh = 100 J 全部转化为动能。&quot;)">A. 10 J</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;减少的势能 mgh = 100 J 全部转化为动能。&quot;)">B. 50 J</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;减少的势能 mgh = 100 J 全部转化为动能。&quot;)">C. 100 J</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;减少的势能 mgh = 100 J 全部转化为动能。&quot;)">D. 1000 J</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（升学题）质量为2kg的物体从5m高处自由落下，落地时动能约为？（g=10N/kg）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="能量转化计算错误">A.50J</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="能量转化计算错误">B.100J</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="能量转化计算错误">C.150J</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="能量转化计算错误">D.200J</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）游乐场大摆锤上升过程中，能量如何转化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="不理解动态转化过程">A.动能全部转为势能</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="不理解动态转化过程">B.动能减少势能增加</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="不理解动态转化过程">C.机械能逐渐增大</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="不理解动态转化过程">D.势能持续减小</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>（概念题）关于弹性势能，正确的是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="对弹性势能本质理解偏差">A.与形变成反比</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="对弹性势能本质理解偏差">B.只存在于弹簧</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="对弹性势能本质理解偏差">C.来自物体形变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="对弹性势能本质理解偏差">D.永远不变</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>质量越大、速度越大，动能越大。</li><li>越高重力势能越大（同一星球表面近似）。</li><li>弹性势能与形变有关。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-mechanical-energy-section2.png" alt="机械能对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>静止在桌面的书</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 动能不为零必</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 动能可为零，有重力势能</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 没有势能</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 质量为零</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>过山车下降过程通常</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 重力势能转动能</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 动能变质量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 电荷增加</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 温度必降为绝对零</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为静止物体没有机械能</h3><p>✅ 静止物体可能有重力势能</p><p>💡 忽略势能的存在条件</p></div><div class="tu-q"><h3>❌ 计算动能时漏乘1/2</h3><p>✅ 必须使用完整公式E_k=1/2mv²</p><p>💡 公式记忆不完整</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>高处势能低处动，速度质量都要用</p><p><strong>类比：</strong>像压紧的弹簧玩具，松手时储存的能量变成运动</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 能量滑板公园</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html" title="PhET · 能量滑板公园" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 观察高度与速度变化时动能势能的此消彼长。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
 
 
-<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-work-energy", "name": "phy-m-work-energy"}], "current": {"id": "phy-m-mechanical-energy", "name": "机械能：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>速度越大（质量一定）动能</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 越小</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 越大</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 不变</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 为负</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>高度越高（质量一定）重力势能</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 越小</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 越大</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 不变</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 为零</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：机械能</h2><div data-teachany-kg="phy-m-mechanical-energy"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>研究能量转化可用</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 能量滑板模型</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只背定义</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 关掉所有力的概念</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 只测电压</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明机械能最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -601,3 +599,5 @@ function phymDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：机械能</h2><div data-teachany-kg="phy-m-mechanical-energy"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
