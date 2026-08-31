@@ -43,7 +43,7 @@ SLOTS = {
     95:  ("error-clinic",    "multi"),  # 易错点诊所（多误区并列）
     97:  ("summary",         "uniq"),   # 小结
     98:  ("memory-anchor",   "uniq"),   # 记忆锚点
-    100: ("external-resources", "uniq"),  # 拓展资源
+    100: ("external-resources", "multi"), # 拓展资源（可多组）
     105: ("video",           "multi"),  # 视频
     110: ("phet-lab",        "uniq"),   # 仿真
     115: ("tiered-practice", "multi"),  # 分层练习 L1/L2/L3
@@ -83,7 +83,7 @@ TITLE_RULES = [
     (re.compile(r"核心模块 ?3|模块[三3]"), 50),
     (re.compile(r"核心模块 ?4|模块[四4]|图象法"), 55),
     (re.compile(r"知识精讲|核心概念"), 60),
-    (re.compile(r"方法范例|方法与范例|方法"), 61),
+    (re.compile(r"方法范例|方法与范例|^方法[:：]"), 61),
     (re.compile(r"范例"), 62),
     (re.compile(r"深层理解|深度理解|五镜头"), 70),
     (re.compile(r"综合任务|综合实践|综合练习"), 75),
@@ -100,7 +100,8 @@ TITLE_RULES = [
     (re.compile(r"图文速览|图集"), 35),
     (re.compile(r"仿真|GeoGebra|PhET|网络仿真"), 110),
     (re.compile(r"基础巩固|能力应用|迁移与产出|先过关|含错因"), 115),
-    (re.compile(r"知识图谱|知识结构主图|知识全景"), 140),
+    (re.compile(r"知识全景|学习地图"), 5),
+    (re.compile(r"知识图谱|知识结构主图"), 140),
 ]
 
 
@@ -122,6 +123,7 @@ ID_HIGH = {
     "deep-understanding": 70,
     "error-clinic": 95, "summary": 97, "memory-anchor": 98,
     "phet-lab": 110, "teachany-audio-player": 120,
+    "interactive-lab": 77, "interactive-model": 77, "concept-overview": 5,
     "teachany-ai-tutor-card": 130, "ai-media-zone": 125,
     "knowledge-graph": 140, "teachany-knowledge-graph": 140,
 }
