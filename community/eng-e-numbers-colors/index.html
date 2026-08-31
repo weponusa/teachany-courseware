@@ -357,7 +357,7 @@ function checkPretest() {
 }
 </script>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/eng-e-numbers-colors-hero.png" alt="数字与颜色知识结构（无字）" loading="eager">
@@ -368,7 +368,82 @@ function checkPretest() {
 </section>
 
 <!-- OBJECTIVES -->
-<section data-scaffold="full" data-bloom-level="apply" class="screen" id="objectives">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+<section data-scaffold="full" data-bloom-level="apply" class="screen" id="objectives" data-slot="10">
   <div class="top-bar">
     <div class="stars-display">⭐ <span id="stars-obj">0</span></div>
     <button class="btn-sound" onclick="speakText('Let us learn numbers and colors!')">🔊</button>
@@ -391,7 +466,9 @@ function checkPretest() {
 </section>
 
 <!-- WARMUP -->
-<section data-bloom-level="understand" class="screen" id="pretest">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么数字13在西方不吉利？</p></div><div class="tu-q"><p>❓ 为什么交通灯用红黄绿三种颜色？</p></div><div class="tu-q"><p>❓ 为什么英语里11和12不和别的数字一样叫oneteen和twoteen？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+
+<section data-bloom-level="understand" class="screen" id="pretest" data-slot="20">
   <div class="top-bar">
     <div class="stars-display">⭐ <span id="stars-warm">0</span></div>
     <span style="font-size:16px;font-weight:700;color:var(--primary)">🔥 热身</span>
@@ -416,66 +493,8 @@ function checkPretest() {
 </section>
 
 <!-- LEVEL 1: 数字匹配 -->
-<section class="screen" id="level1">
-  <div class="top-bar">
-    <div class="stars-display">⭐ <span id="stars-l1">0</span></div>
-    <span style="font-size:16px;font-weight:700;color:var(--primary)">关卡 1/3</span>
-  </div>
-  <div class="progress-bar"><div class="progress-fill" style="width:35%"></div></div>
-  <div class="level-card">
-    <div class="level-badge">🔢 第一关：数字识别</div>
-    <div class="big-display big-number" id="l1-display">7</div>
-    <div class="quiz-sub" id="l1-sub">选出正确的英文单词</div>
-    <div class="options" id="l1-opts"></div>
-    <div class="feedback" id="l1-fb"></div>
-    <div class="q-count" id="l1-cnt">0/8 题</div>
-  </div>
-</section>
-
-<!-- LEVEL 2: 颜色识别 -->
-<section class="screen" id="level2">
-  <div class="top-bar">
-    <div class="stars-display">⭐ <span id="stars-l2">0</span></div>
-    <span style="font-size:16px;font-weight:700;color:var(--primary)">关卡 2/3</span>
-  </div>
-  <div class="progress-bar"><div class="progress-fill" style="width:58%"></div></div>
-  <div class="level-card">
-    <div class="level-badge">🎨 第二关：颜色识别</div>
-    <div class="color-swatch" id="l2-swatch"></div>
-    <div class="quiz-sub">这是什么颜色？</div>
-    <div class="options" id="l2-opts" style="grid-template-columns:1fr 1fr"></div>
-    <div class="feedback" id="l2-fb"></div>
-    <div class="q-count" id="l2-cnt">0/8 题</div>
-  </div>
-</section>
-
-<!-- LEVEL 3: 数数游戏 -->
-<section class="screen" id="level3">
-  <div class="top-bar">
-    <div class="stars-display">⭐ <span id="stars-l3">0</span></div>
-    <span style="font-size:16px;font-weight:700;color:var(--primary)">关卡 3/3</span>
-  </div>
-  <div class="progress-bar"><div class="progress-fill" style="width:78%"></div></div>
-  <div class="level-card">
-    <div class="level-badge">🔢 第三关：数数挑战</div>
-    <div class="quiz-sub" id="l3-question">数数图片里有几只动物？</div>
-    <div class="count-scene" id="count-scene" onclick="countItem(event)"></div>
-    <div style="text-align:center;font-size:14px;color:#888;margin-bottom:10px">点击物品来数数 <span id="count-num" style="font-size:20px;font-weight:900;color:var(--primary)">0</span></div>
-    <div style="text-align:center;margin-bottom:12px">
-      <input class="count-input" id="count-input" type="text" placeholder="输入英文数字..." autocomplete="off" onkeydown="if(event.key==='Enter')checkCount()">
-    </div>
-    <div style="display:flex;gap:12px;justify-content:center">
-      <button class="btn-check" onclick="checkCount()">✅ 确认</button>
-      <button class="btn-check" style="background:linear-gradient(135deg,#74b9ff,#0984e3)" onclick="resetCount()">🔄 重置</button>
-      <button class="btn-sound" onclick="speakL3()">🔊</button>
-    </div>
-    <div class="feedback" id="l3-fb"></div>
-    <div class="q-count" id="l3-cnt">0/5 题</div>
-  </div>
-</section>
-
-<!-- BOSS -->
-<section class="screen" id="boss">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 数字1-10</h2><div class="tu-q"><p><strong>And：</strong>学生能数1-10</p><p><strong>But：</strong>英文发音易混淆</p><p><strong>Therefore：</strong>建立数字与英文对应</p></div><div class="tu-q"><p>今天我们来玩数字捉迷藏！比如数字5读作'five'，像小手掌的5个手指（伸出手示范）。注意4（four）和5（five）发音不同哦，four像小汽车'呜呜'声，five尾巴要翘起来读。</p></div><div class="tu-q"><p>🌍 看教室里的钟表，长针指到6就是'30分'，我们一起数：one two...six！</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>电话按键'7'英文怎么读？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="注意six和seven都有's'开头">seven</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="注意six和seven都有's'开头">six</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="注意six和seven都有's'开头">nine</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="注意six和seven都有's'开头">zero</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="screen" id="boss" data-slot="35">
   <div class="top-bar">
     <div class="stars-display">⭐ <span id="stars-boss">0</span></div>
     <span style="font-size:16px;font-weight:700;color:var(--accent)">👹 Boss战</span>
@@ -498,7 +517,7 @@ function checkPretest() {
 </section>
 
 <!-- REPORT -->
-<section class="screen" id="report">
+<section class="screen" id="report" data-slot="35">
   <div class="section-title">🏆 超棒！学习报告</div>
   <div style="font-size:90px;animation:wiggle 1.2s ease-in-out infinite">🐻</div>
   <div class="score-circle"><div class="score-num" id="final-score">0</div><div class="score-lbl">总分</div></div>
@@ -513,7 +532,7 @@ function checkPretest() {
 </section>
 
 <!-- EXTENSION -->
-<section class="screen" id="extension">
+<section class="screen" id="extension" data-slot="35">
   <div class="section-title">📚 继续学习</div>
   <div class="bear-chat">
     <div class="bear-avatar">🐻</div>
@@ -1113,7 +1132,49 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 
 <!-- teachany-upgrade-v2 -->
 <!-- upgrade topic: 数字与颜色 -->
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 教室颜色调查</h2><p>统计教室里不同颜色物品的数量</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="哪种颜色的物品最多？"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="用英文记录物品颜色和数量"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="用英文句子描述调查结果"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section enge-depth core-knowledge-module text-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>数字与颜色</h2>
+      <p>数字 one–ten（及更大数）用于数数、年龄与电话；颜色 red, blue, yellow, green 等描述事物。常结合 How many …? / What colour is …?</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>数字与颜色核心知识结构图：展示数字词汇、颜色词汇及其常用句型的关联</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="10" y="10" width="620" height="400" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.1"><line x1="60" y1="0" x2="60" y2="420" stroke="#475569"/><line x1="160" y1="0" x2="160" y2="420" stroke="#475569"/><line x1="320" y1="0" x2="320" y2="420" stroke="#475569"/><line x1="480" y1="0" x2="480" y2="420" stroke="#475569"/><line x1="580" y1="0" x2="580" y2="420" stroke="#475569"/><line x1="0" y1="80" x2="640" y2="80" stroke="#475569"/><line x1="0" y1="180" x2="640" y2="180" stroke="#475569"/><line x1="0" y1="280" x2="640" y2="280" stroke="#475569"/><line x1="0" y1="340" x2="640" y2="340" stroke="#475569"/></g><rect x="40" y="50" width="560" height="320" rx="12" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="320" y="80" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">数字与颜色核心知识结构图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></text><rect x="60" y="110" width="240" height="200" rx="8" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="180" y="135" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">Numbers 数字<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><rect x="340" y="110" width="240" height="200" rx="8" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="460" y="135" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">Colors 颜色<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><circle cx="90" cy="165" r="8" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2s"/></circle><text x="110" y="170" fill="#e2e8f0" font-size="12">one, two, three...<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><circle cx="90" cy="190" r="8" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2.5s"/></circle><text x="110" y="195" fill="#e2e8f0" font-size="12">four, five, six...<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><circle cx="90" cy="215" r="8" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="3s"/></circle><text x="110" y="220" fill="#e2e8f0" font-size="12">seven, eight, nine<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><circle cx="90" cy="240" r="8" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="3.5s"/></circle><text x="110" y="245" fill="#e2e8f0" font-size="12">ten, eleven...<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><circle cx="90" cy="265" r="8" fill="#f59e0b" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="4s"/></circle><text x="110" y="270" fill="#7dd3fc" font-size="12">数数/年龄/电话<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><circle cx="370" cy="165" r="12" fill="#ef4444" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="4.5s"/></circle><text x="395" y="170" fill="#e2e8f0" font-size="12">red 红色<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></text><circle cx="370" cy="190" r="12" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="5s"/></circle><text x="395" y="195" fill="#e2e8f0" font-size="12">blue 蓝色<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><circle cx="370" cy="215" r="12" fill="#fbbf24" stroke="#fde047" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="5.5s"/></circle><text x="395" y="220" fill="#e2e8f0" font-size="12">yellow 黄色<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><circle cx="370" cy="240" r="12" fill="#34d399" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="6s"/></circle><text x="395" y="245" fill="#e2e8f0" font-size="12">green 绿色<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><circle cx="370" cy="265" r="8" fill="#a78bfa" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="6.5s"/></circle><text x="395" y="270" fill="#7dd3fc" font-size="12">描述事物特征<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><rect x="120" y="330" width="180" height="30" rx="6" fill="url(#redGrad)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></rect><text x="210" y="350" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">How many...?<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><rect x="340" y="330" width="180" height="30" rx="6" fill="url(#redGrad)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></rect><text x="430" y="350" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">What colour is...?<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></text><path d="M 180 310 Q 210 320 210 330" fill="none" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></path><path d="M 460 310 Q 430 320 430 330" fill="none" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></path><circle cx="180" cy="310" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.95s" fill="freeze"/></circle><circle cx="460" cy="310" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></circle><path d="M 300 210 L 340 210" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" fill="none" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="5.5s"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.25s" fill="freeze"/></path><text x="320" y="200" text-anchor="middle" fill="#7dd3fc" font-size="11">结合使用<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></text><rect x="460" y="380" width="160" height="30" rx="4" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.55s" fill="freeze"/></rect><circle cx="470" cy="390" r="4" fill="#3b82f6"/><text x="480" y="395" fill="#e2e8f0" font-size="10">基础词汇<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.7s" fill="freeze"/></text><circle cx="470" cy="400" r="4" fill="#ef4444"/><text x="480" y="405" fill="#e2e8f0" font-size="10">常用句型<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.85s" fill="freeze"/></text></svg></figure>
+
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 颜色初识</h2><div class="tu-q"><p><strong>And：</strong>认识红黄蓝</p><p><strong>But：</strong>混合色不会表达</p><p><strong>Therefore：</strong>掌握基础颜色词</p></div><div class="tu-q"><p>彩虹有7种颜色，今天我们学3种：red（红色）像苹果，yellow（黄色）像小鸭子，blue（蓝色）像天空。试试用蜡笔涂3个气球，说'I like blue balloon！'</p></div><div class="tu-q"><p>🌍 放学路上找找：red停牌、yellow校车、blue路牌</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>香蕉是什么颜色？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="熟香蕉是yellow，未熟是green">red</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="熟香蕉是yellow，未熟是green">yellow</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="熟香蕉是yellow，未熟是green">blue</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="熟香蕉是yellow，未熟是green">green</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 数字颜色配</h2><div class="tu-q"><p><strong>And：</strong>已学单独知识</p><p><strong>But：</strong>不会组合使用</p><p><strong>Therefore：</strong>建立关联表达</p></div><div class="tu-q"><p>现在把数字和颜色变成好朋友！比如'3只绿色青蛙'要说'three green frogs'（竖起3根手指）。注意顺序：数字在前颜色在后，就像先知道有几块糖，再说糖是什么颜色。</p></div><div class="tu-q"><p>🌍 数数你的彩笔：'I have five red markers!'</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>'两只蓝色小鸟'怎么说？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="记住数字→颜色→物品的顺序">two blue birds</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="记住数字→颜色→物品的顺序">blue two birds</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="记住数字→颜色→物品的顺序">birds blue two</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="记住数字→颜色→物品的顺序">two birds blue</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4" data-slot="55"><h2>📖 趣味问答</h2><div class="tu-q"><p><strong>And：</strong>能简单描述物品</p><p><strong>But：</strong>缺少综合运用</p><p><strong>Therefore：</strong>巩固实战能力</p></div><div class="tu-q"><p>我们来玩超市游戏！老师举卡片问'How many yellow bananas?'（展示画有4根香蕉的图），你要回答'Four yellow bananas'。答对可以当收银员哦！</p></div><div class="tu-q"><p>🌍 帮妈妈数水果：'three red apples, two orange oranges'</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>看到'5个红色气球'图片该怎么回答？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="气球是balloon，别和ball搞混">five red balls</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="气球是balloon，别和ball搞混">five red balloons</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="气球是balloon，别和ball搞混">red five balloons</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="气球是balloon，别和ball搞混">balloons red five</button></div><div class="tu-fb" hidden></div></div></section>
+
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section enge-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：数一数 + 涂一涂</h2>
+      <p>用实物数数说英文；看物品说颜色：It&#x27;s red. There are three pencils.</p>
+      <div class="worked-example"><strong>范例：</strong>I have two red apples. / What colour is it? It&#x27;s blue.</div>
+      <p id="lesson-pitfall" class="enge-pitfall"><strong>常见误区：</strong>常见误区是 thirteen/thirty 等易混，或颜色词当名词乱加复数。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>“三个”用英语说是？</p>
+        <button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;three 表示三。&quot;)">A. two</button><button type="button" data-correct="1" onclick="engeDepthCheck(this,true,&#x27;enge-depth-feedback&#x27;,&quot;three 表示三。&quot;)">B. three</button><button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;three 表示三。&quot;)">C. tree</button><button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;three 表示三。&quot;)">D. free</button>
+        <div class="enge-feedback" id="enge-depth-feedback" role="status"></div>
+      </div>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>数字与颜色英语教学方法分解图：数数、涂色、句型练习及常见误区</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient></defs><rect x="0" y="0" width="640" height="420" fill="#0a1520"/><rect x="20" y="20" width="600" height="380" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><g opacity="0.1"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155"/><line x1="20" y1="140" x2="620" y2="140" stroke="#334155"/><line x1="20" y1="200" x2="620" y2="200" stroke="#334155"/><line x1="20" y1="260" x2="620" y2="260" stroke="#334155"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155"/></g><rect x="50" y="50" width="180" height="120" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="140" y="75" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">数一数 Count<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><circle cx="80" cy="110" r="12" fill="#ef4444" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></circle><circle cx="110" cy="110" r="12" fill="#ef4444" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></circle><circle cx="140" cy="110" r="12" fill="#ef4444" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></circle><text x="80" y="115" text-anchor="middle" fill="#e2e8f0" font-size="10">1<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><text x="110" y="115" text-anchor="middle" fill="#e2e8f0" font-size="10">2<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><text x="140" y="115" text-anchor="middle" fill="#e2e8f0" font-size="10">3<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><text x="140" y="150" text-anchor="middle" fill="#7dd3fc" font-size="12">Three apples<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><rect x="270" y="50" width="180" height="120" rx="10" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="360" y="75" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">涂一涂 Color<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><rect x="320" y="95" width="25" height="35" rx="3" fill="#3b82f6" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><rect x="350" y="95" width="25" height="35" rx="3" fill="#ef4444" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><rect x="380" y="95" width="25" height="35" rx="3" fill="#34d399" stroke="#6ee7b7" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="360" y="150" text-anchor="middle" fill="#7dd3fc" font-size="12">It's blue/red/green<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><rect x="490" y="50" width="120" height="120" rx="10" fill="url(#greenGrad)" stroke="#6ee7b7" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="550" y="75" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">练习<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><text x="550" y="95" text-anchor="middle" fill="#e2e8f0" font-size="11">"三个"用英语说？<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><text x="510" y="115" text-anchor="middle" fill="#e2e8f0" font-size="10">A.two<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><text x="550" y="115" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="bold">B.three<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="590" y="115" text-anchor="middle" fill="#e2e8f0" font-size="10">C.tree<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="550" y="135" text-anchor="middle" fill="#e2e8f0" font-size="10">D.free<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><rect x="50" y="200" width="280" height="100" rx="10" fill="url(#purpleGrad)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="190" y="225" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">句型范例 Examples<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><text x="70" y="250" fill="#7dd3fc" font-size="12">I have two red apples.<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="70" y="270" fill="#7dd3fc" font-size="12">What colour is it? It's blue.<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="70" y="290" fill="#7dd3fc" font-size="12">There are three pencils.<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><rect x="370" y="200" width="240" height="100" rx="10" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="490" y="225" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">常见误区 Common Errors<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="380" y="250" fill="#e2e8f0" font-size="11">thirteen/thirty 易混淆<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><text x="380" y="270" fill="#e2e8f0" font-size="11">颜色词误加复数 reds✗<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><text x="380" y="290" fill="#e2e8f0" font-size="11">数词发音不准确<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><path d="M 140 170 Q 190 190 270 110" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></path><path d="M 360 170 Q 360 190 190 240" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></path><path d="M 550 170 Q 520 190 490 240" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></path><circle cx="260" cy="340" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></circle><line x1="140" y1="170" x2="260" y2="340" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></line><text x="270" y="345" fill="#e2e8f0" font-size="12">数数练习<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></text><circle cx="400" cy="340" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></circle><line x1="360" y1="170" x2="400" y2="340" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></line><text x="410" y="345" fill="#e2e8f0" font-size="12">颜色识别<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><rect x="480" y="320" width="130" height="70" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></rect><text x="490" y="335" fill="#fbbf24" font-size="12" font-weight="bold">学习要点<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><rect x="490" y="345" width="8" height="8" fill="#3b82f6"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></rect><text x="505" y="353" fill="#e2e8f0" font-size="10">数字准确<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><rect x="490" y="360" width="8" height="8" fill="#f59e0b"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></rect><text x="505" y="368" fill="#e2e8f0" font-size="10">颜色正确<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><rect x="490" y="375" width="8" height="8" fill="#34d399"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></rect><text x="505" y="383" fill="#e2e8f0" font-size="10">避免误区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text></svg></figure>
+
+</section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>数字拆解为词根（如four-teen），颜色拆解为基本色混合</p></div><div class="tu-q"><h3>💡解释它</h3><p>数字13忌讳源于宗教文化，颜色象征意义来自自然联想</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>中文数字规律性强，英文11-19有特殊变化</p></div><div class="tu-q"><h3>👁️看见它</h3><p>用彩虹色谱记忆颜色顺序，钟表盘记忆数字</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>将数字颜色组合运用于购物清单（如3 red apples）</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
 <div class="tu-q" data-answer="C">
 <h3>选择题 1</h3><p>How many yellow papers does Xiao Ming have?</p><div class="tu-opts">
 <button type="button" class="tu-opt" data-choice="A" data-diagnosis="这是红色彩纸数量">A. five</button>
@@ -1139,134 +1200,73 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <div class="tu-fill"><h3>填空题 2</h3><p>The color with most papers is ____. (填颜色英文单词)</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>yellow</p><p>黄色彩纸有7张，数量最多</p></details></div>
 </section>
 
-<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 教室颜色调查</h2><p>统计教室里不同颜色物品的数量</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="哪种颜色的物品最多？"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="用英文记录物品颜色和数量"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="用英文句子描述调查结果"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
-<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
-<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
-<!-- v7.7.4 标准知识图谱模块 -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么数字13在西方不吉利？</p></div><div class="tu-q"><p>❓ 为什么交通灯用红黄绿三种颜色？</p></div><div class="tu-q"><p>❓ 为什么英语里11和12不和别的数字一样叫oneteen和twoteen？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
-  <section class="section enge-depth core-knowledge-module text-module" id="lesson-focus"
-    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
-    <div class="card">
-      <span class="phase-tag">知识精讲</span>
-      <h2>数字与颜色</h2>
-      <p>数字 one–ten（及更大数）用于数数、年龄与电话；颜色 red, blue, yellow, green 等描述事物。常结合 How many …? / What colour is …?</p>
-    </div>
-  </section>
-<figure class="ta-standard-figure"><figcaption>数字与颜色核心知识结构图：展示数字词汇、颜色词汇及其常用句型的关联</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="10" y="10" width="620" height="400" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.1"><line x1="60" y1="0" x2="60" y2="420" stroke="#475569"/><line x1="160" y1="0" x2="160" y2="420" stroke="#475569"/><line x1="320" y1="0" x2="320" y2="420" stroke="#475569"/><line x1="480" y1="0" x2="480" y2="420" stroke="#475569"/><line x1="580" y1="0" x2="580" y2="420" stroke="#475569"/><line x1="0" y1="80" x2="640" y2="80" stroke="#475569"/><line x1="0" y1="180" x2="640" y2="180" stroke="#475569"/><line x1="0" y1="280" x2="640" y2="280" stroke="#475569"/><line x1="0" y1="340" x2="640" y2="340" stroke="#475569"/></g><rect x="40" y="50" width="560" height="320" rx="12" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="320" y="80" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">数字与颜色核心知识结构图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></text><rect x="60" y="110" width="240" height="200" rx="8" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="180" y="135" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">Numbers 数字<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><rect x="340" y="110" width="240" height="200" rx="8" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="460" y="135" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">Colors 颜色<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><circle cx="90" cy="165" r="8" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2s"/></circle><text x="110" y="170" fill="#e2e8f0" font-size="12">one, two, three...<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><circle cx="90" cy="190" r="8" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2.5s"/></circle><text x="110" y="195" fill="#e2e8f0" font-size="12">four, five, six...<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><circle cx="90" cy="215" r="8" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="3s"/></circle><text x="110" y="220" fill="#e2e8f0" font-size="12">seven, eight, nine<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><circle cx="90" cy="240" r="8" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="3.5s"/></circle><text x="110" y="245" fill="#e2e8f0" font-size="12">ten, eleven...<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><circle cx="90" cy="265" r="8" fill="#f59e0b" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="4s"/></circle><text x="110" y="270" fill="#7dd3fc" font-size="12">数数/年龄/电话<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><circle cx="370" cy="165" r="12" fill="#ef4444" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="4.5s"/></circle><text x="395" y="170" fill="#e2e8f0" font-size="12">red 红色<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></text><circle cx="370" cy="190" r="12" fill="#3b82f6" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="5s"/></circle><text x="395" y="195" fill="#e2e8f0" font-size="12">blue 蓝色<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><circle cx="370" cy="215" r="12" fill="#fbbf24" stroke="#fde047" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="5.5s"/></circle><text x="395" y="220" fill="#e2e8f0" font-size="12">yellow 黄色<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><circle cx="370" cy="240" r="12" fill="#34d399" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="6s"/></circle><text x="395" y="245" fill="#e2e8f0" font-size="12">green 绿色<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><circle cx="370" cy="265" r="8" fill="#a78bfa" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="6.5s"/></circle><text x="395" y="270" fill="#7dd3fc" font-size="12">描述事物特征<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><rect x="120" y="330" width="180" height="30" rx="6" fill="url(#redGrad)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></rect><text x="210" y="350" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">How many...?<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><rect x="340" y="330" width="180" height="30" rx="6" fill="url(#redGrad)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></rect><text x="430" y="350" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">What colour is...?<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></text><path d="M 180 310 Q 210 320 210 330" fill="none" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></path><path d="M 460 310 Q 430 320 430 330" fill="none" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></path><circle cx="180" cy="310" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.95s" fill="freeze"/></circle><circle cx="460" cy="310" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></circle><path d="M 300 210 L 340 210" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" fill="none" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="5.5s"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.25s" fill="freeze"/></path><text x="320" y="200" text-anchor="middle" fill="#7dd3fc" font-size="11">结合使用<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></text><rect x="460" y="380" width="160" height="30" rx="4" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.55s" fill="freeze"/></rect><circle cx="470" cy="390" r="4" fill="#3b82f6"/><text x="480" y="395" fill="#e2e8f0" font-size="10">基础词汇<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.7s" fill="freeze"/></text><circle cx="470" cy="400" r="4" fill="#ef4444"/><text x="480" y="405" fill="#e2e8f0" font-size="10">常用句型<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.85s" fill="freeze"/></text></svg></figure>
-
-</section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section enge-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：数一数 + 涂一涂</h2>
-      <p>用实物数数说英文；看物品说颜色：It&#x27;s red. There are three pencils.</p>
-      <div class="worked-example"><strong>范例：</strong>I have two red apples. / What colour is it? It&#x27;s blue.</div>
-      <p id="lesson-pitfall" class="enge-pitfall"><strong>常见误区：</strong>常见误区是 thirteen/thirty 等易混，或颜色词当名词乱加复数。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练：辨析要点</h3>
-        <p>“三个”用英语说是？</p>
-        <button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;three 表示三。&quot;)">A. two</button><button type="button" data-correct="1" onclick="engeDepthCheck(this,true,&#x27;enge-depth-feedback&#x27;,&quot;three 表示三。&quot;)">B. three</button><button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;three 表示三。&quot;)">C. tree</button><button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;three 表示三。&quot;)">D. free</button>
-        <div class="enge-feedback" id="enge-depth-feedback" role="status"></div>
-      </div>
-    </div>
-  </section>
-<figure class="ta-standard-figure"><figcaption>数字与颜色英语教学方法分解图：数数、涂色、句型练习及常见误区</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient></defs><rect x="0" y="0" width="640" height="420" fill="#0a1520"/><rect x="20" y="20" width="600" height="380" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><g opacity="0.1"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155"/><line x1="20" y1="140" x2="620" y2="140" stroke="#334155"/><line x1="20" y1="200" x2="620" y2="200" stroke="#334155"/><line x1="20" y1="260" x2="620" y2="260" stroke="#334155"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155"/></g><rect x="50" y="50" width="180" height="120" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="140" y="75" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">数一数 Count<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><circle cx="80" cy="110" r="12" fill="#ef4444" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></circle><circle cx="110" cy="110" r="12" fill="#ef4444" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></circle><circle cx="140" cy="110" r="12" fill="#ef4444" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></circle><text x="80" y="115" text-anchor="middle" fill="#e2e8f0" font-size="10">1<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><text x="110" y="115" text-anchor="middle" fill="#e2e8f0" font-size="10">2<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><text x="140" y="115" text-anchor="middle" fill="#e2e8f0" font-size="10">3<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><text x="140" y="150" text-anchor="middle" fill="#7dd3fc" font-size="12">Three apples<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><rect x="270" y="50" width="180" height="120" rx="10" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="360" y="75" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">涂一涂 Color<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><rect x="320" y="95" width="25" height="35" rx="3" fill="#3b82f6" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><rect x="350" y="95" width="25" height="35" rx="3" fill="#ef4444" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><rect x="380" y="95" width="25" height="35" rx="3" fill="#34d399" stroke="#6ee7b7" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="360" y="150" text-anchor="middle" fill="#7dd3fc" font-size="12">It's blue/red/green<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><rect x="490" y="50" width="120" height="120" rx="10" fill="url(#greenGrad)" stroke="#6ee7b7" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="550" y="75" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">练习<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><text x="550" y="95" text-anchor="middle" fill="#e2e8f0" font-size="11">"三个"用英语说？<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><text x="510" y="115" text-anchor="middle" fill="#e2e8f0" font-size="10">A.two<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><text x="550" y="115" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="bold">B.three<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="590" y="115" text-anchor="middle" fill="#e2e8f0" font-size="10">C.tree<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="550" y="135" text-anchor="middle" fill="#e2e8f0" font-size="10">D.free<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><rect x="50" y="200" width="280" height="100" rx="10" fill="url(#purpleGrad)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="190" y="225" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">句型范例 Examples<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><text x="70" y="250" fill="#7dd3fc" font-size="12">I have two red apples.<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="70" y="270" fill="#7dd3fc" font-size="12">What colour is it? It's blue.<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="70" y="290" fill="#7dd3fc" font-size="12">There are three pencils.<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><rect x="370" y="200" width="240" height="100" rx="10" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="490" y="225" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">常见误区 Common Errors<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="380" y="250" fill="#e2e8f0" font-size="11">thirteen/thirty 易混淆<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><text x="380" y="270" fill="#e2e8f0" font-size="11">颜色词误加复数 reds✗<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><text x="380" y="290" fill="#e2e8f0" font-size="11">数词发音不准确<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><path d="M 140 170 Q 190 190 270 110" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></path><path d="M 360 170 Q 360 190 190 240" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></path><path d="M 550 170 Q 520 190 490 240" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></path><circle cx="260" cy="340" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></circle><line x1="140" y1="170" x2="260" y2="340" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></line><text x="270" y="345" fill="#e2e8f0" font-size="12">数数练习<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></text><circle cx="400" cy="340" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></circle><line x1="360" y1="170" x2="400" y2="340" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></line><text x="410" y="345" fill="#e2e8f0" font-size="12">颜色识别<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><rect x="480" y="320" width="130" height="70" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></rect><text x="490" y="335" fill="#fbbf24" font-size="12" font-weight="bold">学习要点<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><rect x="490" y="345" width="8" height="8" fill="#3b82f6"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></rect><text x="505" y="353" fill="#e2e8f0" font-size="10">数字准确<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><rect x="490" y="360" width="8" height="8" fill="#f59e0b"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></rect><text x="505" y="368" fill="#e2e8f0" font-size="10">颜色正确<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><rect x="490" y="375" width="8" height="8" fill="#34d399"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></rect><text x="505" y="383" fill="#e2e8f0" font-size="10">避免误区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text></svg></figure>
-
-</section>
-
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>数字拆解为词根（如four-teen），颜色拆解为基本色混合</p></div><div class="tu-q"><h3>💡解释它</h3><p>数字13忌讳源于宗教文化，颜色象征意义来自自然联想</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>中文数字规律性强，英文11-19有特殊变化</p></div><div class="tu-q"><h3>👁️看见它</h3><p>用彩虹色谱记忆颜色顺序，钟表盘记忆数字</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>将数字颜色组合运用于购物清单（如3 red apples）</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 将fifteen错读成fiveteen</h3><p>✅ 强调fif-词根与five的区别</p><p>💡 受five发音干扰</p></div><div class="tu-q"><h3>❌ 混淆green与gray发音</h3><p>✅ 用'gr草生长（green）'和'gr爷爷白发（gray）'联想</p><p>💡 音近且都是gr开头</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>一二三四分开记，teen从十三开始齐，颜色就像彩虹走，红橙黄绿青蓝紫</p><p><strong>类比：</strong>记数字像吃饼干，1-10是小块，11-19是夹心块，整十数是完整包装</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 将fifteen错读成fiveteen</h3><p>✅ 强调fif-词根与five的区别</p><p>💡 受five发音干扰</p></div><div class="tu-q"><h3>❌ 混淆green与gray发音</h3><p>✅ 用'gr草生长（green）'和'gr爷爷白发（gray）'联想</p><p>💡 音近且都是gr开头</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>一二三四分开记，teen从十三开始齐，颜色就像彩虹走，红橙黄绿青蓝紫</p><p><strong>类比：</strong>记数字像吃饼干，1-10是小块，11-19是夹心块，整十数是完整包装</p></div></section>
 
 <!-- ⭐ v7.7 标准独立连续音频模块 -->
 
 <script>window.__NAV_NODES__ = [{"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#22c55e"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#f59e0b"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#8b5cf6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#ef4444"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#06b6d4"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#ec4899"}, {"icon": "🎧", "label": "音频讲解", "target": "teachany-audio-player", "color": "#84cc16"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#3b82f6"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="screen" id="level1" data-slot="115">
+  <div class="top-bar">
+    <div class="stars-display">⭐ <span id="stars-l1">0</span></div>
+    <span style="font-size:16px;font-weight:700;color:var(--primary)">关卡 1/3</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:35%"></div></div>
+  <div class="level-card">
+    <div class="level-badge">🔢 第一关：数字识别</div>
+    <div class="big-display big-number" id="l1-display">7</div>
+    <div class="quiz-sub" id="l1-sub">选出正确的英文单词</div>
+    <div class="options" id="l1-opts"></div>
+    <div class="feedback" id="l1-fb"></div>
+    <div class="q-count" id="l1-cnt">0/8 题</div>
+  </div>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 数字1-10</h2><div class="tu-q"><p><strong>And：</strong>学生能数1-10</p><p><strong>But：</strong>英文发音易混淆</p><p><strong>Therefore：</strong>建立数字与英文对应</p></div><div class="tu-q"><p>今天我们来玩数字捉迷藏！比如数字5读作'five'，像小手掌的5个手指（伸出手示范）。注意4（four）和5（five）发音不同哦，four像小汽车'呜呜'声，five尾巴要翘起来读。</p></div><div class="tu-q"><p>🌍 看教室里的钟表，长针指到6就是'30分'，我们一起数：one two...six！</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>电话按键'7'英文怎么读？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="注意six和seven都有's'开头">seven</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="注意six和seven都有's'开头">six</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="注意six和seven都有's'开头">nine</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="注意six和seven都有's'开头">zero</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 颜色初识</h2><div class="tu-q"><p><strong>And：</strong>认识红黄蓝</p><p><strong>But：</strong>混合色不会表达</p><p><strong>Therefore：</strong>掌握基础颜色词</p></div><div class="tu-q"><p>彩虹有7种颜色，今天我们学3种：red（红色）像苹果，yellow（黄色）像小鸭子，blue（蓝色）像天空。试试用蜡笔涂3个气球，说'I like blue balloon！'</p></div><div class="tu-q"><p>🌍 放学路上找找：red停牌、yellow校车、blue路牌</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>香蕉是什么颜色？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="熟香蕉是yellow，未熟是green">red</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="熟香蕉是yellow，未熟是green">yellow</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="熟香蕉是yellow，未熟是green">blue</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="熟香蕉是yellow，未熟是green">green</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 数字颜色配</h2><div class="tu-q"><p><strong>And：</strong>已学单独知识</p><p><strong>But：</strong>不会组合使用</p><p><strong>Therefore：</strong>建立关联表达</p></div><div class="tu-q"><p>现在把数字和颜色变成好朋友！比如'3只绿色青蛙'要说'three green frogs'（竖起3根手指）。注意顺序：数字在前颜色在后，就像先知道有几块糖，再说糖是什么颜色。</p></div><div class="tu-q"><p>🌍 数数你的彩笔：'I have five red markers!'</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>'两只蓝色小鸟'怎么说？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="记住数字→颜色→物品的顺序">two blue birds</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="记住数字→颜色→物品的顺序">blue two birds</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="记住数字→颜色→物品的顺序">birds blue two</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="记住数字→颜色→物品的顺序">two birds blue</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4"><h2>📖 趣味问答</h2><div class="tu-q"><p><strong>And：</strong>能简单描述物品</p><p><strong>But：</strong>缺少综合运用</p><p><strong>Therefore：</strong>巩固实战能力</p></div><div class="tu-q"><p>我们来玩超市游戏！老师举卡片问'How many yellow bananas?'（展示画有4根香蕉的图），你要回答'Four yellow bananas'。答对可以当收银员哦！</p></div><div class="tu-q"><p>🌍 帮妈妈数水果：'three red apples, two orange oranges'</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>看到'5个红色气球'图片该怎么回答？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="气球是balloon，别和ball搞混">five red balls</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="气球是balloon，别和ball搞混">five red balloons</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="气球是balloon，别和ball搞混">red five balloons</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="气球是balloon，别和ball搞混">balloons red five</button></div><div class="tu-fb" hidden></div></div></section>
+<!-- LEVEL 2: 颜色识别 -->
+<section class="screen" id="level2" data-slot="115">
+  <div class="top-bar">
+    <div class="stars-display">⭐ <span id="stars-l2">0</span></div>
+    <span style="font-size:16px;font-weight:700;color:var(--primary)">关卡 2/3</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:58%"></div></div>
+  <div class="level-card">
+    <div class="level-badge">🎨 第二关：颜色识别</div>
+    <div class="color-swatch" id="l2-swatch"></div>
+    <div class="quiz-sub">这是什么颜色？</div>
+    <div class="options" id="l2-opts" style="grid-template-columns:1fr 1fr"></div>
+    <div class="feedback" id="l2-fb"></div>
+    <div class="q-count" id="l2-cnt">0/8 题</div>
+  </div>
+</section>
 
-<section class="ta-standard-section" id="teachany-audio-player">
+<!-- LEVEL 3: 数数游戏 -->
+<section class="screen" id="level3" data-slot="115">
+  <div class="top-bar">
+    <div class="stars-display">⭐ <span id="stars-l3">0</span></div>
+    <span style="font-size:16px;font-weight:700;color:var(--primary)">关卡 3/3</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:78%"></div></div>
+  <div class="level-card">
+    <div class="level-badge">🔢 第三关：数数挑战</div>
+    <div class="quiz-sub" id="l3-question">数数图片里有几只动物？</div>
+    <div class="count-scene" id="count-scene" onclick="countItem(event)"></div>
+    <div style="text-align:center;font-size:14px;color:#888;margin-bottom:10px">点击物品来数数 <span id="count-num" style="font-size:20px;font-weight:900;color:var(--primary)">0</span></div>
+    <div style="text-align:center;margin-bottom:12px">
+      <input class="count-input" id="count-input" type="text" placeholder="输入英文数字..." autocomplete="off" onkeydown="if(event.key==='Enter')checkCount()">
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button class="btn-check" onclick="checkCount()">✅ 确认</button>
+      <button class="btn-check" style="background:linear-gradient(135deg,#74b9ff,#0984e3)" onclick="resetCount()">🔄 重置</button>
+      <button class="btn-sound" onclick="speakL3()">🔊</button>
+    </div>
+    <div class="feedback" id="l3-fb"></div>
+    <div class="q-count" id="l3-cnt">0/5 题</div>
+  </div>
+</section>
+
+<!-- BOSS -->
+<section class="ta-standard-section" id="teachany-audio-player" data-slot="120">
   <div data-teachany-audio>
     <script type="application/json" data-teachany-audio-playlist>
 [
@@ -1290,9 +1290,7 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   </div>
 </section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：数字与颜色</h2><div data-teachany-kg="eng-e-numbers-colors"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
-
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 
@@ -1513,3 +1511,5 @@ function engeDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：数字与颜色</h2><div data-teachany-kg="eng-e-numbers-colors"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

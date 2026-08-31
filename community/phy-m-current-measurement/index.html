@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-current-measurement-hero.png" alt="电流的测量：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,101 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出电流表串联使用的原因及并联的危险性</p></div><div class="tu-q"><p>🎯 能根据估计值正确选择0.6A或3A量程并解释选择依据</p></div><div class="tu-q"><p>🎯 能分析不同量程下刻度线的对应关系并准确读数</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么电流表必须串联在电路里？并联会怎样？</p></div><div class="tu-q"><p>❓ 量程选大了指针偏转小，选小了会烧坏，到底该怎么选？</p></div><div class="tu-q"><p>❓ 读数时到底看哪一排刻度线？0.6A和3A量程的刻度不一样吗？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 电流表怎么接</h2><div class="tu-q"><p><strong>And：</strong>学生知道串联和并联的基本概念</p><p><strong>But：</strong>不清楚电流表接入电路时为何必须串联</p><p><strong>Therefore：</strong>理解电流表串联才能准确测量电流</p></div><div class="tu-q"><p>电流表相当于一根导线，必须串联在电路中才能测出真实电流。比如测小灯泡电流时，如果把电流表并联在灯泡两端，相当于给电流‘开了条近路’，大部分电流会绕过灯泡直接通过电流表，导致测量值远大于实际值（可能从0.3A变成2A以上），还会烧坏电表。</p></div><div class="tu-q"><p>🌍 就像测水管水流必须把流量计装进水管里，如果挂在管外就测不准了。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>测电风扇电流时，电流表应该：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B会短路，选C/D会导致测量错误">A. 串联在电路里</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B会短路，选C/D会导致测量错误">B. 并联在电风扇两端</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B会短路，选C/D会导致测量错误">C. 随便接都能测</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B会短路，选C/D会导致测量错误">D. 同时串联和并联</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>电流表该串联还是并联？量程怎么选？</h2>
 <p>测电流必须把电流表串联进被测支路，并选择合适量程，否则易烧表或读数不准。</p>
@@ -174,7 +268,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>测电流三要点</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>接法</h3><p>电流表必须串联。</p></div><div class="mini-panel"><h3>量程</h3><p>先估计，先试大量程，再改小。</p></div><div class="mini-panel"><h3>读数</h3><p>看清量程与分度值，估读。</p></div></div>
@@ -188,7 +282,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -202,32 +296,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：先试触选量程，再按刻度读数</h2>
-      <p>不能确定电流大小时先用大量程试触。读数时先确认所选量程，再按对应分度值读数：同一指针位置，0～0.6 A 量程的读数是 0～3 A 量程读数的五分之一。</p>
-      <div class="worked-example"><strong>范例：</strong>选用 0～0.6 A 量程时，若指针指在 0～3 A 刻度线的 1.5 处，实际电流为 1.5 ÷ 5 = 0.3 A。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是按大量程刻度直接读数却使用了小量程，导致读数扩大 5 倍。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>使用电流表时，下列做法正确的是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电流表必须串联且正进负出。&quot;)">A. 把电流表并联在用电器两端</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电流表必须串联且正进负出。&quot;)">B. 把电流表直接接到电源两极</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;电流表必须串联且正进负出。&quot;)">C. 把电流表串联接入电路，电流从“+”接线柱流入</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电流表必须串联且正进负出。&quot;)">D. 电流从“−”接线柱流入</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>选用 0～0.6 A 量程，指针位置对应 0～3 A 刻度的 1.5，则实际电流为？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两量程刻度成 5 倍关系，1.5÷5 = 0.3 A。&quot;)">A. 0.15 A</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;两量程刻度成 5 倍关系，1.5÷5 = 0.3 A。&quot;)">B. 0.3 A</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两量程刻度成 5 倍关系，1.5÷5 = 0.3 A。&quot;)">C. 1.5 A</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两量程刻度成 5 倍关系，1.5÷5 = 0.3 A。&quot;)">D. 3 A</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="35">
 <section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
 <h2>安全与规范</h2>
 <ul class="steps"><li>电流表内阻很小，严禁直接接电源两极。</li><li>红进黑出，注意正负。</li><li>换量程要重新试触。</li></ul>
@@ -240,13 +309,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </figure>
 </div></section></section>
 
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：估计约 0.3A，应选哪一量程？</h2>
 <ol class="steps"><li>若有 0–0.6A 与 0–3A，优先 0–0.6A 更精确</li><li>先用大量程试触确认不超过</li><li>再改小量程精细读数</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「电流测量」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -274,75 +343,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>电流单位</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 伏特</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 安培</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 欧姆</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 瓦特</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>电流表能否直接接电源两极</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 可以</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 不可以</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 只在直流可以</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 只在交流可以</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 直流电路（电流表）</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html" title="PhET · 直流电路（电流表）" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 把电流表串进支路，比较不同位置的读数。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>估计 0.25A，更合理的量程</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">A. 0–0.6A</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">B. 0–3A 且不再改</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 任意</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电压表量程</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>读数时要注意</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 量程与分度值</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 只看指针偏哪</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 不用估读</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 可以反接无视</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>测灯泡电流，电流表应</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 与灯串联</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 与灯并联</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 与电压表并联即可</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 接在电源两端</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话总结本课最关键的一条规律，并举一个生活例子。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -458,116 +459,113 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么电流表必须串联在电路里？并联会怎样？</p></div><div class="tu-q"><p>❓ 量程选大了指针偏转小，选小了会烧坏，到底该怎么选？</p></div><div class="tu-q"><p>❓ 读数时到底看哪一排刻度线？0.6A和3A量程的刻度不一样吗？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出电流表串联使用的原因及并联的危险性</p></div><div class="tu-q"><p>🎯 能根据估计值正确选择0.6A或3A量程并解释选择依据</p></div><div class="tu-q"><p>🎯 能分析不同量程下刻度线的对应关系并准确读数</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 反接正负极时认为指针不偏转就是没电流</h3><p>✅ 反接时指针会反向打表，应立即断开防止损坏</p><p>💡 未理解表头机械结构特性</p></div><div class="tu-q"><h3>❌ 用3A量程测小电流时认为读数更精确</h3><p>✅ 小电流应优先用0.6A量程（分度值更小）</p><p>💡 混淆量程范围与测量精度概念</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>串联要记牢，量程看大小，读数对量程，安全第一条</p><p><strong>类比：</strong>像查水管流量，必须让全部水流经过水表才能准确计量</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>如图电路，当开关闭合时发现电流表指针反偏，说明（）[升学题]</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A会表现为指针超量程撞击，选C指针不动，选D与偏转方向无关">电流过大超过量程</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A会表现为指针超量程撞击，选C指针不动，选D与偏转方向无关">正负接线柱接反</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A会表现为指针超量程撞击，选C指针不动，选D与偏转方向无关">电路出现断路</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A会表现为指针超量程撞击，选C指针不动，选D与偏转方向无关">用电器功率太小</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>用3A量程测得指针指在第15小格，实际电流是（）[计算题]</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="3A量程每小格0.1A，需强化量程与分度值对应关系">0.15A</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="3A量程每小格0.1A，需强化量程与分度值对应关系">1.5A</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="3A量程每小格0.1A，需强化量程与分度值对应关系">0.5A</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="3A量程每小格0.1A，需强化量程与分度值对应关系">0.3A</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="A"><h3>后测题 3</h3><p>检修汽车电路时，技师将电流表接在保险丝位置测量，这运用了（）[迁移题]</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="保险丝位置相当于干路，必须串联测量总电流">串联测量原理</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="保险丝位置相当于干路，必须串联测量总电流">并联分流原理</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="保险丝位置相当于干路，必须串联测量总电流">短路检测法</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="保险丝位置相当于干路，必须串联测量总电流">电阻补偿法</button></div><div class="tu-fb" hidden></div></div></section>
-<script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
-<!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
-</section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
-
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 电流表怎么接</h2><div class="tu-q"><p><strong>And：</strong>学生知道串联和并联的基本概念</p><p><strong>But：</strong>不清楚电流表接入电路时为何必须串联</p><p><strong>Therefore：</strong>理解电流表串联才能准确测量电流</p></div><div class="tu-q"><p>电流表相当于一根导线，必须串联在电路中才能测出真实电流。比如测小灯泡电流时，如果把电流表并联在灯泡两端，相当于给电流‘开了条近路’，大部分电流会绕过灯泡直接通过电流表，导致测量值远大于实际值（可能从0.3A变成2A以上），还会烧坏电表。</p></div><div class="tu-q"><p>🌍 就像测水管水流必须把流量计装进水管里，如果挂在管外就测不准了。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>测电风扇电流时，电流表应该：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B会短路，选C/D会导致测量错误">A. 串联在电路里</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B会短路，选C/D会导致测量错误">B. 并联在电风扇两端</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B会短路，选C/D会导致测量错误">C. 随便接都能测</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B会短路，选C/D会导致测量错误">D. 同时串联和并联</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 量程选多大</h2><div class="tu-q"><p><strong>And：</strong>学生知道电流表有不同量程</p><p><strong>But：</strong>不会根据预估电流选择合适量程</p><p><strong>Therefore：</strong>掌握‘先估后选’的实用技能</p></div><div class="tu-q"><p>选量程要‘宁大勿小’：先用最大量程试触，再换到接近实际值的档位。比如测手电筒电路时，如果预估电流约0.3A：①先用3A量程试测；②若显示0.28A，就换到0.6A档，这样读数更精确（0.6A档每小格代表0.02A，而3A档每小格是0.1A）。绝对禁止直接用最小量程！</p></div><div class="tu-q"><p>🌍 就像用体重秤，先选0-150kg档站上去，发现只有45kg再换到0-100kg档会更准。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>预估电路电流1.2A，应优先选哪个量程试测？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A会打弯指针，选C读数不精确，选D可能损坏电表">A. 0.6A档</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A会打弯指针，选C读数不精确，选D可能损坏电表">B. 3A档</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A会打弯指针，选C读数不精确，选D可能损坏电表">C. 15A档</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A会打弯指针，选C读数不精确，选D可能损坏电表">D. 随便选</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 读数看变化</h2><div class="tu-q"><p><strong>And：</strong>学生会读电流表示数</p><p><strong>But：</strong>忽略电路参数改变时的电流变化</p><p><strong>Therefore：</strong>建立电流与电路参数的关联</p></div><div class="tu-q"><p>电流会随电路变化实时改变！比如用两节电池串联（3V）驱动灯泡时：①初始电流可能是0.3A；②当电池电量下降至2V时，电流可能降到0.2A；③如果再并联一个灯泡，电流会增大到0.4A（总电流）。要边调节边观察，不能只记初始值。</p></div><div class="tu-q"><p>🌍 就像开车时油表指针会随着油门深浅实时变化，不能只看起步时的数值。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>调高电源电压时，电流表示数会：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="根据欧姆定律，电压升高电流增大">A. 变大</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="根据欧姆定律，电压升高电流增大">B. 变小</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="根据欧姆定律，电压升高电流增大">C. 不变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="根据欧姆定律，电压升高电流增大">D. 先变小后变大</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 量程选多大</h2><div class="tu-q"><p><strong>And：</strong>学生知道电流表有不同量程</p><p><strong>But：</strong>不会根据预估电流选择合适量程</p><p><strong>Therefore：</strong>掌握‘先估后选’的实用技能</p></div><div class="tu-q"><p>选量程要‘宁大勿小’：先用最大量程试触，再换到接近实际值的档位。比如测手电筒电路时，如果预估电流约0.3A：①先用3A量程试测；②若显示0.28A，就换到0.6A档，这样读数更精确（0.6A档每小格代表0.02A，而3A档每小格是0.1A）。绝对禁止直接用最小量程！</p></div><div class="tu-q"><p>🌍 就像用体重秤，先选0-150kg档站上去，发现只有45kg再换到0-100kg档会更准。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>预估电路电流1.2A，应优先选哪个量程试测？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A会打弯指针，选C读数不精确，选D可能损坏电表">A. 0.6A档</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A会打弯指针，选C读数不精确，选D可能损坏电表">B. 3A档</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A会打弯指针，选C读数不精确，选D可能损坏电表">C. 15A档</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A会打弯指针，选C读数不精确，选D可能损坏电表">D. 随便选</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 读数看变化</h2><div class="tu-q"><p><strong>And：</strong>学生会读电流表示数</p><p><strong>But：</strong>忽略电路参数改变时的电流变化</p><p><strong>Therefore：</strong>建立电流与电路参数的关联</p></div><div class="tu-q"><p>电流会随电路变化实时改变！比如用两节电池串联（3V）驱动灯泡时：①初始电流可能是0.3A；②当电池电量下降至2V时，电流可能降到0.2A；③如果再并联一个灯泡，电流会增大到0.4A（总电流）。要边调节边观察，不能只记初始值。</p></div><div class="tu-q"><p>🌍 就像开车时油表指针会随着油门深浅实时变化，不能只看起步时的数值。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>调高电源电压时，电流表示数会：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="根据欧姆定律，电压升高电流增大">A. 变大</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="根据欧姆定律，电压升高电流增大">B. 变小</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="根据欧姆定律，电压升高电流增大">C. 不变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="根据欧姆定律，电压升高电流增大">D. 先变小后变大</button></div><div class="tu-fb" hidden></div></div></section>
 
 <script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-series-parallel", "name": "phy-m-series-parallel"}], "current": {"id": "phy-m-current-measurement", "name": "电流的测量：从实验现象到变量关系", "status": "active"}, "extends": []};
 // auto-injected standard graph data</script>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：电流的测量</h2><div data-teachany-kg="phy-m-current-measurement"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：先试触选量程，再按刻度读数</h2>
+      <p>不能确定电流大小时先用大量程试触。读数时先确认所选量程，再按对应分度值读数：同一指针位置，0～0.6 A 量程的读数是 0～3 A 量程读数的五分之一。</p>
+      <div class="worked-example"><strong>范例：</strong>选用 0～0.6 A 量程时，若指针指在 0～3 A 刻度线的 1.5 处，实际电流为 1.5 ÷ 5 = 0.3 A。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是按大量程刻度直接读数却使用了小量程，导致读数扩大 5 倍。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>使用电流表时，下列做法正确的是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电流表必须串联且正进负出。&quot;)">A. 把电流表并联在用电器两端</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电流表必须串联且正进负出。&quot;)">B. 把电流表直接接到电源两极</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;电流表必须串联且正进负出。&quot;)">C. 把电流表串联接入电路，电流从“+”接线柱流入</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电流表必须串联且正进负出。&quot;)">D. 电流从“−”接线柱流入</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>选用 0～0.6 A 量程，指针位置对应 0～3 A 刻度的 1.5，则实际电流为？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两量程刻度成 5 倍关系，1.5÷5 = 0.3 A。&quot;)">A. 0.15 A</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;两量程刻度成 5 倍关系，1.5÷5 = 0.3 A。&quot;)">B. 0.3 A</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两量程刻度成 5 倍关系，1.5÷5 = 0.3 A。&quot;)">C. 1.5 A</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;两量程刻度成 5 倍关系，1.5÷5 = 0.3 A。&quot;)">D. 3 A</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
+</section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>如图电路，当开关闭合时发现电流表指针反偏，说明（）[升学题]</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A会表现为指针超量程撞击，选C指针不动，选D与偏转方向无关">电流过大超过量程</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A会表现为指针超量程撞击，选C指针不动，选D与偏转方向无关">正负接线柱接反</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A会表现为指针超量程撞击，选C指针不动，选D与偏转方向无关">电路出现断路</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A会表现为指针超量程撞击，选C指针不动，选D与偏转方向无关">用电器功率太小</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>用3A量程测得指针指在第15小格，实际电流是（）[计算题]</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="3A量程每小格0.1A，需强化量程与分度值对应关系">0.15A</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="3A量程每小格0.1A，需强化量程与分度值对应关系">1.5A</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="3A量程每小格0.1A，需强化量程与分度值对应关系">0.5A</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="3A量程每小格0.1A，需强化量程与分度值对应关系">0.3A</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A"><h3>后测题 3</h3><p>检修汽车电路时，技师将电流表接在保险丝位置测量，这运用了（）[迁移题]</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="保险丝位置相当于干路，必须串联测量总电流">串联测量原理</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="保险丝位置相当于干路，必须串联测量总电流">并联分流原理</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="保险丝位置相当于干路，必须串联测量总电流">短路检测法</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="保险丝位置相当于干路，必须串联测量总电流">电阻补偿法</button></div><div class="tu-fb" hidden></div></div></section>
+<script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
+<!-- 课程导览图（互动画布） -->
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>估计 0.25A，更合理的量程</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">A. 0–0.6A</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">B. 0–3A 且不再改</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 任意</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电压表量程</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>读数时要注意</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 量程与分度值</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 只看指针偏哪</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 不用估读</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 可以反接无视</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 反接正负极时认为指针不偏转就是没电流</h3><p>✅ 反接时指针会反向打表，应立即断开防止损坏</p><p>💡 未理解表头机械结构特性</p></div><div class="tu-q"><h3>❌ 用3A量程测小电流时认为读数更精确</h3><p>✅ 小电流应优先用0.6A量程（分度值更小）</p><p>💡 混淆量程范围与测量精度概念</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>串联要记牢，量程看大小，读数对量程，安全第一条</p><p><strong>类比：</strong>像查水管流量，必须让全部水流经过水表才能准确计量</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 直流电路（电流表）</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html" title="PhET · 直流电路（电流表）" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 把电流表串进支路，比较不同位置的读数。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/circuit-construction-kit-dc/latest/circuit-construction-kit-dc_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
+
+
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>电流单位</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 伏特</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 安培</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 欧姆</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 瓦特</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>电流表能否直接接电源两极</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 可以</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 不可以</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 只在直流可以</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 只在交流可以</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>测灯泡电流，电流表应</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 与灯串联</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 与灯并联</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 与电压表并联即可</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 接在电源两端</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话总结本课最关键的一条规律，并举一个生活例子。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -600,3 +598,5 @@ function phymDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：电流的测量</h2><div data-teachany-kg="phy-m-current-measurement"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

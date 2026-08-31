@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-electromagnetism-basic-hero.png" alt="电流的磁效应：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -164,7 +164,112 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </section>
 
 <section class="hero-cover"><img class="hero-cover-img" src="./assets/phy-m-electromagnetism-basic-hero.png" alt="课程封面"></section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-current-circuit", "name": "phy-m-current-circuit"}, {"id": "phy-m-magnetism-basics", "name": "phy-m-magnetism-basics"}], "current": {"id": "phy-m-electromagnetism-basic", "name": "电流的磁效应：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+
+<section class="slide-page" data-page-index="12" data-page-type="content" data-tsh="知识图谱 - 查看前置、后续与同域知识">
+
+</section>
+<section class="slide-page" data-page-index="13" data-page-type="content" data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出电流磁效应的发现者及基本现象</p></div><div class="tu-q"><p>🎯 能判断影响电磁铁磁性强弱的三个因素</p></div><div class="tu-q"><p>🎯 能分析实验数据得出电流与磁场强度的关系</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么通电导线能让小磁针偏转？</p></div><div class="tu-q"><p>❓ 电流越大磁力就越强吗？</p></div><div class="tu-q"><p>❓ 电磁铁和普通磁铁有什么区别？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 磁针为何转</h2><div class="tu-q"><p><strong>And：</strong>学生知道磁铁能吸铁</p><p><strong>But：</strong>不明白通电导线为何让小磁针偏转</p><p><strong>Therefore：</strong>建立电与磁的关联认知</p></div><div class="tu-q"><p>通电导线周围存在看不见的磁场，就像磁铁周围一样。这个磁场会使附近的小磁针发生偏转，比如用1节干电池（1.5V）连接30cm导线，小磁针会偏转15°左右。电流越大（如换成3V电池），偏转角度会增大到30°，说明磁场强弱与电流大小有关。</p></div><div class="tu-q"><p>🌍 家庭电路短路时，跳闸前电线周围会产生强磁场，若此时附近有指南针，能看到指针剧烈抖动。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>用2节电池串联供电时，小磁针偏转角度会？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能认为电压增加会减弱效应">A.比1节电池时大</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能认为电压增加会减弱效应">B.比1节电池时小</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能认为电压增加会减弱效应">C.完全不偏转</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能认为电压增加会减弱效应">D.快速旋转</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>通电导线旁的小磁针为什么偏转？</h2>
 <p>奥斯特实验表明：电流能产生磁场。通电螺线管的磁场类似条形磁铁，可用安培定则判断方向。</p>
@@ -176,7 +281,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>电流磁效应</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>奥斯特</h3><p>电流周围有磁场</p></div><div class="mini-panel"><h3>螺线管</h3><p>类似条形磁铁</p></div><div class="mini-panel"><h3>安培定则</h3><p>判断磁场方向</p></div></div>
@@ -190,7 +295,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -204,51 +309,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：安培定则定极性，三因素调强弱</h2>
-      <p>判断螺线管极性先看电流从哪端流入线圈；要增强电磁铁磁性，可增大电流、增加匝数或插入铁芯，这三条常作为控制变量实验的自变量。</p>
-      <div class="worked-example"><strong>范例：</strong>保持匝数和铁芯不变，只增大通过电磁铁的电流，吸引的大头针数量增多，说明电流越大磁性越强。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是用左手判断螺线管极性，或认为断电后电磁铁仍有强磁性。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>奥斯特实验说明？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;小磁针偏转说明电流周围有磁场。&quot;)">A. 磁能生电</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;小磁针偏转说明电流周围有磁场。&quot;)">B. 通电导线周围存在磁场</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;小磁针偏转说明电流周围有磁场。&quot;)">C. 磁场对电流有力的作用</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;小磁针偏转说明电流周围有磁场。&quot;)">D. 电流方向与磁场无关</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>要使电磁铁磁性增强，下列做法无效的是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;对调正负极只改变磁极方向，不改变强弱。&quot;)">A. 增大通过线圈的电流</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;对调正负极只改变磁极方向，不改变强弱。&quot;)">B. 增加线圈匝数</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;对调正负极只改变磁极方向，不改变强弱。&quot;)">C. 插入铁芯</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;对调正负极只改变磁极方向，不改变强弱。&quot;)">D. 把电源正负极对调</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>电流方向改变，磁场方向改变。</li><li>螺线管极性与绕向、电流方向有关。</li><li>电磁铁可控制通断。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-electromagnetism-basic-section2.png" alt="电流磁效应对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
-<section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
-<h2>例：怎样增强电磁铁磁性？</h2>
-<ol class="steps"><li>增大电流</li><li>增加匝数</li><li>插入铁芯</li></ol>
-</div></section></section>
-
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「电流磁效应」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -276,75 +337,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>通电导线周围</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 一定无磁场</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 存在磁场</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 只有电场</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 温度必降</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>通电螺线管磁场像</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 点电荷</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 条形磁铁</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 声波</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 重力场</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 电磁感应相关</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" title="PhET · 电磁感应相关" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 观察磁与电的联系，辅助理解电流的磁效应。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>增强电磁铁磁性可</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 减小电流</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 增大电流或匝数</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 去掉铁芯</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 反向无影响必假</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>电流反向则螺线管</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 极性反向</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 磁性消失永久</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 变成绝缘体</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 质量变化</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>电磁起重机利用</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 电流的磁效应</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 光的折射</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 浮力</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 静电平衡</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明电流磁效应最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -460,121 +453,38 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么通电导线能让小磁针偏转？</p></div><div class="tu-q"><p>❓ 电流越大磁力就越强吗？</p></div><div class="tu-q"><p>❓ 电磁铁和普通磁铁有什么区别？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出电流磁效应的发现者及基本现象</p></div><div class="tu-q"><p>🎯 能判断影响电磁铁磁性强弱的三个因素</p></div><div class="tu-q"><p>🎯 能分析实验数据得出电流与磁场强度的关系</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为断电后电磁铁仍有磁性</h3><p>✅ 演示断电后铁钉掉落现象</p><p>💡 混淆电磁铁与永磁体特性</p></div><div class="tu-q"><h3>❌ 用安培定则时拇指指向电流反方向</h3><p>✅ 强调'右手握导线，拇指电流走'</p><p>💡 左右手定则混淆</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>电生磁，安培判，右手握住电流转</p><p><strong>类比：</strong>电流像水流，磁场像水流产生的漩涡</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）如图通电螺线管旁小磁针静止时N极指向左，则电源（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="安培定则应用时未结合磁极相互作用">A.正极在a端</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="安培定则应用时未结合磁极相互作用">B.负极在a端</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="安培定则应用时未结合磁极相互作用">C.正极在b端</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="安培定则应用时未结合磁极相互作用">D.无法判断</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）电梯紧急制动装置利用电流磁效应，断电时（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未理解电磁铁'电生磁'特性">A.磁力增强锁死电梯</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未理解电磁铁'电生磁'特性">B.磁力消失释放刹车</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未理解电磁铁'电生磁'特性">C.产生感应电流</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未理解电磁铁'电生磁'特性">D.改变磁场方向</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="D"><h3>后测题 3</h3><p>（实验题）要研究电流大小对磁场影响，应控制（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="忽略控制变量法的多因素要求">A.线圈匝数不变</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="忽略控制变量法的多因素要求">B.铁芯材料不变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="忽略控制变量法的多因素要求">C.小磁针位置不变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="忽略控制变量法的多因素要求">D.以上全部</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 磁针为何转</h2><div class="tu-q"><p><strong>And：</strong>学生知道磁铁能吸铁</p><p><strong>But：</strong>不明白通电导线为何让小磁针偏转</p><p><strong>Therefore：</strong>建立电与磁的关联认知</p></div><div class="tu-q"><p>通电导线周围存在看不见的磁场，就像磁铁周围一样。这个磁场会使附近的小磁针发生偏转，比如用1节干电池（1.5V）连接30cm导线，小磁针会偏转15°左右。电流越大（如换成3V电池），偏转角度会增大到30°，说明磁场强弱与电流大小有关。</p></div><div class="tu-q"><p>🌍 家庭电路短路时，跳闸前电线周围会产生强磁场，若此时附近有指南针，能看到指针剧烈抖动。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>用2节电池串联供电时，小磁针偏转角度会？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能认为电压增加会减弱效应">A.比1节电池时大</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能认为电压增加会减弱效应">B.比1节电池时小</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能认为电压增加会减弱效应">C.完全不偏转</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能认为电压增加会减弱效应">D.快速旋转</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 磁场可测量</h2><div class="tu-q"><p><strong>And：</strong>学生已观察磁针偏转现象</p><p><strong>But：</strong>不知道如何量化磁场强弱</p><p><strong>Therefore：</strong>引入可测变量建立科学规律</p></div><div class="tu-q"><p>用线圈代替直导线能增强磁场，比如绕10圈的线圈通1A电流时，磁针偏转45°；增加到20圈（其他条件不变）会偏转60°。这里‘线圈匝数’和‘电流大小’就是可测变量。实验中可用传感器测量磁场强度（如50mT），发现它与电流（A）和匝数成正比。</p></div><div class="tu-q"><p>🌍 电动车充电器里线圈嗡嗡声就是电流磁效应，充电电流越大声音越响。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>要使磁场增强50%，可以？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B会削弱磁场">A.电流从2A增到3A</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B会削弱磁场">B.线圈从50减到25匝</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B会削弱磁场">C.用更粗的导线</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B会削弱磁场">D.拉长线圈长度</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 调控电磁铁</h2><div class="tu-q"><p><strong>And：</strong>学生知道变量影响磁场</p><p><strong>But：</strong>不会综合调控多个参数</p><p><strong>Therefore：</strong>培养工程思维解决实际问题</p></div><div class="tu-q"><p>电磁铁磁性强弱由电流、匝数和铁芯共同决定。例如：用5V电源，20匝线圈空载时吸起3枚回形针；插入铁芯后能吸起8枚；若保持铁芯同时增加匝数到40匝，能吸起15枚。实际应用中（如门禁电磁锁）会综合调节这些参数。</p></div><div class="tu-q"><p>🌍 废旧电器拆出的电磁铁，改造后可做冰箱门报警器。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>哪种改造能提升电磁铁吸力？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B会消除铁芯作用">A.增加电池数量</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B会消除铁芯作用">B.改用塑料芯</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B会消除铁芯作用">C.减少导线长度</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B会消除铁芯作用">D.降低电压</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 探究电磁铁磁性强弱的影响因素</h2><p>设计实验探究电流大小和线圈匝数对电磁铁磁性强弱的影响。</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="假设电流越大，线圈匝数越多，电磁铁的磁性越强。"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="通过改变电池数量和线圈匝数，观察电磁铁吸引铁钉的数量和距离。"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="电流大小和线圈匝数都会影响电磁铁的磁性强弱，电流越大，线圈匝数越多，磁性越强。"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 磁场可测量</h2><div class="tu-q"><p><strong>And：</strong>学生已观察磁针偏转现象</p><p><strong>But：</strong>不知道如何量化磁场强弱</p><p><strong>Therefore：</strong>引入可测变量建立科学规律</p></div><div class="tu-q"><p>用线圈代替直导线能增强磁场，比如绕10圈的线圈通1A电流时，磁针偏转45°；增加到20圈（其他条件不变）会偏转60°。这里‘线圈匝数’和‘电流大小’就是可测变量。实验中可用传感器测量磁场强度（如50mT），发现它与电流（A）和匝数成正比。</p></div><div class="tu-q"><p>🌍 电动车充电器里线圈嗡嗡声就是电流磁效应，充电电流越大声音越响。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>要使磁场增强50%，可以？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B会削弱磁场">A.电流从2A增到3A</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B会削弱磁场">B.线圈从50减到25匝</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B会削弱磁场">C.用更粗的导线</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B会削弱磁场">D.拉长线圈长度</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 调控电磁铁</h2><div class="tu-q"><p><strong>And：</strong>学生知道变量影响磁场</p><p><strong>But：</strong>不会综合调控多个参数</p><p><strong>Therefore：</strong>培养工程思维解决实际问题</p></div><div class="tu-q"><p>电磁铁磁性强弱由电流、匝数和铁芯共同决定。例如：用5V电源，20匝线圈空载时吸起3枚回形针；插入铁芯后能吸起8枚；若保持铁芯同时增加匝数到40匝，能吸起15枚。实际应用中（如门禁电磁锁）会综合调节这些参数。</p></div><div class="tu-q"><p>🌍 废旧电器拆出的电磁铁，改造后可做冰箱门报警器。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>哪种改造能提升电磁铁吸力？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B会消除铁芯作用">A.增加电池数量</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B会消除铁芯作用">B.改用塑料芯</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B会消除铁芯作用">C.减少导线长度</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B会消除铁芯作用">D.降低电压</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：安培定则定极性，三因素调强弱</h2>
+      <p>判断螺线管极性先看电流从哪端流入线圈；要增强电磁铁磁性，可增大电流、增加匝数或插入铁芯，这三条常作为控制变量实验的自变量。</p>
+      <div class="worked-example"><strong>范例：</strong>保持匝数和铁芯不变，只增大通过电磁铁的电流，吸引的大头针数量增多，说明电流越大磁性越强。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是用左手判断螺线管极性，或认为断电后电磁铁仍有强磁性。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>奥斯特实验说明？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;小磁针偏转说明电流周围有磁场。&quot;)">A. 磁能生电</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;小磁针偏转说明电流周围有磁场。&quot;)">B. 通电导线周围存在磁场</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;小磁针偏转说明电流周围有磁场。&quot;)">C. 磁场对电流有力的作用</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;小磁针偏转说明电流周围有磁场。&quot;)">D. 电流方向与磁场无关</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>要使电磁铁磁性增强，下列做法无效的是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;对调正负极只改变磁极方向，不改变强弱。&quot;)">A. 增大通过线圈的电流</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;对调正负极只改变磁极方向，不改变强弱。&quot;)">B. 增加线圈匝数</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;对调正负极只改变磁极方向，不改变强弱。&quot;)">C. 插入铁芯</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;对调正负极只改变磁极方向，不改变强弱。&quot;)">D. 把电源正负极对调</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
 
-
-<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-current-circuit", "name": "phy-m-current-circuit"}, {"id": "phy-m-magnetism-basics", "name": "phy-m-magnetism-basics"}], "current": {"id": "phy-m-electromagnetism-basic", "name": "电流的磁效应：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
-
-
-<section class="slide-page" data-page-index="12" data-page-type="content" data-tsh="知识图谱 - 查看前置、后续与同域知识">
-
-</section>
-<section class="slide-page" data-page-index="13" data-page-type="content" data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
-
-</section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
 <div class="tu-q" data-answer="C">
 <h3>选择题 1</h3><p>在探究电磁铁磁性强弱的实验中，以下哪个因素不会影响实验结果？</p><div class="tu-opts">
 <button type="button" class="tu-opt" data-choice="A" data-diagnosis="电流大小直接影响电磁铁的磁性强弱。">A. 电流大小</button>
@@ -600,11 +510,99 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <div class="tu-fill"><h3>填空题 2</h3><p>在电磁铁实验中，保持电流不变，增加线圈匝数，电磁铁的磁性会____。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>增强</p><p>增加线圈匝数会增强电磁铁的磁性。</p></details></div>
 </section>
 
-<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 探究电磁铁磁性强弱的影响因素</h2><p>设计实验探究电流大小和线圈匝数对电磁铁磁性强弱的影响。</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="假设电流越大，线圈匝数越多，电磁铁的磁性越强。"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="通过改变电池数量和线圈匝数，观察电磁铁吸引铁钉的数量和距离。"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="电流大小和线圈匝数都会影响电磁铁的磁性强弱，电流越大，线圈匝数越多，磁性越强。"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）如图通电螺线管旁小磁针静止时N极指向左，则电源（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="安培定则应用时未结合磁极相互作用">A.正极在a端</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="安培定则应用时未结合磁极相互作用">B.负极在a端</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="安培定则应用时未结合磁极相互作用">C.正极在b端</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="安培定则应用时未结合磁极相互作用">D.无法判断</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）电梯紧急制动装置利用电流磁效应，断电时（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未理解电磁铁'电生磁'特性">A.磁力增强锁死电梯</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未理解电磁铁'电生磁'特性">B.磁力消失释放刹车</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未理解电磁铁'电生磁'特性">C.产生感应电流</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未理解电磁铁'电生磁'特性">D.改变磁场方向</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="D"><h3>后测题 3</h3><p>（实验题）要研究电流大小对磁场影响，应控制（ ）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="忽略控制变量法的多因素要求">A.线圈匝数不变</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="忽略控制变量法的多因素要求">B.铁芯材料不变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="忽略控制变量法的多因素要求">C.小磁针位置不变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="忽略控制变量法的多因素要求">D.以上全部</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>电流方向改变，磁场方向改变。</li><li>螺线管极性与绕向、电流方向有关。</li><li>电磁铁可控制通断。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-electromagnetism-basic-section2.png" alt="电流磁效应对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：电流的磁效应</h2><div data-teachany-kg="phy-m-electromagnetism-basic"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
+<h2>例：怎样增强电磁铁磁性？</h2>
+<ol class="steps"><li>增大电流</li><li>增加匝数</li><li>插入铁芯</li></ol>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>增强电磁铁磁性可</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 减小电流</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 增大电流或匝数</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 去掉铁芯</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 反向无影响必假</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>电流反向则螺线管</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 极性反向</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 磁性消失永久</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 变成绝缘体</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 质量变化</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为断电后电磁铁仍有磁性</h3><p>✅ 演示断电后铁钉掉落现象</p><p>💡 混淆电磁铁与永磁体特性</p></div><div class="tu-q"><h3>❌ 用安培定则时拇指指向电流反方向</h3><p>✅ 强调'右手握导线，拇指电流走'</p><p>💡 左右手定则混淆</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>电生磁，安培判，右手握住电流转</p><p><strong>类比：</strong>电流像水流，磁场像水流产生的漩涡</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 电磁感应相关</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" title="PhET · 电磁感应相关" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 观察磁与电的联系，辅助理解电流的磁效应。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
+
+
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>通电导线周围</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 一定无磁场</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 存在磁场</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 只有电场</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 温度必降</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>通电螺线管磁场像</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 点电荷</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 条形磁铁</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 声波</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 重力场</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>电磁起重机利用</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 电流的磁效应</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 光的折射</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 浮力</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 静电平衡</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明电流磁效应最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -637,3 +635,5 @@ function phymDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：电流的磁效应</h2><div data-teachany-kg="phy-m-electromagnetism-basic"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

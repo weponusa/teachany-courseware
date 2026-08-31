@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-newton-laws-hero.png" alt="牛顿第一定律与二力平衡：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,105 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-gravity", "name": "phy-m-gravity"}, {"id": "phy-m-friction", "name": "phy-m-friction"}], "current": {"id": "phy-m-newton-laws", "name": "牛顿第一定律与二力平衡：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出牛顿第一定律的内容及成立条件</p></div><div class="tu-q"><p>🎯 能根据受力分析判断物体运动状态是否改变</p></div><div class="tu-q"><p>🎯 能用二力平衡条件解释生活中的惯性现象</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么急刹车时人会往前冲？</p></div><div class="tu-q"><p>❓ 静止的物体真的不受力吗？</p></div><div class="tu-q"><p>❓ 怎么判断物体是不是在做匀速直线运动？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 惯性初体验</h2><div class="tu-q"><p><strong>And：</strong>学生经历过急刹车时身体前倾</p><p><strong>But：</strong>不明白为什么松开油门车不会立刻停下</p><p><strong>Therefore：</strong>通过实验感受惯性本质</p></div><div class="tu-q"><p>物体保持原有运动状态的性质叫惯性。比如用尺子快速击打叠在一起的硬币，最下面的硬币被抽出时，上面的硬币会因为惯性保持静止状态而垂直落在桌面上（演示时可叠放5枚一元硬币，击打速度需达到0.5m/s以上）。牛顿第一定律说明：当合外力为零时，运动的物体会保持匀速直线运动。</p></div><div class="tu-q"><p>🌍 地铁突然启动时，站着的人会往后倒。这是因为脚随车厢运动，而上身由于惯性保持静止。实测地铁启动加速度约0.8m/s²，相当于被轻轻推了一下的感觉。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>公交车突然右转时，乘客会向哪个方向倾斜？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B的同学混淆了惯性方向，物体要保持的是转弯前的运动方向">A.左侧</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B的同学混淆了惯性方向，物体要保持的是转弯前的运动方向">B.右侧</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B的同学混淆了惯性方向，物体要保持的是转弯前的运动方向">C.前方</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B的同学混淆了惯性方向，物体要保持的是转弯前的运动方向">D.后方</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>急刹车人为什么前倾？</h2>
 <p>牛顿第一定律：物体不受力或受平衡力时保持静止或匀速直线运动。惯性是物体保持运动状态的性质。</p>
@@ -174,7 +272,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>牛顿第一定律</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>定律</h3><p>保持静止或匀速直线</p></div><div class="mini-panel"><h3>惯性</h3><p>固有属性</p></div><div class="mini-panel"><h3>平衡力</h3><p>等效于不受力</p></div></div>
@@ -188,7 +286,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="深化追问">
+<section class="slide-page" data-page-type="content" data-tsh="深化追问" data-slot="35">
   <section class="section phym-depth core-knowledge-module" id="module-depth"
     data-bloom-level="analyze" data-scaffold="partial" data-tts="module-depth">
     <div class="card">
@@ -207,7 +305,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -221,51 +319,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：先判合力是否为零</h2>
-      <p>物体静止或匀速直线运动时，受力平衡，合力为零；运动状态改变一定是受到了非平衡力。解释惯性现象要说清“原来的状态”和“哪部分状态被改变”。</p>
-      <div class="worked-example"><strong>范例：</strong>水平桌面上静止的书受重力和支持力，这是一对平衡力，合力为零，因此保持静止。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是说“物体受到惯性作用”，惯性是性质不是力，也不能说速度大惯性大。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>关于惯性，下列说法正确的是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;惯性是物体固有属性，只由质量决定。&quot;)">A. 物体运动越快惯性越大</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;惯性是物体固有属性，只由质量决定。&quot;)">B. 惯性是一种力</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;惯性是物体固有属性，只由质量决定。&quot;)">C. 惯性只与质量有关</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;惯性是物体固有属性，只由质量决定。&quot;)">D. 静止的物体没有惯性</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>以恒定速度沿直线行驶的汽车，其受力情况是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;匀速直线运动时合力为零。&quot;)">A. 只受牵引力</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;匀速直线运动时合力为零。&quot;)">B. 合力为零，受平衡力</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;匀速直线运动时合力为零。&quot;)">C. 合力方向向前</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;匀速直线运动时合力为零。&quot;)">D. 不受任何力</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>力不是维持运动的原因，而是改变运动状态。</li><li>惯性不是力。</li><li>安全带对抗惯性危害。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-newton-laws-section2.png" alt="牛顿第一定律对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
-<section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
-<h2>例：刹车人前倾</h2>
-<ol class="steps"><li>人有惯性保持原速度</li><li>车减速</li><li>相对车前倾</li></ol>
-</div></section></section>
-
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「牛顿第一定律」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -293,75 +347,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>惯性是</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 一种力</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 物体属性</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 只有固体有</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 电压</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>急刹车人前倾因为</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">A. 惯性</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">B. 引力消失</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 摩擦力使人加速向前</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 静电</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 力与运动</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html" title="PhET · 力与运动" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 调节摩擦力，观察撤力后的滑动，体会惯性。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>力的作用是</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 维持运动</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 改变运动状态</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 创造质量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 产生电荷必</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>平衡力作用下物体</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 一定变速</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 可保持静止或匀速直线</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 一定转圈</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 质量变化</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>系安全带主要为了</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 减小惯性危害</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 增大惯性当力</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 消除质量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 产生动力</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明牛顿第一定律最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -477,116 +463,128 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么急刹车时人会往前冲？</p></div><div class="tu-q"><p>❓ 静止的物体真的不受力吗？</p></div><div class="tu-q"><p>❓ 怎么判断物体是不是在做匀速直线运动？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出牛顿第一定律的内容及成立条件</p></div><div class="tu-q"><p>🎯 能根据受力分析判断物体运动状态是否改变</p></div><div class="tu-q"><p>🎯 能用二力平衡条件解释生活中的惯性现象</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为运动的物体一定受到力维持</h3><p>✅ 强调力是改变运动状态的原因，不是维持运动的原因</p><p>💡 受日常生活经验影响（如不推车会停下）</p></div><div class="tu-q"><h3>❌ 将惯性误解为一种力</h3><p>✅ 明确惯性是物体固有属性，不是外界施加的力</p><p>💡 混淆'惯性'与'惯性力'概念</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>不受力或平衡力，匀速静止不变异</p><p><strong>类比：</strong>就像突然停下的公交车，站着的人会往前倾</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）如图小车从斜面滑下，在毛巾表面运动距离最短，说明：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="错选A/D未理解实验结论；错选C混淆惯性与阻力关系">A.力是维持运动的原因</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="错选A/D未理解实验结论；错选C混淆惯性与阻力关系">B.阻力越小运动状态越难改变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="错选A/D未理解实验结论；错选C混淆惯性与阻力关系">C.小车惯性随阻力减小而增大</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="错选A/D未理解实验结论；错选C混淆惯性与阻力关系">D.运动需要力来维持</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>直升机悬停时，升力与重力关系是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="错选A/C未掌握二力平衡条件">A.升力＞重力</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="错选A/C未掌握二力平衡条件">B.升力=重力</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="错选A/C未掌握二力平衡条件">C.升力＜重力</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="错选A/C未掌握二力平衡条件">D.无法确定</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>（迁移题）宇航员在空间站推舱壁后会匀速飘走，说明：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="错选A/C混淆物理概念；错选D误解牛顿第三定律">A.太空中惯性消失</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="错选A/C混淆物理概念；错选D误解牛顿第三定律">B.不受外力保持匀速运动</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="错选A/C混淆物理概念；错选D误解牛顿第三定律">C.微重力导致质量减小</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="错选A/C混淆物理概念；错选D误解牛顿第三定律">D.反作用力维持运动</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 惯性初体验</h2><div class="tu-q"><p><strong>And：</strong>学生经历过急刹车时身体前倾</p><p><strong>But：</strong>不明白为什么松开油门车不会立刻停下</p><p><strong>Therefore：</strong>通过实验感受惯性本质</p></div><div class="tu-q"><p>物体保持原有运动状态的性质叫惯性。比如用尺子快速击打叠在一起的硬币，最下面的硬币被抽出时，上面的硬币会因为惯性保持静止状态而垂直落在桌面上（演示时可叠放5枚一元硬币，击打速度需达到0.5m/s以上）。牛顿第一定律说明：当合外力为零时，运动的物体会保持匀速直线运动。</p></div><div class="tu-q"><p>🌍 地铁突然启动时，站着的人会往后倒。这是因为脚随车厢运动，而上身由于惯性保持静止。实测地铁启动加速度约0.8m/s²，相当于被轻轻推了一下的感觉。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>公交车突然右转时，乘客会向哪个方向倾斜？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B的同学混淆了惯性方向，物体要保持的是转弯前的运动方向">A.左侧</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B的同学混淆了惯性方向，物体要保持的是转弯前的运动方向">B.右侧</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B的同学混淆了惯性方向，物体要保持的是转弯前的运动方向">C.前方</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B的同学混淆了惯性方向，物体要保持的是转弯前的运动方向">D.后方</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 二力探秘</h2><div class="tu-q"><p><strong>And：</strong>知道静止的物体会保持静止</p><p><strong>But：</strong>不理解书桌为什么能同时承受书包和手的压力</p><p><strong>Therefore：</strong>建立二力平衡的量化认知</p></div><div class="tu-q"><p>当两个力大小相等、方向相反、作用在同一直线上时，物体处于平衡状态。例如用弹簧秤拉木块（质量500g），当示数稳定在4.9N时（g取9.8N/kg），说明桌面对木块的摩擦力也正好是4.9N。此时木块受到的合外力为零，符合牛顿第一定律的平衡条件。</p></div><div class="tu-q"><p>🌍 电梯匀速上升时，体重秤示数不变。实测60kg的人所受支持力约588N，与重力平衡。若电梯加速上升1m/s²，支持力会增大到648N。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>吊灯静止时，电线拉力20N，说明什么？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B的同学可能将拉力与重力当成不同性质的力">A.灯重20N</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B的同学可能将拉力与重力当成不同性质的力">B.灯重10N</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B的同学可能将拉力与重力当成不同性质的力">C.电线能承受40N</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B的同学可能将拉力与重力当成不同性质的力">D.有空气阻力</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 变量操控</h2><div class="tu-q"><p><strong>And：</strong>能识别简单平衡状态</p><p><strong>But：</strong>不会通过改变变量验证定律</p><p><strong>Therefore：</strong>培养控制变量的实验思维</p></div><div class="tu-q"><p>通过斜面小车实验验证：①同一小车从不同高度（如30cm/60cm）滑下，水平面阻力相同时，初速度越大滑行越远；②相同高度释放时，在毛巾（摩擦系数0.6）、木板（0.2）、玻璃（0.05）上滑行距离依次增加。数据证明：阻力越小，物体越接近匀速直线运动状态。</p></div><div class="tu-q"><p>🌍 冰壶运动员擦冰能减少摩擦系数（从0.015降到0.008），使冰壶多滑行3-5米。比赛用冰壶质量约20kg，初速度通常4m/s。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>要增大实验小车滑行距离，可以？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B的同学混淆了摩擦力的影响因素，粗糙面反而会增加阻力">A.增加斜面角度</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B的同学混淆了摩擦力的影响因素，粗糙面反而会增加阻力">B.换更粗糙的平面</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B的同学混淆了摩擦力的影响因素，粗糙面反而会增加阻力">C.给小车装风扇</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B的同学混淆了摩擦力的影响因素，粗糙面反而会增加阻力">D.减小小车质量</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 二力探秘</h2><div class="tu-q"><p><strong>And：</strong>知道静止的物体会保持静止</p><p><strong>But：</strong>不理解书桌为什么能同时承受书包和手的压力</p><p><strong>Therefore：</strong>建立二力平衡的量化认知</p></div><div class="tu-q"><p>当两个力大小相等、方向相反、作用在同一直线上时，物体处于平衡状态。例如用弹簧秤拉木块（质量500g），当示数稳定在4.9N时（g取9.8N/kg），说明桌面对木块的摩擦力也正好是4.9N。此时木块受到的合外力为零，符合牛顿第一定律的平衡条件。</p></div><div class="tu-q"><p>🌍 电梯匀速上升时，体重秤示数不变。实测60kg的人所受支持力约588N，与重力平衡。若电梯加速上升1m/s²，支持力会增大到648N。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>吊灯静止时，电线拉力20N，说明什么？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B的同学可能将拉力与重力当成不同性质的力">A.灯重20N</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B的同学可能将拉力与重力当成不同性质的力">B.灯重10N</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B的同学可能将拉力与重力当成不同性质的力">C.电线能承受40N</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B的同学可能将拉力与重力当成不同性质的力">D.有空气阻力</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 变量操控</h2><div class="tu-q"><p><strong>And：</strong>能识别简单平衡状态</p><p><strong>But：</strong>不会通过改变变量验证定律</p><p><strong>Therefore：</strong>培养控制变量的实验思维</p></div><div class="tu-q"><p>通过斜面小车实验验证：①同一小车从不同高度（如30cm/60cm）滑下，水平面阻力相同时，初速度越大滑行越远；②相同高度释放时，在毛巾（摩擦系数0.6）、木板（0.2）、玻璃（0.05）上滑行距离依次增加。数据证明：阻力越小，物体越接近匀速直线运动状态。</p></div><div class="tu-q"><p>🌍 冰壶运动员擦冰能减少摩擦系数（从0.015降到0.008），使冰壶多滑行3-5米。比赛用冰壶质量约20kg，初速度通常4m/s。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>要增大实验小车滑行距离，可以？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B的同学混淆了摩擦力的影响因素，粗糙面反而会增加阻力">A.增加斜面角度</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B的同学混淆了摩擦力的影响因素，粗糙面反而会增加阻力">B.换更粗糙的平面</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B的同学混淆了摩擦力的影响因素，粗糙面反而会增加阻力">C.给小车装风扇</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B的同学混淆了摩擦力的影响因素，粗糙面反而会增加阻力">D.减小小车质量</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：先判合力是否为零</h2>
+      <p>物体静止或匀速直线运动时，受力平衡，合力为零；运动状态改变一定是受到了非平衡力。解释惯性现象要说清“原来的状态”和“哪部分状态被改变”。</p>
+      <div class="worked-example"><strong>范例：</strong>水平桌面上静止的书受重力和支持力，这是一对平衡力，合力为零，因此保持静止。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是说“物体受到惯性作用”，惯性是性质不是力，也不能说速度大惯性大。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>关于惯性，下列说法正确的是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;惯性是物体固有属性，只由质量决定。&quot;)">A. 物体运动越快惯性越大</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;惯性是物体固有属性，只由质量决定。&quot;)">B. 惯性是一种力</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;惯性是物体固有属性，只由质量决定。&quot;)">C. 惯性只与质量有关</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;惯性是物体固有属性，只由质量决定。&quot;)">D. 静止的物体没有惯性</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>以恒定速度沿直线行驶的汽车，其受力情况是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;匀速直线运动时合力为零。&quot;)">A. 只受牵引力</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;匀速直线运动时合力为零。&quot;)">B. 合力为零，受平衡力</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;匀速直线运动时合力为零。&quot;)">C. 合力方向向前</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;匀速直线运动时合力为零。&quot;)">D. 不受任何力</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）如图小车从斜面滑下，在毛巾表面运动距离最短，说明：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="错选A/D未理解实验结论；错选C混淆惯性与阻力关系">A.力是维持运动的原因</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="错选A/D未理解实验结论；错选C混淆惯性与阻力关系">B.阻力越小运动状态越难改变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="错选A/D未理解实验结论；错选C混淆惯性与阻力关系">C.小车惯性随阻力减小而增大</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="错选A/D未理解实验结论；错选C混淆惯性与阻力关系">D.运动需要力来维持</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>直升机悬停时，升力与重力关系是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="错选A/C未掌握二力平衡条件">A.升力＞重力</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="错选A/C未掌握二力平衡条件">B.升力=重力</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="错选A/C未掌握二力平衡条件">C.升力＜重力</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="错选A/C未掌握二力平衡条件">D.无法确定</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>（迁移题）宇航员在空间站推舱壁后会匀速飘走，说明：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="错选A/C混淆物理概念；错选D误解牛顿第三定律">A.太空中惯性消失</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="错选A/C混淆物理概念；错选D误解牛顿第三定律">B.不受外力保持匀速运动</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="错选A/C混淆物理概念；错选D误解牛顿第三定律">C.微重力导致质量减小</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="错选A/C混淆物理概念；错选D误解牛顿第三定律">D.反作用力维持运动</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>力不是维持运动的原因，而是改变运动状态。</li><li>惯性不是力。</li><li>安全带对抗惯性危害。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-newton-laws-section2.png" alt="牛顿第一定律对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
+<h2>例：刹车人前倾</h2>
+<ol class="steps"><li>人有惯性保持原速度</li><li>车减速</li><li>相对车前倾</li></ol>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>力的作用是</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 维持运动</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 改变运动状态</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 创造质量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 产生电荷必</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>平衡力作用下物体</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">A. 一定变速</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">B. 可保持静止或匀速直线</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 一定转圈</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 质量变化</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为运动的物体一定受到力维持</h3><p>✅ 强调力是改变运动状态的原因，不是维持运动的原因</p><p>💡 受日常生活经验影响（如不推车会停下）</p></div><div class="tu-q"><h3>❌ 将惯性误解为一种力</h3><p>✅ 明确惯性是物体固有属性，不是外界施加的力</p><p>💡 混淆'惯性'与'惯性力'概念</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>不受力或平衡力，匀速静止不变异</p><p><strong>类比：</strong>就像突然停下的公交车，站着的人会往前倾</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 力与运动</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html" title="PhET · 力与运动" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 调节摩擦力，观察撤力后的滑动，体会惯性。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
 
 
-<script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-gravity", "name": "phy-m-gravity"}, {"id": "phy-m-friction", "name": "phy-m-friction"}], "current": {"id": "phy-m-newton-laws", "name": "牛顿第一定律与二力平衡：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>惯性是</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 一种力</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 物体属性</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 只有固体有</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 电压</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>急刹车人前倾因为</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">A. 惯性</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">B. 引力消失</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 摩擦力使人加速向前</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 静电</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：牛顿第一定律与二力平衡</h2><div data-teachany-kg="phy-m-newton-laws"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>系安全带主要为了</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 减小惯性危害</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 增大惯性当力</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 消除质量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 产生动力</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明牛顿第一定律最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -620,3 +618,5 @@ function pmDepthCheck(button, isCorrect, feedbackId, explanation) {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：牛顿第一定律与二力平衡</h2><div data-teachany-kg="phy-m-newton-laws"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

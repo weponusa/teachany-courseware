@@ -410,7 +410,7 @@ function checkPretest() {
 }
 </script>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/eng-e-passage-questions-hero.png" alt="Passage Questions | 阅读理解知识结构（无字）" loading="eager">
@@ -421,7 +421,82 @@ function checkPretest() {
 </section>
 
 <!-- OBJECTIVES -->
-<section data-scaffold="full" data-bloom-level="apply" class="section" id="objectives">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+<section data-scaffold="full" data-bloom-level="apply" class="section" id="objectives" data-slot="10">
   <div class="obj-card">
     <div class="obj-title">🎯 理解目标</div>
     <div class="obj-item"><div class="obj-icon">🔮</div><div class="obj-text"><strong>预测内容</strong>：根据标题预测文章主题</div></div>
@@ -433,7 +508,9 @@ function checkPretest() {
 </section>
 
 <!-- WARMUP: PREDICT -->
-<section data-scaffold="partial" data-bloom-level="remember" class="section" id="pretest">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么文章里的小狗最后跑掉了？</p></div><div class="tu-q"><p>❓ 作者写这个故事想告诉我们什么？</p></div><div class="tu-q"><p>❓ 第三段那个生词‘suddenly’到底是什么意思？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+
+<section data-scaffold="partial" data-bloom-level="remember" class="section" id="pretest" data-slot="20">
   <div class="warm-title">🔮 阅读预测热身</div>
   <div class="predict-card">
     <div class="predict-title">👀 看标题，猜内容：</div>
@@ -452,7 +529,8 @@ function checkPretest() {
 </section>
 
 <!-- PASSAGE -->
-<section data-bloom-level="understand" class="section" id="passage">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 找关键句</h2><div class="tu-q"><p><strong>And：</strong>学生能读懂简单英语短文</p><p><strong>But：</strong>但找不到问题对应的句子</p><p><strong>Therefore：</strong>教他们用关键词定位</p></div><div class="tu-q"><p>关键句就像藏宝图上的红叉叉！比如问"What color is Lucy's bag?"时，快速扫描文章找"Lucy"和"bag"出现的句子。看这个例子："Lucy has a red bag and blue shoes."（数字提示：只要读1个包含关键词的句子就能答对）</p></div><div class="tu-q"><p>🌍 就像妈妈让你从超市货架上找"草莓味酸奶"，你会直接看包装上画着草莓的瓶子，不用每瓶都打开尝。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>文章说"Tom gets up at 7:00",问题问"When does Tom wake up?"该选哪个？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选错说明没发现"gets up"和"wake up"是同一个意思">A. 7:00</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选错说明没发现"gets up"和"wake up"是同一个意思">B. 7:30</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选错说明没发现"gets up"和"wake up"是同一个意思">C. 6:30</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选错说明没发现"gets up"和"wake up"是同一个意思">D. 8:00</button></div><div class="tu-fb" hidden></div></div></section>
+<section data-bloom-level="understand" class="section" id="passage" data-slot="35">
   <div class="passage-wrapper">
     <div class="passage-nav">
       <div class="passage-nav-title">📰 A Trip to the Zoo</div>
@@ -494,44 +572,7 @@ function checkPretest() {
 </section>
 
 <!-- LEVEL 1: MCQ -->
-<section data-bloom-level="apply" class="section" id="level1">
-  <div class="mcq-wrapper">
-    <div class="mcq-title">✏️ 关卡1：选择题</div>
-    <div class="mcq-sub">根据文章内容，选择最佳答案！</div>
-    <div id="mcqItems"></div>
-    <button class="nav-btn" id="mcqSubmit" onclick="checkMCQ()" style="display:block;margin:0 auto">提交选择题 ✅</button>
-    <div class="mcq-progress">已选: <span id="mcqSelected">0</span>/5</div>
-  </div>
-</section>
-
-<!-- LEVEL 2: SHORT ANSWER -->
-<section class="section" id="level2">
-  <div class="sa-wrapper">
-    <div class="sa-title">💬 关卡2：简答题</div>
-    <div class="sa-sub">用英语完整回答问题！</div>
-    <div class="sa-items" id="saItems"></div>
-    <button class="sa-check" onclick="checkSA()">检查答案 ✅</button>
-    <div class="sa-result" id="saResult"></div>
-  </div>
-</section>
-
-<!-- LEVEL 3: SUMMARY FILL -->
-<section class="section" id="level3">
-  <div class="sum-wrapper">
-    <div class="sum-title">📝 关卡3：摘要填空</div>
-    <div class="sum-sub">从词库中选词，完成文章摘要！</div>
-    <div class="sum-skeleton" id="sumSkeleton"></div>
-    <div class="sum-word-pool" id="sumPool"></div>
-    <div class="sum-score-bar">
-      <div class="sum-score-label">完成度</div>
-      <div class="sum-score-track"><div class="sum-score-fill" id="sumFill" style="width:0%"></div></div>
-      <span id="sumCount" style="font-size:0.85rem;color:#888;min-width:40px">0/5</span>
-    </div>
-  </div>
-</section>
-
-<!-- BOSS -->
-<section class="section" id="boss">
+<section class="section" id="boss" data-slot="35">
   <div class="boss-title">⚡ Boss：终极阅读挑战</div>
   <div class="boss-sub">五年级阅读最强关卡</div>
   <div class="boss-wrap">
@@ -547,7 +588,7 @@ function checkPretest() {
 </section>
 
 <!-- REPORT -->
-<section class="section" id="report">
+<section class="section" id="report" data-slot="35">
   <div class="report-card">
     <div class="report-emoji" id="reportEmoji">🏆</div>
     <div class="report-title" id="reportTitle">阅读高手！</div>
@@ -566,7 +607,7 @@ function checkPretest() {
 </section>
 
 <!-- EXTENSION -->
-<section class="section" id="extension">
+<section class="section" id="extension" data-slot="35">
   <div class="ext-card">
     <div class="ext-title">📚 高级阅读策略</div>
     <div class="strategy-grid">
@@ -1027,7 +1068,48 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 
 <!-- teachany-upgrade-v2 -->
 <!-- upgrade topic: Passage Questions | 阅读理解 -->
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 比较两本童话书的封面信息</h2><p>观察中日童话书的封面设计差异</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="不同国家的封面会突出各自文化元素"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="记录两本书的配色、主角服饰、典型图案"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="总结文化符号在封面设计中的体现"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section enge-depth core-knowledge-module text-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>短文阅读答题</h2>
+      <p>小学短文题先读问题再读文章，带着问题找答案。常见题型：找细节、判断正误、选标题。答案一般能在文中直接找到或简单推断。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>小学英语阅读理解三步答题法与常见题型解析</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="blueArrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#60a5fa"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.3"><line x1="60" y1="20" x2="60" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="120" y1="20" x2="120" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="180" y1="20" x2="180" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="300" y1="20" x2="300" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="360" y1="20" x2="360" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="420" y1="20" x2="420" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="540" y1="20" x2="540" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="60" x2="620" y2="60" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="120" x2="620" y2="120" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="180" x2="620" y2="180" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="240" x2="620" y2="240" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="300" x2="620" y2="300" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="360" x2="620" y2="360" stroke="#334155" stroke-width="0.5"/></g><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">小学英语阅读理解答题策略</text><rect x="50" y="70" width="120" height="80" rx="10" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="110" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第一步</text><text x="110" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">先读问题</text><text x="110" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">明确要求</text><rect x="200" y="70" width="120" height="80" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="260" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第二步</text><text x="260" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">带着问题</text><text x="260" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">阅读文章</text><rect x="350" y="70" width="120" height="80" rx="10" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="410" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第三步</text><text x="410" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">定位答案</text><text x="410" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">找到依据</text><path d="M170 110 Q185 110 200 110" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#blueArrow)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></path><path d="M320 110 Q335 110 350 110" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#blueArrow)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></path><text x="50" y="185" fill="#fbbf24" font-size="15" font-weight="bold">常见题型分析</text><rect x="50" y="200" width="160" height="70" rx="8" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="130" y="220" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">细节理解题</text><text x="130" y="240" text-anchor="middle" fill="#e2e8f0" font-size="11">What/When/Where</text><text x="130" y="255" text-anchor="middle" fill="#7dd3fc" font-size="11">直接在文中找答案</text><rect x="240" y="200" width="160" height="70" rx="8" fill="url(#purpleGrad)" stroke="#c084fc" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="320" y="220" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">判断正误题</text><text x="320" y="240" text-anchor="middle" fill="#e2e8f0" font-size="11">True/False</text><text x="320" y="255" text-anchor="middle" fill="#7dd3fc" font-size="11">对比文章内容</text><rect x="430" y="200" width="160" height="70" rx="8" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="510" y="220" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">主旨大意题</text><text x="510" y="240" text-anchor="middle" fill="#e2e8f0" font-size="11">选择标题</text><text x="510" y="255" text-anchor="middle" fill="#7dd3fc" font-size="11">概括文章主题</text><circle cx="130" cy="285" r="5" fill="#ef4444" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.5s"/></circle><circle cx="320" cy="285" r="5" fill="#a78bfa" stroke="#c084fc" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.8s"/></circle><circle cx="510" cy="285" r="5" fill="#34d399" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2.1s"/></circle><line x1="130" y1="270" x2="130" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></line><line x1="320" y1="270" x2="320" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></line><line x1="510" y1="270" x2="510" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></line><rect x="80" y="320" width="480" height="60" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></rect><text x="320" y="340" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">解题关键技巧</text><text x="150" y="360" text-anchor="middle" fill="#e2e8f0" font-size="12">关键词定位</text><text x="320" y="360" text-anchor="middle" fill="#e2e8f0" font-size="12">上下文理解</text><text x="490" y="360" text-anchor="middle" fill="#e2e8f0" font-size="12">逻辑推理</text><rect x="480" y="320" width="140" height="80" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></rect><text x="490" y="335" fill="#e2e8f0" font-size="12" font-weight="bold">答题流程</text><rect x="490" y="340" width="12" height="8" fill="#f59e0b"/><text x="508" y="348" fill="#e2e8f0" font-size="10">读问题</text><rect x="490" y="355" width="12" height="8" fill="#3b82f6"/><text x="508" y="363" fill="#e2e8f0" font-size="10">读文章</text><rect x="490" y="370" width="12" height="8" fill="#34d399"/><text x="508" y="378" fill="#e2e8f0" font-size="10">找答案</text><rect x="490" y="385" width="12" height="8" fill="#ef4444"/><text x="508" y="393" fill="#e2e8f0" font-size="10">验证</text></svg></figure>
+
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 猜生词义</h2><div class="tu-q"><p><strong>And：</strong>学生知道基础词汇</p><p><strong>But：</strong>遇到生词就卡住</p><p><strong>Therefore：</strong>教联系上下文猜词</p></div><div class="tu-q"><p>生词就像拼图缺块，可以用周围图片补全！比如看到"The crocodile's scaly skin looks like fish scales."即使不认识"scaly"，通过"like fish scales"就能猜是"鳞状的"。重点看生词前后的解释（数字提示：约70%的生词可通过上下文破解）。</p></div><div class="tu-q"><p>🌍 就像你不知道"拍立得"是什么，但听说"马上出照片的相机"就懂了。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>文章说"Emma felt jubilant when she won the prize",jubilant的意思可能是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选错可能忽略了"won the prize"这个快乐线索">A. 开心的</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选错可能忽略了"won the prize"这个快乐线索">B. 惊讶的</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选错可能忽略了"won the prize"这个快乐线索">C. 困倦的</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选错可能忽略了"won the prize"这个快乐线索">D. 生气的</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 辨正误</h2><div class="tu-q"><p><strong>And：</strong>学生能理解字面意思</p><p><strong>But：</strong>容易掉入陷阱选项</p><p><strong>Therefore：</strong>教对比文章细节</p></div><div class="tu-q"><p>当侦探抓小偷要对比证据！比如文章说"There are 3 apples in the basket"但选项说"4 apples"就是错的，就算其他单词都一样。特别注意数字、颜色、否定词（not/no）这些陷阱高发区（数字提示：90%的错误选项会改动1-2个词）。</p></div><div class="tu-q"><p>🌍 就像妈妈说要买"圆形小西瓜"，如果超市只有椭圆形大西瓜就不能买。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>文章说"The library opens at 9am",哪个选项错误？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A或C可能没注意时态，选D是无关信息">A. opens at 9am</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A或C可能没注意时态，选D是无关信息">B. opens at 8am</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A或C可能没注意时态，选D是无关信息">C. The library is closed now</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A或C可能没注意时态，选D是无关信息">D. It's about library time</button></div><div class="tu-fb" hidden></div></div></section>
+
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section enge-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：读题→圈关键词→回文定位</h2>
+      <p>把问题中的人名、时间、地点圈出来，到文中找相同或近义表达，再选答案。</p>
+      <div class="worked-example"><strong>范例：</strong>Q: Where is Amy? 文中：Amy is at school. → 答案 at school.</div>
+      <p id="lesson-pitfall" class="enge-pitfall"><strong>常见误区：</strong>常见误区是凭感觉选，不回原文核对。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>做阅读理解时，较好的第一步是？</p>
+        <button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;先读题能带着目标找信息。&quot;)">A. 不看题直接乱选</button><button type="button" data-correct="1" onclick="engeDepthCheck(this,true,&#x27;enge-depth-feedback&#x27;,&quot;先读题能带着目标找信息。&quot;)">B. 先读问题再读文章找关键信息</button><button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;先读题能带着目标找信息。&quot;)">C. 只看最后一句</button><button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;先读题能带着目标找信息。&quot;)">D. 翻译每一个词才开始</button>
+        <div class="enge-feedback" id="enge-depth-feedback" role="status"></div>
+      </div>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>阅读理解三步解题法机制分解与实例演示图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="blueArrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#60a5fa"/></marker><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(100,116,139,0.1)" stroke-width="0.5"/></pattern></defs><rect width="640" height="420" fill="#0a1520"/><rect width="640" height="420" fill="url(#grid)"/><rect x="10" y="10" width="620" height="400" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="320" y="40" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">阅读理解解题机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.2s" fill="freeze"/></text><rect x="40" y="70" width="140" height="80" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.4s" fill="freeze"/></rect><text x="110" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第一步</text><text x="110" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">读题</text><text x="110" y="135" text-anchor="middle" fill="#7dd3fc" font-size="11">理解问题</text><rect x="250" y="70" width="140" height="80" rx="10" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="320" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第二步</text><text x="320" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">圈关键词</text><text x="320" y="135" text-anchor="middle" fill="#7dd3fc" font-size="11">标记要点</text><rect x="460" y="70" width="140" height="80" rx="10" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.8s" fill="freeze"/></rect><text x="530" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第三步</text><text x="530" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">回文定位</text><text x="530" y="135" text-anchor="middle" fill="#7dd3fc" font-size="11">找到答案</text><path d="M 180 110 Q 215 90 250 110" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="5 3"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.0s" fill="freeze"/></path><path d="M 390 110 Q 425 90 460 110" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="5 3"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></path><rect x="60" y="180" width="520" height="100" rx="12" fill="url(#purpleGrad)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.4s" fill="freeze"/></rect><text x="320" y="205" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">实例演示</text><rect x="80" y="215" width="120" height="50" rx="8" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.6s" fill="freeze"/></rect><text x="140" y="235" text-anchor="middle" fill="#e2e8f0" font-size="11">Q: Where is Amy?</text><text x="140" y="250" text-anchor="middle" fill="#7dd3fc" font-size="10">圈出关键词Amy</text><rect x="260" y="215" width="120" height="50" rx="8" fill="rgba(34,211,153,0.15)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></rect><text x="320" y="235" text-anchor="middle" fill="#e2e8f0" font-size="11">Amy is at school.</text><text x="320" y="250" text-anchor="middle" fill="#7dd3fc" font-size="10">文中找到Amy</text><rect x="440" y="215" width="120" height="50" rx="8" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.0s" fill="freeze"/></rect><text x="500" y="235" text-anchor="middle" fill="#e2e8f0" font-size="11">答案: at school</text><text x="500" y="250" text-anchor="middle" fill="#7dd3fc" font-size="10">提取答案信息</text><path d="M 200 240 L 260 240" stroke="#7dd3fc" stroke-width="2" marker-end="url(#blueArrow)" stroke-dasharray="4 2"><animate attributeName="stroke-dashoffset" from="12" to="0" dur="1s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.2s" fill="freeze"/></path><path d="M 380 240 L 440 240" stroke="#7dd3fc" stroke-width="2" marker-end="url(#blueArrow)" stroke-dasharray="4 2"><animate attributeName="stroke-dashoffset" from="12" to="0" dur="1s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></path><rect x="40" y="300" width="280" height="80" rx="10" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.6s" fill="freeze"/></rect><text x="180" y="325" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">常见误区</text><text x="180" y="345" text-anchor="middle" fill="#e2e8f0" font-size="12">凭感觉选择，不回原文核对</text><circle cx="80" cy="350" r="8" fill="#ef4444" opacity="0.6"><animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="0.6" dur="0.5s" begin="2.8s" fill="freeze"/></circle><text x="100" y="355" fill="#e2e8f0" font-size="11">错误方法</text><rect x="360" y="300" width="240" height="80" rx="10" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.0s" fill="freeze"/></rect><text x="480" y="325" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">练习题</text><text x="480" y="345" text-anchor="middle" fill="#e2e8f0" font-size="11">较好的第一步是？</text><text x="480" y="365" text-anchor="middle" fill="#7dd3fc" font-size="10">B. 先读问题再读文章找关键信息</text><circle cx="540" cy="350" r="6" fill="#34d399"><animate attributeName="r" values="6;9;6" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.2s" fill="freeze"/></circle><line x1="110" y1="150" x2="110" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.4s" fill="freeze"/></line><circle cx="110" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></circle><line x1="320" y1="150" x2="320" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.8s" fill="freeze"/></line><circle cx="320" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.0s" fill="freeze"/></circle><line x1="530" y1="150" x2="530" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></line><circle cx="530" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.4s" fill="freeze"/></circle><rect x="480" y="390" width="140" height="25" rx="4" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.6s" fill="freeze"/></rect><rect x="490" y="395" width="8" height="5" fill="#3b82f6"/><text x="505" y="402" fill="#e2e8f0" font-size="10">步骤流程</text><rect x="555" y="395" width="8" height="5" fill="#f59e0b"/><text x="570" y="402" fill="#e2e8f0" font-size="10">关键操作</text></svg></figure>
+
+</section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>把文章分成‘开头-经过-结尾’三部分</p></div><div class="tu-q"><h3>💡解释它</h3><p>用彩色笔标出时间、地点、人物关键信息</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>对比插图内容和文字描述是否一致</p></div><div class="tu-q"><h3>👁️看见它</h3><p>想象自己就是故事里的小主人公</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>如果故事发生在夏天会有什么不同？</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
 <div class="tu-q" data-answer="B">
 <h3>选择题 1</h3><p>The book cover shows a girl wearing traditional Korean hanbok holding a lantern. This most likely means the story happens during:</p><div class="tu-opts">
 <button type="button" class="tu-opt" data-choice="A" data-diagnosis="圣诞节不是韩国传统节日">A. Christmas celebration</button>
@@ -1053,133 +1135,51 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <div class="tu-fill"><h3>填空题 2</h3><p>According to the rules, readers should keep ____ in the library. (用文中的'quiet'适当形式填空)</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>quiet</p><p>保持安静需用形容词原级</p></details></div>
 </section>
 
-<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 比较两本童话书的封面信息</h2><p>观察中日童话书的封面设计差异</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="不同国家的封面会突出各自文化元素"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="记录两本书的配色、主角服饰、典型图案"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="总结文化符号在封面设计中的体现"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
-<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
-<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
-<!-- v7.7.4 标准知识图谱模块 -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么文章里的小狗最后跑掉了？</p></div><div class="tu-q"><p>❓ 作者写这个故事想告诉我们什么？</p></div><div class="tu-q"><p>❓ 第三段那个生词‘suddenly’到底是什么意思？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
-  <section class="section enge-depth core-knowledge-module text-module" id="lesson-focus"
-    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
-    <div class="card">
-      <span class="phase-tag">知识精讲</span>
-      <h2>短文阅读答题</h2>
-      <p>小学短文题先读问题再读文章，带着问题找答案。常见题型：找细节、判断正误、选标题。答案一般能在文中直接找到或简单推断。</p>
-    </div>
-  </section>
-<figure class="ta-standard-figure"><figcaption>小学英语阅读理解三步答题法与常见题型解析</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="blueArrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#60a5fa"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.3"><line x1="60" y1="20" x2="60" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="120" y1="20" x2="120" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="180" y1="20" x2="180" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="300" y1="20" x2="300" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="360" y1="20" x2="360" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="420" y1="20" x2="420" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="540" y1="20" x2="540" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="60" x2="620" y2="60" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="120" x2="620" y2="120" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="180" x2="620" y2="180" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="240" x2="620" y2="240" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="300" x2="620" y2="300" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="360" x2="620" y2="360" stroke="#334155" stroke-width="0.5"/></g><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">小学英语阅读理解答题策略</text><rect x="50" y="70" width="120" height="80" rx="10" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="110" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第一步</text><text x="110" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">先读问题</text><text x="110" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">明确要求</text><rect x="200" y="70" width="120" height="80" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="260" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第二步</text><text x="260" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">带着问题</text><text x="260" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">阅读文章</text><rect x="350" y="70" width="120" height="80" rx="10" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="410" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第三步</text><text x="410" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">定位答案</text><text x="410" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">找到依据</text><path d="M170 110 Q185 110 200 110" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#blueArrow)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></path><path d="M320 110 Q335 110 350 110" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#blueArrow)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></path><text x="50" y="185" fill="#fbbf24" font-size="15" font-weight="bold">常见题型分析</text><rect x="50" y="200" width="160" height="70" rx="8" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="130" y="220" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">细节理解题</text><text x="130" y="240" text-anchor="middle" fill="#e2e8f0" font-size="11">What/When/Where</text><text x="130" y="255" text-anchor="middle" fill="#7dd3fc" font-size="11">直接在文中找答案</text><rect x="240" y="200" width="160" height="70" rx="8" fill="url(#purpleGrad)" stroke="#c084fc" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="320" y="220" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">判断正误题</text><text x="320" y="240" text-anchor="middle" fill="#e2e8f0" font-size="11">True/False</text><text x="320" y="255" text-anchor="middle" fill="#7dd3fc" font-size="11">对比文章内容</text><rect x="430" y="200" width="160" height="70" rx="8" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="510" y="220" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">主旨大意题</text><text x="510" y="240" text-anchor="middle" fill="#e2e8f0" font-size="11">选择标题</text><text x="510" y="255" text-anchor="middle" fill="#7dd3fc" font-size="11">概括文章主题</text><circle cx="130" cy="285" r="5" fill="#ef4444" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.5s"/></circle><circle cx="320" cy="285" r="5" fill="#a78bfa" stroke="#c084fc" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.8s"/></circle><circle cx="510" cy="285" r="5" fill="#34d399" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2.1s"/></circle><line x1="130" y1="270" x2="130" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></line><line x1="320" y1="270" x2="320" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></line><line x1="510" y1="270" x2="510" y2="280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></line><rect x="80" y="320" width="480" height="60" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></rect><text x="320" y="340" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">解题关键技巧</text><text x="150" y="360" text-anchor="middle" fill="#e2e8f0" font-size="12">关键词定位</text><text x="320" y="360" text-anchor="middle" fill="#e2e8f0" font-size="12">上下文理解</text><text x="490" y="360" text-anchor="middle" fill="#e2e8f0" font-size="12">逻辑推理</text><rect x="480" y="320" width="140" height="80" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></rect><text x="490" y="335" fill="#e2e8f0" font-size="12" font-weight="bold">答题流程</text><rect x="490" y="340" width="12" height="8" fill="#f59e0b"/><text x="508" y="348" fill="#e2e8f0" font-size="10">读问题</text><rect x="490" y="355" width="12" height="8" fill="#3b82f6"/><text x="508" y="363" fill="#e2e8f0" font-size="10">读文章</text><rect x="490" y="370" width="12" height="8" fill="#34d399"/><text x="508" y="378" fill="#e2e8f0" font-size="10">找答案</text><rect x="490" y="385" width="12" height="8" fill="#ef4444"/><text x="508" y="393" fill="#e2e8f0" font-size="10">验证</text></svg></figure>
-
-</section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section enge-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：读题→圈关键词→回文定位</h2>
-      <p>把问题中的人名、时间、地点圈出来，到文中找相同或近义表达，再选答案。</p>
-      <div class="worked-example"><strong>范例：</strong>Q: Where is Amy? 文中：Amy is at school. → 答案 at school.</div>
-      <p id="lesson-pitfall" class="enge-pitfall"><strong>常见误区：</strong>常见误区是凭感觉选，不回原文核对。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练：辨析要点</h3>
-        <p>做阅读理解时，较好的第一步是？</p>
-        <button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;先读题能带着目标找信息。&quot;)">A. 不看题直接乱选</button><button type="button" data-correct="1" onclick="engeDepthCheck(this,true,&#x27;enge-depth-feedback&#x27;,&quot;先读题能带着目标找信息。&quot;)">B. 先读问题再读文章找关键信息</button><button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;先读题能带着目标找信息。&quot;)">C. 只看最后一句</button><button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;先读题能带着目标找信息。&quot;)">D. 翻译每一个词才开始</button>
-        <div class="enge-feedback" id="enge-depth-feedback" role="status"></div>
-      </div>
-    </div>
-  </section>
-<figure class="ta-standard-figure"><figcaption>阅读理解三步解题法机制分解与实例演示图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="blueArrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#60a5fa"/></marker><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(100,116,139,0.1)" stroke-width="0.5"/></pattern></defs><rect width="640" height="420" fill="#0a1520"/><rect width="640" height="420" fill="url(#grid)"/><rect x="10" y="10" width="620" height="400" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="320" y="40" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">阅读理解解题机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.2s" fill="freeze"/></text><rect x="40" y="70" width="140" height="80" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.4s" fill="freeze"/></rect><text x="110" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第一步</text><text x="110" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">读题</text><text x="110" y="135" text-anchor="middle" fill="#7dd3fc" font-size="11">理解问题</text><rect x="250" y="70" width="140" height="80" rx="10" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="320" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第二步</text><text x="320" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">圈关键词</text><text x="320" y="135" text-anchor="middle" fill="#7dd3fc" font-size="11">标记要点</text><rect x="460" y="70" width="140" height="80" rx="10" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.8s" fill="freeze"/></rect><text x="530" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第三步</text><text x="530" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">回文定位</text><text x="530" y="135" text-anchor="middle" fill="#7dd3fc" font-size="11">找到答案</text><path d="M 180 110 Q 215 90 250 110" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="5 3"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.0s" fill="freeze"/></path><path d="M 390 110 Q 425 90 460 110" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="5 3"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></path><rect x="60" y="180" width="520" height="100" rx="12" fill="url(#purpleGrad)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.4s" fill="freeze"/></rect><text x="320" y="205" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">实例演示</text><rect x="80" y="215" width="120" height="50" rx="8" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.6s" fill="freeze"/></rect><text x="140" y="235" text-anchor="middle" fill="#e2e8f0" font-size="11">Q: Where is Amy?</text><text x="140" y="250" text-anchor="middle" fill="#7dd3fc" font-size="10">圈出关键词Amy</text><rect x="260" y="215" width="120" height="50" rx="8" fill="rgba(34,211,153,0.15)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></rect><text x="320" y="235" text-anchor="middle" fill="#e2e8f0" font-size="11">Amy is at school.</text><text x="320" y="250" text-anchor="middle" fill="#7dd3fc" font-size="10">文中找到Amy</text><rect x="440" y="215" width="120" height="50" rx="8" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.0s" fill="freeze"/></rect><text x="500" y="235" text-anchor="middle" fill="#e2e8f0" font-size="11">答案: at school</text><text x="500" y="250" text-anchor="middle" fill="#7dd3fc" font-size="10">提取答案信息</text><path d="M 200 240 L 260 240" stroke="#7dd3fc" stroke-width="2" marker-end="url(#blueArrow)" stroke-dasharray="4 2"><animate attributeName="stroke-dashoffset" from="12" to="0" dur="1s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.2s" fill="freeze"/></path><path d="M 380 240 L 440 240" stroke="#7dd3fc" stroke-width="2" marker-end="url(#blueArrow)" stroke-dasharray="4 2"><animate attributeName="stroke-dashoffset" from="12" to="0" dur="1s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></path><rect x="40" y="300" width="280" height="80" rx="10" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.6s" fill="freeze"/></rect><text x="180" y="325" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">常见误区</text><text x="180" y="345" text-anchor="middle" fill="#e2e8f0" font-size="12">凭感觉选择，不回原文核对</text><circle cx="80" cy="350" r="8" fill="#ef4444" opacity="0.6"><animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="0.6" dur="0.5s" begin="2.8s" fill="freeze"/></circle><text x="100" y="355" fill="#e2e8f0" font-size="11">错误方法</text><rect x="360" y="300" width="240" height="80" rx="10" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.0s" fill="freeze"/></rect><text x="480" y="325" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">练习题</text><text x="480" y="345" text-anchor="middle" fill="#e2e8f0" font-size="11">较好的第一步是？</text><text x="480" y="365" text-anchor="middle" fill="#7dd3fc" font-size="10">B. 先读问题再读文章找关键信息</text><circle cx="540" cy="350" r="6" fill="#34d399"><animate attributeName="r" values="6;9;6" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.2s" fill="freeze"/></circle><line x1="110" y1="150" x2="110" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.4s" fill="freeze"/></line><circle cx="110" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></circle><line x1="320" y1="150" x2="320" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.8s" fill="freeze"/></line><circle cx="320" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.0s" fill="freeze"/></circle><line x1="530" y1="150" x2="530" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></line><circle cx="530" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.4s" fill="freeze"/></circle><rect x="480" y="390" width="140" height="25" rx="4" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.6s" fill="freeze"/></rect><rect x="490" y="395" width="8" height="5" fill="#3b82f6"/><text x="505" y="402" fill="#e2e8f0" font-size="10">步骤流程</text><rect x="555" y="395" width="8" height="5" fill="#f59e0b"/><text x="570" y="402" fill="#e2e8f0" font-size="10">关键操作</text></svg></figure>
-
-</section>
-
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>把文章分成‘开头-经过-结尾’三部分</p></div><div class="tu-q"><h3>💡解释它</h3><p>用彩色笔标出时间、地点、人物关键信息</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>对比插图内容和文字描述是否一致</p></div><div class="tu-q"><h3>👁️看见它</h3><p>想象自己就是故事里的小主人公</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>如果故事发生在夏天会有什么不同？</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把人物对话当成作者观点</h3><p>✅ 用不同颜色标注对话和叙述</p><p>💡 混淆直接引用和转述</p></div><div class="tu-q"><h3>❌ 看到生词就查字典</h3><p>✅ 先画出生词前后3句话猜意思</p><p>💡 缺乏上下文意识</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>谁在哪里干什么，三步读懂小文章</p><p><strong>类比：</strong>读文章就像吃三明治，开头结尾是面包，中间馅料最丰富</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把人物对话当成作者观点</h3><p>✅ 用不同颜色标注对话和叙述</p><p>💡 混淆直接引用和转述</p></div><div class="tu-q"><h3>❌ 看到生词就查字典</h3><p>✅ 先画出生词前后3句话猜意思</p><p>💡 缺乏上下文意识</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>谁在哪里干什么，三步读懂小文章</p><p><strong>类比：</strong>读文章就像吃三明治，开头结尾是面包，中间馅料最丰富</p></div></section>
 
 <!-- ⭐ v7.7 标准独立连续音频模块 -->
 
 <script>window.__NAV_NODES__ = [{"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#22c55e"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#f59e0b"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#8b5cf6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#ef4444"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#06b6d4"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#ec4899"}, {"icon": "🎧", "label": "音频讲解", "target": "teachany-audio-player", "color": "#84cc16"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#3b82f6"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section data-bloom-level="apply" class="section" id="level1" data-slot="115">
+  <div class="mcq-wrapper">
+    <div class="mcq-title">✏️ 关卡1：选择题</div>
+    <div class="mcq-sub">根据文章内容，选择最佳答案！</div>
+    <div id="mcqItems"></div>
+    <button class="nav-btn" id="mcqSubmit" onclick="checkMCQ()" style="display:block;margin:0 auto">提交选择题 ✅</button>
+    <div class="mcq-progress">已选: <span id="mcqSelected">0</span>/5</div>
+  </div>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 找关键句</h2><div class="tu-q"><p><strong>And：</strong>学生能读懂简单英语短文</p><p><strong>But：</strong>但找不到问题对应的句子</p><p><strong>Therefore：</strong>教他们用关键词定位</p></div><div class="tu-q"><p>关键句就像藏宝图上的红叉叉！比如问"What color is Lucy's bag?"时，快速扫描文章找"Lucy"和"bag"出现的句子。看这个例子："Lucy has a red bag and blue shoes."（数字提示：只要读1个包含关键词的句子就能答对）</p></div><div class="tu-q"><p>🌍 就像妈妈让你从超市货架上找"草莓味酸奶"，你会直接看包装上画着草莓的瓶子，不用每瓶都打开尝。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>文章说"Tom gets up at 7:00",问题问"When does Tom wake up?"该选哪个？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选错说明没发现"gets up"和"wake up"是同一个意思">A. 7:00</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选错说明没发现"gets up"和"wake up"是同一个意思">B. 7:30</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选错说明没发现"gets up"和"wake up"是同一个意思">C. 6:30</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选错说明没发现"gets up"和"wake up"是同一个意思">D. 8:00</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 猜生词义</h2><div class="tu-q"><p><strong>And：</strong>学生知道基础词汇</p><p><strong>But：</strong>遇到生词就卡住</p><p><strong>Therefore：</strong>教联系上下文猜词</p></div><div class="tu-q"><p>生词就像拼图缺块，可以用周围图片补全！比如看到"The crocodile's scaly skin looks like fish scales."即使不认识"scaly"，通过"like fish scales"就能猜是"鳞状的"。重点看生词前后的解释（数字提示：约70%的生词可通过上下文破解）。</p></div><div class="tu-q"><p>🌍 就像你不知道"拍立得"是什么，但听说"马上出照片的相机"就懂了。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>文章说"Emma felt jubilant when she won the prize",jubilant的意思可能是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选错可能忽略了"won the prize"这个快乐线索">A. 开心的</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选错可能忽略了"won the prize"这个快乐线索">B. 惊讶的</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选错可能忽略了"won the prize"这个快乐线索">C. 困倦的</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选错可能忽略了"won the prize"这个快乐线索">D. 生气的</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 辨正误</h2><div class="tu-q"><p><strong>And：</strong>学生能理解字面意思</p><p><strong>But：</strong>容易掉入陷阱选项</p><p><strong>Therefore：</strong>教对比文章细节</p></div><div class="tu-q"><p>当侦探抓小偷要对比证据！比如文章说"There are 3 apples in the basket"但选项说"4 apples"就是错的，就算其他单词都一样。特别注意数字、颜色、否定词（not/no）这些陷阱高发区（数字提示：90%的错误选项会改动1-2个词）。</p></div><div class="tu-q"><p>🌍 就像妈妈说要买"圆形小西瓜"，如果超市只有椭圆形大西瓜就不能买。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>文章说"The library opens at 9am",哪个选项错误？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A或C可能没注意时态，选D是无关信息">A. opens at 9am</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A或C可能没注意时态，选D是无关信息">B. opens at 8am</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A或C可能没注意时态，选D是无关信息">C. The library is closed now</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A或C可能没注意时态，选D是无关信息">D. It's about library time</button></div><div class="tu-fb" hidden></div></div></section>
+<!-- LEVEL 2: SHORT ANSWER -->
+<section class="section" id="level2" data-slot="115">
+  <div class="sa-wrapper">
+    <div class="sa-title">💬 关卡2：简答题</div>
+    <div class="sa-sub">用英语完整回答问题！</div>
+    <div class="sa-items" id="saItems"></div>
+    <button class="sa-check" onclick="checkSA()">检查答案 ✅</button>
+    <div class="sa-result" id="saResult"></div>
+  </div>
+</section>
 
-<section class="ta-standard-section" id="teachany-audio-player">
+<!-- LEVEL 3: SUMMARY FILL -->
+<section class="section" id="level3" data-slot="115">
+  <div class="sum-wrapper">
+    <div class="sum-title">📝 关卡3：摘要填空</div>
+    <div class="sum-sub">从词库中选词，完成文章摘要！</div>
+    <div class="sum-skeleton" id="sumSkeleton"></div>
+    <div class="sum-word-pool" id="sumPool"></div>
+    <div class="sum-score-bar">
+      <div class="sum-score-label">完成度</div>
+      <div class="sum-score-track"><div class="sum-score-fill" id="sumFill" style="width:0%"></div></div>
+      <span id="sumCount" style="font-size:0.85rem;color:#888;min-width:40px">0/5</span>
+    </div>
+  </div>
+</section>
+
+<!-- BOSS -->
+<section class="ta-standard-section" id="teachany-audio-player" data-slot="120">
   <div data-teachany-audio>
     <script type="application/json" data-teachany-audio-playlist>
 [
@@ -1203,9 +1203,7 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   </div>
 </section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：Passage Questions</h2><div data-teachany-kg="eng-e-passage-questions"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
-
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 
@@ -1426,3 +1424,5 @@ function engeDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：Passage Questions</h2><div data-teachany-kg="eng-e-passage-questions"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-sound-properties-hero.png" alt="声音的特性（音调/响度/音色）：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,103 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出音调、响度、音色的定义及影响因素</p></div><div class="tu-q"><p>🎯 能判断生活现象中声音特性的变化原因</p></div><div class="tu-q"><p>🎯 能分析波形图中三特性的差异</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么吉他弦越细声音越尖？</p></div><div class="tu-q"><p>❓ 调大音量时到底改变了什么？</p></div><div class="tu-q"><p>❓ 怎么用手机测出不同乐器的音高？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 音调的秘密</h2><div class="tu-q"><p><strong>And：</strong>学生知道声音有高低不同</p><p><strong>But：</strong>不清楚是什么决定了音调高低</p><p><strong>Therefore：</strong>理解音调与频率的定量关系</p></div><div class="tu-q"><p>音调由声源振动频率决定，频率越高音调越高。比如吉他弦：粗弦每秒振动100次（100Hz）发低音，细弦每秒振动400次（400Hz）发高音。实验中用手机软件测出：敲击装满水的玻璃杯（水深12cm）频率280Hz，倒掉一半水后频率升到520Hz。</p></div><div class="tu-q"><p>🌍 生活中的例子：男生声音频率通常85-180Hz，女生165-255Hz；蚊子翅膀振动频率约600Hz，所以我们听到的是高音调的嗡嗡声。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>哪种情况音调会变高？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B是混淆了响度与音调，用力敲只会让声音变大">A. 吉他弦调紧</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B是混淆了响度与音调，用力敲只会让声音变大">B. 鼓皮敲重些</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B是混淆了响度与音调，用力敲只会让声音变大">C. 大钟换成小钟</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B是混淆了响度与音调，用力敲只会让声音变大">D. 大喊一声</button></div><div class="tu-fb" hidden></div></div></section>
+
+
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>为什么能分辨不同乐器？</h2>
 <p>音调、响度、音色分别与频率、振幅及波形特征相关。</p>
@@ -174,7 +270,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>声音的特性</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>产生</h3><p>振动发声</p></div><div class="mini-panel"><h3>传播</h3><p>需要介质</p></div><div class="mini-panel"><h3>特性/应用</h3><p>音调响度音色或控制</p></div></div>
@@ -188,7 +284,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -202,51 +298,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：按“三特性—三决定量”对号入座</h2>
-      <p>题目里出现“尖细、粗重”指音调，“大小、响亮”指响度，“听出是谁、是什么乐器”指音色。改变弦长、松紧改变的是频率即音调。</p>
-      <div class="worked-example"><strong>范例：</strong>同样用力敲大小两个音叉，小音叉振动频率高、音调高；用更大力敲同一音叉，振幅大、响度大。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把“声音大”当成音调高，混淆响度与音调。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>“闻其声而知其人”主要依据声音的哪个特性？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;不同人发声体结构不同，音色不同。&quot;)">A. 音调</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;不同人发声体结构不同，音色不同。&quot;)">B. 响度</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;不同人发声体结构不同，音色不同。&quot;)">C. 音色</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;不同人发声体结构不同，音色不同。&quot;)">D. 频率</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>用更大的力敲击同一个音叉，与原来相比？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;用力大只增大振幅，频率不变，故响度增大、音调不变。&quot;)">A. 音调升高，响度不变</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;用力大只增大振幅，频率不变，故响度增大、音调不变。&quot;)">B. 音调不变，响度增大</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;用力大只增大振幅，频率不变，故响度增大、音调不变。&quot;)">C. 音调和响度都升高</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;用力大只增大振幅，频率不变，故响度增大、音调不变。&quot;)">D. 音色改变</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>真空不能传声。</li><li>响度与距离、振幅有关。</li><li>噪声是干扰人们的声音。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-sound-properties-section2.png" alt="声音的特性对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：月球上两人面对面能直接交谈吗？</h2>
 <ol class="steps"><li>不能靠空气传声</li><li>真空不能传声</li><li>可用无线电等</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「声音的特性」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -274,75 +332,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>真空中</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 能传声</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 不能传声</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 传声更快</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 只传超声波</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>音调主要与</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 振幅</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 频率</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 音色波形细节</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 温度唯一</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 波动/声音相关</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" title="PhET · 波动/声音相关" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 调节频率与振幅，观察波形变化，对照音调响度。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>响度主要与</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 频率</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 振幅等</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 颜色</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电阻</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>区分乐器常用</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 音色</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 只有响度</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 只有音调</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 电压</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>控制噪声可</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 在声源/传播途径/人耳处采取措施</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只提高音量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 关掉所有光</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 增大摩擦必有效</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明声音的特性最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -458,110 +448,7 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么吉他弦越细声音越尖？</p></div><div class="tu-q"><p>❓ 调大音量时到底改变了什么？</p></div><div class="tu-q"><p>❓ 怎么用手机测出不同乐器的音高？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出音调、响度、音色的定义及影响因素</p></div><div class="tu-q"><p>🎯 能判断生活现象中声音特性的变化原因</p></div><div class="tu-q"><p>🎯 能分析波形图中三特性的差异</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 以为音量大音调就高</h3><p>✅ 演示：用同一音调改变音量</p><p>💡 混淆振幅与频率</p></div><div class="tu-q"><h3>❌ 认为音色是音量</h3><p>✅ 对比钢琴和小提琴同音调演奏</p><p>💡 生活用语误导</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>频率定调幅定响，波形形状定音色</p><p><strong>类比：</strong>音调像楼梯台阶高低，响度像人走路步子大小</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）如图示波器波形，说法正确的是</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D：未掌握波形疏密对应频率">A.甲音调比乙低</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D：未掌握波形疏密对应频率">B.甲响度比乙大</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D：未掌握波形疏密对应频率">C.两者音色相同</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D：未掌握波形疏密对应频率">D.乙频率更高</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>医生用听诊器主要改变了声音的</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选C：混淆声音放大与音色变化">A.音调</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选C：混淆声音放大与音色变化">B.响度</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选C：混淆声音放大与音色变化">C.音色</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选C：混淆声音放大与音色变化">D.传播速度</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>（迁移）智能音箱调节低音效果是改变</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A：未区分低频与小声概念">A.振幅</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A：未区分低频与小声概念">B.频率</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A：未区分低频与小声概念">C.波形</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A：未区分低频与小声概念">D.传播介质</button></div><div class="tu-fb" hidden></div></div></section>
-<script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
-<!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
-</section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
-
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 音调的秘密</h2><div class="tu-q"><p><strong>And：</strong>学生知道声音有高低不同</p><p><strong>But：</strong>不清楚是什么决定了音调高低</p><p><strong>Therefore：</strong>理解音调与频率的定量关系</p></div><div class="tu-q"><p>音调由声源振动频率决定，频率越高音调越高。比如吉他弦：粗弦每秒振动100次（100Hz）发低音，细弦每秒振动400次（400Hz）发高音。实验中用手机软件测出：敲击装满水的玻璃杯（水深12cm）频率280Hz，倒掉一半水后频率升到520Hz。</p></div><div class="tu-q"><p>🌍 生活中的例子：男生声音频率通常85-180Hz，女生165-255Hz；蚊子翅膀振动频率约600Hz，所以我们听到的是高音调的嗡嗡声。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>哪种情况音调会变高？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B是混淆了响度与音调，用力敲只会让声音变大">A. 吉他弦调紧</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B是混淆了响度与音调，用力敲只会让声音变大">B. 鼓皮敲重些</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B是混淆了响度与音调，用力敲只会让声音变大">C. 大钟换成小钟</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B是混淆了响度与音调，用力敲只会让声音变大">D. 大喊一声</button></div><div class="tu-fb" hidden></div></div></section>
-
-
-<section class="section teachany-upgrade-block" id="boost-1" data-bloom-level="understand" data-scaffold="full">
+<section class="section teachany-upgrade-block" id="boost-1" data-bloom-level="understand" data-scaffold="full" data-slot="35">
 <h2>🔍 声音的「指纹」破案记</h2>
 <p>你想想看，为什么闭着眼睛听脚步声就能认出妈妈？秘密藏在音色里！音色就像声音的指纹，由声波的「附加小振动」决定。科学家发现，所有物体发声时，除了主要振动（基频），还会产生多个微弱振动（泛音）。这些泛音的强弱组合就像调色盘——长笛的高频泛音多，听起来清脆；大鼓的低频泛音强，感觉浑厚。说白了，基频决定音调高低，泛音配方决定音色特点。就连同一把小提琴，用塑料弦和羊肠弦的音色也不同，因为材料改变了泛音「配方」呢！</p>
 <p><strong>生活实例：</strong>疫情期间的电话流调就用到了音色识别。工作人员通过电话沟通时，即使对方故意改变音调，声纹识别系统仍能通过分析2000-4000Hz范围内的泛音特征，像验指纹一样确认身份。你接到的95开头的银行客服电话，系统也是靠这个技术防伪的。</p>
@@ -573,7 +460,7 @@ D. 传播速度
 正确答案：C
 解析：优质瓷器内部结构均匀，敲击时泛音丰富和谐；有裂纹的瓷器泛音杂乱。这就像鉴别西瓜生熟时，好瓜的音色浑厚，闷瓜的音色单薄，靠的是音色中的泛音信息，与音调高低无关。</div>
 </section>
-<section class="section teachany-upgrade-block" id="boost-2" data-bloom-level="understand" data-scaffold="full">
+<section class="section teachany-upgrade-block" id="boost-2" data-bloom-level="understand" data-scaffold="full" data-slot="35">
 <h2>🎚️ 分贝计里的身体警报</h2>
 <p>来做个实验：把手机分贝计对准电风扇，距离从10cm拉到1m——咦？数值减半但听起来只轻了一点？这是因为响度（主观感受）和声强（客观测量）是对数关系！每增加10分贝，声强实际增大10倍。你的耳膜超智能，把万亿倍的声强压缩成可感知的120分贝范围。但小心，60分贝的谈话声让你舒适，85分贝的吸尘器听半小时就会引发耳蜗毛细胞「罢工」，它们可不会像眼睛那样闭眼休息！</p>
 <p><strong>生活实例：</strong>Apple Watch的噪声APP在检测到90分贝环境时会震动提醒，这相当于地铁进站时的噪音。持续暴露在这个环境下，就像用100瓦灯泡烤耳朵，30分钟就会触发内耳自我保护机制——暂时性听力阈移（TTS），让你突然觉得世界变安静了，其实是听力受损的前兆！</p>
@@ -589,9 +476,120 @@ D. 出口处：75分贝（背景音）
 <script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-sound-generation", "name": "phy-m-sound-generation"}], "current": {"id": "phy-m-sound-properties", "name": "声音的特性：从实验现象到变量关系", "status": "active"}, "extends": []};
 // auto-injected standard graph data</script>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：声音的特性</h2><div data-teachany-kg="phy-m-sound-properties"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：按“三特性—三决定量”对号入座</h2>
+      <p>题目里出现“尖细、粗重”指音调，“大小、响亮”指响度，“听出是谁、是什么乐器”指音色。改变弦长、松紧改变的是频率即音调。</p>
+      <div class="worked-example"><strong>范例：</strong>同样用力敲大小两个音叉，小音叉振动频率高、音调高；用更大力敲同一音叉，振幅大、响度大。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把“声音大”当成音调高，混淆响度与音调。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>“闻其声而知其人”主要依据声音的哪个特性？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;不同人发声体结构不同，音色不同。&quot;)">A. 音调</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;不同人发声体结构不同，音色不同。&quot;)">B. 响度</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;不同人发声体结构不同，音色不同。&quot;)">C. 音色</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;不同人发声体结构不同，音色不同。&quot;)">D. 频率</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>用更大的力敲击同一个音叉，与原来相比？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;用力大只增大振幅，频率不变，故响度增大、音调不变。&quot;)">A. 音调升高，响度不变</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;用力大只增大振幅，频率不变，故响度增大、音调不变。&quot;)">B. 音调不变，响度增大</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;用力大只增大振幅，频率不变，故响度增大、音调不变。&quot;)">C. 音调和响度都升高</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;用力大只增大振幅，频率不变，故响度增大、音调不变。&quot;)">D. 音色改变</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
+</section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）如图示波器波形，说法正确的是</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D：未掌握波形疏密对应频率">A.甲音调比乙低</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D：未掌握波形疏密对应频率">B.甲响度比乙大</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D：未掌握波形疏密对应频率">C.两者音色相同</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D：未掌握波形疏密对应频率">D.乙频率更高</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>医生用听诊器主要改变了声音的</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选C：混淆声音放大与音色变化">A.音调</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选C：混淆声音放大与音色变化">B.响度</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选C：混淆声音放大与音色变化">C.音色</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选C：混淆声音放大与音色变化">D.传播速度</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>（迁移）智能音箱调节低音效果是改变</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A：未区分低频与小声概念">A.振幅</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A：未区分低频与小声概念">B.频率</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A：未区分低频与小声概念">C.波形</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A：未区分低频与小声概念">D.传播介质</button></div><div class="tu-fb" hidden></div></div></section>
+<script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
+<!-- 课程导览图（互动画布） -->
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>真空不能传声。</li><li>响度与距离、振幅有关。</li><li>噪声是干扰人们的声音。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-sound-properties-section2.png" alt="声音的特性对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>响度主要与</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 频率</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 振幅等</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 颜色</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电阻</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>区分乐器常用</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 音色</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 只有响度</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 只有音调</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 电压</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 以为音量大音调就高</h3><p>✅ 演示：用同一音调改变音量</p><p>💡 混淆振幅与频率</p></div><div class="tu-q"><h3>❌ 认为音色是音量</h3><p>✅ 对比钢琴和小提琴同音调演奏</p><p>💡 生活用语误导</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>频率定调幅定响，波形形状定音色</p><p><strong>类比：</strong>音调像楼梯台阶高低，响度像人走路步子大小</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 波动/声音相关</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" title="PhET · 波动/声音相关" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 调节频率与振幅，观察波形变化，对照音调响度。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
+
+
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>真空中</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 能传声</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 不能传声</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 传声更快</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 只传超声波</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>音调主要与</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 振幅</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 频率</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 音色波形细节</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 温度唯一</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>控制噪声可</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 在声源/传播途径/人耳处采取措施</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只提高音量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 关掉所有光</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 增大摩擦必有效</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明声音的特性最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -624,3 +622,5 @@ function phymDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：声音的特性</h2><div data-teachany-kg="phy-m-sound-properties"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

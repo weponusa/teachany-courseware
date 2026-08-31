@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-motion-description-hero.png" alt="机械运动：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,105 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "phy-m-motion-description", "name": "机械运动：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出参照物的定义并举例说明</p></div><div class="tu-q"><p>🎯 能判断物体运动状态并说明参照物</p></div><div class="tu-q"><p>🎯 能计算匀速直线运动的速度和路程</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么说坐在车里看窗外会觉得树在往后跑？</p></div><div class="tu-q"><p>❓ 怎么判断操场上的同学是静止还是运动的？</p></div><div class="tu-q"><p>❓ 跑步时说我速度是5m/s到底什么意思？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 运动与静止</h2><div class="tu-q"><p><strong>And：</strong>学生知道日常物体的移动现象</p><p><strong>But：</strong>难以说清判断运动的标准</p><p><strong>Therefore：</strong>建立参照系的核心概念</p></div><div class="tu-q"><p>机械运动的本质是位置变化。必须选定参照物才能判断运动状态。例如：教室里的黑板相对教室墙壁是静止的（位置未变），但相对行驶中的校车却是运动的（位置持续改变）。关键要明确‘相对于谁’来判断。</p></div><div class="tu-q"><p>🌍 地铁进站时，站台上的人看到车厢在运动（以站台为参照），车厢里的乘客却感觉自己是静止的（以车厢为参照）。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>判断正误："月亮在云层中穿行"是以云为参照物</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能忽略了日常描述隐含的参照系">正确</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能忽略了日常描述隐含的参照系">错误</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能忽略了日常描述隐含的参照系">无法确定</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能忽略了日常描述隐含的参照系">需更多信息</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>怎样判断物体在运动还是静止？</h2>
 <p>机械运动是物体位置变化。运动和静止是相对的，需选参照物；还要区分速度等描述量。</p>
@@ -174,7 +272,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>机械运动</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>参照物</h3><p>被选作标准的物体</p></div><div class="mini-panel"><h3>相对性</h3><p>相对不同参照物结论可能不同</p></div><div class="mini-panel"><h3>速度</h3><p>描述快慢</p></div></div>
@@ -188,7 +286,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -202,51 +300,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：先定参照物，再统一单位</h2>
-      <p>判断某物体是否运动，先问“相对谁”。计算速度时务必把路程和时间换算成配套单位，最后再按需要换算 m/s 与 km/h。</p>
-      <div class="worked-example"><strong>范例：</strong>百米跑用时 20 s 跑完 100 m，v = 100/20 = 5 m/s = 5×3.6 = 18 km/h。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是不说明参照物就断言物体运动或静止，以及 m/s 与 km/h 换算时乘除颠倒。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>坐在行驶的列车中的乘客说自己是静止的，他选择的参照物是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;相对车厢乘客位置不变，故为静止。&quot;)">A. 路旁的树</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;相对车厢乘客位置不变，故为静止。&quot;)">B. 列车车厢</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;相对车厢乘客位置不变，故为静止。&quot;)">C. 地面</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;相对车厢乘客位置不变，故为静止。&quot;)">D. 迎面驶来的车</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>某人 20 s 跑完 100 m，他的平均速度约为？</p>
-        <button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;v = 100/20 = 5 m/s，×3.6 得 18 km/h。&quot;)">A. 5 m/s，合 18 km/h</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;v = 100/20 = 5 m/s，×3.6 得 18 km/h。&quot;)">B. 5 m/s，合 1.4 km/h</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;v = 100/20 = 5 m/s，×3.6 得 18 km/h。&quot;)">C. 20 m/s，合 72 km/h</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;v = 100/20 = 5 m/s，×3.6 得 18 km/h。&quot;)">D. 2 m/s，合 7.2 km/h</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>未选参照物就说运动无意义。</li><li>参照物默认地面要心中有数。</li><li>速度方向与大小。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-motion-description-section2.png" alt="机械运动对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：乘客相对车厢静止、相对地面运动</h2>
 <ol class="steps"><li>选车厢为参照物→静止</li><li>选地面→运动</li><li>结论依赖参照物</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「机械运动」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -274,75 +334,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>坐车时路边树“向后”是因为</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 选车厢为参照物</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 树真的在倒退走路</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 没有参照物</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 光速变化</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>运动和静止是</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 绝对的</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 相对的</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 无法研究</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 只对光成立</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 力与运动基础</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html" title="PhET · 力与运动基础" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 拖动物体观察运动，体会描述运动需要参照。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>速度描述</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">A. 快慢</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">B. 质量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 温度</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电荷</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>选不同参照物</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 结论可能不同</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 结论一定相同</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 物体消失</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 质量改变</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>描述航班运动常选</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 地面/地球</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 随意一片云必唯一</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 电子</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 磁感线</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明机械运动最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -458,116 +450,122 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么说坐在车里看窗外会觉得树在往后跑？</p></div><div class="tu-q"><p>❓ 怎么判断操场上的同学是静止还是运动的？</p></div><div class="tu-q"><p>❓ 跑步时说我速度是5m/s到底什么意思？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出参照物的定义并举例说明</p></div><div class="tu-q"><p>🎯 能判断物体运动状态并说明参照物</p></div><div class="tu-q"><p>🎯 能计算匀速直线运动的速度和路程</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为地面是绝对静止的</h3><p>✅ 强调参照物可任意选择</p><p>💡 日常经验固化思维</p></div><div class="tu-q"><h3>❌ 混淆平均速度和瞬时速度</h3><p>✅ 用跑步计时案例演示区别</p><p>💡 概念理解表面化</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>动与静，看参照；速度路程除时间</p><p><strong>类比：</strong>像电梯里看楼层变化，判断谁在动</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）甲看路标后退，乙看甲静止，则乙的运动状态是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="相对运动分析不全面">A.静止</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="相对运动分析不全面">B.与甲同速同向</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="相对运动分析不全面">C.与甲反向运动</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="相对运动分析不全面">D.变速运动</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>飞机匀速飞行时，乘客竖直抛起硬币会？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="惯性原理应用错误">A.落在后方</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="惯性原理应用错误">B.落回手中</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="惯性原理应用错误">C.向前飞去</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="惯性原理应用错误">D.向上悬浮</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="D"><h3>后测题 3</h3><p>迁移：两列火车并排停靠，突然感觉自己在动，可能是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="相对运动情景单一化">A.我们的车启动了</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="相对运动情景单一化">B.旁边的车开动了</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="相对运动情景单一化">C.两车同时启动</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="相对运动情景单一化">D.以上都可能</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 运动与静止</h2><div class="tu-q"><p><strong>And：</strong>学生知道日常物体的移动现象</p><p><strong>But：</strong>难以说清判断运动的标准</p><p><strong>Therefore：</strong>建立参照系的核心概念</p></div><div class="tu-q"><p>机械运动的本质是位置变化。必须选定参照物才能判断运动状态。例如：教室里的黑板相对教室墙壁是静止的（位置未变），但相对行驶中的校车却是运动的（位置持续改变）。关键要明确‘相对于谁’来判断。</p></div><div class="tu-q"><p>🌍 地铁进站时，站台上的人看到车厢在运动（以站台为参照），车厢里的乘客却感觉自己是静止的（以车厢为参照）。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>判断正误："月亮在云层中穿行"是以云为参照物</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能忽略了日常描述隐含的参照系">正确</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能忽略了日常描述隐含的参照系">错误</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能忽略了日常描述隐含的参照系">无法确定</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能忽略了日常描述隐含的参照系">需更多信息</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 运动的测量</h2><div class="tu-q"><p><strong>And：</strong>学生已理解参照系概念</p><p><strong>But：</strong>不知如何定量描述运动</p><p><strong>Therefore：</strong>引入位移与路程的测量方法</p></div><div class="tu-q"><p>用位置变化量（位移）描述运动效果。位移是矢量，包含大小和方向。例如：操场跑一圈回到起点，位移为0（位置未变），但路程是400米（跑道长度）。测量时需要明确起点、终点和计时点。</p></div><div class="tu-q"><p>🌍 外卖员APP显示的‘距您500米’是直线位移，实际骑行可能绕行800米。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>小明绕边长10m的正方形跑道跑两圈，他的位移是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D可能混淆了路程和位移概念">0m</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D可能混淆了路程和位移概念">20m</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D可能混淆了路程和位移概念">40m</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D可能混淆了路程和位移概念">80m</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 运动快慢</h2><div class="tu-q"><p><strong>And：</strong>学生能比较物体快慢</p><p><strong>But：</strong>缺乏科学量化方法</p><p><strong>Therefore：</strong>建立速度的计算模型</p></div><div class="tu-q"><p>速度=位移/时间，反映运动快慢和方向。例如：高铁3小时行驶900公里（向北），速度是300km/h（北）。平均速度看总位移，瞬时速度看某一时刻。要注意单位统一（如m/s或km/h）。</p></div><div class="tu-q"><p>🌍 台风预警中的‘移速20km/h’指台风中心每小时移动距离。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>汽车仪表盘显示"80km/h"属于：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能将长途导航均速与实时车速混淆">瞬时速度</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能将长途导航均速与实时车速混淆">平均速度</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能将长途导航均速与实时车速混淆">加速度</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能将长途导航均速与实时车速混淆">位移</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 运动的测量</h2><div class="tu-q"><p><strong>And：</strong>学生已理解参照系概念</p><p><strong>But：</strong>不知如何定量描述运动</p><p><strong>Therefore：</strong>引入位移与路程的测量方法</p></div><div class="tu-q"><p>用位置变化量（位移）描述运动效果。位移是矢量，包含大小和方向。例如：操场跑一圈回到起点，位移为0（位置未变），但路程是400米（跑道长度）。测量时需要明确起点、终点和计时点。</p></div><div class="tu-q"><p>🌍 外卖员APP显示的‘距您500米’是直线位移，实际骑行可能绕行800米。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>小明绕边长10m的正方形跑道跑两圈，他的位移是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D可能混淆了路程和位移概念">0m</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D可能混淆了路程和位移概念">20m</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D可能混淆了路程和位移概念">40m</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D可能混淆了路程和位移概念">80m</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 运动快慢</h2><div class="tu-q"><p><strong>And：</strong>学生能比较物体快慢</p><p><strong>But：</strong>缺乏科学量化方法</p><p><strong>Therefore：</strong>建立速度的计算模型</p></div><div class="tu-q"><p>速度=位移/时间，反映运动快慢和方向。例如：高铁3小时行驶900公里（向北），速度是300km/h（北）。平均速度看总位移，瞬时速度看某一时刻。要注意单位统一（如m/s或km/h）。</p></div><div class="tu-q"><p>🌍 台风预警中的‘移速20km/h’指台风中心每小时移动距离。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>汽车仪表盘显示"80km/h"属于：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能将长途导航均速与实时车速混淆">瞬时速度</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能将长途导航均速与实时车速混淆">平均速度</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能将长途导航均速与实时车速混淆">加速度</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能将长途导航均速与实时车速混淆">位移</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：先定参照物，再统一单位</h2>
+      <p>判断某物体是否运动，先问“相对谁”。计算速度时务必把路程和时间换算成配套单位，最后再按需要换算 m/s 与 km/h。</p>
+      <div class="worked-example"><strong>范例：</strong>百米跑用时 20 s 跑完 100 m，v = 100/20 = 5 m/s = 5×3.6 = 18 km/h。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是不说明参照物就断言物体运动或静止，以及 m/s 与 km/h 换算时乘除颠倒。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>坐在行驶的列车中的乘客说自己是静止的，他选择的参照物是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;相对车厢乘客位置不变，故为静止。&quot;)">A. 路旁的树</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;相对车厢乘客位置不变，故为静止。&quot;)">B. 列车车厢</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;相对车厢乘客位置不变，故为静止。&quot;)">C. 地面</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;相对车厢乘客位置不变，故为静止。&quot;)">D. 迎面驶来的车</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>某人 20 s 跑完 100 m，他的平均速度约为？</p>
+        <button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;v = 100/20 = 5 m/s，×3.6 得 18 km/h。&quot;)">A. 5 m/s，合 18 km/h</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;v = 100/20 = 5 m/s，×3.6 得 18 km/h。&quot;)">B. 5 m/s，合 1.4 km/h</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;v = 100/20 = 5 m/s，×3.6 得 18 km/h。&quot;)">C. 20 m/s，合 72 km/h</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;v = 100/20 = 5 m/s，×3.6 得 18 km/h。&quot;)">D. 2 m/s，合 7.2 km/h</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）甲看路标后退，乙看甲静止，则乙的运动状态是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="相对运动分析不全面">A.静止</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="相对运动分析不全面">B.与甲同速同向</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="相对运动分析不全面">C.与甲反向运动</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="相对运动分析不全面">D.变速运动</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>飞机匀速飞行时，乘客竖直抛起硬币会？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="惯性原理应用错误">A.落在后方</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="惯性原理应用错误">B.落回手中</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="惯性原理应用错误">C.向前飞去</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="惯性原理应用错误">D.向上悬浮</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="D"><h3>后测题 3</h3><p>迁移：两列火车并排停靠，突然感觉自己在动，可能是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="相对运动情景单一化">A.我们的车启动了</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="相对运动情景单一化">B.旁边的车开动了</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="相对运动情景单一化">C.两车同时启动</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="相对运动情景单一化">D.以上都可能</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>未选参照物就说运动无意义。</li><li>参照物默认地面要心中有数。</li><li>速度方向与大小。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-motion-description-section2.png" alt="机械运动对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>速度描述</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">A. 快慢</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">B. 质量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 温度</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电荷</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>选不同参照物</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 结论可能不同</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 结论一定相同</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 物体消失</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 质量改变</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为地面是绝对静止的</h3><p>✅ 强调参照物可任意选择</p><p>💡 日常经验固化思维</p></div><div class="tu-q"><h3>❌ 混淆平均速度和瞬时速度</h3><p>✅ 用跑步计时案例演示区别</p><p>💡 概念理解表面化</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>动与静，看参照；速度路程除时间</p><p><strong>类比：</strong>像电梯里看楼层变化，判断谁在动</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 力与运动基础</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html" title="PhET · 力与运动基础" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 拖动物体观察运动，体会描述运动需要参照。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/forces-and-motion-basics/latest/forces-and-motion-basics_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
 
 
-<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "phy-m-motion-description", "name": "机械运动：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>坐车时路边树“向后”是因为</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 选车厢为参照物</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 树真的在倒退走路</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 没有参照物</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 光速变化</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>运动和静止是</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 绝对的</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 相对的</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 无法研究</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 只对光成立</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：机械运动</h2><div data-teachany-kg="phy-m-motion-description"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>描述航班运动常选</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 地面/地球</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 随意一片云必唯一</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 电子</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 磁感线</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明机械运动最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -600,3 +598,5 @@ function phymDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：机械运动</h2><div data-teachany-kg="phy-m-motion-description"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

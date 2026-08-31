@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-sound-generation-hero.png" alt="声音的产生与传播：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,105 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "phy-m-sound-generation", "name": "声音的产生与传播：从实验现象到变量关系", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出声音由物体振动产生，并能列举3种以上发声实例</p></div><div class="tu-q"><p>🎯 能判断不同介质中声音传播速度的快慢，正确排序固体&gt;液体&gt;气体</p></div><div class="tu-q"><p>🎯 能分析简单情境中声音传播现象（如回声、隔墙听音）的物理原理</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么敲桌子能听见声音，敲棉花却听不见？</p></div><div class="tu-q"><p>❓ 声音在真空中真的不能传播吗？那宇航员怎么交流？</p></div><div class="tu-q"><p>❓ 为什么雷声比闪电慢，但平时说话感觉声音和嘴型同步？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 振动产生声</h2><div class="tu-q"><p><strong>And：</strong>学生知道拍手、说话能发声</p><p><strong>But：</strong>为什么敲桌子时看不见振动却能听见声音？</p><p><strong>Therefore：</strong>建立振动与声音的因果关系</p></div><div class="tu-q"><p>声音是由物体振动产生的，振动频率在20-20000Hz内人耳才能听见。比如敲击音叉时，叉臂每秒振动440次（440Hz），带动周围空气振动形成声波。振动幅度决定响度，频率决定音调。实验可用撒了盐的鼓面观察振动。</p></div><div class="tu-q"><p>🌍 手机播放音乐时，用手摸扬声器会感到麻——这是振膜在快速振动；蚊子翅膀每秒拍动600次，发出嗡嗡声。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>以下哪种现象说明发声体在振动？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误将传播现象当振动证据">A. 水面被音叉激起水花</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误将传播现象当振动证据">B. 雷声传到远处变弱</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误将传播现象当振动证据">C. 捂住耳朵听不见声音</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误将传播现象当振动证据">D. 真空罩内闹钟不响</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>敲桌子为什么能听见？</h2>
 <p>声音由振动产生，需要介质传播；真空不能传声。</p>
@@ -174,7 +272,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>声音的产生与传播</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>产生</h3><p>振动发声</p></div><div class="mini-panel"><h3>传播</h3><p>需要介质</p></div><div class="mini-panel"><h3>特性/应用</h3><p>音调响度音色或控制</p></div></div>
@@ -188,7 +286,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="深化追问">
+<section class="slide-page" data-page-type="content" data-tsh="深化追问" data-slot="35">
   <section class="section phym-depth core-knowledge-module" id="module-depth"
     data-bloom-level="analyze" data-scaffold="partial" data-tts="module-depth">
     <div class="card">
@@ -207,7 +305,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -221,51 +319,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：先判介质，再用 v = s/t</h2>
-      <p>计算与声速有关的问题先确认介质与温度，再套 s = vt。回声测距要注意声音走的是往返路程，单程距离要除以 2。</p>
-      <div class="worked-example"><strong>范例：</strong>看到闪电后 3 s 听到雷声，闪电传播时间可忽略，距离 ≈ 340 m/s × 3 s = 1020 m。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是认为宇宙中也能听到爆炸声，或回声测距时忘记除以 2。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>宇航员在月球表面无法直接对话，原因是？</p>
-        <button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;声的传播需要介质，真空中无法传声。&quot;)">A. 月球上没有空气，真空不能传声</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;声的传播需要介质，真空中无法传声。&quot;)">B. 月球上声速太快</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;声的传播需要介质，真空中无法传声。&quot;)">C. 宇航服太厚</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;声的传播需要介质，真空中无法传声。&quot;)">D. 月球上没有振动</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>看到闪电后经过 3 s 听到雷声，声速取 340 m/s，打雷处约有多远？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt = 340×3 = 1020 m，光传播时间可忽略。&quot;)">A. 113 m</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt = 340×3 = 1020 m，光传播时间可忽略。&quot;)">B. 340 m</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt = 340×3 = 1020 m，光传播时间可忽略。&quot;)">C. 680 m</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt = 340×3 = 1020 m，光传播时间可忽略。&quot;)">D. 1020 m</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>真空不能传声。</li><li>响度与距离、振幅有关。</li><li>噪声是干扰人们的声音。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-sound-generation-section2.png" alt="声音的产生与传播对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：月球上两人面对面能直接交谈吗？</h2>
 <ol class="steps"><li>不能靠空气传声</li><li>真空不能传声</li><li>可用无线电等</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「声音的产生与传播」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -293,75 +353,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>真空中</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 能传声</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 不能传声</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 传声更快</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 只传超声波</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>音调主要与</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 振幅</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 频率</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 音色波形细节</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 温度唯一</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 波动/声音相关</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" title="PhET · 波动/声音相关" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 调节频率与振幅，观察波形变化，对照音调响度。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>响度主要与</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 频率</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 振幅等</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 颜色</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电阻</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>区分乐器常用</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 音色</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 只有响度</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 只有音调</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 电压</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>控制噪声可</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 在声源/传播途径/人耳处采取措施</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只提高音量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 关掉所有光</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 增大摩擦必有效</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明声音的产生与传播最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -477,116 +469,122 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么敲桌子能听见声音，敲棉花却听不见？</p></div><div class="tu-q"><p>❓ 声音在真空中真的不能传播吗？那宇航员怎么交流？</p></div><div class="tu-q"><p>❓ 为什么雷声比闪电慢，但平时说话感觉声音和嘴型同步？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出声音由物体振动产生，并能列举3种以上发声实例</p></div><div class="tu-q"><p>🎯 能判断不同介质中声音传播速度的快慢，正确排序固体&gt;液体&gt;气体</p></div><div class="tu-q"><p>🎯 能分析简单情境中声音传播现象（如回声、隔墙听音）的物理原理</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为声音传播不需要时间</h3><p>✅ 测量百米外敲鼓的声光到达时间差</p><p>💡 日常对话中声速过快难以察觉延迟</p></div><div class="tu-q"><h3>❌ 误以为真空能传声</h3><p>✅ 对比电铃在玻璃罩内抽气前后的声音变化实验</p><p>💡 科幻电影中太空爆炸声效误导</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>物体振动才发声，固液气体都能传，真空绝对静悄悄</p><p><strong>类比：</strong>声波像人浪，观众（介质）不动浪（声音）就停</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）将正在发声的手机放入密封玻璃瓶，抽气过程中听到声音逐渐减弱，是因为：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未理解实验本质是验证介质对传声的影响">A.手机振动停止</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未理解实验本质是验证介质对传声的影响">B.介质不断减少</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未理解实验本质是验证介质对传声的影响">C.声波频率改变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未理解实验本质是验证介质对传声的影响">D.瓶体吸收声能</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="A"><h3>后测题 2</h3><p>（迁移题）医生用叩诊锤检查病人腹部时，主要利用声音的：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未联系不同脏器密度变化会导致振动频率（音调）改变">A.音调差异</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未联系不同脏器密度变化会导致振动频率（音调）改变">B.响度大小</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未联系不同脏器密度变化会导致振动频率（音调）改变">C.音色特征</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未联系不同脏器密度变化会导致振动频率（音调）改变">D.传播速度</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="D"><h3>后测题 3</h3><p>（实验题）要验证'发声体在振动'，最直接的观察方法是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未掌握放大微小振动的实验方法">A.测量声音大小</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未掌握放大微小振动的实验方法">B.触摸感受振动</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未掌握放大微小振动的实验方法">C.用示波器检测</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未掌握放大微小振动的实验方法">D.观察溅起水花</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 振动产生声</h2><div class="tu-q"><p><strong>And：</strong>学生知道拍手、说话能发声</p><p><strong>But：</strong>为什么敲桌子时看不见振动却能听见声音？</p><p><strong>Therefore：</strong>建立振动与声音的因果关系</p></div><div class="tu-q"><p>声音是由物体振动产生的，振动频率在20-20000Hz内人耳才能听见。比如敲击音叉时，叉臂每秒振动440次（440Hz），带动周围空气振动形成声波。振动幅度决定响度，频率决定音调。实验可用撒了盐的鼓面观察振动。</p></div><div class="tu-q"><p>🌍 手机播放音乐时，用手摸扬声器会感到麻——这是振膜在快速振动；蚊子翅膀每秒拍动600次，发出嗡嗡声。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>以下哪种现象说明发声体在振动？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误将传播现象当振动证据">A. 水面被音叉激起水花</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误将传播现象当振动证据">B. 雷声传到远处变弱</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误将传播现象当振动证据">C. 捂住耳朵听不见声音</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误将传播现象当振动证据">D. 真空罩内闹钟不响</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 介质传声波</h2><div class="tu-q"><p><strong>And：</strong>学生知道声音需要通过空气传播</p><p><strong>But：</strong>为什么固体传播声音比空气快？</p><p><strong>Therefore：</strong>理解不同介质中声速差异的本质</p></div><div class="tu-q"><p>声音传播需要介质（固/液/气），介质粒子越紧密传播越快。15℃时空气中声速340m/s，水中约1500m/s，钢铁中高达5200m/s。例如将耳朵贴铁轨可提前10秒听到远处火车声——固体传声快且能量损失少。真空不能传声因缺少振动粒子。</p></div><div class="tu-q"><p>🌍 潜水时能清晰听见同伴敲击氧气瓶；古代士兵趴地听马蹄声判断敌情。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>将正在响铃的闹钟放入玻璃罩抽气，声音变化说明：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆介质消失与传播过程">A. 真空不能传声</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆介质消失与传播过程">B. 声音传播需要时间</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆介质消失与传播过程">C. 玻璃隔绝了声音</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆介质消失与传播过程">D. 闹钟振动减弱</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 变量测声音</h2><div class="tu-q"><p><strong>And：</strong>学生能用大小/高低描述声音</p><p><strong>But：</strong>如何用仪器量化声音特征？</p><p><strong>Therefore：</strong>建立可测量变量与感知的联系</p></div><div class="tu-q"><p>声音可测量变量：1. 响度（分贝dB）——振幅决定，正常说话约60dB；2. 音调（赫兹Hz）——频率决定，男声平均120Hz，女声220Hz。用示波器可看到：敲鼓声波幅宽但稀疏（低频大响度），吹笛声波密集但幅窄（高频小响度）。</p></div><div class="tu-q"><p>🌍 KTV里的分贝仪会提示音量超标；调音软件能显示演唱音准偏差多少Hz。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>用同一力度敲大鼓和小锣，示波器显示哪个波形幅更大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误将频率特征当作振幅判断">A. 大鼓-振幅大响度大</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误将频率特征当作振幅判断">B. 小锣-频率高音调高</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误将频率特征当作振幅判断">C. 两者相同</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误将频率特征当作振幅判断">D. 无法比较</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 介质传声波</h2><div class="tu-q"><p><strong>And：</strong>学生知道声音需要通过空气传播</p><p><strong>But：</strong>为什么固体传播声音比空气快？</p><p><strong>Therefore：</strong>理解不同介质中声速差异的本质</p></div><div class="tu-q"><p>声音传播需要介质（固/液/气），介质粒子越紧密传播越快。15℃时空气中声速340m/s，水中约1500m/s，钢铁中高达5200m/s。例如将耳朵贴铁轨可提前10秒听到远处火车声——固体传声快且能量损失少。真空不能传声因缺少振动粒子。</p></div><div class="tu-q"><p>🌍 潜水时能清晰听见同伴敲击氧气瓶；古代士兵趴地听马蹄声判断敌情。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>将正在响铃的闹钟放入玻璃罩抽气，声音变化说明：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆介质消失与传播过程">A. 真空不能传声</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆介质消失与传播过程">B. 声音传播需要时间</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆介质消失与传播过程">C. 玻璃隔绝了声音</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆介质消失与传播过程">D. 闹钟振动减弱</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 变量测声音</h2><div class="tu-q"><p><strong>And：</strong>学生能用大小/高低描述声音</p><p><strong>But：</strong>如何用仪器量化声音特征？</p><p><strong>Therefore：</strong>建立可测量变量与感知的联系</p></div><div class="tu-q"><p>声音可测量变量：1. 响度（分贝dB）——振幅决定，正常说话约60dB；2. 音调（赫兹Hz）——频率决定，男声平均120Hz，女声220Hz。用示波器可看到：敲鼓声波幅宽但稀疏（低频大响度），吹笛声波密集但幅窄（高频小响度）。</p></div><div class="tu-q"><p>🌍 KTV里的分贝仪会提示音量超标；调音软件能显示演唱音准偏差多少Hz。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>用同一力度敲大鼓和小锣，示波器显示哪个波形幅更大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误将频率特征当作振幅判断">A. 大鼓-振幅大响度大</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误将频率特征当作振幅判断">B. 小锣-频率高音调高</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误将频率特征当作振幅判断">C. 两者相同</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误将频率特征当作振幅判断">D. 无法比较</button></div><div class="tu-fb" hidden></div></div></section>
 <script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：先判介质，再用 v = s/t</h2>
+      <p>计算与声速有关的问题先确认介质与温度，再套 s = vt。回声测距要注意声音走的是往返路程，单程距离要除以 2。</p>
+      <div class="worked-example"><strong>范例：</strong>看到闪电后 3 s 听到雷声，闪电传播时间可忽略，距离 ≈ 340 m/s × 3 s = 1020 m。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是认为宇宙中也能听到爆炸声，或回声测距时忘记除以 2。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>宇航员在月球表面无法直接对话，原因是？</p>
+        <button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;声的传播需要介质，真空中无法传声。&quot;)">A. 月球上没有空气，真空不能传声</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;声的传播需要介质，真空中无法传声。&quot;)">B. 月球上声速太快</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;声的传播需要介质，真空中无法传声。&quot;)">C. 宇航服太厚</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;声的传播需要介质，真空中无法传声。&quot;)">D. 月球上没有振动</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>看到闪电后经过 3 s 听到雷声，声速取 340 m/s，打雷处约有多远？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt = 340×3 = 1020 m，光传播时间可忽略。&quot;)">A. 113 m</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt = 340×3 = 1020 m，光传播时间可忽略。&quot;)">B. 340 m</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt = 340×3 = 1020 m，光传播时间可忽略。&quot;)">C. 680 m</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt = 340×3 = 1020 m，光传播时间可忽略。&quot;)">D. 1020 m</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）将正在发声的手机放入密封玻璃瓶，抽气过程中听到声音逐渐减弱，是因为：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未理解实验本质是验证介质对传声的影响">A.手机振动停止</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未理解实验本质是验证介质对传声的影响">B.介质不断减少</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未理解实验本质是验证介质对传声的影响">C.声波频率改变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未理解实验本质是验证介质对传声的影响">D.瓶体吸收声能</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A"><h3>后测题 2</h3><p>（迁移题）医生用叩诊锤检查病人腹部时，主要利用声音的：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未联系不同脏器密度变化会导致振动频率（音调）改变">A.音调差异</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未联系不同脏器密度变化会导致振动频率（音调）改变">B.响度大小</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未联系不同脏器密度变化会导致振动频率（音调）改变">C.音色特征</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未联系不同脏器密度变化会导致振动频率（音调）改变">D.传播速度</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="D"><h3>后测题 3</h3><p>（实验题）要验证'发声体在振动'，最直接的观察方法是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未掌握放大微小振动的实验方法">A.测量声音大小</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未掌握放大微小振动的实验方法">B.触摸感受振动</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未掌握放大微小振动的实验方法">C.用示波器检测</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未掌握放大微小振动的实验方法">D.观察溅起水花</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>真空不能传声。</li><li>响度与距离、振幅有关。</li><li>噪声是干扰人们的声音。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-sound-generation-section2.png" alt="声音的产生与传播对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>响度主要与</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 频率</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 振幅等</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 颜色</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电阻</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>区分乐器常用</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 音色</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 只有响度</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 只有音调</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 电压</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为声音传播不需要时间</h3><p>✅ 测量百米外敲鼓的声光到达时间差</p><p>💡 日常对话中声速过快难以察觉延迟</p></div><div class="tu-q"><h3>❌ 误以为真空能传声</h3><p>✅ 对比电铃在玻璃罩内抽气前后的声音变化实验</p><p>💡 科幻电影中太空爆炸声效误导</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>物体振动才发声，固液气体都能传，真空绝对静悄悄</p><p><strong>类比：</strong>声波像人浪，观众（介质）不动浪（声音）就停</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 波动/声音相关</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" title="PhET · 波动/声音相关" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 调节频率与振幅，观察波形变化，对照音调响度。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
 
 
-<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "phy-m-sound-generation", "name": "声音的产生与传播：从实验现象到变量关系", "status": "active"}, "extends": []};
-// auto-injected standard graph data</script>
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>真空中</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 能传声</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 不能传声</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 传声更快</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 只传超声波</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>音调主要与</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 振幅</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 频率</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 音色波形细节</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 温度唯一</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：声音的产生与传播</h2><div data-teachany-kg="phy-m-sound-generation"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>控制噪声可</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 在声源/传播途径/人耳处采取措施</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只提高音量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 关掉所有光</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 增大摩擦必有效</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明声音的产生与传播最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -620,3 +618,5 @@ function pmDepthCheck(button, isCorrect, feedbackId, explanation) {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：声音的产生与传播</h2><div data-teachany-kg="phy-m-sound-generation"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

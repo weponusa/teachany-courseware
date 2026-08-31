@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-electric-motor-hero.png" alt="电动机原理：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,101 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出通电线圈在磁场中受力的方向判断方法</p></div><div class="tu-q"><p>🎯 能分析电动机转速与电压、磁场强度的定量关系</p></div><div class="tu-q"><p>🎯 能判断电动机卡住时电流异常增大的原因</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么电风扇转着转着会变慢？</p></div><div class="tu-q"><p>❓ 电动机里的线圈为啥不会转着转着缠在一起？</p></div><div class="tu-q"><p>❓ 调大电压后，电动机转速到底怎么变？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 磁场与电流</h2><div class="tu-q"><p><strong>And：</strong>学生知道磁铁能吸铁</p><p><strong>But：</strong>不清楚电流也能产生磁场</p><p><strong>Therefore：</strong>建立电与磁的关联</p></div><div class="tu-q"><p>通电导线周围存在磁场，这叫电流的磁效应。比如用5号电池给线圈通电，旁边的小磁针会偏转30度，说明产生了磁场。磁场方向用右手定则判断：拇指指向电流方向，四指弯曲方向就是磁场环绕方向。</p></div><div class="tu-q"><p>🌍 电磁起重机就是利用这个原理，通电时产生强磁场吸起废铁，断电时磁场消失放下废铁。工地搬运5吨重的钢材全靠它。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下列哪个现象说明电流产生磁场？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B只涉及永磁体，选C是静电现象，选D是热效应">A.通电后指南针偏转</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B只涉及永磁体，选C是静电现象，选D是热效应">B.磁铁吸引铁钉</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B只涉及永磁体，选C是静电现象，选D是热效应">C.摩擦后的塑料尺吸纸屑</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B只涉及永磁体，选C是静电现象，选D是热效应">D.热水袋发热</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>为什么通电线圈在磁场中会转动？</h2>
 <p>通电导线在磁场中受力，线圈因而转动。电动机把电能转化为机械能，换向器使转动持续。</p>
@@ -174,7 +268,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>电动机</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>受力</h3><p>磁场对电流有力</p></div><div class="mini-panel"><h3>转动</h3><p>线圈持续转动</p></div><div class="mini-panel"><h3>转化</h3><p>电能→机械能</p></div></div>
@@ -188,7 +282,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="深化追问">
+<section class="slide-page" data-page-type="content" data-tsh="深化追问" data-slot="35">
   <section class="section phym-depth core-knowledge-module" id="module-depth"
     data-bloom-level="analyze" data-scaffold="partial" data-tts="module-depth">
     <div class="card">
@@ -207,7 +301,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -221,51 +315,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：先判能量转化，再算效率</h2>
-      <p>看到“通电后转动”想到磁场对电流的作用；看到“转动后产生电流”想到电磁感应。电动机效率 = 输出机械功率 ÷ 输入电功率。</p>
-      <div class="worked-example"><strong>范例：</strong>电动机接在 220 V 电源上，电流 5 A，输入电功率 P = UI = 1100 W；若输出机械功率 1000 W，则效率约为 91%。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把电动机原理说成电磁感应，实际上电磁感应是发电机的原理。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>电动机工作时的能量转化是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电动机把电能转化为机械能。&quot;)">A. 机械能转化为电能</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;电动机把电能转化为机械能。&quot;)">B. 电能转化为机械能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电动机把电能转化为机械能。&quot;)">C. 内能转化为电能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电动机把电能转化为机械能。&quot;)">D. 电能全部转化为内能</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>某电动机接在 220 V 电路中，电流为 5 A，其输入电功率为？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;P = UI = 220×5 = 1100 W。&quot;)">A. 44 W</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;P = UI = 220×5 = 1100 W。&quot;)">B. 225 W</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;P = UI = 220×5 = 1100 W。&quot;)">C. 1100 W</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;P = UI = 220×5 = 1100 W。&quot;)">D. 4400 W</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>电动机需要电能输入。</li><li>换向器改变线圈电流方向。</li><li>与发电机过程相反。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-electric-motor-section2.png" alt="电动机对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：电动机突然卡住仍通电，可能？</h2>
 <ol class="steps"><li>电流偏大发热</li><li>有烧毁风险</li><li>应有保护措施</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「电动机」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -293,75 +349,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>通电导线在磁场中</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 一定不受力</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 可能受力</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 质量变大</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 一定发光</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>换向器作用主要是</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 增大电阻</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 改变电流方向维持转动</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 产生静电</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 测量电压</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 电磁感应/电磁相关</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" title="PhET · 电磁感应/电磁相关" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 结合磁场与电流关系，理解电机受力转动的基础。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>电动机与发电机</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 完全相同过程</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 能量转化方向相反</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 都只靠摩擦</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 都无需磁场</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>电机卡住仍通电危险在于</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 电流过大发热</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 电压变为零</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 磁场消失无害</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 功率必为负</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>电风扇主要是</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 电动机</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 发电机</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 变压器</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 验电器</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明电动机最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -477,116 +465,126 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么电风扇转着转着会变慢？</p></div><div class="tu-q"><p>❓ 电动机里的线圈为啥不会转着转着缠在一起？</p></div><div class="tu-q"><p>❓ 调大电压后，电动机转速到底怎么变？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出通电线圈在磁场中受力的方向判断方法</p></div><div class="tu-q"><p>🎯 能分析电动机转速与电压、磁场强度的定量关系</p></div><div class="tu-q"><p>🎯 能判断电动机卡住时电流异常增大的原因</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为换向器是供电装置</h3><p>✅ 换向器是周期性改变电流方向的机械开关</p><p>💡 将换向器与电刷功能混淆</p></div><div class="tu-q"><h3>❌ 认为转速与电流成正比</h3><p>✅ 实际转速由电压和磁场强度共同决定</p><p>💡 混淆欧姆定律在电动机中的适用条件</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>左手定则判方向，电压磁场定转速</p><p><strong>类比：</strong>像秋千，推得越用力（电压），荡得越高（转速）</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）电动机卡住时电流增大的原因是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A者混淆了欧姆定律适用条件">A.电阻突然减小</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A者混淆了欧姆定律适用条件">B.反电动势消失</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A者混淆了欧姆定律适用条件">C.换向器故障</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A者混淆了欧姆定律适用条件">D.磁极反转</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>电动玩具车加速时，电动机内部变化正确的是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A者未理解转速与换向频率的关系">A.换向频率降低</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A者未理解转速与换向频率的关系">B.线圈受力增大</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A者未理解转速与换向频率的关系">C.磁铁极性翻转</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A者未理解转速与换向频率的关系">D.电刷接触面积减小</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>若将电动机磁铁强度增为2倍，线圈匝数减半，则转速？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选其他选项者未掌握转速公式n=kU/NB">A.变为4倍</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选其他选项者未掌握转速公式n=kU/NB">B.基本不变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选其他选项者未掌握转速公式n=kU/NB">C.减半</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选其他选项者未掌握转速公式n=kU/NB">D.变为1/4</button></div><div class="tu-fb" hidden></div></div></section>
-<script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
-<!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
-</section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
-
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 磁场与电流</h2><div class="tu-q"><p><strong>And：</strong>学生知道磁铁能吸铁</p><p><strong>But：</strong>不清楚电流也能产生磁场</p><p><strong>Therefore：</strong>建立电与磁的关联</p></div><div class="tu-q"><p>通电导线周围存在磁场，这叫电流的磁效应。比如用5号电池给线圈通电，旁边的小磁针会偏转30度，说明产生了磁场。磁场方向用右手定则判断：拇指指向电流方向，四指弯曲方向就是磁场环绕方向。</p></div><div class="tu-q"><p>🌍 电磁起重机就是利用这个原理，通电时产生强磁场吸起废铁，断电时磁场消失放下废铁。工地搬运5吨重的钢材全靠它。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下列哪个现象说明电流产生磁场？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B只涉及永磁体，选C是静电现象，选D是热效应">A.通电后指南针偏转</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B只涉及永磁体，选C是静电现象，选D是热效应">B.磁铁吸引铁钉</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B只涉及永磁体，选C是静电现象，选D是热效应">C.摩擦后的塑料尺吸纸屑</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B只涉及永磁体，选C是静电现象，选D是热效应">D.热水袋发热</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 线圈转起来</h2><div class="tu-q"><p><strong>And：</strong>知道磁铁会吸引/排斥</p><p><strong>But：</strong>不明白如何让线圈持续转动</p><p><strong>Therefore：</strong>理解电动机基本结构</p></div><div class="tu-q"><p>通电线圈在磁场中会受到安培力。比如用两节电池给边长5cm的方形线圈供电，放在U形磁铁中，线圈两边受力方向相反，形成旋转力矩。但转到平衡位置时会停住，需要换向器（两个半圆铜环）每转半圈就改变电流方向，这样线圈就能连续转15圈/分钟。</p></div><div class="tu-q"><p>🌍 玩具四驱车的130型电动机，就是靠换向器让转子每分钟空转1万2千转，带动齿轮组让小车跑出8km/h的速度。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>电动机换向器的作用是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B需要增强磁铁，选C需换粗导线，选D是电容器功能">A.每半圈改变电流方向</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B需要增强磁铁，选C需换粗导线，选D是电容器功能">B.增大磁场强度</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B需要增强磁铁，选C需换粗导线，选D是电容器功能">C.降低线圈电阻</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B需要增强磁铁，选C需换粗导线，选D是电容器功能">D.储存多余电能</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 变量控制</h2><div class="tu-q"><p><strong>And：</strong>观察到电动机转速会变化</p><p><strong>But：</strong>不知道具体受哪些因素影响</p><p><strong>Therefore：</strong>掌握可测量变量的关系</p></div><div class="tu-q"><p>通过实验发现：当电压从3V升到6V时，转速从1000转/分提高到2000转/分（正比关系）；用强磁铁替换弱磁铁，同样电压下转速提高50%；线圈匝数从50匝增到100匝，转速却降低到原来的1/4（因为电阻增大导致电流减小）。这说明转速与电压、磁场强度成正比，与线圈电阻成反比。</p></div><div class="tu-q"><p>🌍 电动车调速就是通过控制器改变电压，比如48V电动车调到60V模式，最高时速能从25km/h提升到35km/h。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下列哪项不会让电动机加速？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="增加匝数会增大电阻降低电流，选BCD都能直接提高转速">A.增加线圈匝数</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="增加匝数会增大电阻降低电流，选BCD都能直接提高转速">B.换更强磁铁</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="增加匝数会增大电阻降低电流，选BCD都能直接提高转速">C.提高电源电压</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="增加匝数会增大电阻降低电流，选BCD都能直接提高转速">D.减少轴承摩擦</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 线圈转起来</h2><div class="tu-q"><p><strong>And：</strong>知道磁铁会吸引/排斥</p><p><strong>But：</strong>不明白如何让线圈持续转动</p><p><strong>Therefore：</strong>理解电动机基本结构</p></div><div class="tu-q"><p>通电线圈在磁场中会受到安培力。比如用两节电池给边长5cm的方形线圈供电，放在U形磁铁中，线圈两边受力方向相反，形成旋转力矩。但转到平衡位置时会停住，需要换向器（两个半圆铜环）每转半圈就改变电流方向，这样线圈就能连续转15圈/分钟。</p></div><div class="tu-q"><p>🌍 玩具四驱车的130型电动机，就是靠换向器让转子每分钟空转1万2千转，带动齿轮组让小车跑出8km/h的速度。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>电动机换向器的作用是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B需要增强磁铁，选C需换粗导线，选D是电容器功能">A.每半圈改变电流方向</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B需要增强磁铁，选C需换粗导线，选D是电容器功能">B.增大磁场强度</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B需要增强磁铁，选C需换粗导线，选D是电容器功能">C.降低线圈电阻</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B需要增强磁铁，选C需换粗导线，选D是电容器功能">D.储存多余电能</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 变量控制</h2><div class="tu-q"><p><strong>And：</strong>观察到电动机转速会变化</p><p><strong>But：</strong>不知道具体受哪些因素影响</p><p><strong>Therefore：</strong>掌握可测量变量的关系</p></div><div class="tu-q"><p>通过实验发现：当电压从3V升到6V时，转速从1000转/分提高到2000转/分（正比关系）；用强磁铁替换弱磁铁，同样电压下转速提高50%；线圈匝数从50匝增到100匝，转速却降低到原来的1/4（因为电阻增大导致电流减小）。这说明转速与电压、磁场强度成正比，与线圈电阻成反比。</p></div><div class="tu-q"><p>🌍 电动车调速就是通过控制器改变电压，比如48V电动车调到60V模式，最高时速能从25km/h提升到35km/h。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下列哪项不会让电动机加速？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="增加匝数会增大电阻降低电流，选BCD都能直接提高转速">A.增加线圈匝数</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="增加匝数会增大电阻降低电流，选BCD都能直接提高转速">B.换更强磁铁</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="增加匝数会增大电阻降低电流，选BCD都能直接提高转速">C.提高电源电压</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="增加匝数会增大电阻降低电流，选BCD都能直接提高转速">D.减少轴承摩擦</button></div><div class="tu-fb" hidden></div></div></section>
 
 <script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-electromagnetism-basic", "name": "phy-m-electromagnetism-basic"}], "current": {"id": "phy-m-electric-motor", "name": "电动机原理：从实验现象到变量关系", "status": "active"}, "extends": []};
 // auto-injected standard graph data</script>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：电动机原理</h2><div data-teachany-kg="phy-m-electric-motor"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：先判能量转化，再算效率</h2>
+      <p>看到“通电后转动”想到磁场对电流的作用；看到“转动后产生电流”想到电磁感应。电动机效率 = 输出机械功率 ÷ 输入电功率。</p>
+      <div class="worked-example"><strong>范例：</strong>电动机接在 220 V 电源上，电流 5 A，输入电功率 P = UI = 1100 W；若输出机械功率 1000 W，则效率约为 91%。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把电动机原理说成电磁感应，实际上电磁感应是发电机的原理。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>电动机工作时的能量转化是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电动机把电能转化为机械能。&quot;)">A. 机械能转化为电能</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;电动机把电能转化为机械能。&quot;)">B. 电能转化为机械能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电动机把电能转化为机械能。&quot;)">C. 内能转化为电能</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;电动机把电能转化为机械能。&quot;)">D. 电能全部转化为内能</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>某电动机接在 220 V 电路中，电流为 5 A，其输入电功率为？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;P = UI = 220×5 = 1100 W。&quot;)">A. 44 W</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;P = UI = 220×5 = 1100 W。&quot;)">B. 225 W</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;P = UI = 220×5 = 1100 W。&quot;)">C. 1100 W</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;P = UI = 220×5 = 1100 W。&quot;)">D. 4400 W</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
+</section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）电动机卡住时电流增大的原因是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A者混淆了欧姆定律适用条件">A.电阻突然减小</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A者混淆了欧姆定律适用条件">B.反电动势消失</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A者混淆了欧姆定律适用条件">C.换向器故障</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A者混淆了欧姆定律适用条件">D.磁极反转</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>电动玩具车加速时，电动机内部变化正确的是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A者未理解转速与换向频率的关系">A.换向频率降低</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A者未理解转速与换向频率的关系">B.线圈受力增大</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A者未理解转速与换向频率的关系">C.磁铁极性翻转</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A者未理解转速与换向频率的关系">D.电刷接触面积减小</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>若将电动机磁铁强度增为2倍，线圈匝数减半，则转速？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选其他选项者未掌握转速公式n=kU/NB">A.变为4倍</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选其他选项者未掌握转速公式n=kU/NB">B.基本不变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选其他选项者未掌握转速公式n=kU/NB">C.减半</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选其他选项者未掌握转速公式n=kU/NB">D.变为1/4</button></div><div class="tu-fb" hidden></div></div></section>
+<script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
+<!-- 课程导览图（互动画布） -->
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>电动机需要电能输入。</li><li>换向器改变线圈电流方向。</li><li>与发电机过程相反。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-electric-motor-section2.png" alt="电动机对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>电动机与发电机</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 完全相同过程</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 能量转化方向相反</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 都只靠摩擦</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 都无需磁场</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>电机卡住仍通电危险在于</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 电流过大发热</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 电压变为零</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 磁场消失无害</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 功率必为负</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为换向器是供电装置</h3><p>✅ 换向器是周期性改变电流方向的机械开关</p><p>💡 将换向器与电刷功能混淆</p></div><div class="tu-q"><h3>❌ 认为转速与电流成正比</h3><p>✅ 实际转速由电压和磁场强度共同决定</p><p>💡 混淆欧姆定律在电动机中的适用条件</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>左手定则判方向，电压磁场定转速</p><p><strong>类比：</strong>像秋千，推得越用力（电压），荡得越高（转速）</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 电磁感应/电磁相关</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" title="PhET · 电磁感应/电磁相关" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 结合磁场与电流关系，理解电机受力转动的基础。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/faradays-law/latest/faradays-law_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
+
+
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>通电导线在磁场中</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 一定不受力</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 可能受力</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 质量变大</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 一定发光</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>换向器作用主要是</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 增大电阻</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 改变电流方向维持转动</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 产生静电</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 测量电压</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>电风扇主要是</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 电动机</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 发电机</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 变压器</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 验电器</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明电动机最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -620,3 +618,5 @@ function pmDepthCheck(button, isCorrect, feedbackId, explanation) {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：电动机原理</h2><div data-teachany-kg="phy-m-electric-motor"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+

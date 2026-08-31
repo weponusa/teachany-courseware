@@ -153,7 +153,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
-<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/phy-m-sound-applications-hero.png" alt="声的利用（超声/次声）：从实验现象到变量关系知识结构（无字）" loading="eager">
@@ -162,7 +162,101 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
 </section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境">
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
+<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
+<span style="opacity:.4">·</span>
+<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
+<span style="opacity:.4">·</span>
+<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
+<span style="opacity:.4">·</span>
+<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
+<span style="opacity:.4">·</span>
+<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
+<span style="opacity:.4">·</span>
+<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
+<span style="opacity:.4">·</span>
+<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
+<span style="opacity:.4">·</span>
+<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
+
+<h2>🗺️ 课程导览图</h2>
+<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
+<div style="text-align:center;margin:10px 0;">
+  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
+</div>
+<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
+  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
+</div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出超声与次声在医疗、工业中的典型应用场景</p></div><div class="tu-q"><p>🎯 能判断具体情境中声波类型及利用原理</p></div><div class="tu-q"><p>🎯 能分析声波参数（频率/强度）与利用效果的关系</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么B超能看见肚子里的小宝宝？</p></div><div class="tu-q"><p>❓ 次声波真的能让人难受吗？</p></div><div class="tu-q"><p>❓ 超声波洗眼镜和普通水洗有啥不一样？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 超声探伤</h2><div class="tu-q"><p><strong>And：</strong>学生知道声音能传递信息</p><p><strong>But：</strong>不理解如何把无形声波转化为检测数据</p><p><strong>Therefore：</strong>掌握超声波检测的物理量转化原理</p></div><div class="tu-q"><p>超声波频率超过20000Hz，具有强穿透性。当它在金属中传播遇到裂纹时，部分声波会被反射（回声），其余继续传播。通过测量发射与接收回声的时间差Δt（如0.004秒），结合声在钢中速度v=5000m/s，用公式s=v×Δt/2算出裂纹深度10米。例如检测铁轨时，设备显示3.2ms的延迟，说明内部8米处有损伤。</p></div><div class="tu-q"><p>🌍 4S店保养时，技师用超声探头扫描发动机缸体，屏幕出现红色斑块的位置就是内部裂纹，就像给金属做'B超'。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>检测铝板时超声波往返用时0.002秒，铝中声速3000m/s，裂纹深度是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="忘记除以2：往返时间是单程的两倍">A.3米</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="忘记除以2：往返时间是单程的两倍">B.6米</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="忘记除以2：往返时间是单程的两倍">C.1.5米</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="忘记除以2：往返时间是单程的两倍">D.0.3米</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
 <section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>B超是怎样“看见”的？</h2>
 <p>超声波/次声波的应用与危害，回声定位等。</p>
@@ -174,7 +268,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心">
+<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
 <section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>声的利用</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>产生</h3><p>振动发声</p></div><div class="mini-panel"><h3>传播</h3><p>需要介质</p></div><div class="mini-panel"><h3>特性/应用</h3><p>音调响度音色或控制</p></div></div>
@@ -188,7 +282,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 </div></section></section>
 
 
-<section class="slide-page" data-page-type="content" data-tsh="精讲">
+<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
   <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
@@ -202,51 +296,13 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 </section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
-      <span class="phase-tag">方法与范例</span>
-      <h2>方法：先判信息还是能量，再算往返</h2>
-      <p>判断依据是“获取了什么”：得到位置、图像属信息；使物体发生变化属能量。测距计算统一用 s = vt/2。</p>
-      <div class="worked-example"><strong>范例：</strong>声呐测海深：超声波往返用时 4 s，海水中声速 1500 m/s，深度 = 1500×4÷2 = 3000 m。</div>
-      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把超声碎石归为“传递信息”，或测距时用往返总路程当作深度。</p>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 1：概念辨析</h3>
-        <p>下列应用中，主要利用声传递能量的是？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;清洗依靠超声波振动带来的能量。&quot;)">A. B 超检查身体</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;清洗依靠超声波振动带来的能量。&quot;)">B. 声呐探测鱼群</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;清洗依靠超声波振动带来的能量。&quot;)">C. 超声波清洗眼镜</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;清洗依靠超声波振动带来的能量。&quot;)">D. 回声定位测距</button>
-        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
-      </div>
-      <div class="module-check" data-conceptest="true">
-        <h3>马上练 2：计算应用</h3>
-        <p>声呐向海底发射超声波，4 s 后收到回波，海水中声速 1500 m/s，海深为？</p>
-        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt/2 = 1500×4÷2 = 3000 m。&quot;)">A. 1500 m</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt/2 = 1500×4÷2 = 3000 m。&quot;)">B. 3000 m</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt/2 = 1500×4÷2 = 3000 m。&quot;)">C. 6000 m</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt/2 = 1500×4÷2 = 3000 m。&quot;)">D. 375 m</button>
-        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
-      </div>
-    </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>真空不能传声。</li><li>响度与距离、振幅有关。</li><li>噪声是干扰人们的声音。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-sound-applications-section2.png" alt="声的利用对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题">
+<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
 <section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
 <h2>例：月球上两人面对面能直接交谈吗？</h2>
 <ol class="steps"><li>不能靠空气传声</li><li>真空不能传声</li><li>可用无线电等</li></ol>
 </div></section></section>
 
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
 <h2>调参数，观察与「声的利用」相关的变化</h2>
 <div class="control-row">
 <label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
@@ -274,75 +330,7 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 
 
 
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
-<h2>先过关</h2>
-<div class="practice-block"><h3>1</h3><p>真空中</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 能传声</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 不能传声</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 传声更快</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 只传超声波</button>
-<div id="l1a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>2</h3><p>音调主要与</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 振幅</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 频率</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 音色波形细节</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 温度唯一</button>
-<div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 波动/声音相关</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" title="PhET · 波动/声音相关" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 调节频率与振幅，观察波形变化，对照音调响度。</p>
-    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>响度主要与</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 频率</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 振幅等</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 颜色</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电阻</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>区分乐器常用</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 音色</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 只有响度</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 只有音调</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 电压</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
-<h2>迁移与产出</h2>
-<div class="practice-block"><h3>5</h3><p>控制噪声可</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 在声源/传播途径/人耳处采取措施</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只提高音量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 关掉所有光</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 增大摩擦必有效</button>
-<div id="l3a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>开放产出</h3>
-<p>用三句话说明声的利用最重要的一条规律，并举一例。</p>
-<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
-<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
-<div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结">
+<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
 <section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
 <span class="phase-tag">小结清单</span>
 <h2>这节课你应能做到</h2>
@@ -458,108 +446,7 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么B超能看见肚子里的小宝宝？</p></div><div class="tu-q"><p>❓ 次声波真的能让人难受吗？</p></div><div class="tu-q"><p>❓ 超声波洗眼镜和普通水洗有啥不一样？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出超声与次声在医疗、工业中的典型应用场景</p></div><div class="tu-q"><p>🎯 能判断具体情境中声波类型及利用原理</p></div><div class="tu-q"><p>🎯 能分析声波参数（频率/强度）与利用效果的关系</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 以为超声和次声是人耳听不见的普通声波</h3><p>✅ 超声频率＞20000Hz，次声＜20Hz，普通声波在20-20000Hz之间</p><p>💡 混淆频率范围定义</p></div><div class="tu-q"><h3>❌ 认为月球上真空能传声</h3><p>✅ 真空不能传声，需通过无线电通讯</p><p>💡 忽视介质必要性</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>超声高频看得细，次声低频传得远</p><p><strong>类比：</strong>超声像绣花针精准，次声像大鼓声传千里</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（升学题）渔船声呐系统向海底发射超声波，若2s后收到回声，海水传声速度1500m/s，海底深度约为？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未理解回声时间含往返路程">A.750m</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未理解回声时间含往返路程">B.1500m</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未理解回声时间含往返路程">C.3000m</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未理解回声时间含往返路程">D.6000m</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）清洗精密零件时，以下哪种参数组合效果最好？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未建立频率-强度与清洗效果的关联">A.低频+低强度</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未建立频率-强度与清洗效果的关联">B.高频+高强度</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未建立频率-强度与清洗效果的关联">C.低频+高强度</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未建立频率-强度与清洗效果的关联">D.高频+低强度</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>（现象解释）火山爆发前动物焦躁不安，可能与哪种声波有关？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未联系次声波的生物效应">A.可听声波</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未联系次声波的生物效应">B.超声波</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未联系次声波的生物效应">C.次声波</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未联系次声波的生物效应">D.电磁波</button></div><div class="tu-fb" hidden></div></div></section>
-<script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
-<!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map">
-<nav style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;padding:10px;border-radius:12px;background:rgba(15,23,42,.35);font-size:14px"><a href="#anchor" style="color:#60a5fa;text-decoration:none">🧭 带问题学</a>
-<span style="opacity:.4">·</span>
-<a href="#objectives" style="color:#60a5fa;text-decoration:none">🎯 学习目标</a>
-<span style="opacity:.4">·</span>
-<a href="#pretest" style="color:#60a5fa;text-decoration:none">📝 前测</a>
-<span style="opacity:.4">·</span>
-<a href="#deep-understanding" style="color:#60a5fa;text-decoration:none">🔍 深层理解</a>
-<span style="opacity:.4">·</span>
-<a href="#error-clinic" style="color:#60a5fa;text-decoration:none">⚠️ 易错诊所</a>
-<span style="opacity:.4">·</span>
-<a href="#posttest" style="color:#60a5fa;text-decoration:none">✅ 后测</a>
-<span style="opacity:.4">·</span>
-<a href="#memory-anchor" style="color:#60a5fa;text-decoration:none">🧠 记忆锚点</a>
-<span style="opacity:.4">·</span>
-<a href="#knowledge-graph" style="color:#60a5fa;text-decoration:none">🗺️ 知识图谱</a></nav>
-
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
-</section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
-
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 超声探伤</h2><div class="tu-q"><p><strong>And：</strong>学生知道声音能传递信息</p><p><strong>But：</strong>不理解如何把无形声波转化为检测数据</p><p><strong>Therefore：</strong>掌握超声波检测的物理量转化原理</p></div><div class="tu-q"><p>超声波频率超过20000Hz，具有强穿透性。当它在金属中传播遇到裂纹时，部分声波会被反射（回声），其余继续传播。通过测量发射与接收回声的时间差Δt（如0.004秒），结合声在钢中速度v=5000m/s，用公式s=v×Δt/2算出裂纹深度10米。例如检测铁轨时，设备显示3.2ms的延迟，说明内部8米处有损伤。</p></div><div class="tu-q"><p>🌍 4S店保养时，技师用超声探头扫描发动机缸体，屏幕出现红色斑块的位置就是内部裂纹，就像给金属做'B超'。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>检测铝板时超声波往返用时0.002秒，铝中声速3000m/s，裂纹深度是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="忘记除以2：往返时间是单程的两倍">A.3米</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="忘记除以2：往返时间是单程的两倍">B.6米</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="忘记除以2：往返时间是单程的两倍">C.1.5米</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="忘记除以2：往返时间是单程的两倍">D.0.3米</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" id="boost-1" data-bloom-level="understand" data-scaffold="full">
+<section class="section teachany-upgrade-block" id="boost-1" data-bloom-level="understand" data-scaffold="full" data-slot="35">
 <h2>🔍 超声探伤：工业界的"听诊器"</h2>
 <p>同学们，你们知道医生用听诊器能听到心跳声，但工程师怎么"听"出金属内部的裂纹呢？这就要用到超声探伤技术了。超声波的频率超过2万赫兹，穿透力极强，遇到材料内部缺陷时会发生反射。工程师用探头发出超声波，再接收回波，通过分析回波时间差和强度变化，就能像X光片一样"看见"物体内部结构。说白了，这和蝙蝠用回声定位是一个原理，只不过人类用电子设备放大了这种能力。你想想，为什么不用普通声波？因为波长太长，分辨率不够，就像用粗笔画不出细节一样。</p>
 <p><strong>生活实例：</strong>上海中心大厦的钢结构焊接时，工人会用超声探伤仪扫描焊缝。仪器屏幕上出现异常波形时，说明可能有气泡或裂缝，必须重新焊接。2020年港珠澳大桥检测中，超声发现某段钢箱梁有2毫米深的隐形裂纹，及时避免了重大安全隐患。</p>
@@ -571,7 +458,7 @@ D. 观察树木年轮
 正确答案：C
 解析：超声探伤的优势在于检测不透明物体内部缺陷（C对）。表面划痕（A）肉眼可见，气压（B）用压力表测量，年轮（D）可切开观察。涡轮叶片在高温高压下工作，内部微裂纹会引发断裂，必须用超声波无损检测。</div>
 </section>
-<section class="section teachany-upgrade-block" id="boost-2" data-bloom-level="understand" data-scaffold="full">
+<section class="section teachany-upgrade-block" id="boost-2" data-bloom-level="understand" data-scaffold="full" data-slot="35">
 <h2>🌊 次声波：大自然的"隐形信使"</h2>
 <p>刚才我们聊了高频超声波，现在来看看频率低于20赫兹的次声波。这种声波波长特别长，能绕开障碍物传播上千公里，能量衰减很小。火山喷发、地震、核爆炸都会产生强烈次声波，国际禁止核试验组织就是靠全球次声监测站来发现违规核试验的。你想想，为什么台风来临前动物会焦躁不安？因为台风旋转时会产生8-13赫兹的次声波，这个频率正好和许多动物的内脏共振。说白了，次声波就像大自然的电报系统，只是人类耳朵听不见罢了。</p>
 <p><strong>生活实例：</strong>2022年汤加火山大喷发时，全球气压计都记录到持续36小时的次声波动。我国广州气象站监测到频率0.01赫兹的次声波，比声速还早15分钟抵达，为海啸预警争取了宝贵时间。</p>
@@ -583,7 +470,7 @@ D. 能远距离传播且穿透力强
 正确答案：D
 解析：次声波频率低导致波长长，能绕过障碍（D对）。人类听阈下限20赫兹（A错），次声波传播损耗小（B错），反而能穿透建筑物（C错）。利用这个特性可监测地震等灾害。</div>
 </section>
-<section class="section teachany-upgrade-block" id="boost-3" data-bloom-level="understand" data-scaffold="full">
+<section class="section teachany-upgrade-block" id="boost-3" data-bloom-level="understand" data-scaffold="full" data-slot="35">
 <h2>⚡ 声能转化：让声音"打工"的黑科技</h2>
 <p>声音除了传递信息，还能直接做功！英国利兹大学研发的声悬浮装置，用高强度声波把水滴托在空中；医院用超声波碎石机把声能聚焦成高压波，能无创击碎肾结石。这里的关键是声能转化——当声波遇到障碍物时，振动能量会转化为机械能。你想想，为什么广场舞音响旁边的纸片会抖动？这就是声压在做功。说白了，声波就像看不见的"空气锤"，只不过我们平时遇到的声压太小，而超声碎石机的声压能达到100个大气压！</p>
 <p><strong>生活实例：</strong>比亚迪电动车用声波除尘技术清洁电池仓。当传感器检测到灰尘堆积，会发射特定频率声波使灰尘颗粒共振脱落，比传统吸尘器更彻底。这项技术源自航天器太阳能板的清洁方案。</p>
@@ -599,9 +486,120 @@ D. 次声波武器使人眩晕
 <script>const knowledgeGraphData={"prerequisites": [{"id": "phy-m-sound-properties", "name": "phy-m-sound-properties"}], "current": {"id": "phy-m-sound-applications", "name": "声的利用：从实验现象到变量关系", "status": "active"}, "extends": []};
 // auto-injected standard graph data</script>
 
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：声的利用</h2><div data-teachany-kg="phy-m-sound-applications"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="61">
+  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：先判信息还是能量，再算往返</h2>
+      <p>判断依据是“获取了什么”：得到位置、图像属信息；使物体发生变化属能量。测距计算统一用 s = vt/2。</p>
+      <div class="worked-example"><strong>范例：</strong>声呐测海深：超声波往返用时 4 s，海水中声速 1500 m/s，深度 = 1500×4÷2 = 3000 m。</div>
+      <p id="lesson-pitfall" class="phym-pitfall"><strong>常见误区：</strong>常见误区是把超声碎石归为“传递信息”，或测距时用往返总路程当作深度。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>下列应用中，主要利用声传递能量的是？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;清洗依靠超声波振动带来的能量。&quot;)">A. B 超检查身体</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;清洗依靠超声波振动带来的能量。&quot;)">B. 声呐探测鱼群</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-1&#x27;,&quot;清洗依靠超声波振动带来的能量。&quot;)">C. 超声波清洗眼镜</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-1&#x27;,&quot;清洗依靠超声波振动带来的能量。&quot;)">D. 回声定位测距</button>
+        <div class="phym-feedback" id="phym-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>声呐向海底发射超声波，4 s 后收到回波，海水中声速 1500 m/s，海深为？</p>
+        <button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt/2 = 1500×4÷2 = 3000 m。&quot;)">A. 1500 m</button><button type="button" data-correct="1" onclick="phymDepthCheck(this,true,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt/2 = 1500×4÷2 = 3000 m。&quot;)">B. 3000 m</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt/2 = 1500×4÷2 = 3000 m。&quot;)">C. 6000 m</button><button type="button" data-correct="0" onclick="phymDepthCheck(this,false,&#x27;phym-depth-feedback-2&#x27;,&quot;s = vt/2 = 1500×4÷2 = 3000 m。&quot;)">D. 375 m</button>
+        <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
+</section>
 
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（升学题）渔船声呐系统向海底发射超声波，若2s后收到回声，海水传声速度1500m/s，海底深度约为？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未理解回声时间含往返路程">A.750m</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未理解回声时间含往返路程">B.1500m</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未理解回声时间含往返路程">C.3000m</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未理解回声时间含往返路程">D.6000m</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）清洗精密零件时，以下哪种参数组合效果最好？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未建立频率-强度与清洗效果的关联">A.低频+低强度</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未建立频率-强度与清洗效果的关联">B.高频+高强度</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未建立频率-强度与清洗效果的关联">C.低频+高强度</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未建立频率-强度与清洗效果的关联">D.高频+低强度</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>（现象解释）火山爆发前动物焦躁不安，可能与哪种声波有关？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未联系次声波的生物效应">A.可听声波</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未联系次声波的生物效应">B.超声波</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未联系次声波的生物效应">C.次声波</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未联系次声波的生物效应">D.电磁波</button></div><div class="tu-fb" hidden></div></div></section>
+<script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#22c55e"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#f59e0b"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#06b6d4"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
+<!-- 课程导览图（互动画布） -->
+<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
+<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>真空不能传声。</li><li>响度与距离、振幅有关。</li><li>噪声是干扰人们的声音。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-sound-applications-section2.png" alt="声的利用对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div></section></section>
+
+<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
+<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>响度主要与</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 频率</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 振幅等</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 颜色</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 电阻</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>区分乐器常用</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 音色</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 只有响度</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 只有音调</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 电压</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 以为超声和次声是人耳听不见的普通声波</h3><p>✅ 超声频率＞20000Hz，次声＜20Hz，普通声波在20-20000Hz之间</p><p>💡 混淆频率范围定义</p></div><div class="tu-q"><h3>❌ 认为月球上真空能传声</h3><p>✅ 真空不能传声，需通过无线电通讯</p><p>💡 忽视介质必要性</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>超声高频看得细，次声低频传得远</p><p><strong>类比：</strong>超声像绣花针精准，次声像大鼓声传千里</p></div></section>
+<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 波动/声音相关</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" title="PhET · 波动/声音相关" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 调节频率与振幅，观察波形变化，对照音调响度。</p>
+    <p style="font-size:12px;color:#64748b;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/waves-intro/latest/waves-intro_zh_CN.html</a></p>
+  </div>
+</section>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
+
+
+<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<h2>先过关</h2>
+<div class="practice-block"><h3>1</h3><p>真空中</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 能传声</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">B. 不能传声</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 传声更快</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 只传超声波</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>2</h3><p>音调主要与</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 振幅</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 频率</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 音色波形细节</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 温度唯一</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section></section>
+
+<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
+<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+<h2>迁移与产出</h2>
+<div class="practice-block"><h3>5</h3><p>控制噪声可</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 在声源/传播途径/人耳处采取措施</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 只提高音量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 关掉所有光</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 增大摩擦必有效</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>开放产出</h3>
+<p>用三句话说明声的利用最重要的一条规律，并举一例。</p>
+<textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
+<button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
+<div id="l3-open-feedback" class="feedback" hidden></div></div>
+</div></section></section>
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
 <style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#93c5fd}</style>
@@ -634,3 +632,5 @@ function phymDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 </body>
 </html>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：声的利用</h2><div data-teachany-kg="phy-m-sound-applications"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
