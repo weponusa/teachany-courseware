@@ -159,14 +159,24 @@ ID_LOW = {
 def slot_of(sid, cls, title, text_len=0, body_text=""):
     """按优先级识别槽位；未识别返回 None。
 
-    优先级：高置信 id > 标题关键词 > id 模式 > 低置信 id > 内容兜底。
-    （低置信 id 放标题后——实测 intro 的内容常为「带着问题学」，
-    若按 id 归 0 会把问题锚点错标成 hero，全库 29 个课件中招。）
+    优先级：高置信 id > class 特征 > 标题/phase-tag 关键词 > id 模式
+    > 低置信 id > 内容兜底。
     """
+    # 内容特判（先于 id）：id=posttest 但标题是「真题练习」的补丁块
+    # 名不副实——chn-e 系列约 17 个课件，重打标时会被 ID_HIGH 覆盖回 90
+    if title and re.search(r'真题练习', title):
+        return 85
     if sid and sid in ID_HIGH:
         return ID_HIGH[sid]
+    # class 特征：class="hero" 的 section 是开场封面（可能嵌套
+    # hero-infographic 于内层，无 id 只有课题名标题，易被兜底误归 35）
+    if cls and re.search(r'\bhero\b', cls) and 'hero-infographic-dup' not in sid:
+        return 0
     if PLACEHOLDER.search(title or body_text[:60]):
         return None
+    # 标题关键词（仅用 h2 标题——曾尝试并入 body 头部文本，
+    # 结果正文叙述里的「小结/方法」等词被大量误判为模块类型，
+    # R4 违规从 0 涨到 466，已回退）
     if title:
         for pat, slot in TITLE_RULES:
             if pat.search(title):

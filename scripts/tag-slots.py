@@ -36,7 +36,7 @@ def analyze(html):
         cls = (re.search(r'class="([^"]+)"', a) or [None, ""])[1]
         title = SHELL.title_of(a, b) or ""
         text_len = SHELL.text_len(b)
-        body_text = re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', b))[:60]
+        body_text = re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', b))[:120]
         slot = SLOTS.slot_of(sid, cls, title, text_len, body_text)
         if slot is None:
             # 归 None 的模块若已有 data-slot（规则更新前的旧标），移除之
