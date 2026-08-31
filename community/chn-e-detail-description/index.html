@@ -302,18 +302,6 @@ body{background:var(--bg);font-family:'Segoe UI',system-ui,sans-serif;min-height
 </section>
 
 <!-- OBJECTIVES -->
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
-</section>
-
 <section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出3种细节描写方法（动作/神态/环境）</p></div><div class="tu-q"><p>🎯 能判断例文中细节描写的表达效果</p></div><div class="tu-q"><p>🎯 能运用'五感法'写出50字细节片段</p></div></section>
 
 <section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么我写的人物总是干巴巴的？</p></div><div class="tu-q"><p>❓ 怎么把'小花很美'写出画面感？</p></div><div class="tu-q"><p>❓ 老师说我的作文像流水账，怎么办？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
@@ -347,7 +335,6 @@ body{background:var(--bg);font-family:'Segoe UI',system-ui,sans-serif;min-height
 
 <!-- ⭐ v7.7 标准独立连续音频模块 -->
 
-<script>window.__NAV_NODES__ = [{"icon": "📝", "label": "前测", "target": "pretest", "color": "#3b82f6"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#22c55e"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#f59e0b"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#8b5cf6"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#ef4444"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#06b6d4"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ec4899"}, {"icon": "🎧", "label": "音频讲解", "target": "teachany-audio-player", "color": "#84cc16"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#3b82f6"}];</script>
 <!-- 课程导览图（互动画布） -->
 <section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" id="sec-obj" class="section" data-slot="35">
   <div style="max-width:860px;margin:40px auto;padding:0 16px;">
@@ -987,69 +974,7 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
 
 <script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "chn-e-detail-description", "name": "细节描写", "status": "active"}, "extends": []};
 // auto-injected standard graph data</script>

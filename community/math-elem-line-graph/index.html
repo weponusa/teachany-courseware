@@ -232,18 +232,6 @@ function checkPretest() {
   }
 }
 </script>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
-</section>
-
 <section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出折线统计图横纵轴表示的含义</p></div><div class="tu-q"><p>🎯 能判断折线图中数据变化的趋势（上升/下降/不变）</p></div><div class="tu-q"><p>🎯 能分析折线图中特殊点的实际意义（如最高点）</p></div></section>
 <section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么折线图看起来像一座座小山丘？</p></div><div class="tu-q"><p>❓ 折线上的点如果连错了会怎样？</p></div><div class="tu-q"><p>❓ 怎么从折线图里看出谁跑得最快？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
 <section class="section text-module" id="pretest" data-bloom-level="remember" data-scaffold="full" data-tts="pretest" data-slot="20"><div class="panel"><span class="phase-tag">Pretest</span><h2>📝 课前诊断：先暴露一个误区</h2><p>折线统计图最主要的优点是？</p><button class="quiz-option" data-q="pre" data-a="A">A. 能看出数量的多少</button><button class="quiz-option" data-q="pre" data-a="B">B. 能看出各部分占总数的比例</button><button class="quiz-option" data-q="pre" data-a="C" data-correct="1" data-diag="折线统计图通过线段的升降直观反映数量随时间的变化趋势，这是它区别于条形统计图的最大特点。要看各部分占总数的比例，应当用扇形统计图。">C. 能清楚反映数量的增减变化趋势</button><div class="feedback" id="fb-pre">选择后显示错因诊断。</div></div></section>
@@ -782,74 +770,11 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 
 <section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把相邻月份用直线连接</h3><p>✅ 每个数据点必须对应横轴刻度值</p><p>💡 忽略横轴是离散型数据（如月份）</p></div><div class="tu-q"><h3>❌ 认为线段越陡数值越大</h3><p>✅ 比较数值要看纵坐标，坡度只反映变化速度</p><p>💡 混淆绝对值和变化率</p></div></section>
 <section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>点连成线看趋势，横轴纵轴要盯住</p><p><strong>类比：</strong>折线图就像心电监护仪，波动越大说明变化越剧烈</p></div></section>
-<script>window.__NAV_NODES__ = [{"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#3b82f6"}, {"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#22c55e"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#8b5cf6"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#ef4444"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#06b6d4"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
 <section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
 
 <script>const knowledgeGraphData={"prerequisites": [{"id": "pictograph", "name": "pictograph"}], "current": {"id": "math-e-line-graph", "name": "折线统计图", "status": "active"}, "extends": []};
 // auto-injected standard graph data</script>
