@@ -96,18 +96,6 @@
   }
 ]</script></div>
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="course-nav-map" data-slot="5">
-<h2>🗺️ 课程导览图</h2>
-<p style="opacity:.85">点击节点跳转到对应章节；可切换布局。</p>
-<div style="text-align:center;margin:10px 0;">
-  <canvas id="navMapCanvas" width="640" height="380" style="max-width:100%;background:rgba(15,23,42,.5);border-radius:14px;touch-action:manipulation;"></canvas>
-</div>
-<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-  <button type="button" class="tu-opt" id="navLayoutRing">⭕ 环形布局</button>
-  <button type="button" class="tu-opt" id="navLayoutList">📜 纵向布局</button>
-</div>
-</section>
-
 <section data-scaffold="full" data-bloom-level="apply" id="objectives" class="section" data-tts="objectives" data-tsh="学习目标 - 明确这节课结束时能做到什么" data-slot="10"><div class="panel"><span class="phase-tag">Learning Objectives</span><h2>学习目标</h2><ul class="grid"><li>能解释光合作用涉及的关键结构、过程或调节机制</li><li>能用变量和证据分析光合作用相关实验/情境题</li><li>能把光合作用迁移到健康、生态、农业或生物技术问题中</li><li>能借助知识图谱说明前置知识和后续联系</li></ul></div></section>
 
 <nav class="section" id="lesson-nav" aria-label="课件导航"><div class="grid nav-grid"><a class="choice" href="#pretest">课前诊断</a><a class="choice" href="#core-concept">核心概念</a><a class="choice" href="#interactive-model">互动模型</a><a class="choice" href="#posttest">达标检测</a></div></nav>
@@ -235,7 +223,6 @@ document.getElementById('checkTransfer').addEventListener('click',function(){con
 <!-- teachany-upgrade-v2 -->
 <!-- upgrade topic: 光合作用 -->
 <section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>光水氧，暗碳糖，ATP穿梭忙</p><p><strong>类比：</strong>像快递站：光反应是打包能量包裹（ATP），暗反应是派送包裹合成糖</p></div></section>
-<script>window.__NAV_NODES__ = [{"icon": "🎯", "label": "学习目标", "target": "objectives", "color": "#3b82f6"}, {"icon": "📝", "label": "前测", "target": "pretest", "color": "#22c55e"}, {"icon": "🔍", "label": "深层理解", "target": "deep-understanding", "color": "#f59e0b"}, {"icon": "✅", "label": "后测", "target": "posttest", "color": "#8b5cf6"}, {"icon": "⚠️", "label": "易错诊所", "target": "error-clinic", "color": "#ef4444"}, {"icon": "🧭", "label": "带问题学", "target": "anchor", "color": "#06b6d4"}, {"icon": "🧠", "label": "记忆锚点", "target": "memory-anchor", "color": "#ec4899"}, {"icon": "🗺️", "label": "知识图谱", "target": "knowledge-graph", "color": "#84cc16"}];</script>
 <!-- 课程导览图（互动画布） -->
 <section class="section text-module" id="video-demo" data-bloom-level="understand" data-scaffold="full" data-tts="video-demo" data-slot="105"><div class="panel"><span class="phase-tag">Video</span><h2>🎬 微课讲解：关键机制回顾</h2><p>视频用语音和动态画面回顾本课主线：问题情境 → 机制模型 → 证据判断 → 迁移应用。</p></div></section>
 <section class="section text-module" id="external-lab" data-bloom-level="apply" data-scaffold="partial" data-slot="110"><div class="panel"><span class="phase-tag">External Biology Lab</span><h2>🧫 外部互动：3Dmol 蛋白质/酶结构</h2><p>旋转 3D 分子模型，观察结构层级。请把结构特点和 光合作用 中的功能解释对应起来：结构不是装饰，而是功能的证据。</p><div id="mol-viewer" class="mol-viewer" aria-label="3Dmol 分子结构查看器"></div><p class="hint">💡 操作提示：拖拽旋转模型，思考“形状、空间位置、结合位点”如何影响生命活动。</p></div></section><script src="https://3Dmol.org/build/3Dmol-min.js"></script><script>window.addEventListener('load',function(){if(!window.$3Dmol)return;const viewer=$3Dmol.createViewer('mol-viewer',{backgroundColor:'#081426'});$3Dmol.download('pdb:1HHO',viewer,{},function(){viewer.setStyle({},{cartoon:{color:'spectrum'}});viewer.zoomTo();viewer.rotate(0.4,'y',8000);viewer.render();});});</script>
@@ -243,69 +230,7 @@ document.getElementById('checkTransfer').addEventListener('click',function(){con
 <section data-scaffold="partial" data-bloom-level="remember" class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
 </section>
-<script>
-(function(){
-  var cv = document.getElementById('navMapCanvas');
-  if (!cv) return;
-  var ctx = cv.getContext('2d');
-  var nodes = window.__NAV_NODES__ || [];
-  var layout = 'ring', hotspots = [];
-  function compute(){
-    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
-    if (layout === 'ring') {
-      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI/2 + i * 2*Math.PI/n;
-        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
-      }
-    } else {
-      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
-      for (i = 0; i < n; i++) {
-        var c = Math.floor(i/per), row = i%per;
-        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
-      }
-    }
-    return pts;
-  }
-  function draw(){
-    var W = cv.width, H = cv.height;
-    ctx.clearRect(0,0,W,H);
-    var pts = compute();
-    hotspots = [];
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
-    for (var i = 1; i < pts.length; i++) {
-      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
-    }
-    for (i = 0; i < pts.length; i++) {
-      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
-      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
-      ctx.fillStyle = nd.color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(nd.icon, x, y - 2);
-      ctx.font = '12px "PingFang SC",sans-serif';
-      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
-      hotspots.push({x:x, y:y, r:34, target:nd.target});
-    }
-  }
-  cv.addEventListener('click', function(e){
-    var rect = cv.getBoundingClientRect();
-    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
-    var my = (e.clientY - rect.top) * (cv.height / rect.height);
-    for (var i = 0; i < hotspots.length; i++) {
-      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
-      if (dx*dx + dy*dy <= h.r*h.r) {
-        var el = document.getElementById(h.target);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-        return;
-      }
-    }
-  });
-  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
-  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
-  draw();
-})();
-</script>
+
 
 
 <script id="bioh-depth-js">
