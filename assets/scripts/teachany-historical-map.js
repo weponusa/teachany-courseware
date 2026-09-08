@@ -1,4 +1,4 @@
-/*! TeachAny Standard Historical Map · v2.7 (Leaflet · Web Mercator)
+/*! TeachAny Standard Historical Map · v2.10 (Leaflet · Web Mercator)
  * ─────────────────────────────────────────────────────────
  * 参考稳定实现：community/history-medieval-europe
  * 特点：真 Leaflet 地图引擎 + 本地 geojson + 朝代切换 + 城市标注 + 暗色主题
@@ -71,6 +71,9 @@
     // 1) 优先课件本地 assets/maps/（裸名或相对分类路径都支持）
     bases.push("./assets/maps/" + file);
     bases.push("assets/maps/" + file);
+    // 1b) 仓库共享地图库（地理课用当代政区，不必把唐朝图拷进每个课件）
+    bases.push("../../assets/maps/" + file);
+    bases.push("../assets/maps/" + file);
     // 2) 回退到 skill 仓库（相对路径，历史兼容）
     var scopeDir = scope === "world" ? "historical-world" : scope === "china" ? "historical-china" : "historical-" + scope;
     bases.push("../../skill/assets/" + scopeDir + "/" + file);
@@ -189,8 +192,8 @@
       zoomControl: true,
       // v2.9: zoomSnap 可配（如 0.25）——EPSG4326 下整数 zoom 粒度粗，
       // fitBounds 会向下取整导致视图比目标区域大很多，细粒度 snap 让聚焦更准。
-      zoomSnap: cfg.zoomSnap != null ? cfg.zoomSnap : 1,
-      zoomDelta: cfg.zoomDelta != null ? cfg.zoomDelta : 1,
+      zoomSnap: cfg.zoomSnap != null ? cfg.zoomSnap : 0.25,
+      zoomDelta: cfg.zoomDelta != null ? cfg.zoomDelta : 0.5,
       minZoom: cfg.minZoom != null ? cfg.minZoom : 2,
       maxZoom: cfg.maxZoom != null ? cfg.maxZoom : 8,
       worldCopyJump: false,
@@ -248,43 +251,38 @@
         interactive: false
       }).addTo(map);
     } else {
-    // v2.8: Web Mercator XYZ 底图（与 WGS84 GeoJSON 同 CRS 链，Leaflet 自动对齐）。
-    // 支持 cfg.basemap 自定义底图，可用仓库自带本地瓦片（离线/国内可访问）：
-    //   "basemap": { "url": "../../assets/maps/physical/terrain-tiles/{z}/{x}/{y}.png",
-    //                "minZoom": 4, "maxZoom": 6, "opacity": 1, "attribution": "© TeachAny 地形底图" }
-    // v2.8.1: 默认底图改为仓库自制地形瓦片（TeachAny 自研体系，不再默认外部 CARTO 服务；
-    // 国内可访问、无 apikey 限制）。需回退在线底图可显式配置 cfg.basemap.url。
+    // v2.10: 默认用全球 Web Mercator 底图，与 WGS84 GeoJSON 对齐。
+    // 禁止再默认 physical/terrain-tiles：那是中国范围 Terrarium DEM 稀疏瓦片（Z4-6），
+    // 会在世界/中国视图上叠出一块错位的绿色方块。
+    // 显式 cfg.basemap.url 仍可指向本地瓦片（须自行设 bounds / nativeZoom）。
     var bmCfg = (cfg.basemap && typeof cfg.basemap === "object") ? cfg.basemap : {};
-    var bmUrl = bmCfg.url || "../../assets/maps/physical/terrain-tiles/{z}/{x}/{y}.png";
+    var wantTerrain = cfg.terrain === true || (cfg.terrain && typeof cfg.terrain === "object");
+    var customUrl = !!bmCfg.url;
+    // 深色课件默认用深色底图：浅色 Esri 晕渲会洗成一片灰蓝，和页面、省界都对不上。
+    var esriDark = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+    var esriRelief = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}";
+    var bmUrl = bmCfg.url || esriDark;
     var bmOpts = {
       maxZoom: bmCfg.maxZoom != null ? bmCfg.maxZoom : 19,
-      opacity: bmCfg.opacity != null ? bmCfg.opacity : 0.6,
-      attribution: bmCfg.attribution || "© TeachAny 地形底图"
+      opacity: bmCfg.opacity != null ? bmCfg.opacity : 1,
+      attribution: bmCfg.attribution || (customUrl ? "© TeachAny 地形底图" : "© Esri")
     };
-    // 默认本地瓦片为稀疏集（Z4-6），钳制原生 zoom 范围，超出自动拉伸
-    if (!bmCfg.url && bmCfg.minNativeZoom == null) bmCfg.minNativeZoom = 4;
-    if (!bmCfg.url && bmCfg.maxNativeZoom == null) bmCfg.maxNativeZoom = 6;
     if (bmCfg.minZoom != null) bmOpts.minZoom = bmCfg.minZoom;
-    // v2.8: 稀疏瓦片集（如只有 zoom4-6 的自带地形瓦片）用 minNativeZoom/maxNativeZoom，
-    // 地图 zoom 超出原生范围时自动拉伸/缩放瓦片，避免低 zoom 时底图空白。
-    if (bmCfg.minNativeZoom != null) bmOpts.minNativeZoom = bmCfg.minNativeZoom;
-    if (bmCfg.maxNativeZoom != null) bmOpts.maxNativeZoom = bmCfg.maxNativeZoom;
-    // v2.8: bmCfg.bounds 限定瓦片请求范围（[[南,西],[北,东]]），范围外不请求，减少 404 噪音
-    if (Array.isArray(bmCfg.bounds)) { try { bmOpts.bounds = L.latLngBounds(bmCfg.bounds); } catch (e) {} }
+    if (customUrl) {
+      if (bmCfg.minNativeZoom != null) bmOpts.minNativeZoom = bmCfg.minNativeZoom;
+      if (bmCfg.maxNativeZoom != null) bmOpts.maxNativeZoom = bmCfg.maxNativeZoom;
+      if (Array.isArray(bmCfg.bounds)) { try { bmOpts.bounds = L.latLngBounds(bmCfg.bounds); } catch (e) {} }
+    }
     if (bmUrl.indexOf("{s}") >= 0) bmOpts.subdomains = bmCfg.subdomains || "abcd";
     L.tileLayer(bmUrl, bmOpts).addTo(map);
 
-    // v2.8.1: Esri 地形叠加层改为默认关闭（外部 ArcGIS 服务有 apikey/访问限制，
-    // 且底图已用自制地形瓦片，无需再叠 Esri）。需开启可显式配置 "terrain": true。
-    if (cfg.terrain === true || (cfg.terrain && typeof cfg.terrain === "object")) {
-      var terrainOpacity = 0.42;
+    // 地形只作低透明纹理，不替换深色底图
+    if (wantTerrain) {
+      var terrainOpacity = 0.22;
       if (cfg.terrain && typeof cfg.terrain === "object" && cfg.terrain.opacity != null) {
         terrainOpacity = cfg.terrain.opacity;
       }
-      L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}",
-        { maxZoom: 13, opacity: terrainOpacity, attribution: "© Esri" }
-      ).addTo(map);
+      L.tileLayer(esriRelief, { maxZoom: 13, opacity: terrainOpacity, attribution: "© Esri" }).addTo(map);
     }
     } // end else（v2.9 baseImage 分支的备选路径）
 

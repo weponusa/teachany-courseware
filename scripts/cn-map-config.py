@@ -40,10 +40,14 @@ def _match_era(text: str, rules: tuple) -> tuple[str, str, str] | None:
 
 def _era_entry(file_key: str, label: str, color: str, desc: str, cities: list | None = None) -> dict:
     eid = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-") or "era"
+    if "/" in file_key or file_key.endswith((".json", ".geojson")):
+        file_name = file_key if file_key.endswith((".json", ".geojson")) else f"{file_key}.geojson"
+    else:
+        file_name = f"{file_key}.geojson"
     return {
         "id": eid,
         "label": label,
-        "file": f"{file_key}.geojson",
+        "file": file_name,
         "fill": color,
         "stroke": color,
         "desc": desc,
@@ -56,6 +60,41 @@ def is_world_scope(title: str, node_id: str = "") -> bool:
     return any(h in blob for h in WORLD_HINTS)
 
 
+WORLD_GEO_HINTS = (
+    "world", "continent", "globe", "season", "earth", "ocean", "climate-m",
+    "population-distribution", "terrain-types", "全球", "世界", "大洲", "大洋",
+    "经纬", "气候类型", "人种",
+)
+
+CHINA_CITIES = [
+    [39.90, 116.40, "北京", "Beijing", "首都"],
+    [31.23, 121.47, "上海", "Shanghai", "东部沿海"],
+    [34.34, 108.94, "西安", "Xi'an", "西北枢纽"],
+    [23.13, 113.26, "广州", "Guangzhou", "南方门户"],
+]
+
+CLIMATE_CITIES = [
+    [45.75, 126.65, "哈尔滨", "Harbin", "温带季风·冬季严寒"],
+    [39.90, 116.40, "北京", "Beijing", "温带季风"],
+    [30.59, 114.31, "武汉", "Wuhan", "亚热带·冬冷夏热"],
+    [23.13, 113.26, "广州", "Guangzhou", "亚热带·降水丰沛"],
+    [43.83, 87.62, "乌鲁木齐", "Urumqi", "温带大陆性·干旱"],
+    [29.65, 91.13, "拉萨", "Lhasa", "高原山地气候"],
+]
+
+WORLD_CITIES = [
+    [51.51, -0.13, "伦敦", "London", "温带海洋性气候"],
+    [30.04, 31.24, "开罗", "Cairo", "热带沙漠气候"],
+    [1.35, 103.82, "新加坡", "Singapore", "热带雨林气候"],
+    [-33.87, 151.21, "悉尼", "Sydney", "亚热带湿润气候"],
+]
+
+
+def is_world_geo(title: str, node_id: str = "") -> bool:
+    blob = f"{title} {node_id}".lower()
+    return any(h.lower() in blob for h in WORLD_GEO_HINTS) or is_world_scope(title, node_id)
+
+
 def default_map_config(spec: dict) -> dict | None:
     subject = (spec.get("subject") or "").lower()
     title = spec.get("title") or spec.get("node_id", "本课")
@@ -64,39 +103,55 @@ def default_map_config(spec: dict) -> dict | None:
         return None
 
     if subject == "geography":
+        climate = any(k in f"{title} {node_id}" for k in ("气候", "天气", "气温", "降水", "季风", "climate"))
+        if is_world_geo(title, node_id):
+            return {
+                "title": f"{title} · 区域地图",
+                "scope": "world",
+                "center": [20, 20],
+                "zoom": 2.25,
+                "minZoom": 1.5,
+                "zoomSnap": 0.25,
+                "zoomDelta": 0.5,
+                "fitBounds": [[-45, -30], [70, 160]],
+                "refitEra": False,
+                "terrain": True,
+                "eras": [
+                    _era_entry(
+                        "political/world/countries.geojson",
+                        "当代世界",
+                        "#38bdf8",
+                        f"<strong>{title}</strong>：用当代国界阅读大洲、气候带与空间格局。",
+                        WORLD_CITIES,
+                    )
+                ],
+                "overlays": [],
+            }
         return {
             "title": f"{title} · 区域地图",
             "scope": "china",
             "center": [35, 105],
-            "zoom": 4,
+            "zoom": 4.25,
+            "minZoom": 3.5,
+            "zoomSnap": 0.25,
+            "zoomDelta": 0.5,
             "fitBounds": [[18, 73], [54, 135]],
+            "refitEra": False,
             "terrain": True,
             "eras": [
                 _era_entry(
-                    "tang-dynasty",
-                    "中国疆域",
+                    "political/china-modern/provinces.geojson",
+                    "当代中国",
                     "#22c55e",
-                    f"<strong>{title}</strong>：运用地图阅读区域位置、范围与空间联系。",
-                    [
-                        [39.90, 116.40, "北京", "Beijing", "首都"],
-                        [31.23, 121.47, "上海", "Shanghai", "东部沿海"],
-                        [34.34, 108.94, "西安", "Xi'an", "西北枢纽"],
-                        [23.13, 113.26, "广州", "Guangzhou", "南方门户"],
-                    ],
+                    f"<strong>{title}</strong>：用当代省级政区阅读位置、范围与空间联系。",
+                    CLIMATE_CITIES if climate else CHINA_CITIES,
                 )
             ],
             "overlays": [
                 {
-                    "id": "provinces",
-                    "label": "省界",
-                    "file": "china-provinces.json",
-                    "style": {"color": "#3b82f6", "weight": 1},
-                    "visible": True,
-                },
-                {
                     "id": "rivers",
-                    "label": "河流",
-                    "file": "rivers-historical.geojson",
+                    "label": "主要河流",
+                    "file": "physical/rivers/ne_10m_rivers_china.json",
                     "style": {"color": "#0ea5e9", "weight": 2},
                     "visible": False,
                 },

@@ -76,6 +76,8 @@
     // 1) 优先课件本地 assets/maps/（裸名或相对分类路径都支持）
     bases.push("./assets/maps/" + file);
     bases.push("assets/maps/" + file);
+    bases.push("../../assets/maps/" + file);
+    bases.push("../assets/maps/" + file);
     // 2) 回退到 skill 仓库（相对路径，历史兼容）
     var scopeDir = scope === "world" ? "historical-world" : scope === "china" ? "historical-china" : "historical-" + scope;
     bases.push("../../skill/assets/" + scopeDir + "/" + file);
