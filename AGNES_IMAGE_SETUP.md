@@ -31,6 +31,7 @@ python3 scripts/agnes-image-gen.py \
 |------|------|
 | `AGNES_API_KEY` | Agnes 平台 API Key（仅服务端，勿写入仓库） |
 | `TEACHANY_DB` | 已绑定的 D1（与 PBL 日志同库即可） |
+| `OPENROUTER_KEY` | Agnes 持续 429 时的兜底生图通道（`google/gemini-2.5-flash-image`），返回 data URL |
 
 可选：
 

@@ -30,6 +30,7 @@ TeachAny · Agnes 课件生图（服务端中转，用户无感）
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import sys
@@ -93,9 +94,16 @@ def generate_remote(course_id: str, prompt: str, *, size: str = DEFAULT_SIZE, sl
 
 
 def download_image(url: str, out_path: Path, timeout: int = 120) -> int:
-    req = urllib.request.Request(url, headers={'User-Agent': 'TeachAny/1.0'})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = resp.read()
+    if url.startswith('data:'):
+        # Agnes 限流时服务端会切 OpenRouter 兜底，返回 data URL（base64）
+        header, _, payload = url.partition(',')
+        if ';base64' not in header:
+            raise RuntimeError(f'不支持的 data URL 格式: {header[:80]}')
+        data = base64.b64decode(payload)
+    else:
+        req = urllib.request.Request(url, headers={'User-Agent': 'TeachAny/1.0'})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = resp.read()
     if len(data) < MIN_BYTES:
         raise RuntimeError(f'下载文件过小 ({len(data)} B)，可能无效')
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -176,6 +184,7 @@ def main():
         size_b = download_image(result['url'], out_path)
         probe = write_probe(out_path.parent)
         print(f'   ✅ {out_path} ({size_b // 1024} KB, {dt:.1f}s)')
+        print(f'   通道: {result.get("provider", "agnes")} · 模型: {result.get("model", "-")}')
         print(f'   额度: {result.get("used")}/{result.get("limit")}，剩余 {result.get("remaining")}')
         print(f'   探针: {probe}')
         return
@@ -203,7 +212,7 @@ def main():
                 result = gen_with_retry(course_id, prompt, size=size, slot=slot)
                 out_path = out_dir / f'{name}.png'
                 download_image(result['url'], out_path)
-                print(f'   ✅ {out_path.name} · 剩余额度 {result.get("remaining")}')
+                print(f'   ✅ {out_path.name} · {result.get("provider", "agnes")} · 剩余额度 {result.get("remaining")}')
                 ok += 1
             except Exception as e:
                 err = str(e)
