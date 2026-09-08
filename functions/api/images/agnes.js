@@ -26,7 +26,8 @@ import {
   releaseCourseImageSlot,
   logImageGen,
   getIpUsageLastMinute,
-  callAgnesImage,
+  callAgnesImageWithRetry,
+  callOpenRouterImage,
   AGNES_MODEL,
 } from '../../_lib/agnes-image.js';
 
@@ -102,8 +103,18 @@ export async function onRequestPost(context) {
   }
 
   const t0 = Date.now();
+  let provider = 'agnes';
+  let agnesErr = null;
   try {
-    const result = await callAgnesImage(env, prompt, size);
+    let result;
+    try {
+      result = await callAgnesImageWithRetry(env, prompt, size);
+    } catch (e) {
+      // Agnes 持续 429（上游按出口 IP 限流）→ 兜底 OpenRouter（生产已配 OPENROUTER_KEY）
+      agnesErr = e;
+      provider = 'openrouter';
+      result = await callOpenRouterImage(env, prompt, size);
+    }
     const latencyMs = Date.now() - t0;
 
     await logImageGen(db, {
@@ -111,7 +122,7 @@ export async function onRequestPost(context) {
       slot,
       prompt,
       size,
-      remoteUrl: result.url,
+      remoteUrl: provider === 'openrouter' ? 'openrouter:data-url' : result.url,
       latencyMs,
       ipHash,
       userAgent,
@@ -125,9 +136,12 @@ export async function onRequestPost(context) {
       used: reservation.used,
       remaining: reservation.remaining,
       limit: perCourseLimit,
-      model: AGNES_MODEL,
+      model: result.model || AGNES_MODEL,
+      provider,
       latency_ms: latencyMs,
-      note: '请尽快下载 url 到课件 assets/；链接为 Agnes 临时地址',
+      note: provider === 'openrouter'
+        ? 'Agnes 限流，已切换 OpenRouter 兜底；url 为 data URL，可直接解码保存'
+        : '请尽快下载 url 到课件 assets/；链接为 Agnes 临时地址',
     });
   } catch (e) {
     const latencyMs = Date.now() - t0;
@@ -138,7 +152,9 @@ export async function onRequestPost(context) {
       prompt,
       size,
       latencyMs,
-      error: e?.message || String(e),
+      error: provider === 'openrouter' && agnesErr
+        ? `agnes:${agnesErr?.message || agnesErr} | openrouter:${e?.message || e}`
+        : e?.message || String(e),
       ipHash,
       userAgent,
     });

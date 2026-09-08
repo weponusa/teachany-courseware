@@ -10,6 +10,14 @@ export const CORS = {
 export const AGNES_MODEL = 'agnes-image-2.1-flash';
 export const AGNES_API_URL = 'https://apihub.agnes-ai.com/v1/images/generations';
 
+/** OpenRouter 兜底生图（Agnes 持续 429 时启用） */
+export const OPENROUTER_IMAGE_MODEL = 'google/gemini-2.5-flash-image';
+export const OPENROUTER_IMAGE_URL = 'https://openrouter.ai/api/v1/images';
+
+/** Agnes 429 重试参数：上游按出口 IP 限流，单次 429 仅 ~10ms，重试即换骰子 */
+const AGNES_RETRY_ATTEMPTS = 8;
+const AGNES_RETRY_BASE_MS = 350;
+
 const ALLOWED_SIZES = new Set(['512x512', '768x768', '1024x1024', '1024x768', '1280x768', '768x1280']);
 const NO_TEXT_SUFFIX = '\n\nSTRICT: NO TEXT, NO LETTERS, NO NUMBERS, NO WATERMARK, no Chinese characters. Educational illustration only.';
 
@@ -213,6 +221,108 @@ export async function callAgnesImage(env, prompt, size) {
   } catch (e) {
     if (e?.name === 'AbortError') {
       const err = new Error('Agnes image generation timeout (120s)');
+      err.status = 504;
+      throw err;
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Agnes 带重试版本：上游按出口 IP 限流（429 瞬时返回），
+ * 每次重试都会换 Cloudflare 出口 IP 重新掷骰，实测约 8-15% 单次成功率。
+ * @param {Record<string,string>} env
+ * @param {string} prompt
+ * @param {string} size
+ */
+export async function callAgnesImageWithRetry(env, prompt, size) {
+  let lastErr = null;
+  for (let attempt = 1; attempt <= AGNES_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await callAgnesImage(env, prompt, size);
+    } catch (e) {
+      lastErr = e;
+      const retryable = e?.status === 429 || e?.status === 502 || e?.status === 504;
+      if (!retryable || attempt === AGNES_RETRY_ATTEMPTS) break;
+      await sleep(AGNES_RETRY_BASE_MS + Math.floor(Math.random() * 500));
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * OpenRouter 兜底生图：返回 data URL（b64_json 形式）。
+ * @param {Record<string,string>} env
+ * @param {string} prompt
+ * @param {string} size  如 1280x768 / 1024x1024
+ */
+export async function callOpenRouterImage(env, prompt, size) {
+  const apiKey = String(env.OPENROUTER_KEY || env.OPENROUTER_API_KEY || '').trim();
+  if (!apiKey) {
+    const err = new Error('OPENROUTER_KEY not configured on server');
+    err.status = 503;
+    throw err;
+  }
+
+  const [w, h] = String(size || '1280x768').split('x').map((n) => parseInt(n, 10) || 0);
+  const ratio = h > 0 ? w / h : 1;
+  let aspect = '1:1';
+  if (ratio >= 1.6) aspect = '16:9';
+  else if (ratio >= 1.2) aspect = '4:3';
+  else if (ratio <= 0.62) aspect = '9:16';
+  else if (ratio <= 0.85) aspect = '3:4';
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120000);
+
+  try {
+    const resp = await fetch(OPENROUTER_IMAGE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_IMAGE_MODEL,
+        prompt,
+        n: 1,
+        resolution: '1K',
+        aspect_ratio: aspect,
+        output_format: 'png',
+      }),
+      signal: controller.signal,
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const msg = data?.error?.message || data?.error || JSON.stringify(data).slice(0, 300);
+      const err = new Error(`OpenRouter HTTP ${resp.status}: ${msg}`);
+      err.status = resp.status === 429 ? 429 : 502;
+      throw err;
+    }
+
+    const item = data?.data?.[0];
+    if (!item?.b64_json) {
+      const err = new Error('OpenRouter response missing b64_json');
+      err.status = 502;
+      throw err;
+    }
+
+    const mediaType = item.media_type || 'image/png';
+    return {
+      url: `data:${mediaType};base64,${item.b64_json}`,
+      model: OPENROUTER_IMAGE_MODEL,
+      raw: { usage: data?.usage || null },
+    };
+  } catch (e) {
+    if (e?.name === 'AbortError') {
+      const err = new Error('OpenRouter image generation timeout (120s)');
       err.status = 504;
       throw err;
     }
