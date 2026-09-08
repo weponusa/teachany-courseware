@@ -122,7 +122,9 @@ def gen_with_retry(course_id: str, prompt: str, **kwargs) -> dict:
         if result.get('error') == 'COURSE_QUOTA_EXCEEDED':
             break
         if result.get('_http_status') == 429 and attempt < 3:
-            wait = 60 if result.get('error') == 'RATE_LIMIT' else 15 * attempt
+            # RATE_LIMIT 是本机 IP 限流，须等满 60s；GENERATION_FAILED 是上游限流，
+            # 服务端已内建 8 次重试 + OpenRouter 兜底，客户端短间隔补刀即可
+            wait = 60 if result.get('error') == 'RATE_LIMIT' else 5 * attempt
             print(f'  ⚠️  429 {"IP 限流" if result.get("error") == "RATE_LIMIT" else "限流"}，{wait}s 后重试…')
             time.sleep(wait)
             continue
