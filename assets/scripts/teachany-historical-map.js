@@ -1,4 +1,4 @@
-/*! TeachAny Standard Historical Map · v2.10 (Leaflet · Web Mercator)
+/*! TeachAny Standard Historical Map · v2.11 (Leaflet · Web Mercator)
  * ─────────────────────────────────────────────────────────
  * 参考稳定实现：community/history-medieval-europe
  * 特点：真 Leaflet 地图引擎 + 本地 geojson + 朝代切换 + 城市标注 + 暗色主题
@@ -47,7 +47,7 @@
  *   - 底图：仅 L.tileLayer XYZ；禁止 L.imageOverlay 全球等距圆柱 JPG（cfg.hillshade 已废弃）
  *   - 疆域 GeoJSON：WGS84，坐标 [lng, lat]；城市 cities：[lat, lng, …]
  *   - fitBounds：[[南纬, 西经], [北纬, 东经]]，如中国 [[18,72],[52,140]]
- *   - 地形：cfg.terrain !== false 时叠加 Esri World_Shaded_Relief（同为 Web Mercator）
+ *   - 底图默认：Esri World_Imagery（绿陆蓝海，无需 API Key）；禁止再默认 Carto（现已水印）或中国范围 Terrarium
  */
 (function () {
   "use strict";
@@ -258,10 +258,11 @@
     var bmCfg = (cfg.basemap && typeof cfg.basemap === "object") ? cfg.basemap : {};
     var wantTerrain = cfg.terrain === true || (cfg.terrain && typeof cfg.terrain === "object");
     var customUrl = !!bmCfg.url;
-    // 深色课件默认用深色底图：浅色 Esri 晕渲会洗成一片灰蓝，和页面、省界都对不上。
-    var esriDark = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+    // Carto Dark 现已要求 API Key（瓦片会打水印）。Esri 浅灰画布/浅色晕渲也不对。
+    // 默认用 Esri World_Imagery：绿陆蓝海、Web Mercator、无需 key。
+    var esriImagery = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
     var esriRelief = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}";
-    var bmUrl = bmCfg.url || esriDark;
+    var bmUrl = bmCfg.url || esriImagery;
     var bmOpts = {
       maxZoom: bmCfg.maxZoom != null ? bmCfg.maxZoom : 19,
       opacity: bmCfg.opacity != null ? bmCfg.opacity : 1,
@@ -276,9 +277,9 @@
     if (bmUrl.indexOf("{s}") >= 0) bmOpts.subdomains = bmCfg.subdomains || "abcd";
     L.tileLayer(bmUrl, bmOpts).addTo(map);
 
-    // 地形只作低透明纹理，不替换深色底图
-    if (wantTerrain) {
-      var terrainOpacity = 0.22;
+    // 卫星/影像底已含地形纹理；仅在自定义底图上再叠浅色晕渲
+    if (wantTerrain && customUrl) {
+      var terrainOpacity = 0.35;
       if (cfg.terrain && typeof cfg.terrain === "object" && cfg.terrain.opacity != null) {
         terrainOpacity = cfg.terrain.opacity;
       }
