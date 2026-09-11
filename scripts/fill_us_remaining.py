@@ -2,9 +2,9 @@
 """Fill remaining US curriculum points - short text version for timeout fixes."""
 import json, glob, os, requests, re, time
 
-API_KEY = "sk-Ye5gTEaDbjlXaM2BlZGcjg"
-API_URL = "https://llmapi.paratera.com/v1/chat/completions"
-MODEL = "DeepSeek-V3.2"
+API_KEY = "teachany-proxy"
+API_URL = "https://www.teachany.cn/api/llm/chat/completions"
+MODEL = "qwen/qwen3-next-80b-a3b-instruct"
 
 def call_llm(prompt):
     r = requests.post(API_URL,

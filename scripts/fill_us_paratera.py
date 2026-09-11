@@ -3,8 +3,8 @@ import json, glob, os, requests, re, time
 
 GEMINI_KEY = "AIzaSyCJd7qZoi6g3WEa6yzfujSsc0KtgXoOL-M"
 GURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
-PKEY = "sk-Ye5gTEaDbjlXaM2BlZGcjg"
-PURL = "https://llmapi.paratera.com/v1/chat/completions"
+PKEY = "teachany-proxy"
+PURL = "https://www.teachany.cn/api/llm/chat/completions"
 
 md = open('/Users/wepon/CodeBuddy/一次函数/books/课标-整理版/us/common-core-math.md').read()
 k5s = md.find('Kindergarten', 22600); k5e = md.find('Grade 6', k5s+100) if md.find('Grade 6', k5s+100)>0 else len(md)
@@ -62,7 +62,7 @@ for (sj,st), nodes in sorted(bk.items()):
     print(f"\n📡 {tag} txt={len(text)}")
     try:
         r=requests.post(PURL, headers={"Authorization":f"Bearer {PKEY}","Content-Type":"application/json"},
-            json={"model":"DeepSeek-V3.2","messages":[{"role":"user","content":prompt}],
+            json={"model":"qwen/qwen3-next-80b-a3b-instruct","messages":[{"role":"user","content":prompt}],
                 "max_tokens":4096,"temperature":0.1},timeout=120)
         if not r.ok: raise RuntimeError(f"P {r.status_code}: {r.text[:300]}")
         raw=r.json()["choices"][0]["message"]["content"]

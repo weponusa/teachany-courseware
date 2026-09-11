@@ -8,8 +8,8 @@ except ImportError:
     os.system("pip3 install pdfplumber -q")
     import pdfplumber
 
-API_KEY = "sk-Ye5gTEaDbjlXaM2BlZGcjg"
-API_URL = "https://llmapi.paratera.com/v1/chat/completions"
+API_KEY = "teachany-proxy"
+API_URL = "https://www.teachany.cn/api/llm/chat/completions"
 
 def extract_text(pdf_path, max_pages=30):
     """Extract text from PDF using pdfplumber."""
@@ -29,7 +29,7 @@ def extract_text(pdf_path, max_pages=30):
 def call_llm(prompt):
     r = requests.post(API_URL,
         headers={"Authorization":"Bearer {}".format(API_KEY),"Content-Type":"application/json"},
-        json={"model":"DeepSeek-V3.2","messages":[{"role":"user","content":prompt}],
+        json={"model":"qwen/qwen3-next-80b-a3b-instruct","messages":[{"role":"user","content":prompt}],
              "max_tokens":8192,"temperature":0.1}, timeout=300)
     if not r.ok:
         raise RuntimeError("{}: {}".format(r.status_code, r.text[:300]))
