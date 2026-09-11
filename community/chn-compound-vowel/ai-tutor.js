@@ -177,12 +177,12 @@
       keyHint: '硅基流动 Key 申请：https://cloud.siliconflow.cn/account/ak（送 14 元额度）'
     },
     {
-      id: 'paratera',
-      name: '🇨🇳 并行超算（机构）',
-      baseUrl: 'https://llmapi.paratera.com/v1',
-      model: 'DeepSeek-V3.2',
-      models: ['DeepSeek-V3.2', 'GLM-4.7', 'GLM-5', 'Kimi-K2', 'MiniMax-M2.5', 'Qwen3-235B-A22B-Instruct-2507', 'ERNIE-5.0-Thinking-Preview'],
-      keyHint: '并行超算 Paratera 仅限机构用户'
+      id: 'teachany-proxy',
+      name: '⚡ TeachAny 中转（免 Key）',
+      baseUrl: 'https://www.teachany.cn/api/llm',
+      model: 'qwen/qwen3-next-80b-a3b-instruct',
+      models: ['qwen/qwen3-next-80b-a3b-instruct', 'deepseek-ai/DeepSeek-V4-Flash', 'z-ai/glm-4.5-air', 'google/gemini-2.5-flash'],
+      keyHint: '经 TeachAny 服务端转发，无需 API Key'
     },
     {
       id: 'custom',
