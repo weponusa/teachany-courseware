@@ -825,13 +825,13 @@ def build_html(spec):
 
 {head_meta}
 
-<link rel="stylesheet" href="./assets/scripts/ai-tutor.css">
-<link rel="stylesheet" href="./assets/scripts/teachany-tutor-card.css">
-<link rel="stylesheet" href="./assets/scripts/teachany-tts-narrator.css">
-<link rel="stylesheet" href="./assets/scripts/teachany-section-hints.css">
-<link rel="stylesheet" href="./assets/scripts/teachany-knowledge-graph.css">
-<link rel="stylesheet" href="./assets/scripts/teachany-audio-player.css">
-<link rel="stylesheet" href="./assets/scripts/teachany-floating-dock.css">
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
 
 <style>
 {CSS}
@@ -885,12 +885,12 @@ def build_html(spec):
 {spec['custom_js']}
 </script>
 
-<script src="./assets/scripts/ai-tutor.js"></script>
-<script src="./assets/scripts/teachany-tutor-card.js" defer></script>
-<script src="./assets/scripts/teachany-tts-narrator.js" defer></script>
-<script src="./assets/scripts/teachany-section-hints.js" defer></script>
-<script src="./assets/scripts/teachany-knowledge-graph.js" defer></script>
-<script src="./assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
 </body>
 </html>
 '''
