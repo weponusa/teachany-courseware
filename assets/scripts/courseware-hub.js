@@ -116,10 +116,22 @@ async function _doInit() {
         fetchJSON(HUB_REGISTRY_URL),
         fetchJSON(HUB_COMMUNITY_URL),
       ]);
-      registryData = regResult.status === 'fulfilled' ? regResult.value : { courses: [] };
-      communityData = comResult.status === 'fulfilled' ? comResult.value : { courses: [] };
-      setHubCache(registryData, communityData);
-      console.log('[CoursewareHub] ✅ 从服务器加载数据');
+      const regOk = regResult.status === 'fulfilled';
+      const comOk = comResult.status === 'fulfilled';
+      registryData = regOk ? regResult.value : { courses: [] };
+      communityData = comOk ? comResult.value : { courses: [] };
+      // 仅在两个数据源都真正拿到、且 registry 非空时才写缓存并报成功。
+      // 否则（部署窗口 / 网络抖动 / 5xx）会把「空索引」缓存 15 分钟，
+      // 导致全站知识地图与知识树一律显示「无课件」。
+      if (regOk && comOk && (registryData.courses || []).length > 0) {
+        setHubCache(registryData, communityData);
+        console.log('[CoursewareHub] ✅ 从服务器加载数据');
+      } else {
+        _initPromise = null;  // 允许下次进入页面时重试
+        console.warn('[CoursewareHub] ⚠️ 数据源加载不完整，未写缓存，将自动重试：registry=' +
+          regResult.status + ', community=' + comResult.status +
+          ', registryCourses=' + ((registryData.courses || []).length));
+      }
     }
 
     // 3. 标准化 registry 课件
@@ -188,8 +200,8 @@ async function _doInit() {
       `registry=${_registryCourses.length}, community=${_communityCourses.length}`);
 
   } catch (err) {
-    console.error('[CoursewareHub] 初始化失败:', err);
-    _initialized = true; // 标记为已初始化，避免反复重试
+    console.error('[CoursewareHub] 初始化失败（未缓存，允许下次重试）:', err);
+    _initPromise = null; // 原来置 _initialized=true 会把空索引锁死整页，改为允许重试
   }
 }
 
