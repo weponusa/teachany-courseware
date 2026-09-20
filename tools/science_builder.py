@@ -347,6 +347,14 @@ input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
 .misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
 .misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
 
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
 @media (max-width: 768px) {
   :root { --page-padding: 16px; --card-radius: 16px; }
   .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
@@ -751,7 +759,7 @@ def p_homework(spec, idx, tts, title, script, levels, tag="作业分层"):
 
 def p_kg(spec, idx):
     return f'''
-  <section class="slide-page" data-page-type="summary" data-page-index="{idx}" data-tts="knowledge-graph"
+  <section class="slide-page kg-page" data-page-type="summary" data-page-index="{idx}" data-tts="knowledge-graph"
            data-tts-script="{spec['tts']['knowledge-graph']}"
            data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
     <div class="slide-inner">
@@ -760,7 +768,8 @@ def p_kg(spec, idx):
           <span class="phase-tag" data-variant="purple">知识图谱</span>
           <h2>这节课在知识网络里的位置</h2>
         </div>
-        <p style="color:var(--muted);margin:0 0 16px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p style="color:var(--muted);margin:0 0 10px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p class="kg-loading-hint" style="color:var(--muted);font-size:13px;margin:0 0 10px">图谱正在加载：首次进入需下载知识索引（约 1–3 秒），加载完成后本行会自动消失。</p>
         <div data-teachany-kg="{spec['node_id']}">
           <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
         </div>
@@ -842,8 +851,8 @@ def build_html(spec):
 <div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
 
 <div class="teachany-brand-bar">
-  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny">
-    <span class="brand-mark">T</span><span class="brand-name">TeachAny</span>
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
+    <img src="https://www.teachany.cn/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
   </a>
   <div class="brand-right">
     <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
