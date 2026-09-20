@@ -1,0 +1,1543 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《输入-计算-输出模型》 · 小学信息科技 五年级 · TeachAny</title>
+<meta name="description" content="面向小学五年级：知道控制系统做的事可以拆成输入、计算、输出三步，能在一个自动装置里指出数据从哪里来、按什么规则算、最后做了什么；并通过给机器喂不合适输入的小实验，理解计算的局限与数据的责任。">
+
+<meta name="course-id" content="it-e-input-output">
+<meta name="course-title" content="输入-计算-输出模型">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="小学五年级">
+<meta name="course-prereqs" content="">
+<meta name="course-next" content="it-e-sensors-actuators">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.22.0">
+<meta name="teachany-node" content="it-e-input-output">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="5">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-domain" content="process-control">
+<meta name="teachany-prerequisites" content="本课是信息科技小学段「过程与控制」的起始课，不需要先修节点">
+<meta name="teachany-lesson-type" content="concept-practice">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style>
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+</style>
+</head>
+<body class="teachany-elementary">
+
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
+    <img src="https://www.teachany.cn/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.22.0</span></span>
+  </div>
+</div>
+
+<div class="slide-container" id="slide-container">
+
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero"
+           data-tts-script="先看一件小事。天慢慢黑了，教室里的灯自己亮了起来，没有人去按开关。灯是怎么知道天黑的？它看不见，也不会猜，它只是把光线变成了一个能比较的数值，送进机器里，机器再按一条想好的规则算一算，最后决定把灯打开。把这件事说清楚，就只剩三格：输入、计算、输出。今天这节课，我们就来把这三格弄明白，还会亲手喂给机器一些不合适的输入，看看它会算出什么样的怪结果。"
+           data-tsh="开场 - 用一个真实问题建立学习动机" data-bloom-level="remember" data-scaffold="full">
+    <div class="slide-inner">
+      <p class="level-badge">小学五年级 · 过程与控制</p>
+      <h1>输入-计算-输出模型</h1>
+      <p class="subtitle">教室的灯，天一黑就自己亮了——它到底是怎么知道的？</p>
+      <figure class="ta-standard-figure" style="margin-top:24px">
+        <img src="./assets/it-e-input-output-hero.webp" alt="输入-计算-输出模型知识结构图：输入是什么、计算在做什么、输出做什么，以及三格的先后关系">
+        <figcaption>三格模型：输入拿到数据 · 计算按规则比一比 · 输出动手做事 · 顺序不能调换</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide-page" id="problem-anchor" data-page-type="interactive" data-page-index="1"
+           data-tts="problem-anchor" data-tts-alias="anchor"
+           data-tts-script="开始之前，先选一个你最想弄明白的问题。是想知道机器到底从哪儿拿到数据，还是想知道它凭什么能自己做决定，又或者你想弄明白为什么有时候它算出来的结果特别奇怪，再或者你想亲手拆开一个自动装置，看看它的三格分别是什么。选好了，就带着这个问题往下看。"
+           data-tsh="问题锚点 - 先确定今天最想弄明白的问题">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">问题锚点</span>
+          <h2>今天最想弄明白哪一件事？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你真正好奇的问题，后面的动手活动都会围着它转。</p>
+        <div class="grid">
+          <button class="choice" data-anchor-choice="机器是从哪儿拿到数据的"><strong>机器是从哪儿拿到数据的？</strong><br><span style="color:var(--muted);font-size:14px">它凭什么知道天黑了、有人来了</span></button>
+          <button class="choice" data-anchor-choice="它凭什么能自己做决定"><strong>它凭什么能自己做决定？</strong><br><span style="color:var(--muted);font-size:14px">中间那一格到底在算什么</span></button>
+          <button class="choice" data-anchor-choice="为什么有时候它算出来的结果特别奇怪"><strong>为什么有时候它算出来的结果特别奇怪？</strong><br><span style="color:var(--muted);font-size:14px">是不是机器也会出错</span></button>
+          <button class="choice" data-anchor-choice="怎样把一个自动装置拆成三格"><strong>怎样把一个自动装置拆成三格？</strong><br><span style="color:var(--muted);font-size:14px">想自己动手拆一个试试</span></button>
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己最想知道的问题
+          <input id="learner-question-input" placeholder="把你好奇的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives"
+           data-tts-script="这节课有四个小目标。第一，能说出输入、计算、输出分别是什么意思，知道它们是有先后的三步。第二，能在三格模型里指出一个自动装置的数据从哪里来、按什么规则算、最后做了什么。第三，能说出输入的数值或类型不对时，机器算出来的结果就会很奇怪。第四，能说出一条使用数据的规矩，比如别人的个人信息不能随便拿来当输入。"
+           data-tsh="学习目标 - 明确这节课结束时能做到什么" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">学习目标</span>
+          <h2>这节课结束时，你应该能做到</h2>
+        </div>
+        <ul class="objectives">
+          <li>能说出输入、计算、输出分别是什么意思，知道三步有先后、不能调换</li>
+          <li>能在三格模型里指出一个自动装置的数据从哪里来、按什么规则算、最后做了什么</li>
+          <li>能说出输入的类型或数值不对时，机器会算不出来或算出怪结果</li>
+          <li>能说出一条使用数据的规矩，例如别人的个人信息不能随便拿来当输入</li>
+        </ul>
+        <div class="kid-note" style="margin-top:16px">
+          <span class="emoji">🎯</span>
+          <div><strong>课标依据：</strong>《义务教育信息科技课程标准（2022年版2025年修订）》小学「过程与控制」——理解控制系统中输入、计算、输出的基本模型。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="3" data-tts="pretest"
+           data-tts-script="先做三道小题，用你现在的想法选就行。选完马上能看到解释，选错了也没关系，正好知道该重点听哪里。"
+           data-tsh="先测一测：机器是怎么知道天黑的？ - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">前测</span>
+          <h2>先测一测：机器是怎么知道天黑的？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="pre-1">
+          <p><strong>1. 教室的灯，天一黑就自己亮了。它真的是「看见」天黑了吗？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-1" data-correct="1">不是，是光线传感器把亮度变成了一个数，送进机器里</button>
+            <button class="choice" data-q="pre-1" data-correct="0">是，灯自己长了一只眼睛</button>
+            <button class="choice" data-q="pre-1" data-correct="0">是，有同学在旁边帮它按开关</button>
+          </div>
+          <p class="result warn" data-explain="pre-1" style="display:none;margin-top:10px">灯不会看，也不会猜。它靠的是一根光线传感器，把「有多亮」变成一个能比较的数值。<strong>错因提醒：</strong>常见错误是把传感器当成「眼睛」。它更像一只把光变成数字的手，真正做决定的是后面的计算。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-2">
+          <p><strong>2. 下面哪一样，是智能台灯的「输入」？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-2" data-correct="1">光线的亮度数值</button>
+            <button class="choice" data-q="pre-2" data-correct="0">灯亮起来这件事</button>
+            <button class="choice" data-q="pre-2" data-correct="0">灯泡的玻璃外壳</button>
+          </div>
+          <p class="result warn" data-explain="pre-2" style="display:none;margin-top:10px">送进去给机器处理的数据，才是输入；灯亮起来是它最后做出来的事，那是输出。<strong>错因提醒：</strong>最容易搞混的就是「输入的」和「输出的」——记住方向：从外面送进来的叫输入，从装置做出去的叫输出。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-3">
+          <p><strong>3. 风扇在温度超过 26 ℃ 时自动转起来。它要先做什么？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-3" data-correct="1">先测到当前的温度</button>
+            <button class="choice" data-q="pre-3" data-correct="0">先让风扇转起来试试</button>
+            <button class="choice" data-q="pre-3" data-correct="0">先自己猜一个温度</button>
+          </div>
+          <p class="result warn" data-explain="pre-3" style="display:none;margin-top:10px">顺序是：先有输入，才有计算，最后才有输出。没有数据，机器什么也算不出来。<strong>错因提醒：</strong>不少同学误认为机器会「先动手再说」，其实它每一步都要等上一步的结果。</p>
+        </div>
+        <p id="pre-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="module-1"
+           data-tts-script="先说三格模型。机器做事，其实只有三步。第一步是输入，就是它先拿到要处理的数据，比如光线有多亮、温度是多少、按钮有没有被按下。第二步是计算，就是它按一条想好的规则，把这些数据比一比、算一算。第三步是输出，就是它照着算出来的结果动手做事，比如把灯打开、把门打开、发出报警声。要特别记住一件事：这三步是有先后的。没有输入，就没有可以算的东西；没有算，就不知道该输出什么。"
+           data-tsh="机器做事只有三步：输入、计算、输出" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念一</span>
+          <h2>机器做事只有三步：输入、计算、输出</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p><strong>为什么要学这一课？</strong></p>
+          <p style="color:var(--muted)">我们平时做事凭感觉就够了（And）；可像自动感应灯这种装置，它没有眼睛也没有想法，只会一件事一件事地做（But）；所以我们得把它做的事拆成看得清的三步——输入、计算、输出，才能看懂它，也才能自己动手做一个（Therefore）。</p>
+        </div>
+        <p style="font-size:17px;margin:0 0 12px">不管是自动感应灯、电饭煲还是智能台灯，抽象地看，它们做的事都只有三步。</p>
+        <div class="grid grid-3">
+          <div class="inner-card"><p><strong>① 输入</strong></p><p style="color:var(--muted)">先拿到要处理的数据：光线多亮、温度多少、按钮有没有被按下。</p></div>
+          <div class="inner-card"><p><strong>② 计算</strong></p><p style="color:var(--muted)">按一条写好的规则，把这些数据比一比、算一算。</p></div>
+          <div class="inner-card"><p><strong>③ 输出</strong></p><p style="color:var(--muted)">照着算出来的结果动手做事：开灯、开门、报警。</p></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-e-input-output-fig1.webp" alt="输入、计算、输出三格模型示意图：传感器送来的数据进入输入格，在计算格里按规则比较判断，最后从输出格做出动作">
+          <figcaption>三格模型：数据从输入进来，在计算格被按规则比一比，最后从输出格做出去</figcaption>
+        </figure>
+        <div class="inner-card">
+          <p><strong>举个例子：自动感应门</strong></p>
+          <p style="color:var(--muted)">输入——门边的传感器送来一个信号：这个范围内有没有人 → 计算——照规则比一比：检测到人了吗 → 输出——有人就把门打开，没人就把门关上。</p>
+        </div>
+        <div class="kid-note"><span class="emoji">💡</span><div><strong>记一句口诀：</strong>输入是眼睛，计算是脑袋，输出是手脚。眼睛没看见，脑袋就没得想；脑袋没想好，手脚就不知道该做什么。</div></div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>看见它</strong>：身边每一个「会自己做事」的装置，都能拆出这三格：路灯、扫地机、自动晾衣架，一个都不例外。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>解释它</strong>：为什么顺序不能调换？因为没有输入就没有数据可算，没算完就不知道输出什么——每一步都得等上一步。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：你自己做事也是这三步：先看清情况（输入），再想一想（计算），最后动手（输出）。差别只在于人会变通，机器不会。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="lab-1"
+           data-tts-script="光听还不够，我们来亲手跑一遍。左边选一个输入，就是给机器一个它可以处理的数据；中间选一条规则，就是告诉它该怎么想；然后点执行。你会看到三格一个接一个亮起来，数据像小球一样从输入滚到计算，再滚到输出。试试看，有的组合会很顺，有的组合却会卡在中途，请你留意为什么。"
+           data-tsh="动手一：三格数据流动器" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">动手实验室</span>
+          <h2>动手一：三格数据流动器</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">给机器一个输入，再给它一条规则，然后点「执行」。三格会一个个亮起来，看数据怎样从左边走到右边。</p>
+        <div class="lab-panel" id="io3-panel">
+          <div style="font-weight:700;font-size:14px;margin-bottom:6px">① 选一个输入（传感器送来的数据）</div>
+          <div class="sort-bank">
+            <button class="choice" data-io-in="lux30" style="text-align:center">光线传感器：30 勒克斯</button>
+            <button class="choice" data-io-in="lux80" style="text-align:center">光线传感器：80 勒克斯</button>
+            <button class="choice" data-io-in="press" style="text-align:center">按钮：被按下了</button>
+            <button class="choice" data-io-in="dist120" style="text-align:center">距离传感器：120 厘米</button>
+          </div>
+          <div style="font-weight:700;font-size:14px;margin:14px 0 6px">② 选一条规则（机器该怎么想）</div>
+          <div class="sort-bank">
+            <button class="choice" data-io-rule="dark" style="text-align:center">如果光线低于 50 勒克斯，就去开灯</button>
+            <button class="choice" data-io-rule="press" style="text-align:center">如果按钮被按下，就去开门</button>
+            <button class="choice" data-io-rule="near" style="text-align:center">如果距离小于 30 厘米，就报警</button>
+          </div>
+          <div class="io-row">
+            <div class="inner-card" id="io3-in"><p><strong>① 输入</strong></p><p class="io-v">—</p></div>
+            <div class="io-arrow">→</div>
+            <div class="inner-card" id="io3-calc"><p><strong>② 计算</strong></p><p class="io-v">—</p></div>
+            <div class="io-arrow">→</div>
+            <div class="inner-card" id="io3-out"><p><strong>③ 输出</strong></p><p class="io-v">—</p></div>
+          </div>
+          <div class="flex-row">
+            <button class="choice" id="io3-run" style="text-align:center">▶ 执行</button>
+            <button class="choice" id="io3-reset" style="text-align:center">重新开始</button>
+          </div>
+          <p class="result warn" id="io3-verdict" style="margin-top:12px">请先选一个输入，再选一条规则。</p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🔍</span><div><strong>多试几组，你会发现两种「跑不通」：</strong>一种是条件没满足，机器什么都不做——这没错，规则本来就这么写的；另一种是输入和规则<strong>对不上号</strong>，它算不下去，卡在中间那一格。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="6" data-tts="module-2"
+           data-tts-script="第二件事，说说计算里面到底在做什么。计算不是机器在猜，也不是它自己想出来的，它只是拿着一条我们写好的规则，照着走一遍。比如这条规则：如果光线低于五十，就去开灯。机器做的事只有一件，就是拿输入进来的那个数，和五十比一比。比出来是真的，就走开灯这条路；比出来不是，就什么都不做。所以规则写错了，机器就跟着错——它不会怀疑，也不会变通。"
+           data-tsh="计算不是猜：它只会照着规则走一遍" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念二</span>
+          <h2>计算不是猜：它只会照着规则走一遍</h2>
+        </div>
+
+        <p style="font-size:17px;margin:0 0 12px">「计算」这一格里，机器看不出任何聪明。它只做一件事：拿规则里的条件，和输入的数据<strong>比一比</strong>。</p>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>取出数据：</strong>把输入格里的那个数拿出来。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>比一比：</strong>按规则的条件比较，比如「28 是不是大于 26」。</div></div>
+          <div class="step"><span class="n green">3</span><div><strong>得出结论：</strong>成立就走一条路，不成立就走另一条路——结果只有两种，没有第三种。</div></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-e-input-output-fig2.webp" alt="三张输入卡片对比示意图：数值合理的输入得到正常结果，文字输入算不出来，抄错单位的数值算出怪结果">
+          <figcaption>同样一条规则，换三张输入卡片：数值合理就正常，类型不对就算不出来，数值抄错就会算出怪结果</figcaption>
+        </figure>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">以为机器会「看着办」、会「变通一下」。它不会。规则说比大于，它就只比大于；送进来的东西没法比，它就卡在原地。所以设备出的怪结果，多半不是机器的问题，而是<strong>输入或规则写错了</strong>。</p>
+        </div>
+        <div class="kid-note" style="margin-top:12px"><span class="emoji">🧭</span><div><strong>一句话记住：</strong>机器只是不算错，不代表它给的数据没错。最后看结果的人，还是我们。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="7" data-tts="lab-2"
+           data-tts-script="现在我们做一件有点坏的事：故意喂给机器一些不合适的输入。规则是固定的一条，如果温度超过二十六摄氏度就打开风扇。下面有四张输入卡片，你一张一张点过去，看看机器会算出什么。有的输入它会算不出来，有的输入它算得理直气壮、结果却明显不对，还有一张卡片，压根就不该被拿来做输入。"
+           data-tsh="动手二：输入不对劲，它会算出什么？" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">动手实验室</span>
+          <h2>动手二：输入不对劲，它会算出什么？</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">规则固定是这一条：<strong>如果温度超过 26 ℃，就打开风扇。</strong>下面四张输入卡片，一张一张点过去，看看机器各会算出什么。</p>
+        <div class="lab-panel" id="bad-panel">
+          <div style="font-weight:700;font-size:14px;margin-bottom:6px">可选的四张输入卡片</div>
+          <div class="sort-bank">
+            <button class="choice" data-bad="ok" style="text-align:center">输入卡片 ①：温度 28 ℃</button>
+            <button class="choice" data-bad="text" style="text-align:center">输入卡片 ②：温度「很热」</button>
+            <button class="choice" data-bad="unit" style="text-align:center">输入卡片 ③：温度 268 ℃</button>
+            <button class="choice" data-bad="privacy" style="text-align:center">输入卡片 ④：同学的手机号 13X****5678</button>
+          </div>
+          <div class="io-row">
+            <div class="inner-card" id="bad-in"><p><strong>① 输入</strong></p><p class="io-v">—</p></div>
+            <div class="io-arrow">→</div>
+            <div class="inner-card" id="bad-calc"><p><strong>② 计算</strong></p><p class="io-v">—</p></div>
+            <div class="io-arrow">→</div>
+            <div class="inner-card" id="bad-out"><p><strong>③ 输出</strong></p><p class="io-v">—</p></div>
+          </div>
+          <p class="result warn" id="bad-verdict" style="margin-top:12px">点一张输入卡片，看机器怎么反应。</p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🛡️</span><div><strong>四张里有一张，不是算得对不对的问题，而是该不该算。</strong>别人的姓名、手机号、住址都是个人信息。数据可以帮机器做事，但不是什么数据都能拿——这条规矩，比三格模型本身更重要。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="worked-example"
+           data-tts-script="我们一起完整地拆一次。任务是这样的：走廊上的自动感应灯，人来就亮，人走一会儿就灭。第一步找输入：它拿到的是传感器送来的一个信号，意思是这个范围内有没有人。第二步看计算：规则是，如果检测到有人，就去开灯；如果检测不到人，就等一会儿再关灯。第三步看输出：灯亮起来，或者灯熄灭。第四步再回头检查一遍：输入的信号对不对？规则写得全不全？输出会不会影响别人？三步都对上了，这个装置才算想清楚了。"
+           data-tsh="例题示范：把自动感应灯拆成三格" data-bloom-level="analyze" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">例题示范</span>
+          <h2>例题示范：把自动感应灯拆成三格</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>题目：</strong>走廊上的自动感应灯，人来就亮，人走一会儿就灭。请把它拆成输入、计算、输出三格，并说说为什么要这样分。</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>找输入：</strong>它从传感器拿到一个信号——这个范围内<strong>有没有人</strong>。这是从外面送进来的数据。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>看计算：</strong>规则是「检测到有人就开灯；检测不到人就等一会儿再关灯」。这是照着规则比一比的判断。</div></div>
+          <div class="step"><span class="n">3</span><div><strong>看输出：</strong>灯亮起来，或者灯熄灭。这是装置最后做出来的事。</div></div>
+          <div class="step"><span class="n green">4</span><div><strong>回头检查：</strong>输入的信号准不准？规则写得全不全（人走之后要不要延迟）？输出会不会打扰到别人？三步都对上了，这个装置才算想清楚。</div></div>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">把「灯亮了」写成输入。灯亮是装置<strong>做出去</strong>的事，是输出。判断方向有个笨办法但很管用：问一句「这是别人给它的，还是它给别人的？」别人给它的，就是输入。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="9" data-tts="conceptest-1"
+           data-tts-script="接下来用三个容易弄错的说法考考你。请仔细读每一个选项，选完再看解释。"
+           data-tsh="概念测试：三个说法，错在哪里 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">概念测试</span>
+          <h2>概念测试：三个说法，错在哪里</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="ct-1">
+          <p><strong>1. 「输入 → 计算 → 输出」这三格的顺序，能不能调换？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-1" data-correct="1">不能，先有数据才谈得上算，算完才知道输出什么</button>
+            <button class="choice" data-q="ct-1" data-correct="0">能，反正三件事最后都做了</button>
+            <button class="choice" data-q="ct-1" data-correct="0">能，机器会自己重新排一遍</button>
+          </div>
+          <p class="result warn" data-explain="ct-1" style="display:none;margin-top:10px">顺序就是这条模型的骨架：没有输入，计算这一格没有东西可拿；没有算完，输出也不知道该做什么。<strong>错因提醒：</strong>容易误认为「三步都做了就行」——顺序一换，机器就停在中间动不了。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-2">
+          <p><strong>2. 小智想做「有人靠近就亮灯」，却装了一个只会测温度的传感器。会发生什么？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-2" data-correct="1">输入和规则对不上，计算进行不下去，也就没有输出</button>
+            <button class="choice" data-q="ct-2" data-correct="0">灯照样会亮，机器会变通一下</button>
+            <button class="choice" data-q="ct-2" data-correct="0">传感器会自动变成测人的</button>
+          </div>
+          <p class="result warn" data-explain="ct-2" style="display:none;margin-top:10px">规则要的是距离或人的信号，送进来的却是温度，两边对不上号，机器就卡在计算这一格。<strong>错因提醒：</strong>常见错误是以为机器会「看着办」——它不会变通，输入和规则必须配套。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-3">
+          <p><strong>3. 为什么说「机器算出来的结果，还得我们再看一眼」？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-3" data-correct="1">因为输入要是抄错了，机器也会照着算出一个怪结果</button>
+            <button class="choice" data-q="ct-3" data-correct="0">因为机器算得比较慢</button>
+            <button class="choice" data-q="ct-3" data-correct="0">因为机器会故意骗人</button>
+          </div>
+          <p class="result warn" data-explain="ct-3" style="display:none;margin-top:10px">机器只是不算错，不代表你给的数据没错。数据错一位，它就跟着错一位。<strong>错因提醒：</strong>误认为「机器算的就是对的」，是这一课最需要改掉的一个想法。</p>
+        </div>
+        <p id="ct-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="synthesis"
+           data-tts-script="最后一件事交给你。学校想在教室里装一台小助手，能自己判断光线够不够，还能提醒大家安静阅读。下面有六张卡片，请你把它们放进正确的格子里：哪些是它要拿到的输入，哪些是它要照着算的规则，哪些是它最后做出来的输出。放对了会告诉你理由，放错了会给你一个提示，可以再试一次。"
+           data-tsh="综合任务：给教室小助手配好三格" data-bloom-level="create" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">综合任务</span>
+          <h2>综合任务：给教室小助手配好三格</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">先点一张卡片，再点你认为对的那个格子。每放一次都会立刻告诉你理由。</p>
+        <div class="lab-panel">
+          <div style="font-weight:700;font-size:14px;margin-bottom:6px">待归位的六张卡片</div>
+          <div class="sort-bank" id="triple-bank">
+          <button class="sort-item" data-kind="in" data-why="它是装置从外面拿回来的数据，住在输入这一格。">光线传感器送来的亮度数值</button>
+          <button class="sort-item" data-kind="in" data-why="这也是外面送进来的数据，同样是输入。">同学按下按钮的信号</button>
+          <button class="sort-item" data-kind="calc" data-why="这是一条要比一比的规则，住在计算这一格。">比较一下：亮度小于 50 吗？</button>
+          <button class="sort-item" data-kind="calc" data-why="这也是照规则算一算，属于计算。">判断一下：按钮被按下了吗？</button>
+          <button class="sort-item" data-kind="out" data-why="这是装置最后动手做出来的事，住在输出这一格。">教室的灯亮起来</button>
+          <button class="sort-item" data-kind="out" data-why="屏幕上出现提示，也是装置做出来的输出。">屏幕显示「请安静阅读」</button>
+          </div>
+          <div class="sort-bins" style="grid-template-columns:repeat(3,1fr)">
+            <div class="sort-bin" data-triple-bin="in">
+              <h4>① 输入（数据从哪儿来）</h4>
+              <div class="bin-body"></div>
+            </div>
+            <div class="sort-bin" data-triple-bin="calc">
+              <h4>② 计算（照着规则算一算）</h4>
+              <div class="bin-body"></div>
+            </div>
+            <div class="sort-bin" data-triple-bin="out">
+              <h4>③ 输出（最后做了什么）</h4>
+              <div class="bin-body"></div>
+            </div>
+          </div>
+          <p class="result warn" id="triple-out" style="margin-top:12px">点一张卡片开始归位。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>放完以后想一想，说给同桌听：</strong></p>
+          <p style="color:var(--muted)">如果这台小助手要记录班上同学的阅读时长，它会拿到哪些数据？这些数据里有没有不该随便收集的？你会怎样写规则，让它既好用又不越界？</p>
+          <textarea id="syn-answer" rows="3" placeholder="它的输入有……其中……不该随便收集，所以我的规则会……" style="margin-top:8px"></textarea>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="posttest"
+           data-tts-script="最后一轮，换几个新的小情境来考考你。这次会出现自动门、一个算错了的温度，还有一道关于数据安全的题目，看看你能不能把学到的三格模型和那条责任提醒都用上去。"
+           data-tsh="后测：换几个情境，三格还在不在 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">后测</span>
+          <h2>后测：换几个情境，三格还在不在</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="post-1">
+          <p><strong>1. 自动门的输入是「门边有没有人」，输出是「开门或关门」。中间「计算」那一格在做什么？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-1" data-correct="1">按规则判断「有人」这个条件成不成立</button>
+            <button class="choice" data-q="post-1" data-correct="0">把门推开</button>
+            <button class="choice" data-q="post-1" data-correct="0">负责给门供电</button>
+          </div>
+          <p class="result warn" data-explain="post-1" style="display:none;margin-top:10px">计算格里只有一件事：照规则比一比、判断一下。推门是输出，供电是另一回事。<strong>错因提醒：</strong>常见错误是把「动手做的那件事」也算进计算里——动手的都属于输出。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-2">
+          <p><strong>2. 一个智能温度计显示教室有 268 ℃。最可能发生了什么？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-2" data-correct="1">输入的数据抄错了单位，26.8 被写成了 268</button>
+            <button class="choice" data-q="post-2" data-correct="0">教室真的变热了</button>
+            <button class="choice" data-q="post-2" data-correct="0">温度计自己坏了，和输入无关</button>
+          </div>
+          <p class="result warn" data-explain="post-2" style="display:none;margin-top:10px">268 确实大于 26，机器算得一点没错。问题出在送进去的数据上——这就是「算得没错，结果很怪」。<strong>错因提醒：</strong>容易误认为「结果怪就是机器坏了」。先回头查输入，多半错在那一格。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-3">
+          <p><strong>3. 小组想做一个「记录同学喝水次数」的小程序，把全班同学的姓名和学号当成输入。下面哪种做法最稳妥？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-3" data-correct="1">只在班里内部使用，不公开名单，不上传到公开的地方，用完就删</button>
+            <button class="choice" data-q="post-3" data-correct="0">发到班级群里让大家都看看</button>
+            <button class="choice" data-q="post-3" data-correct="0">顺手把家长的电话也一起录进去</button>
+          </div>
+          <p class="result warn" data-explain="post-3" style="display:none;margin-top:10px">姓名、学号、电话都是个人信息，够用就好、不外传、用完就删，这是最基本的一条规矩。<strong>错因提醒：</strong>常见的错误想法是「反正是班里的，没关系」——个人信息一旦传出去，就收不回来了。</p>
+        </div>
+        <p id="post-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="12" data-tts="summary"
+           data-tts-script="这节课我们记住了三句话。第一句，机器做事只有三步：输入拿到数据，计算按规则算一算，输出动手做事，三步有先后，不能调换。第二句，计算就是拿着一条规则去比一比、算一算，机器不会猜，也不会变通。第三句，输入不对，结果就怪：类型不对它算不出来，数值抄错它会照着算错，而别人的个人信息压根就不该被随便拿来做输入。回到开头那盏自己亮起来的灯，它靠的就是这三格——而最后该由人把关的那一步，永远还是人。"
+           data-tsh="小结：三句话，把三格模型讲清楚" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">小结</span>
+          <h2>小结：三句话，把三格模型讲清楚</h2>
+        </div>
+        <div class="grid">
+          <div class="summary-item"><span class="num">1</span><div><strong>三步是什么：</strong>输入拿到数据，计算按规则算一算，输出动手做事——三步有先后，不能调换。</div></div>
+          <div class="summary-item"><span class="num">2</span><div><strong>计算是什么：</strong>拿出输入的数据，和规则里的条件比一比，得出成立或不成立——机器不会猜，也不会变通。</div></div>
+          <div class="summary-item"><span class="num">3</span><div><strong>输入为什么重要：</strong>类型不对它算不出来，数值抄错它会算出怪结果——它只是不算错，不代表数据没错。</div></div>
+        </div>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>还有一条不该忘的规矩：</strong>不是所有数据都能当输入。别人的姓名、手机号、住址是个人信息，够用就好、不外传、用完就删。机器可以帮我们做事，但把关的永远是人。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>给别人讲一遍：</strong>请用「输入、计算、输出」这三个词，说清楚一盏路灯是怎样自己亮起来的。</p>
+          <p style="color:var(--muted)">再动一动手：<strong>画出来</strong>——在本子上画三个方框，用箭头连起来，左边写输入，中间写规则，右边写输出。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="13" data-tts="homework"
+           data-tts-script="最后留三项作业，分三个层次。第一层基础巩固，人人要做：用输入、计算、输出三个词，说出电饭煲是怎么把饭煮好的。第二层能力应用，动手做：找一个家里的自动装置，把它的三格写在一张纸上，再写清楚它的输入是从哪个传感器来的。第三层迁移挑战，选做：给教室设计一个自动小助手，写出它的输入、计算、输出，并说明你会怎样防止它拿到不该拿的数据。"
+           data-tsh="作业分层：三层小任务，按自己的节奏来" data-bloom-level="create" data-scaffold="none">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">作业分层</span>
+          <h2>作业分层：三层小任务，按自己的节奏来</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">三层练习，做完第一、二层就算通关；第三层留给愿意继续探索的同学。</p>
+        <div class="inner-card">
+          <p><strong>⭐ 基础巩固（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>用「输入、计算、输出」三个词，说出电饭煲是怎么把饭煮好的。</li>
+            <li>说出三格模型里每一格各表示什么，并说说为什么顺序不能调换。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐ 能力应用（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>找一个家里的自动装置（自动晾衣架、扫地机、智能台灯都可以），把它的三格写在一张纸上。</li>
+            <li>写清楚这个装置的输入是从哪个传感器来的，输出又是靠什么做出来的。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐⭐ 迁移挑战（选做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>给教室设计一台自动小助手，写出它的输入、计算、输出，并画成三个方框加箭头的示意图。</li>
+            <li>在上面那道题里补充一条：如果它要收集同学的数据，你会用哪些数据、不用哪些数据，为什么？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page kg-page" data-page-type="summary" data-page-index="14" data-tts="knowledge-graph"
+           data-tts-script="这张图展示了这节课在信息科技知识网络里的位置。左边是学它之前要先会的，右边是学会之后可以接着探索的，下面是同一个领域的伙伴知识。可以点一点，看看还有哪些值得继续学的内容。"
+           data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">知识图谱</span>
+          <h2>这节课在知识网络里的位置</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 10px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p class="kg-loading-hint" style="color:var(--muted);font-size:13px;margin:0 0 10px">图谱正在加载：首次进入需下载知识索引（约 1–3 秒），加载完成后本行会自动消失。</p>
+        <div data-teachany-kg="it-e-input-output">
+          <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="15" data-tts="ai-tutor"
+           data-tts-script="如果还有没想通的地方，把你的问题写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。"
+           data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+</div><!-- .slide-container -->
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-pretest",
+    "section": "pretest",
+    "src": "./tts/s04-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s05-module-1",
+    "section": "module-1",
+    "src": "./tts/s05-module-1.mp3",
+    "label": "概念一 机器做事的三步"
+  },
+  {
+    "id": "s06-lab-1",
+    "section": "lab-1",
+    "src": "./tts/s06-lab-1.mp3",
+    "label": "动手一 三格数据流动器"
+  },
+  {
+    "id": "s07-module-2",
+    "section": "module-2",
+    "src": "./tts/s07-module-2.mp3",
+    "label": "概念二 计算就是照规则"
+  },
+  {
+    "id": "s08-lab-2",
+    "section": "lab-2",
+    "src": "./tts/s08-lab-2.mp3",
+    "label": "动手二 输入不对结果就怪"
+  },
+  {
+    "id": "s09-worked-example",
+    "section": "worked-example",
+    "src": "./tts/s09-worked-example.mp3",
+    "label": "例题讲解 拆开自动感应灯"
+  },
+  {
+    "id": "s10-conceptest-1",
+    "section": "conceptest-1",
+    "src": "./tts/s10-conceptest-1.mp3",
+    "label": "概念测试"
+  },
+  {
+    "id": "s11-synthesis",
+    "section": "synthesis",
+    "src": "./tts/s11-synthesis.mp3",
+    "label": "综合任务 教室小助手三格拆解"
+  },
+  {
+    "id": "s12-posttest",
+    "section": "posttest",
+    "src": "./tts/s12-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s13-summary",
+    "section": "summary",
+    "src": "./tts/s13-summary.mp3",
+    "label": "课堂小结"
+  },
+  {
+    "id": "s14-homework",
+    "section": "homework",
+    "src": "./tts/s14-homework.mp3",
+    "label": "作业分层"
+  },
+  {
+    "id": "s15-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s15-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s16-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s16-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<script>
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'it-e-input-output',
+    courseTitle: '输入-计算-输出模型',
+    subject: 'info-tech',
+    grade: '5',
+    nodeId: 'it-e-input-output',
+    lessonType: 'concept-practice',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+</script>
+
+<script>
+
+/* ============================================================
+   it-e-input-output 互动逻辑
+   1) 选择题接线（前测 / 概念测试 / 后测）
+   2) 动手一：三格数据流动器（输入 + 规则 → 执行 → 三格依次亮起）
+   3) 动手二：怪结果实验（不合适的输入 → 算不出来 / 算得没错结果却怪）
+   4) 综合任务：六张卡片放进 输入 / 计算 / 输出 三格
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* 三格模型样式（走主题变量，不写死颜色） */
+  var st = document.createElement('style');
+  st.textContent =
+    '.io-row{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;margin-top:14px;}' +
+    '.io-row .inner-card{flex:1;min-width:170px;margin:0;transition:box-shadow .35s ease;}' +
+    '.io-arrow{display:grid;place-items:center;color:var(--muted);font-size:20px;font-weight:800;min-width:20px;}' +
+    '.io-v{color:var(--text-secondary);font-size:14px;line-height:1.6;margin:0;min-height:44px;}' +
+    '.io-cell-lit{box-shadow:0 0 0 2px var(--brand) inset;}';
+  document.head.appendChild(st);
+
+  /* ---------- 1. 选择题 ---------- */
+  document.querySelectorAll('[data-quiz-block]').forEach(function (block) {
+    block.querySelectorAll('.choice').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (block.dataset.answered === '1') return;
+        block.dataset.answered = '1';
+        var ok = btn.dataset.correct === '1';
+        btn.classList.add(ok ? 'correct' : 'wrong');
+        block.querySelectorAll('.choice').forEach(function (b) {
+          if (b.dataset.correct === '1') b.classList.add('correct');
+          b.disabled = true;
+        });
+        var ex = block.querySelector('[data-explain]');
+        if (ex) ex.style.display = 'block';
+      });
+    });
+  });
+
+  function setCell(el, text) {
+    if (!el) return;
+    el.classList.add('selected');
+    el.querySelector('.io-v').textContent = text;
+  }
+  function resetCells(ids) {
+    ids.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('selected');
+      el.querySelector('.io-v').textContent = '—';
+    });
+  }
+
+  /* ---------- 2. 动手一：三格数据流动器 ---------- */
+  var panel1 = document.getElementById('io3-panel');
+  if (panel1) {
+    var IN = {
+      lux30:  { label: '光线传感器：30 勒克斯', kind: 'lux', show: '光线亮度 = 30 勒克斯' },
+      lux80:  { label: '光线传感器：80 勒克斯', kind: 'lux', show: '光线亮度 = 80 勒克斯' },
+      press:  { label: '按钮：被按下了', kind: 'button', show: '按钮信号 = 已按下' },
+      dist120:{ label: '距离传感器：120 厘米', kind: 'dist', show: '距离 = 120 厘米' }
+    };
+    var RULE = {
+      dark:  { label: '如果光线低于 50 勒克斯，就去开灯', need: 'lux', needCn: '光线的亮度数值',
+               cmp: function (v) { return v < 50; }, yes: '把灯打开', no: '什么都不做（灯不亮）',
+               ask: '这条规则要把光线的亮度和 50 比一比。' },
+      press: { label: '如果按钮被按下，就去开门', need: 'button', needCn: '按钮被按下的信号',
+               cmp: function () { return true; }, yes: '把门打开', no: '门不动',
+               ask: '这条规则要检查按钮有没有被按下。' },
+      near:  { label: '如果距离小于 30 厘米，就报警', need: 'dist', needCn: '距离的数值',
+               cmp: function (v) { return v < 30; }, yes: '发出报警声', no: '不报警',
+               ask: '这条规则要把距离和 30 厘米比一比。' }
+    };
+    var VALUE = { lux30: 30, lux80: 80, dist120: 120 };
+    var curIn = null, curRule = null, busy = false;
+    var out1 = document.getElementById('io3-verdict');
+    var ids1 = ['io3-in', 'io3-calc', 'io3-out'];
+
+    function refresh1() {
+      panel1.querySelectorAll('[data-io-in]').forEach(function (b) {
+        b.classList.toggle('selected', b.dataset.ioIn === curIn);
+      });
+      panel1.querySelectorAll('[data-io-rule]').forEach(function (b) {
+        b.classList.toggle('selected', b.dataset.ioRule === curRule);
+      });
+    }
+
+    panel1.querySelectorAll('[data-io-in]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (busy) return;
+        curIn = b.dataset.ioIn;
+        resetCells(ids1);
+        refresh1();
+        out1.className = 'result warn';
+        out1.textContent = '输入选好了：' + IN[curIn].label + '。现在再选一条规则，然后点「执行」。';
+      });
+    });
+    panel1.querySelectorAll('[data-io-rule]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (busy) return;
+        curRule = b.dataset.ioRule;
+        resetCells(ids1);
+        refresh1();
+        out1.className = 'result warn';
+        out1.textContent = '规则选好了：' + RULE[curRule].label + '。现在点「执行」，看着数据一格格走过去。';
+      });
+    });
+
+    document.getElementById('io3-run').addEventListener('click', function () {
+      if (busy) return;
+      if (!curIn || !curRule) {
+        out1.className = 'result error';
+        out1.textContent = '还缺一样：输入和规则都要选好，机器才有东西可算。';
+        return;
+      }
+      busy = true;
+      resetCells(ids1);
+      var I = IN[curIn], R = RULE[curRule];
+      out1.className = 'result warn';
+      out1.textContent = '正在执行……先看输入这一格。';
+      setTimeout(function () {
+        setCell(document.getElementById('io3-in'), I.show);
+        out1.textContent = '数据到了输入格里。接着往前走，看计算这一格。';
+      }, 120);
+      setTimeout(function () {
+        if (I.kind !== R.need) {
+          setCell(document.getElementById('io3-calc'),
+            R.ask + '可是送进来的却是「' + I.show + '」，两样东西对不上号，这条规则用不上。');
+          out1.className = 'result error';
+          out1.textContent = '卡在计算这一格了：这条规则要的是' + R.needCn +
+            '，输入却是另一种数据。常见错误：以为机器会「变通一下」——它只会照规则算，对不上就停在这儿。';
+          setTimeout(function () {
+            setCell(document.getElementById('io3-out'), '没有输出。装置什么也没做。');
+            busy = false;
+          }, 620);
+          return;
+        }
+        var ok;
+        if (I.kind === 'button') {
+          ok = true;
+          setCell(document.getElementById('io3-calc'), '检查按钮状态：确实被按下了，条件成立。');
+        } else {
+          ok = R.cmp(VALUE[curIn]);
+          setCell(document.getElementById('io3-calc'),
+            '拿 ' + VALUE[curIn] + ' 和规则里的数比一比：' + (ok ? '条件成立。' : '条件不成立。'));
+        }
+        out1.textContent = '算完了。最后看输出这一格。';
+        setTimeout(function () {
+          setCell(document.getElementById('io3-out'), ok ? R.yes : R.no);
+          out1.className = 'result';
+          out1.innerHTML = ok
+            ? '<strong>跑通了：</strong>输入 → 计算 → 输出，三格一格格走完。注意——<strong>顺序不能调换</strong>，没有输入就没有可算的东西，没算完也不知道该输出什么。'
+            : '<strong>也算跑通了：</strong>条件不成立的时候，机器「什么都不做」，这本身就是一个正确的输出。' +
+              '别以为它坏了——规则里本来就写着，不满足条件就不动手。';
+          busy = false;
+        }, 700);
+      }, 700);
+    });
+
+    document.getElementById('io3-reset').addEventListener('click', function () {
+      if (busy) return;
+      curIn = null; curRule = null;
+      resetCells(ids1);
+      refresh1();
+      out1.className = 'result warn';
+      out1.textContent = '清空了。再选一组输入和规则试试。';
+    });
+  }
+
+  /* ---------- 3. 动手二：怪结果实验 ---------- */
+  var panel2 = document.getElementById('bad-panel');
+  if (panel2) {
+    var CASES = {
+      ok: {
+        calc: '拿 28 和 26 比一比：28 > 26，条件成立。',
+        out: '风扇打开。',
+        msg: '输入是数值、单位没错、大小也合理，机器算得又快又准——这是最顺的一种情况。',
+        kind: 'ok'
+      },
+      text: {
+        calc: '这条规则要拿一个数去和 26 比大小，可送进来的是「很热」。比不了。',
+        out: '算不出来，风扇一动不动。',
+        msg: '机器不会猜「很热」到底是几度。常见错误：以为机器「听懂意思」就能干活——它只认能比较的数据，不会变通。',
+        kind: 'error'
+      },
+      unit: {
+        calc: '拿 268 和 26 比一比：268 > 26，条件成立。算得一点没错。',
+        out: '风扇打开了。',
+        msg: '可教室里只有 26.8 ℃ —— 抄数据时把 26.8 写成了 268。机器不会怀疑数据，你错一位，它就跟着错一位。常见错误：误认为「机器算出来的就一定对」，它只是不算错，不代表你给的数据没错。',
+        kind: 'error'
+      },
+      privacy: {
+        calc: '这条规则要的是温度，送进来的却是别人的手机号。类型对不上，也不该拿它来做输入。',
+        out: '装置拒绝执行，并且弹出一句提醒。',
+        msg: '同学姓名、手机号、住址都是个人信息，不能随便拿来当输入，更不能打包上传。常见错误：觉得「手边有什么数据就用什么」——用之前先问一句：这个数据，我该不该拿？',
+        kind: 'privacy'
+      }
+    };
+    var ids2 = ['bad-in', 'bad-calc', 'bad-out'];
+    var out2 = document.getElementById('bad-verdict');
+
+    panel2.querySelectorAll('[data-bad]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var c = CASES[b.dataset.bad];
+        panel2.querySelectorAll('[data-bad]').forEach(function (x) { x.classList.remove('selected'); });
+        b.classList.add('selected');
+        resetCells(ids2);
+        setTimeout(function () {
+          setCell(document.getElementById('bad-in'), b.textContent.trim().replace(/^输入卡片\s*[①②③④]：/, '输入 = '));
+        }, 60);
+        setTimeout(function () {
+          setCell(document.getElementById('bad-calc'), c.calc);
+        }, 520);
+        setTimeout(function () {
+          setCell(document.getElementById('bad-out'), c.out);
+          out2.className = 'result ' + (c.kind === 'ok' ? '' : (c.kind === 'privacy' ? 'error' : 'warn'));
+          out2.innerHTML = c.kind === 'privacy'
+            ? '<strong>这一条不只是算错，是不该算。</strong>' + c.msg
+            : (c.kind === 'ok'
+              ? '<strong>结果正常。</strong>' + c.msg
+              : '<strong>结果很怪——但机器一点没错。</strong>' + c.msg);
+        }, 980);
+      });
+    });
+  }
+
+  /* ---------- 4. 综合任务：三格分类 ---------- */
+  var bank3 = document.getElementById('triple-bank');
+  if (bank3) {
+    var picked3 = null, done3 = 0;
+    var out3 = document.getElementById('triple-out');
+
+    bank3.querySelectorAll('.sort-item').forEach(function (card) {
+      card.addEventListener('click', function () {
+        if (card.classList.contains('done')) return;
+        bank3.querySelectorAll('.sort-item').forEach(function (c) { c.style.outline = 'none'; });
+        card.style.outline = '3px solid var(--brand)';
+        picked3 = card;
+        out3.className = 'result warn';
+        out3.textContent = '已选中「' + card.textContent.trim() + '」，现在点下面你认为对的那个格子。';
+      });
+    });
+
+    document.querySelectorAll('[data-triple-bin]').forEach(function (bin) {
+      bin.addEventListener('click', function () {
+        if (!picked3) {
+          out3.className = 'result warn';
+          out3.textContent = '先点上面的一张卡片，再点格子。';
+          return;
+        }
+        var want = picked3.dataset.kind, got = bin.dataset.tripleBin;
+        picked3.style.outline = 'none';
+        if (want === got) {
+          var tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = picked3.textContent.trim() + ' ✓';
+          bin.querySelector('.bin-body').appendChild(tag);
+          picked3.classList.add('done');
+          picked3.disabled = true;
+          done3++;
+          out3.className = 'result';
+          out3.innerHTML = '<strong>放对了！</strong>' + picked3.dataset.why;
+          bin.classList.add('ok');
+          picked3 = null;
+          if (done3 === 6) {
+            out3.className = 'result';
+            out3.innerHTML = '<strong>六张卡片全部归位。</strong>最快的判断办法是问三句话：' +
+              '这份数据是从外面<strong>拿进来</strong>的吗？那它是输入。' +
+              '这一句是在<strong>比一比、算一算</strong>吗？那它是计算。' +
+              '这件事是装置最后<strong>做出来</strong>的吗？那它是输出。';
+          }
+        } else {
+          out3.className = 'result error';
+          out3.innerHTML = '<strong>再想一下：「' + picked3.textContent.trim() + '」</strong>' +
+            '先问自己：它是从外面拿进来的数据，是要照规则算一算，还是装置最后做出来的事？<br>' +
+            '<span style="color:var(--muted)">常见错误：把「数据」和「规则」搞混了。' +
+            '数据是别人送来的，规则是我们自己写好的——规则像一句话，数据像一个数。</span>';
+          picked3.style.outline = '3px dashed rgba(239,68,68,.7)';
+        }
+      });
+    });
+  }
+})();
+
+</script>
+
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+</body>
+</html>

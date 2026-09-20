@@ -1,4 +1,4 @@
-/*! TeachAny Standard Historical Map · v2.7 (Leaflet · Web Mercator)
+/*! TeachAny Standard Historical Map · v2.11 (Leaflet · Web Mercator)
  * ─────────────────────────────────────────────────────────
  * 参考稳定实现：community/history-medieval-europe
  * 特点：真 Leaflet 地图引擎 + 本地 geojson + 朝代切换 + 城市标注 + 暗色主题
@@ -47,17 +47,12 @@
  *   - 底图：仅 L.tileLayer XYZ；禁止 L.imageOverlay 全球等距圆柱 JPG（cfg.hillshade 已废弃）
  *   - 疆域 GeoJSON：WGS84，坐标 [lng, lat]；城市 cities：[lat, lng, …]
  *   - fitBounds：[[南纬, 西经], [北纬, 东经]]，如中国 [[18,72],[52,140]]
- *   - 地形：cfg.terrain !== false 时叠加 Esri World_Shaded_Relief（同为 Web Mercator）
+ *   - 底图默认：Esri World_Imagery（绿陆蓝海，无需 API Key）；禁止再默认 Carto（现已水印）或中国范围 Terrarium
  */
 (function () {
   "use strict";
   if (window.__TeachAnyMapInit) return;
   window.__TeachAnyMapInit = true;
-
-  if (typeof L === "undefined") {
-    console.error("[TeachAnyMap] Leaflet 未加载。请在引入本模块前先引入 leaflet.js 和 leaflet.css");
-    return;
-  }
 
   // 双平台远程地图源：teachany.cn 优先（国内外均可访问，Cloudflare），
   // GitHub（jsDelivr / raw）作为备份。任一可用即可，互为冗余。
@@ -76,6 +71,9 @@
     // 1) 优先课件本地 assets/maps/（裸名或相对分类路径都支持）
     bases.push("./assets/maps/" + file);
     bases.push("assets/maps/" + file);
+    // 1b) 仓库共享地图库（地理课用当代政区，不必把唐朝图拷进每个课件）
+    bases.push("../../assets/maps/" + file);
+    bases.push("../assets/maps/" + file);
     // 2) 回退到 skill 仓库（相对路径，历史兼容）
     var scopeDir = scope === "world" ? "historical-world" : scope === "china" ? "historical-china" : "historical-" + scope;
     bases.push("../../skill/assets/" + scopeDir + "/" + file);
@@ -183,17 +181,30 @@
     host.appendChild(legendEl);
 
     // Leaflet 地图初始化
+    // v2.9: cfg.crs="EPSG4326" 时用等距圆柱投影（配合 cfg.baseImage 全球渲染图铺底，
+    // 与 WGS84 GeoJSON 同为经纬度线性坐标，完美对齐）；默认仍 EPSG:3857 Web Mercator。
+    var useEpsg4326 = (cfg.crs === "EPSG4326" || cfg.crs === "EPSG:4326");
     var map = L.map(mapId, {
       center: cfg.center || [34, 108],
       zoom: cfg.zoom || 4,
-      // 使用默认 EPSG:3857（Web Mercator），与 CartoDB 瓦片底图匹配
+      crs: useEpsg4326 ? L.CRS.EPSG4326 : L.CRS.EPSG3857,
       maxBounds: cfg.maxBounds || [[-90, -180], [90, 180]],
       zoomControl: true,
-      minZoom: cfg.minZoom || 2,
-      maxZoom: cfg.maxZoom || 8,
+      // v2.9: zoomSnap 可配（如 0.25）——EPSG4326 下整数 zoom 粒度粗，
+      // fitBounds 会向下取整导致视图比目标区域大很多，细粒度 snap 让聚焦更准。
+      zoomSnap: cfg.zoomSnap != null ? cfg.zoomSnap : 0.25,
+      zoomDelta: cfg.zoomDelta != null ? cfg.zoomDelta : 0.5,
+      minZoom: cfg.minZoom != null ? cfg.minZoom : 2,
+      maxZoom: cfg.maxZoom != null ? cfg.maxZoom : 8,
       worldCopyJump: false,
       attributionControl: false
     });
+
+    // v2.9: 全局 map 实例注册表——课件需在标准底图上叠加自定义交互层
+    // （如 geo-monsoon 的季风区多边形/风向箭头）时，通过
+    // window.TeachAnyMaps['<data-teachany-map 的 id>'] 获取实例后 L.xxx.addTo(map)。
+    window.TeachAnyMaps = window.TeachAnyMaps || {};
+    window.TeachAnyMaps[mapId] = map;
 
     if (cfg.hillshade) {
       console.warn(
@@ -206,7 +217,9 @@
 
     function refitMap() {
       try { map.invalidateSize(true); } catch (e) { map.invalidateSize(); }
-      if (currentEraLayer) {
+      // v2.9: cfg.refitEra === false 时不用 era 边界 refit——全球轮廓类 era
+      // （如 geo-monsoon 用 world/countries 做底衬）会把视图拉成全球，覆盖教学聚焦区。
+      if (currentEraLayer && cfg.refitEra !== false) {
         try {
           var b = currentEraLayer.getBounds();
           if (b && b.isValid && b.isValid()) {
@@ -225,27 +238,54 @@
       refitTimer = setTimeout(refitMap, 160);
     }
 
-    // v2.7: Web Mercator XYZ 底图（与 WGS84 GeoJSON 同 CRS 链，Leaflet 自动对齐）
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
-      {
-        subdomains: "abcd",
-        maxZoom: 19,
-        opacity: 0.72,
-        attribution: "© CARTO © OSM contributors"
+    // v2.9: cfg.baseImage 用等距圆柱全球渲染图铺底（如自带 hillshade/global-color-hillshade-4k.jpg）。
+    // 必须配 cfg.crs="EPSG4326"：等距圆柱 JPG 与 WGS84 GeoJSON 同为经纬度线性坐标，完美对齐。
+    // 在默认 Web Mercator 下用 imageOverlay 会南北错位（RULES #21 禁止的正是这种错位用法）。
+    if (cfg.baseImage && cfg.baseImage.url) {
+      if (!useEpsg4326) {
+        console.warn("[TeachAnyMap] cfg.baseImage 需配合 cfg.crs=\"EPSG4326\"，否则全球等距圆柱图与 Web Mercator 错位");
       }
-    ).addTo(map);
+      L.imageOverlay(cfg.baseImage.url, cfg.baseImage.bounds || [[-90, -180], [90, 180]], {
+        opacity: cfg.baseImage.opacity != null ? cfg.baseImage.opacity : 1,
+        attribution: cfg.baseImage.attribution || "",
+        interactive: false
+      }).addTo(map);
+    } else {
+    // v2.10: 默认用全球 Web Mercator 底图，与 WGS84 GeoJSON 对齐。
+    // 禁止再默认 physical/terrain-tiles：那是中国范围 Terrarium DEM 稀疏瓦片（Z4-6），
+    // 会在世界/中国视图上叠出一块错位的绿色方块。
+    // 显式 cfg.basemap.url 仍可指向本地瓦片（须自行设 bounds / nativeZoom）。
+    var bmCfg = (cfg.basemap && typeof cfg.basemap === "object") ? cfg.basemap : {};
+    var wantTerrain = cfg.terrain === true || (cfg.terrain && typeof cfg.terrain === "object");
+    var customUrl = !!bmCfg.url;
+    // Carto Dark 现已要求 API Key（瓦片会打水印）。Esri 浅灰画布/浅色晕渲也不对。
+    // 默认用 Esri World_Imagery：绿陆蓝海、Web Mercator、无需 key。
+    var esriImagery = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+    var esriRelief = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}";
+    var bmUrl = bmCfg.url || esriImagery;
+    var bmOpts = {
+      maxZoom: bmCfg.maxZoom != null ? bmCfg.maxZoom : 19,
+      opacity: bmCfg.opacity != null ? bmCfg.opacity : 1,
+      attribution: bmCfg.attribution || (customUrl ? "© TeachAny 地形底图" : "© Esri")
+    };
+    if (bmCfg.minZoom != null) bmOpts.minZoom = bmCfg.minZoom;
+    if (customUrl) {
+      if (bmCfg.minNativeZoom != null) bmOpts.minNativeZoom = bmCfg.minNativeZoom;
+      if (bmCfg.maxNativeZoom != null) bmOpts.maxNativeZoom = bmCfg.maxNativeZoom;
+      if (Array.isArray(bmCfg.bounds)) { try { bmOpts.bounds = L.latLngBounds(bmCfg.bounds); } catch (e) {} }
+    }
+    if (bmUrl.indexOf("{s}") >= 0) bmOpts.subdomains = bmCfg.subdomains || "abcd";
+    L.tileLayer(bmUrl, bmOpts).addTo(map);
 
-    if (cfg.terrain !== false) {
-      var terrainOpacity = 0.42;
+    // 卫星/影像底已含地形纹理；仅在自定义底图上再叠浅色晕渲
+    if (wantTerrain && customUrl) {
+      var terrainOpacity = 0.35;
       if (cfg.terrain && typeof cfg.terrain === "object" && cfg.terrain.opacity != null) {
         terrainOpacity = cfg.terrain.opacity;
       }
-      L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}",
-        { maxZoom: 13, opacity: terrainOpacity, attribution: "© Esri" }
-      ).addTo(map);
+      L.tileLayer(esriRelief, { maxZoom: 13, opacity: terrainOpacity, attribution: "© Esri" }).addTo(map);
     }
+    } // end else（v2.9 baseImage 分支的备选路径）
 
     if (cfg.fitBounds) {
       try { map.fitBounds(L.latLngBounds(cfg.fitBounds), { padding: [24, 24] }); } catch (e) {}
@@ -360,11 +400,31 @@
           .then(function (data) {
             var fill = era.fill || "#6366f1";
             var stroke = era.stroke || "#4f46e5";
+            // v2.8.2: 政权分色——feature.properties.POWER 命中配色表时按政权着色
+            // （三国等分裂时期可分别显示魏/蜀/吴等政权边界；统一朝代 POWER 不命中走默认）
+            var POWER_COLORS = {
+              "魏": { fill: "#3b82f6", stroke: "#60a5fa" },
+              "蜀": { fill: "#a78bfa", stroke: "#c4b5fd" },
+              "蜀汉": { fill: "#a78bfa", stroke: "#c4b5fd" },
+              "吴": { fill: "#f59e0b", stroke: "#fbbf24" }
+            };
             currentEraLayer = L.geoJSON(data, {
               style: function (feature) {
                 // 尊重 feature.properties.LEVEL 分层：country 深色，prefecture 浅色
                 var lvl = feature.properties && feature.properties.LEVEL;
                 var nameCh = (feature.properties && feature.properties.NAME_CH) || "";
+                // v2.8.2: 政权分色优先（如三国魏/蜀/吴各郡）
+                var pw = feature.properties && feature.properties.POWER;
+                if (pw && POWER_COLORS[pw]) {
+                  var pc = POWER_COLORS[pw];
+                  return {
+                    fillColor: pc.fill,
+                    fillOpacity: era.fillOpacity != null ? era.fillOpacity : 0.3,
+                    color: pc.stroke,
+                    weight: era.weight != null ? era.weight : 1,
+                    opacity: 0.85
+                  };
+                }
                 // 匈奴等周边政权用虚线边框、浅色填充，与主体疆域区分
                 var isNeighbor = /匈奴|鲜卑|乌桓|羌|哀牢|朝鲜|卫氏|高句丽|百济|新罗|倭/.test(nameCh);
                 var isNeighborEn = /^(Xiongnu|Southern Xiongnu|Xianbei|Wuhuan|Goguryeo|Baekje|Silla|Wa|Gojoseon)$/i.test((feature.properties && feature.properties.NAME) || "");
@@ -380,10 +440,12 @@
                 }
                 return {
                   fillColor: fill,
-                  fillOpacity: lvl === "prefecture" ? 0.12 : 0.28,
+                  // v2.8: 支持 era.fillOpacity / era.weight / era.strokeOpacity 自定义
+                  // （用自带地形底图时建议 fillOpacity 0.05-0.12，让地形纹理透出）
+                  fillOpacity: era.fillOpacity != null ? era.fillOpacity : (lvl === "prefecture" ? 0.12 : 0.28),
                   color: stroke,
-                  weight: lvl === "prefecture" ? 0.7 : 1.4,
-                  opacity: 0.75
+                  weight: era.weight != null ? era.weight : (lvl === "prefecture" ? 0.7 : 1.4),
+                  opacity: era.strokeOpacity != null ? era.strokeOpacity : 0.75
                 };
               },
               onEachFeature: function (feature, layer) {
@@ -462,7 +524,15 @@
     map.whenReady(scheduleRefit);
   }
 
+  // v2.9: 等待 Leaflet 就绪再初始化——兼容课件异步/回退链加载 leaflet.js 的场景
+  // （如 geo-monsoon 的多 CDN 动态加载），最多等待约 10 秒，超时明确报错而非静默失败。
+  var initRetries = 0;
   function init() {
+    if (typeof L === "undefined") {
+      if (initRetries++ < 66) { setTimeout(init, 150); return; }
+      console.error("[TeachAnyMap] Leaflet 未加载。请在引入本模块前先引入 leaflet.js 和 leaflet.css");
+      return;
+    }
     document.querySelectorAll("[data-teachany-map]").forEach(mount);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

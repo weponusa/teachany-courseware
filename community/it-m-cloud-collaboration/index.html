@@ -1,0 +1,1599 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《云存储与在线协作》 · 初中信息科技 七年级 · TeachAny</title>
+<meta name="description" content="通过版本冲突模拟与权限组合判定，理解云存储的账号、云端副本与同步机制，掌握在线协作中版本记录与权限设置的作用，并能按规范管理自己的数字作品、安全地分享文件。">
+
+<meta name="course-id" content="it-m-cloud-collaboration">
+<meta name="course-title" content="云存储与在线协作">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="初中七年级">
+<meta name="course-prereqs" content="it-m-internet-architecture">
+<meta name="course-next" content="it-m-web-development">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.22.0">
+<meta name="teachany-node" content="it-m-cloud-collaboration">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="7">
+<meta name="teachany-stage" content="middle">
+<meta name="teachany-domain" content="internet-innovation">
+<meta name="teachany-prerequisites" content="互联网结构与协议初识">
+<meta name="teachany-lesson-type" content="application-practice">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style>
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+</style>
+</head>
+<body class="teachany-middle">
+
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
+    <img src="https://www.teachany.cn/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.22.0</span></span>
+  </div>
+</div>
+
+<div class="slide-container" id="slide-container">
+
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero"
+           data-tts-script="先看一个真实场景。小组四个人要交一份实验报告，说好各自把自己那部分写进去。结果第二天打开文件一看，昨天写好的两段不见了，只剩下最后一版。文件明明没删，内容却少了——问题出在哪？其实这不是文件坏了，而是我们对「云存储」和「在线协作」的工作方式理解得还不够。这节课，我们把它弄明白，并学会规范地管理自己的数字作品。"
+           data-tsh="开场 - 用一个真实问题建立学习动机" data-bloom-level="remember" data-scaffold="full">
+    <div class="slide-inner">
+      <p class="level-badge">初中七年级 · 互联网应用与创新</p>
+      <h1>云存储与在线协作</h1>
+      <p class="subtitle">同一份文件，几个人同时在改，为什么有的改动留下了、有的却不见了？</p>
+      <figure class="ta-standard-figure" style="margin-top:24px">
+        <img src="./assets/it-m-cloud-collaboration-hero.webp" alt="云存储与在线协作知识结构图：云存储原理、协作与权限、作品管理三栏">
+        <figcaption>云存储原理 → 在线协作与权限 → 数字作品管理：分清上传下载 · 看清版本与范围 · 规范命名与备份</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide-page" id="problem-anchor" data-page-type="interactive" data-page-index="1"
+           data-tts="problem-anchor" data-tts-alias="anchor"
+           data-tts-script="在开始之前，先选出你最想弄明白的那个问题。是想知道文件放到云端之后到底存在哪里，还是想知道几个人同时改一份文件为什么不会乱，又或者你更想知道怎样把文件名、版本和权限管理得清清楚楚。选好之后，就带着这个问题往下看。"
+           data-tsh="问题锚点 - 先确定今天最想弄明白的问题">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">问题锚点</span>
+          <h2>今天最想弄明白哪一件事？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你真正好奇的问题，后面的实验都会围着它转。</p>
+        <div class="grid">
+          <button class="choice" data-anchor-choice="文件放到云端之后到底存在哪里"><strong>文件放到云端之后，到底存在哪里？</strong><br><span style="color:var(--muted);font-size:14px">本地那份还会不会留在电脑里</span></button>
+          <button class="choice" data-anchor-choice="几个人同时改一份文件为什么不会乱"><strong>几个人同时改一份文件，为什么不会乱？</strong><br><span style="color:var(--muted);font-size:14px">背后的同步和版本记录是怎么回事</span></button>
+          <button class="choice" data-anchor-choice="为什么我昨天写好的内容会不见"><strong>为什么我昨天写好的内容会不见？</strong><br><span style="color:var(--muted);font-size:14px">想弄清版本覆盖到底怎么发生</span></button>
+          <button class="choice" data-anchor-choice="分享给谁给多大的权限才安全"><strong>分享给谁、给多大的权限才安全？</strong><br><span style="color:var(--muted);font-size:14px">怎样既方便又不外泄</span></button>
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己最想知道的问题
+          <input id="learner-question-input" placeholder="把你好奇的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives"
+           data-tts-script="这节课有四个目标。第一，能说清楚云存储的基本原理，分清上传、下载和同步三件事。第二，能说明在线协作依靠什么机制让多人同时编辑一份文件。第三，能根据任务需要设置合适的分享范围与权限，并说出其中的安全风险。第四，能用自己的话讲出一套数字作品管理的规范，并照着规范整理文件。"
+           data-tsh="学习目标 - 明确这节课结束时能做到什么" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">学习目标</span>
+          <h2>这节课结束时，你应该能做到</h2>
+        </div>
+        <ul class="objectives">
+          <li>能说清楚云存储的基本原理，分清上传、下载与同步三个动作</li>
+          <li>能说明在线协作依靠版本记录与自动同步维持秩序</li>
+          <li>能根据任务需要选择合适的分享范围与权限，并说出其中的安全风险</li>
+          <li>能按规范管理数字作品，给文件规范命名、分类归档并保留版本</li>
+        </ul>
+        <div class="kid-note" style="margin-top:16px">
+          <span class="emoji">🎯</span>
+          <div><strong>课标依据：</strong>《义务教育信息科技课程标准（2022年版2025年修订）》初中「互联网应用与创新」——体验云存储与协作工具，规范进行数字作品管理；在互联网应用中遵守法律法规与信息社会责任。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="3" data-tts="pretest"
+           data-tts-script="先做三道小题，凭你现在的想法选就行，选错了也没关系，正好能看出哪里需要重点听。选完会立刻出现解释。"
+           data-tsh="先测一测：文件到底存在哪里？ - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">前测</span>
+          <h2>先测一测：文件到底存在哪里？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="pre-1">
+          <p><strong>1. 「上传」和「下载」这两个动作，方向分别是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-1" data-correct="1">上传是本地送到云端，下载是云端取回本地</button>
+            <button class="choice" data-q="pre-1" data-correct="0">上传是云端取回本地，下载是本地送到云端</button>
+            <button class="choice" data-q="pre-1" data-correct="0">两个动作方向一样，只是说法不同</button>
+          </div>
+          <p class="result warn" data-explain="pre-1" style="display:none;margin-top:10px">上，是往云端去；下，是从云端回来。<strong>错因提醒：</strong>把上传和下载的方向搞反，是这一课最常见的错误，记住「上」对应的方向是往上送出去。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-2">
+          <p><strong>2. 把文件保存到云端之后，本地的那份文件会怎么样？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-2" data-correct="1">它还在本地，云端是另一份副本，两边可以保持同步</button>
+            <button class="choice" data-q="pre-2" data-correct="0">本地那份会被自动删除</button>
+            <button class="choice" data-q="pre-2" data-correct="0">本地那份不能再打开</button>
+          </div>
+          <p class="result warn" data-explain="pre-2" style="display:none;margin-top:10px">云存储是在云端多放一份副本，不是把本地的那份搬走。两份保持一致，靠的是同步。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-3">
+          <p><strong>3. 小组四个人同时改一份在线文档，最需要提前说清楚的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-3" data-correct="1">谁负责哪一部分，以及各自的权限是什么</button>
+            <button class="choice" data-q="pre-3" data-correct="0">谁的电脑配置最好</button>
+            <button class="choice" data-q="pre-3" data-correct="0">谁的网速最快</button>
+          </div>
+          <p class="result warn" data-explain="pre-3" style="display:none;margin-top:10px">这个问题先记在心里，等一下做同步实验时，你会看到没有分工和权限约定会发生什么。</p>
+        </div>
+        <p id="pre-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="module-1"
+           data-tts-script="云存储，是把文件保存到网络上去，而不是只保存在自己这台设备里。它有三个关键点。第一是账号，账号决定了你是谁，也决定了你能看到哪些文件。第二是云端副本，网络上那份文件才是大家公认的版本。第三是同步，设备把本地的改动传上去，再把云端的改动取下来，两边保持一致。这里要分清三个动作：上传，是把本地的东西送到云端；下载，是把云端的东西取回本地；同步，是自动做这两件事，让两边尽量一样。"
+           data-tsh="云存储：账号、云端副本与同步" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念一</span>
+          <h2>云存储：账号、云端副本与同步</h2>
+        </div>
+
+        <div class="inner-card">
+          <p><strong>为什么要学这一课？</strong>你已经知道互联网是由许多网络互联而成的，数据可以在设备之间传输。<strong>但</strong>传过去的文件存在哪里，谁说了算？<strong>所以</strong>我们需要弄清云存储的工作方式，才能安全地存放和取用自己的数字作品。</p>
+        </div>
+        <div class="grid grid-3">
+          <div class="inner-card">
+            <p><strong>账号</strong></p>
+            <p style="color:var(--muted)">账号决定你是谁，也决定你能看到哪些文件。账号一旦泄露，你的文件就不再只属于你。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>云端副本</strong></p>
+            <p style="color:var(--muted)">放在网络服务器上的那一份，是大家公认的权威版本；本地只是它的一个副本。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>同步</strong></p>
+            <p style="color:var(--muted)">自动做两件事：把本地改动送上去，把云端更新取下来，让两边尽量一致。</p>
+          </div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-cloud-collaboration-fig1.webp" alt="云存储原理示意图：两台设备通过云端服务器保持副本一致">
+          <figcaption>设备 A 与设备 B 各自持有一份副本，改动通过云端服务器传递，两边因此保持一致</figcaption>
+        </figure>
+        <div class="kid-note"><span class="emoji">🔀</span><div><strong>三个动作别搞混：</strong>上传是「本地 → 云端」，下载是「云端 → 本地」，同步是两个方向都自动做。三个动作都会改动数据，所以做之前要看清新旧。</div></div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>看见它</strong>：同一份文件，在手机、平板、教室电脑上各有一个副本，改动却能互相同步——背后是云端那一份在当中转。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>解释它</strong>：为什么云存储能防丢失？因为云端服务器通常会把数据复制到多处保存。这属于「冗余」，代价是需要更多存储空间。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：同步的思路不止用在文件上：浏览器的书签、笔记应用的记录，都是同一套「一份权威数据 + 多份副本」的模型。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="lab-1"
+           data-tts-script="我们来模拟一次真实的协作事故。左边是本地副本，右边是云端副本，两个版本号会随着操作变化。你可以自己改一处，也可以让同伴在云端改一处，然后选择上传或者下载。请注意观察：当云端已经有了别人的新版本，而你还按老版本上传，会发生什么。"
+           data-tsh="云同步模拟器：一次版本冲突是怎么发生的" data-bloom-level="analyze" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">协作实验室</span>
+          <h2>云同步模拟器：一次版本冲突是怎么发生的</h2>
+        </div>
+
+        
+<style>
+.ta-sync { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ta-sync-box { border: 1px solid var(--line-subtle); border-radius: 12px; padding: 12px; background: var(--bg-subtle); }
+.ta-sync-box h4 { font-size: 14px; color: var(--text-secondary); margin: 0 0 8px; }
+.ta-sync-box .ver { display: inline-block; font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700;
+  padding: 2px 8px; border-radius: 999px; background: var(--brand-soft); color: var(--link); margin-left: 6px; }
+.ta-sync-box .body { min-height: 62px; font-size: 14px; color: var(--text); background: var(--card);
+  border: 1px solid var(--line-subtle); border-radius: 9px; padding: 9px 11px; }
+.ta-sync-box .body.remote { border-style: dashed; }
+.ta-flag { display: inline-block; margin-top: 8px; font-size: 12px; padding: 3px 9px; border-radius: 999px;
+  background: var(--brand-2-soft); color: var(--accent-deep); border: 1px solid var(--line-subtle); }
+.ta-flag.dirty { background: var(--warm-soft); color: var(--warm-deep); }
+.ta-check { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.ta-check-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 11px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); font-size: 14px; }
+.ta-check-row .mark { flex-shrink: 0; width: 26px; height: 26px; display: grid; place-items: center;
+  border-radius: 50%; font-weight: 800; font-size: 14px; }
+.ta-check-row.ok .mark { background: rgba(34, 197, 94, .16); color: #15803d; }
+.ta-check-row.no .mark { background: rgba(239, 68, 68, .14); color: var(--danger); }
+.ta-check-row.wait .mark { background: var(--brand-soft); color: var(--link); }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">左边是你手里这份，右边是云端那份。先自己改一处，再让同伴在云端改一处，然后试着上传，看看会发生什么。</p>
+        <div class="lab-panel" id="lab1-sync">
+          <div class="ta-sync">
+            <div class="ta-sync-box">
+              <h4>本地副本<span class="ver" id="l1-local-ver">v1</span></h4>
+              <div class="body" id="l1-local-body">实验报告 · 第一段：实验目的。</div>
+              <span class="ta-flag" id="l1-local-flag">与云端一致</span>
+            </div>
+            <div class="ta-sync-box">
+              <h4>云端副本<span class="ver" id="l1-cloud-ver">v1</span></h4>
+              <div class="body remote" id="l1-cloud-body">实验报告 · 第一段：实验目的。</div>
+              <span class="ta-flag" id="l1-cloud-flag">线上权威版本</span>
+            </div>
+          </div>
+          <div class="flex-row">
+            <button class="choice" id="l1-edit" style="text-align:center;flex:1">我在本地改一处</button>
+            <button class="choice" id="l1-peer" style="text-align:center;flex:1">同伴在云端改一处</button>
+          </div>
+          <div class="flex-row">
+            <button class="choice" id="l1-upload" style="text-align:center;flex:1">上传：本地 → 云端</button>
+            <button class="choice" id="l1-download" style="text-align:center;flex:1">下载：云端 → 本地</button>
+            <button class="choice" id="l1-reset" style="text-align:center;flex:1">重置</button>
+          </div>
+          <p class="result warn" id="l1-out" style="margin-top:12px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🧪</span><div><strong>试试这条路线：</strong>先「我在本地改一处」，再点一次「同伴在云端改一处」，最后点「上传」。看到冲突提示后，想一想：如果当时先点一次「下载」，结果会不会不一样？</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="6" data-tts="module-2"
+           data-tts-script="在线协作，是几个人同时编辑同一份文件。它靠两样东西维持秩序：一是自动同步和版本记录，每一次保存都会留下一条历史，出问题可以回头看；二是权限设置，决定谁能看、谁只能评论、谁可以改。分享的时候要同时想两件事：给多大的权限，以及分享给多大的范围。范围一旦选成「拿到链接的人」，链接被转发出去，范围之外的人也能看到。"
+           data-tsh="在线协作：同步、版本记录与权限" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念二</span>
+          <h2>在线协作：同步、版本记录与权限</h2>
+        </div>
+
+        <div class="inner-card">
+          <p><strong>两样东西维持秩序。</strong>第一是<strong>自动同步与版本记录</strong>：每次保存都留下一条历史，写错了可以回头看、往回转。第二是<strong>权限设置</strong>：决定谁能看、谁只能评论、谁可以改。</p>
+        </div>
+        <div class="grid grid-3">
+          <div class="inner-card">
+            <p><strong>只能查看</strong></p>
+            <p style="color:var(--muted)">能读，不能改。适合发给需要了解情况的人。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>可以评论</strong></p>
+            <p style="color:var(--muted)">能读，能留建议，不能直接改正文。适合征求意见。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>可以编辑</strong></p>
+            <p style="color:var(--muted)">能直接改正文，改动会进入版本记录。适合同组同学。</p>
+          </div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-cloud-collaboration-fig2.webp" alt="分享范围与权限档位对照示意图：仅指定的人、拿到链接的人、完全公开">
+          <figcaption>分享范围决定「谁能进来」，权限档位决定「进来能做什么」，两件事要同时想清楚</figcaption>
+        </figure>
+        <div class="inner-card">
+          <p><strong>易错点：只想着给权限，忘了想范围。</strong>「拿到链接的人」和「完全公开」看起来很省事，但链接一旦被转发出去，范围就失控了。涉及个人信息、成绩、联系方式的内容，分享范围必须收在「仅指定的人」。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="7" data-tts="lab-2"
+           data-tts-script="现在你来当一次权限管理员。先选一个权限档位，再选一个分享范围，然后看看查看、评论、编辑、转发这几件事分别会发生什么。选完之后读一读下面的风险提示，想一想：给小组内部共享的一份草稿，用什么样的设置才既方便又安全。"
+           data-tsh="权限检查器：这个分享设置安全吗？" data-bloom-level="evaluate" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">协作实验室</span>
+          <h2>权限检查器：这个分享设置安全吗？</h2>
+        </div>
+
+        
+<style>
+.ta-sync { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ta-sync-box { border: 1px solid var(--line-subtle); border-radius: 12px; padding: 12px; background: var(--bg-subtle); }
+.ta-sync-box h4 { font-size: 14px; color: var(--text-secondary); margin: 0 0 8px; }
+.ta-sync-box .ver { display: inline-block; font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700;
+  padding: 2px 8px; border-radius: 999px; background: var(--brand-soft); color: var(--link); margin-left: 6px; }
+.ta-sync-box .body { min-height: 62px; font-size: 14px; color: var(--text); background: var(--card);
+  border: 1px solid var(--line-subtle); border-radius: 9px; padding: 9px 11px; }
+.ta-sync-box .body.remote { border-style: dashed; }
+.ta-flag { display: inline-block; margin-top: 8px; font-size: 12px; padding: 3px 9px; border-radius: 999px;
+  background: var(--brand-2-soft); color: var(--accent-deep); border: 1px solid var(--line-subtle); }
+.ta-flag.dirty { background: var(--warm-soft); color: var(--warm-deep); }
+.ta-check { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.ta-check-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 11px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); font-size: 14px; }
+.ta-check-row .mark { flex-shrink: 0; width: 26px; height: 26px; display: grid; place-items: center;
+  border-radius: 50%; font-weight: 800; font-size: 14px; }
+.ta-check-row.ok .mark { background: rgba(34, 197, 94, .16); color: #15803d; }
+.ta-check-row.no .mark { background: rgba(239, 68, 68, .14); color: var(--danger); }
+.ta-check-row.wait .mark { background: var(--brand-soft); color: var(--link); }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">先选一个权限档位，再选一个分享范围，看看查看、评论、编辑、转发这四件事分别会发生什么。</p>
+        <div class="lab-panel" id="lab2-perm">
+          <div style="font-weight:700;font-size:14px;margin-bottom:6px">① 给对方多大的权限</div>
+          <div class="flex-row" style="margin-top:0">
+            <button class="choice" data-perm="view" style="text-align:center">只能查看</button>
+            <button class="choice" data-perm="comment" style="text-align:center">可以评论</button>
+            <button class="choice" data-perm="edit" style="text-align:center">可以编辑</button>
+          </div>
+          <div style="font-weight:700;font-size:14px;margin:16px 0 6px">② 分享给多大的范围</div>
+          <div class="flex-row" style="margin-top:0">
+            <button class="choice" data-scope="named" style="text-align:center">仅指定的人</button>
+            <button class="choice" data-scope="link" style="text-align:center">拿到链接的人</button>
+            <button class="choice" data-scope="open" style="text-align:center">完全公开</button>
+          </div>
+          <div class="ta-check" id="l2-rows" style="margin-top:16px"></div>
+          <p class="result warn" id="l2-out" style="margin-top:14px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🔐</span><div><strong>挑战：</strong>小组正在改一份还没定稿的草稿，既要方便大家一起补充，又不能外传。请找出一组最合适的设置，并说明你为什么这样选。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="worked-example"
+           data-tts-script="我们一起分析那起协作事故。第一步，看清现象：昨天晚上写好的两段不见了。第二步，找出原因：两个人在各自的设备上各改了一版，甲先上传，乙手里还是旧版本，乙一上传，就把甲那一版覆盖掉了。第三步，判断性质：这不是文件损坏，是版本覆盖。第四步，给出对策：动手改之前先同步一次，看到版本冲突的提示不要直接覆盖，而是先比较两版内容，或者干脆分工到不同章节，各写各的。"
+           data-tsh="例题示范：两段内容为什么不见了" data-bloom-level="analyze" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">例题示范</span>
+          <h2>例题示范：两段内容为什么不见了</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>题目：</strong>小组四人合作写实验报告。第二天打开文件，昨天写好的两段不见了。文件没有报错，容量也变小了。请分析原因并提出改进办法。</p>
+        </div>
+        <div class="inner-card">
+          <p style="margin:0 0 6px"><strong>第一步　看清现象：</strong>内容少了，但文件能正常打开，说明不是文件损坏。</p>
+          <p style="margin:0 0 6px"><strong>第二步　找出原因：</strong>两个人在各自设备上各改了一版。甲先上传到云端，乙手里还是旧副本，乙一上传，旧副本把甲那一版整个替换掉了。</p>
+          <p style="margin:0 0 6px"><strong>第三步　判断性质：</strong>这是<strong>版本覆盖</strong>，不是丢失。云端和本地都存在过旧版本，只是没人发现。</p>
+          <p style="margin:0"><strong>第四步　给出对策：</strong>动手前先同步一次；看到冲突提示不要强行覆盖，先比较两版再合并；更稳妥的是分工到不同章节，各自只改自己那一段。</p>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">不少同学误认为「上传」总是安全的，只有「下载」才会覆盖别的东西。事实是：上传和下载都会覆盖，只是方向相反。上传覆盖的是云端，下载覆盖的是本地。真正安全的做法不是回避这两个动作，而是<strong>动手之前先看清版本，两边都有改动时先合并</strong>。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="9" data-tts="conceptest-1"
+           data-tts-script="现在用三个容易弄错的说法考考你。请仔细读每一个选项，选出你认为正确的那个，然后看解释。"
+           data-tsh="概念测试：找出藏在说法里的错误 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">概念测试</span>
+          <h2>概念测试：找出藏在说法里的错误</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="ct-1">
+          <p><strong>1. 关于云存储，下面哪句话是正确的？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-1" data-correct="1">本地和云端各有一份副本，同步让两边保持一致</button>
+            <button class="choice" data-q="ct-1" data-correct="0">上传之后本地那份就不存在了</button>
+            <button class="choice" data-q="ct-1" data-correct="0">只要存到云端，文件一定不会泄露</button>
+          </div>
+          <p class="result warn" data-explain="ct-1" style="display:none;margin-top:10px">云存储是「多一份副本」，不是「搬家」。<strong>错因提醒：</strong>很多同学把上传误认为搬迁，其实本地那份通常还在。另外，云端安全不等于账号安全，账号泄露照样会出事。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-2">
+          <p><strong>2. 你在本地改了文件，同时同伴也在云端改了同一份文件。这时最合适的做法是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-2" data-correct="1">先把两版内容放在一起比较，合并之后再上传</button>
+            <button class="choice" data-q="ct-2" data-correct="0">直接上传，谁的版本新就用谁的</button>
+            <button class="choice" data-q="ct-2" data-correct="0">两个人都别动，等文件自己变好</button>
+          </div>
+          <p class="result warn" data-explain="ct-2" style="display:none;margin-top:10px">两边都有改动时，直接上传一定覆盖掉另一方。<strong>错因提醒：</strong>把「版本冲突」误认为「文件出错」是常见错误，其实它是提示你要先合并，而不是提示文件坏了。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-3">
+          <p><strong>3. 要发一份还没定稿的小组草稿给组内同学补充意见，最合适的分享设置是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-3" data-correct="1">分享范围设为「仅指定的人」，权限给「可以评论」</button>
+            <button class="choice" data-q="ct-3" data-correct="0">分享范围设为「完全公开」，权限给「只能查看」</button>
+            <button class="choice" data-q="ct-3" data-correct="0">分享范围设为「拿到链接的人」，权限给「可以编辑」</button>
+          </div>
+          <p class="result warn" data-explain="ct-3" style="display:none;margin-top:10px">范围收在名单内，权限刚好够用，既方便又安全。公开或链接分享会让范围失控。<strong>错因提醒：</strong>只盯着权限档位、忘了看分享范围，是最容易被忽略的常见错误。</p>
+        </div>
+        <p id="ct-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="synthesis"
+           data-tts-script="学到这里，请你当一次数字作品管理员。屏幕上的工具会按四条规则给你的文件名打分：有没有日期，有没有版本号，有没有多余的空格或符号，主题词是否说得清楚。先输入一个你平时用的文件名试试，看看得几分，再点一下生成规范名，对比一下差别。"
+           data-tsh="综合任务：给你的数字作品改一个规范的名字" data-bloom-level="create" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">综合任务</span>
+          <h2>综合任务：给你的数字作品改一个规范的名字</h2>
+        </div>
+
+        
+<style>
+.ta-sync { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ta-sync-box { border: 1px solid var(--line-subtle); border-radius: 12px; padding: 12px; background: var(--bg-subtle); }
+.ta-sync-box h4 { font-size: 14px; color: var(--text-secondary); margin: 0 0 8px; }
+.ta-sync-box .ver { display: inline-block; font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700;
+  padding: 2px 8px; border-radius: 999px; background: var(--brand-soft); color: var(--link); margin-left: 6px; }
+.ta-sync-box .body { min-height: 62px; font-size: 14px; color: var(--text); background: var(--card);
+  border: 1px solid var(--line-subtle); border-radius: 9px; padding: 9px 11px; }
+.ta-sync-box .body.remote { border-style: dashed; }
+.ta-flag { display: inline-block; margin-top: 8px; font-size: 12px; padding: 3px 9px; border-radius: 999px;
+  background: var(--brand-2-soft); color: var(--accent-deep); border: 1px solid var(--line-subtle); }
+.ta-flag.dirty { background: var(--warm-soft); color: var(--warm-deep); }
+.ta-check { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.ta-check-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 11px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); font-size: 14px; }
+.ta-check-row .mark { flex-shrink: 0; width: 26px; height: 26px; display: grid; place-items: center;
+  border-radius: 50%; font-weight: 800; font-size: 14px; }
+.ta-check-row.ok .mark { background: rgba(34, 197, 94, .16); color: #15803d; }
+.ta-check-row.no .mark { background: rgba(239, 68, 68, .14); color: var(--danger); }
+.ta-check-row.wait .mark { background: var(--brand-soft); color: var(--link); }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">规范的文件名，应该让人不看内容就知道「什么时候、什么主题、第几版」。输入你平时用的文件名，看看能得几分。</p>
+        <div class="lab-panel" id="syn-manager">
+          <div class="flex-row" style="margin-top:0">
+            <input id="syn-filename" placeholder="例如：实验报告.docx 或 光的折射 v2" value="新建文档(2).docx" style="flex:1">
+            <button class="choice" id="syn-check" style="text-align:center;flex:0 0 120px">检查规范</button>
+          </div>
+          <div class="ta-check" id="syn-rows" style="margin-top:14px"></div>
+          <div class="lab-readout" style="margin-top:14px">
+            <div class="readout-cell" style="flex:2">
+              <span class="k">按规范应该这样命名</span>
+              <span class="v" id="syn-suggest" style="font-size:16px">—</span>
+            </div>
+          </div>
+          <p class="result warn" id="syn-out" style="margin-top:14px"></p>
+        </div>
+        <div class="inner-card">
+          <p><strong>再写一条你自己的规则：</strong>除了日期、主题、版本，你觉得小组文件还应该约定什么？写在下面，说明它是为了防止什么问题。</p>
+          <textarea id="syn-answer" rows="3" placeholder="我们还应该约定……因为如果不这样，就会……"></textarea>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="posttest"
+           data-tts-script="最后用新情境检验一下。这次出现了共享链接、回收站和同伴协作，看看你能不能把学到的原理用上去。"
+           data-tsh="后测：换一个情境，看看规律还在不在 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">后测</span>
+          <h2>后测：换一个情境，看看规律还在不在</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="post-1">
+          <p><strong>1. 同学把一份班级通讯录的分享链接发到了大群里，链接范围是「拿到链接的人」。最可能的风险是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-1" data-correct="1">链接会被不断转发，同学的姓名和联系方式会流出到范围之外</button>
+            <button class="choice" data-q="post-1" data-correct="0">文件会变大，占用更多存储空间</button>
+            <button class="choice" data-q="post-1" data-correct="0">文件会自动变成只读</button>
+          </div>
+          <p class="result warn" data-explain="post-1" style="display:none;margin-top:10px">「拿到链接的人」这个范围没有边界，转一次就多一圈人。通讯录属于他人个人信息，分享范围必须收在「仅指定的人」。<strong>错因提醒：</strong>误认为「有链接才能看」就等于安全，是最常见的判断失误。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-2">
+          <p><strong>2. 误删了一份云端文件，最先应该做的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-2" data-correct="1">去回收站或版本记录里找回来，别急着重新做</button>
+            <button class="choice" data-q="post-2" data-correct="0">马上重新写一份</button>
+            <button class="choice" data-q="post-2" data-correct="0">把账号注销再重新注册</button>
+          </div>
+          <p class="result warn" data-explain="post-2" style="display:none;margin-top:10px">云存储通常保留回收站和版本历史，误删和改错大多可以恢复。<strong>错因提醒：</strong>误认为删掉就彻底没了，于是重做一遍，白白浪费时间。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-3">
+          <p><strong>3. 小组合作写一份报告，为了减少互相覆盖，最有效的做法是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-3" data-correct="1">分工到不同章节，各自只改自己负责的那一段，改完先同步再上传</button>
+            <button class="choice" data-q="post-3" data-correct="0">每个人都在同一个段落上反复修改</button>
+            <button class="choice" data-q="post-3" data-correct="0">约定大家都不要保存，最后一个人统一写</button>
+          </div>
+          <p class="result warn" data-explain="post-3" style="display:none;margin-top:10px">分工加同步，是减少版本冲突最直接的办法。它靠的是约定，而不是指望技术自动解决一切。</p>
+        </div>
+        <p id="post-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="12" data-tts="summary"
+           data-tts-script="这节课我们弄明白了三件事。第一，云存储把文件放在网络上，靠账号区分身份，靠同步让设备和云端保持一致，上传和下载是两个方向相反的动作。第二，在线协作靠自动同步和版本记录维持秩序，靠权限设置决定谁能做什么。第三，数字作品要管好，靠的是规范命名、分类归档、保留版本、定期备份，以及只给必要的人必要的权限。"
+           data-tsh="小结：三句话，把自己讲明白" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">小结</span>
+          <h2>小结：三句话，把自己讲明白</h2>
+        </div>
+
+        <div class="grid">
+          <div class="summary-item"><span class="num">1</span><div><strong>云存储</strong>：账号区分身份，云端副本是权威版本，同步让多设备保持一致；上传是本地到云端，下载是云端到本地。</div></div>
+          <div class="summary-item"><span class="num">2</span><div><strong>在线协作</strong>：靠自动同步和版本记录维持秩序，靠权限设置决定谁能做什么；范围决定谁能进来，权限决定进来能做什么。</div></div>
+          <div class="summary-item"><span class="num">3</span><div><strong>作品管理</strong>：规范命名、分类归档、保留版本、定期备份，只给必要的人必要的权限。</div></div>
+        </div>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>回到开头那起事故：</strong>两段内容没有消失，是被旧版本覆盖了。如果当时动手前先同步一次，或者分工到不同章节，这场事故根本不会发生。技术给了我们方便的协作方式，而用得对，靠的是约定和规范。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>给别人讲一遍：</strong>请用「云端副本、同步、版本冲突、分享范围」这四个词，说清楚这次事故是怎么发生的、以后怎么避免。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="13" data-tts="homework"
+           data-tts-script="最后留三项作业，分三个层次。第一层基础巩固，人人要做：说出上传、下载、同步三个动作的区别，并写出查看、评论、编辑三种权限分别能做什么。第二层能力应用，动手做：把自己云盘里的一个文件夹按规范重新命名和归档，并给它设置一个合适的分享范围。第三层迁移挑战，选做：为小组合作写出一份文件管理约定，说明命名规则、版本规则和分工方式，并解释每条约定是为了防止什么问题。"
+           data-tsh="作业分层：三层练习，按自己的节奏来" data-bloom-level="create" data-scaffold="none">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">作业分层</span>
+          <h2>作业分层：三层练习，按自己的节奏来</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">三层练习，做完第一、二层就算通关；第三层留给愿意继续探索的同学。</p>
+        <div class="inner-card">
+          <p><strong>⭐ 基础巩固（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>说出上传、下载、同步三个动作的区别，并各举一个你实际用过的例子。</li>
+            <li>写出查看、评论、编辑三种权限分别能做什么，以及它们各自适合什么场合。</li>
+            <li>列出数字作品管理规范的四个要点，每个要点用一句话说明它的作用。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐ 能力应用（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>把自己云盘里的一个文件夹按规范重新命名和归档，把整理前后的文件名对照记录下来。</li>
+            <li>给自己的一份文件设置一个合适的分享范围与权限，并写下你这样设置的理由。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐⭐ 迁移挑战（选做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>为小组合作写出一份文件管理约定，说明命名规则、版本规则和分工方式，并逐条解释每条约定是为了防止什么问题。</li>
+            <li>找一次你经历过的文件混乱事件（内容丢失、版本搞混、发错人），分析原因属于哪一类，并写出改进办法。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page kg-page" data-page-type="summary" data-page-index="14" data-tts="knowledge-graph"
+           data-tts-script="这张图展示了这节课在信息科技知识网络里的位置。左边是先要学会的知识，右边是可以接着探索的内容，下面是同一领域的伙伴知识。可以点一点，看看还有哪些值得继续研究的问题。"
+           data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">知识图谱</span>
+          <h2>这节课在知识网络里的位置</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 10px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p class="kg-loading-hint" style="color:var(--muted);font-size:13px;margin:0 0 10px">图谱正在加载：首次进入需下载知识索引（约 1–3 秒），加载完成后本行会自动消失。</p>
+        <div data-teachany-kg="it-m-cloud-collaboration">
+          <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="15" data-tts="ai-tutor"
+           data-tts-script="如果还有没弄明白的地方，把你的问题写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。"
+           data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+</div><!-- .slide-container -->
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-pretest",
+    "section": "pretest",
+    "src": "./tts/s04-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s05-module-1",
+    "section": "module-1",
+    "src": "./tts/s05-module-1.mp3",
+    "label": "概念一 云存储原理"
+  },
+  {
+    "id": "s06-lab-1",
+    "section": "lab-1",
+    "src": "./tts/s06-lab-1.mp3",
+    "label": "实验室一 同步模拟器"
+  },
+  {
+    "id": "s07-module-2",
+    "section": "module-2",
+    "src": "./tts/s07-module-2.mp3",
+    "label": "概念二 协作与权限"
+  },
+  {
+    "id": "s08-lab-2",
+    "section": "lab-2",
+    "src": "./tts/s08-lab-2.mp3",
+    "label": "实验室二 权限检查器"
+  },
+  {
+    "id": "s09-worked-example",
+    "section": "worked-example",
+    "src": "./tts/s09-worked-example.mp3",
+    "label": "例题讲解"
+  },
+  {
+    "id": "s10-conceptest-1",
+    "section": "conceptest-1",
+    "src": "./tts/s10-conceptest-1.mp3",
+    "label": "概念测试"
+  },
+  {
+    "id": "s11-synthesis",
+    "section": "synthesis",
+    "src": "./tts/s11-synthesis.mp3",
+    "label": "综合任务 作品管理台"
+  },
+  {
+    "id": "s12-posttest",
+    "section": "posttest",
+    "src": "./tts/s12-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s13-summary",
+    "section": "summary",
+    "src": "./tts/s13-summary.mp3",
+    "label": "课堂小结"
+  },
+  {
+    "id": "s14-homework",
+    "section": "homework",
+    "src": "./tts/s14-homework.mp3",
+    "label": "作业分层"
+  },
+  {
+    "id": "s15-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s15-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s16-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s16-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<script>
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'it-m-cloud-collaboration',
+    courseTitle: '云存储与在线协作',
+    subject: 'info-tech',
+    grade: '7',
+    nodeId: 'it-m-cloud-collaboration',
+    lessonType: 'application-practice',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+</script>
+
+<script>
+
+/* ============================================================
+   it-m-cloud-collaboration 互动逻辑
+   1) 选择题接线（前测 / 概念测试 / 后测）
+   2) 云同步模拟器：本地版本 / 云端版本 / 冲突检测
+   3) 权限与分享范围检查器：四种动作 × 组合设置
+   4) 数字作品管理台：文件名规范校验与重命名建议
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ---------- 1. 选择题 ---------- */
+  document.querySelectorAll('[data-quiz-block]').forEach(function (block) {
+    block.querySelectorAll('.choice').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (block.dataset.answered === '1') return;
+        block.dataset.answered = '1';
+        var ok = btn.dataset.correct === '1';
+        btn.classList.add(ok ? 'correct' : 'wrong');
+        block.querySelectorAll('.choice').forEach(function (b) {
+          if (b.dataset.correct === '1') b.classList.add('correct');
+          b.disabled = true;
+        });
+        var ex = block.querySelector('[data-explain]');
+        if (ex) ex.style.display = 'block';
+      });
+    });
+  });
+
+  /* ---------- 2. 云同步模拟器 ---------- */
+  var syncRoot = document.getElementById('lab1-sync');
+  if (syncRoot) {
+    var cloudVer = 1;
+    var cloudText = '实验报告 · 第一段：实验目的。';
+    var baseVer = 1;
+    var localText = cloudText;
+    var dirty = false;
+    var editCount = 0;
+    var OTHER = [
+      '实验报告 · 第二段：实验步骤（同伴补写）。',
+      '实验报告 · 第三段：数据记录（同伴补写）。',
+      '实验报告 · 第四段：结论（同伴补写）。'
+    ];
+
+    var eLocalVer = document.getElementById('l1-local-ver');
+    var eLocalBody = document.getElementById('l1-local-body');
+    var eLocalFlag = document.getElementById('l1-local-flag');
+    var eCloudVer = document.getElementById('l1-cloud-ver');
+    var eCloudBody = document.getElementById('l1-cloud-body');
+    var eCloudFlag = document.getElementById('l1-cloud-flag');
+    var eSyncOut = document.getElementById('l1-out');
+
+    function render(label, cls) {
+      eLocalVer.textContent = 'v' + (baseVer + (dirty ? 1 : 0));
+      eLocalBody.textContent = localText;
+      eLocalFlag.textContent = dirty ? '有改动，还没有上传' : '与云端一致';
+      eLocalFlag.className = 'ta-flag' + (dirty ? ' dirty' : '');
+      eCloudVer.textContent = 'v' + cloudVer;
+      eCloudBody.textContent = cloudText;
+      eCloudFlag.textContent = cloudVer > baseVer ? '云端有比你更新的版本' : '线上权威版本';
+      eCloudFlag.className = 'ta-flag' + (cloudVer > baseVer ? ' dirty' : '');
+      eSyncOut.className = 'result ' + (cls || 'warn');
+      eSyncOut.innerHTML = label;
+    }
+
+    document.getElementById('l1-edit').addEventListener('click', function () {
+      localText = '实验报告 · 我补充的这一段（第 ' + (editCount + 1) + ' 次编辑）。';
+      dirty = true;
+      editCount = editCount + 1;
+      render('<strong>你在本地改了一处。</strong>现在左边的内容只存在这台设备上，云端还不知道。如果不点「上传」，换一台设备打开就看不到这段内容。');
+    });
+
+    document.getElementById('l1-peer').addEventListener('click', function () {
+      if (cloudVer - 1 < OTHER.length) {
+        cloudText = OTHER[cloudVer - 1];
+      } else {
+        cloudText = '实验报告 · 又追加了一段（同伴补写）。';
+      }
+      cloudVer = cloudVer + 1;
+      render('<strong>同伴在云端保存了一次。</strong>云端版本升到 v' + cloudVer +
+        '。注意：你手里的是基于 v' + baseVer + ' 的副本，已经落后了。');
+    });
+
+    document.getElementById('l1-upload').addEventListener('click', function () {
+      if (cloudVer > baseVer) {
+        render('<strong>版本冲突！上传被拦下了。</strong>云端已经是 v' + cloudVer +
+          '，你手里的是基于 v' + baseVer + ' 改出来的。如果强行上传，云端那一段会被你的旧版本整个替换掉——这就是开头报告少了两段的原因。正确的做法是先下载，把两边的改动合到一起，再上传。', 'error');
+        return;
+      }
+      if (!dirty) {
+        render('<strong>没有需要上传的改动。</strong>本地内容和云端一致，这时候上传不会有任何变化。', 'warn');
+        return;
+      }
+      cloudVer = cloudVer + 1;
+      baseVer = cloudVer;
+      cloudText = localText;
+      dirty = false;
+      render('<strong>上传成功。</strong>你的改动成为云端的 v' + cloudVer +
+        '，本地和云端重新一致。上传的方向是「本地 → 云端」。');
+    });
+
+    document.getElementById('l1-download').addEventListener('click', function () {
+      if (dirty) {
+        render('<strong>先别急着下载。</strong>你本地还有没上传的改动，直接下载会把它们覆盖掉。正确处理是先把两版内容放在一起比较，决定哪些留下，再合并。<strong>错因提醒：</strong>很多同学以为下载总是安全的，其实它和上传一样会覆盖数据，只是覆盖的方向相反。', 'error');
+        return;
+      }
+      localText = cloudText;
+      baseVer = cloudVer;
+      dirty = false;
+      render('<strong>下载完成。</strong>本地更新到 v' + cloudVer +
+        '，拿到的就是云端这一版。下载的方向是「云端 → 本地」。');
+    });
+
+    document.getElementById('l1-reset').addEventListener('click', function () {
+      cloudVer = 1; baseVer = 1;
+      cloudText = '实验报告 · 第一段：实验目的。';
+      localText = cloudText; dirty = false; editCount = 0;
+      render('已重置。现在本地和云端都是 v1，内容一致。先试试「我在本地改一处」。');
+    });
+
+    render('现在本地和云端都是 v1，内容一致。先试试「我在本地改一处」。');
+  }
+
+  /* ---------- 3. 权限与分享范围检查器 ---------- */
+  var permRoot = document.getElementById('lab2-perm');
+  if (permRoot) {
+    var PERM = {
+      view: { n: '只能查看', desc: '对方可以打开阅读，但不能改动内容。' },
+      comment: { n: '可以评论', desc: '对方能阅读，还能留下评论和建议，但不能直接改正文。' },
+      edit: { n: '可以编辑', desc: '对方能直接修改正文，改动会进入版本记录。' }
+    };
+    var SCOPE = {
+      named: { n: '仅指定的人', risk: 'low', desc: '只有名单里的人能打开，最稳妥。' },
+      link: { n: '拿到链接的人', risk: 'mid', desc: '谁拿到链接谁就能打开，链接被转发后范围就失控了。' },
+      open: { n: '完全公开', risk: 'high', desc: '所有人都能打开，任何人搜索都可能找到它。' }
+    };
+    var perm = 'comment', scope = 'named';
+    var ePermRows = document.getElementById('l2-rows');
+    var ePermOut = document.getElementById('l2-out');
+
+    function judge(action) {
+      var canView = true;
+      var canComment = perm === 'comment' || perm === 'edit';
+      var canEdit = perm === 'edit';
+      if (action === 'view') return canView;
+      if (action === 'comment') return canComment;
+      if (action === 'edit') return canEdit;
+      return scope !== 'named';
+    }
+
+    function render2() {
+      var P = PERM[perm], S = SCOPE[scope];
+      var items = [
+        { a: 'view', t: '打开来读', extra: '三种权限档位都允许阅读。' },
+        { a: 'comment', t: '留下评论', extra: can2('comment') },
+        { a: 'edit', t: '直接修改正文', extra: can2('edit') },
+        { a: 'share', t: '把链接转发给别人', extra: scope === 'named'
+            ? '只有当对方本就在名单里时才有效，名单外的人打开会被拒绝。'
+            : '范围是「' + S.n + '」，转发出去的链接别人能直接打开，你无法再收回。' }
+      ];
+      ePermRows.innerHTML = '';
+      items.forEach(function (it) {
+        var ok = judge(it.a);
+        var row = document.createElement('div');
+        row.className = 'ta-check-row ' + (ok ? 'ok' : 'no');
+        row.innerHTML = '<span class="mark">' + (ok ? '✓' : '✕') + '</span>' +
+          '<span><strong>' + it.t + '</strong>：' + (ok ? '允许' : '不允许') + '。<span style="color:var(--muted)">' + it.extra + '</span></span>';
+        ePermRows.appendChild(row);
+      });
+      var riskText = S.risk === 'low'
+        ? '当前设置的风险等级：较低。权限和范围都收得比较紧，适合小组内部还没完成的草稿。'
+        : (S.risk === 'mid'
+            ? '当前设置的风险等级：中等。链接一旦被转发，范围之外的人也能看到，别把没定稿的内容这样分享。'
+            : '当前设置的风险等级：较高。完全公开意味着任何人搜到都能打开，涉及个人信息、成绩、联系方式的内容绝对不能这样分享。');
+      var adv = perm === 'edit' ? '另外，' + S.n + '里所有人都能直接改正文，容易互相覆盖，建议改成「可以评论」，由一位同学统一定稿。' : '';
+      ePermOut.className = 'result ' + (S.risk === 'high' ? 'error' : (S.risk === 'mid' ? 'warn' : ''));
+      ePermOut.innerHTML = '<strong>当前：' + P.n + ' + ' + S.n + '。</strong>' + P.desc + S.desc +
+        '<br>' + riskText + adv +
+        '<br><strong>信息社会责任：</strong>分享之前先问自己两句——对方真的需要这个权限吗？这份内容里有没有别人的隐私？';
+    }
+    function can2(a) {
+      if (a === 'comment') return '需要「可以评论」或「可以编辑」。';
+      return '只有「可以编辑」才允许。';
+    }
+
+    document.querySelectorAll('[data-perm]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        perm = b.dataset.perm;
+        document.querySelectorAll('[data-perm]').forEach(function (x) { x.classList.toggle('selected', x === b); });
+        render2();
+      });
+    });
+    document.querySelectorAll('[data-scope]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        scope = b.dataset.scope;
+        document.querySelectorAll('[data-scope]').forEach(function (x) { x.classList.toggle('selected', x === b); });
+        render2();
+      });
+    });
+    document.querySelector('[data-perm="comment"]').classList.add('selected');
+    document.querySelector('[data-scope="named"]').classList.add('selected');
+    render2();
+  }
+
+  /* ---------- 4. 数字作品管理台 ---------- */
+  var mgrRoot = document.getElementById('syn-manager');
+  if (mgrRoot) {
+    var eInput = document.getElementById('syn-filename');
+    var eCheck = document.getElementById('syn-check');
+    var eMgrRows = document.getElementById('syn-rows');
+    var eName = document.getElementById('syn-suggest');
+    var eMgrOut = document.getElementById('syn-out');
+
+    var RULES = [
+      { k: 'date', label: '是否写清日期', hint: '建议用 8 位数字开头，例如 20260915，一眼就知道是哪一版。' },
+      { k: 'ver', label: '是否标出版本号', hint: '建议用 v1、v2 这样的版本号，改过几轮一目了然。' },
+      { k: 'clean', label: '有没有多余空格或符号', hint: '用下划线连接各段，避免空格和括号，跨设备打开才不会乱码。' },
+      { k: 'topic', label: '主题词是否说得清楚', hint: '主题至少要有两个汉字，别用「新建文档」「未命名」这种说法。' }
+    ];
+
+    function analyse(name) {
+      var n = name.trim();
+      return {
+        date: /\d{8}|\d{4}[-年]\d{1,2}/.test(n),
+        ver: /v\s*\d+/i.test(n),
+        clean: n !== '' && !/[\s（）()【】\[\]]/.test(n),
+        topic: ((n.match(/[\u4e00-\u9fff]/g) || []).length >= 2) &&
+               !/未命名|新建|新建文档|文档\d*$/.test(n)
+      };
+    }
+
+    function render3() {
+      var name = eInput.value;
+      var res = analyse(name);
+      eMgrRows.innerHTML = '';
+      if (!name.trim()) {
+        eMgrOut.className = 'result warn';
+        eMgrOut.textContent = '先在上面输入一个你平时用的文件名，点「检查规范」看看。';
+        eName.textContent = '—';
+        return;
+      }
+      var score = 0;
+      RULES.forEach(function (r) {
+        var ok = res[r.k];
+        if (ok) score = score + 1;
+        var row = document.createElement('div');
+        row.className = 'ta-check-row ' + (ok ? 'ok' : 'no');
+        row.innerHTML = '<span class="mark">' + (ok ? '✓' : '✕') + '</span><span><strong>' +
+          r.label + '</strong>：' + (ok ? '做到了' : '还差一点') +
+          '。<span style="color:var(--muted)">' + r.hint + '</span></span>';
+        eMgrRows.appendChild(row);
+      });
+      var today = '20260915';
+      var topic = (name.match(/[\u4e00-\u9fff]{2,6}/) || ['作品'])[0].replace(/未命名|新建文档|新建/g, '') || '作品';
+      var v = (name.match(/v\s*(\d+)/i) || [null, '1'])[1];
+      eName.textContent = today + '_' + topic + '_v' + v;
+      var cls = score === 4 ? '' : (score >= 2 ? 'warn' : 'error');
+      var tip = score === 4
+        ? '这个文件名已经符合规范，换一台设备、换一个人接手都能看明白。'
+        : (score >= 2
+            ? '基本能看懂，但还缺几项。一个规范的文件名，应该让人不看内容就知道「什么时候、什么主题、第几版」。'
+            : '这个文件名的问题比较多。等到一个月后自己回头看，很可能已经想不起来它是什么了。');
+      eMgrOut.className = 'result ' + cls;
+      eMgrOut.innerHTML = '<strong>得分：' + score + ' / 4</strong><br>' + tip +
+        '<br><strong>易错提醒：</strong>很多同学误认为文件名只要自己看得懂就够了。事实上文件一旦共享给别人，别人不认识你的简称；一旦有了多个版本，没有版本号就分不清哪一版最新。';
+    }
+
+    eCheck.addEventListener('click', render3);
+    eInput.addEventListener('input', function () {
+      if (eMgrRows.children.length > 0) render3();
+    });
+    eName.textContent = '—';
+  }
+})();
+
+</script>
+
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+</body>
+</html>
