@@ -1,0 +1,1342 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《地球的内部：往地心挖下去会看到什么》 · 小学科学 五年级 · TeachAny</title>
+<meta name="description" content="用深度滑块把地球内部三个圈层变成一段可以自己走一遍的旅程，再用板块运动演示说明山脉、火山与地震的成因，理解地球圈层之间的相互作用。">
+
+<meta name="course-id" content="sci-e-earth-interior">
+<meta name="course-title" content="地球的内部：往地心挖下去会看到什么">
+<meta name="course-subject" content="science">
+<meta name="course-grade" content="小学五年级">
+<meta name="course-prereqs" content="sci-e-rocks-soil">
+<meta name="course-next" content="sci-e-natural-disasters">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.22.0">
+<meta name="teachany-node" content="sci-e-earth-interior">
+<meta name="teachany-subject" content="science">
+<meta name="teachany-grade" content="5">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-domain" content="earth-space-science">
+<meta name="teachany-prerequisites" content="岩石与土壤">
+<meta name="teachany-lesson-type" content="concept-inquiry">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+
+<link rel="stylesheet" href="./assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="./assets/scripts/teachany-floating-dock.css">
+
+<style>
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgba(191, 155, 96, 0.16);
+  --text: #3a3126;
+  --text-secondary: #5c5142;
+  --muted: #94866c;
+  --brand: #ff6b6b;
+  --brand-soft: rgba(255, 107, 107, 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgba(78, 205, 196, 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgba(78, 205, 196, 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgba(255, 209, 102, 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: #e05555; text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(255, 107, 107, 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(78, 205, 196, 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(255, 209, 102, 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, #ff6b6b 0%, #f59e0b 55%, #4ecdc4 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgba(78, 205, 196, 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgba(255, 107, 107, 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgba(255, 209, 102, 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgba(78, 205, 196, 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgba(78, 205, 196, 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgba(255, 107, 107, 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgba(255, 209, 102, 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgba(255, 107, 107, 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgba(78, 205, 196, 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgba(255, 209, 102, 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgba(255, 251, 240, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: #3a3126; text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: #e05555; text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgba(191,155,96,.12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgba(191, 155, 96, 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgba(191,155,96,.14), 0 0 34px rgba(78,205,196,.12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: #3a3126; }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: #e05555; background: var(--brand-soft);
+  border: 1px solid rgba(255,107,107,.24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: #14897f; background: var(--accent-soft); border-color: rgba(78,205,196,.28); }
+.phase-tag[data-variant="purple"] { color: #b07d12; background: var(--warm-soft); border-color: rgba(255,209,102,.5); }
+.phase-tag[data-variant="warn"] { color: #b45309; background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgba(255,107,107,.22);
+  border-radius: var(--card-radius-sm);
+  background: rgba(255,255,255,.85);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgba(255,107,107,.45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgba(255,107,107,.16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: #fff; color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(255,107,107,.14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgba(255,209,102,.55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: #fff; border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: #fff; }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgba(255,251,240,.95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgba(191,155,96,.14); color: #5c5142; cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgba(191,155,96,.24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgba(191,155,96,.2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgba(255,251,240,.72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgba(191,155,96,.35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgba(255,107,107,.5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgba(255,107,107,.45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgba(255,107,107,.32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: #b07d12; background: var(--warm-soft); border: 1px solid rgba(255,209,102,.6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgba(255,209,102,.8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: #fff; border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgba(78,205,196,.7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgba(255,209,102,.9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: #e05555; font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: #14897f; }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgba(255,107,107,.28); background: #fff; color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(191,155,96,.22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgba(191,155,96,.45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: #5c5142; }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: #fff; border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgba(78,205,196,.8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: #fff; }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: #e05555; }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+</style>
+</head>
+<body class="teachany-elementary">
+
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny">
+    <span class="brand-mark">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.22.0</span></span>
+  </div>
+</div>
+
+<div class="slide-container" id="slide-container">
+
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero"
+           data-tts-script="先一起做个思想实验。如果给你一台超级钻机，一直往下挖，穿过泥土、穿过岩石，一直挖到地球的中心，你会看到什么？会不会挖到一个藏在地下的巨大空洞？地球里面到底是空的、是水、还是别的什么东西？这节课我们就当一次地心探险家，从地面一直走到六千多千米深的地方，看看一路上会经过哪些圈层。"
+           data-tsh="开场 - 用一个真实问题建立学习动机" data-bloom-level="remember" data-scaffold="full">
+    <div class="slide-inner">
+      <p class="level-badge">小学五年级 · 地球与宇宙科学 · 地球系统</p>
+      <h1>地球的内部：往地心挖下去会看到什么</h1>
+      <p class="subtitle">如果一直往地下挖，穿过泥土和岩石，最后会挖到什么？</p>
+      <figure class="ta-standard-figure" style="margin-top:24px">
+        <img src="./assets/sci-e-earth-interior-hero.webp" alt="地球内部圈层知识结构图：地壳、地幔、地核与板块运动">
+        <figcaption>地壳、地幔、地核三个圈层 · 越深越热越挤 · 地壳分成板块 · 挤压成山、张裂生火、错动地震</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide-page" id="problem-anchor" data-page-type="interactive" data-page-index="1"
+           data-tts="problem-anchor" data-tts-alias="anchor"
+           data-tts-script="在开始之前，先选出你最想弄明白的那个问题。是想知道地球里面分成了哪几层，还是想知道越往下走会越热还是越冷，又或者你想弄清楚火山和地震到底是从哪里来的。选好之后，就带着这个问题往下看。"
+           data-tsh="问题锚点 - 先确定今天最想弄明白的问题">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">问题锚点</span>
+          <h2>今天最想弄明白哪一件事？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你真正好奇的问题，后面的探究都会围着它转。</p>
+        <div class="grid">
+          <button class="choice" data-anchor-choice="地球里面分成哪几层"><strong>地球里面分成哪几层？</strong><br><span style="color:var(--muted);font-size:14px">想知道脚下的地球到底是什么结构</span></button>
+          <button class="choice" data-anchor-choice="越往地下走是更热还是更冷"><strong>越往地下走，是更热还是更冷？</strong><br><span style="color:var(--muted);font-size:14px">想知道深处的温度和压力</span></button>
+          <button class="choice" data-anchor-choice="火山和地震到底是怎么来的"><strong>火山和地震到底是怎么来的？</strong><br><span style="color:var(--muted);font-size:14px">想知道它们为什么总在同一片地方出现</span></button>
+          <button class="choice" data-anchor-choice="我想亲手走一遍去地心的路"><strong>我想亲手走一遍去地心的路</strong><br><span style="color:var(--muted);font-size:14px">拖动探针，一直走到六千多千米深</span></button>
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己最想知道的问题
+          <input id="learner-question-input" placeholder="把你好奇的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives"
+           data-tts-script="这节课有四个目标。第一，能说出地球内部由地壳、地幔、地核三个圈层组成，并说出它们大致的顺序。第二，能说出越往地球深处温度越高、压力越大。第三，能说出地壳不是一整块，而是分成若干板块。第四，能举例说明板块的挤压、张裂和错动会造成山脉、火山和地震。"
+           data-tsh="学习目标 - 明确这节课结束时能做到什么" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">学习目标</span>
+          <h2>这节课结束时，你应该能做到</h2>
+        </div>
+        <ul class="objectives">
+          <li>能说出地球内部由地壳、地幔、地核三个圈层组成，并说出它们从外到里的顺序</li>
+          <li>能说出越往地球深处走，温度越高、压力越大</li>
+          <li>能说出地壳不是一整块，而是分成若干板块，它们在缓慢移动</li>
+          <li>能举例说明板块挤压、张裂、错动分别会造成山脉、火山和地震</li>
+        </ul>
+        <div class="kid-note" style="margin-top:16px">
+          <span class="emoji">🎯</span>
+          <div><strong>课标依据：</strong>《义务教育科学课程标准（2022年版2025年修订）》学科核心概念10「地球系统」学习内容10.4 地球内部圈层和地壳运动——5～6年级知道地球系统不同圈层的相互作用产生了各种自然现象。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="3" data-tts="pretest"
+           data-tts-script="先做三道小题，凭你现在的想法选就行，选错了也没关系，正好能看出哪里需要重点听。选完会立刻出现解释。"
+           data-tsh="先测一测：地球里面是什么样子？ - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">前测</span>
+          <h2>先测一测：地球里面是什么样子？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="pre-1">
+          <p><strong>1. 如果一直往地下挖，穿过泥土和岩石，最后会挖到什么？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-1" data-correct="1">会一路遇到越来越热、越来越密的岩石和金属，直到地心</button>
+            <button class="choice" data-q="pre-1" data-correct="0">会挖到一个巨大的空洞</button>
+            <button class="choice" data-q="pre-1" data-correct="0">会挖到一片地下海</button>
+          </div>
+          <p class="result warn" data-explain="pre-1" style="display:none;margin-top:10px">地球内部是实心的，分成三个圈层，越往深处温度越高、压力越大。<strong>错因提醒：</strong>科幻片里的地下空洞是想象，真实的地球内部被岩石和金属填得满满的。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-2">
+          <p><strong>2. 从地面往下走，温度会怎么变化？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-2" data-correct="1">越来越高，地心附近有五千多摄氏度</button>
+            <button class="choice" data-q="pre-2" data-correct="0">先升高，到了地幔又开始变冷</button>
+            <button class="choice" data-q="pre-2" data-correct="0">一直保持不变</button>
+          </div>
+          <p class="result warn" data-explain="pre-2" style="display:none;margin-top:10px">越往深处越热，地心附近的温度比炼钢炉还高得多。<strong>错因提醒：</strong>不要误认为地下深处是阴冷的，正好相反，那里又热又挤。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-3">
+          <p><strong>3. 火山喷发和地震为什么常常出现在同一片地方？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-3" data-correct="1">因为那里往往是板块交界处，地壳活动最剧烈</button>
+            <button class="choice" data-q="pre-3" data-correct="0">因为它们约好了一起发生</button>
+            <button class="choice" data-q="pre-3" data-correct="0">因为那里的天气不好</button>
+          </div>
+          <p class="result warn" data-explain="pre-3" style="display:none;margin-top:10px">火山和地震大多集中在板块交界处。这个问题先记在心里，等下我们要亲手演示板块运动。</p>
+        </div>
+        <p id="pre-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="module-1"
+           data-tts-script="我们先把地球切开看一看。从外往里数，地球内部分成三个大圈层。最外面薄薄的一层叫做地壳，就是我们脚下的岩石层。地壳往下到大约两千九百千米深处，是地幔，这是最厚的一层，上部的岩石又热又软，可以非常缓慢地流动。再往下一直到底，是地核，它是地球的最中心。科学家又按状态把地核分成两部分：外面那一圈是液态的外核，最里面是固态的内核。往深处走，温度越来越高，从地表的大约二十摄氏度，一路升到地心附近的五千多摄氏度，比炼钢炉还要热得多；压力也越来越大，越深的地方，上面的岩石压得越紧，到了地心，压力大到我们很难想象。"
+           data-tsh="地球里面分三层：地壳、地幔、地核" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念一</span>
+          <h2>地球里面分三层：地壳、地幔、地核</h2>
+        </div>
+
+        <p style="font-size:17px;margin:0 0 12px">把地球切开，从外往里数，一共三个大圈层：<strong>地壳、地幔、地核</strong>。越往深处走，温度越高，压力越大。</p>
+        <div class="grid grid-3">
+          <div class="inner-card">
+            <p><strong>地壳</strong></p>
+            <p style="color:var(--muted)">最外面薄薄的一层岩石，我们就站在它上面。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>地幔</strong></p>
+            <p style="color:var(--muted)">最厚的一层，上部又热又软，能非常缓慢地流动。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>地核</strong></p>
+            <p style="color:var(--muted)">最中心，温度最高、压力最大，外面是液态，里面是固态。</p>
+          </div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/sci-e-earth-interior-fig1.webp" alt="地球内部圈层剖面示意图，标注地壳、地幔、外核、内核与深度">
+          <figcaption>地球内部从外到里：地壳（约 0～35 千米）、地幔（约 35～2900 千米）、地核（约 2900～6371 千米）</figcaption>
+        </figure>
+        <div class="kid-note"><span class="emoji">🥚</span><div><strong>打个比方：</strong>把一个熟鸡蛋切开，蛋壳很像地壳，蛋白很像地幔，蛋黄很像地核。当然，真实的地球比鸡蛋热得多、也挤得多。</div></div>
+        <div class="kid-note"><span class="emoji">🤔</span><div><strong>为什么要学地球的内部？</strong>因为火山喷发、地震和温泉，都来自地下这几个圈层之间的相互作用。看不清里面，就说不清外面的现象。</div></div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>看见它</strong>：地壳很薄，最厚的地方也只有几十千米；地幔厚达两千多千米，占了地球体积的绝大部分。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>解释它</strong>：为什么越深越热？因为地球内部藏着大量热量，外面的岩石又像一层厚棉被，把热量捂在里面散不出去。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：我们虽然挖不到地心，却能靠地震波给地球做「透视」——地震波穿过不同圈层时速度会变化，科学家就是这样知道地球分层的。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="lab-1"
+           data-tts-script="光听数字不够直观，我们来当一次地心探险家。下面这个滑块可以让你从地面一直往下走到六千三百七十一千米深的地心。拖动滑块，右边会实时告诉你现在到了哪个圈层，那里的温度有多高，压力有多大。你可以慢慢拖，也可以直接拖到最底下，看看地心到底是什么样的地方。"
+           data-tsh="地球剖面探针：一口气走到六千三百七十一千米" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">动手实验室</span>
+          <h2>地球剖面探针：一口气走到六千三百七十一千米</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">拖动滑块，让探针从地面一直往下走。右边会实时显示你所在的圈层、温度有多高、压力有多大。</p>
+        <div class="lab-panel">
+          <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+            <div id="probe-stage" style="position:relative;width:150px;height:320px;flex-shrink:0;border-radius:14px;overflow:hidden;border:1px solid var(--line-subtle);background:linear-gradient(180deg,#f2ead9 0%,#f6d9b8 20%,#f0a874 55%,#e2643f 78%,#a8241c 100%)">
+              <div style="position:absolute;left:0;right:0;top:0;height:14px;background:#c9a46a;border-bottom:1px solid rgba(0,0,0,.2)"></div>
+              <div style="position:absolute;left:0;right:0;top:14px;height:138px;background:rgba(224,122,63,.55)"></div>
+              <div style="position:absolute;left:0;right:0;top:152px;height:106px;background:rgba(232,76,61,.55)"></div>
+              <div style="position:absolute;left:0;right:0;top:258px;bottom:0;background:rgba(176,42,36,.65)"></div>
+              <span style="position:absolute;left:6px;top:0px;font-size:11px;color:#5c5142;font-weight:700">地壳</span>
+              <span style="position:absolute;left:6px;top:20px;font-size:11px;color:#4a2a10;font-weight:700">地幔</span>
+              <span style="position:absolute;left:6px;top:158px;font-size:11px;color:#fff;font-weight:700">外核</span>
+              <span style="position:absolute;left:6px;top:264px;font-size:11px;color:#fff;font-weight:700">内核</span>
+              <div id="probe-dot" style="position:absolute;left:50%;margin-left:-7px;width:14px;height:14px;border-radius:50%;background:#c9a46a;border:2px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.35);transition:top .15s linear"></div>
+              <span style="position:absolute;right:5px;bottom:4px;font-size:10px;color:rgba(255,255,255,.85)">示意剖面 · 地壳已放大</span>
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div class="lab-readout" style="margin-top:0">
+                <div class="readout-cell"><span class="k">深度</span><span class="v" id="probe-depth">0 千米</span></div>
+                <div class="readout-cell"><span class="k">所在圈层</span><span class="v green" id="probe-layer">地壳</span></div>
+              </div>
+              <div class="lab-readout">
+                <div class="readout-cell"><span class="k">温度</span><span class="v" id="probe-temp">约 20 ℃</span></div>
+                <div class="readout-cell"><span class="k">压力</span><span class="v" id="probe-press">接近 0</span></div>
+              </div>
+              <div class="slider-row" style="display:block">
+                <label for="probe-range" style="display:block;margin-bottom:4px">往下挖的深度：0 → 6371 千米</label>
+                <input type="range" id="probe-range" min="0" max="6371" step="1" value="0" style="width:100%">
+              </div>
+              <div class="flex-row" style="margin-top:8px">
+                <button class="choice selected" data-jump="0" style="text-align:center;font-size:13px">地面 0</button>
+                <button class="choice" data-jump="35" style="text-align:center;font-size:13px">地壳底 35</button>
+                <button class="choice" data-jump="2900" style="text-align:center;font-size:13px">地幔底 2900</button>
+                <button class="choice" data-jump="6371" style="text-align:center;font-size:13px">地心 6371</button>
+              </div>
+              <p class="result warn" id="probe-desc" style="margin-top:10px"></p>
+            </div>
+          </div>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🌡️</span><div><strong>发现了吗：</strong>深度从 0 变到 6371 千米，温度从二十摄氏度涨到五千多摄氏度，压力从接近 0 涨到三十多万个大气压。可是地壳只占了最上面极薄的一点——所以图中把地壳放大了，不然根本看不见。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="6" data-tts="module-2"
+           data-tts-script="知道了地球内部的样子，我们再来解决另一个问题：火山和地震是从哪里来的？原来，地壳并不是完整的一整块，它像一件摔碎又拼起来的巨大拼图，分成好多块，这些大块叫做板块。板块不是固定不动的，它们趴在又热又软的软流层上，非常缓慢地移动，一年只移动几厘米，和我们手指甲生长的速度差不多。板块挨在一起的地方最不安分：两块互相挤压，岩层被挤得弯起来、拱起来，就形成了高大的山脉；两块互相张裂，地壳被拉开一道口子，下面的岩浆顺着裂缝涌上来，就形成了火山；两块水平错动，岩层被卡住又突然滑开，就会发生地震。所以我们看到的火山、地震和山脉，大多集中在板块交界的地方。"
+           data-tsh="地壳是拼起来的，板块一动就有了山、火山和地震" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念二</span>
+          <h2>地壳是拼起来的，板块一动就有了山、火山和地震</h2>
+        </div>
+
+        <p style="font-size:17px;margin:0 0 12px">地壳不是完整的一整块，而是分成好多大块，叫做<strong>板块</strong>。它们趴在又热又软的软流层上，每年只移动几厘米。</p>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>挤压：</strong>两块板块互相撞过来，岩层被拱起，形成高大山脉，同时伴随地震。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>张裂：</strong>两块板块互相分开，地壳裂开口子，岩浆上涌，形成火山。</div></div>
+          <div class="step"><span class="n green">3</span><div><strong>错动：</strong>两块板块水平错开，岩层卡住后突然滑动，能量一下子放出来，发生地震。</div></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/sci-e-earth-interior-fig2.webp" alt="板块运动的三种方式示意图，标注挤压、张裂、错动及其形成的地形">
+          <figcaption>挤压隆起山脉，张裂生成火山，错动引发地震——三种运动都发生在板块交界的地方</figcaption>
+        </figure>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">误认为一地震就是板块在挤压。其实三种运动都可能引发地震，判断方向还要看有没有山脉隆起、有没有火山喷发。记住这句口诀：<strong>挤压成山，张裂生火，错动地震</strong>。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="7" data-tts="lab-2"
+           data-tts-script="现在请你亲手演示一次板块运动。下面有两个板块，你可以让它们挤压、张裂或者错动，看看地面上会跟着发生什么变化。每点一种运动，都读一读下面的解释，想一想这种运动形成了什么地形、又带来了什么自然现象。"
+           data-tsh="板块运动演示：看看地面会跟着发生什么" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">动手实验室</span>
+          <h2>板块运动演示：看看地面会跟着发生什么</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">点下面的三个按钮，让两块板块做出不同的运动，观察地面上出现了什么。</p>
+        <div class="lab-panel">
+          <div class="lab-stage" id="plate-stage" style="height:200px;background:linear-gradient(180deg,#eef6ff 0%,#dceaf7 55%,#c9a46a 56%,#b3904f 100%)">
+            <div id="plate-left" style="position:absolute;bottom:0;left:6%;width:36%;height:56px;background:#8d6a3f;border-radius:6px 6px 0 0;transition:transform .8s cubic-bezier(.34,1.2,.5,1)"></div>
+            <div id="plate-right" style="position:absolute;bottom:0;right:6%;width:36%;height:56px;background:#8d6a3f;border-radius:6px 6px 0 0;transition:transform .8s cubic-bezier(.34,1.2,.5,1)"></div>
+            <div id="plate-mid" style="position:absolute;left:44%;bottom:56px;width:0%;height:60px;background:#e84c3d;opacity:.75;border-radius:6px 6px 0 0;transition:all .8s ease"></div>
+            <div id="plate-mountain" style="position:absolute;left:50%;margin-left:-40px;bottom:56px;width:80px;height:56px;background:#7a5c33;clip-path:polygon(50% 0,100% 100%,0 100%);transform:translateY(-30px);transition:transform .8s ease"></div>
+            <div id="plate-volcano" style="position:absolute;left:50%;margin-left:-30px;bottom:56px;width:60px;height:52px;background:#a03a2a;clip-path:polygon(50% 12%,100% 100%,0 100%);transform:translateY(0) scale(.5);transition:transform .8s ease"></div>
+          </div>
+          <div class="flex-row" style="margin-top:12px">
+            <button class="choice selected" data-plate="push" style="text-align:center">➡️⬅️ 挤压</button>
+            <button class="choice" data-plate="split" style="text-align:center">⬅️➡️ 张裂</button>
+            <button class="choice" data-plate="slip" style="text-align:center">↕️ 错动</button>
+          </div>
+          <p class="result" id="plate-out" style="margin-top:12px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🗺️</span><div><strong>连起来想：</strong>为什么火山和地震常常出现在同一片区域？因为它们都和板块交界有关。打开地图软件搜一搜，你会发现火山和地震带大多连成一条条线。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="worked-example"
+           data-tts-script="我们一起来分析一道题。有一座小岛，岛上经常发生地震，山上还不断有岩浆冒出来。请判断这里的地壳可能在发生什么运动，并说明理由。第一步，看清条件：有两个关键线索，一是经常地震，二是有岩浆喷出。第二步，找出线索背后的意思：地震说明这里的板块在活动；岩浆来自地幔上部，能冒到地面，说明地壳下面有一条通道。第三步，做出判断：地壳被拉开了一道口子、岩浆才能顺着裂缝涌上来，所以这里最可能是板块张裂。第四步，把道理说完整：张裂时地壳变薄、破裂，形成火山，同时伴随地震；如果是挤压，岩层会拱起来形成山脉；如果是错动，最突出的表现是地震，不一定有火山。"
+           data-tsh="例题示范：这座小岛上的地壳在怎么运动" data-bloom-level="analyze" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">例题示范</span>
+          <h2>例题示范：这座小岛上的地壳在怎么运动</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>题目：</strong>有一座小岛，岛上经常发生地震，山上还不断有岩浆冒出来。请判断这里的地壳可能在发生什么运动，并说明理由。</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>看清条件：</strong>题目给了两个线索——经常地震，有岩浆喷出。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>读出线索的意思：</strong>地震说明板块在活动；岩浆来自地幔上部，能冒到地面，说明地壳下面有一条通道。</div></div>
+          <div class="step"><span class="n">3</span><div><strong>做出判断：</strong>地壳被拉开一道口子，岩浆才能顺着裂缝上来，所以这里最可能是<strong>板块张裂</strong>。</div></div>
+          <div class="step"><span class="n green">4</span><div><strong>把道理说完整：</strong>张裂时地壳变薄、破裂，形成火山并伴随地震；挤压会拱起山脉；错动最突出的表现是地震，不一定有火山。</div></div>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错法</span>
+          <p style="margin:6px 0 0">只看到「地震」就答成挤压，是这道题最常见的错误。地震在三种运动里都可能发生，所以必须再看<strong>有没有火山、有没有山脉</strong>，才能判断方向。这正是把现象和原因搞混的典型表现。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="9" data-tts="conceptest-1"
+           data-tts-script="现在用三个容易弄错的说法考考你。请仔细读每一个选项，选出你认为正确的那个，然后看解释。"
+           data-tsh="概念测试：找出藏在说法里的错误 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">概念测试</span>
+          <h2>概念测试：找出藏在说法里的错误</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="ct-1">
+          <p><strong>1. 下面哪句话是正确的？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-1" data-correct="1">地球内部从外到里分成地壳、地幔、地核三个圈层</button>
+            <button class="choice" data-q="ct-1" data-correct="0">地球内部是空的，所以才有火山</button>
+            <button class="choice" data-q="ct-1" data-correct="0">地幔在最外面，地壳在最里面</button>
+          </div>
+          <p class="result warn" data-explain="ct-1" style="display:none;margin-top:10px">从外到里的顺序是地壳、地幔、地核。<strong>错因提醒：</strong>把地壳和地幔的里外顺序搞混，是这一课最常见的错误。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-2">
+          <p><strong>2. 越往地球深处走，温度和压力会怎样变化？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-2" data-correct="1">温度越来越高，压力也越来越大</button>
+            <button class="choice" data-q="ct-2" data-correct="0">温度越来越高，压力越来越小</button>
+            <button class="choice" data-q="ct-2" data-correct="0">温度和压力都不变</button>
+          </div>
+          <p class="result warn" data-explain="ct-2" style="display:none;margin-top:10px">深处被上面的岩石压着，越深越挤，同时热量也越攒越多。<strong>错因提醒：</strong>容易误认为压力会随深度减小，其实正好相反。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-3">
+          <p><strong>3. 喜马拉雅山脉是怎么形成的？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-3" data-correct="1">两块板块互相挤压，岩层被拱起来</button>
+            <button class="choice" data-q="ct-3" data-correct="0">两块板块张裂，岩浆堆起来</button>
+            <button class="choice" data-q="ct-3" data-correct="0">河流把泥沙堆起来</button>
+          </div>
+          <p class="result warn" data-explain="ct-3" style="display:none;margin-top:10px">高大的山脉主要由板块挤压形成，而且它现在还在缓慢长高。<strong>错因提醒：</strong>不要把它和火山堆出来的山搞混——火山是岩浆喷出后堆成的，形状和成因都不一样。</p>
+        </div>
+        <p id="ct-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="synthesis"
+           data-tts-script="学到这里，请你当一次科学讲解员。学校科技节要做一张地球内部圈层海报，需要你写一份讲解稿：从地表出发，一路讲到地心，每到一个圈层就说出它的名字、大约到多深、温度大概多少，以及那里是什么状态。请写三到五句话，让别人看完海报就能记住这条路线。"
+           data-tsh="综合任务：写一份地球圈层讲解稿" data-bloom-level="create" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">综合任务</span>
+          <h2>综合任务：写一份地球圈层讲解稿</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">科技节的海报上要配一段讲解稿，请带着读者从地面一路走到地心。</p>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>每一站都要写清四件事：</strong>圈层名字 · 大约有多深 · 温度大概多少 · 那里是什么状态。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>第一步：排出路线顺序</strong></p>
+          <p style="color:var(--muted)">先经过哪一层，再经过哪一层，最后到哪一层？把它们写下来。</p>
+          <textarea id="syn-route" rows="2" placeholder="地面 → …… → …… → 地心"></textarea>
+        </div>
+        <div class="inner-card">
+          <p><strong>第二步：写成三到五句话的讲解稿</strong></p>
+          <textarea id="syn-answer" rows="5" placeholder="从地面出发，我们首先进入……"></textarea>
+        </div>
+        <div class="kid-note"><span class="emoji">🗣️</span><div>写完后读给同桌听，请他只看你的文字，能不能说出每一层的名字和温度。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="posttest"
+           data-tts-script="最后用新的情境检验一下。这次的问题里出现了温泉、深井和海底山脉，看看你能不能把圈层和板块运动用上去。"
+           data-tsh="后测：换个情境，规律还在不在 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">后测</span>
+          <h2>后测：换个情境，规律还在不在</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="post-1">
+          <p><strong>1. 有的地方能打出上千米深的深井，井水抽上来就是热的。这个现象说明：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-1" data-correct="1">越往地下深处温度越高</button>
+            <button class="choice" data-q="post-1" data-correct="0">地下水自己会发热</button>
+            <button class="choice" data-q="post-1" data-correct="0">深井里的水被泵加热了</button>
+          </div>
+          <p class="result warn" data-explain="post-1" style="display:none;margin-top:10px">井越深，水接触到的岩层越热，所以抽上来的水温度更高。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-2">
+          <p><strong>2. 海底有一条长长的山脉，中间有一道裂口，不断有岩浆涌出来形成新的海底。这里最可能在发生：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-2" data-correct="1">板块张裂</button>
+            <button class="choice" data-q="post-2" data-correct="0">板块挤压</button>
+            <button class="choice" data-q="post-2" data-correct="0">板块错动</button>
+          </div>
+          <p class="result warn" data-explain="post-2" style="display:none;margin-top:10px">有岩浆上涌、有裂口，是张裂的典型表现。<strong>错因提醒：</strong>不要一看到「山」就判断成挤压——海底山脉很多是岩浆堆出来的。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-3">
+          <p><strong>3. 两个板块交界处，岩层先被卡住很多年，某一天突然滑动了一下，地面剧烈震动。这是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-3" data-correct="1">板块错动引发的地震</button>
+            <button class="choice" data-q="post-3" data-correct="0">板块张裂引发的火山</button>
+            <button class="choice" data-q="post-3" data-correct="0">板块挤压形成的山脉</button>
+          </div>
+          <p class="result warn" data-explain="post-3" style="display:none;margin-top:10px">水平错动时岩层先卡住、蓄积能量，突然滑动就释放出能量，形成地震。</p>
+        </div>
+        <p id="post-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="12" data-tts="summary"
+           data-tts-script="这节课我们弄明白了三件事。第一，地球内部从外到里分成地壳、地幔、地核三个圈层，越往深处温度越高、压力越大。第二，地壳不是一整块，而是分成若干板块，它们趴在又热又软的软流层上缓慢移动。第三，板块挤压会形成山脉，张裂会形成火山，错动会引发地震，这些现象大多出现在板块交界的地方。回到开头的问题，往地心挖下去，你不会挖到一个空洞，而是会穿过一层层越来越热、越来越密的岩石和金属。"
+           data-tsh="小结：三句话，把自己讲明白" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">小结</span>
+          <h2>小结：三句话，把自己讲明白</h2>
+        </div>
+        <div class="grid">
+          <div class="summary-item"><span class="num">1</span><div><strong>三个圈层</strong>：从外到里是地壳、地幔、地核，越深温度越高、压力越大。</div></div>
+          <div class="summary-item"><span class="num">2</span><div><strong>板块在动</strong>：地壳分成若干板块，趴在软流层上，每年只移动几厘米。</div></div>
+          <div class="summary-item"><span class="num">3</span><div><strong>三种结果</strong>：挤压成山，张裂生火，错动地震，大多发生在板块交界处。</div></div>
+        </div>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>回到开头的问题：</strong>往地心挖下去，你不会挖到一个空洞，而是会穿过越来越热、越来越密的岩石和金属——先是薄薄的地壳，再是厚厚的地幔，最后是又烫又挤的地核。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>给别人讲一遍：</strong>请用"地壳、地幔、地核、板块"这四个词，说清火山和地震是从哪里来的。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="13" data-tts="homework"
+           data-tts-script="最后留三项作业，分三个层次。第一层基础巩固，人人要做：按从外到里的顺序写出地球的三个圈层，并各写一句它的特点。第二层能力应用，动手做：用橡皮泥、彩泥或者切开的熟鸡蛋做一个地球内部圈层模型，标出三个圈层的名字。第三层迁移挑战，选做：查一查我国哪一带有火山、哪一带地震比较多，把它们画在一张简图上，并说说和板块交界有什么关系。"
+           data-tsh="作业分层：三层练习，按自己的节奏来" data-bloom-level="create" data-scaffold="none">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">作业分层</span>
+          <h2>作业分层：三层练习，按自己的节奏来</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">三层练习，做完第一、二层就算通关；第三层留给愿意继续探索的同学。</p>
+        <div class="inner-card">
+          <p><strong>⭐ 基础巩固（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>按从外到里的顺序写出地球的三个圈层，并给每一层写一句特点。</li>
+            <li>写出板块挤压、张裂、错动分别会带来什么结果。</li>
+            <li>判断对错并说明理由：越往地下深处走，温度越低、压力越小。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐ 能力应用（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>用橡皮泥、彩泥或者切开的熟鸡蛋做一个地球内部圈层模型，标出三个圈层的名字，并写一句说明。</li>
+            <li>打开地图软件，找一找我国的火山和地震多发区，把它们的位置抄下来，说说它们和板块交界有什么关系。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐⭐ 迁移挑战（选做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>假设你能坐进一艘地心探险舱，请设计一条从地面到地心的路线：每一站写明深度、温度、能看到的景象，并说明为什么越往后越难前进。</li>
+            <li>查一查科学家是怎么在不挖开地球的情况下知道地球内部分层的，用三句话讲清他们的办法。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="14" data-tts="knowledge-graph"
+           data-tts-script="这张图展示了这节课在科学知识网络里的位置。左边是先要学会的知识，右边是可以接着探索的内容，下面是同一领域的伙伴知识。可以点一点，看看还有哪些值得继续研究的问题。"
+           data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">知识图谱</span>
+          <h2>这节课在知识网络里的位置</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <div data-teachany-kg="sci-e-earth-interior">
+          <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="15" data-tts="ai-tutor"
+           data-tts-script="如果还有没弄明白的地方，把你的问题写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。"
+           data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+</div><!-- .slide-container -->
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-pretest",
+    "section": "pretest",
+    "src": "./tts/s04-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s05-module-1",
+    "section": "module-1",
+    "src": "./tts/s05-module-1.mp3",
+    "label": "概念一 地球的三个圈层"
+  },
+  {
+    "id": "s06-lab-1",
+    "section": "lab-1",
+    "src": "./tts/s06-lab-1.mp3",
+    "label": "实验室一 地球剖面探针"
+  },
+  {
+    "id": "s07-module-2",
+    "section": "module-2",
+    "src": "./tts/s07-module-2.mp3",
+    "label": "概念二 板块在慢慢移动"
+  },
+  {
+    "id": "s08-lab-2",
+    "section": "lab-2",
+    "src": "./tts/s08-lab-2.mp3",
+    "label": "实验室二 板块运动演示"
+  },
+  {
+    "id": "s09-worked-example",
+    "section": "worked-example",
+    "src": "./tts/s09-worked-example.mp3",
+    "label": "例题讲解 判断板块运动方向"
+  },
+  {
+    "id": "s10-conceptest-1",
+    "section": "conceptest-1",
+    "src": "./tts/s10-conceptest-1.mp3",
+    "label": "概念测试"
+  },
+  {
+    "id": "s11-synthesis",
+    "section": "synthesis",
+    "src": "./tts/s11-synthesis.mp3",
+    "label": "综合任务 圈层讲解稿"
+  },
+  {
+    "id": "s12-posttest",
+    "section": "posttest",
+    "src": "./tts/s12-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s13-summary",
+    "section": "summary",
+    "src": "./tts/s13-summary.mp3",
+    "label": "课堂小结"
+  },
+  {
+    "id": "s14-homework",
+    "section": "homework",
+    "src": "./tts/s14-homework.mp3",
+    "label": "作业分层"
+  },
+  {
+    "id": "s15-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s15-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s16-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s16-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<script>
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'sci-e-earth-interior',
+    courseTitle: '地球的内部：往地心挖下去会看到什么',
+    subject: 'science',
+    grade: '5',
+    nodeId: 'sci-e-earth-interior',
+    lessonType: 'concept-inquiry',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+</script>
+
+<script>
+
+/* ============================================================
+   sci-e-earth-interior 互动逻辑
+   1) 选择题接线（前测 / 概念测试 / 后测）
+   2) 地球剖面探针：深度滑块 0→6371 km → 圈层 / 温度 / 压力
+   3) 板块运动演示：挤压 / 张裂 / 错动
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ---------- 1. 选择题 ---------- */
+  document.querySelectorAll('[data-quiz-block]').forEach(function (block) {
+    block.querySelectorAll('.choice').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (block.dataset.answered === '1') return;
+        block.dataset.answered = '1';
+        var ok = btn.dataset.correct === '1';
+        btn.classList.add(ok ? 'correct' : 'wrong');
+        block.querySelectorAll('.choice').forEach(function (b) {
+          if (b.dataset.correct === '1') b.classList.add('correct');
+          b.disabled = true;
+        });
+        var ex = block.querySelector('[data-explain]');
+        if (ex) ex.style.display = 'block';
+      });
+    });
+  });
+
+  /* ---------- 2. 地球剖面探针 ---------- */
+  var DEPTHS = [0, 35, 100, 400, 670, 2900, 5100, 6371];
+  var TEMPS  = [20, 600, 1300, 1600, 1900, 3000, 5000, 5500];
+  var PRESS  = [0, 1, 3, 13, 23, 136, 329, 364];
+
+  function interp(xs, ys, v) {
+    if (v <= xs[0]) return ys[0];
+    for (var i = 1; i < xs.length; i++) {
+      if (v <= xs[i]) {
+        var t = (v - xs[i - 1]) / (xs[i] - xs[i - 1]);
+        return ys[i - 1] + t * (ys[i] - ys[i - 1]);
+      }
+    }
+    return ys[ys.length - 1];
+  }
+
+  function layerOf(d) {
+    if (d < 35) return { n: '地壳', sub: '我们脚下的岩石层', c: '#c9a46a' };
+    if (d < 2900) return { n: '地幔', sub: '最厚的一层，上部又热又软，能缓慢流动', c: '#e07a3f' };
+    if (d < 5100) return { n: '地核 · 外核', sub: '温度很高，这里的金属是液态的', c: '#e84c3d' };
+    return { n: '地核 · 内核', sub: '压力最大，温度最高，金属被压成固态', c: '#b02a24' };
+  }
+
+  var probeStage = document.getElementById('probe-stage');
+  if (probeStage) {
+    var slider = document.getElementById('probe-range');
+    var probe = document.getElementById('probe-dot');
+    var outLayer = document.getElementById('probe-layer');
+    var outDepth = document.getElementById('probe-depth');
+    var outTemp = document.getElementById('probe-temp');
+    var outPress = document.getElementById('probe-press');
+    var outDesc = document.getElementById('probe-desc');
+    var SHELL_PX = 14, REST_PX = 306;
+
+    function renderProbe() {
+      var d = parseFloat(slider.value);
+      var y = (d <= 35) ? (d / 35) * SHELL_PX : SHELL_PX + ((d - 35) / 6336) * REST_PX;
+      probe.style.top = Math.max(0, Math.min(318, y)) + 'px';
+      var L = layerOf(d);
+      probe.style.background = L.c;
+      outLayer.textContent = L.n;
+      outDepth.textContent = (d >= 6371 ? 6371 : Math.round(d)) + ' 千米';
+      outTemp.textContent = '约 ' + Math.round(interp(DEPTHS, TEMPS, d) / 10) * 10 + ' ℃';
+      var p = interp(DEPTHS, PRESS, d);
+      outPress.textContent = p < 0.5 ? '接近 0' : '约 ' + Math.round(p) + ' 万个大气压';
+      outDesc.innerHTML = '<strong>' + L.n + '</strong>：' + L.sub + '。';
+      document.querySelectorAll('[data-jump]').forEach(function (b) {
+        b.classList.toggle('selected', Math.abs(parseFloat(b.dataset.jump) - d) < 1);
+      });
+    }
+    slider.addEventListener('input', renderProbe);
+    document.querySelectorAll('[data-jump]').forEach(function (b) {
+      b.addEventListener('click', function () { slider.value = b.dataset.jump; renderProbe(); });
+    });
+    renderProbe();
+  }
+
+  /* ---------- 3. 板块运动演示 ---------- */
+  var plateStage = document.getElementById('plate-stage');
+  if (plateStage) {
+    var pl = document.getElementById('plate-left');
+    var pr = document.getElementById('plate-right');
+    var mid = document.getElementById('plate-mid');
+    var mt = document.getElementById('plate-mountain');
+    var vc = document.getElementById('plate-volcano');
+    var out = document.getElementById('plate-out');
+
+    var MODES = {
+      push: {
+        name: '挤压',
+        left: 'translateX(26px)', right: 'translateX(-26px)',
+        midW: '0%', midTop: '0px',
+        mountain: 'translateY(-30px)', volc: 'translateY(0) scale(.5)',
+        cls: 'result',
+        msg: '<strong>两块板块互相挤压 → 岩层拱起来，形成高大山脉，同时也会有地震。</strong><br>' +
+             '岩层被挤得弯起来、一层层叠上去，越挤越高。我国的喜马拉雅山脉就是这样隆起来的，它至今还在长高。'
+      },
+      split: {
+        name: '张裂',
+        left: 'translateX(-26px)', right: 'translateX(26px)',
+        midW: '26%', midTop: '0px',
+        mountain: 'translateY(0) scale(.5)', volc: 'translateY(-26px) scale(1)',
+        cls: 'result',
+        msg: '<strong>两块板块互相分开 → 地壳被拉开一道口子，岩浆上涌，形成火山。</strong><br>' +
+             '裂缝处地壳变薄、破裂，地幔上部的岩浆顺着裂缝冒出来。东非大裂谷正在这样被拉开，海底也常常这样长出新的地壳。'
+      },
+      slip: {
+        name: '错动',
+        left: 'translateX(20px) translateY(-16px)', right: 'translateX(-20px) translateY(16px)',
+        midW: '4%', midTop: '0px',
+        mountain: 'translateY(0) scale(.5)', volc: 'translateY(0) scale(.5)',
+        cls: 'result error',
+        msg: '<strong>两块板块水平错动 → 岩层被卡住，然后突然滑开，发生地震。</strong><br>' +
+             '错动时岩层先被卡住、越卡越紧，能量一点点攒起来；一旦撑不住突然滑动，能量一下子放出来，地面就剧烈震动。'
+      }
+    };
+
+    function renderPlate(key) {
+      var m = MODES[key];
+      pl.style.transform = m.left;
+      pr.style.transform = m.right;
+      mid.style.width = m.midW;
+      mt.style.transform = m.mountain;
+      vc.style.transform = m.volc;
+      out.className = m.cls;
+      out.innerHTML = m.msg;
+      document.querySelectorAll('[data-plate]').forEach(function (b) {
+        b.classList.toggle('selected', b.dataset.plate === key);
+      });
+    }
+    document.querySelectorAll('[data-plate]').forEach(function (b) {
+      b.addEventListener('click', function () { renderPlate(b.dataset.plate); });
+    });
+    renderPlate('push');
+  }
+})();
+
+</script>
+
+<script src="./assets/scripts/ai-tutor.js"></script>
+<script src="./assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="./assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="./assets/scripts/teachany-section-hints.js" defer></script>
+<script src="./assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="./assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+</body>
+</html>
