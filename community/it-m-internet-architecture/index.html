@@ -1,0 +1,1767 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《互联网结构与协议初识》 · 初中信息科技 七年级 · TeachAny</title>
+<meta name="description" content="从一次真实的发送出发，认识互联网是许多网络互联形成的网络，理解协议分层「每层只管一件事」的设计，掌握数据分包、地址寻址与路由器逐段转发的完整过程，并能按自下而上的顺序分层定位网络故障。">
+
+<meta name="course-id" content="it-m-internet-architecture">
+<meta name="course-title" content="互联网结构与协议初识">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="初中七年级">
+<meta name="course-prereqs" content="无">
+<meta name="course-next" content="it-m-web-development">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.22.0">
+<meta name="teachany-node" content="it-m-internet-architecture">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="7">
+<meta name="teachany-stage" content="middle">
+<meta name="teachany-domain" content="internet-innovation">
+<meta name="teachany-prerequisites" content="无（初中互联网起点）">
+<meta name="teachany-lesson-type" content="concept-simulation">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style>
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+</style>
+</head>
+<body class="teachany-middle">
+
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
+    <img src="https://www.teachany.cn/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.22.0</span></span>
+  </div>
+</div>
+
+<div class="slide-container" id="slide-container">
+
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero"
+           data-tts-script="先看一个真实的过程。你在教室里按了一下发送，几毫秒之后，另一座城市的一台机器收到了这条消息。中间没有一根线从你这里直接连到那里，你也不知道它到底走了哪条路。这节课我们就来拆开这个看不见的过程：互联网到底是由什么组成的，协议是做什么用的，数据又是怎样一段一段走过去的。"
+           data-tsh="开场 - 用一个真实问题建立学习动机" data-bloom-level="remember" data-scaffold="full">
+    <div class="slide-inner">
+      <p class="level-badge">初中七年级 · 互联网应用与创新</p>
+      <h1>互联网结构与协议初识</h1>
+      <p class="subtitle">你按了一下发送，数据穿过看不见的网络到达另一台机器——它到底走了哪条路，按什么规则走？</p>
+      <figure class="ta-standard-figure" style="margin-top:24px">
+        <img src="./assets/it-m-internet-architecture-hero.webp" alt="互联网知识与协议结构图：网络结构、协议分层、数据传输三栏">
+        <figcaption>网络结构 · 协议分层 · 数据传输：互联网是网络的网络，每层只管一件事，数据分包逐段转发</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide-page" id="problem-anchor" data-page-type="interactive" data-page-index="1"
+           data-tts="problem-anchor" data-tts-alias="anchor"
+           data-tts-script="在开始之前，先选出你最想弄明白的那个问题。是想知道一条消息到底走了哪条路，还是想知道为什么要把协议分成好几层，又或者你想弄清楚数据被切成一个个小包之后，凭什么还能不丢不乱。选好之后，就带着这个问题往下看。"
+           data-tsh="问题锚点 - 先确定今天最想弄明白的问题">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">问题锚点</span>
+          <h2>今天最想弄明白哪一件事？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你真正好奇的问题，后面的实验都会围着它转。</p>
+        <div class="grid">
+          <button class="choice" data-anchor-choice="一条消息是怎么走过去的"><strong>一条消息是怎么走过去的？</strong><br><span style="color:var(--muted);font-size:14px">中间没有一根线直连，它是怎么到的</span></button>
+          <button class="choice" data-anchor-choice="为什么要把协议分成好几层"><strong>为什么要把协议分成好几层？</strong><br><span style="color:var(--muted);font-size:14px">不分层会有什么麻烦</span></button>
+          <button class="choice" data-anchor-choice="数据被切成一个个包凭什么不丢不乱"><strong>数据被切成一个个包，凭什么不丢不乱？</strong><br><span style="color:var(--muted);font-size:14px">丢了包以后发生了什么</span></button>
+          <button class="choice" data-anchor-choice="输入域名就能打开页面中间发生了什么"><strong>输入域名就能打开页面，中间发生了什么？</strong><br><span style="color:var(--muted);font-size:14px">域名和地址是什么关系</span></button>
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己最想知道的问题
+          <input id="learner-question-input" placeholder="把你好奇的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives"
+           data-tts-script="这节课有四个目标。第一，能说出互联网是许多网络互联而成，并能说明分层的作用。第二，能说出协议是通信双方共同遵守的规则，能对应说出各层的主要职责。第三，能描述数据被切分成数据包、由路由器逐段转发的完整过程。第四，能按自下而上的顺序，分层定位一个网络故障出在哪一层。"
+           data-tsh="学习目标 - 明确这节课结束时能做到什么" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">学习目标</span>
+          <h2>这节课结束时，你应该能做到</h2>
+        </div>
+        <ul class="objectives">
+          <li>能说出互联网是许多网络互联形成的网络，并说明协议分层的作用</li>
+          <li>能说出协议是通信双方共同遵守的规则，并能对应说出各层的主要职责</li>
+          <li>能描述数据被切分成数据包、由路由器逐段转发的完整过程，说明丢失重传与按序号重排</li>
+          <li>能按自下而上的顺序分层定位一个网络故障，说明判断依据</li>
+        </ul>
+        <div class="kid-note" style="margin-top:16px">
+          <span class="emoji">🎯</span>
+          <div><strong>课标依据：</strong>《义务教育信息科技课程标准（2022年版2025年修订）》初中「互联网应用与创新」——理解互联网基本结构，知道常见协议的作用；能对常见网络问题作出初步判断。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="3" data-tts="pretest"
+           data-tts-script="先做三道小题，凭你现在的想法选就行，选错了也没关系，正好能看出哪里需要重点听。选完会立刻出现解释。"
+           data-tsh="先测一测：网络到底是怎么连起来的？ - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">前测</span>
+          <h2>先测一测：网络到底是怎么连起来的？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="pre-1">
+          <p><strong>1. 关于「互联网」，下面哪种说法更准确？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-1" data-correct="1">互联网是许多网络互相连接形成的网络</button>
+            <button class="choice" data-q="pre-1" data-correct="0">互联网就是一台容量特别大的服务器</button>
+            <button class="choice" data-q="pre-1" data-correct="0">互联网就是一根很长的网线，把所有电脑串起来</button>
+          </div>
+          <p class="result warn" data-explain="pre-1" style="display:none;margin-top:10px">互联网的名字本来就说明了它的结构：网络与网络互联。任何一台机器都只是其中一个节点。<strong>错因提醒：</strong>把互联网想成一台大机器，是最常见的一类误解，它会让你在后面理解转发与寻址时处处卡住。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-2">
+          <p><strong>2. 通信双方要能互相听懂，最不能缺的是什么？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-2" data-correct="1">双方共同遵守的一套规则，也就是协议</button>
+            <button class="choice" data-q="pre-2" data-correct="0">两台机器用同一个厂家的产品</button>
+            <button class="choice" data-q="pre-2" data-correct="0">两边的网速必须完全一样</button>
+          </div>
+          <p class="result warn" data-explain="pre-2" style="display:none;margin-top:10px">只要双方遵守同一套协议，用什么设备、什么线路都能互通——这正是协议存在的意义。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-3">
+          <p><strong>3. 为什么要把网络通信的规则分成好几层，而不是写成一大本？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-3" data-correct="1">分层之后，每一层只解决一件事，改一层不影响其他层</button>
+            <button class="choice" data-q="pre-3" data-correct="0">分层只是为了方便背诵</button>
+            <button class="choice" data-q="pre-3" data-correct="0">层数越多传输速度越快</button>
+          </div>
+          <p class="result warn" data-explain="pre-3" style="display:none;margin-top:10px">分层是一种分工：上层向下层提出请求，下层为上层提供服务。某一层的技术更新了，其他层可以不动。这个问题先记在心里，等下我们看数据包的时候会用上。</p>
+        </div>
+        <p id="pre-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="module-1"
+           data-tts-script="互联网不是一台很大的机器，它是许多网络互联起来形成的网络。这么多设备要互相通信，就必须先约定好规矩，这套规矩就叫协议。把协议分成几层，是为了让每一层只解决一件事：应用层管收发具体的服务请求，传输层管端到端的可靠传输，网络层管寻址和选择路径，网络接口层管在链路上传输信号。上层向下层提出请求，下层为上层提供服务。"
+           data-tsh="互联网是网络的网络，协议分层让每一层各管一件事" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念一</span>
+          <h2>互联网是网络的网络，协议分层让每一层各管一件事</h2>
+        </div>
+
+        
+<style>
+.ta-flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ta-node { flex: 1; min-width: 66px; text-align: center; padding: 10px 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); font-size: 13px; font-weight: 700; }
+.ta-node.hot { border-color: var(--brand); background: var(--brand-soft); color: var(--text-strong); }
+.ta-pkts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.ta-pkt { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 54px; height: 54px; border-radius: 10px; font-size: 13px; font-weight: 800;
+  font-variant-numeric: tabular-nums; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.ta-pkt small { font-weight: 600; color: var(--muted); font-size: 10px; margin-top: 2px; }
+.ta-pkt.wait { opacity: .55; }
+.ta-pkt.fly { border-color: var(--brand); background: var(--brand-soft); }
+.ta-pkt.ok { border-color: var(--brand-2); background: var(--brand-2-soft); }
+.ta-pkt.lost { border-color: var(--danger); background: rgba(239, 68, 68, .10); color: var(--danger); }
+.ta-log { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13.5px; }
+.ta-log li { padding: 7px 10px; border-radius: 8px; margin-bottom: 6px;
+  border-left: 3px solid var(--line-subtle); background: var(--bg-subtle); color: var(--text-secondary); }
+.ta-log li.ok { border-left-color: var(--brand-2); color: var(--text-strong); }
+.ta-log li.bad { border-left-color: var(--danger); color: var(--text-strong); background: rgba(239, 68, 68, .07); }
+.ta-log li.now { border-left-color: var(--brand); color: var(--text-strong); background: var(--brand-soft); }
+.ta-pick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+</style>
+
+        <div class="inner-card">
+          <p><strong>为什么要学这一课？</strong>你已经知道，两台计算机之间可以互相传文件；但当联网的设备从两台变成几百万台，链路从一种变成几十种，<strong>但真正的问题出现了</strong>：谁规定怎么开口、怎么找路、出错了怎么办？<strong>所以</strong>需要一套共同遵守的规则（协议），并且把它分层，让每一层只解决一件事。这就是网络工程师每天打交道的对象。</p>
+        </div>
+        <div class="grid grid-2">
+          <div class="inner-card">
+            <p><strong>互联网：网络的网络</strong></p>
+            <p style="color:var(--muted)">终端设备连到本地网络，本地网络通过路由器接入更大的网络。你发出的数据不会走一条专属的线，而是被一段一段接力送过去。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>协议：共同遵守的规则</strong></p>
+            <p style="color:var(--muted)">协议规定了数据长什么样、按什么顺序交换、出了错怎么处理。只要遵守同一套协议，不同设备、不同线路都能互通。</p>
+          </div>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>应用层：</strong>收发具体的服务请求，比如取一个页面、发一条消息。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>传输层：</strong>负责端到端的传输，管住数据是否到达、是否需要重传。</div></div>
+          <div class="step"><span class="n">3</span><div><strong>网络层：</strong>负责寻址与选择路径，决定这个包下一步交给谁。</div></div>
+          <div class="step"><span class="n green">4</span><div><strong>网络接口层：</strong>负责在具体的链路上把信号送出去。</div></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-internet-architecture-fig1.webp" alt="四层协议模型示意图：应用层、传输层、网络层、网络接口层及各自职责">
+          <figcaption>分层模型：上层向下层提出请求，下层为上层提供服务；每一层只解决一件事</figcaption>
+        </figure>
+        <div class="kid-note"><span class="emoji">🧭</span><div><strong>记忆锚点：</strong>像寄快递。你只管把东西交给快递点（应用层），快递公司负责逐站转运（网络层），最后一段由派件员送到门口（网络接口层）。你不需要知道它走了哪条高速，只要地址写对。</div></div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>拆开它</strong>：任何一次通信都能拆成同一条链条：上层说要做什么 → 下层负责把这件事送到 → 到了对面再一层层交回去。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>解释它</strong>：为什么必须分层？因为下层一改，全世界的设备都要跟着改。分层把变化关在了一层的门里。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：打电话、寄信、点外卖背后也是同样的分层协作——每一层只需要把自己的那一件事做对。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="lab-1"
+           data-tts-script="现在我们把发送过程跑一遍。先选要发送的数据量，系统会按每个数据包最多携带一千字节把它切开，再让这些包一个一个沿路径转发过去。你可以打开丢包开关，看看其中一个包在路上丢掉之后会发生什么。盯住四个数字：分包数、已送达、重传次数、重组结果。"
+           data-tsh="数据包传输模拟器：分包、转发、丢包、重传" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">网络实验室</span>
+          <h2>数据包传输模拟器：分包、转发、丢包、重传</h2>
+        </div>
+
+        
+<style>
+.ta-flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ta-node { flex: 1; min-width: 66px; text-align: center; padding: 10px 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); font-size: 13px; font-weight: 700; }
+.ta-node.hot { border-color: var(--brand); background: var(--brand-soft); color: var(--text-strong); }
+.ta-pkts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.ta-pkt { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 54px; height: 54px; border-radius: 10px; font-size: 13px; font-weight: 800;
+  font-variant-numeric: tabular-nums; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.ta-pkt small { font-weight: 600; color: var(--muted); font-size: 10px; margin-top: 2px; }
+.ta-pkt.wait { opacity: .55; }
+.ta-pkt.fly { border-color: var(--brand); background: var(--brand-soft); }
+.ta-pkt.ok { border-color: var(--brand-2); background: var(--brand-2-soft); }
+.ta-pkt.lost { border-color: var(--danger); background: rgba(239, 68, 68, .10); color: var(--danger); }
+.ta-log { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13.5px; }
+.ta-log li { padding: 7px 10px; border-radius: 8px; margin-bottom: 6px;
+  border-left: 3px solid var(--line-subtle); background: var(--bg-subtle); color: var(--text-secondary); }
+.ta-log li.ok { border-left-color: var(--brand-2); color: var(--text-strong); }
+.ta-log li.bad { border-left-color: var(--danger); color: var(--text-strong); background: rgba(239, 68, 68, .07); }
+.ta-log li.now { border-left-color: var(--brand); color: var(--text-strong); background: var(--brand-soft); }
+.ta-pick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">先选要发送的数据量，再点「发送数据」。打开丢包开关，你会看到其中一个包在路上丢掉之后，整个流程是怎样补救的。</p>
+        <div class="lab-panel" id="lab1-stage">
+          <div class="ta-flow">
+            <div class="ta-node hot" data-hop="0">本机</div>
+            <div class="ta-node" data-hop="1">路由器一</div>
+            <div class="ta-node" data-hop="2">路由器二</div>
+            <div class="ta-node" data-hop="3">服务器</div>
+          </div>
+          <div class="slider-row">
+            <label for="l1-size">数据量</label>
+            <input type="range" id="l1-size" min="1" max="12" step="1" value="4">
+            <span class="readout-cell" style="flex:0 0 120px"><span class="k">要发送</span><span class="v" id="l1-size-val">4 千字节</span></span>
+          </div>
+          <div class="ta-pkts" id="l1-packets"></div>
+          <div class="lab-readout">
+            <div class="readout-cell"><span class="k">分包数</span><span class="v" id="l1-count">—</span></div>
+            <div class="readout-cell"><span class="k">已送达</span><span class="v green" id="l1-arrived">—</span></div>
+            <div class="readout-cell"><span class="k">重传次数</span><span class="v" id="l1-retry">0</span></div>
+            <div class="readout-cell"><span class="k">接收方状态</span><span class="v" id="l1-state">待发</span></div>
+          </div>
+          <div class="flex-row">
+            <button class="choice" id="l1-send" style="text-align:center;flex:1">发送数据</button>
+            <button class="choice" id="l1-loss" style="text-align:center;flex:1">丢包开关：开</button>
+            <button class="choice" id="l1-reset" style="text-align:center;flex:1">重新开始</button>
+          </div>
+          <p class="result warn" id="l1-out" style="margin-top:12px">点「发送数据」开始。</p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">📦</span><div><strong>注意看两件事：</strong>第一，每个包只带一小块数据，所以出错时只需要重传一个包，不用把整份数据重发。第二，丢了一个包，后面的包照样继续往前走——它们各自独立，到目的地再按序号重排。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="6" data-tts="module-2"
+           data-tts-script="数据不是一整条直接过去的。它被切成许多数据包，每个包有自己的包头，包头里写着源地址、目的地址和序号。路由器连接着不同的网络，它只看包头的目的地址，决定下一跳往哪里送，并不需要知道完整路线。正因为每个包都带地址，它们可以各走各的，到目的地再按序号重新排好。"
+           data-tsh="数据被切成带地址的数据包，由路由器逐段转发" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念二</span>
+          <h2>数据被切成带地址的数据包，由路由器逐段转发</h2>
+        </div>
+
+        
+<style>
+.ta-flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ta-node { flex: 1; min-width: 66px; text-align: center; padding: 10px 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); font-size: 13px; font-weight: 700; }
+.ta-node.hot { border-color: var(--brand); background: var(--brand-soft); color: var(--text-strong); }
+.ta-pkts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.ta-pkt { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 54px; height: 54px; border-radius: 10px; font-size: 13px; font-weight: 800;
+  font-variant-numeric: tabular-nums; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.ta-pkt small { font-weight: 600; color: var(--muted); font-size: 10px; margin-top: 2px; }
+.ta-pkt.wait { opacity: .55; }
+.ta-pkt.fly { border-color: var(--brand); background: var(--brand-soft); }
+.ta-pkt.ok { border-color: var(--brand-2); background: var(--brand-2-soft); }
+.ta-pkt.lost { border-color: var(--danger); background: rgba(239, 68, 68, .10); color: var(--danger); }
+.ta-log { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13.5px; }
+.ta-log li { padding: 7px 10px; border-radius: 8px; margin-bottom: 6px;
+  border-left: 3px solid var(--line-subtle); background: var(--bg-subtle); color: var(--text-secondary); }
+.ta-log li.ok { border-left-color: var(--brand-2); color: var(--text-strong); }
+.ta-log li.bad { border-left-color: var(--danger); color: var(--text-strong); background: rgba(239, 68, 68, .07); }
+.ta-log li.now { border-left-color: var(--brand); color: var(--text-strong); background: var(--brand-soft); }
+.ta-pick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+</style>
+
+        <p style="font-size:17px;margin:0 0 12px">数据不是一整条直接过去的。它被<strong>切成许多数据包</strong>，每个包自带包头，包头里写着目的地址和序号。</p>
+        <div class="grid grid-2">
+          <div class="inner-card">
+            <p><strong>包头里有什么</strong></p>
+            <p style="color:var(--muted)">源地址、目的地址、序号。地址告诉网络这个包要去哪里，序号让接收方知道该把它排在第几位。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>路由器做什么</strong></p>
+            <p style="color:var(--muted)">路由器连接着不同的网络。它只看包头里的目的地址，决定下一跳交给谁，并不需要知道完整路线。</p>
+          </div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-internet-architecture-fig2.webp" alt="分组交换示意图：数据被切成带编号的数据包，经路由器逐段转发后按编号重组">
+          <figcaption>分组交换：一份数据切成若干带编号的包，各自沿路径转发，到目的地按编号重新排好</figcaption>
+        </figure>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">不少同学误认为数据是「一整条」从出发地直达目的地的，还误认为路由器上存着一张完整的地图、知道全程怎么走。事实是：每个包只带着目的地址上路，每一台路由器只负责把它交给更接近目的地的下一跳。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>还有一件必须知道的事：</strong>数据包要经过许多台不属于你的设备才能到达对面。如果内容是明文，任何一台设备上都能被读取。<strong>所以</strong>承载敏感信息的传输必须加密——这也是安全传输协议存在的根本原因。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="7" data-tts="lab-2"
+           data-tts-script="再来看另一种看不见的过程。你在地址栏里输入的是一个域名，可机器之间只认地址里的数字，中间要做一次翻译，这个过程叫域名解析。点开始解析，你会看到查询一层一层往上走，最后拿回一个地址。拿回地址之后，数据包还要经过若干次转发才能到达目的地，每经过一台路由器，记录的跳数就加一。"
+           data-tsh="域名解析与路径：域名怎样变成地址，包又走了几跳" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">网络实验室</span>
+          <h2>域名解析与路径：域名怎样变成地址，包又走了几跳</h2>
+        </div>
+
+        
+<style>
+.ta-flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ta-node { flex: 1; min-width: 66px; text-align: center; padding: 10px 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); font-size: 13px; font-weight: 700; }
+.ta-node.hot { border-color: var(--brand); background: var(--brand-soft); color: var(--text-strong); }
+.ta-pkts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.ta-pkt { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 54px; height: 54px; border-radius: 10px; font-size: 13px; font-weight: 800;
+  font-variant-numeric: tabular-nums; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.ta-pkt small { font-weight: 600; color: var(--muted); font-size: 10px; margin-top: 2px; }
+.ta-pkt.wait { opacity: .55; }
+.ta-pkt.fly { border-color: var(--brand); background: var(--brand-soft); }
+.ta-pkt.ok { border-color: var(--brand-2); background: var(--brand-2-soft); }
+.ta-pkt.lost { border-color: var(--danger); background: rgba(239, 68, 68, .10); color: var(--danger); }
+.ta-log { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13.5px; }
+.ta-log li { padding: 7px 10px; border-radius: 8px; margin-bottom: 6px;
+  border-left: 3px solid var(--line-subtle); background: var(--bg-subtle); color: var(--text-secondary); }
+.ta-log li.ok { border-left-color: var(--brand-2); color: var(--text-strong); }
+.ta-log li.bad { border-left-color: var(--danger); color: var(--text-strong); background: rgba(239, 68, 68, .07); }
+.ta-log li.now { border-left-color: var(--brand); color: var(--text-strong); background: var(--brand-soft); }
+.ta-pick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">机器之间只认地址里的数字，可我们输入的是域名。先看这一次翻译是怎么完成的，再看数据包实际要走几跳。</p>
+        <div class="lab-panel">
+          <p style="margin:0 0 6px"><strong>① 选一个域名</strong></p>
+          <div class="ta-pick">
+            <button class="choice" data-l2-domain="library" style="text-align:center">图书室.example</button>
+            <button class="choice" data-l2-domain="study" style="text-align:center">学习角.example</button>
+            <button class="choice" data-l2-domain="weather" style="text-align:center">气象站.example</button>
+          </div>
+          <div class="lab-readout" style="margin-top:12px">
+            <div class="readout-cell"><span class="k">解析出的地址</span><span class="v" id="l2-ip">—</span></div>
+            <div class="readout-cell"><span class="k">解析耗时</span><span class="v green" id="l2-cost">—</span></div>
+            <div class="readout-cell"><span class="k">经过跳数</span><span class="v" id="l2-hops">—</span></div>
+          </div>
+          <div class="flex-row">
+            <button class="choice" id="l2-go" style="text-align:center;flex:1">开始解析</button>
+            <button class="choice" id="l2-hop" style="text-align:center;flex:1">看数据包怎么走</button>
+          </div>
+          <div id="lab2-stage"><ul class="ta-log" id="l2-log"></ul></div>
+          <p class="result warn" id="l2-out" style="margin-top:12px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🔎</span><div><strong>观察：</strong>解析是从下往上一步步问出来的，没有人手里存着全世界的域名表。等换一个域名再解析一次，你会发现耗时和跳数都不一样——路径是逐台设备接力决定的。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="worked-example"
+           data-tts-script="我们一起分析一个真实的故障。有同学报告说，他的机器能打开校内的共享文件夹，却打不开外网的一个网站。第一步，看清现象：局域网内通，出网不通。第二步，按分层自下而上定位：先看本机地址配置，再看网关是否可达。第三步，这两层都通过了，说明问题在更上层，于是检查域名解析，发现域名服务器地址配置错误。第四步，说清道理并修复：数据包要送到目的地，必须先拿到对方的地址；地址拿不到，后面的路再通也走不了。"
+           data-tsh="例题示范：局域网通、外网不通，问题出在哪一层" data-bloom-level="analyze" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">例题示范</span>
+          <h2>例题示范：局域网通、外网不通，问题出在哪一层</h2>
+        </div>
+
+        
+<style>
+.ta-flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ta-node { flex: 1; min-width: 66px; text-align: center; padding: 10px 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); font-size: 13px; font-weight: 700; }
+.ta-node.hot { border-color: var(--brand); background: var(--brand-soft); color: var(--text-strong); }
+.ta-pkts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.ta-pkt { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 54px; height: 54px; border-radius: 10px; font-size: 13px; font-weight: 800;
+  font-variant-numeric: tabular-nums; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.ta-pkt small { font-weight: 600; color: var(--muted); font-size: 10px; margin-top: 2px; }
+.ta-pkt.wait { opacity: .55; }
+.ta-pkt.fly { border-color: var(--brand); background: var(--brand-soft); }
+.ta-pkt.ok { border-color: var(--brand-2); background: var(--brand-2-soft); }
+.ta-pkt.lost { border-color: var(--danger); background: rgba(239, 68, 68, .10); color: var(--danger); }
+.ta-log { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13.5px; }
+.ta-log li { padding: 7px 10px; border-radius: 8px; margin-bottom: 6px;
+  border-left: 3px solid var(--line-subtle); background: var(--bg-subtle); color: var(--text-secondary); }
+.ta-log li.ok { border-left-color: var(--brand-2); color: var(--text-strong); }
+.ta-log li.bad { border-left-color: var(--danger); color: var(--text-strong); background: rgba(239, 68, 68, .07); }
+.ta-log li.now { border-left-color: var(--brand); color: var(--text-strong); background: var(--brand-soft); }
+.ta-pick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+</style>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(245,158,11,.55)">
+          <p style="margin:0"><strong>题目：</strong>一间机房里，一台机器能打开校内的共享文件夹，却怎么也打不开外网的一个网站。请判断问题最可能出在哪一层，并说明你的排查过程。</p>
+        </div>
+        <div class="inner-card">
+          <p style="margin:0 0 6px"><strong>第一步　看清现象：</strong>局域网内通，出外网不通。这说明本机和本地网络这一段是好的。</p>
+          <p style="margin:0 0 6px"><strong>第二步　先查更靠下的层：</strong>本机地址、掩码、默认网关是否配置正确；网关能不能回应。</p>
+          <p style="margin:0 0 6px"><strong>第三步　再往上查：</strong>网关既然通，就检查域名解析。结果发现向域名服务器发出的查询一直没有回应。</p>
+          <p style="margin:0"><strong>第四步　定位并修复：</strong>问题出在域名解析这一层——域名服务器地址配置错了。改成正确的地址后重新解析，页面立刻就能打开。</p>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">最容易犯的错是一上来就重启设备，或者直接下结论「断网了」。还有人误认为「能打开校内共享文件夹，就说明网络没问题」——其实局域网通只证明最下面两层是好的，上面几层完全没有验证过。排查网络问题的正确姿势是<strong>自下而上、逐层排除</strong>：下层不通，上层必然不可用；下层通了，才轮到查上层。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="9" data-tts="conceptest-1"
+           data-tts-script="现在用三个容易弄错的说法考考你。请仔细读每一个选项，选出你认为正确的那个，然后看解释。"
+           data-tsh="概念测试：找出藏在说法里的错误 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">概念测试</span>
+          <h2>概念测试：找出藏在说法里的错误</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="ct-1">
+          <p><strong>1. 下面哪句话是正确的？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-1" data-correct="1">数据被切成数据包传输，其中一个包丢了只需要重传这一个包</button>
+            <button class="choice" data-q="ct-1" data-correct="0">数据必须整块一起传输，中间断开就要全部重发</button>
+            <button class="choice" data-q="ct-1" data-correct="0">数据包一定会沿着同一条路线按顺序到达</button>
+          </div>
+          <p class="result warn" data-explain="ct-1" style="display:none;margin-top:10px">分包的意义正在于此：出错时只补发受影响的那一小块。<strong>错因提醒：</strong>很多同学误认为数据包会按发送顺序、走同一条路到达；实际上它们可以各走各的，靠序号在目的地重排。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-2">
+          <p><strong>2. 路由器决定把一个数据包往哪里送，主要依据是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-2" data-correct="1">包头里的目的地址</button>
+            <button class="choice" data-q="ct-2" data-correct="0">数据包里装的内容</button>
+            <button class="choice" data-q="ct-2" data-correct="0">发这个包的人是谁</button>
+          </div>
+          <p class="result warn" data-explain="ct-2" style="display:none;margin-top:10px">路由器只看目的地址，选一个更接近目的地的下一跳，不需要读懂包里的内容。<strong>错因提醒：</strong>容易误认为路由器要打开包看内容才能转发——如果需要看内容，那加密传输就没法实现了。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-3">
+          <p><strong>3. 有人把网页地址换成了另一台服务器的地址，页面就打不开了。如果只能改一个地方，最该先检查的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-3" data-correct="1">域名解析得到的地址是否正确</button>
+            <button class="choice" data-q="ct-3" data-correct="0">显示屏的亮度</button>
+            <button class="choice" data-q="ct-3" data-correct="0">本机的键盘是否好用</button>
+          </div>
+          <p class="result warn" data-explain="ct-3" style="display:none;margin-top:10px">域名要先被翻译成地址，包才谈得上往哪里送。翻译错了，后面的路全错。<strong>错因提醒：</strong>遇到「打不开」就断定是线路问题，是常见的错误判断；这一次断的其实是上面那一层。</p>
+        </div>
+        <p id="ct-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="synthesis"
+           data-tts-script="学到这里，请你当一次网络工程师。机房的一台机器打不开图书馆的网站，报修单递到你手上。你要按自下而上的顺序，逐层检查本机地址、网关连通、域名解析、服务端口这四项，把故障定位到具体的某一层，最后交出一份诊断报告。"
+           data-tsh="综合任务：按分层顺序，把故障定位到具体一层" data-bloom-level="analyze" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">综合任务</span>
+          <h2>综合任务：按分层顺序，把故障定位到具体一层</h2>
+        </div>
+
+        
+<style>
+.ta-flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ta-node { flex: 1; min-width: 66px; text-align: center; padding: 10px 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); font-size: 13px; font-weight: 700; }
+.ta-node.hot { border-color: var(--brand); background: var(--brand-soft); color: var(--text-strong); }
+.ta-pkts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.ta-pkt { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 54px; height: 54px; border-radius: 10px; font-size: 13px; font-weight: 800;
+  font-variant-numeric: tabular-nums; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.ta-pkt small { font-weight: 600; color: var(--muted); font-size: 10px; margin-top: 2px; }
+.ta-pkt.wait { opacity: .55; }
+.ta-pkt.fly { border-color: var(--brand); background: var(--brand-soft); }
+.ta-pkt.ok { border-color: var(--brand-2); background: var(--brand-2-soft); }
+.ta-pkt.lost { border-color: var(--danger); background: rgba(239, 68, 68, .10); color: var(--danger); }
+.ta-log { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13.5px; }
+.ta-log li { padding: 7px 10px; border-radius: 8px; margin-bottom: 6px;
+  border-left: 3px solid var(--line-subtle); background: var(--bg-subtle); color: var(--text-secondary); }
+.ta-log li.ok { border-left-color: var(--brand-2); color: var(--text-strong); }
+.ta-log li.bad { border-left-color: var(--danger); color: var(--text-strong); background: rgba(239, 68, 68, .07); }
+.ta-log li.now { border-left-color: var(--brand); color: var(--text-strong); background: var(--brand-soft); }
+.ta-pick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">报修单：机房 3 号机打不开图书馆网站。你有四项检查权限，请按自下而上的顺序使用它们，找出断点在哪一层。</p>
+        <div class="lab-panel">
+          <div class="ta-pick" id="syn-stage">
+            <button class="choice" data-syn-check="addr" style="text-align:center">检查一 · 本机地址</button>
+            <button class="choice" data-syn-check="gw" style="text-align:center">检查二 · 网关连通</button>
+            <button class="choice" data-syn-check="dns" style="text-align:center">检查三 · 域名解析</button>
+            <button class="choice" data-syn-check="port" style="text-align:center">检查四 · 服务端口</button>
+          </div>
+          <ul class="ta-log" id="syn-log"></ul>
+          <p class="result warn" id="syn-out" style="margin-top:12px"></p>
+          <p class="result" id="syn-fix" style="margin-top:10px;display:none"></p>
+        </div>
+        <div class="inner-card">
+          <p><strong>写下来，说给同桌听：</strong>你是按什么顺序检查的？为什么这个顺序比随机点开一项更省时间？如果把「检查三」放在第一步就点了，你会得到什么结论，又可能错过什么？</p>
+          <textarea id="syn-answer" rows="3" placeholder="我先查……因为……如果先点检查三，我会以为……"></textarea>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="posttest"
+           data-tts-script="最后用新情境检验一下。这次出现了视频卡顿和换一台设备就正常的情况，看看你能不能把分层和分包的知识用上去。"
+           data-tsh="后测：换一个情境，看看规律还在不在 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">后测</span>
+          <h2>后测：换一个情境，看看规律还在不在</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="post-1">
+          <p><strong>1. 看在线视频时画面偶尔卡一下，但聊天消息照常收发。最合理的解释是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-1" data-correct="1">视频数据量大，被切成很多包，只要有一个包没能及时补上，画面就会停顿一下</button>
+            <button class="choice" data-q="post-1" data-correct="0">网络彻底断了，只是恰好还能发消息</button>
+            <button class="choice" data-q="post-1" data-correct="0">聊天消息的传输不需要经过网络</button>
+          </div>
+          <p class="result warn" data-explain="post-1" style="display:none;margin-top:10px">视频对时延和丢包比文字更敏感，同样的链路下，包多、量大的那一方先受影响。这正是分包与重传机制要做的事。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-2">
+          <p><strong>2. 同一间教室里，你的机器打不开某个页面，借来同桌的机器却能打开。最先该怀疑的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-2" data-correct="1">问题出在你这台机器自己的配置上，而不是整条线路</button>
+            <button class="choice" data-q="post-2" data-correct="0">整个网络都瘫痪了</button>
+            <button class="choice" data-q="post-2" data-correct="0">那个页面本身被删掉了</button>
+          </div>
+          <p class="result warn" data-explain="post-2" style="display:none;margin-top:10px">同一时间、同一网络下只有一台机器异常，说明公共部分（链路、网关、域名服务器）是好的，差异只在这台机器自己。<strong>错因提醒：</strong>把个别机器的问题当成全网故障，是排查时最常见的误判。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-3">
+          <p><strong>3. 一位同学说：「我知道目的地址是 203.0.113.42，所以我的机器一定知道全部路线。」这句话：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-3" data-correct="1">不准确，知道目的地址不等于知道完整路线，路线是逐台设备接力决定的</button>
+            <button class="choice" data-q="post-3" data-correct="0">完全正确</button>
+            <button class="choice" data-q="post-3" data-correct="0">只在网络空闲时正确</button>
+          </div>
+          <p class="result warn" data-explain="post-3" style="display:none;margin-top:10px">每一台路由器只需要知道自己该把包交给谁。谁都不掌握全程，但包依然能到——这就是逐段转发的妙处。</p>
+        </div>
+        <p id="post-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="12" data-tts="summary"
+           data-tts-script="这节课我们弄明白了三件事。第一，互联网是许多网络互联形成的网络，协议是通信双方共同遵守的规则，分层是为了让每一层只解决一件事。第二，数据被切成带有序号和地址的数据包，由路由器逐段转发，到目的地再按序号重排。第三，排查网络问题要自下而上分层定位，先确认本机地址和网关，再看域名解析，最后看服务端口。"
+           data-tsh="小结：三句话，把自己讲明白" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">小结</span>
+          <h2>小结：三句话，把自己讲明白</h2>
+        </div>
+        <div class="grid">
+          <div class="summary-item"><span class="num">1</span><div><strong>结构</strong>：互联网是许多网络互联形成的网络；协议是通信双方共同遵守的规则。</div></div>
+          <div class="summary-item"><span class="num">2</span><div><strong>分层</strong>：应用层收发请求，传输层管端到端可靠传输，网络层管寻址与选路，网络接口层管链路上的信号；上层提请求，下层提供服务。</div></div>
+          <div class="summary-item"><span class="num">3</span><div><strong>传输</strong>：数据切成带有序号和地址的数据包，由路由器逐段转发，到目的地按序号重排；丢了哪一个就重传哪一个。</div></div>
+        </div>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(245,158,11,.55)">
+          <p style="margin:0"><strong>回到开头那一下发送：</strong>你按下的那一刻，应用层把内容交下去，传输层把它切成若干数据包并记下序号，网络层给每个包写上目的地址，网络接口层把它送上网线；接着一台台路由器只看地址、逐段接力，最后在对面按序号重排还原。整个过程没有人掌握全局，却准确完成了。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>给别人讲一遍：</strong>请用「协议、分层、数据包、地址」这四个词，说清楚一条消息从你这里到对面经历了什么。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="13" data-tts="homework"
+           data-tts-script="最后留三项作业，分三个层次。第一层基础巩固，人人要做：写出四层的名称和各自的主要职责，并说出协议在通信中起什么作用。第二层能力应用，动手做：画出一次发送过程中数据包从本机到服务器的路径，标出每一步负责转发的是哪一类设备。第三层迁移挑战，选做：找一个你遇到过的上网问题，写一份自下而上的排查步骤，说明你判断故障在哪一层的依据。"
+           data-tsh="作业分层：三层练习，按自己的节奏来" data-bloom-level="create" data-scaffold="none">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">作业分层</span>
+          <h2>作业分层：三层练习，按自己的节奏来</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">三层练习，做完第一、二层就算通关；第三层留给愿意继续探索的同学。</p>
+        <div class="inner-card">
+          <p><strong>⭐ 基础巩固（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>写出四层协议模型的名称，并为每一层写一句「它负责什么」。</li>
+            <li>用自己的话说出「协议」的含义：协议规定了哪三件事（数据长什么样、按什么顺序交换、出错怎么办）？</li>
+            <li>画出一个数据包的包头示意，标出源地址、目的地址、序号分别放在哪里。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐ 能力应用（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>画出一次发送过程：从本机出发，经过两台路由器，到达服务器。在图上标出每一段负责转发的是哪一类设备。</li>
+            <li>把模拟器里的数据量从 4 千字节改成 10 千字节，记录分包数和重传次数，说明它们为什么这样变化。</li>
+            <li>记录一次真实的域名解析：换两个不同的域名各解析一次，把解析出的地址、耗时、跳数填进表格并比较。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐⭐ 迁移挑战（选做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>为自己遇到过的某一个上网问题，写一份自下而上的排查步骤，说明你判断断点在哪一层的依据。</li>
+            <li>查阅资料了解：为什么传送敏感信息的传输必须加密？请从「数据包要经过许多台设备」这个角度解释，并给出两条你可以做到的保护个人信息的做法。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page kg-page" data-page-type="summary" data-page-index="14" data-tts="knowledge-graph"
+           data-tts-script="这张图展示了这节课在信息科技知识网络里的位置。左边是先要学会的知识，右边是可以接着探索的内容，下面是同一领域的伙伴知识。可以点一点，看看还有哪些值得继续研究的问题。"
+           data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">知识图谱</span>
+          <h2>这节课在知识网络里的位置</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 10px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p class="kg-loading-hint" style="color:var(--muted);font-size:13px;margin:0 0 10px">图谱正在加载：首次进入需下载知识索引（约 1–3 秒），加载完成后本行会自动消失。</p>
+        <div data-teachany-kg="it-m-internet-architecture">
+          <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="15" data-tts="ai-tutor"
+           data-tts-script="如果还有没弄明白的地方，把你的问题写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。"
+           data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+</div><!-- .slide-container -->
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-pretest",
+    "section": "pretest",
+    "src": "./tts/s04-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s05-module-1",
+    "section": "module-1",
+    "src": "./tts/s05-module-1.mp3",
+    "label": "概念一 网络的网络与协议分层"
+  },
+  {
+    "id": "s06-lab-1",
+    "section": "lab-1",
+    "src": "./tts/s06-lab-1.mp3",
+    "label": "实验室一 数据包传输模拟器"
+  },
+  {
+    "id": "s07-module-2",
+    "section": "module-2",
+    "src": "./tts/s07-module-2.mp3",
+    "label": "概念二 数据包、地址与转发"
+  },
+  {
+    "id": "s08-lab-2",
+    "section": "lab-2",
+    "src": "./tts/s08-lab-2.mp3",
+    "label": "实验室二 域名解析与路径"
+  },
+  {
+    "id": "s09-worked-example",
+    "section": "worked-example",
+    "src": "./tts/s09-worked-example.mp3",
+    "label": "例题讲解"
+  },
+  {
+    "id": "s10-conceptest-1",
+    "section": "conceptest-1",
+    "src": "./tts/s10-conceptest-1.mp3",
+    "label": "概念测试"
+  },
+  {
+    "id": "s11-synthesis",
+    "section": "synthesis",
+    "src": "./tts/s11-synthesis.mp3",
+    "label": "综合任务 分层排障"
+  },
+  {
+    "id": "s12-posttest",
+    "section": "posttest",
+    "src": "./tts/s12-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s13-summary",
+    "section": "summary",
+    "src": "./tts/s13-summary.mp3",
+    "label": "课堂小结"
+  },
+  {
+    "id": "s14-homework",
+    "section": "homework",
+    "src": "./tts/s14-homework.mp3",
+    "label": "作业分层"
+  },
+  {
+    "id": "s15-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s15-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s16-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s16-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<script>
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'it-m-internet-architecture',
+    courseTitle: '互联网结构与协议初识',
+    subject: 'info-tech',
+    grade: '7',
+    nodeId: 'it-m-internet-architecture',
+    lessonType: 'concept-simulation',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+</script>
+
+<script>
+
+/* ============================================================
+   it-m-internet-architecture 互动逻辑
+   1) 选择题接线（前测 / 概念测试 / 后测）
+   2) 数据包传输模拟器：分包 → 转发 → 丢包 → 重传 → 重组
+   3) 域名解析与路径跳数
+   4) 分层排障工作台：自下而上定位故障层
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ---------- 1. 选择题 ---------- */
+  document.querySelectorAll('[data-quiz-block]').forEach(function (block) {
+    block.querySelectorAll('.choice').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (block.dataset.answered === '1') return;
+        block.dataset.answered = '1';
+        btn.classList.add(btn.dataset.correct === '1' ? 'correct' : 'wrong');
+        block.querySelectorAll('.choice').forEach(function (b) {
+          if (b.dataset.correct === '1') b.classList.add('correct');
+          b.disabled = true;
+        });
+        var ex = block.querySelector('[data-explain]');
+        if (ex) ex.style.display = 'block';
+      });
+    });
+  });
+
+  /* ---------- 2. 数据包传输模拟器 ---------- */
+  var PAYLOAD = 1;                 /* 每个数据包最多携带 1 千字节 */
+  var HOP_MS = 420;                /* 每个包经过一跳的演示耗时 */
+  var l1 = document.getElementById('lab1-stage');
+
+  if (l1) {
+    var eSize = document.getElementById('l1-size');
+    var eSizeV = document.getElementById('l1-size-val');
+    var eCount = document.getElementById('l1-count');
+    var eArrived = document.getElementById('l1-arrived');
+    var eRetry = document.getElementById('l1-retry');
+    var eState = document.getElementById('l1-state');
+    var eBox = document.getElementById('l1-packets');
+    var eOut = document.getElementById('l1-out');
+    var eLoss = document.getElementById('l1-loss');
+    var eSend = document.getElementById('l1-send');
+    var eReset = document.getElementById('l1-reset');
+    var nodeEls = l1.querySelectorAll('[data-hop]');
+
+    var packets = [], retry = 0, lossOn = true, running = false, timer = null;
+
+    function sizeKb() { return Number(eSize.value); }
+    function packetTotal() { return Math.ceil(sizeKb() / PAYLOAD); }
+
+    function build() {
+      packets = [];
+      var n = packetTotal();
+      for (var i = 1; i <= n; i++) packets.push({ id: i, bytes: PAYLOAD, state: '待发' });
+      retry = 0;
+      running = false;
+      if (timer) { clearInterval(timer); timer = null; }
+      eSend.disabled = false;
+      eSend.textContent = '发送数据';
+      render();
+    }
+
+    function markNodes(idx) {
+      nodeEls.forEach(function (el, k) { el.classList.toggle('hot', k === idx); });
+    }
+
+    function render() {
+      var arrived = packets.filter(function (p) { return p.state === '已送达'; }).length;
+      var lost = packets.filter(function (p) { return p.state === '丢失'; }).length;
+      eCount.textContent = packets.length + ' 个';
+      eArrived.textContent = arrived + ' / ' + packets.length;
+      eRetry.textContent = String(retry);
+      eState.textContent = lost > 0 ? '缺少 ' + lost + ' 个包' : (arrived === packets.length ? '完整' : '待发');
+
+      eBox.innerHTML = '';
+      packets.forEach(function (p) {
+        var d = document.createElement('div');
+        d.className = 'ta-pkt';
+        if (p.state === '在途') d.className += ' fly';
+        else if (p.state === '已送达') d.className += ' ok';
+        else if (p.state === '丢失') d.className += ' lost';
+        else d.className += ' wait';
+        d.innerHTML = '第 ' + p.id + ' 包<small>' + p.state + '</small>';
+        eBox.appendChild(d);
+      });
+    }
+
+    function summary() {
+      var arrived = packets.filter(function (p) { return p.state === '已送达'; }).length;
+      var missing = packets.filter(function (p) { return p.state !== '已送达'; });
+      if (missing.length === 0) {
+        markNodes(3);
+        eOut.className = 'result';
+        eOut.innerHTML = '<strong>重组成功：</strong>' + packets.length + ' 个数据包按序号一、二、三……重排，' +
+          '还原出 ' + sizeKb() + ' 千字节的完整数据。' + (retry > 0 ? '这一次一共重传了 ' + retry + ' 次。' : '');
+      } else {
+        eOut.className = 'result error';
+        eOut.innerHTML = '<strong>暂时无法重组：</strong>接收方还缺 ' + missing.length + ' 个包（' +
+          missing.map(function (p) { return '第 ' + p.id + ' 包'; }).join('、') +
+          '）。接收方不会凭猜测补上缺失的内容，它会要求发送方重传。';
+      }
+    }
+
+    eSend.addEventListener('click', function () {
+      if (running) return;
+      running = true;
+      eSend.disabled = true;
+      eSend.textContent = '正在发送…';
+      var lostId = lossOn ? 3 : -1;
+      if (lostId > packets.length) lostId = -1;
+      var i = 0;
+
+      timer = setInterval(function () {
+        if (i >= packets.length) {
+          clearInterval(timer); timer = null;
+          markNodes(3);
+          var lostList = packets.filter(function (p) { return p.state === '丢失'; });
+          if (lostList.length > 0) {
+            retry += 1;
+            render();
+            eOut.className = 'result warn';
+            eOut.innerHTML = '<strong>发生丢包：</strong>第 ' + lostList[0].id +
+              ' 包没有到达接收方。传输层会启动超时重传，把这个包再发一次——重传次数加一。';
+            setTimeout(function () {
+              lostList.forEach(function (p) { p.state = '已送达'; });
+              render(); summary();
+              eSend.textContent = '发送数据';
+              running = false;
+            }, 1100);
+          } else {
+            summary();
+            eSend.textContent = '发送数据';
+            running = false;
+          }
+          return;
+        }
+        var p = packets[i];
+        markNodes(i < packets.length / 2 ? 1 : 2);
+        p.state = '在途';
+        render();
+        setTimeout(function () {
+          p.state = (lostId === p.id) ? '丢失' : '已送达';
+          render();
+          if (p.state === '丢失') {
+            eOut.className = 'result warn';
+            eOut.innerHTML = '<strong>第 ' + p.id + ' 包在路上丢失了。</strong>' +
+              '注意：后面的包照常往前走，不会因为前面丢了一个就全部停下来——这正是分组交换的特点。';
+          }
+        }, HOP_MS * 0.6);
+        i += 1;
+      }, HOP_MS);
+    });
+
+    eLoss.addEventListener('click', function () {
+      lossOn = !lossOn;
+      eLoss.textContent = lossOn ? '丢包开关：开' : '丢包开关：关';
+      eLoss.classList.toggle('selected', lossOn);
+    });
+    eReset.addEventListener('click', build);
+    eSize.addEventListener('input', function () {
+      eSizeV.textContent = sizeKb() + ' 千字节';
+      markNodes(0);
+      build();
+    });
+
+    eLoss.classList.add('selected');
+    eSizeV.textContent = sizeKb() + ' 千字节';
+    markNodes(0);
+    build();
+  }
+
+  /* ---------- 3. 域名解析与路径跳数 ---------- */
+  var DOMAINS = {
+    library: { name: '图书室.example', ip: '203.0.113.42', hops: 5, ms: 3 },
+    study: { name: '学习角.example', ip: '203.0.113.18', hops: 6, ms: 4 },
+    weather: { name: '气象站.example', ip: '198.51.100.7', hops: 8, ms: 6 }
+  };
+  var l2 = document.getElementById('lab2-stage');
+
+  if (l2) {
+    var eLog = document.getElementById('l2-log');
+    var eOut2 = document.getElementById('l2-out');
+    var eIp = document.getElementById('l2-ip');
+    var eHops = document.getElementById('l2-hops');
+    var eCost = document.getElementById('l2-cost');
+    var eGo = document.getElementById('l2-go');
+    var eHop = document.getElementById('l2-hop');
+    var curDomain = 'library';
+    var busy = false, timer2 = null, timer3 = null;
+
+    function chain(d) {
+      return [
+        { t: '本机缓存', m: '查本机最近的记录：没有 ' + d.name + '，缓存未命中。', ok: false },
+        { t: '本地域名服务器', m: '把问题转给本地域名服务器：它也没有这条记录，需要继续往上问。', ok: false },
+        { t: '根域名服务器', m: '根域名服务器不直接给出地址，它回答：这个域名归顶级域服务器管，去问它。', ok: false },
+        { t: '顶级域服务器', m: '顶级域服务器回答：这个域名的权威记录在那台权威域名服务器上。', ok: false },
+        { t: '权威域名服务器', m: '权威域名服务器给出最终答案：' + d.name + ' 对应的地址是 ' + d.ip + '。', ok: true }
+      ];
+    }
+
+    function clearAll() {
+      if (timer2) { clearInterval(timer2); timer2 = null; }
+      if (timer3) { clearInterval(timer3); timer3 = null; }
+      eLog.innerHTML = '';
+      eIp.textContent = '—';
+      eHops.textContent = '—';
+      eCost.textContent = '—';
+      eHop.textContent = '—';
+      eGo.disabled = false;
+      eGo.textContent = '开始解析';
+      busy = false;
+    }
+
+    function pick(key) {
+      curDomain = key;
+      document.querySelectorAll('[data-l2-domain]').forEach(function (b) {
+        b.classList.toggle('selected', b.dataset.l2Domain === key);
+      });
+      clearAll();
+      eOut2.className = 'result warn';
+      eOut2.innerHTML = '已选域名 <strong>' + DOMAINS[key].name + '</strong>，点「开始解析」看它怎样一步步被翻译成地址。';
+    }
+
+    document.querySelectorAll('[data-l2-domain]').forEach(function (b) {
+      b.addEventListener('click', function () { if (!busy) pick(b.dataset.l2Domain); });
+    });
+
+    eGo.addEventListener('click', function () {
+      if (busy) return;
+      busy = true;
+      eGo.disabled = true;
+      var d = DOMAINS[curDomain];
+      var steps = chain(d);
+      var i = 0;
+      eLog.innerHTML = '';
+      eIp.textContent = '解析中…';
+      eGo.textContent = '解析中…';
+      timer2 = setInterval(function () {
+        if (i >= steps.length) {
+          clearInterval(timer2); timer2 = null;
+          eIp.textContent = d.ip;
+          eCost.textContent = d.ms + ' 毫秒';
+          eOut2.className = 'result';
+          eOut2.innerHTML = '<strong>解析完成：</strong>域名 ' + d.name + ' 翻译成地址 ' + d.ip +
+            '，一共问了 5 层，耗时约 ' + d.ms + ' 毫秒。拿到地址之后，数据包才谈得上往哪里送。';
+          eGo.textContent = '解析完成';
+          return;
+        }
+        var s = steps[i];
+        var li = document.createElement('li');
+        li.className = s.ok ? 'ok' : 'now';
+        li.innerHTML = '<strong>第 ' + (i + 1) + ' 步 · ' + s.t + '</strong>：' + s.m;
+        eLog.appendChild(li);
+        i += 1;
+      }, 620);
+    });
+
+    eHop.addEventListener('click', function () {
+      var d = DOMAINS[curDomain];
+      if (timer3) { clearInterval(timer3); timer3 = null; }
+      var ttl = 64, k = 0;
+      eHops.textContent = '0 跳';
+      eHop.disabled = true;
+      eHop.textContent = '转发中…';
+      timer3 = setInterval(function () {
+        k += 1;
+        ttl -= 1;
+        eHops.textContent = k + ' 跳';
+        eOut2.className = 'result warn';
+        eOut2.innerHTML = '<strong>第 ' + k + ' 跳：</strong>数据包抵达第 ' + k +
+          ' 台路由器，它只看包头里的目的地址 ' + d.ip + '，把包转给下一跳；同时把剩余生存时间减到 ' + ttl + '。';
+        if (k >= d.hops) {
+          clearInterval(timer3); timer3 = null;
+          eOut2.className = 'result';
+          eOut2.innerHTML = '<strong>已抵达目的地：</strong>从本机到 ' + d.name + ' 一共经过 ' + d.hops +
+            ' 台路由器。注意：每一台都只知道自己该往哪里转，没有哪一台掌握完整路线。';
+          eHop.disabled = false;
+          eHop.textContent = '再走一遍';
+        }
+      }, 700);
+    });
+
+    eOut2.className = 'result warn';
+    eOut2.innerHTML = '先选一个域名，点「开始解析」看地址是怎么来的；再点「看数据包怎么走」看它经过几跳。';
+    eHops.textContent = '—';
+    document.querySelectorAll('[data-l2-domain]').forEach(function (b) {
+      b.classList.toggle('selected', b.dataset.l2Domain === curDomain);
+    });
+  }
+
+  /* ---------- 4. 分层排障工作台 ---------- */
+  var CHECKS = [
+    { id: 'addr', layer: '本机地址', order: 1,
+      pass: true, ok: '本机地址 10.20.30.41，掩码 24 位，默认网关 10.20.30.1。地址配置正常。',
+      bad: '本机没有拿到有效地址，后面所有检查都无从谈起。' },
+    { id: 'gw', layer: '网关连通', order: 2,
+      pass: true, ok: '网关 10.20.30.1 回应耗时 1 毫秒，本机到本地网络这段是通的。',
+      bad: '网关没有回应，说明问题就在本地这一段。' },
+    { id: 'dns', layer: '域名解析', order: 3,
+      pass: false, ok: '域名解析正常，拿到了目标地址。',
+      bad: '向域名服务器 10.20.30.254 发出查询，一直没有回应，超时。域名换不成地址，后面的路再通也没用。' },
+    { id: 'port', layer: '服务端口', order: 4,
+      pass: true, ok: '直接使用地址 203.0.113.42 的 443 端口，连接建立成功，页面能打开。',
+      bad: '目标端口没有响应，说明服务本身不可用。' }
+  ];
+  var syn = document.getElementById('syn-stage');
+
+  if (syn) {
+    var eSynLog = document.getElementById('syn-log');
+    var eSynOut = document.getElementById('syn-out');
+    var eSynFix = document.getElementById('syn-fix');
+    var done = {}, visited = 0, orderWarn = 0;
+
+    function refreshSyn() {
+      document.querySelectorAll('[data-syn-check]').forEach(function (b) {
+        var c = CHECKS.filter(function (x) { return x.id === b.dataset.synCheck; })[0];
+        b.classList.toggle('selected', !!done[c.id]);
+      });
+    }
+
+    document.querySelectorAll('[data-syn-check]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.dataset.synCheck;
+        if (done[id]) return;
+        var c = CHECKS.filter(function (x) { return x.id === id; })[0];
+        var earlierOpen = CHECKS.filter(function (x) { return x.order < c.order && !done[x.id]; });
+
+        var li = document.createElement('li');
+        li.className = c.pass ? 'ok' : 'bad';
+        li.innerHTML = '<strong>检查' + c.order + ' · ' + c.layer + '</strong>：' + (c.pass ? c.ok : c.bad);
+        eSynLog.appendChild(li);
+        done[id] = true;
+        visited += 1;
+        refreshSyn();
+
+        var prefix = '';
+        if (earlierOpen.length > 0) {
+          orderWarn += 1;
+          prefix = '<strong>提醒：</strong>你跳过了更靠下的「' +
+            earlierOpen.map(function (x) { return x.layer; }).join('、') +
+            '」。工程上排查网络问题习惯自下而上：下层的问题会让上层一起失灵，先查下层才不会白跑。<br>';
+        }
+
+        if (!c.pass) {
+          eSynOut.className = 'result error';
+          eSynOut.innerHTML = prefix + '<strong>故障定位：</strong>问题出在「' + c.layer +
+            '」这一层。前面几层都通过了，说明线路和地址都没问题，是这一步把后面的路断了。';
+          eSynFix.style.display = 'block';
+          eSynFix.className = 'result';
+          eSynFix.innerHTML = '<strong>修复方案：</strong>把本机的域名服务器地址改成正确的 ' +
+            '10.20.30.53，再重新解析一次即可。改完之后，从本机到网关、从域名到地址、从地址到服务端口，链条才完整。';
+        } else {
+          eSynOut.className = 'result warn';
+          eSynOut.innerHTML = prefix + '<strong>这一层通过：</strong>继续往下（更靠近应用）检查，看看断点在哪里。';
+        }
+      });
+    });
+
+    eSynFix.style.display = 'none';
+    eSynOut.className = 'result warn';
+    eSynOut.textContent = '按自下而上的顺序，依次检查四项。每查一项都会给出这一层的结果。';
+  }
+})();
+
+</script>
+
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+</body>
+</html>

@@ -1,0 +1,1889 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《程序调试与迭代》 · 小学信息科技 五年级 · TeachAny</title>
+<meta name="description" content="面向小学五年级：能按「位置—症状—线索」三步读懂一段报错信息；能在有问题的伪代码里点出出错的那一行并说出原因；能改好之后重新运行、确认这一次真的跑通且结果对得上；能在一段不报错但结果不对的程序里，先用小数据手工验算再定位到出问题的一处，并用改动最小的办法修好。">
+
+<meta name="course-id" content="it-e-debugging">
+<meta name="course-title" content="程序调试与迭代">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="小学五年级">
+<meta name="course-prereqs" content="it-e-branch-loop">
+<meta name="course-next" content="it-e-input-output">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.22.0">
+<meta name="teachany-node" content="it-e-debugging">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="5">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-domain" content="algorithm-programming">
+<meta name="teachany-prerequisites" content="分支与循环结构">
+<meta name="teachany-lesson-type" content="concept-practice">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style>
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+</style>
+</head>
+<body class="teachany-elementary">
+
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
+    <img src="https://www.teachany.cn/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.22.0</span></span>
+  </div>
+</div>
+
+<div class="slide-container" id="slide-container">
+
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero"
+           data-tts-script="先请你想象一件事。你照着食谱做一道菜，结果端出来太咸了。这时候你会怎么办？你不会把整锅倒掉，也不会怪锅不好。你会回想每一步：盐是不是放多了？是不是放了两次？这就是调试。程序写错了也一样：它要么在运行时停下来告诉你哪里出了问题，要么安安静静地跑完，却给你一个不对的结果。今天这节课，我们要学会看懂它给你的提示，亲手找出那一行，改好，再跑一遍。"
+           data-tsh="开场 - 用一个真实问题建立学习动机" data-bloom-level="remember" data-scaffold="full">
+    <div class="slide-inner">
+      <p class="level-badge">小学五年级 · 算法与程序</p>
+      <h1>程序调试与迭代</h1>
+      <p class="subtitle">做菜太咸了，你会尝一口、想一想、少放一点盐——程序出了错，你也会这么做吗？</p>
+      <figure class="ta-standard-figure" style="margin-top:24px">
+        <img src="./assets/it-e-debugging-hero.webp" alt="程序调试与迭代知识结构图：读懂报错、找到那一行、改好再跑一遍三栏">
+        <figcaption>程序调试：读懂报错三件事 · 找那一行 · 改好再跑一遍</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide-page" id="problem-anchor" data-page-type="interactive" data-page-index="1"
+           data-tts="problem-anchor" data-tts-alias="anchor"
+           data-tts-script="开始之前，先选一个你最想弄明白的问题。是想知道那一段报错信息到底在说什么，还是想知道程序不报错但结果不对时该从哪里查，又或者你想弄明白为什么说「慢一点、看一步」比「全部重写」更管用，再或者你想学会改完以后怎么确认真的改对了。选好了，就带着这个问题往下看。"
+           data-tsh="问题锚点 - 先确定今天最想弄明白的问题">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">问题锚点</span>
+          <h2>今天最想弄明白哪一件事？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你真正好奇的问题，后面的动手活动都会围着它转。</p>
+        <div class="grid">
+          <button class="choice" data-anchor-choice="那一段报错信息到底在说什么"><strong>那一段报错信息到底在说什么？</strong><br><span style="color:var(--muted);font-size:14px">从哪里开始读，读哪几个字最有用</span></button>
+          <button class="choice" data-anchor-choice="程序不报错但结果不对从哪查"><strong>程序不报错，但结果不对，从哪查？</strong><br><span style="color:var(--muted);font-size:14px">它一声不吭，我怎么知道哪里做多了</span></button>
+          <button class="choice" data-anchor-choice="为什么说慢一点看一步更好"><strong>为什么说慢一点、看一步更好？</strong><br><span style="color:var(--muted);font-size:14px">为什么一次全改完反而更慢</span></button>
+          <button class="choice" data-anchor-choice="改完以后怎么知道真的改对了"><strong>改完以后怎么知道真的改对了？</strong><br><span style="color:var(--muted);font-size:14px">想学会自己验证、自己收尾</span></button>
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己最想知道的问题
+          <input id="learner-question-input" placeholder="把你好奇的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives"
+           data-tts-script="这节课有四个目标。第一，能读懂一段报错信息，说出它指的是哪一行、出了什么事。第二，能在一段有问题的程序里点出出错的那一行，并说出可能的原因。第三，能改掉出错的地方，然后重新运行一遍，确认这一次真的跑通了。第四，能在一段不报错但结果不对的程序里，用小手算一遍的方法找出问题，并试着用改动最小的办法修好它。"
+           data-tsh="学习目标 - 明确这节课结束时能做到什么" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">学习目标</span>
+          <h2>这节课结束时，你应该能做到</h2>
+        </div>
+        <ul class="objectives">
+          <li>能按「停在第几行、它在抱怨什么、那个名字第一次出现在哪里」三步读懂一段报错信息</li>
+          <li>能在有问题的伪代码里点出出错的那一行，并说出可能的原因</li>
+          <li>能改掉出错的地方并重新运行，确认这一次真的跑通、结果也对得上</li>
+          <li>能在一段不报错但结果不对的程序里，先用小数据手工验算，再定位到出问题的一处，并用改动最小的办法修好</li>
+        </ul>
+        <div class="kid-note" style="margin-top:16px">
+          <span class="emoji">🎯</span>
+          <div><strong>课标依据：</strong>《义务教育信息科技课程标准（2022年版2025年修订）》小学「算法与程序」——能发现程序错误并尝试修改，体验迭代优化。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="3" data-tts="pretest"
+           data-tts-script="先做三道小题，用你现在的想法选就行。选完马上能看到解释，选错了也没关系，正好知道该重点听哪里。"
+           data-tsh="先测一测：程序出错的时候，你会怎么做？ - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">前测</span>
+          <h2>先测一测：程序出错的时候，你会怎么做？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="pre-1">
+          <p><strong>1. 程序运行时停下来，并且显示了一行报错信息。最该先做的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-1" data-correct="1">读一读它说的行号和那句话，弄清它在抱怨什么</button>
+            <button class="choice" data-q="pre-1" data-correct="0">把整段程序删掉重写一遍</button>
+            <button class="choice" data-q="pre-1" data-correct="0">随便改一处再看看能不能跑</button>
+          </div>
+          <p class="result warn" data-explain="pre-1" style="display:none;margin-top:10px">报错信息是程序在帮你：它告诉你停在哪一行、抱怨的是什么。<strong>错因提醒：</strong>常见错误是一看到报错就整段重写——其实问题常常只在某一行的某几个字上。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-2">
+          <p><strong>2. 程序跑完了，也没有报错，可是给你的结果不对。这说明：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-2" data-correct="1">程序里的某一步多做或少做了一次，得靠自己算一遍去发现</button>
+            <button class="choice" data-q="pre-2" data-correct="0">电脑坏了</button>
+            <button class="choice" data-q="pre-2" data-correct="0">这种错误没办法发现</button>
+          </div>
+          <p class="result warn" data-explain="pre-2" style="display:none;margin-top:10px">不报错的错误是逻辑错，要靠自己用小手算一遍答案再去对照。<strong>错因提醒：</strong>别误认为「不报错就是对的」——跑得通和算得对，是两回事。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-3">
+          <p><strong>3. 把程序改好以后，为什么一定要重新运行一遍？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-3" data-correct="1">确认这一次真的跑通、结果也对上了</button>
+            <button class="choice" data-q="pre-3" data-correct="0">让程序看起来新一点</button>
+            <button class="choice" data-q="pre-3" data-correct="0">帮电脑记住这次修改</button>
+          </div>
+          <p class="result warn" data-explain="pre-3" style="display:none;margin-top:10px">改完不跑，就等于没改——验证是调试里少不了的最后一步。<strong>错因提醒：</strong>不少同学改完就交上去了，结果同一个错误又出现了。改一次、跑一次，最稳。</p>
+        </div>
+        <p id="pre-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="module-1"
+           data-tts-script="先学会看报错信息。程序出错的时候，它其实很愿意帮你：它会告诉你停在了哪一行，会告诉你它看到了一个不认识的名字，有时候还会告诉你它在哪一步卡住了。读报错要按顺序读三件事：第一，看它说的行号，这是出事的位置；第二，看它说的那句话，那是它在抱怨什么；第三，想一想它抱怨的那个东西，第一次出现是在哪一行。要特别记住：报错指出的行号，是出事的位置，不一定就是根因所在——真正要改的地方，常常要往前对齐一下名字。"
+           data-tsh="报错信息不是坏消息：它在告诉你三件事" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念一</span>
+          <h2>报错信息不是坏消息：它在告诉你三件事</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p><strong>为什么要学这一课？</strong></p>
+          <p style="color:var(--muted)">我们已经能让程序走分支、转循环了（And）；可一旦程序停下来，很多同学的第一反应是「整段重写」，改了半天又踩进新的坑（But）；其实程序停下来的时候，它会把线索一起交给你，只要会读就能省下大半力气（Therefore）。</p>
+        </div>
+        <p style="font-size:17px;margin:0 0 12px">报错信息要<strong>按顺序读三件事</strong>——读对了顺序，一半的问题当场就清楚了。</p>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>停在哪一行：</strong>报错里的行号，就是出事的位置。先去那一行看一眼，后面的行还没轮到做。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>它在抱怨什么：</strong>是看到一个不认识的名字，还是条件写得不完整？这句话说清了症状。</div></div>
+          <div class="step"><span class="n green">3</span><div><strong>那个名字第一次出现在哪里：</strong>回到前面去对一对名字、对一对写法——根因常常在更前面的那一行。</div></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-e-debugging-fig1.webp" alt="报错信息拆解示意图：一条报错信息被拆成「在哪一行」「出了什么事」「去看看前面怎么写的」三块">
+          <figcaption>示意图：一条报错信息可以拆成三块来读——位置、症状、线索；读了这三块，再动手改</figcaption>
+        </figure>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">以为<strong>报错的行号就是要改的行</strong>，于是只看那一行。多数时候那一行确实是改动的落点，但有时它只是「被绊倒的地方」——比如前面起的名字和这里用的名字不一样。所以读完报错，要回到那个名字第一次出现的地方对一对。</p>
+        </div>
+        <div class="kid-note" style="margin-top:12px"><span class="emoji">🎵</span><div><strong>记一句口诀：</strong>先看停在哪一行，再看它在怨什么，回头对一对名字，最后才动手改。</div></div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>看见它</strong>：报错信息的样子其实三行就够：一个位置、一句抱怨、偶尔加一句建议。看清三块，剩下的就是照着一行行对。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>拆开它</strong>：为什么程序能指出位置？因为它是照着顺序一行一行做的，走到哪一行做不下去，它自己最清楚。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：这份读法放到生活里也好用：机器报的错、老师改的红笔、同学说的「看不懂」，都是线索，不是责怪。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="lab-1"
+           data-tts-script="光看还不够，我们自己来读一遍。下面是一段记录跑步总分的程序，它跑不动了，并且给出了一条报错信息。请你点一点报错信息里的三块线索卡，看看程序里对应的那一行会怎么亮起来，再读一读每句话在说什么。最后判断一下：真正要改的，到底是哪一行。"
+           data-tsh="动手一：读一条报错信息，找出要改的那一行" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">动手实验室</span>
+          <h2>动手一：读一条报错信息，找出要改的那一行</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">这段记录跑步总分的程序跑不动了。请你点一点报错信息里的三块线索卡，看程序里哪一行会亮起来、每句话在说什么；最后判断真正要改的是哪一行。</p>
+        <div class="lab-panel">
+          <div class="dg-wrap">
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px">程序（伪代码）</div>
+              <div class="dg-code" id="dg1-code"></div>
+            </div>
+            <div class="dg-side">
+              <div class="dg-err"><span class="dg-errlab">程序给出的报错信息（示意图）</span>程序停在第 5 行<br>名字「次数」还没有出现过</div>
+              <div style="font-weight:700;font-size:14px;margin-top:4px">点一点这三块线索，看看各是什么意思</div>
+              <button class="choice dg-clue" data-dg1-clue="c1">线索一：先看它说停在了哪一行</button>
+              <button class="choice dg-clue" data-dg1-clue="c2">线索二：它在抱怨哪一个名字</button>
+              <button class="choice dg-clue" data-dg1-clue="c3">线索三：回到那个名字第一次出现的地方</button>
+              <div style="font-weight:700;font-size:14px;margin-top:4px">你的判断：真正要改的是哪一行？</div>
+              <div class="flex-row" style="margin-top:0">
+                <button class="choice" data-dg1-judge="1" style="text-align:center">第 1 行</button>
+                <button class="choice" data-dg1-judge="5" style="text-align:center">第 5 行</button>
+              </div>
+            </div>
+          </div>
+          <p class="result warn" id="dg1-out" style="margin-top:12px">先点一张线索卡，看看对应的那一行怎么亮起来。</p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🔍</span><div><strong>看仔细：</strong>线索三亮起来的是第 1 行，可第 1 行并没有写错。它亮起来只是提醒你——回到这里对一对名字。「出事的位置」和「要改的位置」有时候不是同一行。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="6" data-tts="module-2"
+           data-tts-script="报错信息能帮我们，可它只帮一半忙。程序里的问题分两种：一种是看得见的，程序会停下来告诉你；另一种是看不见的，它安安静静跑完，只是结果不对。看不见的那种最麻烦，也最需要方法。方法就是一句话：先自己用小手算一遍。拿一个小一点的数据，自己算出答案，再和程序给的结果对一对，对不上就说明某一步多做了或者少做了。然后按这个圈走：运行、发现问题、定位到那一行、改好、再运行一遍。这个圈要一直转到结果对为止，这就是调试，也就是一遍一遍地改进。"
+           data-tsh="两种错误与调试循环：跑得通不等于算得对" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念二</span>
+          <h2>两种错误与调试循环：跑得通不等于算得对</h2>
+        </div>
+
+        <p style="font-size:17px;margin:0 0 12px">程序里的问题分<strong>两种</strong>：一种看得见，一种看不见。看不见的那一种，才最需要方法。</p>
+        <div class="grid grid-2">
+          <div class="inner-card"><p><strong>看得见的错：程序会停下来</strong></p><p style="color:var(--muted)">名字写错、语句放错位置、条件没写完……程序做不下去了，它会停下来，并把行号和抱怨一起告诉你。按概念一的三步就能读。</p></div>
+          <div class="inner-card"><p><strong>看不见的错：跑完但结果不对</strong></p><p style="color:var(--muted)">程序一路做到底，没有一点抱怨，只是给你的答案不对。它不吭声，只能靠你自己去发现——这是最容易漏掉的一种。</p></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-e-debugging-fig2.webp" alt="调试循环示意图：运行、发现问题、定位到那一行、改好、再运行一遍，形成一个不断转动的圈">
+          <figcaption>示意图：调试就是一个圈——运行、发现问题、定位到那一行、改好、再运行一遍，一直转到结果对上为止</figcaption>
+        </figure>
+        <div class="inner-card">
+          <p><strong>看不见的错，靠这一招：先自己用小手算一遍。</strong></p>
+          <p style="color:var(--muted)">挑一个小一点的数据，自己把答案算出来（比如三天的个数加起来是多少），再和程序给的结果对一对。对不上，就去数它<strong>转了几圈</strong>——多半是某一步多做了一次，或者少做了一次。这一步一用到，看不见的错也就看得见了。</p>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">以为「程序跑完了就是对的」。跑得通，只说明它没被绊倒；算得对，才算真的对。另一个常见错误是改完就交——<strong>改一次、跑一次</strong>，确认这一次真的对上了，这一步不能省。</p>
+        </div>
+        <div class="kid-note" style="margin-top:12px"><span class="emoji">🎵</span><div><strong>记一句口诀：</strong>跑通不等于算对，先自己算一遍；小步改、小步验，改完记得再跑一遍。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="7" data-tts="lab-2"
+           data-tts-script="现在轮到你动手了。下面有两关，每一关都给你一段跑不通的程序，还有它给出的报错信息。请你点一点你认为出问题的那一行：点对了，它会告诉你错在哪里，并且出现一个修正按钮；点错了也没关系，它会提示你再想想。改好以后，点重新运行，看着程序一行一行跑通。"
+           data-tsh="动手二：点出问题行，改好，再跑一遍" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">动手实验室</span>
+          <h2>动手二：点出问题行，改好，再跑一遍</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">两个关卡，每关都有一段跑不通的程序和它的报错信息。请点一点你认为出问题的那一行：点对了会告诉你错在哪里，还会出现一个修正按钮。</p>
+        <div class="dg-tabs">
+          <button class="choice dg-tab on" data-dg-tab="a" style="flex:1">第 1 关：名字对不上</button>
+          <button class="choice dg-tab" data-dg-tab="b" style="flex:1">第 2 关：它停不下来了</button>
+        </div>
+        <div class="lab-panel" data-dg-pane="a">
+          <div class="dg-wrap">
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px">程序（点一行选它）</div>
+              <div class="dg-code" id="dg2a-code"></div>
+            </div>
+            <div class="dg-side">
+              <div class="dg-err"><span class="dg-errlab">报错信息（示意图）</span>程序停在第 4 行<br>名字「次序」还没有出现过</div>
+              <div class="dg-read" id="dg2a-read">先点一点你认为出问题的那一行。</div>
+              <button class="choice" id="dg2a-fix" style="display:none;text-align:center">🔧 修正</button>
+              <div class="flex-row" style="margin-top:0">
+                <button class="choice" id="dg2a-run" style="text-align:center">▶ 重新运行</button>
+                <button class="choice" id="dg2a-step" style="text-align:center">单步执行</button>
+                <button class="choice" id="dg2a-reset" style="text-align:center">复位</button>
+              </div>
+            </div>
+          </div>
+          <p class="result warn" id="dg2a-out" style="margin-top:12px">点一点你认为出问题的那一行。</p>
+        </div>
+        <div class="lab-panel" data-dg-pane="b" style="display:none">
+          <div class="dg-wrap">
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px">程序（点一行选它）</div>
+              <div class="dg-code" id="dg2b-code"></div>
+            </div>
+            <div class="dg-side">
+              <div class="dg-err"><span class="dg-errlab">报错信息（示意图）</span>程序一直在转圈<br>停不下来</div>
+              <div class="dg-read" id="dg2b-read">先点一点你认为出问题的那一行。</div>
+              <button class="choice" id="dg2b-fix" style="display:none;text-align:center">🔧 修正</button>
+              <div class="flex-row" style="margin-top:0">
+                <button class="choice" id="dg2b-run" style="text-align:center">▶ 重新运行</button>
+                <button class="choice" id="dg2b-step" style="text-align:center">单步执行</button>
+                <button class="choice" id="dg2b-reset" style="text-align:center">复位</button>
+              </div>
+            </div>
+          </div>
+          <p class="result warn" id="dg2b-out" style="margin-top:12px">点一点你认为出问题的那一行。</p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🛠️</span><div><strong>注意这个顺序：</strong>先看懂报错 → 再点出那一行 → 再改 → <strong>最后一定要重新运行</strong>。跳过最后一步，你其实并不知道自己改对了没有。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="worked-example"
+           data-tts-script="我们一起来看一段「能跑，但结果不对」的程序。它要把三天的跳绳个数加起来，程序给的结果是二百七十。第一步，先自己用小手算一遍：一百二十加一百五十再加一百三十，等于四百。第二步，两个数对不上，二百七十比四百少了整整一天，说明它少加了一天。第三步，数一数它转了几圈：条件写的是「天数 小于 3」，天数从 1 开始，只能转两圈；要加三天，应该转三圈。第四步，把「小于」改成「小于等于」，让它把第三天也算进去，再跑一遍，结果正好四百。"
+           data-tsh="例题示范：跑得通但算错了，怎么查？" data-bloom-level="analyze" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">例题示范</span>
+          <h2>例题示范：跑得通但算错了，怎么查？</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>题目：</strong>三天的跳绳个数是 120、150、130，要把它们加起来。程序的循环条件是「当 天数 &lt; 3 时」，天数从 1 开始，最后输出 270。它错在哪里？</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>先自己用小手算一遍：</strong>120 加 150 再加 130，等于 400。这是正确答案，先把它写在纸上。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>和程序的结果对一对：</strong>400 和 270 差得很远，正好差 130——也就是整整一天的量。说明有某一天没被加进去。</div></div>
+          <div class="step"><span class="n">3</span><div><strong>数一数它转了几圈：</strong>「天数 &lt; 3」，天数是 1 和 2 时成立，只转了两圈；要加三天，应该转三圈。</div></div>
+          <div class="step"><span class="n green">4</span><div><strong>回去改那一处再跑一遍：</strong>把条件改成「天数 ≤ 3」，让它把第三天也算进去；重新运行，输出正好 400，对上了。</div></div>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">先去看最后那个「输出」那一行——以为打印的方式有问题。其实输出的写法没有错，是它拿到的数字本身就少了一天。另一个常见错误是<strong>跳过第 1 步</strong>：不先算一遍正确答案，就不知道程序该给多少，自然也就发现不了它错了。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="9" data-tts="conceptest-1"
+           data-tts-script="接下来用三个容易弄错的说法考考你。请仔细读每一个选项，选完再看解释。"
+           data-tsh="概念测试：三种说法，错在哪里 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">概念测试</span>
+          <h2>概念测试：三种说法，错在哪里</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="ct-1">
+          <p><strong>1. 报错信息说「第 6 行：名字「结杲」还没有出现过」。最该先看的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-1" data-correct="1">第 6 行里那个名字，和前面某一行起的名字是不是对得上</button>
+            <button class="choice" data-q="ct-1" data-correct="0">直接把第 6 行整行删掉</button>
+            <button class="choice" data-q="ct-1" data-correct="0">从第 1 行开始把所有行都改一遍</button>
+          </div>
+          <p class="result warn" data-explain="ct-1" style="display:none;margin-top:10px">报错说它不认识这个名字，那就回去找这个名字该在哪一行被起过。<strong>错因提醒：</strong>常见错误是删行或全改——名字对不上只是几个字的问题，改对那几个字就够了。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-2">
+          <p><strong>2. 程序跑完了，也没有报错，但答案明显偏小。可能性最大的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-2" data-correct="1">循环多做或少做了一次，某一步没有算进去</button>
+            <button class="choice" data-q="ct-2" data-correct="0">显示器显示不准</button>
+            <button class="choice" data-q="ct-2" data-correct="0">程序跑得太快了</button>
+          </div>
+          <p class="result warn" data-explain="ct-2" style="display:none;margin-top:10px">答案差一份，通常是「轮次」差了一圈——去数它转了几圈。<strong>错因提醒：</strong>这类错误不会报错，要先自己算一遍答案，才知道它差了多少。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-3">
+          <p><strong>3. 改好一处之后，最好怎么做？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-3" data-correct="1">重新运行一次，确认这一次跑通、结果也对上了</button>
+            <button class="choice" data-q="ct-3" data-correct="0">赶紧把文件关掉，免得又出错</button>
+            <button class="choice" data-q="ct-3" data-correct="0">继续往下改好几处，最后一起运行</button>
+          </div>
+          <p class="result warn" data-explain="ct-3" style="display:none;margin-top:10px">改一次、跑一次，出问题也能马上知道是哪一处带来的。<strong>错因提醒：</strong>一次性改很多处再运行，万一还是不对，就分不清是哪一处没改好了。</p>
+        </div>
+        <p id="ct-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="synthesis"
+           data-tts-script="最后一个任务交给你。这段程序能跑完，也不报错，可总数就是少了一天的量。请你先点「我自己先算一遍」，用小手算出正确答案；接着点单步执行，看程序到底转了几圈；然后点出你认为出问题的那一行，把它改好，再重新运行一次，看结果对不对得上。改完以后还有一个小问题等你：如果以后要统计五天，这个程序要改几处？"
+           data-tsh="综合任务：不报错、但结果不对的一段程序" data-bloom-level="create" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">综合任务</span>
+          <h2>综合任务：不报错、但结果不对的一段程序</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">这段程序能一路跑到底，也不报错，可是跳绳总数就是少了一天的量。请先自己算一遍，再单步执行看它转了几圈，最后把出问题的那一处改好、重新运行。</p>
+        <div class="lab-panel">
+          <div class="dg-wrap">
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px">程序（点一行选它）</div>
+              <div class="dg-code" id="dg3-code"></div>
+              <div class="flex-row" style="margin-top:8px">
+                <button class="choice" id="dg3-calc" style="text-align:center">🧮 我自己先算一遍</button>
+                <button class="choice" id="dg3-run" style="text-align:center">▶ 重新运行</button>
+                <button class="choice" id="dg3-step" style="text-align:center">单步执行</button>
+                <button class="choice" id="dg3-reset" style="text-align:center">复位</button>
+              </div>
+            </div>
+            <div class="dg-side">
+              <div class="inner-card" style="margin:0">
+                <p style="margin:0"><strong>数据（三天的跳绳个数）</strong></p>
+                <p style="color:var(--muted);margin:6px 0 0">第一天 120 个 · 第二天 150 个 · 第三天 130 个</p>
+              </div>
+              <div class="dg-read" id="dg3-read">先点「我自己先算一遍」算出正确答案，再点单步执行看程序转了几圈。</div>
+              <button class="choice" id="dg3-fix" style="display:none;text-align:center">🔧 修正</button>
+            </div>
+          </div>
+          <p class="result warn" id="dg3-out" style="margin-top:12px">先点「我自己先算一遍」，再点单步执行。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>再想一想（改动怎样才能最小）：</strong>如果以后要统计五天，这个程序需要改几处？</p>
+          <div class="flex-row" style="margin-top:8px">
+            <button class="choice" data-dg3-iter="a" style="text-align:center">只改控制天数的那个数和数据</button>
+            <button class="choice" data-dg3-iter="b" style="text-align:center">整段程序全部重写一遍</button>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="posttest"
+           data-tts-script="最后一轮，换几个新情境来考考你。这次会出现自动售货机、体温登记表和一段改了三次才对的程序，看看你能不能把学到的办法用上去。"
+           data-tsh="后测：换几个情境，办法还在不在 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">后测</span>
+          <h2>后测：换几个情境，办法还在不在</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="post-1">
+          <p><strong>1. 自动售货机程序报错：「第 7 行：名字「找零」还没有出现过」。最合理的下一步是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-1" data-correct="1">看第 7 行用到的这个名字，前面哪一行该给它起名字</button>
+            <button class="choice" data-q="post-1" data-correct="0">把售货机拆开看看</button>
+            <button class="choice" data-q="post-1" data-correct="0">把第 7 行以后的行全部删掉</button>
+          </div>
+          <p class="result warn" data-explain="post-1" style="display:none;margin-top:10px">还是那条老规矩：报错说名字不认识，就回去对一对名字。<strong>错因提醒：</strong>别一看到报错就删代码——删掉之后原来的功能也没了。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-2">
+          <p><strong>2. 体温登记表程序把同一个人的记录打印了两次，但它没有报错。最该先做的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-2" data-correct="1">自己数一遍应该打印几条，再看程序实际打了几条</button>
+            <button class="choice" data-q="post-2" data-correct="0">换一台电脑再试</button>
+            <button class="choice" data-q="post-2" data-correct="0">把打印出来的纸撕掉重打</button>
+          </div>
+          <p class="result warn" data-explain="post-2" style="display:none;margin-top:10px">先算清楚「应该几条」，才知道「多了几条」，问题就好找了。<strong>错因提醒：</strong>不报错的错误，永远靠「先自己算一遍」才抓得住。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-3">
+          <p><strong>3. 一段程序你改了三次才对。关于这三次修改，下面说法正确的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-3" data-correct="1">每改一次就跑一次，是小步改进，比一次全改更容易查</button>
+            <button class="choice" data-q="post-3" data-correct="0">改三次说明你不适合写程序</button>
+            <button class="choice" data-q="post-3" data-correct="0">应该一开始就把整段推倒重写，省时间</button>
+          </div>
+          <p class="result warn" data-explain="post-3" style="display:none;margin-top:10px">小步改、小步验，是经验丰富的做法；一次改太多，出错时反而分不清原因。<strong>错因提醒：</strong>别误认为「改了很多次」是笨——能一步步收敛到正确结果，正是调试的本事。</p>
+        </div>
+        <p id="post-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="12" data-tts="summary"
+           data-tts-script="这节课我们记住三句话。第一句，报错信息要读三件事：停在第几行、它在抱怨什么、那个名字第一次出现在哪里。第二句，程序的问题分两种，报错能指出看得见的那种，看不见的那种要靠自己用小手算一遍去发现。第三句，调试就是一个圈：运行、找出那一行、改好、再运行一遍，一直转到结果对上为止；而且每次只改该改的地方，不要整段重写。回到开头那锅太咸的菜：你尝一口、想一想、少放一点盐再尝一口，就是调试。"
+           data-tsh="小结：三句话，把调试讲清楚" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">小结</span>
+          <h2>小结：三句话，把调试讲清楚</h2>
+        </div>
+        <div class="grid">
+          <div class="summary-item"><span class="num">1</span><div><strong>报错信息读三件事：</strong>停在第几行、它在抱怨什么、那个名字第一次出现在哪里。</div></div>
+          <div class="summary-item"><span class="num">2</span><div><strong>两种错误要分清：</strong>停得下来的那种照着报错读；停不下来的那种先自己用小数据算一遍。</div></div>
+          <div class="summary-item"><span class="num">3</span><div><strong>调试是一个圈：</strong>运行、找那一行、改好、再运行一遍；每次只改该改的地方，不要整段重写。</div></div>
+        </div>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>回到开头那锅太咸的菜：</strong>你尝一口、想一想、少放一点盐，再尝一口——这就是调试。程序出错不是坏事，它只是还没被调好；而你已经有了一套能一遍遍用下去的办法。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>给别人讲一遍：</strong>请用「报错、两种错、再跑一遍」这三个词，说清楚你会怎么处理一段出问题的程序。</p>
+          <p style="color:var(--muted)">再动一动手：<strong>写下来</strong>——给今天课上遇到的两次错误各写一行「出错记录」：错在哪一行、为什么错、最后怎么改的。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="13" data-tts="homework"
+           data-tts-script="最后留三项作业，分三个层次。第一层基础巩固，人人要做：把你今天在课上见过的两条报错信息抄下来，各写一句它到底在说什么。第二层能力应用，动手做：找一段能跑但结果不对的小程序，用小手算一遍找出问题，把修改前后运行的结果都记下来。第三层迁移挑战，选做：给自己的程序写一份「出错记录」，写明出过什么问题、你是怎么找到的、最后改了什么，下星期再看一遍。"
+           data-tsh="作业分层：三层小任务，按自己的节奏来" data-bloom-level="create" data-scaffold="none">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">作业分层</span>
+          <h2>作业分层：三层小任务，按自己的节奏来</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">三层练习，做完第一、二层就算通关；第三层留给愿意继续探索的同学。</p>
+        <div class="inner-card">
+          <p><strong>⭐ 基础巩固（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>把课上见过的两条报错信息抄下来，各写一句「它到底在说什么」。</li>
+            <li>说出两种错误的区别：哪一种程序会停下来告诉你，哪一种只能靠自己算一遍才发现。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐ 能力应用（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>找一段能跑但结果不对的小程序（也可以自己写一段），先手工算出正确答案，再找出是哪一步多做或少做了一次，把修改前后两次运行的结果都记下来。</li>
+            <li>用两三句话记下你一次「一次改太多、结果查不出来」的经历，说说后来你改成了什么做法。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐⭐ 迁移挑战（选做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>给自己的程序写一份「出错记录」：写明出过什么问题、你是怎么找到的、最后改了什么；下星期再拿出来看一遍。</li>
+            <li>如果一段程序里有三个地方要改，你会一次全改完再运行，还是改一处跑一次？说说你的理由，并动手试试两种做法。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page kg-page" data-page-type="summary" data-page-index="14" data-tts="knowledge-graph"
+           data-tts-script="这张图展示了这节课在信息科技知识网络里的位置。左边是学它之前要先会的，右边是学会之后可以接着探索的，下面是同一个领域的伙伴知识。可以点一点，看看还有哪些值得继续学的内容。"
+           data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">知识图谱</span>
+          <h2>这节课在知识网络里的位置</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 10px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p class="kg-loading-hint" style="color:var(--muted);font-size:13px;margin:0 0 10px">图谱正在加载：首次进入需下载知识索引（约 1–3 秒），加载完成后本行会自动消失。</p>
+        <div data-teachany-kg="it-e-debugging">
+          <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="15" data-tts="ai-tutor"
+           data-tts-script="如果还有没想通的地方，把你的问题写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。"
+           data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+</div><!-- .slide-container -->
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-pretest",
+    "section": "pretest",
+    "src": "./tts/s04-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s05-module-1",
+    "section": "module-1",
+    "src": "./tts/s05-module-1.mp3",
+    "label": "概念一 报错信息读三件事"
+  },
+  {
+    "id": "s06-lab-1",
+    "section": "lab-1",
+    "src": "./tts/s06-lab-1.mp3",
+    "label": "动手一 读一条报错信息"
+  },
+  {
+    "id": "s07-module-2",
+    "section": "module-2",
+    "src": "./tts/s07-module-2.mp3",
+    "label": "概念二 两种错误与调试循环"
+  },
+  {
+    "id": "s08-lab-2",
+    "section": "lab-2",
+    "src": "./tts/s08-lab-2.mp3",
+    "label": "动手二 找出那一行并改好重跑"
+  },
+  {
+    "id": "s09-worked-example",
+    "section": "worked-example",
+    "src": "./tts/s09-worked-example.mp3",
+    "label": "例题讲解 先自己算一遍"
+  },
+  {
+    "id": "s10-conceptest-1",
+    "section": "conceptest-1",
+    "src": "./tts/s10-conceptest-1.mp3",
+    "label": "概念测试"
+  },
+  {
+    "id": "s11-synthesis",
+    "section": "synthesis",
+    "src": "./tts/s11-synthesis.mp3",
+    "label": "综合任务 不报错但结果不对"
+  },
+  {
+    "id": "s12-posttest",
+    "section": "posttest",
+    "src": "./tts/s12-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s13-summary",
+    "section": "summary",
+    "src": "./tts/s13-summary.mp3",
+    "label": "课堂小结"
+  },
+  {
+    "id": "s14-homework",
+    "section": "homework",
+    "src": "./tts/s14-homework.mp3",
+    "label": "作业分层"
+  },
+  {
+    "id": "s15-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s15-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s16-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s16-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<script>
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'it-e-debugging',
+    courseTitle: '程序调试与迭代',
+    subject: 'info-tech',
+    grade: '5',
+    nodeId: 'it-e-debugging',
+    lessonType: 'concept-practice',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+</script>
+
+<script>
+
+/* ============================================================
+   it-e-debugging 互动逻辑
+   1) 选择题接线（前测 / 概念测试 / 后测）
+   2) renderCode()：伪代码行渲染 + 高亮 + 可点选 + 已修正标记
+   3) 动手一：读报错信息（点线索卡 → 高亮对应行 → 判断真正要改哪一行）
+   4) 动手二（核心模拟）：点选问题行 → 即时错因 → 修正 → 重新运行跑通（两关）
+   5) 综合任务：不报错但结果不对 → 手工验算 → 定位边界 bug → 修正重跑 + 迭代提问
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ---------- 1. 选择题 ---------- */
+  document.querySelectorAll('[data-quiz-block]').forEach(function (block) {
+    block.querySelectorAll('.choice').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (block.dataset.answered === '1') return;
+        block.dataset.answered = '1';
+        var ok = btn.dataset.correct === '1';
+        btn.classList.add(ok ? 'correct' : 'wrong');
+        block.querySelectorAll('.choice').forEach(function (b) {
+          if (b.dataset.correct === '1') b.classList.add('correct');
+          b.disabled = true;
+        });
+        var ex = block.querySelector('[data-explain]');
+        if (ex) ex.style.display = 'block';
+      });
+    });
+  });
+
+  /* ---------- 通用样式（走主题变量，不写死颜色） ---------- */
+  var st = document.createElement('style');
+  st.textContent =
+    '.dg-wrap{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(230px,0.92fr);gap:14px;align-items:start;}' +
+    '@media(max-width:760px){.dg-wrap{grid-template-columns:1fr;}}' +
+    '.dg-code{display:flex;flex-direction:column;gap:4px;padding:10px;border-radius:12px;' +
+    'background:var(--bg-subtle);border:1px solid var(--line-subtle);}' +
+    '.dg-line{display:flex;align-items:flex-start;gap:9px;padding:7px 10px;border-radius:8px;' +
+    'background:var(--card);border:1px solid transparent;font-size:14px;' +
+    'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;transition:all .2s ease;}' +
+    '.dg-line .dg-n{flex-shrink:0;width:20px;height:20px;border-radius:5px;display:grid;place-items:center;' +
+    'background:rgb(var(--paper-rgb) / 20%);color:var(--muted);font-size:11px;font-weight:800;}' +
+    '.dg-line .dg-c{flex:1;min-width:0;word-break:break-word;}' +
+    '.dg-line.pickable{cursor:pointer;}' +
+    '.dg-line.pickable:hover{border-color:rgb(var(--brand-rgb) / 45%);background:var(--brand-soft);}' +
+    '.dg-line.run{border-color:var(--brand);background:var(--brand-soft);' +
+    'box-shadow:0 0 0 3px rgb(var(--brand-rgb) / 16%);}' +
+    '.dg-line.run .dg-n{background:var(--brand);color:#fff;}' +
+    '.dg-line.check{border-color:var(--warn);background:rgb(var(--warm-rgb) / 20%);}' +
+    '.dg-line.tried{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.07);}' +
+    '.dg-line.ok{border-color:var(--brand-2);background:var(--accent-soft);}' +
+    '.dg-line.ok .dg-n{background:var(--brand-2);color:#fff;}' +
+    '.dg-side{display:flex;flex-direction:column;gap:10px;}' +
+    '.dg-err{padding:12px 14px;border-radius:12px;background:rgba(239,68,68,.08);' +
+    'border:1px solid rgba(239,68,68,.3);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;' +
+    'font-size:13px;line-height:1.75;}' +
+    '.dg-err .dg-errlab{display:block;font-family:-apple-system,"PingFang SC",sans-serif;' +
+    'font-weight:800;font-size:12px;color:#c2410c;margin-bottom:4px;}' +
+    '.dg-clue{width:100%;text-align:left;font-size:13px;font-weight:700;}' +
+    '.dg-clue:hover{background:var(--brand-soft);}' +
+    '.dg-read{padding:10px 12px;border-radius:12px;background:var(--bg-subtle);' +
+    'border:1px solid var(--line-subtle);font-size:14px;line-height:1.7;min-height:56px;}' +
+    '.dg-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}' +
+    '.dg-tab{text-align:center;font-weight:800;font-size:14px;}' +
+    '.dg-tab.on{border-color:var(--brand);background:var(--brand-soft);box-shadow:0 0 0 3px rgb(var(--brand-rgb) / 16%);}' +
+    '.lab-readout{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}' +
+    '.readout-cell{flex:1;min-width:104px;background:var(--bg-subtle);border:1px solid var(--line-subtle);' +
+    'border-radius:12px;padding:9px 11px;text-align:center;}' +
+    '.readout-cell .k{display:block;font-size:12px;color:var(--muted);}' +
+    '.readout-cell .v{font-size:19px;font-weight:800;color:var(--link);font-variant-numeric:tabular-nums;}' +
+    '.readout-cell .v.green{color:var(--accent-deep);}' +
+    '.choice{border:1.5px solid rgb(var(--brand-rgb) / 32%);background:var(--card);}' +
+    '.choice:hover{background:var(--brand-soft);border-color:rgb(var(--brand-rgb) / 55%);}' +
+    '.kid-note{border-color:rgb(var(--warm-rgb) / 80%);}';
+  document.head.appendChild(st);
+
+  /* ---------- 2. 代码行渲染 ---------- */
+  function renderCode(el, lines, cur, marks, pickable) {
+    if (!el) return;
+    el.innerHTML = '';
+    lines.forEach(function (txt, k) {
+      var row = document.createElement('div');
+      var cls = 'dg-line';
+      if (pickable) cls += ' pickable';
+      if (cur === k + 1) cls += ' run';
+      if (marks && marks[k + 1]) cls += ' ' + marks[k + 1];
+      row.className = cls;
+      var n = document.createElement('span');
+      n.className = 'dg-n';
+      n.textContent = (k + 1);
+      var c = document.createElement('span');
+      c.className = 'dg-c';
+      c.textContent = txt;
+      row.appendChild(n);
+      row.appendChild(c);
+      el.appendChild(row);
+    });
+  }
+
+  function lineIndex(el, node) {
+    while (node && node.parentNode !== el) node = node.parentNode;
+    if (!node) return 0;
+    return Array.prototype.indexOf.call(el.children, node) + 1;
+  }
+
+  /* ---------- 3. 动手一：读一条报错信息 ---------- */
+  (function () {
+    var out = document.getElementById('dg1-out');
+    if (!out) return;
+    var code = document.getElementById('dg1-code');
+    var LINES = [
+      '跑步次数 = 0',
+      '总分 = 0',
+      '当 跑步次数 <= 3 时',
+      '    总分 = 总分 + 距离[跑步次数]',
+      '    次数 = 次数 + 1',
+      '结束',
+      '输出 总分'
+    ];
+    var CLUES = {
+      c1: { line: 5, cls: 'run',
+        head: '线索一：「程序停在第 5 行」。',
+        text: '报错里的行号，就是在告诉你出事的位置。程序里第 5 行已经亮起来了——它就是程序停下来的那一行，后面的「结束」和「输出」都没有机会做。' },
+      c2: { line: 5, cls: 'run',
+        head: '线索二：「名字「次数」还没有出现过」。',
+        text: '这是报错里最有用的一句。程序看到了「次数」这个名字，可是前面从没在哪一行给它起过名字。它不认识这个名字，所以停住了。' },
+      c3: { line: 1, cls: 'check',
+        head: '线索三：回到第 1 行对一对名字。',
+        text: '第 1 行已经亮起来了。看仔细：那里起名字用的是「跑步次数」，不是「次数」。两处名字对不上——这才是真正的原因。报错指的行是「出事的位置」，根因往往要往前对一下名字。' }
+    };
+    var pickLine = 5, pickCls = 'run', judged = false;
+
+    function paint() {
+      var marks = {};
+      if (pickLine > 0) marks[pickLine] = pickCls;
+      renderCode(code, LINES, -1, marks, false);
+    }
+
+    document.querySelectorAll('[data-dg1-clue]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var c = CLUES[b.dataset.dg1Clue];
+        if (!c) return;
+        pickLine = c.line;
+        pickCls = c.cls;
+        paint();
+        out.className = 'result warn';
+        out.innerHTML = '<strong>' + c.head + '</strong>' + c.text;
+      });
+    });
+
+    document.querySelectorAll('[data-dg1-judge]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (judged) return;
+        judged = true;
+        var ok = b.dataset.dg1Judge === '5';
+        pickLine = ok ? 5 : 1;
+        pickCls = 'run';
+        paint();
+        b.classList.add(ok ? 'correct' : 'wrong');
+        out.className = 'result ' + (ok ? '' : 'warn');
+        out.innerHTML = ok
+          ? '<strong>对了，要改的就是第 5 行。</strong>把它写成「次数 = 跑步次数 + 1」，两处的名字就一致了，程序就能接着往下走。' +
+            '<br><span style="color:var(--muted)">记住这个顺序：先看它停在哪一行，再看它抱怨什么，最后回到那个名字第一次出现的地方对一对。</span>'
+          : '<strong>再想一想。</strong>第 1 行没有错——它给变量起名字起得很对。'
+            + '<br><span style="color:var(--muted)">错因提醒：常见错误是看到报错就回头改第一行。'
+            + '报错说的是「这个名字没出现过」，所以要改的是那个把名字写错的地方，也就是第 5 行。</span>';
+      });
+    });
+    paint();
+  })();
+
+  /* ---------- 4. 动手二（核心模拟）：点出问题行 → 修正 → 重新运行跑通 ---------- */
+  function makeRound(prefix, R) {
+    var codeEl = document.getElementById(prefix + '-code');
+    var outEl = document.getElementById(prefix + '-out');
+    var readEl = document.getElementById(prefix + '-read');
+    var fixBtn = document.getElementById(prefix + '-fix');
+    if (!codeEl || !outEl || !fixBtn) return;
+    var state = { fixed: false, cur: -1, timer: null, trace: [], picked: [] };
+
+    function paint() {
+      var cur = (state.cur >= 0 && state.cur < state.trace.length) ? state.trace[state.cur].line : -1;
+      var marks = {};
+      if (state.fixed) marks[R.bugLine] = 'ok';
+      state.picked.forEach(function (n) { if (n !== R.bugLine) marks[n] = 'tried'; });
+      renderCode(codeEl, R.lines(state.fixed), cur, marks, !state.fixed);
+      if (state.cur >= 0 && state.cur < state.trace.length) {
+        var s = state.trace[state.cur];
+        readEl.textContent = '第 ' + (state.cur + 1) + ' 步（第 ' + s.line + ' 行）：' + s.note;
+      } else {
+        readEl.textContent = state.fixed
+          ? '改好了，点「重新运行」看看这一次能不能跑通。'
+          : '先点一点你认为出问题的那一行。';
+      }
+    }
+
+    function build(fixed) { state.trace = R.build(fixed); state.cur = -1; }
+
+    function advance() {
+      if (state.cur >= state.trace.length - 1) return false;
+      state.cur++;
+      paint();
+      return state.cur < state.trace.length - 1;
+    }
+
+    function notFixedMsg() {
+      outEl.className = 'result error';
+      outEl.innerHTML = '<strong>还是同样的毛病：' + R.errShort + '</strong><br>' +
+        '<span style="color:var(--muted)">先在上面那段程序里点一点你认为出问题的那一行，找到以后把它改好，再来运行。</span>';
+      paint();
+    }
+
+    codeEl.addEventListener('click', function (e) {
+      if (state.fixed || state.timer !== null) return;
+      var idx = lineIndex(codeEl, e.target);
+      if (!idx) return;
+      if (state.picked.indexOf(idx) < 0) state.picked.push(idx);
+      if (idx === R.bugLine) {
+        fixBtn.style.display = '';
+        fixBtn.textContent = '🔧 ' + R.fixLabel;
+        outEl.className = 'result';
+        outEl.innerHTML = '<strong>找到了！就是第 ' + idx + ' 行。</strong>' + R.why +
+          '<br><span style="color:var(--muted)">错因提醒：' + R.errWhy + '</span>' +
+          '<br><span style="color:var(--muted)">下一步：点下面的修正按钮把它改掉，然后重新运行一次。</span>';
+      } else {
+        outEl.className = 'result warn';
+        outEl.innerHTML = '<strong>第 ' + idx + ' 行看着是对的。</strong>' + R.hint +
+          '<br><span style="color:var(--muted)">错因提醒：常见错误是凭感觉乱点一行就动手改——' +
+          '先回到报错信息，看它到底在抱怨什么。</span>';
+      }
+      paint();
+    });
+
+    fixBtn.addEventListener('click', function () {
+      if (state.fixed) return;
+      state.fixed = true;
+      fixBtn.style.display = 'none';
+      build(true);
+      paint();
+      outEl.className = 'result';
+      outEl.innerHTML = '<strong>已经改好了。</strong>' + R.fixedNote +
+        '<br><span style="color:var(--muted)">现在点「重新运行」，一行一行看着它跑完。</span>';
+    });
+
+    document.getElementById(prefix + '-run').addEventListener('click', function () {
+      if (state.timer !== null) return;
+      if (!state.fixed) { notFixedMsg(); return; }
+      build(true);
+      paint();
+      outEl.className = 'result warn';
+      outEl.textContent = '正在一行一行跑……亮起来的那一行就是程序正在做的这一步。';
+      state.timer = setInterval(function () {
+        if (!advance()) {
+          clearInterval(state.timer);
+          state.timer = null;
+          paint();
+          outEl.className = 'result';
+          outEl.innerHTML = '<strong>🎉 这一遍跑通了，结果也对上了。</strong>' + R.okNote;
+        }
+      }, 580);
+    });
+
+    document.getElementById(prefix + '-step').addEventListener('click', function () {
+      if (state.timer !== null) return;
+      if (!state.fixed) { notFixedMsg(); return; }
+      if (state.trace.length === 0) build(true);
+      if (state.cur >= state.trace.length - 1) {
+        outEl.className = 'result';
+        outEl.innerHTML = '<strong>这一遍已经走完了。</strong>' +
+          '<br><span style="color:var(--muted)">想再看一次，点「复位」回到开头，再单步执行。</span>';
+        return;
+      }
+      advance();
+    });
+
+    document.getElementById(prefix + '-reset').addEventListener('click', function () {
+      if (state.timer !== null) { clearInterval(state.timer); state.timer = null; }
+      state.fixed = false;
+      state.picked = [];
+      fixBtn.style.display = 'none';
+      build(false);
+      paint();
+      outEl.className = 'result warn';
+      outEl.textContent = '程序复位了。点一点你认为出问题的那一行。';
+    });
+
+    build(false);
+    paint();
+    return { reset: function () { build(false); paint(); } };
+  }
+
+  /* 第一关：名字写错（报错能定位到行） */
+  (function () {
+    var L1 = [
+      '及格人数 = 0',
+      '次数 = 1',
+      '当 次数 <= 3 时',
+      '    如果 成绩[次序] >= 60 则',
+      '        及格人数 = 及格人数 + 1',
+      '    结束（分支）',
+      '    次数 = 次数 + 1',
+      '结束（循环，回到第 3 行）',
+      '输出 及格人数'
+    ];
+    var SC = [72, 45, 88];
+    makeRound('dg2a', {
+      bugLine: 4,
+      errShort: '第 4 行：名字「次序」还没有出现过',
+      why: '程序看到的「次序」这个名字，前面从没哪一行给它起过名字。第 2 行起名字用的是「次数」，第 4 行却写成了「次序」——两个字颠倒了一下，程序就不认识了。',
+      errWhy: '常见错误是把名字里的两个字写颠倒、多写一个字，自己读着挺顺，程序却完全不认识。写完名字，回头看一眼前面那一行是怎么起的。',
+      fixLabel: '把第 4 行的「次序」改成「次数」',
+      fixedNote: '第 4 行现在写成「如果 成绩[次数] >= 60 则」，和第 2 行的名字一模一样了。',
+      hint: '再看一眼报错信息：它抱怨的那个名字，是「次序」还是「次数」？回到第 2 行，看看那个名字本来是怎么起的。',
+      lines: function (fixed) {
+        if (!fixed) return L1.slice();
+        var a = L1.slice();
+        a[3] = '    如果 成绩[次数] >= 60 则';
+        return a;
+      },
+      build: function (fixed) {
+        var t = [];
+        if (!fixed) {
+          t.push({ line: 1, note: '及格人数设成 0。' });
+          t.push({ line: 2, note: '次数从 1 开始。' });
+          t.push({ line: 3, note: '次数 1 <= 3 成立，进圈里。' });
+          t.push({ line: 4, note: '程序走到这里，看到了一个不认识的名字「次序」——它停下来，不再往下走了。' });
+          return t;
+        }
+        var pass = 0, k = 1, loops = 0;
+        t.push({ line: 1, note: '及格人数设成 0。' });
+        t.push({ line: 2, note: '次数从 1 开始。' });
+        while (k <= 3) {
+          loops++;
+          var sc = SC[k - 1];
+          t.push({ line: 3, note: '第 ' + loops + ' 圈：次数 ' + k + ' <= 3 成立，进圈里。' });
+          var hit = sc >= 60;
+          t.push({ line: 4, note: '看第 ' + k + ' 个成绩：' + sc + ' >= 60 吗？——' + (hit ? '成立。' : '不成立。') });
+          if (hit) { pass++; t.push({ line: 5, note: '及格人数加 1，变成 ' + pass + '。' }); }
+          else { t.push({ line: 6, note: '这一圈不加，走出分支。' }); }
+          k++;
+          t.push({ line: 7, note: '次数加 1，变成 ' + k + '。' });
+        }
+        t.push({ line: 3, note: '次数 ' + k + ' <= 3 不成立，走出循环，一共转了 ' + loops + ' 圈。' });
+        t.push({ line: 9, note: '输出结果：及格人数 = ' + pass + '。' });
+        return t;
+      },
+      okNote: '<br><span style="color:var(--muted)">这一次程序一路跑到最后，输出「及格人数 = 2」——' +
+        '72 和 88 及格，45 不及格，正好两个人。常犯的错误就是把名字写错、两个相近的字颠倒，' +
+        '而报错信息其实已经把行号告诉你了。</span>'
+    });
+  })();
+
+  /* 第二关：语句放错位置（报错只说"停不下来"） */
+  (function () {
+    var L2 = [
+      '总分 = 0',
+      '次数 = 1',
+      '当 次数 <= 3 时',
+      '    总分 = 总分 + 成绩[次数]',
+      '结束（循环，回到第 3 行）',
+      '次数 = 次数 + 1',
+      '输出 总分'
+    ];
+    var SC2 = [72, 45, 88];
+    makeRound('dg2b', {
+      bugLine: 6,
+      errShort: '程序一直在转圈，停不下来',
+      why: '「次数 = 次数 + 1」被放在了循环外面。圈里没有人去改变次数，条件就永远成立——循环找不到出口，只好一直转下去。',
+      errWhy: '常见错误是以为「少放一句不要紧」——恰恰是这一句让循环有出口。以后写完循环，先问自己一句：谁让它迟早停下来？',
+      fixLabel: '把第 6 行移进循环里（放到「结束」之前）',
+      fixedNote: '「次数 = 次数 + 1」现在被放进了循环里，就在第 5 行「结束」的前面。',
+      hint: '报错说它停不下来，那就去找「谁该让次数变大」——那件事现在在圈里还是圈外？',
+      lines: function (fixed) {
+        if (!fixed) return L2.slice();
+        return [
+          '总分 = 0',
+          '次数 = 1',
+          '当 次数 <= 3 时',
+          '    总分 = 总分 + 成绩[次数]',
+          '    次数 = 次数 + 1',
+          '结束（循环，回到第 3 行）',
+          '输出 总分'
+        ];
+      },
+      build: function (fixed) {
+        var t = [];
+        if (!fixed) {
+          t.push({ line: 1, note: '总分设成 0。' });
+          t.push({ line: 2, note: '次数从 1 开始。' });
+          var k = 1, n = 0;
+          while (n < 3) {
+            n++;
+            t.push({ line: 3, note: '第 ' + n + ' 圈：次数 ' + k + ' <= 3 成立，进圈里。' });
+            t.push({ line: 4, note: '总分加上第 ' + k + ' 个成绩。' });
+            t.push({ line: 5, note: '这一圈走完了，回到第 3 行——可是次数还是 ' + k + '，一点没变。' });
+          }
+          t.push({ line: 6, note: '你看：转了三圈，次数还是 ' + k + '，第 6 行那句「次数 = 次数 + 1」永远排不上。它一直在转圈，停不下来。' });
+          return t;
+        }
+        var total = 0, k2 = 1, loops = 0;
+        t.push({ line: 1, note: '总分设成 0。' });
+        t.push({ line: 2, note: '次数从 1 开始。' });
+        while (k2 <= 3) {
+          loops++;
+          var sc = SC2[k2 - 1];
+          t.push({ line: 3, note: '第 ' + loops + ' 圈：次数 ' + k2 + ' <= 3 成立，进圈里。' });
+          total += sc;
+          t.push({ line: 4, note: '总分加上 ' + sc + '，变成 ' + total + '。' });
+          k2++;
+          t.push({ line: 5, note: '次数加 1，变成 ' + k2 + '——这一回它在圈里，所以条件迟早会不成立。' });
+        }
+        t.push({ line: 3, note: '次数 ' + k2 + ' <= 3 不成立，走出循环，一共转了 ' + loops + ' 圈。' });
+        t.push({ line: 7, note: '输出结果：总分 = ' + total + '。' });
+        return t;
+      },
+      okNote: '<br><span style="color:var(--muted)">这一次它转了三圈就出来了，输出「总分 = 205」。' +
+        '记住这个道理：循环必须有一个出口，而出口靠的是「圈里有人让条件迟早不成立」。</span>'
+    });
+  })();
+
+  /* 页签切换 */
+  document.querySelectorAll('[data-dg-tab]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('[data-dg-tab]').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      var t = b.dataset.dgTab;
+      document.querySelectorAll('[data-dg-pane]').forEach(function (p) {
+        p.style.display = (p.dataset.dgPane === t) ? '' : 'none';
+      });
+    });
+  });
+
+  /* ---------- 5. 综合任务：不报错但结果不对 ---------- */
+  (function () {
+    var out = document.getElementById('dg3-out');
+    if (!out) return;
+    var code = document.getElementById('dg3-code');
+    var read = document.getElementById('dg3-read');
+    var fixBtn = document.getElementById('dg3-fix');
+    var calcBtn = document.getElementById('dg3-calc');
+    var CNT = [120, 150, 130];
+    var LINES = [
+      '跳绳总数 = 0',
+      '天数 = 1',
+      '当 天数 < 3 时',
+      '    跳绳总数 = 跳绳总数 + 每次个数[天数]',
+      '    天数 = 天数 + 1',
+      '结束（循环，回到第 3 行）',
+      '输出 跳绳总数'
+    ];
+    var state = { fixed: false, cur: -1, timer: null, trace: [], tried: {} };
+
+    function lines() {
+      if (!state.fixed) return LINES.slice();
+      var a = LINES.slice();
+      a[2] = '当 天数 <= 3 时';
+      return a;
+    }
+
+    function build() {
+      var total = 0, k = 1, loops = 0, t = [];
+      t.push({ line: 1, note: '跳绳总数设成 0。' });
+      t.push({ line: 2, note: '天数从 1 开始。' });
+      while (state.fixed ? (k <= 3) : (k < 3)) {
+        loops++;
+        t.push({ line: 3, note: '第 ' + loops + ' 圈：天数 ' + k + (state.fixed ? ' <= 3' : ' < 3') + ' 成立，进圈里。' });
+        total += CNT[k - 1];
+        t.push({ line: 4, note: '加上第 ' + k + ' 天的 ' + CNT[k - 1] + ' 个，跳绳总数变成 ' + total + '。' });
+        k++;
+        t.push({ line: 5, note: '天数加 1，变成 ' + k + '。' });
+      }
+      t.push({ line: 3, note: '天数 ' + k + (state.fixed ? ' <= 3' : ' < 3') + ' 不成立 —— 走出循环，只转了 ' + loops + ' 圈。' });
+      t.push({ line: 7, note: '输出结果：跳绳总数 = ' + total + '。' + (state.fixed ? '' : '（应该转 3 圈才对，少转了 1 圈。）') });
+      return t;
+    }
+
+    function paint() {
+      var cur = (state.cur >= 0 && state.cur < state.trace.length) ? state.trace[state.cur].line : -1;
+      var marks = {};
+      if (state.fixed) marks[3] = 'ok';
+      Object.keys(state.tried).forEach(function (n) { if (Number(n) !== 3) marks[n] = 'tried'; });
+      renderCode(code, lines(), cur, marks, !state.fixed);
+      if (state.cur >= 0 && state.cur < state.trace.length) {
+        read.textContent = '第 ' + (state.cur + 1) + ' 步（第 ' + state.trace[state.cur].line + ' 行）：' + state.trace[state.cur].note;
+      } else {
+        read.textContent = state.fixed
+          ? '改好了，点「重新运行」看看这一回对不对得上。'
+          : '先点「我自己先算一遍」算出正确答案，再点单步执行看程序转了几圈。';
+      }
+    }
+
+    function rebuild() { state.trace = build(); state.cur = -1; }
+    function advance() {
+      if (state.cur >= state.trace.length - 1) return false;
+      state.cur++;
+      paint();
+      return state.cur < state.trace.length - 1;
+    }
+
+    code.addEventListener('click', function (e) {
+      if (state.fixed || state.timer !== null) return;
+      var idx = lineIndex(code, e.target);
+      if (!idx) return;
+      state.tried[idx] = 1;
+      if (idx === 3) {
+        fixBtn.style.display = '';
+        out.className = 'result';
+        out.innerHTML = '<strong>找到了，就是第 3 行的条件。</strong>' +
+          '程序写的是「天数 &lt; 3」，天数从 1 开始，只有 1 和 2 满足条件，所以只加了两天，140 加 130 得 270，第三天的 120 被漏掉了。' +
+          '<br><span style="color:var(--muted)">错因提醒：这类错误程序不会报错——它只是老老实实按你写的条件执行。' +
+          '要靠自己先算一遍答案，才能发现它少做了一轮。</span>' +
+          '<br><span style="color:var(--muted)">下一步：点下面的修正按钮，把条件改成「小于等于」，再重新运行一次。</span>';
+      } else {
+        out.className = 'result warn';
+        out.innerHTML = '<strong>第 ' + idx + ' 行看着没问题。</strong>' +
+          '再看一眼：程序只转了 2 圈，可三天都要加。是哪一行的条件决定了转几圈？' +
+          '<br><span style="color:var(--muted)">错因提醒：常见错误是从「输出」那一行开始怀疑——' +
+          '输出本身没错，是它拿到的数就少了一天。</span>';
+      }
+      paint();
+    });
+
+    calcBtn.addEventListener('click', function () {
+      out.className = 'result';
+      out.innerHTML = '<strong>你自己算一遍：' + CNT[0] + ' + ' + CNT[1] + ' + ' + CNT[2] +
+        ' = ' + (CNT[0] + CNT[1] + CNT[2]) + '。</strong>' +
+        '<br><span style="color:var(--muted)">这就是正确答案。程序给出的却是 270，比它少了整整一天——' +
+        '现在你知道该去查什么了：查它到底加了几天的。</span>';
+    });
+
+    fixBtn.addEventListener('click', function () {
+      if (state.fixed) return;
+      state.fixed = true;
+      fixBtn.style.display = 'none';
+      rebuild();
+      paint();
+      out.className = 'result';
+      out.innerHTML = '<strong>已经改好了。</strong>第 3 行现在是「当 天数 &lt;= 3 时」，会转到第 3 天。' +
+        '<br><span style="color:var(--muted)">现在点「重新运行」，看这一次输出对不对得上你算的答案。</span>';
+    });
+
+    document.getElementById('dg3-run').addEventListener('click', function () {
+      if (state.timer !== null) return;
+      if (!state.fixed) {
+        out.className = 'result warn';
+        out.innerHTML = '<strong>不着急运行。</strong>这段程序不报错，跑完只会给你一个错的答案。' +
+          '<br><span style="color:var(--muted)">先点「我自己先算一遍」，再点单步执行，看看它转了几圈。</span>';
+        return;
+      }
+      rebuild();
+      paint();
+      out.className = 'result warn';
+      out.textContent = '正在一行一行跑……';
+      state.timer = setInterval(function () {
+        if (!advance()) {
+          clearInterval(state.timer);
+          state.timer = null;
+          paint();
+          out.className = 'result';
+          out.innerHTML = '<strong>🎉 这一遍输出「跳绳总数 = 400」，和你算的一模一样。</strong>' +
+            '<br><span style="color:var(--muted)">回顾一下这次调试的路：先自己算一遍答案 → 发现程序少做了一轮 → ' +
+            '数了数它转了几圈 → 定位到条件那一行 → 改成「小于等于」→ 重新运行验证。</span>';
+        }
+      }, 580);
+    });
+
+    document.getElementById('dg3-step').addEventListener('click', function () {
+      if (state.timer !== null) return;
+      if (state.trace.length === 0) rebuild();
+      if (state.cur >= state.trace.length - 1) {
+        out.className = 'result';
+        out.innerHTML = '<strong>这一遍已经走完了。</strong>' +
+          '<br><span style="color:var(--muted)">想再看一次，点「复位」回到开头，再单步执行。</span>';
+        return;
+      }
+      advance();
+    });
+
+    document.getElementById('dg3-reset').addEventListener('click', function () {
+      if (state.timer !== null) { clearInterval(state.timer); state.timer = null; }
+      state.fixed = false;
+      state.tried = {};
+      fixBtn.style.display = 'none';
+      rebuild();
+      paint();
+      out.className = 'result warn';
+      out.textContent = '程序复位了。先点「我自己先算一遍」，再单步执行看看它转了几圈。';
+    });
+
+    document.querySelectorAll('[data-dg3-iter]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var ok = b.dataset.dg3Iter === 'a';
+        b.classList.add(ok ? 'correct' : 'wrong');
+        out.className = 'result ' + (ok ? '' : 'warn');
+        out.innerHTML = ok
+          ? '<strong>对。</strong>要动的地方其实只有两处：第 3 行里的那个 3 改成 5，再把第 4 天、第 5 天的个数补进数据里。' +
+            '其它行都不用碰。<br><span style="color:var(--muted)">这就是「迭代优化」的意思：' +
+            '每次只改动该改的地方，然后重新运行验证一遍——小步改、小步验，比推倒重来稳得多。</span>'
+          : '<strong>再想一想。</strong>整段重写一遍要多花很多时间，还容易带进新的错误。' +
+            '<br><span style="color:var(--muted)">错因提醒：不少同学误认为「改动越彻底越保险」——' +
+            '其实恰好相反，改动越小越容易检查出问题。想一想：控制「统计几天」的那个数，程序里出现在哪一行？</span>';
+      });
+    });
+
+    rebuild();
+    paint();
+  })();
+})();
+
+</script>
+
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+</body>
+</html>

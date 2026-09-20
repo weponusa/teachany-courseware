@@ -1,0 +1,1719 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《分支与循环结构》 · 小学信息科技 五年级 · TeachAny</title>
+<meta name="description" content="面向小学五年级：能说出分支是一问两路、条件成立走「则」不成立走「否则」且两条只走一条；能说出循环的三件事（从哪儿开始、什么时候停、每圈怎么变）；能在伪代码里一行一行跟读，说出每一步变量的值并数出循环转了几圈；能发现把「≤」改成「<」少转一圈、把起始值从 1 改成 0 多转一圈，并在结果差一次时先检查分界线上的符号与起始值。">
+
+<meta name="course-id" content="it-e-branch-loop">
+<meta name="course-title" content="分支与循环结构">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="小学五年级">
+<meta name="course-prereqs" content="it-e-block-programming">
+<meta name="course-next" content="it-e-debugging">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.22.0">
+<meta name="teachany-node" content="it-e-branch-loop">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="5">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-domain" content="algorithm-programming">
+<meta name="teachany-prerequisites" content="积木式程序设计">
+<meta name="teachany-lesson-type" content="concept-practice">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style>
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+</style>
+</head>
+<body class="teachany-elementary">
+
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
+    <img src="https://www.teachany.cn/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.22.0</span></span>
+  </div>
+</div>
+
+<div class="slide-container" id="slide-container">
+
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero"
+           data-tts-script="先请你想象一件事。妈妈让你写一张便条：如果明天下雨，就带伞；否则，就戴帽子。你写下的这句话，里面其实藏着程序里最重要的一种结构。程序不是只会从上往下一行行做，它还会根据条件挑一条路走，也会照着同一个条件把一件事做上好几遍。今天这节课，我们要把这两种结构拆开来看清楚：一种叫分支，一种叫循环；还要亲手点着走一遍，看看程序到底走了哪条路、转了几圈。"
+           data-tsh="开场 - 用一个真实问题建立学习动机" data-bloom-level="remember" data-scaffold="full">
+    <div class="slide-inner">
+      <p class="level-badge">小学五年级 · 算法与程序</p>
+      <h1>分支与循环结构</h1>
+      <p class="subtitle">一张「下雨带伞、否则戴帽子」的便条里，藏着程序里最重要的两种走路方式——你分得清吗？</p>
+      <figure class="ta-standard-figure" style="margin-top:24px">
+        <img src="./assets/it-e-branch-loop-hero.webp" alt="分支与循环结构知识结构图：分支结构、循环结构与边界值检查三栏">
+        <figcaption>分支与循环：一问两路只走一条 · 循环三件事 · 分界线上先查符号</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide-page" id="problem-anchor" data-page-type="interactive" data-page-index="1"
+           data-tts="problem-anchor" data-tts-alias="anchor"
+           data-tts-script="开始之前，先选一个你最想弄明白的问题。是想知道程序怎么根据条件挑一条路走，还是想知道循环为什么能一遍一遍重复做同一件事，又或者你想弄明白为什么改成小于号就少跑了一圈，再或者你想学会在程序绕个不停的时候找出原因。选好了，就带着这个问题往下看。"
+           data-tsh="问题锚点 - 先确定今天最想弄明白的问题">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">问题锚点</span>
+          <h2>今天最想弄明白哪一件事？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你真正好奇的问题，后面的动手活动都会围着它转。</p>
+        <div class="grid">
+          <button class="choice" data-anchor-choice="程序怎么根据条件挑一条路走"><strong>程序怎么根据条件挑一条路走？</strong><br><span style="color:var(--muted);font-size:14px">一句话问出两条路，为什么只走一条</span></button>
+          <button class="choice" data-anchor-choice="循环为什么能一遍遍重复做"><strong>循环为什么能一遍遍重复做？</strong><br><span style="color:var(--muted);font-size:14px">它靠什么停下来，又靠什么继续</span></button>
+          <button class="choice" data-anchor-choice="为什么改成小于号就少跑一圈"><strong>为什么改成小于号就少跑一圈？</strong><br><span style="color:var(--muted);font-size:14px">一个符号怎么就能差出一整圈</span></button>
+          <button class="choice" data-anchor-choice="程序绕来绕去停不下来怎么办"><strong>程序绕来绕去停不下来，怎么办？</strong><br><span style="color:var(--muted);font-size:14px">想学会自己找出那个出问题的地方</span></button>
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己最想知道的问题
+          <input id="learner-question-input" placeholder="把你好奇的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives"
+           data-tts-script="这节课有四个目标。第一，能说出分支就是一问两路：条件成立走一条，不成立走另一条，两条路只走一条。第二，能说出循环是三件事：从哪儿开始、什么时候停、每转一圈怎么变。第三，能在伪代码里一行一行看程序怎么走，说出每一步变量的值，并数出循环一共转了几圈。第四，能发现把小于等于改成小于、或者把起始值从一改成零，结果就会差一次，并能说出差在哪里。"
+           data-tsh="学习目标 - 明确这节课结束时能做到什么" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">学习目标</span>
+          <h2>这节课结束时，你应该能做到</h2>
+        </div>
+        <ul class="objectives">
+          <li>能说出分支是一问两路：条件成立走「则」，不成立走「否则」，两条路只走一条</li>
+          <li>能说出循环的三件事：从哪儿开始、什么时候停、每圈怎么变，并知道少了第三件会停不下来</li>
+          <li>能在伪代码里一行一行跟读，说出每一步变量的值，并数出循环一共转了几圈</li>
+          <li>能发现把「≤」改成「<」少转一圈、把起始值从 1 改成 0 多转一圈，并在结果差一次时优先检查这两处</li>
+        </ul>
+        <div class="kid-note" style="margin-top:16px">
+          <span class="emoji">🎯</span>
+          <div><strong>课标依据：</strong>《义务教育信息科技课程标准（2022年版2025年修订）》小学「算法与程序」——在程序中运用顺序、分支、循环结构解决简单问题。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="3" data-tts="pretest"
+           data-tts-script="先做三道小题，用你现在的想法选就行。选完马上能看到解释，选错了也没关系，正好知道该重点听哪里。"
+           data-tsh="先测一测：程序会怎么挑路、怎么转圈？ - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">前测</span>
+          <h2>先测一测：程序会怎么挑路、怎么转圈？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="pre-1">
+          <p><strong>1. 程序里的「如果……则……否则……」，最后的执行方式是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-1" data-correct="1">条件成立走「则」那条，不成立走「否则」那条，两条只走一条</button>
+            <button class="choice" data-q="pre-1" data-correct="0">两条路都走一遍</button>
+            <button class="choice" data-q="pre-1" data-correct="0">两条路都不走，等别人告诉它选哪条</button>
+          </div>
+          <p class="result warn" data-explain="pre-1" style="display:none;margin-top:10px">分支的本质就是一问两路，条件决定走哪一条，而且只走一条。<strong>错因提醒：</strong>常见错误是以为「否则」也要做一遍——其实它只是备用的那条路，条件成立时根本不会碰到它。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-2">
+          <p><strong>2. 写一个循环，下面哪一件事不做，程序就会一直转下去停不下来？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-2" data-correct="1">每转一圈，让控制循环的那个量变化一下</button>
+            <button class="choice" data-q="pre-2" data-correct="0">给循环起一个好听的名字</button>
+            <button class="choice" data-q="pre-2" data-correct="0">把循环里的动作写得再详细一点</button>
+          </div>
+          <p class="result warn" data-explain="pre-2" style="display:none;margin-top:10px">循环变量不变化，条件就永远成立，程序就出不来了。<strong>错因提醒：</strong>不少同学误认为循环只要写上「重复」两个字就够了——「什么时候停」和「每圈怎么变」才是关键。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-3">
+          <p><strong>3. 循环条件是「次数 ≤ 3」，次数从 1 开始。这个循环会转几圈？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-3" data-correct="1">3 圈</button>
+            <button class="choice" data-q="pre-3" data-correct="0">2 圈</button>
+            <button class="choice" data-q="pre-3" data-correct="0">4 圈</button>
+          </div>
+          <p class="result warn" data-explain="pre-3" style="display:none;margin-top:10px">次数依次是 1、2、3 时条件都成立，一共转 3 圈；到 4 才停下来。<strong>错因提醒：</strong>容易把「小于等于」当成「小于」来数，少算一圈；也容易把从 0 开始当成从 1 开始，多算一圈。</p>
+        </div>
+        <p id="pre-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="module-1"
+           data-tts-script="先看分支。生活里我们常常要按条件做决定：如果下雨就带伞，否则就戴帽子。写进程序里就是一句话：如果条件成立，做这一件事；否则，做另一件事。要记住三点。第一，条件必须是一句能判真假的话，比如分数大于或等于六十——这句话要么成立，要么不成立，没有第三种。第二，成立走「则」那一条，不成立走「否则」那一条。第三，两条路只会走一条，绝不会都走，也不会都不走。还有一点特别要紧：分界线上的那个数常常最会骗人，五十九和六十只差一分，走的路却完全不同。"
+           data-tsh="分支：一问两路，只走一条" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念一</span>
+          <h2>分支：一问两路，只走一条</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p><strong>为什么要学这一课？</strong></p>
+          <p style="color:var(--muted)">前面我们已经会让程序一行一行按顺序做事了（And）；可生活里的事常常要看情况——下雨才带伞，成绩够了才算及格，一句话说不清楚（But）；所以程序里要有一种会「自己挑路」的结构，那就是分支（Therefore）。</p>
+        </div>
+        <p style="font-size:17px;margin:0 0 12px">分支就是<strong>一问两路</strong>：先问一句能判真假的话，成立走一条，不成立走另一条。</p>
+        <div class="grid grid-3">
+          <div class="inner-card"><p><strong>① 条件能判真假</strong></p><p style="color:var(--muted)">「分数 ≥ 60」这种话，要么成立，要么不成立，没有第三种。</p></div>
+          <div class="inner-card"><p><strong>② 成立走「则」</strong></p><p style="color:var(--muted)">条件成立，就做「则」下面那件事，做完跳出去。</p></div>
+          <div class="inner-card"><p><strong>③ 两条只走一条</strong></p><p style="color:var(--muted)">「否则」是备用路：成立时根本不碰它，不成立时才走。</p></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-e-branch-loop-fig1.webp" alt="分支结构示意图：一个条件判断分成上下两条路，成立走上面一条，不成立走下面一条，两条路只走一条">
+          <figcaption>示意图：一句话问出两条路——条件成立走上面那条，不成立走下面那条；两条路永远不会同时走</figcaption>
+        </figure>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">把条件的<strong>方向写反</strong>：本来想说「分数不够就再练一练」，却写成「分数 ≥ 60 则再练一练」。条件本身没错，但它代表的意思反了。写完条件，一定要问自己一句：<strong>这句话成立的时候，我希望它做什么？</strong></p>
+        </div>
+        <div class="kid-note" style="margin-top:12px"><span class="emoji">🎵</span><div><strong>记一句口诀：</strong>一句话问真假，两条路只走一头；分界线上那一个数，最会把人骗回头。</div></div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>看见它</strong>：分支的样子就是岔路口的两块路牌。程序走到这里会停下来问一句，然后只往一个方向去。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>解释它</strong>：为什么一定要「只走一条」？因为两条路做的事常常是互相矛盾的——既说及格又说没及格，那就乱套了。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：生活的规则大多是这个形状：如果体温超过三十七度三就报告老师，否则正常上课。看懂了形状，规则就好读了。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="lab-1"
+           data-tts-script="光看还不够，我们自己动手走一遍。下面是一段判断分数是否及格的伪代码。请你先选一个分数，再点单步执行，一行一行看着程序往下走。走到判断那一行，程序会告诉你条件成立不成立；亮起来的那一行，就是它正在做的那一步。请你特别试一下五十九分和六十分：只差一分，程序走的路完全不一样。"
+           data-tsh="动手一：一行一行走一遍这段分支" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">动手实验室</span>
+          <h2>动手一：一行一行走一遍这段分支</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">先选一个分数当输入，再点「单步执行」，一行一行看程序走。走到判断那一行，它会告诉你条件成立不成立。</p>
+        <div class="lab-panel">
+          <div class="bl-wrap">
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px">程序（伪代码）</div>
+              <div class="bl-code" id="bl1-code"></div>
+              <div class="flex-row" style="margin-top:10px">
+                <button class="choice" id="bl1-run" style="text-align:center">▶ 一次跑完</button>
+                <button class="choice" id="bl1-step" style="text-align:center">单步执行</button>
+                <button class="choice" id="bl1-reset" style="text-align:center">回到开头</button>
+              </div>
+            </div>
+            <div class="bl-side">
+              <div style="font-weight:700;font-size:14px">① 选一个分数（这就是「输入数据」）</div>
+              <div class="flex-row" style="margin-top:0">
+                <button class="choice bl-pick" data-bl1-score="59">59 分</button>
+                <button class="choice bl-pick" data-bl1-score="60">60 分</button>
+                <button class="choice bl-pick" data-bl1-score="88">88 分</button>
+              </div>
+              <div class="lab-readout">
+                <div class="readout-cell"><span class="k">分数</span><span class="v" id="bl1-score">—</span></div>
+                <div class="readout-cell"><span class="k">条件真假</span><span class="v green" id="bl1-cond">—</span></div>
+                <div class="readout-cell"><span class="k">已走行数</span><span class="v" id="bl1-lines">0 行</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="result warn" id="bl1-out" style="margin-top:12px">先选一个分数，再点「单步执行」，看程序走哪一条路。</p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🔍</span><div><strong>看仔细：</strong>换成 59 分再走一遍，你会发现程序走的路完全不一样。分界线上的两个数只差一分，结果却差一整条路——这就是条件写「≥」还是写「&gt;」时最要小心的地方。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="6" data-tts="module-2"
+           data-tts-script="接下来看循环。循环就是把同一件事一遍一遍做，直到条件不再成立。写循环要想清楚三件事：第一，循环变量从哪儿开始；第二，什么时候停，也就是那个条件；第三，每转一圈它怎么变。第三件事最容易被忘掉——如果每圈都不变，条件永远成立，程序就会一直转下去，停不下来。另外，停下来那一刻的审查最要紧：用小于等于三，循环转三圈；改成小于三，就只转两圈；起始值从一改成零，又会多转一圈。一个符号、一个数，差的就是一整圈。"
+           data-tsh="循环：三件事想清楚，还要盯住分界线" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念二</span>
+          <h2>循环：三件事想清楚，还要盯住分界线</h2>
+        </div>
+
+        <p style="font-size:17px;margin:0 0 12px">循环就是<strong>条件还成立，就再转一圈</strong>。写循环必须想清楚三件事，缺一件就会转不停。</p>
+        <div class="step-grid">
+          <div class="step"><span class="n">始</span><div><strong>从哪儿开始：</strong>循环变量第一次取什么值。从 0 开始还是从 1 开始，最后的结果会差一次。</div></div>
+          <div class="step"><span class="n">停</span><div><strong>什么时候停：</strong>条件写成小于等于还是小于，直接决定它转几圈。</div></div>
+          <div class="step"><span class="n green">变</span><div><strong>每圈怎么变：</strong>每转一圈，循环变量必须变一下。忘了这一件，条件永远成立，就出不来了。</div></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-e-branch-loop-fig2.webp" alt="循环结构示意图：判断条件成立就回到上面再转一圈并累计圈数，条件不成立才向下走出循环">
+          <figcaption>示意图：条件成立就绕着圈再走一遍，每转一圈计数器加一；条件不成立才往下走出循环</figcaption>
+        </figure>
+        <div class="inner-card">
+          <p><strong>分界线上的三个数，最容易骗人：</strong></p>
+          <p style="color:var(--muted)">① 条件写「次数 ≤ 3」转 3 圈，写「次数 &lt; 3」只转 2 圈——差一个符号，少一整圈。<br>② 起始值从 1 改成 0，同一个条件就会<strong>多转一圈</strong>。<br>③ 所以程序结果比预期差一点时，先回去看那个符号和那个起始值。</p>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">以为「条件不成立」就是出错。其实条件不成立只是<strong>该停了</strong>——它不是失败，而是循环正常的出口。真正的问题是条件<strong>永远成立</strong>：那才会让程序绕个不停。</p>
+        </div>
+        <div class="kid-note" style="margin-top:12px"><span class="emoji">🎵</span><div><strong>记一句口诀：</strong>从哪儿开始、何时停、每圈怎么变；小于等于和小于，差的就是一整圈。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="7" data-tts="lab-2"
+           data-tts-script="现在请你当一次程序执行器。下面这段循环程序，它的起始值、比较符和上界都可以改。请你点单步执行，一次一行，看着变量表里的总数和次数跟着变；右边的循环圈数会一圈一圈累加。改一改那三个开关，再走一遍，看看循环圈数会怎么变。"
+           data-tsh="动手二：改三个开关，看循环转几圈" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">动手实验室</span>
+          <h2>动手二：改三个开关，看循环转几圈</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">下面是一段循环程序。起始值、比较符、上界都可以改。点「单步执行」，一次一行，看变量表怎么变、循环圈数怎么累加。</p>
+        <div class="lab-panel">
+          <div class="bl-wrap">
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px">程序（伪代码）</div>
+              <div class="bl-code" id="bl2-code"></div>
+              <div class="flex-row" style="margin-top:10px">
+                <button class="choice" id="bl2-run" style="text-align:center">▶ 一次跑完</button>
+                <button class="choice" id="bl2-step" style="text-align:center">单步执行</button>
+                <button class="choice" id="bl2-reset" style="text-align:center">回到开头</button>
+              </div>
+            </div>
+            <div class="bl-side">
+              <div style="font-weight:700;font-size:14px">三个开关（改完请重新走一遍）</div>
+              <div class="bl-ctl"><label for="bl2-start">起始值</label>
+                <select id="bl2-start"><option value="1">次数 = 1</option><option value="0">次数 = 0</option></select></div>
+              <div class="bl-ctl"><label for="bl2-op">比较符</label>
+                <select id="bl2-op"><option value="le">小于等于 ≤</option><option value="lt">小于 &lt;</option></select></div>
+              <div class="bl-ctl"><label for="bl2-bound">上界</label>
+                <select id="bl2-bound"><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+              <div class="lab-readout">
+                <div class="readout-cell"><span class="k">总数</span><span class="v" id="bl2-total">0</span></div>
+                <div class="readout-cell"><span class="k">次数</span><span class="v" id="bl2-k">1</span></div>
+                <div class="readout-cell"><span class="k">循环圈数</span><span class="v green" id="bl2-loops">0</span></div>
+              </div>
+              <div style="font-size:13px;color:var(--muted)">每一圈亮一个点：</div>
+              <div class="bl-loopbar" id="bl2-dots"></div>
+            </div>
+          </div>
+          <p class="result warn" id="bl2-out" style="margin-top:12px">先点「单步执行」，看它一圈一圈怎么走。</p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">💡</span><div><strong>试一试：</strong>把「≤ 3」改成「&lt; 3」，再看圈数——少了一整圈！再把起始值从 1 改成 0，圈数又多了一圈。所以程序结果差一次的时候，先回来检查这个符号和这个起始值。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="worked-example"
+           data-tts-script="我们一起来读一段循环里套着分支的程序。第一步，先把程序里会变的量都列出来：及格人数和次数。第二步，一圈一圈地走：先看循环条件成立不成立，成立才进圈里。第三步，进了圈里再看分支：这个成绩够不够六十，够就加一，不够就不加，两条路只走一条。第四步，走完一圈别忘了做最后那件事——把次数加一，不然就出不来了。走完四圈，把每一步的及格人数连起来看：零、一、一、二，最后一个数就是答案。"
+           data-tsh="例题示范：读一段循环里套着分支的程序" data-bloom-level="analyze" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">例题示范</span>
+          <h2>例题示范：读一段循环里套着分支的程序</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>题目：</strong>成绩依次是 72、45、88、60，要数出及格（≥ 60）的人数。程序是：① 及格人数 = 0 ② 次数 = 1 ③ 当 次数 ≤ 4 时 ④ 如果 成绩[次数] ≥ 60 则 ⑤ 及格人数 = 及格人数 + 1 ⑥ 结束分支 ⑦ 次数 = 次数 + 1 ⑧ 结束循环 ⑨ 输出 及格人数。结果是多少？</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>先列出会变的量：</strong>「及格人数」和「次数」两个。给它们各写一列，后面每走一步就把新值记上去。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>看循环条件：</strong>次数从 1 开始，≤ 4 成立，所以进圈里；一圈走完次数加一，变成 2，再回来问一次。</div></div>
+          <div class="step"><span class="n">3</span><div><strong>圈里先判分支：</strong>72 够 60，及格人数加一；45 不够，这一圈不加。两条路只走一条。</div></div>
+          <div class="step"><span class="n green">4</span><div><strong>走完四圈再收尾：</strong>及格人数依次是 0、1、1、2、3——最后一个 3 就是答案，也就是有 3 个人及格。</div></div>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">最容易忘的是<strong>第 ⑦ 步</strong>——把「次数 = 次数 + 1」忘在循环体外面，或者干脆漏掉。少了这一步，次数永远是 1，条件永远成立，程序就绕个不停。第二容易错的是把最后一个 60 分当成不及格：条件是「≥ 60」，60 正好算进去。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="9" data-tts="conceptest-1"
+           data-tts-script="接下来用三个容易弄错的说法考考你。请仔细读每一个选项，选完再看解释。"
+           data-tsh="概念测试：三种说法，错在哪里 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">概念测试</span>
+          <h2>概念测试：三种说法，错在哪里</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="ct-1">
+          <p><strong>1. 「如果 分数 ≥ 60 则 说「及格」 否则 说「再练一练」」，当分数是 60 时，程序会：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-1" data-correct="1">说「及格」——条件成立，只走「则」那一条</button>
+            <button class="choice" data-q="ct-1" data-correct="0">两条都说一遍</button>
+            <button class="choice" data-q="ct-1" data-correct="0">说「再练一练」，因为 60 不算过</button>
+          </div>
+          <p class="result warn" data-explain="ct-1" style="display:none;margin-top:10px">≥ 的意思是「大于或等于」，60 正好等于 60，条件成立。<strong>错因提醒：</strong>常见错误是把 ≥ 和 &gt; 搞混，以为必须超过才算——分界线上的那个数永远要单独试一次。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-2">
+          <p><strong>2. 循环条件是「当 次数 ≤ 5 时」，次数从 1 开始，每次加一。循环转几圈？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-2" data-correct="1">5 圈</button>
+            <button class="choice" data-q="ct-2" data-correct="0">4 圈</button>
+            <button class="choice" data-q="ct-2" data-correct="0">6 圈</button>
+          </div>
+          <p class="result warn" data-explain="ct-2" style="display:none;margin-top:10px">次数是 1、2、3、4、5 时都成立，共 5 圈；变成 6 时才停下来。<strong>错因提醒：</strong>把 ≤ 当成 &lt; 就会少数一圈。数不清的时候，把次数一个个写下来最稳。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-3">
+          <p><strong>3. 写了一段循环，运行后程序一直没有停下来。最可能的原因是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-3" data-correct="1">圈里没有让循环变量变化，条件永远成立</button>
+            <button class="choice" data-q="ct-3" data-correct="0">循环里的动作写得太复杂</button>
+            <button class="choice" data-q="ct-3" data-correct="0">循环写得不够漂亮</button>
+          </div>
+          <p class="result warn" data-explain="ct-3" style="display:none;margin-top:10px">循环必须有出口：条件迟早要不成立。让循环变量每圈变化，才能走到那一步。<strong>错因提醒：</strong>别误认为「转不停」是电脑坏了——先回去看那三件事，特别是「每圈怎么变」。</p>
+        </div>
+        <p id="ct-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="synthesis"
+           data-tts-script="最后一个任务交给你。这段程序要做两件事叠在一起：一边数圈，一边在每一圈里判断这个成绩够不够六十。请你点单步执行，一行一行走完，看及格人数怎么从零变成三。走完以后，把判断里的「大于或等于」改成「大于」，再重新走一遍——你会发现六十分那个同学从及格变成了不及格。想一想，为什么会少一个人。"
+           data-tsh="综合任务：一边数圈，一边数及格人数" data-bloom-level="create" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">综合任务</span>
+          <h2>综合任务：一边数圈，一边数及格人数</h2>
+        </div>
+
+        <p style="color:var(--muted);margin:0 0 12px">这段程序把循环和分支叠在一起：一边数圈，一边在每一圈里判断这个成绩够不够 60。请点「单步执行」一行一行走完。</p>
+        <div class="lab-panel">
+          <div class="bl-wrap">
+            <div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px">程序（伪代码）</div>
+              <div class="bl-code" id="bl3-code"></div>
+              <div class="flex-row" style="margin-top:10px">
+                <button class="choice" id="bl3-run" style="text-align:center">▶ 一次跑完</button>
+                <button class="choice" id="bl3-step" style="text-align:center">单步执行</button>
+                <button class="choice" id="bl3-reset" style="text-align:center">回到开头</button>
+              </div>
+            </div>
+            <div class="bl-side">
+              <div style="font-weight:700;font-size:14px">判断里的比较符（改完请重新走一遍）</div>
+              <div class="bl-ctl"><label for="bl3-op">成绩比较</label>
+                <select id="bl3-op"><option value="ge">大于等于 ≥ 60</option><option value="gt">大于 &gt; 60</option></select></div>
+              <div class="lab-readout">
+                <div class="readout-cell"><span class="k">及格人数</span><span class="v" id="bl3-pass">0</span></div>
+                <div class="readout-cell"><span class="k">次数</span><span class="v" id="bl3-k">1</span></div>
+                <div class="readout-cell"><span class="k">循环圈数</span><span class="v green" id="bl3-loops">0</span></div>
+              </div>
+              <div style="font-size:13px;color:var(--muted)">成绩依次是 72、45、88、60</div>
+              <div class="bl-loopbar" id="bl3-dots"></div>
+              <div class="bl-read" id="bl3-read">每走完一圈，这里会告诉你圈里判断的结果。</div>
+            </div>
+          </div>
+          <p class="result warn" id="bl3-out" style="margin-top:12px">先点「单步执行」，看及格人数怎么从 0 变成 3。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>走完以后说给同桌听：</strong></p>
+          <p style="color:var(--muted)">把「≥ 60」改成「&gt; 60」再走一遍，及格人数少了一个——少的那个是谁？为什么？如果把开始那句话改成「次数 = 0」，结果又会变成几个人？</p>
+          <textarea id="syn-answer" rows="3" placeholder="少的是六十分那个同学，因为……如果次数从 0 开始，会……" style="margin-top:8px"></textarea>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="posttest"
+           data-tts-script="最后一轮，换几个新情境来考考你。这次会出现体温报警、跳绳计数、还有一段总是多跑一圈的程序，看看你能不能把学到的规则用上去。"
+           data-tsh="后测：换几个情境，规则还在不在 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">后测</span>
+          <h2>后测：换几个情境，规则还在不在</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="post-1">
+          <p><strong>1. 体温报警程序写的是「如果 体温 ≥ 37.3 则 报警 否则 正常」。体温正好 37.3 度时会：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-1" data-correct="1">报警——分界线上的数算在里面</button>
+            <button class="choice" data-q="post-1" data-correct="0">正常，要超过 37.3 才报警</button>
+            <button class="choice" data-q="post-1" data-correct="0">先报警再取消</button>
+          </div>
+          <p class="result warn" data-explain="post-1" style="display:none;margin-top:10px">≥ 包含等于，37.3 正好成立。<strong>错因提醒：</strong>现实里这类边界特别要紧，规则写 ≥ 还是 &gt; 必须问清楚。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-2">
+          <p><strong>2. 跳绳计数程序是「当 天数 ≤ 3 时 加一次个数」，如果改成「当 天数 &lt; 3 时」，会发生什么？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-2" data-correct="1">少算一天，总数变少</button>
+            <button class="choice" data-q="post-2" data-correct="0">结果完全一样</button>
+            <button class="choice" data-q="post-2" data-correct="0">多算一天，总数变多</button>
+          </div>
+          <p class="result warn" data-explain="post-2" style="display:none;margin-top:10px">≤ 3 转 3 圈，&lt; 3 只转 2 圈，正好少一天。<strong>错因提醒：</strong>常见错误是以为「小于」和「小于等于」差不多——它们差一整圈。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-3">
+          <p><strong>3. 一段循环程序每次的结果都比答案多一次，你最该先检查的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-3" data-correct="1">比较符是不是该用小于、以及循环变量的起始值</button>
+            <button class="choice" data-q="post-3" data-correct="0">把程序整段删掉重写</button>
+            <button class="choice" data-q="post-3" data-correct="0">把循环里的动作换一个顺序</button>
+          </div>
+          <p class="result warn" data-explain="post-3" style="display:none;margin-top:10px">多一次或少一次，几乎都出在分界线上：符号和起始值。<strong>错因提醒：</strong>别急着重写——先动那一个符号、那一个数，然后重新运行一次验证。</p>
+        </div>
+        <p id="post-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="12" data-tts="summary"
+           data-tts-script="这节课我们记住三句话。第一句，分支是一问两路：条件成立走一条，不成立走另一条，两条路只走一条。第二句，循环要三件事：从哪儿开始、什么时候停、每圈怎么变；少一件就会转不停。第三句，分界线上的数最会骗人——小于等于和小于差一圈，起始值一和零差一圈，看到结果差一点，先去检查那个符号和那个数。回到开头那张便条：下雨带伞、否则戴帽子，是分支；每天看一眼天气预报，就是循环。"
+           data-tsh="小结：三句话，把分支和循环讲清楚" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">小结</span>
+          <h2>小结：三句话，把分支和循环讲清楚</h2>
+        </div>
+        <div class="grid">
+          <div class="summary-item"><span class="num">1</span><div><strong>分支是一问两路：</strong>条件成立走「则」，不成立走「否则」，两条路只走一条。</div></div>
+          <div class="summary-item"><span class="num">2</span><div><strong>循环要三件事：</strong>从哪儿开始、什么时候停、每圈怎么变；少一件就转不停。</div></div>
+          <div class="summary-item"><span class="num">3</span><div><strong>分界线上最会出错：</strong>≤ 和 &lt; 差一圈，起始值 1 和 0 差一圈；结果差一次，先查符号和起始值。</div></div>
+        </div>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:rgba(255,209,102,.7)">
+          <p style="margin:0"><strong>回到开头那张便条：</strong>下雨带伞、否则戴帽子——这是分支；每天早上看一眼天气预报，一直看到出门为止——这是循环。程序世界里最常出现的两种走路方式，你今天都认出来了。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>给别人讲一遍：</strong>请用「条件、两条路、只走一条」说清楚什么是分支；再用「开始、停、变化」说清楚循环要注意什么。</p>
+          <p style="color:var(--muted)">再动一动手：<strong>画出来</strong>——在纸上画一个循环的圈，把「成立就回去、不成立就出去」两个箭头都标上去。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="13" data-tts="homework"
+           data-tts-script="最后留三项作业，分三个层次。第一层基础巩固，人人要做：写出一句生活中的如果否则，再写出一件每天重复做、并且知道什么时候停的事，把循环的三件事标出来。第二层能力应用，动手做：给一段循环程序，先在纸上走一遍、写出每一圈里变量的值，再上机运行验证。第三层迁移挑战，选做：设计一个需要循环里套分支的任务，写清条件，并说明你为什么要用小于等于而不是小于。"
+           data-tsh="作业分层：三层小任务，按自己的节奏来" data-bloom-level="create" data-scaffold="none">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">作业分层</span>
+          <h2>作业分层：三层小任务，按自己的节奏来</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">三层练习，做完第一、二层就算通关；第三层留给愿意继续探索的同学。</p>
+        <div class="inner-card">
+          <p><strong>⭐ 基础巩固（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>写出一句生活中的「如果……则……否则……」，并说出条件成立时做什么、不成立时做什么。</li>
+            <li>找出家里一件每天重复做、并且知道什么时候停的事，把循环的三件事（开始、停、变化）写出来。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐ 能力应用（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>给一段循环程序，先在纸上走一遍，写出每一圈里变量的值，再上机运行验证，看看和你写的一样不一样。</li>
+            <li>用两三句话记下你一次把「≤」写成「&lt;」的经历：结果差了多少，你后来是怎么发现并改好的。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐⭐ 迁移挑战（选做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>设计一个需要「循环里套分支」的任务（比如统计一周里每天有没有完成阅读），写清条件和比较符。</li>
+            <li>同一个任务，用「≤ 5」和用「&lt; 6」，转的圈数一样吗？说说你的想法，并动手验证一下。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page kg-page" data-page-type="summary" data-page-index="14" data-tts="knowledge-graph"
+           data-tts-script="这张图展示了这节课在信息科技知识网络里的位置。左边是学它之前要先会的，右边是学会之后可以接着探索的，下面是同一个领域的伙伴知识。可以点一点，看看还有哪些值得继续学的内容。"
+           data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">知识图谱</span>
+          <h2>这节课在知识网络里的位置</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 10px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p class="kg-loading-hint" style="color:var(--muted);font-size:13px;margin:0 0 10px">图谱正在加载：首次进入需下载知识索引（约 1–3 秒），加载完成后本行会自动消失。</p>
+        <div data-teachany-kg="it-e-branch-loop">
+          <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="15" data-tts="ai-tutor"
+           data-tts-script="如果还有没想通的地方，把你的问题写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。"
+           data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+</div><!-- .slide-container -->
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-pretest",
+    "section": "pretest",
+    "src": "./tts/s04-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s05-module-1",
+    "section": "module-1",
+    "src": "./tts/s05-module-1.mp3",
+    "label": "概念一 分支：一问两路"
+  },
+  {
+    "id": "s06-lab-1",
+    "section": "lab-1",
+    "src": "./tts/s06-lab-1.mp3",
+    "label": "动手一 一行一行走一遍分支"
+  },
+  {
+    "id": "s07-module-2",
+    "section": "module-2",
+    "src": "./tts/s07-module-2.mp3",
+    "label": "概念二 循环：三件事与边界"
+  },
+  {
+    "id": "s08-lab-2",
+    "section": "lab-2",
+    "src": "./tts/s08-lab-2.mp3",
+    "label": "动手二 改开关看循环转几圈"
+  },
+  {
+    "id": "s09-worked-example",
+    "section": "worked-example",
+    "src": "./tts/s09-worked-example.mp3",
+    "label": "例题讲解 循环里套分支"
+  },
+  {
+    "id": "s10-conceptest-1",
+    "section": "conceptest-1",
+    "src": "./tts/s10-conceptest-1.mp3",
+    "label": "概念测试"
+  },
+  {
+    "id": "s11-synthesis",
+    "section": "synthesis",
+    "src": "./tts/s11-synthesis.mp3",
+    "label": "综合任务 数出及格人数"
+  },
+  {
+    "id": "s12-posttest",
+    "section": "posttest",
+    "src": "./tts/s12-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s13-summary",
+    "section": "summary",
+    "src": "./tts/s13-summary.mp3",
+    "label": "课堂小结"
+  },
+  {
+    "id": "s14-homework",
+    "section": "homework",
+    "src": "./tts/s14-homework.mp3",
+    "label": "作业分层"
+  },
+  {
+    "id": "s15-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s15-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s16-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s16-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<script>
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'it-e-branch-loop',
+    courseTitle: '分支与循环结构',
+    subject: 'info-tech',
+    grade: '5',
+    nodeId: 'it-e-branch-loop',
+    lessonType: 'concept-practice',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+</script>
+
+<script>
+
+/* ============================================================
+   it-e-branch-loop 互动逻辑
+   1) 选择题接线（前测 / 概念测试 / 后测）
+   2) blRunner()：伪代码执行器工厂
+      —— 高亮当前行、变量面板实时变化、累计循环圈数
+   3) 动手一：分支执行器（选分数 → 单步 → 条件判真假 → 输出哪条路）
+   4) 动手二：循环执行器（起始值/比较符/上界三开关 → 累计循环圈数）
+   5) 综合任务：循环里套分支，数出及格人数（含 ≥ 改成 > 的边界对比）
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ---------- 1. 选择题 ---------- */
+  document.querySelectorAll('[data-quiz-block]').forEach(function (block) {
+    block.querySelectorAll('.choice').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (block.dataset.answered === '1') return;
+        block.dataset.answered = '1';
+        var ok = btn.dataset.correct === '1';
+        btn.classList.add(ok ? 'correct' : 'wrong');
+        block.querySelectorAll('.choice').forEach(function (b) {
+          if (b.dataset.correct === '1') b.classList.add('correct');
+          b.disabled = true;
+        });
+        var ex = block.querySelector('[data-explain]');
+        if (ex) ex.style.display = 'block';
+      });
+    });
+  });
+
+  /* ---------- 通用样式（走主题变量，不写死颜色） ---------- */
+  var st = document.createElement('style');
+  st.textContent =
+    '.bl-wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(230px,0.9fr);gap:14px;align-items:start;}' +
+    '@media(max-width:760px){.bl-wrap{grid-template-columns:1fr;}}' +
+    '.bl-code{display:flex;flex-direction:column;gap:4px;padding:10px;border-radius:12px;' +
+    'background:var(--bg-subtle);border:1px solid var(--line-subtle);}' +
+    '.bl-line{display:flex;align-items:flex-start;gap:9px;padding:7px 10px;border-radius:8px;' +
+    'background:var(--card);border:1px solid transparent;font-size:14px;' +
+    'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;transition:all .2s ease;}' +
+    '.bl-line .bl-n{flex-shrink:0;width:20px;height:20px;border-radius:5px;display:grid;place-items:center;' +
+    'background:rgb(var(--paper-rgb) / 20%);color:var(--muted);font-size:11px;font-weight:800;}' +
+    '.bl-line .bl-c{flex:1;min-width:0;word-break:break-word;}' +
+    '.bl-line.run{border-color:var(--brand);background:var(--brand-soft);' +
+    'box-shadow:0 0 0 3px rgb(var(--brand-rgb) / 16%);}' +
+    '.bl-line.run .bl-n{background:var(--brand);color:#fff;}' +
+    '.bl-line.fixed{border-color:var(--brand-2);background:var(--accent-soft);}' +
+    '.bl-side{display:flex;flex-direction:column;gap:10px;}' +
+    '.bl-pick{text-align:center;font-weight:700;}' +
+    '.bl-pick.on{border-color:var(--brand);background:var(--brand-soft);box-shadow:0 0 0 3px rgb(var(--brand-rgb) / 16%);}' +
+    '.bl-ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}' +
+    '.bl-ctl label{font-size:13px;font-weight:700;min-width:62px;}' +
+    '.bl-ctl select{flex:1;min-width:78px;border-radius:10px;border:1px solid var(--line);' +
+    'background:var(--card);color:var(--text);padding:8px 10px;font-size:14px;font-weight:700;}' +
+    '.bl-loopbar{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}' +
+    '.bl-dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;' +
+    'font-weight:800;background:rgb(var(--paper-rgb) / 18%);color:var(--muted);border:1px solid var(--line-subtle);}' +
+    '.bl-dot.on{background:var(--brand-2);color:#fff;border-color:var(--brand-2);}' +
+    '.bl-read{padding:10px 12px;border-radius:12px;background:var(--bg-subtle);' +
+    'border:1px solid var(--line-subtle);font-size:14px;line-height:1.7;}' +
+    '.bl-read b{color:var(--link);}' +
+    '.choice{border:1.5px solid rgb(var(--brand-rgb) / 32%);background:var(--card);}' +
+    '.choice:hover{background:var(--brand-soft);border-color:rgb(var(--brand-rgb) / 55%);}' +
+    '.choice.selected{border-color:var(--brand);background:rgb(var(--brand-rgb) / 13%);}' +
+    '.kid-note{border-color:rgb(var(--warm-rgb) / 80%);}';
+  document.head.appendChild(st);
+
+  /* ---------- 2. 伪代码执行器工厂 ---------- */
+  function blRunner(cfg) {
+    var codeEl = document.getElementById(cfg.codeId);
+    var outEl = document.getElementById(cfg.outId);
+    if (!codeEl || !outEl) return null;
+    var st = { trace: [], i: -1, timer: null };
+
+    function lines() { return typeof cfg.lines === 'function' ? cfg.lines() : cfg.lines; }
+
+    function paint() {
+      var cur = (st.i >= 0 && st.i < st.trace.length) ? st.trace[st.i] : null;
+      var ls = lines();
+      codeEl.innerHTML = '';
+      ls.forEach(function (txt, k) {
+        var row = document.createElement('div');
+        row.className = 'bl-line' + (cur && cur.line === k + 1 ? ' run' : '') +
+          (cfg.fixedLines && cfg.fixedLines.indexOf(k + 1) >= 0 ? ' fixed' : '');
+        var n = document.createElement('span');
+        n.className = 'bl-n';
+        n.textContent = (k + 1);
+        var c = document.createElement('span');
+        c.className = 'bl-c';
+        c.textContent = txt;
+        row.appendChild(n);
+        row.appendChild(c);
+        codeEl.appendChild(row);
+      });
+      if (cur && cfg.onStep) cfg.onStep(cur, st.i);
+      else if (cfg.onIdle) cfg.onIdle();
+    }
+
+    function rebuild() { st.trace = cfg.build(); st.i = -1; paint(); }
+    function stop() { if (st.timer !== null) { clearInterval(st.timer); st.timer = null; } }
+    function last() { return st.i >= st.trace.length - 1; }
+
+    function advance() {
+      if (last()) return false;
+      st.i++;
+      paint();
+      return !last();
+    }
+
+    function runAll() {
+      stop();
+      rebuild();
+      outEl.className = 'result warn';
+      outEl.textContent = '正在一行一行执行……亮起来的那一行，就是程序正在做的这一步。';
+      st.timer = setInterval(function () {
+        if (!advance()) { stop(); if (cfg.onDone) cfg.onDone(); }
+      }, 640);
+    }
+
+    function stepOnce() {
+      if (st.timer !== null) return;
+      if (st.trace.length === 0) rebuild();
+      if (last()) { if (cfg.onDone) cfg.onDone(); return; }
+      advance();
+      if (last() && cfg.onDone) cfg.onDone();
+    }
+
+    return {
+      reset: function () { stop(); rebuild(); },
+      step: stepOnce,
+      run: runAll,
+      refresh: function () { stop(); rebuild(); },
+      stop: stop
+    };
+  }
+
+  /* ---------- 3. 动手一：分支执行器 ---------- */
+  (function () {
+    var CODE1 = [
+      '输入 分数',
+      '如果 分数 >= 60 则',
+      '    说「及格了，继续加油」',
+      '否则',
+      '    说「还没到 60，再练一练」',
+      '结束'
+    ];
+    var out1 = document.getElementById('bl1-out');
+    if (!out1) return;
+    var elScore = document.getElementById('bl1-score');
+    var elCond = document.getElementById('bl1-cond');
+    var elLines = document.getElementById('bl1-lines');
+    var score1 = 60;
+
+    function trace1() {
+      var s = score1, ok = s >= 60, t = [];
+      t.push({ line: 1, v: { '分数': s }, cond: '—',
+        note: '把选好的数据放进来，起名叫「分数」：分数 = ' + s + '。' });
+      t.push({ line: 2, v: { '分数': s }, cond: ok ? '真' : '假',
+        note: '检查条件：' + s + ' >= 60 吗？——' + (ok ? '成立，走「则」这条路。' : '不成立，走「否则」这条路。') });
+      if (ok) {
+        t.push({ line: 3, v: { '分数': s }, cond: '真', note: '说了「及格了，继续加油」。' });
+      } else {
+        t.push({ line: 5, v: { '分数': s }, cond: '假', note: '说了「还没到 60，再练一练」。' });
+      }
+      t.push({ line: 6, v: { '分数': s }, cond: '—',
+        note: '程序结束。整段只走了' + (ok ? '「则」' : '「否则」') + '这一条路——两条路不会都走。' });
+      return t;
+    }
+
+    var r1 = blRunner({
+      codeId: 'bl1-code', outId: 'bl1-out', lines: CODE1, build: trace1,
+      onStep: function (s, i) {
+        elCond.textContent = s.cond;
+        elLines.textContent = (i + 1) + ' 行';
+      },
+      onIdle: function () { elCond.textContent = '—'; elLines.textContent = '0 行'; },
+      onDone: function () {
+        var ok = score1 >= 60;
+        out1.className = 'result ' + (ok ? '' : 'warn');
+        out1.innerHTML = '<strong>走完了：分数 ' + score1 + '，走了' + (ok ? '「则」' : '「否则」') +
+          '这一条路。</strong>输出是「' + (ok ? '及格了，继续加油' : '还没到 60，再练一练') + '」。<br>' +
+          '<span style="color:var(--muted)">再看一眼条件：' + score1 + ' >= 60 —— ' + (ok ? '成立' : '不成立') +
+          '。条件里的符号决定了走哪条路；' +
+          (score1 === 59 || score1 === 60
+            ? '59 和 60 只差一分，走的路却完全不同——分界线上的数一定要单独试一次。'
+            : '换成 59 分或 60 分再走一遍，看看差别在哪里。') + '</span>';
+      }
+    });
+    if (!r1) return;
+
+    document.querySelectorAll('[data-bl1-score]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        document.querySelectorAll('[data-bl1-score]').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        score1 = parseInt(b.dataset.bl1Score, 10);
+        elScore.textContent = score1 + ' 分';
+        r1.refresh();
+        out1.className = 'result warn';
+        out1.textContent = '已经换成 ' + score1 + ' 分了。点「单步执行」，一行一行看它走哪条路。';
+      });
+    });
+    document.getElementById('bl1-step').addEventListener('click', function () { r1.step(); });
+    document.getElementById('bl1-run').addEventListener('click', function () { r1.run(); });
+    document.getElementById('bl1-reset').addEventListener('click', function () {
+      r1.reset();
+      out1.className = 'result warn';
+      out1.textContent = '回到开头了。再点「单步执行」走一遍。';
+    });
+
+    elScore.textContent = '60 分';
+    document.querySelector('[data-bl1-score="60"]').classList.add('on');
+    r1.reset();
+  })();
+
+  /* ---------- 4. 动手二：循环执行器（累计循环圈数） ---------- */
+  (function () {
+    var out2 = document.getElementById('bl2-out');
+    if (!out2) return;
+    var selStart = document.getElementById('bl2-start');
+    var selOp = document.getElementById('bl2-op');
+    var selBound = document.getElementById('bl2-bound');
+    var elTotal = document.getElementById('bl2-total');
+    var elK = document.getElementById('bl2-k');
+    var elLoops = document.getElementById('bl2-loops');
+    var elDots = document.getElementById('bl2-dots');
+    var cache2 = null;
+
+    function st2() { return parseInt(selStart.value, 10); }
+    function bd2() { return parseInt(selBound.value, 10); }
+    function sym2() { return selOp.value === 'le' ? '<=' : '<'; }
+    function cmp2(v) { return selOp.value === 'le' ? v <= bd2() : v < bd2(); }
+
+    function lines2() {
+      return [
+        '总数 = 0',
+        '次数 = ' + st2(),
+        '当 次数 ' + sym2() + ' ' + bd2() + ' 时',
+        '    总数 = 总数 + 2',
+        '    次数 = 次数 + 1',
+        '结束（回到第 3 行）',
+        '输出 总数'
+      ];
+    }
+
+    function build2() {
+      var total = 0, k = st2(), loops = 0, guard = 0, t = [];
+      function V() { return { '总数': total, '次数': k, '圈数': loops }; }
+      t.push({ line: 1, v: V(), note: '先把总数设成 0，准备开始累加。' });
+      t.push({ line: 2, v: V(), note: '次数从 ' + st2() + ' 开始数。' });
+      while (cmp2(k) && guard++ < 20) {
+        loops++;
+        t.push({ line: 3, v: V(), cond: '真',
+          note: '检查：次数 ' + k + ' ' + sym2() + ' ' + bd2() + ' 成立 —— 进圈里，这是第 ' + loops + ' 圈。' });
+        total = total + 2;
+        t.push({ line: 4, v: V(), note: '总数加上 2，变成 ' + total + '。' });
+        k = k + 1;
+        t.push({ line: 5, v: V(), note: '次数加 1，变成 ' + k + '。' });
+      }
+      t.push({ line: 3, v: V(), cond: '假',
+        note: '检查：次数 ' + k + ' ' + sym2() + ' ' + bd2() + ' 不成立 —— 走出循环，一共转了 ' + loops + ' 圈。' });
+      t.push({ line: 7, v: V(), cond: '—', note: '输出结果：总数 = ' + total + '。' });
+      cache2 = { total: total, loops: loops };
+      return t;
+    }
+
+    function dots(n) {
+      elDots.innerHTML = '';
+      for (var i = 1; i <= Math.max(n, 1); i++) {
+        var d = document.createElement('span');
+        d.className = 'bl-dot' + (i <= n ? ' on' : '');
+        d.textContent = i;
+        elDots.appendChild(d);
+      }
+    }
+
+    var r2 = blRunner({
+      codeId: 'bl2-code', outId: 'bl2-out', lines: lines2, build: build2,
+      onStep: function (s) {
+        elTotal.textContent = s.v['总数'];
+        elK.textContent = s.v['次数'];
+        elLoops.textContent = s.v['圈数'];
+        dots(s.v['圈数']);
+      },
+      onIdle: function () {
+        elTotal.textContent = '0';
+        elK.textContent = st2();
+        elLoops.textContent = '0';
+        dots(0);
+      },
+      onDone: function () {
+        var tip = '边界提醒：条件写「<= 上界」时，圈数 = 上界 − 起始值 + 1。' +
+          '把「<=」改成「<」就少一圈；把起始值从 1 改成 0 就多一圈。';
+        if (selOp.value === 'lt') {
+          tip = '你刚把「小于等于」改成了「小于」，所以圈数正好少了一圈——常见错误就是把这两个符号当成一回事。' + tip;
+        } else if (selStart.value === '0') {
+          tip = '你把起始值从 1 改成了 0，所以圈数多了一圈——起始值和上界一起决定了要转几次。' + tip;
+        }
+        out2.className = 'result warn';
+        out2.innerHTML = '<strong>这一遍：条件「次数 ' + sym2() + ' ' + bd2() + '」，起始值 ' + st2() +
+          '，循环一共转了 ' + cache2.loops + ' 圈，最后总数是 ' + cache2.total + '。</strong><br>' +
+          '<span style="color:var(--muted)">' + tip + '</span>';
+      }
+    });
+    if (!r2) return;
+
+    [selStart, selOp, selBound].forEach(function (el) {
+      el.addEventListener('change', function () {
+        r2.refresh();
+        out2.className = 'result warn';
+        out2.textContent = '参数换好了（条件：次数 ' + sym2() + ' ' + bd2() + '，起始值 ' + st2() +
+          '）。点「单步执行」走一遍，看循环圈数怎么变。';
+      });
+    });
+    document.getElementById('bl2-step').addEventListener('click', function () { r2.step(); });
+    document.getElementById('bl2-run').addEventListener('click', function () { r2.run(); });
+    document.getElementById('bl2-reset').addEventListener('click', function () {
+      r2.reset();
+      out2.className = 'result warn';
+      out2.textContent = '回到开头了。再点「单步执行」走一遍。';
+    });
+    r2.reset();
+  })();
+
+  /* ---------- 5. 综合任务：循环里套分支，数出及格人数 ---------- */
+  (function () {
+    var out3 = document.getElementById('bl3-out');
+    if (!out3) return;
+    var SC = [72, 45, 88, 60];
+    var selOp3 = document.getElementById('bl3-op');
+    var elPass = document.getElementById('bl3-pass');
+    var elK3 = document.getElementById('bl3-k');
+    var elLoops3 = document.getElementById('bl3-loops');
+    var elDots3 = document.getElementById('bl3-dots');
+    var elRead = document.getElementById('bl3-read');
+    var cache3 = null;
+
+    function sym3() { return selOp3.value === 'ge' ? '>=' : '>'; }
+    function cmp3(sc) { return selOp3.value === 'ge' ? sc >= 60 : sc > 60; }
+
+    function lines3() {
+      return [
+        '及格人数 = 0',
+        '次数 = 1',
+        '当 次数 <= 4 时',
+        '    如果 成绩[次数] ' + sym3() + ' 60 则',
+        '        及格人数 = 及格人数 + 1',
+        '    否则',
+        '        说「第 次数 个还没到 60」',
+        '    结束（分支）',
+        '    次数 = 次数 + 1',
+        '结束（循环，回到第 3 行）',
+        '输出 及格人数'
+      ];
+    }
+
+    function build3() {
+      var pass = 0, k = 1, loops = 0, t = [];
+      function V(sc) { return { '及格人数': pass, '次数': k, '圈数': loops, '成绩': sc === undefined ? '—' : sc }; }
+      t.push({ line: 1, v: V(), note: '先把及格人数设成 0。' });
+      t.push({ line: 2, v: V(), note: '次数从 1 开始。' });
+      while (k <= 4 && loops < 10) {
+        loops++;
+        var sc = SC[k - 1];
+        t.push({ line: 3, v: V(), cond: '真',
+          note: '第 ' + loops + ' 圈：次数 ' + k + ' <= 4 成立，进圈里。' });
+        var hit = cmp3(sc);
+        t.push({ line: 4, v: V(sc), cond: hit ? '真' : '假',
+          note: '看第 ' + k + ' 个成绩：' + sc + ' ' + sym3() + ' 60 吗？——' + (hit ? '成立。' : '不成立。') });
+        if (hit) {
+          pass = pass + 1;
+          t.push({ line: 5, v: V(sc), note: '及格人数加 1，变成 ' + pass + '。' });
+        } else {
+          t.push({ line: 7, v: V(sc), note: '说一句「第 ' + k + ' 个还没到 60」，这一圈不加。' });
+        }
+        t.push({ line: 8, v: V(sc), note: '分支结束——两条路只走了一条。' });
+        k = k + 1;
+        t.push({ line: 9, v: V(), note: '次数加 1，变成 ' + k + '，准备下一圈。' });
+      }
+      t.push({ line: 3, v: V(), cond: '假',
+        note: '次数 ' + k + ' <= 4 不成立 —— 走出循环，一共转了 ' + loops + ' 圈。' });
+      t.push({ line: 11, v: V(), cond: '—', note: '输出结果：及格人数 = ' + pass + '。' });
+      cache3 = { pass: pass, loops: loops };
+      return t;
+    }
+
+    function dots3(n) {
+      elDots3.innerHTML = '';
+      for (var i = 1; i <= Math.max(n, 1); i++) {
+        var d = document.createElement('span');
+        d.className = 'bl-dot' + (i <= n ? ' on' : '');
+        d.textContent = i;
+        elDots3.appendChild(d);
+      }
+    }
+
+    var r3 = blRunner({
+      codeId: 'bl3-code', outId: 'bl3-out', lines: lines3, build: build3,
+      onStep: function (s, i) {
+        elPass.textContent = s.v['及格人数'];
+        elK3.textContent = s.v['次数'];
+        elLoops3.textContent = s.v['圈数'];
+        dots3(s.v['圈数']);
+        var extra = (s.v['成绩'] === '—') ? '' : '　（正在看第 ' + s.v['次数'] + ' 个成绩：' + s.v['成绩'] + '）';
+        elRead.textContent = '第 ' + (i + 1) + ' 步：' + s.note + extra;
+      },
+      onIdle: function () {
+        elPass.textContent = '0';
+        elK3.textContent = '1';
+        elLoops3.textContent = '0';
+        dots3(0);
+        elRead.textContent = '每走完一圈，这里会告诉你圈里判断的结果。';
+      },
+      onDone: function () {
+        var ge = selOp3.value === 'ge';
+        out3.className = ge ? 'result' : 'result warn';
+        out3.innerHTML = '<strong>走完了：一共转了 ' + cache3.loops + ' 圈，及格人数是 ' +
+          cache3.pass + ' 人。</strong><br>' +
+          '<span style="color:var(--muted)">' + (ge
+            ? '注意最后那个 60 分：条件是 >= 60，正好等于也算及格，所以它被数进去了。把上面的比较符改成「大于 >」，再走一遍看看。'
+            : '你把 >= 改成了 >，60 分那位同学就不算及格了，所以正好少一个人。分界线上的数就是这样：一个符号，差一个人。')
+          + '</span>';
+      }
+    });
+    if (!r3) return;
+
+    selOp3.addEventListener('change', function () {
+      r3.refresh();
+      out3.className = 'result warn';
+      out3.textContent = '比较符换成「' + sym3() + ' 60」了。点「单步执行」重走一遍，看及格人数变成几。';
+    });
+    document.getElementById('bl3-step').addEventListener('click', function () { r3.step(); });
+    document.getElementById('bl3-run').addEventListener('click', function () { r3.run(); });
+    document.getElementById('bl3-reset').addEventListener('click', function () {
+      r3.reset();
+      out3.className = 'result warn';
+      out3.textContent = '回到开头了。再点「单步执行」走一遍。';
+    });
+    r3.reset();
+  })();
+})();
+
+</script>
+
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+</body>
+</html>
