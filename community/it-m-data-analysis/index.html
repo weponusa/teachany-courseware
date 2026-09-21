@@ -1,0 +1,1988 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《数据分析与可视化》 · 初中信息科技 九年级 · TeachAny</title>
+<meta name="description" content="从一份结论被两句话推翻的统计报告出发，走完数据采集、清洗、统计、可视化的完整链路：用数据清洗工作台亲手处理缺失值、重复值与异常值，并亲眼看到均值被极端值拽走而中位数几乎不动；通过图表选型台理解「先想清楚比什么再选图」，并认识纵轴截断带来的视觉误导；最后在结论口径审核台看到同一份数据因口径不同而得出相反结论，学会把口径写进报告。">
+
+<meta name="course-id" content="it-m-data-analysis">
+<meta name="course-title" content="数据分析与可视化">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="初中九年级">
+<meta name="course-prereqs" content="it-m-data-structures-basic">
+<meta name="course-next" content="it-m-ai-modeling">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.22.0">
+<meta name="teachany-node" content="it-m-data-analysis">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="9">
+<meta name="teachany-stage" content="middle">
+<meta name="teachany-domain" content="data-algorithms">
+<meta name="teachany-prerequisites" content="数据结构基础（列表/字典）">
+<meta name="teachany-lesson-type" content="concept-practice">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style>
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+</style>
+</head>
+<body class="teachany-middle">
+
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
+    <img src="https://www.teachany.cn/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.22.0</span></span>
+  </div>
+</div>
+
+<div class="slide-container" id="slide-container">
+
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero"
+           data-tts-script="先看一件真事。有个小组负责统计全校的课间运动打卡情况，表格拿回来，他们直接把「完成率」一列求了个平均值，写成报告交上去。老师看了一眼问了两句话：那条最大值是一千两百多的记录，你确认过吗？你说的完成率，是按人次算的还是按月份算的？两个问题问下来，报告里的结论全变了。这节课我们就走一遍完整的数据分析链：先把脏数据洗干净，再选合适的统计指标，然后挑一张能把结论说清楚的图，最后学会在报告里写明口径。"
+           data-tsh="开场 - 用一个真实问题建立学习动机" data-bloom-level="remember" data-scaffold="full">
+    <div class="slide-inner">
+      <p class="level-badge">初中九年级 · 数据与算法</p>
+      <h1>数据分析与可视化</h1>
+      <p class="subtitle">一份统计报告，被两句话问下来结论全变了——问题出在哪一步？</p>
+      <figure class="ta-standard-figure" style="margin-top:24px">
+        <img src="./assets/it-m-data-analysis-hero.webp" alt="数据分析与可视化知识结构图：数据清洗、统计指标、图表与决策三栏">
+        <figcaption>清洗走在统计前面 · 指标要选稳健的 · 选图看要比什么 · 结论必须带口径</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide-page" id="problem-anchor" data-page-type="interactive" data-page-index="1"
+           data-tts="problem-anchor" data-tts-alias="anchor"
+           data-tts-script="开始之前，先挑一个你最想弄明白的问题。是想知道一条明显录错的记录能把结论带偏多远，还是想知道均值和什么时候会骗人，又或者你想弄明白同一份数据为什么能得出两个相反的结论。选好以后，就带着这个问题往下看。"
+           data-tsh="问题锚点 - 先确定今天最想弄明白的问题">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">问题锚点</span>
+          <h2>今天最想弄明白哪一件事？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你真正好奇的问题，后面的实验都会围着它转。</p>
+        <div class="grid">
+          <button class="choice" data-anchor-choice="一条录错的记录能把结论带偏多远"><strong>一条录错的记录，能把结论带偏多远？</strong><br><span style="color:var(--muted);font-size:14px">均值会被拽走，中位数不怕</span></button>
+          <button class="choice" data-anchor-choice="空缺的格子删掉还是填上"><strong>空缺的格子，删掉还是填上？</strong><br><span style="color:var(--muted);font-size:14px">两种做法都要付出代价</span></button>
+          <button class="choice" data-anchor-choice="同一份数据为什么能得出两个相反结论"><strong>同一份数据，为什么能得出两个相反结论？</strong><br><span style="color:var(--muted);font-size:14px">口径不同，权重就不同</span></button>
+          <button class="choice" data-anchor-choice="图看起来差不多为什么说它在说谎"><strong>图看起来差不多，为什么说它在说谎？</strong><br><span style="color:var(--muted);font-size:14px">纵轴截断会夸大差距</span></button>
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己最想知道的问题
+          <input id="learner-question-input" placeholder="把你好奇的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives"
+           data-tts-script="这节课有四个目标。第一，能说出数据分析的完整链路：采集、清洗、统计、可视化，最后支撑决策。第二，能识别缺失值、重复值、异常值和单位不一致这四类脏数据，并说出清洗方式各自的代价。第三，能用均值和平均数的差别解释稳健性：为什么异常值会把均值拉偏，却几乎不影响中位数。第四，能根据「要比什么」选择图表类型，并说明纵轴截断为什么会夸大差异、统计口径为什么必须写进结论。"
+           data-tsh="学习目标 - 明确这节课结束时能做到什么" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">学习目标</span>
+          <h2>这节课结束时，你应该能做到</h2>
+        </div>
+        <ul class="objectives">
+          <li>能说出数据分析的完整链路：采集、清洗、统计、可视化，并说明为什么清洗必须走在统计前面</li>
+          <li>能识别缺失值、重复值、异常值和单位不一致四类脏数据，并说出每种清洗方式的代价</li>
+          <li>能用均值与中位数的差别解释稳健性，并说明标准差在描述数据波动时的作用</li>
+          <li>能根据「要比什么」选择图表类型，并说出纵轴截断与统计口径对结论的影响</li>
+        </ul>
+        <div class="kid-note" style="margin-top:16px">
+          <span class="emoji">🎯</span>
+          <div><strong>课标依据：</strong>《义务教育信息科技课程标准（2022年版2025年修订）》初中「数据与算法」——对数据进行清洗、统计与可视化，支撑决策。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="3" data-tts="pretest"
+           data-tts-script="先做三道小题，凭现在的想法选就行，选错了也没关系，正好能看出哪里需要重点听。选完会立刻出现解释。"
+           data-tsh="先测一测：一条录错的记录，能把结论带偏多远？ - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">前测</span>
+          <h2>先测一测：一条录错的记录，能把结论带偏多远？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="pre-1">
+          <p><strong>1. 拿到一份原始数据表，正确的处理顺序是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-1" data-correct="1">先清洗，再统计，然后可视化，最后用来支撑决策</button>
+            <button class="choice" data-q="pre-1" data-correct="0">先画图看个大概，再决定要不要清洗</button>
+            <button class="choice" data-q="pre-1" data-correct="0">直接统计出结果，清洗留到写报告前再说</button>
+          </div>
+          <p class="result warn" data-explain="pre-1" style="display:none;margin-top:10px">清洗必须走在统计前面，否则后面算出的每个数都不可信。<strong>错因提醒：</strong>常见错误是误认为「先画图更快」——用脏数据画的图会先给一个错误的印象，后面很难改回来。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-2">
+          <p><strong>2. 一批成绩里有一条明显录错的异常大的数。下面哪个描述是对的？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-2" data-correct="1">均值会被它明显拉高，中位数几乎不受影响</button>
+            <button class="choice" data-q="pre-2" data-correct="0">均值和中位数都会被同样程度地拉高</button>
+            <button class="choice" data-q="pre-2" data-correct="0">均值和中位数都不会受影响</button>
+          </div>
+          <p class="result warn" data-explain="pre-2" style="display:none;margin-top:10px">均值对每个数平等对待，极端值会把它带偏；中位数只看排序后的中间位置。<strong>错因提醒：</strong>许多同学误认为「两个指标差不多」——数据一旦不对称，它们的差别会非常大。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-3">
+          <p><strong>3. 要展示「一周七天借阅量的变化」，最合适的图是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-3" data-correct="1">折线图，走向和拐点一眼能看出来</button>
+            <button class="choice" data-q="pre-3" data-correct="0">饼图，把每天的量画成扇区</button>
+            <button class="choice" data-q="pre-3" data-correct="0">散点图，把七天画成七个点</button>
+          </div>
+          <p class="result warn" data-explain="pre-3" style="display:none;margin-top:10px">看随时间的变化趋势用折线图；饼图看的是构成，散点图看的是两个量的关系。<strong>错因提醒：</strong>容易搞混的是把「能画出来」当成「画对了」——任何数据都能硬塞进任何一种图，但说不出结论就是在误导。</p>
+        </div>
+        <p id="pre-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="module-1"
+           data-tts-script="先看整条链路。数据分析不是一上手就画图，它有固定的四步：采集，把原始记录收上来；清洗，把不能直接用的记录处理掉；统计，算出能说明问题的指标；可视化，把它画成一张能看懂的图，最后支撑决策。清洗这一步最容易被跳过，但四类脏数据必须处理：一是缺失值，某些格子是空的；二是重复值，同一条记录出现两次；三是异常值，数值明显不符合常识，多半是录入错误；四是单位不一致，有的写秒有的写分。统计这一步的关键是选对指标：均值把每个数都平等对待，所以一个极端值就能把它拽走；中位数只看排序后中间的那个位置，对极端值几乎不敏感，这种性质叫稳健；标准差则告诉你数据散得有多开。"
+           data-tsh="数据分析是一条链，清洗必须走在统计前面" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念一</span>
+          <h2>数据分析是一条链，清洗必须走在统计前面</h2>
+        </div>
+
+        <div class="inner-card">
+          <p><strong>为什么要学这一课？</strong>你已经会用列表和字典把数据存起来，也知道程序能替人算数。但「会算」不等于「算对」——<strong>所以</strong>我们要走一遍完整链路：采集、清洗、统计、可视化，每一步都知道自己在做什么。</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>采集：</strong>把原始记录收上来，同时记清楚每一列的含义和单位。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>清洗：</strong>把不能直接用的记录处理掉。这一步最容易被跳过，也最容易埋下大错。</div></div>
+          <div class="step"><span class="n green">3</span><div><strong>统计：</strong>算出能说明问题的指标。选指标就是选「用哪个数说话」。</div></div>
+          <div class="step"><span class="n">4</span><div><strong>可视化：</strong>画成一张能看懂的图，最后支撑决策。</div></div>
+        </div>
+        <p style="font-size:17px;margin:12px 0">清洗要处理的四类脏数据：<strong>缺失值</strong>（格子是空的）、<strong>重复值</strong>（同一条记录出现两次）、<strong>异常值</strong>（数值不符合常识，多半是录入错误）、<strong>单位不一致</strong>（有的写秒有的写分）。</p>
+        <div class="ta-code" style="margin:14px 0">第一步 统一口径与单位：每一列是什么、单位是什么
+第二步 去重：完全相同的记录只保留一条
+第三步 处理异常值：判断它在现实中「有可能吗」，再决定剔除还是保留
+第四步 处理缺失值：删除该行，或用中位数填充，每种做法都有代价
+第五步 统计：均值、中位数、标准差一起看
+第六步 写报告：数据和口径一起写</div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-data-analysis-fig1.webp" alt="数据分析四步链路图：采集、清洗、统计、可视化，以及四类常见脏数据">
+          <figcaption>四步链路：采集 → 清洗 → 统计 → 可视化；清洗不做好，后面每一步都建在沙子上</figcaption>
+        </figure>
+        <div class="kid-note"><span class="emoji">🧮</span><div><strong>记忆锚点：</strong>把均值想成「全班一起凑份子」——谁出得多谁就影响大，一个极端值就能改写结果。把中位数想成「站队排中间的那位」——旁边站进来一个特别高的人，中间那位还是原来那个人。这种「不怕极端值」的性质就叫<strong>稳健</strong>。</div></div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>看见它</strong>：同一批数据，只报一个均值往往是不够的。均值、中位数、标准差三个数一起报，读者才能判断这批数据到底长什么样。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>拆开它</strong>：清洗的每一个决定都是一次取舍：删掉会损失样本，填充会造出假数据。取舍的依据不是「哪个方便」，而是「缺失和异常是不是随机的」。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：先统一口径再比较，这个习惯不只用在数据里。两支队伍比成绩，也得先确认是不是同一套计分标准。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="lab-1"
+           data-tts-script="现在你来亲手洗一遍数据。屏幕上是一份一分钟跳绳成绩表，里面混着一条空记录、一条完全重复的记录，还有一条明显录错了的记录。你要依次选定缺失值怎么处理、重复记录怎么处理、异常值怎么处理，每改一次，右边的样本数、均值、中位数和标准差都会重新算一遍。请特别盯住两个数：均值和中位数。把异常值留下，你会看到均值一下子被拽到两百多，而中位数几乎不动。"
+           data-tsh="数据清洗工作台：改动一行，统计量就变一次" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">动手实验室</span>
+          <h2>数据清洗工作台：改动一行，统计量就变一次</h2>
+        </div>
+
+        
+<style>
+.ta-code { margin: 12px 0; padding: 14px 16px; border-radius: 12px; background: var(--bg-subtle);
+  border: 1px solid var(--line-subtle); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13.5px; line-height: 1.85; white-space: pre; overflow-x: auto; color: var(--text-secondary); }
+.ta-code b { color: var(--brand); }
+.ta-stage { margin-top: 12px; }
+.ta-meter { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.ta-meter .lbl { flex: 0 0 108px; font-size: 13px; font-weight: 700; }
+.ta-meter .bar { flex: 1; height: 12px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden; }
+.ta-meter .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .35s ease; }
+.ta-meter .val { flex: 0 0 66px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 14px; }
+.ta-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.ta-btns .choice { flex: 1; min-width: 104px; text-align: center; padding: 12px 14px; }
+.ta-sub { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .4px; margin: 0 0 6px; }
+.ta-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.ta-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+.ta-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+.ta-table th, .ta-table td { border-bottom: 1px solid var(--line-subtle); padding: 7px 8px; text-align: left; }
+.ta-table th { color: var(--muted); font-weight: 700; font-size: 13px; }
+.ta-table td.dirty { color: var(--warn-deep); font-weight: 700; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">依次选定去重、异常值、缺失值的处理方式，每改一次，统计量都会用真实数据重新算一遍。请盯住均值和中位数的差距。</p>
+        <div class="lab-panel">
+          <div class="ta-stage" id="da1-stage">
+            <p class="ta-sub">重复记录</p>
+            <div class="ta-btns">
+              <button class="choice selected" data-da1="dup:drop">去重（只留一条）</button>
+              <button class="choice" data-da1="dup:keep">保留（算两次）</button>
+            </div>
+            <p class="ta-sub" style="margin-top:12px">异常值（一条 999 次的记录）</p>
+            <div class="ta-btns">
+              <button class="choice selected" data-da1="out:drop">判为录入错误，剔除</button>
+              <button class="choice" data-da1="out:keep">保留，照常统计</button>
+            </div>
+            <p class="ta-sub" style="margin-top:12px">缺失值</p>
+            <div class="ta-btns">
+              <button class="choice selected" data-da1="miss:drop">删除该行</button>
+              <button class="choice" data-da1="miss:med">用中位数填充</button>
+              <button class="choice" data-da1="miss:mean">用均值填充</button>
+            </div>
+          </div>
+          <table class="ta-table" id="da1-table"></table>
+          <div class="lab-readout">
+            <div class="readout-cell"><span class="k">有效样本</span><span class="v" id="da1-n">—</span></div>
+            <div class="readout-cell"><span class="k">均值</span><span class="v green" id="da1-mean">—</span></div>
+            <div class="readout-cell"><span class="k">中位数</span><span class="v" id="da1-med">—</span></div>
+            <div class="readout-cell"><span class="k">标准差</span><span class="v" id="da1-sd">—</span></div>
+            <div class="readout-cell"><span class="k">最大值</span><span class="v" id="da1-max">—</span></div>
+          </div>
+          <div class="ta-meter"><span class="lbl">均值</span><span class="bar"><span class="fill" id="da1-fill-mean"></span></span><span class="val" id="da1-mean-val">—</span></div>
+          <div class="ta-meter"><span class="lbl">中位数</span><span class="bar"><span class="fill" id="da1-fill-med"></span></span><span class="val" id="da1-med-val">—</span></div>
+          <p style="color:var(--muted);font-size:13px;margin:10px 0 0">两个读数相差 <strong id="da1-gap">—</strong>（差得越大，说明数据越不对称、越可能藏着异常值）</p>
+          <p class="result" id="da1-out" style="margin-top:12px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🧽</span><div><strong>动手找一找：</strong>先只把异常值切到「保留」，看均值和标准差跳到多大；再切回「剔除」，看中位数动没动。然后试三种缺失值处理，比较标准差的差别——填充会让数据「看起来更整齐」，但那份整齐是造出来的。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="6" data-tts="module-2"
+           data-tts-script="洗好了数据，下一步是画图。这里有一条铁律：先想清楚你要比什么，再选图。要比类别之间的大小，用条形图；要看随时间的变化趋势，用折线图；要看一个整体由哪几块构成，用饼图，但类别不能太多；要看两个量之间有没有关系，用散点图。用错了会出两种问题：一种是说不清结论，比如把无序的类别连成折线，读起来像在讲趋势；另一种更严重，是让图说谎。最常见的做法是把纵轴截断，不从零开始，于是两个只差百分之几的柱子看起来差了好几倍。结论没有变，但看图的人被误导了。"
+           data-tsh="选图看的是「你要比什么」，纵轴必须从零开始" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念二</span>
+          <h2>选图看的是「你要比什么」，纵轴必须从零开始</h2>
+        </div>
+
+        <div class="inner-card">
+          <p><strong>数据洗好了，图怎么选？</strong>不是挑好看的，而是<strong>先想清楚你要比什么</strong>，再挑能表达它的那一种。</p>
+        </div>
+        <div class="grid grid-2">
+          <div class="inner-card">
+            <p><strong>条形图 · 比类别</strong></p>
+            <p style="color:var(--muted)">各类别之间谁高谁低，长短比面积更容易读准。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>折线图 · 看趋势</strong></p>
+            <p style="color:var(--muted)">横轴是有先后顺序的量（时间、序号）时用，走向和拐点最清楚。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>饼图 · 看构成</strong></p>
+            <p style="color:var(--muted)">一个整体分成哪几块。类别一多，小扇区就读不出差别了。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>散点图 · 看关系</strong></p>
+            <p style="color:var(--muted)">两个量的对应关系：一起变大、反向变化，还是看不出关系。</p>
+          </div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-data-analysis-fig2.webp" alt="四种常用图表的选型对照图：条形图比类别、折线图看趋势、饼图看构成、散点图看关系">
+          <figcaption>先想清楚要比什么，再选图：比类别、看趋势、看构成、看关系，各有一张对得上的图</figcaption>
+        </figure>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">第一个常见错误是<strong>把无序的类别连成折线</strong>：图书类别之间没有先后，连起来读着像在讲「一路上升」，可这个上升根本不存在。第二个是<strong>纵轴不从零开始</strong>：最高 120、最低 42，真实的差距不到三倍，但如果纵轴从 40 起画，最低的那根就矮得几乎看不见，读起来像差了十倍——数字一个没改，被改的是读者的印象。第三个容易搞混的是<strong>把「图能画出来」当成「图画对了」</strong>：任何一组数据都能硬塞进任何一种图里，但表达不了要说的结论，就已经是在误导。</p>
+        </div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>比较它</strong>：折线图和散点图都有「点」，区别在横轴：折线图的横轴是有序推进的（时间），散点图的横轴是另一个测量值。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：「先想清楚要回答什么问题，再挑工具」这条顺序，在数据分析里成立，在别的任务里同样成立。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="7" data-tts="lab-2"
+           data-tts-script="现在你来亲眼看一遍这件事。屏幕上有三份数据：一周七天的借阅量、四类图书的占比、还有学习时长和成绩的对应关系。你要为每一份数据挑一种图，系统会告诉你这张图能不能把要说的结论说清楚。挑完以后，关掉纵轴从零开始的开关，看同一组数据在视觉上膨胀成什么样——数字一个字都没改。"
+           data-tsh="图表选型台：同一组数据，选错图就会说谎" data-bloom-level="analyze" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">动手实验室</span>
+          <h2>图表选型台：同一组数据，选错图就会说谎</h2>
+        </div>
+
+        
+<style>
+.ta-code { margin: 12px 0; padding: 14px 16px; border-radius: 12px; background: var(--bg-subtle);
+  border: 1px solid var(--line-subtle); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13.5px; line-height: 1.85; white-space: pre; overflow-x: auto; color: var(--text-secondary); }
+.ta-code b { color: var(--brand); }
+.ta-stage { margin-top: 12px; }
+.ta-meter { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.ta-meter .lbl { flex: 0 0 108px; font-size: 13px; font-weight: 700; }
+.ta-meter .bar { flex: 1; height: 12px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden; }
+.ta-meter .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .35s ease; }
+.ta-meter .val { flex: 0 0 66px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 14px; }
+.ta-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.ta-btns .choice { flex: 1; min-width: 104px; text-align: center; padding: 12px 14px; }
+.ta-sub { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .4px; margin: 0 0 6px; }
+.ta-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.ta-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+.ta-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+.ta-table th, .ta-table td { border-bottom: 1px solid var(--line-subtle); padding: 7px 8px; text-align: left; }
+.ta-table th { color: var(--muted); font-weight: 700; font-size: 13px; }
+.ta-table td.dirty { color: var(--warn-deep); font-weight: 700; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">先选一份数据，再挑一种图，看系统判定它能不能把结论说清楚；最后关掉「纵轴从零开始」，看同一组数据在视觉上被放大成什么样。</p>
+        <div class="lab-panel">
+          <div class="ta-stage" id="da2-stage">
+            <p class="ta-sub">第一步：选择数据集</p>
+            <div class="ta-btns">
+              <button class="choice selected" data-da2-ds="week">一周七天的借阅量</button>
+              <button class="choice" data-da2-ds="cat">四类图书的册数占比</button>
+              <button class="choice" data-da2-ds="pair">学习时长与测试得分</button>
+            </div>
+            <p class="ta-sub" style="margin-top:12px">第二步：选择图表</p>
+            <div class="ta-btns">
+              <button class="choice" data-da2-chart="条形图">条形图</button>
+              <button class="choice selected" data-da2-chart="折线图">折线图</button>
+              <button class="choice" data-da2-chart="饼图">饼图</button>
+              <button class="choice" data-da2-chart="散点图">散点图</button>
+            </div>
+            <label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-weight:700;font-size:14px">
+              <input type="checkbox" id="da2-zero" checked style="width:20px;min-height:20px;flex:0 0 20px"> 纵轴从零开始（画总量数据时的规范做法）
+            </label>
+          </div>
+          <canvas id="da2-canvas" width="680" height="300" aria-label="所选集数据与图表类型的绘制结果" style="display:block;width:100%;margin-top:12px;border-radius:12px;background:var(--card);"></canvas>
+          <p class="result" id="da2-out" style="margin-top:12px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">📊</span><div><strong>试出边界：</strong>在「一周借阅量 + 条形图」下关掉纵轴从零，看最低的周三和最高的周六之间的视觉差距被放大成什么样。再切回从零，对比一下——数字完全没变。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="worked-example"
+           data-tts-script="我们完整走一遍一份脏表的处理。第一步，看清数据来源和每一列的含义，确认单位是否统一——这一步不做，后面全白算。第二步，处理重复值：发现一条记录和另一条完全一样，判定为重复录入，去重。第三步，处理异常值：最大值那一栏是一条一千两百多的记录，而全班成绩都在一百到一百八十之间，判定为录入错误，先剔除再决定要不要补录。第四步，处理缺失值并统计：补齐空缺后，同时算出均值、中位数和标准差，而不是只报一个均值。第五步，写报告时必须写明口径：数据和口径一起写，结论才立得住。请注意顺序：清洗一定要在统计之前，否则算出来的每一个数都不可信。"
+           data-tsh="例题示范：一份脏表，怎么走完四步链？" data-bloom-level="evaluate" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">例题示范</span>
+          <h2>例题示范：一份脏表，怎么走完四步链？</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:var(--warm)">
+          <p style="margin:0"><strong>题目：</strong>一份课间运动打卡表被交回来，里面混着一条完全重复的记录、一条数值明显不合理的记录、还有几个空格。请说明你会怎样一步一步处理，最后要报哪几个数。</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>先把口径和单位对齐：</strong>每一列是什么、单位是什么、统计范围是哪几天。这一步不做，后面全白算。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>处理重复值：</strong>两条记录完全一样，判定为重复录入，去重。去重一定要在统计之前做，否则同一条记录投了两票。</div></div>
+          <div class="step"><span class="n green">3</span><div><strong>处理异常值：</strong>先问「它在现实中可能吗」。全班成绩都在 100 到 180 之间，那条 999 次的记录判为录入错误，剔除并回头核对原始表。</div></div>
+          <div class="step"><span class="n">4</span><div><strong>处理缺失值并统计：</strong>空缺处按策略删除或填充，填充值取自清洗后剩下的完整数据。统计时同时算出均值、中位数和标准差，而不是只报一个均值。</div></div>
+          <div class="step"><span class="n">5</span><div><strong>写报告：数据与口径一起写。</strong>「剔除 1 条异常记录后，有效样本 10 条，均值约 147，中位数 148」——这样写，别人才复现得出你的结论。</div></div>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">很多同学误认为<strong>「异常值一律删掉就对了」</strong>。要分清两种情况：如果它是录入错误，剔除是对的；如果它反映的是真实情况——比如确实有一位同学成绩特别高——删掉它就是在掩盖事实，属于选择性处理数据。判断依据是「这个数在现实中有可能吗」，而不是「它看着顺不顺眼」。另一处容易搞混的是<strong>先统计后清洗</strong>：顺序反过来，你会先得到一个看着还行的均值，然后舍不得推翻它，最后把错误一路带到结论里。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="9" data-tts="conceptest-1"
+           data-tts-script="现在用三个容易弄错的说法考考你。请仔细读每一个选项，选出你认为正确的那个，然后看解释。"
+           data-tsh="概念测试：找出藏在说法里的错误 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">概念测试</span>
+          <h2>概念测试：找出藏在说法里的错误</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="ct-1">
+          <p><strong>1. 下面哪句话是正确的？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-1" data-correct="1">中位数对异常值不敏感，因为只看排序后的中间位置</button>
+            <button class="choice" data-q="ct-1" data-correct="0">均值对异常值不敏感，因为它把每个数都算进去了</button>
+            <button class="choice" data-q="ct-1" data-correct="0">标准差越小，说明数据里一定有录错的值</button>
+          </div>
+          <p class="result warn" data-explain="ct-1" style="display:none;margin-top:10px">均值把每个数都算进去，所以极端值会影响它；中位数只看位置，因此稳健。<strong>错因提醒：</strong>常见错误是误认为「取平均最公平」——恰恰因为每个数都被算进去，一个错数才能把它带走。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-2">
+          <p><strong>2. 某个月只有十几人次记录，另一个月有上百人次。要比较两个班的完成率，下面哪种说法最站得住脚？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-2" data-correct="1">两个月的合计和两个月的平均是两种口径，结论可能不一样，报告里应当写明用了哪一种</button>
+            <button class="choice" data-q="ct-2" data-correct="0">合计口径一定最准确，因为它用了全部数据</button>
+            <button class="choice" data-q="ct-2" data-correct="0">各月平均口径一定最准确，因为它对每个月都公平</button>
+          </div>
+          <p class="result warn" data-explain="ct-2" style="display:none;margin-top:10px">两种口径各自合理，差别在于人次权重不同。<strong>错因提醒：</strong>许多同学误认为「统计方法总有唯一正确答案」——口径是人选的，选完必须写出来。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-3">
+          <p><strong>3. 要展示一个班级里四种运动项目的参与人数多少，最合适的图是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-3" data-correct="1">条形图，长短一眼比得出来</button>
+            <button class="choice" data-q="ct-3" data-correct="0">折线图，把四个项目连起来看变化</button>
+            <button class="choice" data-q="ct-3" data-correct="0">散点图，把四项画成四个点</button>
+          </div>
+          <p class="result warn" data-explain="ct-3" style="display:none;margin-top:10px">比类别之间的多少用条形图；项目之间没有先后顺序，连线会读出并不存在的趋势。<strong>错因提醒：</strong>容易搞混的是看到「四个数」就想连成折线——先问横轴有没有顺序。</p>
+        </div>
+        <p id="ct-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="synthesis"
+           data-tts-script="学到这里，请你当一次报告审核员。屏幕上是一份打卡完成率的数据，两个班级各有一个月的记录。你可以切换只看某一个月，也可以在两种统计口径之间切换：一种是把所有月份的人次合在一起算，叫合计口径；另一种是每个月各算一次再取平均，叫各月平均口径。每切一次，屏幕上会自动给出结论句。你会看到一件让人清醒的事：同一份数据，换一个口径，结论就换了一个班。"
+           data-tsh="综合任务：同一份数据，换一个口径结论就翻过来" data-bloom-level="evaluate" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">综合任务</span>
+          <h2>综合任务：同一份数据，换一个口径结论就翻过来</h2>
+        </div>
+
+        
+<style>
+.ta-code { margin: 12px 0; padding: 14px 16px; border-radius: 12px; background: var(--bg-subtle);
+  border: 1px solid var(--line-subtle); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13.5px; line-height: 1.85; white-space: pre; overflow-x: auto; color: var(--text-secondary); }
+.ta-code b { color: var(--brand); }
+.ta-stage { margin-top: 12px; }
+.ta-meter { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.ta-meter .lbl { flex: 0 0 108px; font-size: 13px; font-weight: 700; }
+.ta-meter .bar { flex: 1; height: 12px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden; }
+.ta-meter .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .35s ease; }
+.ta-meter .val { flex: 0 0 66px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 14px; }
+.ta-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.ta-btns .choice { flex: 1; min-width: 104px; text-align: center; padding: 12px 14px; }
+.ta-sub { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .4px; margin: 0 0 6px; }
+.ta-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.ta-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+.ta-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+.ta-table th, .ta-table td { border-bottom: 1px solid var(--line-subtle); padding: 7px 8px; text-align: left; }
+.ta-table th { color: var(--muted); font-weight: 700; font-size: 13px; }
+.ta-table td.dirty { color: var(--warn-deep); font-weight: 700; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">切换月份范围和统计口径，看结论句怎么在两个班之间来回翻。屏幕上的数字全部来自下面这张表，没有任何预设结论。</p>
+        <div class="lab-panel">
+          <div class="ta-stage" id="da3-stage">
+            <p class="ta-sub">统计范围</p>
+            <div class="ta-btns">
+              <button class="choice selected" data-da3="month:all">全部月份</button>
+              <button class="choice" data-da3="month:0">只看 3 月</button>
+              <button class="choice" data-da3="month:1">只看 4 月</button>
+            </div>
+            <p class="ta-sub" style="margin-top:12px">统计口径</p>
+            <div class="ta-btns">
+              <button class="choice selected" data-da3="mode:total">合计口径（全部人次合起来算）</button>
+              <button class="choice" data-da3="mode:monthly">各月平均口径（每月各算一次再取平均）</button>
+            </div>
+          </div>
+          <canvas id="da3-canvas" width="680" height="270" aria-label="两个班级在不同月份与口径下的完成率对比" style="display:block;width:100%;margin-top:12px;border-radius:12px;background:var(--card);"></canvas>
+          <div class="ta-meter"><span class="lbl">甲班完成率</span><span class="bar"><span class="fill" id="da3-fill-a"></span></span><span class="val" id="da3-a">—</span></div>
+          <div class="ta-meter"><span class="lbl">乙班完成率</span><span class="bar"><span class="fill" id="da3-fill-b"></span></span><span class="val" id="da3-b">—</span></div>
+          <div class="lab-readout">
+            <div class="readout-cell"><span class="k">甲班人次</span><span class="v" id="da3-ahit">—</span></div>
+            <div class="readout-cell"><span class="k">乙班人次</span><span class="v green" id="da3-bhit">—</span></div>
+          </div>
+          <p style="color:var(--muted);font-size:13px;margin:8px 0 0">当前口径：<strong id="da3-label">—</strong></p>
+          <p class="result" id="da3-out" style="margin-top:12px"></p>
+        </div>
+        <div class="inner-card">
+          <p><strong>写下来，说给同桌听：</strong>为什么同一份数据能得出两个相反的结论？请用「口径」和「权重」这两个词把你的理由说完整，并写出你会怎样在报告里避免这件事。</p>
+          <textarea id="syn-answer" rows="3" placeholder="因为合计口径按人次加权，人次多的月份影响更大；甲班的人次主要压在完成率低的月份，所以合计时被拉低了。要在报告里……"></textarea>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="posttest"
+           data-tts-script="最后换两个情境检验一下。这次出现了缺失值处理和图表选型的问题，看看你能不能把清洗要先做、均值会被极端值带偏，以及先想清楚要比什么再选图这几条用上去。"
+           data-tsh="后测：换一个情境，看看规律还在不在 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">后测</span>
+          <h2>后测：换一个情境，看看规律还在不在</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="post-1">
+          <p><strong>1. 一批数据里有 8 条空记录、总共 120 条。选择「用均值填充」之后，最需要提醒读者的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-1" data-correct="1">填充造出了不存在的记录，数据的波动被压小了，标准差不能再当作真实离散程度的证据</button>
+            <button class="choice" data-q="post-1" data-correct="0">填充之后样本量变大，所以结论比原来更可靠</button>
+            <button class="choice" data-q="post-1" data-correct="0">填充不会改变任何统计量，可以放心使用</button>
+          </div>
+          <p class="result warn" data-explain="post-1" style="display:none;margin-top:10px">填充会人为造出数据，样本量是变大了，但并没有增加真实信息。<strong>错因提醒：</strong>常见错误是误认为「数据越多越准」——填充出来的那 8 条不带来任何新信息，反而让标准差失真。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-2">
+          <p><strong>2. 一份报告写着「参与率提升了 3 倍」，配图是一张纵轴从 60% 起画的柱状图，实际是 62% 提升到 66%。问题出在：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-2" data-correct="1">纵轴没有从零开始，把 4 个百分点的差距画成了好几倍</button>
+            <button class="choice" data-q="post-2" data-correct="0">柱状图不适合表达参与率，应该换饼图</button>
+            <button class="choice" data-q="post-2" data-correct="0">数据算错了，应该重新统计</button>
+          </div>
+          <p class="result warn" data-explain="post-2" style="display:none;margin-top:10px">总量类数据的纵轴必须从零开始，否则视觉比例会被夸大。<strong>错因提醒：</strong>容易搞混的是把这类问题当成「美工问题」——它改变的是读者得到的结论，属于数据表达的责任问题。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-3">
+          <p><strong>3. 统计一份全员体检数据时，发现一条身高 999 厘米的记录。最恰当的处理是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-3" data-correct="1">先判定为录入错误并核对原始记录，确认后再决定剔除或补录，并在报告里说明处理了几条</button>
+            <button class="choice" data-q="post-3" data-correct="0">直接删掉，不用说明，免得影响结论</button>
+            <button class="choice" data-q="post-3" data-correct="0">保留原值，让数据保持「完整」</button>
+          </div>
+          <p class="result warn" data-explain="post-3" style="display:none;margin-top:10px">处理异常值要留下痕迹：核对来源、说明处理方式和条数，结论才可复现。<strong>错因提醒：</strong>许多同学误认为「悄悄删掉最省事」——不说明的处理等于让读者无法判断结论是否可靠。</p>
+        </div>
+        <p id="post-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="12" data-tts="summary"
+           data-tts-script="这节课我们弄清楚了三件事。第一，数据分析是一条链：采集、清洗、统计、可视化，最后支撑决策，清洗必须走在统计前面，否则算出来的每个数都不可信。第二，指标要选对：均值对极端值敏感，一个录错的数就能把它拽走；中位数只看中间位置，稳健得多；标准差说明数据散得开不开。第三，图表选型看要比什么：比类别用条形图，看趋势用折线图，看构成用饼图，看关系用散点图；纵轴必须从零开始。还有一条最重要的：结论必须连口径一起写，否则换一个口径，结论就会反过来。"
+           data-tsh="小结：三句话，把自己讲明白" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">小结</span>
+          <h2>小结：三句话，把自己讲明白</h2>
+        </div>
+        <div class="grid">
+          <div class="summary-item"><span class="num">1</span><div><strong>四步链路</strong>：采集 → 清洗 → 统计 → 可视化，清洗必须走在统计前面。</div></div>
+          <div class="summary-item"><span class="num">2</span><div><strong>指标要选对</strong>：均值对极端值敏感，中位数稳健，标准差说明数据散得开不开。</div></div>
+          <div class="summary-item"><span class="num">3</span><div><strong>选图看要比什么</strong>：比类别用条形图、看趋势用折线图、看构成用饼图、看关系用散点图，纵轴从零开始。</div></div>
+          <div class="summary-item"><span class="num">4</span><div><strong>结论要带口径</strong>：换一个口径结论可能反过来，报告里必须写清口径与数据来源。</div></div>
+        </div>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:var(--warm)">
+          <p style="margin:0"><strong>回到开头那份报告：</strong>它其实没算错。真正的问题是清洗被跳过了，指标只报了一个，口径也没写。补上这三件事，同一批数据就能支撑一个站得住的结论。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>给别人讲一遍：</strong>请用「清洗、中位数、口径」这三个词，把一份脏数据处理成一份可用报告的过程讲清楚，并说明哪一步最容易出问题。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="13" data-tts="homework"
+           data-tts-script="最后留三项作业，分三个层次。第一层基础巩固，人人要做：写出数据分析的四步链路，并列出三类以上的脏数据及其处理方式。第二层能力应用，动手做：拿一份带缺失和异常值的真实表格，分别算出处理前后的均值与中位数，写出处理方式的取舍理由。第三层迁移挑战，选做：找一份公开发布的统计报告，找出它的统计口径和数据来源，判断如果换一个口径结论会不会变，并写出一段你会怎样补充说明的建议。"
+           data-tsh="作业分层：三层练习，按自己的节奏来" data-bloom-level="create" data-scaffold="none">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">作业分层</span>
+          <h2>作业分层：三层练习，按自己的节奏来</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">三层练习，做完第一、二层就算通关；第三层留给愿意继续探索的同学。</p>
+        <div class="inner-card">
+          <p><strong>⭐ 基础巩固（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>写出数据分析的四步链路，并列出三类以上脏数据及其处理方式。</li>
+            <li>说明均值和中位数在遇到异常值时的差别，并解释「稳健」是什么意思。</li>
+            <li>说出条形图、折线图、饼图、散点图各自适合表达什么。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐ 能力应用（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>拿一份带缺失值和异常值的真实表格，分别算出清洗前后的均值与中位数，写出你选了哪种清洗方式以及理由。</li>
+            <li>为「班级一学期各月借阅量」和「馆藏四类图书的构成」分别选一张图，说明为什么不用另一种。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐⭐ 迁移挑战（选做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>找一份公开发布的统计报告，找出它的统计口径和数据来源，判断换一个口径结论会不会变，写出你会怎样补充说明。</li>
+            <li>自己收集一组数据（例如一周的步数或作业用时），走完四步链写成一份一页的报告，要求结论里必须写明口径。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page kg-page" data-page-type="summary" data-page-index="14" data-tts="knowledge-graph"
+           data-tts-script="这张图展示了这节课在信息科技知识网络里的位置。左边是先要学会的知识，右边是可以接着探索的内容，下面是同一领域的伙伴知识。可以点一点，看看还有哪些值得继续研究的问题。"
+           data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">知识图谱</span>
+          <h2>这节课在知识网络里的位置</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 10px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p class="kg-loading-hint" style="color:var(--muted);font-size:13px;margin:0 0 10px">图谱正在加载：首次进入需下载知识索引（约 1–3 秒），加载完成后本行会自动消失。</p>
+        <div data-teachany-kg="it-m-data-analysis">
+          <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="15" data-tts="ai-tutor"
+           data-tts-script="如果还有没弄明白的地方，把你的问题写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。"
+           data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+</div><!-- .slide-container -->
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-pretest",
+    "section": "pretest",
+    "src": "./tts/s04-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s05-module-1",
+    "section": "module-1",
+    "src": "./tts/s05-module-1.mp3",
+    "label": "概念一 分析链路与数据清洗"
+  },
+  {
+    "id": "s06-lab-1",
+    "section": "lab-1",
+    "src": "./tts/s06-lab-1.mp3",
+    "label": "实验室一 数据清洗工作台"
+  },
+  {
+    "id": "s07-module-2",
+    "section": "module-2",
+    "src": "./tts/s07-module-2.mp3",
+    "label": "概念二 图表选型与诚实表达"
+  },
+  {
+    "id": "s08-lab-2",
+    "section": "lab-2",
+    "src": "./tts/s08-lab-2.mp3",
+    "label": "实验室二 图表选型台"
+  },
+  {
+    "id": "s09-worked-example",
+    "section": "worked-example",
+    "src": "./tts/s09-worked-example.mp3",
+    "label": "例题讲解"
+  },
+  {
+    "id": "s10-conceptest-1",
+    "section": "conceptest-1",
+    "src": "./tts/s10-conceptest-1.mp3",
+    "label": "概念测试"
+  },
+  {
+    "id": "s11-synthesis",
+    "section": "synthesis",
+    "src": "./tts/s11-synthesis.mp3",
+    "label": "综合任务 结论口径审核台"
+  },
+  {
+    "id": "s12-posttest",
+    "section": "posttest",
+    "src": "./tts/s12-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s13-summary",
+    "section": "summary",
+    "src": "./tts/s13-summary.mp3",
+    "label": "课堂小结"
+  },
+  {
+    "id": "s14-homework",
+    "section": "homework",
+    "src": "./tts/s14-homework.mp3",
+    "label": "作业分层"
+  },
+  {
+    "id": "s15-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s15-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s16-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s16-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<script>
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'it-m-data-analysis',
+    courseTitle: '数据分析与可视化',
+    subject: 'info-tech',
+    grade: '9',
+    nodeId: 'it-m-data-analysis',
+    lessonType: 'concept-practice',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+</script>
+
+<script>
+
+/* ============================================================
+   it-m-data-analysis 互动逻辑
+   1) 选择题接线（前测 / 概念测试 / 后测）
+   2) 数据清洗工作台：去重 / 异常值 / 缺失值 三种策略 → 样本数与统计量实时重算
+   3) 图表选型台：数据集 × 图表类型 → 是否能说清结论；纵轴从零开关
+   4) 结论口径审核台：月份筛选 × 统计口径 → 结论句翻转
+   ============================================================ */
+(function () {
+  'use strict';
+
+  function themeColor(name, fb) {
+    try {
+      var v = getComputedStyle(document.body).getPropertyValue(name).trim();
+      return v || fb;
+    } catch (e) { return fb; }
+  }
+  function font(weight, size) {
+    return weight + ' ' + size + 'px -apple-system, "PingFang SC", "Source Han Sans SC", sans-serif';
+  }
+  function num(v, n) {
+    if (!isFinite(v)) return '—';
+    return v.toFixed(n === undefined ? 1 : n);
+  }
+
+  /* ---------- 1. 选择题 ---------- */
+  document.querySelectorAll('[data-quiz-block]').forEach(function (block) {
+    block.querySelectorAll('.choice').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (block.dataset.answered === '1') return;
+        block.dataset.answered = '1';
+        var ok = btn.dataset.correct === '1';
+        btn.classList.add(ok ? 'correct' : 'wrong');
+        block.querySelectorAll('.choice').forEach(function (b) {
+          if (b.dataset.correct === '1') b.classList.add('correct');
+          b.disabled = true;
+        });
+        var ex = block.querySelector('[data-explain]');
+        if (ex) ex.style.display = 'block';
+      });
+    });
+  });
+
+  /* ---------- 2. 数据清洗工作台 ---------- */
+  /* 原始记录：一分钟跳绳成绩。null = 缺失，第 13 条与第 2 条完全重复，999 是明显的录入错误。 */
+  var RAW = [152, 138, null, 165, 147, 130, 158, 141, 999, 149, 136, 155, 138];
+
+  var stageA = document.getElementById('da1-stage');
+  if (stageA) {
+    var eDup = document.getElementById('da1-dup');
+    var eOut = document.getElementById('da1-out');
+    var state = { dup: 'drop', out: 'drop', miss: 'drop' };
+    var btns = document.querySelectorAll('[data-da1]');
+    Array.prototype.forEach.call(btns, function (b) {
+      b.addEventListener('click', function () {
+        var parts = b.getAttribute('data-da1').split(':');
+        state[parts[0]] = parts[1];
+        renderA();
+      });
+    });
+
+    function statsOf(values) {
+      var n = values.length;
+      if (!n) return { n: 0, mean: NaN, med: NaN, sd: NaN, max: NaN };
+      var sum = 0, i;
+      for (i = 0; i < n; i++) sum += values[i];
+      var mean = sum / n;
+      var sorted = values.slice().sort(function (a, b) { return a - b; });
+      var med = n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+      var v = 0;
+      for (i = 0; i < n; i++) v += (values[i] - mean) * (values[i] - mean);
+      return { n: n, mean: mean, med: med, sd: Math.sqrt(v / n), max: sorted[n - 1] };
+    }
+
+    function pipeline() {
+      var rows = RAW.slice();
+      var dupDropped = 0, outDropped = 0, filled = 0;
+
+      /* 第一步：重复值 */
+      if (state.dup === 'drop') {
+        var seen = [];
+        rows = rows.filter(function (v) {
+          if (v === null) return true;
+          if (seen.indexOf(v) >= 0) { dupDropped++; return false; }
+          seen.push(v); return true;
+        });
+      }
+      /* 第二步：异常值 —— 跳绳一分钟超过 400 次不符合常识，判为录入错误 */
+      if (state.out === 'drop') {
+        rows = rows.filter(function (v) {
+          if (v !== null && v > 400) { outDropped++; return false; }
+          return true;
+        });
+      }
+      /* 第三步：缺失值 —— 填充值取自前两步之后剩下的完整数据 */
+      var complete = rows.filter(function (v) { return v !== null; });
+      var base = statsOf(complete);
+      var out = [];
+      rows.forEach(function (v) {
+        if (v === null) {
+          if (state.miss === 'drop') return;
+          if (state.miss === 'mean') { out.push(base.mean); filled++; return; }
+          out.push(base.med); filled++; return;
+        }
+        out.push(v);
+      });
+      return { values: out, complete: complete, base: base, dupDropped: dupDropped, outDropped: outDropped, filled: filled };
+    }
+
+    /* 参照组：按最常见的做法处理（去重 + 剔除异常 + 删除缺失），用作对比的基准 */
+    var REF_VALUES = (function () {
+      var seen = [], out = [];
+      RAW.forEach(function (v) {
+        if (v === null || v > 400) return;
+        if (seen.indexOf(v) >= 0) return;
+        seen.push(v); out.push(v);
+      });
+      return out;
+    })();
+
+    function renderA() {
+      var p = pipeline();
+      var st = statsOf(p.values);
+      var ref = statsOf(REF_VALUES);
+      document.getElementById('da1-n').textContent = String(st.n) + ' 条';
+      document.getElementById('da1-mean').textContent = num(st.mean);
+      document.getElementById('da1-med').textContent = num(st.med);
+      document.getElementById('da1-sd').textContent = num(st.sd);
+      document.getElementById('da1-max').textContent = num(st.max, 0);
+      var gap = Math.abs(st.mean - st.med);
+      document.getElementById('da1-gap').textContent = num(gap);
+      document.getElementById('da1-mean-val').textContent = num(st.mean);
+      document.getElementById('da1-med-val').textContent = num(st.med);
+      document.getElementById('da1-fill-mean').style.width = Math.max(2, Math.min(100, st.mean / 260 * 100)) + '%';
+      document.getElementById('da1-fill-med').style.width = Math.max(2, Math.min(100, st.med / 260 * 100)) + '%';
+
+      Array.prototype.forEach.call(btns, function (b) {
+        var parts = b.getAttribute('data-da1').split(':');
+        b.classList.toggle('selected', state[parts[0]] === parts[1]);
+      });
+
+      /* 表格：标出被判为脏数据的行 */
+      var seen2 = [], html = '<tr><th>序号</th><th>成绩（次/分钟）</th><th>判断</th></tr>';
+      RAW.forEach(function (v, i) {
+        var tag = '正常', cls = '';
+        if (v === null) { tag = state.miss === 'drop' ? '缺失 → 已删除该行' : '缺失 → 已填充'; cls = 'dirty'; }
+        else if (v > 400) { tag = state.out === 'drop' ? '异常值 → 已剔除' : '异常值 → 保留，正在带偏统计量'; cls = 'dirty'; }
+        else if (state.dup === 'drop' && seen2.indexOf(v) >= 0) { tag = '重复记录 → 已去重'; cls = 'dirty'; }
+        if (v !== null) seen2.push(v);
+        html += '<tr><td>' + (i + 1) + '</td><td class="' + cls + '">' + (v === null ? '（空）' : v) + '</td><td class="' + cls + '">' + tag + '</td></tr>';
+      });
+      document.getElementById('da1-table').innerHTML = html;
+
+      var parts = [];
+      parts.push('<strong>当前策略下的统计量：有效样本 ' + st.n + ' 条，均值 ' + num(st.mean) +
+        '，中位数 ' + num(st.med) + '，标准差 ' + num(st.sd) + '，最大值 ' + num(st.max, 0) + '。</strong>');
+      parts.push('均值和中位数相差 ' + num(gap) + '。这两个数本来量的是同一批数据的「中间水平」，' +
+        '差得越大，说明数据越不对称，也就越可能有异常值混在里面。');
+
+      if (state.out === 'keep') {
+        parts.push('<strong>异常值还在表里，后果很清楚：</strong>均值被拽到了 ' + num(st.mean) +
+          '，比中位数 ' + num(st.med) + ' 高出 ' + num(gap) + '；标准差更是涨到 ' + num(st.sd) +
+          '，而把这条记录剔除之后，标准差只有 ' + num(ref.sd) + '（均值也回到 ' + num(ref.mean) + ' 附近）。' +
+          '这就是均值的弱点——它对每一个数都平等对待，一个录错的数就能把它带走。中位数只认排序后的中间位置，几乎不受影响。');
+        eOut.className = 'result error';
+      } else if (gap > 12) {
+        parts.push('<strong>异常值已经剔除，但均值和中位数还差 ' + num(gap) + '：</strong>' +
+          '说明剩下的数据本身也偏斜（有一小批成绩明显偏低的记录），这不是错误，而是真实分布的样子。' +
+          '这种情况下报告里最好两个指标都写。');
+        eOut.className = 'result warn';
+      } else {
+        parts.push('<strong>均值和中位数很接近</strong>，说明这批数据大体对称，用均值概括它是站得住的。');
+        eOut.className = 'result';
+      }
+
+      if (state.miss === 'drop') {
+        parts.push('<strong>缺失值处理方式：删除该行。</strong>好处是剩下的都是真实记录，' +
+          '代价是样本量减少了。要小心一种情况：缺失往往不是随机的，如果空着的那几条恰好来自成绩差的同学，' +
+          '删掉之后整体均值会虚高。');
+      } else {
+        parts.push('<strong>缺失值处理方式：用' + (state.miss === 'mean' ? '均值' : '中位数') + '填充。</strong>' +
+          '好处是不浪费样本，代价是人为造出了不存在的记录。注意标准差：填充后是 ' + num(st.sd) +
+          '，而按最常见做法（去重、剔除异常、删除缺失）算是 ' + num(ref.sd) + '。' +
+          (st.sd < ref.sd
+            ? '在当前这套处理下，填充让标准差变小了——数据看起来更「整齐」，但这份整齐是填充造出来的，不是真的。'
+            : '填充值越偏离中心，标准差被抬得越高。'));
+      }
+
+      if (state.dup === 'drop') {
+        parts.push('<strong>重复记录：已去重 ' + p.dupDropped + ' 条。</strong>' +
+          '去重要在统计之前做。不去重等于让那条记录投两票，会悄悄改变均值。');
+      } else {
+        parts.push('<strong>重复记录：仍保留。</strong>不去重等于让同一条记录被算两次，' +
+          '样本量和均值都会失真，这是最容易漏掉的一种脏数据。');
+      }
+
+      parts.push('<strong>易错点：</strong>常见错误是误认为「数据可以直接拿来算平均值」。' +
+        '清洗必须走在统计前面：顺序反了，后面算出来的每一个数都不可信。' +
+        '另一个容易搞混的是把「删掉异常值」当成唯一的正确做法——' +
+        '异常值是录入错误就该剔除，但如果它反映的是真实情况（比如确实有一位同学成绩特别高），' +
+        '删掉它就是在掩盖事实。判断依据是「这个数在现实中有可能吗」，而不是「它看着顺不顺眼」。');
+      eOut.innerHTML = parts.join('<br>');
+    }
+    renderA();
+  }
+
+  /* ---------- 3. 图表选型台 ---------- */
+  var DS = {
+    week: {
+      name: '一周七天的借阅量',
+      kind: 'series',
+      labels: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      values: [42, 56, 38, 71, 88, 120, 96]
+    },
+    cat: {
+      name: '四类图书的册数占比',
+      kind: 'category',
+      labels: ['文学', '科普', '教辅', '其他'],
+      values: [320, 210, 150, 80]
+    },
+    pair: {
+      name: '学习时长与测试得分',
+      kind: 'relation',
+      pairs: [[1, 52], [2, 58], [2.5, 61], [3, 67], [4, 71], [5, 76], [5.5, 79], [6, 84], [7, 88], [8, 93]]
+    }
+  };
+  var FIT = {
+    series: { 折线图: 'ok', 条形图: 'weak', 饼图: 'bad', 散点图: 'bad' },
+    category: { 条形图: 'ok', 饼图: 'ok', 折线图: 'bad', 散点图: 'bad' },
+    relation: { 散点图: 'ok', 折线图: 'bad', 条形图: 'bad', 饼图: 'bad' }
+  };
+
+  var stageB = document.getElementById('da2-stage');
+  if (stageB) {
+    var cur = { ds: 'week', chart: '折线图', fromZero: true };
+    var eZero = document.getElementById('da2-zero');
+    var eOutB = document.getElementById('da2-out');
+
+    /* 把三份结构不同的数据统一成「标签 + 数值」的序列，供条形/折线/饼图使用 */
+    function seriesOf(d) {
+      if (d.kind === 'relation') {
+        return {
+          labels: d.pairs.map(function (p) { return p[0] + 'h'; }),
+          values: d.pairs.map(function (p) { return p[1]; })
+        };
+      }
+      return { labels: d.labels, values: d.values };
+    }
+
+    function drawChart() {
+      var cv = document.getElementById('da2-canvas');
+      if (!cv || !cv.getContext) return;
+      var ctx = cv.getContext('2d');
+      var W = cv.width, H = cv.height;
+      var L = 56, R = W - 22, T = 26, Bm = H - 40;
+      ctx.clearRect(0, 0, W, H);
+      var d = DS[cur.ds];
+
+      ctx.font = font('600', 11);
+      ctx.fillStyle = themeColor('--muted', '#64748b');
+      ctx.textAlign = 'center';
+      ctx.fillText(d.name, W / 2, 16);
+
+      function axis(min, max, ticks) {
+        ctx.strokeStyle = themeColor('--line', '#e2e8f0');
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(L, T); ctx.lineTo(L, Bm); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(L, Bm); ctx.lineTo(R, Bm); ctx.stroke();
+        ctx.textAlign = 'right';
+        for (var i = 0; i <= ticks; i++) {
+          var v = min + (max - min) * i / ticks;
+          var y = Bm - (Bm - T) * i / ticks;
+          ctx.fillText(String(Math.round(v)), L - 8, y + 4);
+          if (i > 0) { ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(R, y); ctx.stroke(); }
+        }
+      }
+
+      if (cur.chart === '散点图') {
+        axis(0, 100, 5);
+        ctx.fillStyle = themeColor('--brand', '#3b82f6');
+        if (d.kind === 'relation') {
+          d.pairs.forEach(function (p) {
+            var x = L + (p[0] / 8) * (R - L);
+            var y = Bm - (p[1] / 100) * (Bm - T);
+            ctx.beginPath(); ctx.arc(x, y, 5.5, 0, Math.PI * 2); ctx.fill();
+          });
+          ctx.textAlign = 'center';
+          ctx.fillStyle = themeColor('--muted', '#64748b');
+          ctx.fillText('横轴：每天学习时长（小时）', (L + R) / 2, H - 16);
+        } else {
+          var s0 = seriesOf(d);
+          var st0 = (R - L) / s0.values.length;
+          s0.values.forEach(function (v, i) {
+            var x = L + st0 * i + st0 / 2;
+            var y = Bm - (v / 400) * (Bm - T);
+            ctx.beginPath(); ctx.arc(x, y, 5.5, 0, Math.PI * 2); ctx.fill();
+          });
+          ctx.textAlign = 'center';
+          ctx.fillStyle = themeColor('--danger', '#ef4444');
+          ctx.fillText('横轴是类别，不是数值：两点之间的间距没有含义，读不出任何关系', (L + R) / 2, H - 16);
+        }
+        ctx.save(); ctx.translate(14, (T + Bm) / 2); ctx.fillText('数值', 0, 0); ctx.restore();
+        return;
+      }
+
+      var s = seriesOf(d);
+      var vals = s.values, labels = s.labels;
+      var maxV = Math.max.apply(null, vals);
+      var minV = Math.min.apply(null, vals);
+
+      if (cur.chart === '饼图') {
+        var total = 0;
+        vals.forEach(function (v) { total += v; });
+        var cx = (L + R) / 2 - 40, cy = (T + Bm) / 2, rad = Math.min((R - L) / 2 - 44, (Bm - T) / 2);
+        var cols = ['--brand', '--brand-2', '--warm', '--muted'];
+        var ang = -Math.PI / 2;
+        vals.forEach(function (v, i) {
+          var span = v / total * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, rad, ang, ang + span);
+          ctx.closePath();
+          ctx.fillStyle = themeColor(cols[i % 4], '#3b82f6');
+          ctx.globalAlpha = 0.82;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = themeColor('--card', '#fff');
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          var mid = ang + span / 2;
+          ctx.font = font('600', 11);
+          ctx.fillStyle = themeColor('--text-secondary', '#475569');
+          ctx.textAlign = 'center';
+          ctx.fillText(Math.round(v / total * 100) + '%', cx + Math.cos(mid) * rad * 0.66, cy + Math.sin(mid) * rad * 0.66 + 4);
+          ang += span;
+        });
+        ctx.textAlign = 'left';
+        ctx.font = font('600', 12);
+        vals.forEach(function (v, i) {
+          var y = T + 14 + i * 20;
+          ctx.fillStyle = themeColor(cols[i % 4], '#3b82f6');
+          ctx.fillRect(R - 104, y - 9, 11, 11);
+          ctx.fillStyle = themeColor('--muted', '#64748b');
+          ctx.fillText(labels[i] + ' ' + v, R - 88, y + 1);
+        });
+        return;
+      }
+
+      var top = cur.fromZero ? Math.ceil(maxV * 1.15 / 10) * 10 : Math.ceil(maxV * 1.05 / 10) * 10;
+      var bot = 0;
+      if (!cur.fromZero) {
+        bot = Math.floor((minV - (maxV - minV) * 0.35) / 10) * 10;
+        if (bot >= minV) bot = Math.max(0, minV - 10);
+        if (bot < 0) bot = 0;
+      }
+      if (top <= bot) top = bot + 10;
+
+      var step = (R - L) / vals.length;
+      axis(bot, top, 4);
+      if (cur.chart === '条形图') {
+        vals.forEach(function (v, i) {
+          var x = L + step * i + step * 0.2;
+          var w = step * 0.6;
+          var y = Bm - (v - bot) / (top - bot) * (Bm - T);
+          ctx.fillStyle = themeColor('--brand', '#3b82f6');
+          ctx.globalAlpha = 0.88;
+          ctx.fillRect(x, y, w, Bm - y);
+          ctx.globalAlpha = 1;
+          ctx.font = font('600', 11);
+          ctx.fillStyle = themeColor('--text-secondary', '#475569');
+          ctx.textAlign = 'center';
+          ctx.fillText(String(v), x + w / 2, y - 6);
+        });
+      } else {
+        ctx.strokeStyle = themeColor('--brand', '#3b82f6');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        vals.forEach(function (v, i) {
+          var x = L + step * i + step / 2;
+          var y = Bm - (v - bot) / (top - bot) * (Bm - T);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        vals.forEach(function (v, i) {
+          var x = L + step * i + step / 2;
+          var y = Bm - (v - bot) / (top - bot) * (Bm - T);
+          ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+          ctx.fillStyle = themeColor('--brand', '#3b82f6'); ctx.fill();
+        });
+      }
+      ctx.font = font('600', 11);
+      ctx.fillStyle = themeColor('--muted', '#64748b');
+      ctx.textAlign = 'center';
+      labels.forEach(function (lab, i) {
+        ctx.fillText(lab, L + step * i + step / 2, Bm + 17);
+      });
+      ctx.textAlign = 'left';
+      ctx.fillStyle = bot === 0 ? themeColor('--muted', '#64748b') : themeColor('--danger', '#ef4444');
+      ctx.fillText(bot === 0 ? '纵轴从 0 开始' : '注意：纵轴从 ' + bot + ' 开始，没有从 0 开始', L, H - 8);
+    }
+
+    function renderB() {
+      cur.fromZero = eZero.checked;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-da2-ds]'), function (b) {
+        b.classList.toggle('selected', b.getAttribute('data-da2-ds') === cur.ds);
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-da2-chart]'), function (b) {
+        b.classList.toggle('selected', b.getAttribute('data-da2-chart') === cur.chart);
+      });
+      drawChart();
+
+      var d = DS[cur.ds];
+      var verdict = FIT[d.kind][cur.chart];
+      var want = d.kind === 'series' ? '随时间的变化趋势'
+        : (d.kind === 'category' ? '各类别之间的大小与构成' : '两个量之间的关系');
+      var best = d.kind === 'series' ? '折线图' : (d.kind === 'category' ? '条形图' : '散点图');
+      var parts = [];
+
+      if (verdict === 'ok') {
+        parts.push('<strong>这份数据要看的是「' + want + '」，' + cur.chart + '正合适。</strong>' +
+          (d.kind === 'category' && cur.chart === '饼图'
+            ? '这份数据的类别只有四类，每块的占比还能看清，所以饼图也可以用；' +
+              '如果类别超过七八类，小扇区就分不出差别了，那时应该换条形图。'
+            : ''));
+        eOutB.className = 'result';
+      } else if (verdict === 'weak') {
+        parts.push('<strong>' + cur.chart + '能看，但不是最清楚的选择。</strong>' +
+          '条形图能比出各天的高低，但「趋势」这件事要靠读者自己在脑子里连起来。' +
+          '这份数据要看的是' + want + '，换成折线图，走向一眼就能看出来。');
+        eOutB.className = 'result warn';
+      } else {
+        parts.push('<strong>' + cur.chart + '在这份数据上会误导人。</strong>' +
+          (d.kind === 'series' && cur.chart === '饼图'
+            ? '时间是连续推进的，一周七天的和没有「一个整体」的含义，饼图的扇区读不出任何有效信息。'
+            : (d.kind === 'category' && cur.chart === '折线图'
+              ? '图书类别之间没有先后顺序，把它们连成折线，读起来像在讲「从文学到其他一路上升」，可这个上升根本不存在。'
+              : (d.kind === 'relation' && cur.chart === '饼图'
+                ? '学习时长和得分不是「一个整体的几块」，占比在这里没有任何含义。'
+                : '这份数据要看的是' + want + '，' + cur.chart + '表达不了它。这份数据最合适的图是' + best + '。'))));
+        eOutB.className = 'result error';
+      }
+
+      if (!cur.fromZero && cur.chart !== '饼图' && cur.chart !== '散点图') {
+        var s2 = seriesOf(d);
+        var mx = Math.max.apply(null, s2.values), mn = Math.min.apply(null, s2.values);
+        parts.push('<strong>你关掉了「纵轴从零开始」。</strong>最高 ' + mx + '、最低 ' + mn +
+          '，真实的差距是 ' + (mx - mn) + '；但图上最低的那几项被压到几乎看不见，最高的一项几乎顶到顶，' +
+          '读起来像差了十几倍。数字一个都没改，被改的是看图的人得到的印象。' +
+          '这是画图时最容易越过的一条线：<strong>总量数据的纵轴不从零开始会夸大差距</strong>。');
+        parts.push('例外只有一个：如果画的是「变化量」而不是「总量」（比如同比增长的百分比），' +
+          '截断纵轴是可以的——但必须在图上明确标出坐标轴的起点。');
+        eOutB.className = 'result warn';
+      }
+
+      parts.push('<strong>易错点：</strong>常见错误是误认为「挑一张好看的图就行」。' +
+        '选图的依据是你要比什么：比类别用条形图、看趋势用折线图、看构成用饼图、看关系用散点图。' +
+        '另一个容易搞混的是把「图能画出来」当成「图画对了」——' +
+        '任何一组数据都能硬塞进任何一种图里，但表达不了要说的结论，就已经是在误导。');
+      eOutB.innerHTML = parts.join('<br>');
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('[data-da2-ds]'), function (b) {
+      b.addEventListener('click', function () { cur.ds = b.getAttribute('data-da2-ds'); renderB(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-da2-chart]'), function (b) {
+      b.addEventListener('click', function () { cur.chart = b.getAttribute('data-da2-chart'); renderB(); });
+    });
+    eZero.addEventListener('change', renderB);
+    renderB();
+  }
+
+  /* ---------- 4. 结论口径审核台 ---------- */
+  /* 两个班级在 3 月与 4 月的打卡完成情况（人次 / 应打卡人次）。
+     甲班的人次主要压在完成率偏低的 3 月，乙班主要压在完成率偏高的 4 月，
+     于是「合计口径」与「各月平均口径」会给出相反的结论。 */
+  var MONTHS = [
+    { name: '3 月', a: [60, 100], b: [4, 10] },
+    { name: '4 月', a: [10, 10], b: [90, 100] }
+  ];
+
+  var stageC = document.getElementById('da3-stage');
+  if (stageC) {
+    var stateC = { month: 'all', mode: 'total' };
+    var eOutC = document.getElementById('da3-out');
+    var btnsC = document.querySelectorAll('[data-da3]');
+    Array.prototype.forEach.call(btnsC, function (b) {
+      b.addEventListener('click', function () {
+        var parts = b.getAttribute('data-da3').split(':');
+        stateC[parts[0]] = parts[1];
+        renderC();
+      });
+    });
+
+    function renderC() {
+      var rows = stateC.month === 'all' ? MONTHS : MONTHS.filter(function (m, i) {
+        return String(i) === stateC.month;
+      });
+      var aHit = 0, aAll = 0, bHit = 0, bAll = 0;
+      rows.forEach(function (m) { aHit += m.a[0]; aAll += m.a[1]; bHit += m.b[0]; bAll += m.b[1]; });
+      var perMonth = rows.map(function (m) {
+        return { name: m.name, hitA: m.a[0], allA: m.a[1], hitB: m.b[0], allB: m.b[1], a: m.a[0] / m.a[1], b: m.b[0] / m.b[1] };
+      });
+
+      var aVal, bVal, label;
+      if (stateC.mode === 'total') {
+        aVal = aAll ? aHit / aAll : 0;
+        bVal = bAll ? bHit / bAll : 0;
+        label = '合计口径（全部人次合在一起算）';
+      } else {
+        aVal = perMonth.reduce(function (s, m) { return s + m.a; }, 0) / perMonth.length;
+        bVal = perMonth.reduce(function (s, m) { return s + m.b; }, 0) / perMonth.length;
+        label = '各月平均口径（每月各算一次再取平均）';
+      }
+
+      document.getElementById('da3-a').textContent = num(aVal * 100) + ' %';
+      document.getElementById('da3-b').textContent = num(bVal * 100) + ' %';
+      document.getElementById('da3-label').textContent = label;
+      document.getElementById('da3-fill-a').style.width = (aVal * 100) + '%';
+      document.getElementById('da3-fill-b').style.width = (bVal * 100) + '%';
+      document.getElementById('da3-ahit').textContent = aHit + ' / ' + aAll + ' 人次';
+      document.getElementById('da3-bhit').textContent = bHit + ' / ' + bAll + ' 人次';
+
+      /* 分组条形图：逐月 + 当前口径下的合计 */
+      var cv = document.getElementById('da3-canvas');
+      if (cv && cv.getContext) {
+        var ctx = cv.getContext('2d');
+        var W = cv.width, H = cv.height;
+        var L = 52, R = W - 20, T = 24, Bm = H - 44;
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = themeColor('--line', '#e2e8f0');
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(L, T); ctx.lineTo(L, Bm); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(L, Bm); ctx.lineTo(R, Bm); ctx.stroke();
+        ctx.font = font('600', 11);
+        ctx.textAlign = 'right';
+        for (var i = 0; i <= 4; i++) {
+          var y = Bm - (Bm - T) * i / 4;
+          ctx.fillStyle = themeColor('--muted', '#64748b');
+          ctx.fillText((i * 25) + '%', L - 8, y + 4);
+          if (i > 0) { ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(R, y); ctx.stroke(); }
+        }
+        var groups = perMonth.map(function (m) { return { name: m.name, a: m.a, b: m.b }; });
+        if (stateC.month === 'all') groups.push({ name: '合计（合计口径）', a: MONTHS.reduce(function (s, m) { return s + m.a[0]; }, 0) / MONTHS.reduce(function (s, m) { return s + m.a[1]; }, 0), b: MONTHS.reduce(function (s, m) { return s + m.b[0]; }, 0) / MONTHS.reduce(function (s, m) { return s + m.b[1]; }, 0) });
+        var gw = (R - L) / groups.length;
+        groups.forEach(function (g, gi) {
+          [['a', '--brand'], ['b', '--brand-2']].forEach(function (pair, k) {
+            var v = g[pair[0]];
+            var bw = gw * 0.3;
+            var x = L + gw * gi + gw * 0.12 + k * (gw * 0.34);
+            var y = Bm - v * (Bm - T);
+            ctx.fillStyle = themeColor(pair[1], '#3b82f6');
+            ctx.globalAlpha = 0.88;
+            ctx.fillRect(x, y, bw, Bm - y);
+            ctx.globalAlpha = 1;
+            ctx.font = font('700', 11);
+            ctx.fillStyle = themeColor('--text-secondary', '#475569');
+            ctx.textAlign = 'center';
+            ctx.fillText(Math.round(v * 100) + '%', x + bw / 2, y - 5);
+          });
+          ctx.font = font('600', 11);
+          ctx.fillStyle = themeColor('--muted', '#64748b');
+          ctx.textAlign = 'center';
+          ctx.fillText(g.name, L + gw * gi + gw / 2, Bm + 18);
+        });
+        ctx.textAlign = 'left';
+        ctx.font = font('600', 11);
+        ctx.fillStyle = themeColor('--brand', '#3b82f6');
+        ctx.fillRect(L, H - 12, 10, 10);
+        ctx.fillStyle = themeColor('--muted', '#64748b');
+        ctx.fillText('甲班', L + 15, H - 3);
+        ctx.fillStyle = themeColor('--brand-2', '#06b6d4');
+        ctx.fillRect(L + 62, H - 12, 10, 10);
+        ctx.fillStyle = themeColor('--muted', '#64748b');
+        ctx.fillText('乙班', L + 77, H - 3);
+      }
+
+      Array.prototype.forEach.call(btnsC, function (b) {
+        var parts = b.getAttribute('data-da3').split(':');
+        b.classList.toggle('selected', stateC[parts[0]] === parts[1]);
+      });
+
+      var winner = aVal > bVal ? '甲班' : (bVal > aVal ? '乙班' : '两个班一样');
+      var singleMonthWin = perMonth.map(function (m) {
+        return m.name + (m.a > m.b ? '甲班更高' : (m.b > m.a ? '乙班更高' : '两班持平'));
+      });
+
+      var parts = [];
+      parts.push('<strong>当前口径：' + label + (stateC.month === 'all' ? '，范围：全部月份' : '，范围：只看 ' + rows[0].name) +
+        '。甲班 ' + num(aVal * 100) + '%，乙班 ' + num(bVal * 100) + '%，结论是' + winner + '更高。</strong>');
+      perMonth.forEach(function (m) {
+        parts.push(m.name + '：甲班 ' + m.hitA + ' / ' + m.allA + ' 人次 = ' + num(m.a * 100) +
+          '%，乙班 ' + m.hitB + ' / ' + m.allB + ' 人次 = ' + num(m.b * 100) + '%。');
+      });
+
+      if (stateC.month === 'all' && stateC.mode === 'total') {
+        parts.push('<strong>注意这个反差：</strong>甲班在每一个单月都比乙班高（' +
+          singleMonthWin.join('、') + '），可把两个月的全部人次合起来算，结论却变成了' + winner + '更高。' +
+          '原因不在数字，在权重：甲班的应打卡人次主要压在完成率偏低的 3 月，乙班主要压在完成率偏高的 4 月。' +
+          '合计口径把「人多」的那个月算得更重，于是把单月的比较结果盖住了。');
+        eOutC.className = 'result error';
+      } else if (stateC.mode === 'monthly') {
+        parts.push('<strong>各月平均口径把每个月的权重拉平了</strong>，于是不再受「哪个月人多」的影响，' +
+          '结论是' + winner + '更高。可它也有代价：如果某个班在某个月只有十来人次，' +
+          '这个月的小样本会和另一个班上百人次的大样本被平等对待，结论同样不稳。');
+        eOutC.className = 'result warn';
+      } else {
+        parts.push('<strong>只看一个月份，样本量小得多，' + rows[0].name + '的结论只代表这个月。</strong>' +
+          '把它当成全学期的结论，是很常见的过度概括。');
+        eOutC.className = 'result warn';
+      }
+
+      parts.push('<strong>正确的做法不是挑一个好看的口径，而是把口径写进结论。</strong>' +
+        '比如写成「按全部人次合计，乙班较高；但两个单月甲班都较高，差异来自人次权重」。' +
+        '读报告的人看到这句，才不会因为换一个口径就被推翻。');
+      parts.push('<strong>易错点：</strong>常见错误是误认为「统计是中立的，数字不会骗人」。' +
+        '数字本身不骗人，但口径是人为选的；不写口径的结论，等于把选择权藏了起来。' +
+        '另一个容易搞混的是把「合计」当成「整体水平」的自然代表——' +
+        '当各组人次差别很大时，合计会被人次最多的那一组主导。');
+      eOutC.innerHTML = parts.join('<br>');
+    }
+    renderC();
+  }
+})();
+
+</script>
+
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+</body>
+</html>

@@ -1,0 +1,1814 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《开源硬件与模块化设计》 · 初中信息科技 八年级 · TeachAny</title>
+<meta name="description" content="从一台「零件都买对了却跑不起来」的装置出发，学会用供电、逻辑电平、通信方式三条接口约定把系统拆成可独立替换的模块，按模块数量估算总电流并判断余量，识别电平不匹配的危害，最后用分段验证的顺序定位并排除故障。">
+
+<meta name="course-id" content="it-m-open-hardware">
+<meta name="course-title" content="开源硬件与模块化设计">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="初中八年级">
+<meta name="course-prereqs" content="it-m-iot-concept">
+<meta name="course-next" content="it-m-ai-applications">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.22.0">
+<meta name="teachany-node" content="it-m-open-hardware">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="8">
+<meta name="teachany-stage" content="middle">
+<meta name="teachany-domain" content="iot-modules">
+<meta name="teachany-prerequisites" content="物联网概念与架构">
+<meta name="teachany-lesson-type" content="project-design">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style>
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+</style>
+</head>
+<body class="teachany-middle">
+
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
+    <img src="https://www.teachany.cn/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.22.0</span></span>
+  </div>
+</div>
+
+<div class="slide-container" id="slide-container">
+
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero"
+           data-tts-script="先看一台做不成的装置。有人想给教室做一套自动补光装置，灯珠、传感器、主控板都买齐了，接上线以后灯却一会儿亮一会儿灭，换掉一个模块也没用。问题往往不在某个零件上，而在这套东西是怎么被拆成模块、又怎么被接起来的。这节课我们做两件事：把系统拆成能独立替换的模块，再用分段验证的办法把它一步一步调通。"
+           data-tsh="开场 - 用一个真实问题建立学习动机" data-bloom-level="remember" data-scaffold="full">
+    <div class="slide-inner">
+      <p class="level-badge">初中八年级 · 物联网与模块</p>
+      <h1>开源硬件与模块化设计</h1>
+      <p class="subtitle">从一堆都买对了的零件，到一台能稳定跑起来的装置，中间缺的是哪一步？</p>
+      <figure class="ta-standard-figure" style="margin-top:24px">
+        <img src="./assets/it-m-open-hardware-hero.webp" alt="开源硬件与模块化设计知识结构图：模块与接口约定、电平与电流预算、分段验证与排障三栏">
+        <figcaption>模块要有边界 · 接口要有约定 · 电流要留余量 · 调试要分段</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide-page" id="problem-anchor" data-page-type="interactive" data-page-index="1"
+           data-tts="problem-anchor" data-tts-alias="anchor"
+           data-tts-script="开始之前，先挑一个你最想弄明白的问题。是想知道模块之间到底靠什么约定才能互相配合，还是想知道两个模块明明都买对了，为什么接上却不工作，又或者你想亲手按顺序把一台不工作的装置查通。选好以后，就带着这个问题往下看。"
+           data-tsh="问题锚点 - 先确定今天最想弄明白的问题">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">问题锚点</span>
+          <h2>今天最想弄明白哪一件事？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你真正好奇的问题，后面的实验都会围着它转。</p>
+        <div class="grid">
+          <button class="choice" data-anchor-choice="模块之间靠什么约定才能配合"><strong>模块之间靠什么约定才能配合？</strong><br><span style="color:var(--muted);font-size:14px">接口到底约定了哪几件事</span></button>
+          <button class="choice" data-anchor-choice="零件都对，为什么接上就是不动"><strong>零件都对，为什么接上就是不动？</strong><br><span style="color:var(--muted);font-size:14px">电平、电流、地址各能造成什么故障</span></button>
+          <button class="choice" data-anchor-choice="怎么才能一遍就把问题查出来"><strong>怎么才能一遍就把问题查出来？</strong><br><span style="color:var(--muted);font-size:14px">分段验证为什么要讲顺序</span></button>
+          <button class="choice" data-anchor-choice="为什么大电流的模块要单独供电"><strong>为什么大电流的模块要单独供电？</strong><br><span style="color:var(--muted);font-size:14px">余量与瞬时电流是两回事</span></button>
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己最想知道的问题
+          <input id="learner-question-input" placeholder="把你好奇的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives"
+           data-tts-script="这节课有四个目标。第一，能说出模块化设计的三条接口约定：供电、逻辑电平、通信方式，并说明为什么模块可以独立替换。第二，能按模块数量估算总电流，判断供电是否留有足够余量，并识别电流不足的典型现象。第三，能判断两个模块的逻辑电平是否匹配，知道什么时候必须使用电平转换。第四，能按电源、电平、总线、共地的顺序做分段验证，定位并排除一台不工作装置中的故障。"
+           data-tsh="学习目标 - 明确这节课结束时能做到什么" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">学习目标</span>
+          <h2>这节课结束时，你应该能做到</h2>
+        </div>
+        <ul class="objectives">
+          <li>能说出模块化设计的三条接口约定——供电、逻辑电平、通信方式，并说明模块为什么可以独立替换</li>
+          <li>能按模块数量估算总电流，判断供电是否留有足够余量，并识别电流不足的典型现象</li>
+          <li>能判断两个模块的逻辑电平是否匹配，知道什么时候必须使用电平转换</li>
+          <li>能按电源、电平、总线、共地的顺序做分段验证，定位并排除装置故障</li>
+        </ul>
+        <div class="kid-note" style="margin-top:16px">
+          <span class="emoji">🎯</span>
+          <div><strong>课标依据：</strong>《义务教育信息科技课程标准（2022年版2025年修订）》初中「物联网与模块」——使用开源硬件完成模块化系统搭建与调试。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="3" data-tts="pretest"
+           data-tts-script="先做三道小题，凭现在的想法选就行，选错了也没关系，正好能看出哪里需要重点听。选完会立刻出现解释。"
+           data-tsh="先测一测：一条线接错，为什么整套都不工作？ - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">前测</span>
+          <h2>先测一测：一条线接错，为什么整套都不工作？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="pre-1">
+          <p><strong>1. 把一个模块接到主控板上，除了供电和地线，还必须核对的一件事是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-1" data-correct="1">模块的逻辑电平与主控是否一致</button>
+            <button class="choice" data-q="pre-1" data-correct="0">模块外壳的颜色</button>
+            <button class="choice" data-q="pre-1" data-correct="0">模块出厂时贴的编号</button>
+          </div>
+          <p class="result warn" data-explain="pre-1" style="display:none;margin-top:10px">供电、逻辑电平、通信方式，是模块之间必须约定的三条接口。信号用几伏表示高电平，直接决定能不能互通。<strong>错因提醒：</strong>常见错误是误认为「电压接对了信号就能通」——供电和信号是两条独立的约定，必须分别核对。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-2">
+          <p><strong>2. 四个模块各要 150 mA，主控自身 75 mA，板载稳压上限 500 mA。这套装置的问题是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-2" data-correct="1">总电流 675 mA 已经超载，会出现主控重启、模块时好时坏</button>
+            <button class="choice" data-q="pre-2" data-correct="0">总电流只有 150 mA，完全没有问题</button>
+            <button class="choice" data-q="pre-2" data-correct="0">只要把所有模块都接到同一个电源上，电流就会自动变小</button>
+          </div>
+          <p class="result warn" data-explain="pre-2" style="display:none;margin-top:10px">总电流要按全部模块相加来算，再和供电上限比较。超载的典型现象是电压被拉低导致主控反复重启。<strong>错因提醒：</strong>容易搞混的是只算一个模块的电流——功耗预算永远算「全部同时工作」的总和，还要留出余量。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-3">
+          <p><strong>3. 一台装置不工作，下面哪种排查顺序更省时间？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-3" data-correct="1">先确认供电，再确认接线与电平，最后才改程序</button>
+            <button class="choice" data-q="pre-3" data-correct="0">先重写一遍程序，不行再看硬件</button>
+            <button class="choice" data-q="pre-3" data-correct="0">把整套拆掉，从零重新接一遍</button>
+          </div>
+          <p class="result warn" data-explain="pre-3" style="display:none;margin-top:10px">这就是分段验证：按电源、电平、信号、程序的顺序逐段确认。供电不对，后面的现象都不可信。<strong>错因提醒：</strong>许多同学误认为「改程序最快」，可信号连参考点都没有时，程序再对也读不到正确的数。</p>
+        </div>
+        <p id="pre-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="module-1"
+           data-tts-script="模块化设计的第一步，是把一套系统拆成能做独立替换的模块，再给每个模块定好接口。接口约定有三条。第一条是供电：模块要几伏、要多少毫安，能不能都从主控板上取电。第二条是逻辑电平：信号用几伏表示高电平，如果一端是五伏、另一端是三伏三，直接相接就可能读错甚至损坏器件。第三条是通信方式：用哪种总线、占用哪个地址。三条定清楚，模块才能像积木一样换。"
+           data-tsh="模块能独立替换，靠的是三条接口约定" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念一</span>
+          <h2>模块能独立替换，靠的是三条接口约定</h2>
+        </div>
+
+        <div class="inner-card">
+          <p><strong>为什么要学这一课？</strong>你已经知道物联网由感知、网络、应用三层组成，也认识了常见传感器和执行器。但真正动手时，你会发现零件都买对了却接不起来，<strong>所以</strong>我们需要先给每个模块定好接口约定，再谈怎么搭。</p>
+        </div>
+        <p style="font-size:17px;margin:12px 0">模块化设计的要点是<strong>把系统切成能独立替换的模块</strong>。切得开不够，还要约定得清楚——约定一旦明确，坏掉的模块直接换掉，边界好的模块还能搬到别的项目里复用。</p>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>供电约定：</strong>模块要几伏、工作电流多少，能不能都从主控板取电。这是「有没有电」的问题。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>逻辑电平约定：</strong>信号用几伏表示高电平。一端 5 V、一端 3.3 V 直接相接，会被误判，长期还可能损坏器件。</div></div>
+          <div class="step"><span class="n green">3</span><div><strong>通信约定：</strong>走哪条总线、占用哪个地址、按什么时序收发。同一条总线上地址不能重复。</div></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-open-hardware-fig1.webp" alt="模块化系统结构示意图：主控模块与输入模块、输出模块、电源模块之间的接口约定">
+          <figcaption>主控 + 输入模块 + 输出模块 + 电源模块：每条连线都要回答供电、电平、通信三个问题</figcaption>
+        </figure>
+        <div class="kid-note"><span class="emoji">🧩</span><div><strong>记忆锚点：</strong>把模块化想成拼插积木。积木能拼在一起，不是因为形状好看，而是因为凸点和凹槽的尺寸被约定了。接口约定就是模块的「凸点尺寸」——看不见，但决定了能不能拼上。</div></div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>看见它</strong>：同一套功能可以切成不同粒度的模块。切得越细越容易替换，但接口数量也越多，出错的机会跟着增加。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>拆开它</strong>：任意一条模块间连线都能拆成三个问题：电从哪来、信号的高低用什么电压表示、数据怎么传。三个问题都答上，这条线才算设计完。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：这种「先定接口再各自实现」的做法到处都在用：充电线与插头的标准、打印机的驱动接口、团队协作里的分工约定。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="lab-1"
+           data-tts-script="我们先把接口算清楚。左边选主控的逻辑电平和模块类型，右边拖动模块数量，下面会出现三个数：模块总电流、含主控的全部电流，以及余量百分比。拖到某个数量，电流会超过供电上限，仪表条会变色。再切换取电方式，看看把大电流模块改成外接电源以后，余量是不是回来了。"
+           data-tsh="电平与电流预算台：这套接口到底能不能直连？" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">设计实验室</span>
+          <h2>电平与电流预算台：这套接口到底能不能直连？</h2>
+        </div>
+
+        
+<style>
+.ta-slot { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.ta-slot label { min-width: 76px; font-weight: 700; font-size: 14px; }
+.ta-slot select { flex: 1; min-width: 200px; }
+.ta-inline { width: auto !important; min-height: 0 !important; accent-color: var(--brand); }
+.ta-check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; margin-top: 10px; }
+.ta-log { list-style: none; margin: 0; padding: 0; }
+.ta-log li { padding: 9px 12px; margin-bottom: 6px; border-radius: 10px; font-size: 14px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.ta-log li.ok { border-color: var(--ok); }
+.ta-log li.no { border-color: var(--danger); }
+.ta-log li.pending { opacity: .5; }
+.ta-log li .ic { font-weight: 800; margin-right: 7px; }
+.ta-chipset { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; min-height: 34px; }
+.ta-chip { padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  background: var(--brand-soft); border: 1px solid var(--line-subtle); }
+.ta-meter { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.ta-meter .bar { flex: 1; height: 10px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden; }
+.ta-meter .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .35s ease; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">切换主控逻辑电平与模块类型，拖动模块数量，看电流余量与电平匹配怎么同时说话。</p>
+        <div class="lab-panel">
+          <div id="hw1-stage">
+            <div class="ta-slot">
+              <label for="hw1-logic">主控逻辑电平</label>
+              <select id="hw1-logic">
+                <option value="l33" selected>3.3 V 逻辑</option>
+                <option value="l5">5 V 逻辑</option>
+              </select>
+            </div>
+            <div class="ta-slot">
+              <label for="hw1-mod">模块类型</label>
+              <select id="hw1-mod">
+                <option value="s33" selected>3.3 V 传感模块</option>
+                <option value="s5">5 V 传感模块</option>
+                <option value="relay">5 V 执行模块</option>
+                <option value="radio">3.3 V 通信模块</option>
+              </select>
+            </div>
+            <div class="ta-slot">
+              <label for="hw1-sup">取电方式</label>
+              <select id="hw1-sup">
+                <option value="onboard" selected>主控板载稳压（上限 500 mA）</option>
+                <option value="ext">外接独立电源（上限 2000 mA）</option>
+              </select>
+            </div>
+            <div class="slider-row">
+              <label for="hw1-num">模块数量</label>
+              <input type="range" id="hw1-num" min="1" max="6" step="1" value="2">
+              <span class="readout-cell" style="flex:0 0 96px"><span class="k">数量</span><span class="v" id="hw1-num-val">2 个</span></span>
+            </div>
+            <div class="ta-check-row">
+              <input type="checkbox" class="ta-inline" id="hw1-conv">
+              <label for="hw1-conv">已为不匹配的模块加装电平转换</label>
+            </div>
+          </div>
+          <canvas id="hw-gauge" width="680" height="128" aria-label="供电占用仪表" style="display:block;width:100%;border-radius:12px;background:var(--card);"></canvas>
+          <div class="lab-readout">
+            <div class="readout-cell"><span class="k">单个模块电流</span><span class="v" id="hw1-modcur">—</span></div>
+            <div class="readout-cell"><span class="k">全部电流（含主控）</span><span class="v" id="hw1-total">—</span></div>
+            <div class="readout-cell"><span class="k">供电上限</span><span class="v" id="hw1-cap">—</span></div>
+            <div class="readout-cell"><span class="k">电流余量</span><span class="v green" id="hw1-margin">—</span></div>
+          </div>
+          <p class="result warn" id="hw1-out" style="margin-top:12px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🔎</span><div><strong>试出边界：</strong>把模块类型换成 5 V 执行模块、数量拖到 4 个，看仪表条越过右端时会发生什么；再把取电方式换掉，看余量是不是回来了。同一批模块，取电方式不同，结论完全不同。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="6" data-tts="module-2"
+           data-tts-script="接对了不等于能用，工程上真正的功夫在调试。调试的核心方法是分段验证：把系统切成几段，一段一段确认，而不是一次把整套接上碰运气。顺序也很讲究——先电源，再电平，后信号，最后才看程序。为什么先电源？因为供电不对，后面所有现象都不可信。这也是分段验证最容易被忽略的一点：跳过供电，后面测到的数据全是白测。"
+           data-tsh="分段验证：调试是有顺序的" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念二</span>
+          <h2>分段验证：调试是有顺序的</h2>
+        </div>
+
+        <div class="inner-card">
+          <p><strong>接对了不等于能用。</strong>工程上真正的功夫在调试：把系统切成几段，一段一段确认，而不是一次把整套接上碰运气。这个方法叫<strong>分段验证</strong>。</p>
+        </div>
+        <div class="grid grid-2">
+          <div class="inner-card">
+            <p><strong>为什么先查电源？</strong></p>
+            <p style="color:var(--muted)">供电不对，后面测到的所有现象都不可信：读数可能是随机的，动作可能是抽搐的。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>为什么要分段？</strong></p>
+            <p style="color:var(--muted)">整套一起查，错误会互相掩盖；切成段以后，能确定问题在哪一段，再往下切。</p>
+          </div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-open-hardware-fig2.webp" alt="分段验证调试流程图：电源、电平、总线地址、共地四个阶段依次确认">
+          <figcaption>分段验证的基本顺序：电源 → 逻辑电平 → 总线地址 → 共地 → 单元程序，前一段不过就不往下走</figcaption>
+        </figure>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">最容易搞混的是<strong>把「分段」当成「分模块」</strong>：分段验证要求的是按<strong>电气条件</strong>依次确认，不是按模块逐个试。另一个常见错误是<strong>一次改多处</strong>——同时换了模块、改了程序、重接了线，现象变了也不知道是哪一步起的作用。分段验证的规矩是：一次只改一个地方。</p>
+        </div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>解释它</strong>：调试的本质是把「整套不工作」这个大问题，切成一串只能回答是或否的小问题。每答完一个，可能的原因就少一批。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>比较它</strong>：「一次只改一处」看起来慢，实际比反复瞎换快得多：它保证每一次改动都能得到一条可信的结论。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="7" data-tts="lab-2"
+           data-tts-script="现在你当一次调试工程师。四个插槽，每个插槽可以装一个模块，装好以后点自检。自检会按电源、电平、总线地址、共地四条依次检查，每条都给出结论。注意看第一条不过的那一项，它必须优先解决，后面的结论暂时都不能当真。试试把两个同地址的模块装在同一条总线上，看会发生什么。"
+           data-tsh="上电自检工作台：装好模块，按顺序查一遍" data-bloom-level="analyze" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">设计实验室</span>
+          <h2>上电自检工作台：装好模块，按顺序查一遍</h2>
+        </div>
+
+        
+<style>
+.ta-slot { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.ta-slot label { min-width: 76px; font-weight: 700; font-size: 14px; }
+.ta-slot select { flex: 1; min-width: 200px; }
+.ta-inline { width: auto !important; min-height: 0 !important; accent-color: var(--brand); }
+.ta-check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; margin-top: 10px; }
+.ta-log { list-style: none; margin: 0; padding: 0; }
+.ta-log li { padding: 9px 12px; margin-bottom: 6px; border-radius: 10px; font-size: 14px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.ta-log li.ok { border-color: var(--ok); }
+.ta-log li.no { border-color: var(--danger); }
+.ta-log li.pending { opacity: .5; }
+.ta-log li .ic { font-weight: 800; margin-right: 7px; }
+.ta-chipset { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; min-height: 34px; }
+.ta-chip { padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  background: var(--brand-soft); border: 1px solid var(--line-subtle); }
+.ta-meter { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.ta-meter .bar { flex: 1; height: 10px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden; }
+.ta-meter .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .35s ease; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">四个插槽各装一个模块，确认下面两项，然后点上电自检。自检会按电源、电平、总线地址、共地四条依次判定。</p>
+        <div class="lab-panel">
+          <div id="hw2-stage">
+          <div class="ta-slot">
+            <label for="hw-slot-1">插槽 1</label>
+            <select id="hw-slot-1"><option value="none">未安装</option><option value="s33" selected>3.3 V 传感模块（总线，地址 0x48）</option><option value="s5">5 V 传感模块（总线，地址 0x48）</option><option value="s5w">5 V 传感模块（独立信号线）</option><option value="relay">5 V 执行模块（继电器）</option><option value="c48">3.3 V 通信模块（总线，地址 0x48）</option><option value="c4a">3.3 V 通信模块（总线，地址 0x4A）</option></select>
+          </div>
+          <div class="ta-slot">
+            <label for="hw-slot-2">插槽 2</label>
+            <select id="hw-slot-2"><option value="none">未安装</option><option value="s33">3.3 V 传感模块（总线，地址 0x48）</option><option value="s5">5 V 传感模块（总线，地址 0x48）</option><option value="s5w">5 V 传感模块（独立信号线）</option><option value="relay">5 V 执行模块（继电器）</option><option value="c48">3.3 V 通信模块（总线，地址 0x48）</option><option value="c4a">3.3 V 通信模块（总线，地址 0x4A）</option></select>
+          </div>
+          <div class="ta-slot">
+            <label for="hw-slot-3">插槽 3</label>
+            <select id="hw-slot-3"><option value="none">未安装</option><option value="s33">3.3 V 传感模块（总线，地址 0x48）</option><option value="s5">5 V 传感模块（总线，地址 0x48）</option><option value="s5w">5 V 传感模块（独立信号线）</option><option value="relay">5 V 执行模块（继电器）</option><option value="c48">3.3 V 通信模块（总线，地址 0x48）</option><option value="c4a">3.3 V 通信模块（总线，地址 0x4A）</option></select>
+          </div>
+          <div class="ta-slot">
+            <label for="hw-slot-4">插槽 4</label>
+            <select id="hw-slot-4"><option value="none">未安装</option><option value="s33">3.3 V 传感模块（总线，地址 0x48）</option><option value="s5">5 V 传感模块（总线，地址 0x48）</option><option value="s5w">5 V 传感模块（独立信号线）</option><option value="relay">5 V 执行模块（继电器）</option><option value="c48">3.3 V 通信模块（总线，地址 0x48）</option><option value="c4a">3.3 V 通信模块（总线，地址 0x4A）</option></select>
+          </div>
+            <div class="ta-check-row">
+              <input type="checkbox" class="ta-inline" id="hw2-conv">
+              <label for="hw2-conv">已为 5 V 逻辑的模块加装电平转换</label>
+            </div>
+            <div class="ta-check-row">
+              <input type="checkbox" class="ta-inline" id="hw2-gnd">
+              <label for="hw2-gnd">已确认全部模块与主控共地</label>
+            </div>
+          </div>
+          <p style="margin:14px 0 6px;font-weight:700;font-size:14px">上电自检结论（自上而下逐条判定）</p>
+          <ul class="ta-log" id="hw2-log"><li class="pending">还没开始自检。装好模块后点下面的按钮。</li></ul>
+          <p class="result warn" id="hw2-out" style="margin-top:12px">模块装好、下面的两项确认好之后，点「上电自检」。</p>
+          <div class="flex-row">
+            <button class="choice" id="hw2-run" style="text-align:center;flex:1">上电自检</button>
+            <button class="choice" id="hw2-reset" style="text-align:center;flex:1">恢复初始</button>
+          </div>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🧪</span><div><strong>试着造一个故障：</strong>把插槽 2 也换成带总线的模块，地址就会重复，看看自检怎么定位它；再换成地址可选的另一个模块，看结论怎么变。你会体会到：工程排查靠的不是运气，而是一张有顺序的检查表。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="worked-example"
+           data-tts-script="我们一起分析一台不工作的装置。现象是：上电以后主控能启动，传感器读数却一直是零。第一步，先看电源，测量模块的供电引脚是否达到额定值，这一步排除了供电。第二步，看接线，确认信号线接到了约定的引脚，这一步发现信号线接错了位置。第三步，看电平，模块是五伏逻辑，主控是三伏三，必须加电平转换。第四步，看总线地址，两个模块地址重复，也要改开。第五步，用最简程序单独读取这个模块，确认改完以后读数正常。"
+           data-tsh="例题示范：读数一直是零，怎么一段段查出来？" data-bloom-level="analyze" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">例题示范</span>
+          <h2>例题示范：读数一直是零，怎么一段段查出来？</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:var(--warm)">
+          <p style="margin:0"><strong>题目：</strong>一套装置的故障现象是「上电后主控能启动，但传感器读数一直是零」。请按分段验证的顺序列出排查步骤，并说明每一步在排除什么。</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>先确认供电：</strong>用仪表测量模块供电引脚，看是否达到额定电压。这一步排除「有没有电」。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>再看接线：</strong>读数恒为零往往是信号根本没进来。核对信号线是否接在约定的引脚上，这一步排除接错位置。</div></div>
+          <div class="step"><span class="n green">3</span><div><strong>然后看电平：</strong>模块是 5 V 逻辑、主控是 3.3 V 逻辑，高电平识别不了，必须加电平转换。</div></div>
+          <div class="step"><span class="n">4</span><div><strong>接着看总线：</strong>两个模块地址重复会同时应答，读数自然错乱，要把其中一个改成其他可选地址。</div></div>
+          <div class="step"><span class="n">5</span><div><strong>最后用单元程序验证：</strong>只读这一个模块，读数正常，说明前面几步的改动真正起了作用；而不是一次性全改，说不清是哪一步解决的。</div></div>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">很多同学误认为<strong>「读数不对一定是程序写错了」</strong>，于是先去改程序。可读数恒为零，恰恰是最典型的硬件侧现象：没供电、线接错、电平不匹配、地址冲突，都会产生同一个现象。另一个容易搞混的地方是<strong>跳过供电直接查信号</strong>——供电这一段的结论没拿到，后面每一步的结论都是悬空的。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="9" data-tts="conceptest-1"
+           data-tts-script="现在用三个容易弄错的说法考考你。请仔细读每一个选项，选出你认为正确的那个，然后看解释。"
+           data-tsh="概念测试：找出藏在说法里的错误 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">概念测试</span>
+          <h2>概念测试：找出藏在说法里的错误</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="ct-1">
+          <p><strong>1. 下面哪句话是正确的？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-1" data-correct="1">模块能不能独立替换，取决于接口约定是否清楚</button>
+            <button class="choice" data-q="ct-1" data-correct="0">只要买到同一个厂家的模块，接口就一定匹配</button>
+            <button class="choice" data-q="ct-1" data-correct="0">模块化设计就是把所有功能都做进一个模块里</button>
+          </div>
+          <p class="result warn" data-explain="ct-1" style="display:none;margin-top:10px">接口约定清楚，模块才能换、才能复用。<strong>错因提醒：</strong>常见错误是误认为「同来源的模块自动兼容」——供电、电平、通信三条约定必须逐条核对。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-2">
+          <p><strong>2. 总电流已经接近供电上限，装置表现出「执行模块一动，主控就重启」。最合理的做法是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-2" data-correct="1">把大电流模块改用外接独立电源，并保留足够余量</button>
+            <button class="choice" data-q="ct-2" data-correct="0">把供电上限的数值在程序里改大一点</button>
+            <button class="choice" data-q="ct-2" data-correct="0">把执行模块的启动时间改短</button>
+          </div>
+          <p class="result warn" data-explain="ct-2" style="display:none;margin-top:10px">启动瞬间电流更大，余量不足就会被拉低电压。改参数不能凭空造出电流。<strong>错因提醒：</strong>容易搞混的是把供电问题当成程序问题——电流不够是硬件预算的问题，改程序只是把故障掩盖过去。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-3">
+          <p><strong>3. 两个模块都装在一条总线上，读数有时正确有时错乱。最该先查的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-3" data-correct="1">两个模块的总线地址是否重复</button>
+            <button class="choice" data-q="ct-3" data-correct="0">模块的外壳是否固定牢靠</button>
+            <button class="choice" data-q="ct-3" data-correct="0">主控的运行速度是否够快</button>
+          </div>
+          <p class="result warn" data-explain="ct-3" style="display:none;margin-top:10px">同一条总线上地址重复，两个模块会同时应答，读数就会时好时坏。<strong>错因提醒：</strong>许多同学误认为「时好时坏就是接触不良」——信号层的地址冲突也会产生一模一样的不稳定现象。</p>
+        </div>
+        <p id="ct-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="synthesis"
+           data-tts-script="学到这里，请你当一次排障工程师。屏幕上给三个故障现场，你要从动作清单里按顺序挑出三步排查。系统会判定你挑的三步是不是关键项，以及顺序对不对。你会看到一条规律：几乎所有故障都该从电源查起，先隔离、再定位，最后才轮到改程序。顺序错了，花的时间会成倍增加。"
+           data-tsh="综合任务：当一次排障工程师，按顺序把故障查通" data-bloom-level="create" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">综合任务</span>
+          <h2>综合任务：当一次排障工程师，按顺序把故障查通</h2>
+        </div>
+
+        
+<style>
+.ta-slot { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.ta-slot label { min-width: 76px; font-weight: 700; font-size: 14px; }
+.ta-slot select { flex: 1; min-width: 200px; }
+.ta-inline { width: auto !important; min-height: 0 !important; accent-color: var(--brand); }
+.ta-check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; margin-top: 10px; }
+.ta-log { list-style: none; margin: 0; padding: 0; }
+.ta-log li { padding: 9px 12px; margin-bottom: 6px; border-radius: 10px; font-size: 14px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.ta-log li.ok { border-color: var(--ok); }
+.ta-log li.no { border-color: var(--danger); }
+.ta-log li.pending { opacity: .5; }
+.ta-log li .ic { font-weight: 800; margin-right: 7px; }
+.ta-chipset { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; min-height: 34px; }
+.ta-chip { padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  background: var(--brand-soft); border: 1px solid var(--line-subtle); }
+.ta-meter { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.ta-meter .bar { flex: 1; height: 10px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden; }
+.ta-meter .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .35s ease; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">先选一个故障现场，再从动作清单里按你认为合理的顺序挑三步，然后提交判定。</p>
+        <div class="lab-panel">
+          <div id="ps-stage">
+            <p class="result warn" id="ps-brief" style="margin:0 0 14px"></p>
+            <div style="font-weight:700;font-size:14px;margin-bottom:6px">① 选择故障现场</div>
+            <div class="flex-row" style="margin-top:0">
+              <button class="choice selected" data-ps-scen="dead" style="text-align:center">整块装置毫无反应</button>
+              <button class="choice" data-ps-scen="zero" style="text-align:center">传感器读数始终是零</button>
+              <button class="choice" data-ps-scen="blink" style="text-align:center">执行模块一动就停</button>
+            </div>
+            <div style="font-weight:700;font-size:14px;margin:14px 0 6px">② 按顺序挑三步排查动作</div>
+            <div class="flex-row" style="margin-top:0">
+              <button class="choice" data-ps-act="power" style="text-align:center">测量供电引脚电压</button>
+              <button class="choice" data-ps-act="cur" style="text-align:center">核对总电流与供电上限</button>
+              <button class="choice" data-ps-act="gnd" style="text-align:center">确认模块与主控共地</button>
+              <button class="choice" data-ps-act="iso" style="text-align:center">逐个断开模块做隔离</button>
+              <button class="choice" data-ps-act="pin" style="text-align:center">核对信号线接的引脚</button>
+              <button class="choice" data-ps-act="level" style="text-align:center">核对逻辑电平是否匹配</button>
+              <button class="choice" data-ps-act="addr" style="text-align:center">核对总线地址是否重复</button>
+              <button class="choice" data-ps-act="unit" style="text-align:center">用最简程序单独测该模块</button>
+              <button class="choice" data-ps-act="prog" style="text-align:center">先重写主程序逻辑</button>
+            </div>
+            <p style="margin:14px 0 0;font-weight:700;font-size:14px">③ 你选的排查顺序</p>
+            <div class="ta-chipset" id="ps-seq"></div>
+          </div>
+          <p class="result warn" id="ps-out" style="margin-top:12px">顺序挑好三步之后，点「提交排查方案」。</p>
+          <div class="flex-row">
+            <button class="choice" id="ps-run" style="text-align:center;flex:1">提交排查方案</button>
+            <button class="choice" id="ps-clear" style="text-align:center;flex:1">清空重选</button>
+          </div>
+        </div>
+        <div class="inner-card">
+          <p><strong>写下来，说给同桌听：</strong>如果第一步就跳过了供电，后面每一步的结论为什么会变得不可信？</p>
+          <textarea id="syn-answer" rows="3" placeholder="因为供电不正常时，读数和现象都可能是随机的，所以……必须先让第一段的结论成立，再……"></textarea>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="posttest"
+           data-tts-script="最后换两个新情境检验一下。这次出现了不同逻辑电平的模块，还有一个电流吃紧的装置，看看你能不能把接口约定和分段验证用上去。"
+           data-tsh="后测：换一个情境，看看规律还在不在 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">后测</span>
+          <h2>后测：换一个情境，看看规律还在不在</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="post-1">
+          <p><strong>1. 装置里有一个 5 V 逻辑的模块，主控是 3.3 V 逻辑。下面哪种判断最站得住脚？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-1" data-correct="1">必须加电平转换，否则高电平可能被误判，长期还可能损坏器件</button>
+            <button class="choice" data-q="post-1" data-correct="0">只要供电电压都是 5 V，信号就一定能通</button>
+            <button class="choice" data-q="post-1" data-correct="0">把主控的逻辑电平在程序里改成 5 V 就行</button>
+          </div>
+          <p class="result warn" data-explain="post-1" style="display:none;margin-top:10px">逻辑电平是硬件属性，程序改不了。供电和信号是两条独立的约定。<strong>错因提醒：</strong>常见错误是把「供电对上」当成「信号能通」——这两件事必须分别核对。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-2">
+          <p><strong>2. 一台装置要同时驱动三个继电器模块，每个 150 mA，主控自身 75 mA。下面哪种做法最稳妥？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-2" data-correct="1">把继电器模块改由外接独立电源供电，主控只负责控制信号</button>
+            <button class="choice" data-q="post-2" data-correct="0">从主控板载取电，因为标称上限够用</button>
+            <button class="choice" data-q="post-2" data-correct="0">把程序里的动作错开一毫秒，电流就会变小</button>
+          </div>
+          <p class="result warn" data-explain="post-2" style="display:none;margin-top:10px">总电流 525 mA 已超过板载 500 mA 上限，且启动瞬间电流更大，必须外接电源。<strong>错因提醒：</strong>容易搞混的是「标称上限等于能用」——工程上要留余量，还要考虑瞬时电流。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-3">
+          <p><strong>3. 把系统切成分段验证时，下面哪种做法符合「一次只改一处」？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-3" data-correct="1">先只测电源，得到明确结论后再动接线</button>
+            <button class="choice" data-q="post-3" data-correct="0">同时换模块、改程序、重接线，看现象有没有变化</button>
+            <button class="choice" data-q="post-3" data-correct="0">把所有模块都换成贵的型号，一次解决</button>
+          </div>
+          <p class="result warn" data-explain="post-3" style="display:none;margin-top:10px">一次只改一处，每一次改动才能对应一条可信的结论。<strong>错因提醒：</strong>许多同学误认为「多改几处更快」，结果现象变了也说不清是哪一步起的作用。</p>
+        </div>
+        <p id="post-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="12" data-tts="summary"
+           data-tts-script="这节课我们弄清楚了三件事。第一，模块化设计靠接口约定：供电、逻辑电平、通信方式，三条定清楚，模块才能独立替换。第二，逻辑电平不匹配不能直接相接，该用电平转换就必须用；总电流要留余量，大电流负载别都从主控板取电。第三，调试靠分段验证，顺序是电源、电平、信号、程序，第一条不过就不要往下。回到开头那套装置：把模块边界划清楚，再一段一段确认，它就能稳定跑起来。"
+           data-tsh="小结：三句话，把自己讲明白" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">小结</span>
+          <h2>小结：三句话，把自己讲明白</h2>
+        </div>
+        <div class="grid">
+          <div class="summary-item"><span class="num">1</span><div><strong>接口约定</strong>：供电、逻辑电平、通信方式。三条定清楚，模块才能独立替换、跨项目复用。</div></div>
+          <div class="summary-item"><span class="num">2</span><div><strong>电平与电流</strong>：逻辑电平不匹配必须加电平转换；总电流要留余量，大电流负载别都从主控板取电。</div></div>
+          <div class="summary-item"><span class="num">3</span><div><strong>分段验证</strong>：顺序是电源 → 电平 → 信号 → 程序，前一段不过就不往下，一次只改一处。</div></div>
+        </div>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:var(--warm)">
+          <p style="margin:0"><strong>回到开头那套补光装置：</strong>先把模块边界划清楚，把供电、电平、通信三条约定写在纸上；再按分段验证的顺序一段段确认。同一批零件，接法不变、程序不变，只是把「约定」和「顺序」补上，它就能稳定跑起来了。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>给别人讲一遍：</strong>请用「接口约定、余量、分段验证、一次只改一处」这四个词，把一套装置从搭起来到调通的过程讲清楚。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="13" data-tts="homework"
+           data-tts-script="最后留三项作业，分三个层次。第一层基础巩固，人人要做：说出模块化设计的三条接口约定，并说明每条约定对应什么故障。第二层能力应用，动手做：为一套四模块的装置列出供电、电平、总线地址三项检查，算出总电流并判断余量。第三层迁移挑战，选做：为学校的一个真实需求设计一套模块化方案，按分段验证的顺序写出调试步骤。"
+           data-tsh="作业分层：三层练习，按自己的节奏来" data-bloom-level="create" data-scaffold="none">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">作业分层</span>
+          <h2>作业分层：三层练习，按自己的节奏来</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">三层练习，做完第一、二层就算通关；第三层留给愿意继续探索的同学。</p>
+        <div class="inner-card">
+          <p><strong>⭐ 基础巩固（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>说出模块化设计的三条接口约定，并各举一个不满足时会出现的故障现象。</li>
+            <li>说明为什么逻辑电平不匹配的模块不能直接相接。</li>
+            <li>写出分段验证的推荐顺序，并解释为什么电源要排在第一位。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐ 能力应用（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>某装置有四个模块：两个各 20 mA 的传感模块、一个 150 mA 的执行模块、一个 45 mA 的通信模块，主控自身 75 mA。算出总电流，判断板载 500 mA 上限是否够用，并给出改进办法。</li>
+            <li>某装置上电后主控能启动，但两个传感器读数都不对。写出你的三步排查方案，并说明每一步在排除什么。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐⭐ 迁移挑战（选做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>为学校的一个真实需求（如教室光照调节、植物浇水提醒）设计一套模块化方案：模块划分、三条接口约定、供电估算写在纸上。</li>
+            <li>给上面这套方案写一张分段验证检查表，按顺序列出每一步的做法与判据，并说明哪一步不过就不该继续。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page kg-page" data-page-type="summary" data-page-index="14" data-tts="knowledge-graph"
+           data-tts-script="这张图展示了这节课在信息科技知识网络里的位置。左边是先要学会的知识，右边是可以接着探索的内容，下面是同一领域的伙伴知识。可以点一点，看看还有哪些值得继续研究的问题。"
+           data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">知识图谱</span>
+          <h2>这节课在知识网络里的位置</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 10px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p class="kg-loading-hint" style="color:var(--muted);font-size:13px;margin:0 0 10px">图谱正在加载：首次进入需下载知识索引（约 1–3 秒），加载完成后本行会自动消失。</p>
+        <div data-teachany-kg="it-m-open-hardware">
+          <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="15" data-tts="ai-tutor"
+           data-tts-script="如果还有没弄明白的地方，把你的问题写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。"
+           data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+</div><!-- .slide-container -->
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-pretest",
+    "section": "pretest",
+    "src": "./tts/s04-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s05-module-1",
+    "section": "module-1",
+    "src": "./tts/s05-module-1.mp3",
+    "label": "概念一 模块与接口约定"
+  },
+  {
+    "id": "s06-lab-1",
+    "section": "lab-1",
+    "src": "./tts/s06-lab-1.mp3",
+    "label": "实验室一 电平与电流预算台"
+  },
+  {
+    "id": "s07-module-2",
+    "section": "module-2",
+    "src": "./tts/s07-module-2.mp3",
+    "label": "概念二 分段验证与调试顺序"
+  },
+  {
+    "id": "s08-lab-2",
+    "section": "lab-2",
+    "src": "./tts/s08-lab-2.mp3",
+    "label": "实验室二 上电自检工作台"
+  },
+  {
+    "id": "s09-worked-example",
+    "section": "worked-example",
+    "src": "./tts/s09-worked-example.mp3",
+    "label": "例题讲解"
+  },
+  {
+    "id": "s10-conceptest-1",
+    "section": "conceptest-1",
+    "src": "./tts/s10-conceptest-1.mp3",
+    "label": "概念测试"
+  },
+  {
+    "id": "s11-synthesis",
+    "section": "synthesis",
+    "src": "./tts/s11-synthesis.mp3",
+    "label": "综合任务 分段排障台"
+  },
+  {
+    "id": "s12-posttest",
+    "section": "posttest",
+    "src": "./tts/s12-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s13-summary",
+    "section": "summary",
+    "src": "./tts/s13-summary.mp3",
+    "label": "课堂小结"
+  },
+  {
+    "id": "s14-homework",
+    "section": "homework",
+    "src": "./tts/s14-homework.mp3",
+    "label": "作业分层"
+  },
+  {
+    "id": "s15-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s15-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s16-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s16-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<script>
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'it-m-open-hardware',
+    courseTitle: '开源硬件与模块化设计',
+    subject: 'info-tech',
+    grade: '8',
+    nodeId: 'it-m-open-hardware',
+    lessonType: 'project-design',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+</script>
+
+<script>
+
+/* ============================================================
+   it-m-open-hardware 互动逻辑
+   1) 选择题接线（前测 / 概念测试 / 后测）
+   2) 电平与电流预算台：接口三维度换算 + Canvas 电流仪表
+   3) 上电自检工作台：四插槽按「电源→电平→总线→共地」逐条判定
+   4) 分段排障台：按顺序选三步排查动作并判定关键项与顺序
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ---------- 0. 主题色读取（不写死颜色，跟随学段主题） ---------- */
+  function themeColor(name, fb) {
+    try {
+      var v = getComputedStyle(document.body).getPropertyValue(name).trim();
+      return v || fb;
+    } catch (e) { return fb; }
+  }
+  function rr(ctx, x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  /* ---------- 1. 选择题 ---------- */
+  document.querySelectorAll('[data-quiz-block]').forEach(function (block) {
+    block.querySelectorAll('.choice').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (block.dataset.answered === '1') return;
+        block.dataset.answered = '1';
+        var ok = btn.dataset.correct === '1';
+        btn.classList.add(ok ? 'correct' : 'wrong');
+        block.querySelectorAll('.choice').forEach(function (b) {
+          if (b.dataset.correct === '1') b.classList.add('correct');
+          b.disabled = true;
+        });
+        var ex = block.querySelector('[data-explain]');
+        if (ex) ex.style.display = 'block';
+      });
+    });
+  });
+
+  /* ---------- 2. 电平与电流预算台 ---------- */
+  var BOARD_SELF = 75;            /* 主控自身工作电流 mA */
+  var LOGIC = {
+    l33: { v: '3.3 V', n: '3.3 V' },
+    l5:  { v: '5 V',   n: '5 V' }
+  };
+  var MODT = {
+    s33:   { n: '3.3 V 传感模块', vcc: '3.3 V', lv: 'l33', cur: 18 },
+    s5:    { n: '5 V 传感模块',   vcc: '5 V',   lv: 'l5',  cur: 26 },
+    relay: { n: '5 V 执行模块',   vcc: '5 V',   lv: 'l5',  cur: 150 },
+    radio: { n: '3.3 V 通信模块', vcc: '3.3 V', lv: 'l33', cur: 45 }
+  };
+  var SUPPLY = { onboard: { n: '主控板载稳压', cap: 500 }, ext: { n: '外接独立电源', cap: 2000 } };
+
+  var stage1 = document.getElementById('hw1-stage');
+  if (stage1) {
+    var eLogic = document.getElementById('hw1-logic');
+    var eMod = document.getElementById('hw1-mod');
+    var eNum = document.getElementById('hw1-num');
+    var eSup = document.getElementById('hw1-sup');
+    var eConv = document.getElementById('hw1-conv');
+    var eNumV = document.getElementById('hw1-num-val');
+    var eModCur = document.getElementById('hw1-modcur');
+    var eTotal = document.getElementById('hw1-total');
+    var eCap = document.getElementById('hw1-cap');
+    var eMargin = document.getElementById('hw1-margin');
+    var eOut1 = document.getElementById('hw1-out');
+
+    function drawGauge(ratio, state) {
+      var cv = document.getElementById('hw-gauge');
+      if (!cv || !cv.getContext) return;
+      var ctx = cv.getContext('2d');
+      var W = cv.width, H = cv.height;
+      ctx.clearRect(0, 0, W, H);
+      var x0 = 14, x1 = W - 14, barY = 50, barH = 26;
+      var safeX = x0 + (x1 - x0) * 0.8;
+
+      ctx.fillStyle = themeColor('--bg-subtle', '#eef2f7');
+      rr(ctx, x0, barY, x1 - x0, barH, 13); ctx.fill();
+
+      var fillW = Math.max(0, Math.min(1, ratio)) * (x1 - x0);
+      ctx.fillStyle = (state === 'error' ? themeColor('--danger', '#ef4444')
+                    : state === 'warn' ? themeColor('--warm', '#f59e0b')
+                    : themeColor('--brand', '#3b82f6'));
+      rr(ctx, x0, barY, Math.max(fillW, 5), barH, 13); ctx.fill();
+
+      ctx.strokeStyle = themeColor('--warm', '#f59e0b');
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(safeX, barY - 7);
+      ctx.lineTo(safeX, barY + barH + 7);
+      ctx.stroke();
+
+      ctx.font = '700 15px -apple-system, "PingFang SC", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = themeColor('--text-secondary', '#475569');
+      ctx.fillText('供电占用', x0, barY - 16);
+      ctx.fillStyle = themeColor('--warm-deep', '#b45309');
+      ctx.textAlign = 'right';
+      ctx.fillText('建议余量线 80%', safeX, barY - 16);
+      ctx.fillStyle = themeColor('--text-secondary', '#475569');
+      ctx.fillText(Math.round(ratio * 100) + '%', x1, barY - 16);
+
+      ctx.textAlign = 'left';
+      ctx.font = '500 13px -apple-system, "PingFang SC", sans-serif';
+      ctx.fillStyle = themeColor('--muted', '#64748b');
+      ctx.fillText('横条＝已用电流 / 供电上限；越过橙色刻度就说明余量不足，越过右端就是超载。', x0, barY + barH + 32);
+    }
+
+    function render1() {
+      var logic = eLogic.value;
+      var mod = MODT[eMod.value];
+      var n = Number(eNum.value);
+      var sup = SUPPLY[eSup.value];
+      var conv = eConv.checked;
+
+      eNumV.textContent = n + ' 个';
+      eModCur.textContent = mod.cur + ' mA';
+
+      var modTotal = mod.cur * n;
+      var total = BOARD_SELF + modTotal;
+      var ratio = total / sup.cap;
+      var margin = Math.round((1 - ratio) * 100);
+
+      eTotal.textContent = total + ' mA';
+      eCap.textContent = sup.cap + ' mA';
+      eMargin.textContent = margin + ' %';
+
+      var levelOk = (mod.lv === logic) || conv;
+      var powerState = ratio > 1 ? 'error' : (ratio > 0.8 ? 'warn' : 'ok');
+      drawGauge(ratio, powerState === 'ok' ? 'ok' : powerState);
+
+      var parts = [];
+      parts.push('<strong>' + sup.n + '、' + n + ' 个' + mod.n + '的账：</strong>模块共 ' + modTotal +
+        ' mA，加上主控自身的 ' + BOARD_SELF + ' mA，合计 ' + total + ' mA；上限 ' + sup.cap +
+        ' mA，余量 ' + margin + '%。');
+
+      if (ratio > 1) {
+        parts.push('<strong>已经超载：</strong>电流超过供电上限，典型现象是电压被拉低，主控反复重启、模块时好时坏。常见错误是只算电压不算电流——' +
+          '误认为「标称输出电压对上就行」。两个办法：把大电流模块改成外接独立电源，或者减少同时工作的模块数量。');
+      } else if (ratio > 0.8) {
+        parts.push('<strong>余量不足：</strong>虽然还没超载，但已经越过建议余量线。' +
+          '执行模块在启动的瞬间电流会比平时大不少，余量太薄就容易出现「一动就重启」。');
+      } else {
+        parts.push('<strong>供电这一项过关：</strong>余量在建议范围内，执行模块启动时的瞬时电流也吃得下。');
+      }
+
+      if (levelOk) {
+        parts.push('电平这一项：' + (mod.lv === logic
+          ? '模块与主控都是 ' + LOGIC[logic].n + ' 逻辑，信号可以直接相接。'
+          : '模块是 ' + LOGIC[mod.lv].n + ' 逻辑、主控是 ' + LOGIC[logic].n +
+            ' 逻辑，你已声明使用电平转换，这一项过关。'));
+      } else {
+        parts.push('<strong>电平不匹配：</strong>模块是 ' + LOGIC[mod.lv].n + ' 逻辑，主控是 ' + LOGIC[logic].n +
+          ' 逻辑。直接相接时，高电平可能被误判成低电平，长期还可能损坏器件。常见错误是把「电压都接对了」当成「信号也能通」——' +
+          '供电和信号是两条独立的约定，必须分别核对，该加电平转换就必须加。');
+      }
+      parts.push('<strong>易错点：</strong>接口约定有三条——供电、电平、通信。漏掉任何一条，装置都可能「看起来接对了却不工作」。');
+
+      eOut1.className = 'result ' + (ratio > 1 || !levelOk ? 'error' : (ratio > 0.8 ? 'warn' : ''));
+      eOut1.innerHTML = parts.join('<br>');
+    }
+    eLogic.addEventListener('change', render1);
+    eMod.addEventListener('change', render1);
+    eNum.addEventListener('input', render1);
+    eSup.addEventListener('change', render1);
+    eConv.addEventListener('change', render1);
+    render1();
+  }
+
+  /* ---------- 3. 上电自检工作台 ---------- */
+  var SLOTMOD = {
+    none:  { n: '未安装', cur: 0, lv: null,  addr: null,  bus: false },
+    s33:   { n: '3.3 V 传感模块（总线，地址 0x48）', cur: 18,  lv: 'l33', addr: '0x48', bus: true },
+    s5:    { n: '5 V 传感模块（总线，地址 0x48）',   cur: 26,  lv: 'l5',  addr: '0x48', bus: true },
+    s5w:   { n: '5 V 传感模块（独立信号线）',        cur: 30,  lv: 'l5',  addr: null,   bus: false },
+    relay: { n: '5 V 执行模块（继电器）',            cur: 150, lv: 'l5',  addr: null,   bus: false },
+    c48:   { n: '3.3 V 通信模块（总线，地址 0x48）', cur: 45,  lv: 'l33', addr: '0x48', bus: true },
+    c4a:   { n: '3.3 V 通信模块（总线，地址 0x4A）', cur: 45,  lv: 'l33', addr: '0x4A', bus: true }
+  };
+  var BOARD_LV = 'l33';      /* 主控逻辑电平：3.3 V */
+  var BOARD_CAP = 500;       /* 板载 5 V 稳压上限 mA */
+
+  var stage2 = document.getElementById('hw2-stage');
+  if (stage2) {
+    var eConv2 = document.getElementById('hw2-conv');
+    var eGnd = document.getElementById('hw2-gnd');
+    var eLog = document.getElementById('hw2-log');
+    var eOut2 = document.getElementById('hw2-out');
+
+    function pickSlots() {
+      var picked = [];
+      for (var i = 1; i <= 4; i++) {
+        var el = document.getElementById('hw-slot-' + i);
+        if (!el) continue;
+        var k = el.value;
+        if (k !== 'none') picked.push({ k: k, m: SLOTMOD[k] });
+      }
+      return picked;
+    }
+
+    function selfCheck() {
+      var picked = pickSlots();
+      var conv = eConv2.checked;
+      var gnd = eGnd.checked;
+      var rows = [];
+      var firstFail = -1;
+
+      /* ① 电源 */
+      var total = BOARD_SELF;
+      picked.forEach(function (p) { total += p.m.cur; });
+      var pOk = total <= BOARD_CAP;
+      rows.push({
+        ok: pOk,
+        t: '电源：全部模块共 ' + total + ' mA（含主控 ' + BOARD_SELF + ' mA），板载上限 ' + BOARD_CAP + ' mA。' +
+          (pOk ? '没有超载' : '已超载——典型现象是主控反复重启、模块时好时坏'),
+        hint: pOk ? '' : '优先解决：把大电流模块改用外接独立电源，或减少同时工作的模块。'
+      });
+      if (!pOk && firstFail < 0) firstFail = rows.length - 1;
+
+      /* ② 电平 */
+      var badLv = picked.filter(function (p) { return p.m.lv !== BOARD_LV; });
+      var lOk = badLv.length === 0 || conv;
+      rows.push({
+        ok: lOk,
+        t: '逻辑电平：主控是 3.3 V 逻辑，' +
+          (badLv.length === 0 ? '已装模块全部匹配' : '有 ' + badLv.length + ' 个模块是 5 V 逻辑') +
+          (badLv.length ? (conv ? '，你已声明使用电平转换' : '，且未使用电平转换') : ''),
+        hint: lOk ? '' : '优先解决：给 5 V 逻辑的模块加电平转换，或换成 3.3 V 逻辑的模块。'
+      });
+      if (!lOk && firstFail < 0) firstFail = rows.length - 1;
+
+      /* ③ 总线地址 */
+      var seen = {}, dup = [];
+      picked.forEach(function (p) {
+        if (!p.m.bus || !p.m.addr) return;
+        if (seen[p.m.addr]) dup.push(p.m.addr);
+        else seen[p.m.addr] = 1;
+      });
+      var aOk = dup.length === 0;
+      rows.push({
+        ok: aOk,
+        t: '总线地址：同一条总线上 ' +
+          (aOk ? '没有重复地址（已占用：' + (Object.keys(seen).join('、') || '无') + '）'
+               : '出现重复地址 ' + dup.join('、') + '，两个模块会同时应答，读数必然错乱'),
+        hint: aOk ? '' : '优先解决：把其中一个模块的地址改成可选择的其他地址（例如 0x4A）。'
+      });
+      if (!aOk && firstFail < 0) firstFail = rows.length - 1;
+
+      /* ④ 共地 */
+      rows.push({
+        ok: gnd,
+        t: '共地：' + (gnd ? '已声明全部模块与主控共地' : '尚未确认所有模块与主控共地'),
+        hint: gnd ? '' : '优先解决：把各模块的接地引脚与主控接在一起。没有公共参考点，电压高低就没有意义。'
+      });
+      if (!gnd && firstFail < 0) firstFail = rows.length - 1;
+
+      eLog.innerHTML = '';
+      rows.forEach(function (r, i) {
+        var li = document.createElement('li');
+        li.className = r.ok ? 'ok' : 'no';
+        li.innerHTML = '<span class="ic">' + (r.ok ? '✅' : '❌') + '</span>' + r.t +
+          (r.hint ? '<br><span style="color:var(--danger)">' + r.hint + '</span>' : '') +
+          (i > firstFail && firstFail >= 0 ? '<br><span style="color:var(--muted)">提示：前面那一项还没过，这条结论暂时不能当真。</span>' : '');
+        eLog.appendChild(li);
+      });
+
+      var pass = firstFail < 0;
+      eOut2.className = 'result ' + (pass ? '' : 'error');
+      if (pass) {
+        eOut2.innerHTML = '<strong>自检通过：可以上电了。</strong>供电、电平、总线地址、共地四项都对得上。' +
+          '接下来才是加载程序、读取数据；这一步之前的所有排查，都是为了不让「带病上电」把器件烧掉。';
+      } else {
+        eOut2.innerHTML = '<strong>自检不通过：从上往下第一条标红的就是要先解决的那一项。</strong>它后面的结论先不要看。' +
+          '常见错误是跳过供电和共地，直接去改程序——' +
+          '误认为「程序改了就好了」，可实际上信号连参考点都没有，程序再对也读不到正确的数。';
+      }
+    }
+    document.getElementById('hw2-run').addEventListener('click', selfCheck);
+    document.getElementById('hw2-reset').addEventListener('click', function () {
+      for (var i = 1; i <= 4; i++) {
+        var el = document.getElementById('hw-slot-' + i);
+        if (el) el.value = (i === 1 ? 's33' : 'none');
+      }
+      eConv2.checked = false;
+      eGnd.checked = false;
+      eLog.innerHTML = '';
+      eOut2.className = 'result warn';
+      eOut2.textContent = '模块装好、下面的两项确认好之后，点「上电自检」。';
+    });
+  }
+
+  /* ---------- 4. 分段排障台 ---------- */
+  var ACT = {
+    power: { n: '测量模块供电引脚是否达到额定电压', cat: '电源' },
+    cur:   { n: '核对电源额定电流与全部模块总电流（含启动瞬时）', cat: '电源' },
+    gnd:   { n: '确认所有模块与主控共地', cat: '连接' },
+    iso:   { n: '逐个断开模块，看现象是否消失', cat: '隔离' },
+    pin:   { n: '检查信号线是否接到了约定的引脚', cat: '信号' },
+    level: { n: '检查两边模块的逻辑电平是否匹配', cat: '信号' },
+    addr:  { n: '检查同一总线上的模块地址是否重复', cat: '信号' },
+    unit:  { n: '用最简程序单独读取或驱动该模块', cat: '单元' },
+    prog:  { n: '先重写主程序逻辑', cat: '程序' }
+  };
+  var SCEN = {
+    dead: {
+      n: '上电后整块装置毫无反应，指示灯不亮',
+      prio: ['power', 'gnd', 'iso'],
+      why: '先确认电到底有没有送到，再看有没有公共参考点，最后用隔离缩小范围。信号层的检查都排在后面。'
+    },
+    zero: {
+      n: '主控能启动，但传感器读数始终是零',
+      prio: ['power', 'pin', 'level'],
+      why: '读数恒为零，说明「没有有效信号」。先确认模块本身有没有拿到电，再确认信号线接在哪、电平对不对。'
+    },
+    blink: {
+      n: '执行模块动作一下就停，反复如此',
+      prio: ['cur', 'gnd', 'iso'],
+      why: '「一动就停」是典型的供电被拉低：先算电流够不够，再确认共地，最后隔离出到底是哪个模块拖垮了电压。'
+    }
+  };
+  var stage4 = document.getElementById('ps-stage');
+  if (stage4) {
+    var seqScen = 'dead';
+    var seq = [];
+
+    function renderSeq() {
+      var S = SCEN[seqScen];
+      document.getElementById('ps-brief').innerHTML = '<strong>故障现场：' + S.n +
+        '</strong>　请按顺序挑出三步排查动作（已选 ' + seq.length + ' / 3）';
+      var holder = document.getElementById('ps-seq');
+      holder.innerHTML = '';
+      if (seq.length === 0) {
+        holder.innerHTML = '<span style="color:var(--muted);font-size:13px">还没有选择动作。按你认为合理的顺序，从下面点选三步。</span>';
+      }
+      seq.forEach(function (k, i) {
+        var s = document.createElement('span');
+        s.className = 'ta-chip';
+        s.textContent = (i + 1) + '. ' + ACT[k].n + '（' + ACT[k].cat + '）';
+        holder.appendChild(s);
+      });
+      document.querySelectorAll('[data-ps-act]').forEach(function (b) {
+        var k = b.getAttribute('data-ps-act');
+        b.classList.toggle('selected', seq.indexOf(k) >= 0);
+      });
+    }
+
+    document.querySelectorAll('[data-ps-scen]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        seqScen = b.getAttribute('data-ps-scen');
+        seq = [];
+        document.querySelectorAll('[data-ps-scen]').forEach(function (x) {
+          x.classList.toggle('selected', x === b);
+        });
+        document.getElementById('ps-out').className = 'result warn';
+        document.getElementById('ps-out').textContent = '顺序挑好三步之后，点「提交排查方案」。';
+        renderSeq();
+      });
+    });
+    document.querySelectorAll('[data-ps-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var k = b.getAttribute('data-ps-act');
+        var i = seq.indexOf(k);
+        if (i >= 0) { seq.splice(i, 1); }
+        else if (seq.length < 3) { seq.push(k); }
+        else {
+          var out = document.getElementById('ps-out');
+          out.className = 'result warn';
+          out.textContent = '已经选满三步了。想换的话，先点掉上面某个动作。';
+          return;
+        }
+        renderSeq();
+      });
+    });
+    document.getElementById('ps-clear').addEventListener('click', function () {
+      seq = [];
+      renderSeq();
+      document.getElementById('ps-out').className = 'result warn';
+      document.getElementById('ps-out').textContent = '顺序挑好三步之后，点「提交排查方案」。';
+    });
+
+    document.getElementById('ps-run').addEventListener('click', function () {
+      var S = SCEN[seqScen];
+      var out = document.getElementById('ps-out');
+      if (seq.length < 3) {
+        out.className = 'result warn';
+        out.textContent = '还差 ' + (3 - seq.length) + ' 步。请按顺序挑满三步再提交。';
+        return;
+      }
+      var hits = seq.filter(function (k) { return S.prio.indexOf(k) >= 0; }).length;
+      var orderOk = hits === 3 && seq.every(function (k, i) { return S.prio.indexOf(k) === i; });
+      var rows = [];
+
+      seq.forEach(function (k, i) {
+        var pos = S.prio.indexOf(k);
+        var ok = pos >= 0;
+        var extra = '';
+        if (!ok) {
+          extra = k === 'prog'
+            ? '这一步放在最后才有意义，一上来就重写程序，等于跳过了电源和接线两段。'
+            : '这一步在本次故障里不是关键项，先做完关键项再回来看它。';
+        }
+        rows.push('<li class="' + (ok ? 'ok' : 'no') + '"><span class="ic">' + (ok ? '✅' : '❌') + '</span>第 ' +
+          (i + 1) + ' 步　' + ACT[k].n + '<br><span style="color:var(--muted)">' +
+          (ok ? '命中关键项' + (orderOk ? '，位置也对' : '，但建议的顺序是第 ' + (pos + 1) + ' 步') : extra) + '</span></li>');
+      });
+      S.prio.forEach(function (k, i) {
+        if (seq.indexOf(k) < 0) {
+          rows.push('<li><span class="ic">＋</span>漏掉的关键项（应在第 ' + (i + 1) + ' 步）：' + ACT[k].n + '</li>');
+        }
+      });
+
+      var score = hits + (orderOk ? 1 : 0);
+      out.className = 'result ' + (score >= 4 ? '' : 'error');
+      out.innerHTML = '<strong>判定：关键项命中 ' + hits + ' / 3' +
+        '，顺序' + (orderOk ? '正确' : '需要调整') + '，合计 ' + score + ' / 4。</strong>' +
+        '<div class="ta-meter"><div class="bar"><div class="fill" style="width:' + (score * 25) + '%"></div></div><span>' +
+        (score * 25) + '%</span></div>' +
+        '<br><ul class="ta-log">' + rows.join('') + '</ul>' +
+        '<strong>推荐的排查顺序：</strong>' + S.prio.map(function (k, i) { return (i + 1) + '. ' + ACT[k].n; }).join('　') +
+        '。' + S.why +
+        '<br><strong>易错点：</strong>常见错误是凭感觉挑自己最熟的那一步。' +
+        '分段验证的顺序是有道理的——电源决定成败，隔离负责缩小范围，程序永远排在最后。' +
+        '顺序错了，不是查不出来，而是要多花好几倍的时间。';
+    });
+    renderSeq();
+  }
+})();
+
+</script>
+
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+</body>
+</html>
