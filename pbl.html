@@ -2796,12 +2796,28 @@ function onPBLNodeClick(node) {
       });
     }
     if (allCourses.length > 0) {
-      coursewareHtml = `<div class="prereq-list"><h4>📖 已有课件</h4>` +
-        allCourses.map(c => {
-          const sourceIcon = { official: '📋', community_registry: '🔖', community_shared: '🌐', user: '📂' }[c.source] || '📚';
-          const courseUrl = c.url || (c.path ? `./${c.path}/index.html` : '');
-          return courseUrl ? `<a href="${courseUrl}" target="_blank" style="display:block;padding:6px 12px;margin:3px 0;font-size:13px;color:var(--text);text-decoration:none;background:rgba(148,163,184,0.08);">${sourceIcon} ${c.name || c.id}</a>` : '';
-        }).join('') + `</div>`;
+      // 用户知识库（托管在用户自己的资料库里，只有外链）单独成区，
+      // 不混进本地课件列表，避免打乱原有的展示与顺序。
+      const localCourses = allCourses.filter(c => !c.is_external);
+      const libraryCourses = allCourses.filter(c => c.is_external);
+      let inner = '';
+      if (localCourses.length > 0) {
+        inner += `<h4>📖 已有课件</h4>` +
+          localCourses.map(c => {
+            const sourceIcon = { official: '📋', community_registry: '🔖', community_shared: '🌐', user: '📂' }[c.source] || '📚';
+            const courseUrl = c.url || (c.path ? `./${c.path}/index.html` : '');
+            return courseUrl ? `<a href="${courseUrl}" target="_blank" rel="noopener noreferrer" style="display:block;padding:6px 12px;margin:3px 0;font-size:13px;color:var(--text);text-decoration:none;background:rgba(148,163,184,0.08);">${sourceIcon} ${c.name || c.id}</a>` : '';
+          }).join('');
+      }
+      if (libraryCourses.length > 0) {
+        inner += `<h4 style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(148,163,184,0.25);">🔗 用户知识库（用户自己托管）</h4>` +
+          libraryCourses.map(c => {
+            const u = String(c.source_url || c.url || '').trim();
+            if (!/^https?:\/\//i.test(u)) return '';
+            return `<a href="${u.replace(/"/g, '&quot;')}" target="_blank" rel="noopener noreferrer nofollow" style="display:block;padding:6px 12px;margin:3px 0;font-size:13px;color:var(--text);text-decoration:none;background:rgba(148,163,184,0.06);border:1px dashed rgba(148,163,184,0.3);">🔗 ${c.name || c.id} ↗</a>`;
+          }).join('');
+      }
+      coursewareHtml = inner ? `<div class="prereq-list">${inner}</div>` : '';
     } else if (node.courses && node.courses.length) {
       coursewareHtml = `<div class="prereq-list"><h4>📖 已有课件</h4>` +
         node.courses.map(cid => {

@@ -106,7 +106,15 @@ function resolveCourseUrl(course) {
   return COURSEWARE_BASE_URL + '/';
 }
 const CACHE_TTL = 30 * 60 * 1000; // 30 分钟缓存
-const LIKES_KEY = 'teachany_likes';
+const LIKES_KEY = 'teachany_likes';                     // 旧版本地累加值，仅作首屏初值兼容
+const LIKE_COUNT_CACHE_KEY = 'teachany_like_counts_v1'; // 服务端计数的本地副本
+
+// 点赞后端：Cloudflare Pages Functions + KV（teachany-community）
+//   GET  /api/like?ids=a,b,c    → { ok, likes: { id: n } }   卡片渲染取真值
+//   POST /api/like {course_id}  → { ok, liked, likes }       同一 IP 对同一课件只算一次
+const LIKE_API = 'https://teachany-community.pages.dev/api/like';
+const LIKE_BATCH = 200;   // 与后端 MAX_IDS_PER_QUERY 对齐
+const LIKE_FETCH_TIMEOUT = 4000;
 
 /* ─── 辅助工具 ──────────────────────────────── */
 function escapeHtml(value) {
@@ -188,50 +196,158 @@ function saveLikes(likes) {
   } catch {}
 }
 
+/* 计数真值：内存 → 服务端本地副本 → 旧版累加值（仅首次兼容） */
+let _likeCounts = null;
+
+function readJSONSafe(key) {
+  try { return JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch { return {}; }
+}
+
+function writeJSONSafe(key, obj) {
+  try { localStorage.setItem(key, JSON.stringify(obj)); } catch {}
+}
+
+function loadCountCache() {
+  if (_likeCounts) return _likeCounts;
+  _likeCounts = { ...readLikes(), ...readJSONSafe(LIKE_COUNT_CACHE_KEY) };
+  return _likeCounts;
+}
+
+function saveCountCache() {
+  writeJSONSafe(LIKE_COUNT_CACHE_KEY, _likeCounts || {});
+}
+
 function getLikeCount(courseId) {
-  return readLikes()[courseId] || 0;
+  return loadCountCache()[courseId] || 0;
 }
 
 function hasUserLiked(courseId) {
   return readUserLikes()[courseId] === true;
 }
 
-function toggleLike(courseId) {
-  const userLikes = readUserLikes();
-  const likes = readLikes();
-  
-  if (userLikes[courseId]) {
-    // 已点赞,取消点赞
-    userLikes[courseId] = false;
-    likes[courseId] = Math.max((likes[courseId] || 1) - 1, 0);
-  } else {
-    // 未点赞,添加点赞
-    userLikes[courseId] = true;
-    likes[courseId] = (likes[courseId] || 0) + 1;
-  }
-  
-  saveUserLikes(userLikes);
-  saveLikes(likes);
-  
-  return {
-    liked: userLikes[courseId],
-    count: likes[courseId]
-  };
+function setLikeCountValue(courseId, n) {
+  loadCountCache()[courseId] = Math.max(0, Number(n) || 0);
+  saveCountCache();
+  paintLikeCount(courseId);
 }
 
-window._toggleLike = function(button) {
-  const courseId = button.dataset.like;
-  const result = toggleLike(courseId);
-  
-  button.querySelector('.like-count').textContent = result.count;
-  
-  if (result.liked) {
-    button.classList.add('liked');
-    button.querySelector('.like-icon').textContent = '❤️';
-  } else {
-    button.classList.remove('liked');
-    button.querySelector('.like-icon').textContent = '🤍';
+/** 把某个 courseId 的计数同步到页面上所有同 id 的按钮 */
+function paintLikeCount(courseId) {
+  const n = String(getLikeCount(courseId));
+  document.querySelectorAll(`.ta-like-btn[data-like="${courseId}"] .like-count`)
+    .forEach(el => { el.textContent = n; });
+}
+
+/** 全量刷新一遍计数 DOM（批量拉回真值后用，只遍历一次） */
+function refreshAllLikeCounts() {
+  document.querySelectorAll('.ta-like-btn[data-like]').forEach(btn => {
+    const el = btn.querySelector('.like-count');
+    if (el) el.textContent = String(getLikeCount(btn.dataset.like));
+  });
+}
+
+function paintLikeButton(button, courseId) {
+  const liked = hasUserLiked(courseId);
+  button.classList.toggle('liked', liked);
+  const icon = button.querySelector('.like-icon');
+  if (icon) icon.textContent = liked ? '❤️' : '🤍';
+  const count = button.querySelector('.like-count');
+  if (count) count.textContent = String(getLikeCount(courseId));
+  button.title = liked ? '已点赞' : '点赞';
+}
+
+/**
+ * 批量从服务端拉真实计数。
+ * 失败一律静默——页面照常显示本地副本，不让点赞后端拖累画廊渲染。
+ */
+async function primeLikeCounts(courseIds) {
+  const ids = [...new Set((courseIds || []).filter(Boolean))];
+  if (!ids.length) return;
+  loadCountCache();
+
+  const batches = [];
+  for (let i = 0; i < ids.length; i += LIKE_BATCH) batches.push(ids.slice(i, i + LIKE_BATCH));
+
+  const results = await Promise.all(batches.map(async (group) => {
+    let timer;
+    try {
+      const r = await Promise.race([
+        fetch(`${LIKE_API}?ids=${encodeURIComponent(group.join(','))}`, { cache: 'no-store' }),
+        new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), LIKE_FETCH_TIMEOUT); }),
+      ]);
+      if (!r || !r.ok) return null;
+      const data = await r.json();
+      return (data && data.likes) || null;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }));
+
+  let changed = false;
+  for (const likes of results) {
+    if (!likes) continue;
+    for (const [id, n] of Object.entries(likes)) {
+      const v = Number(n) || 0;
+      if (_likeCounts[id] !== v) { _likeCounts[id] = v; changed = true; }
+    }
   }
+  if (changed) { saveCountCache(); refreshAllLikeCounts(); }
+}
+
+/** 写一次点赞。成功返回后端 JSON，失败返回 null */
+async function postLike(courseId) {
+  let timer;
+  try {
+    const r = await Promise.race([
+      fetch(LIKE_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ course_id: courseId }),
+      }),
+      new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), LIKE_FETCH_TIMEOUT); }),
+    ]);
+    if (!r || !r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+window._toggleLike = async function(button) {
+  const courseId = button.dataset.like;
+  if (!courseId || button.dataset.liking === '1') return;
+
+  // 点过就不重复计。后端也按 IP 去重，这里只是省一次往返
+  if (hasUserLiked(courseId)) {
+    paintLikeButton(button, courseId);
+    return;
+  }
+
+  const userLikes = readUserLikes();
+  userLikes[courseId] = true;
+  saveUserLikes(userLikes);
+  button.dataset.liking = '1';
+
+  // 乐观更新：先点亮 +1，等后端回包再以真值校准
+  loadCountCache()[courseId] = getLikeCount(courseId) + 1;
+  saveCountCache();
+  paintLikeButton(button, courseId);
+
+  const res = await postLike(courseId);
+  if (res && typeof res.likes === 'number') {
+    setLikeCountValue(courseId, res.likes);
+  } else {
+    // 后端没落库：回退，避免显示一个不存在的数字
+    userLikes[courseId] = false;
+    saveUserLikes(userLikes);
+    setLikeCountValue(courseId, Math.max(getLikeCount(courseId) - 1, 0));
+  }
+  paintLikeButton(button, courseId);
+  delete button.dataset.liking;
 };
 
 /* ─── 加载注册表 ─────────────────────────────── */
@@ -499,6 +615,9 @@ async function initGallery() {
 
     console.log(`[TeachAny] 官方: ${official.length}, 社区: ${community.length}, 其他知识: ${other.length}`);
 
+    // 渲染前先取服务端真实点赞数（自带超时，点赞后端不可用也不阻塞画廊）
+    await primeLikeCounts(registry.courses.map(c => c.id));
+
     // 渲染官方课件
     const officialGrid = document.getElementById('officialGrid');
     if (officialGrid) {
@@ -566,7 +685,8 @@ window.TeachAnyUnifiedLoader = {
   loadRegistry,
   initGallery,
   renderCourseCard,
-  toggleLike,
+  primeLikeCounts,
+  getLikeCount,
   clearCache: () => localStorage.removeItem(CACHE_KEY)
 };
 

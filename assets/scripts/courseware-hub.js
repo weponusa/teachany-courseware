@@ -28,6 +28,13 @@ const HUB_COURSEWARE_BASE_URL = 'https://www.teachany.cn';
 const HUB_CACHE_KEY = 'teachany_hub_cache_v7'; // v7: auto-publish registry refresh
 const HUB_CACHE_TTL = 15 * 60 * 1000; // 15 分钟
 
+// 心标真值：Cloudflare Pages Functions + KV（teachany-community）
+//   GET /api/like?ids=a,b,c → { ok, likes: { id: n } }
+// 与画廊 unified-loader.js 读的是同一份计数，两边显示保持一致。
+const HUB_LIKE_API = 'https://teachany-community.pages.dev/api/like';
+const HUB_LIKE_BATCH = 200;      // 与后端 MAX_IDS_PER_QUERY 对齐
+const HUB_LIKE_TIMEOUT = 4000;
+
 function resolveCoursewareUrl(path) {
   if (!path) return HUB_COURSEWARE_BASE_URL + '/';
   if (/^https?:\/\//i.test(path)) return path;
@@ -135,42 +142,58 @@ async function _doInit() {
     }
 
     // 3. 标准化 registry 课件
-    _registryCourses = (registryData.courses || []).map(c => ({
-      id: c.id,
-      node_id: c.node_id || '',
-      name: c.name || c.id,
-      subject: c.subject || '',
-      grade: c.grade || 0,
-      emoji: c.emoji || '📚',
-      likes: 0,
-      source: c.status === 'official' ? SOURCE.OFFICIAL : SOURCE.COMMUNITY_REG,
-      url: resolveCoursewareUrl(c.path || `community/${c.id}`),
-      path: c.path || '',
-      has_tts: c.has_tts || false,
-      has_video: c.has_video || false,
-      author: c.author || '',
-      download_url: '',
-    }));
+    //    hosting === 'external-link' 表示课件托管在用户自己的知识库/服务器上，
+    //    只有外链、没有本地目录。前端要把它和本地托管课件分开显示，所以把标识透传出来。
+    _registryCourses = (registryData.courses || []).map(c => {
+      const isExternal = c.hosting === 'external-link' || !!c.source_url;
+      return {
+        id: c.id,
+        node_id: c.node_id || '',
+        name: c.name || c.id,
+        subject: c.subject || '',
+        grade: c.grade || 0,
+        emoji: c.emoji || '📚',
+        likes: 0,
+        source: c.status === 'official' ? SOURCE.OFFICIAL : SOURCE.COMMUNITY_REG,
+        url: isExternal
+          ? (c.source_url || c.download_url || '')
+          : resolveCoursewareUrl(c.path || `community/${c.id}`),
+        path: c.path || '',
+        has_tts: c.has_tts || false,
+        has_video: c.has_video || false,
+        author: c.author || '',
+        download_url: c.download_url || '',
+        hosting: c.hosting || '',
+        source_url: c.source_url || '',
+        is_external: isExternal,
+      };
+    });
 
     // 4. 标准化 community 课件
-    _communityCourses = (communityData.courses || []).map(c => ({
-      id: c.id,
-      node_id: c.node_id || '',
-      name: c.name || c.id,
-      subject: c.subject || '',
-      grade: c.grade || 0,
-      emoji: '🌐',
-      likes: c.likes || 0,
-      source: SOURCE.COMMUNITY_SHARED,
-      url: c.download_url || resolveCoursewareUrl(c.path || `community/${c.id}`),
-      path: c.path || '',
-      has_tts: false,
-      has_video: false,
-      author: c.author || '',
-      download_url: c.download_url || '',
-    }));
+    _communityCourses = (communityData.courses || []).map(c => {
+      const isExternal = c.hosting === 'external-link' || !!c.source_url;
+      return {
+        id: c.id,
+        node_id: c.node_id || '',
+        name: c.name || c.id,
+        subject: c.subject || '',
+        grade: c.grade || 0,
+        emoji: isExternal ? '🔗' : '🌐',
+        likes: c.likes || 0,
+        source: SOURCE.COMMUNITY_SHARED,
+        url: c.download_url || resolveCoursewareUrl(c.path || `community/${c.id}`),
+        path: c.path || '',
+        has_tts: false,
+        has_video: false,
+        author: c.author || '',
+        download_url: c.download_url || '',
+        hosting: c.hosting || '',
+        source_url: c.source_url || '',
+        is_external: isExternal,
+      };
+    });
 
-    // 5. 合并 likes：community likes 覆盖 registry 同 ID 课件
+    // 5. 合并 likes：community/index.json 里的 likes 作初值（老数据兼容）
     const communityLikesMap = new Map();
     _communityCourses.forEach(c => {
       if (c.id && c.likes > 0) communityLikesMap.set(c.id, c.likes);
@@ -181,16 +204,20 @@ async function _doInit() {
       }
     });
 
-    // 6. 合并本地 likes (来自 localStorage)
-    try {
-      const localLikes = JSON.parse(localStorage.getItem('teachany_likes') || '{}');
-      _registryCourses.forEach(c => {
-        if (localLikes[c.id]) c.likes += localLikes[c.id];
+    // 6. 以服务端真实计数覆盖（拉取失败就保留上面的初值，不阻塞索引构建）
+    //    注意：这里不再叠加 localStorage 的本地值——服务端才是唯一真值来源，
+    //    叠加会让同一个数字被算两遍。
+    const serverLikes = await fetchHubLikes(
+      [..._registryCourses, ..._communityCourses].map(c => c.id)
+    );
+    if (serverLikes.size) {
+      [..._registryCourses, ..._communityCourses].forEach(c => {
+        if (c.id && serverLikes.has(c.id)) c.likes = serverLikes.get(c.id);
       });
-      _communityCourses.forEach(c => {
-        if (localLikes[c.id]) c.likes += localLikes[c.id];
-      });
-    } catch {}
+      console.log(`[CoursewareHub] ✅ 服务端点赞数已合并: ${serverLikes.size} 条`);
+    } else {
+      console.warn('[CoursewareHub] ⚠️ 服务端点赞数拉取失败，沿用 community/index.json 初值');
+    }
 
     // 7. 构建 node_id 索引
     _buildNodeIndex();
@@ -203,6 +230,39 @@ async function _doInit() {
     console.error('[CoursewareHub] 初始化失败（未缓存，允许下次重试）:', err);
     _initPromise = null; // 原来置 _initialized=true 会把空索引锁死整页，改为允许重试
   }
+}
+
+/* ─── 心标真值（服务端计数） ──────────────────── */
+async function fetchHubLikes(courseIds) {
+  const ids = [...new Set((courseIds || []).filter(Boolean))];
+  const out = new Map();
+  if (!ids.length) return out;
+
+  const batches = [];
+  for (let i = 0; i < ids.length; i += HUB_LIKE_BATCH) batches.push(ids.slice(i, i + HUB_LIKE_BATCH));
+
+  const results = await Promise.all(batches.map(async (group) => {
+    let timer;
+    try {
+      const r = await Promise.race([
+        fetch(`${HUB_LIKE_API}?ids=${encodeURIComponent(group.join(','))}`, { cache: 'no-store' }),
+        new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), HUB_LIKE_TIMEOUT); }),
+      ]);
+      if (!r || !r.ok) return null;
+      const data = await r.json();
+      return (data && data.likes) || null;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }));
+
+  for (const likes of results) {
+    if (!likes) continue;
+    for (const [id, n] of Object.entries(likes)) out.set(id, Number(n) || 0);
+  }
+  return out;
 }
 
 /* ─── 构建索引 ────────────────────────────────── */
