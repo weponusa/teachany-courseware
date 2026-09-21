@@ -1481,6 +1481,12 @@ function showTooltip(event, d) {
   // ── 统一通过 Hub 获取所有课件（已按 likes 降序排列） ──
   const hubCourses = window.TeachAnyHub ? TeachAnyHub.getAllCoursesForNode(d.id) : [];
   const hubCount = hubCourses.length;
+  // 用户知识库（托管在用户自己的知识库里，只有外链）单独成区，
+  // 不混进本地课件列表，避免影响原来的展示与排序。
+  const libraryCourses = hubCourses.filter(c => c.is_external);
+  const localCourses = hubCourses.filter(c => !c.is_external);
+  const libraryCount = libraryCourses.length;
+  const localCount = localCourses.length;
 
   // 同时保留旧逻辑作为 fallback（Hub 未初始化时）
   const userCourses = window.TeachAnyImporter ? TeachAnyImporter.getTopCoursesForTreeNode(d.id) : [];
@@ -1512,16 +1518,17 @@ function showTooltip(event, d) {
   const statParts = [];
 
   if (hubCount > 0) {
-    // Hub 模式：显示聚合统计
+    // Hub 模式：显示聚合统计（用户知识库单独计数，不并进社区）
     const officialCount = hubCourses.filter(c => c.source === 'official').length;
-    const communityRegCount = hubCourses.filter(c => c.source === 'community_registry').length;
-    const communitySharedCount = hubCourses.filter(c => c.source === 'community_shared').length;
+    const communityRegCount = localCourses.filter(c => c.source === 'community_registry').length;
+    const communitySharedCount = localCourses.filter(c => c.source === 'community_shared').length;
     const userCount = hubCourses.filter(c => c.source === 'user').length;
 
     if (officialCount > 0) statParts.push(`📋 官方 ×${officialCount}`);
     if (communityRegCount > 0) statParts.push(`🔖 社区精选 ×${communityRegCount}`);
     if (communitySharedCount > 0) statParts.push(`🌐 社区共享 ×${communitySharedCount}`);
     if (userCount > 0) statParts.push(`📂 我的 ×${userCount}`);
+    if (libraryCount > 0) statParts.push(`🔗 用户知识库 ×${libraryCount}`);
 
     // 总 likes 数
     const totalLikes = hubCourses.reduce((sum, c) => sum + (c.likes || 0), 0);
@@ -1571,14 +1578,14 @@ function showTooltip(event, d) {
   // ── 课标内容模块（curriculum_points + excerpts） ──
   html += renderCurriculumSection(d);
 
-  // ── 课件列表（始终展示列表+心标，用户点选进入） ──
-  if (hubCount > 0) {
-    html += `<div style="margin-top:8px;font-size:12px;color:var(--dim);">课件列表${hubCount > 1 ? '（按 ❤️ 排序）' : ''}：</div>`;
+  // ── 课件列表（本地托管；用户知识库在下面单独一区） ──
+  if (localCount > 0) {
+    html += `<div style="margin-top:8px;font-size:12px;color:var(--dim);">课件列表${localCount > 1 ? '（按 ❤️ 排序）' : ''}：</div>`;
     html += `<div style="max-height:160px;overflow-y:auto;margin-top:4px;">`;
-    hubCourses.forEach((c, idx) => {
+    localCourses.forEach((c, idx) => {
       const sourceIcon = { official: '📋', community_registry: '🔖', community_shared: '🌐', user: '📂' }[c.source] || '📚';
       const likeBadge = c.likes > 0 ? ` <span style="color:#f87171;">❤️${c.likes}</span>` : ' <span style="color:var(--dimmer);">❤️0</span>';
-      const isBest = idx === 0 && hubCount > 1 ? ' <span style="color:var(--accent);">👑</span>' : '';
+      const isBest = idx === 0 && localCount > 1 ? ' <span style="color:var(--accent);">👑</span>' : '';
       const courseUrl = c.url || (c.path ? `./${c.path}/index.html` : '');
       if (courseUrl) {
         html += `<a ${courseLinkAttrs(courseUrl)}
@@ -1589,7 +1596,7 @@ function showTooltip(event, d) {
       }
     });
     html += `</div>`;
-  } else if (treeOfficialCourses.length) {
+  } else if (hubCount === 0 && treeOfficialCourses.length) {
     // Fallback：仅展示 registry 能解析的官方课件
     html += `<div style="margin-top:8px;font-size:12px;color:var(--dim);">课件列表：</div>`;
     html += `<div style="max-height:160px;overflow-y:auto;margin-top:4px;">`;
@@ -1603,6 +1610,26 @@ function showTooltip(event, d) {
         onmouseover="this.style.background='rgba(59,130,246,0.15)';this.style.borderColor='rgba(59,130,246,0.3)'"
         onmouseout="this.style.background='rgba(148,163,184,0.08)';this.style.borderColor='transparent'"
       ><span>📋</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name || c.id}</span>${likeBadge}</a>`;
+    });
+    html += `</div>`;
+  }
+
+  // ── 用户知识库（用户托管在自己的资料库里，只有外链；独立于上面的本地课件列表）──
+  if (libraryCount > 0) {
+    html += `<div style="margin-top:10px;border-top:1px dashed rgba(148,163,184,0.25);"></div>`;
+    html += `<div style="margin-top:8px;font-size:12px;color:var(--dim);">🔗 用户知识库（用户自己托管）：</div>`;
+    html += `<div style="max-height:120px;overflow-y:auto;margin-top:4px;">`;
+    libraryCourses.forEach(c => {
+      const courseUrl = c.source_url || c.url || '';
+      if (!courseUrl) return;
+      const likeBadge = c.likes > 0
+        ? ` <span style="color:#f87171;">❤️${c.likes}</span>`
+        : ' <span style="color:var(--dimmer);">❤️0</span>';
+      html += `<a ${externalLinkAttrs(courseUrl)}
+        style="display:flex;align-items:center;gap:6px;padding:6px 10px;margin:3px 0;font-size:13px;color:var(--text);text-decoration:none;background:rgba(148,163,184,0.06);border:1px dashed rgba(148,163,184,0.3);transition:all 0.2s;pointer-events:auto;"
+        onmouseover="this.style.background='rgba(16,185,129,0.14)';this.style.borderColor='rgba(16,185,129,0.45)'"
+        onmouseout="this.style.background='rgba(148,163,184,0.06)';this.style.borderColor='rgba(148,163,184,0.3)'"
+      ><span>🔗</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.name || c.id)}</span>${likeBadge}<span style="font-size:11px;color:var(--dimmer);">↗</span></a>`;
     });
     html += `</div>`;
   }
@@ -1740,6 +1767,19 @@ function isTeachAnyUrl(url) {
   // 相对路径（不含协议前缀）都允许
   if (!/^[a-z]+:/i.test(url)) return true;
   return TEACHANY_NAV_WHITELIST.some(re => re.test(url));
+}
+
+/**
+ * 用户知识库外链：白名单之外的地址也要能点开。
+ * 只放行 http/https（挡掉 javascript: / data: 等），并加 noopener/nofollow。
+ */
+function externalLinkAttrs(url) {
+  if (!url || url === '#') return 'href="#"';
+  const u = String(url).trim();
+  if (!/^https?:\/\//i.test(u)) {
+    return `href="#" title="链接格式不支持（仅支持 http/https）" onclick="return false;"`;
+  }
+  return `href="${u.replace(/"/g, '&quot;')}" target="_blank" rel="noopener noreferrer nofollow"`;
 }
 
 /** 生成课件链接属性：白名单内用原生 <a>，避免 preventDefault + window.open 被拦或误杀 teachany.cn */

@@ -58,6 +58,14 @@ if [ -f "$LP_A" ] && [ -f "$LP_B" ] && ! cmp -s "$LP_A" "$LP_B"; then
   cp "$LP_A" "$LP_B"
 fi
 
+# 4c. courseware-hub.js 双份须一致（tree 用 scripts/，pbl/knowledge-map/path 用 assets/scripts/）
+CH_A="$ROOT/scripts/courseware-hub.js"
+CH_B="$ROOT/assets/scripts/courseware-hub.js"
+if [ -f "$CH_A" ] && [ -f "$CH_B" ] && ! cmp -s "$CH_A" "$CH_B"; then
+  echo "⚠️  courseware-hub.js 不一致，同步 scripts/ → assets/scripts/"
+  cp "$CH_A" "$CH_B"
+fi
+
 # 5. 根级页面与索引
 touch "$OUT/.nojekyll"
 for f in \
