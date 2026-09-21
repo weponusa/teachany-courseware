@@ -1,0 +1,1583 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《物联网概念与架构》 · 初中信息科技 八年级 · TeachAny</title>
+<meta name="description" content="从让一间教室自己感知与决策的真实需求出发，理解物联网是让物品能感知、能联网、能上报的技术，掌握感知层、网络层、应用层的基本架构，理解物理量经采样与模数转换变成有限级数数字量的过程及其量化误差，并会按距离、带宽与功耗为设备选择连接方式。">
+
+<meta name="course-id" content="it-m-iot-concept">
+<meta name="course-title" content="物联网概念与架构">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="初中八年级">
+<meta name="course-prereqs" content="无">
+<meta name="course-next" content="it-m-iot-project">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.22.0">
+<meta name="teachany-node" content="it-m-iot-concept">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="8">
+<meta name="teachany-stage" content="middle">
+<meta name="teachany-domain" content="iot-modules">
+<meta name="teachany-prerequisites" content="无（初中物联网起点）">
+<meta name="teachany-lesson-type" content="concept-inquiry">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style>
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+</style>
+</head>
+<body class="teachany-middle">
+
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
+    <img src="https://www.teachany.cn/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.22.0</span></span>
+  </div>
+</div>
+
+<div class="slide-container" id="slide-container">
+
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero"
+           data-tts-script="先看一个真实的问题。一间教室，灯忘关了、空气闷了，人进门才知道，全靠人一遍遍去看。能不能让这些东西自己知道、自己上报、甚至自己动手？这就是物联网要解决的事。它并不神秘，靠的是把物理世界的信息变成数字量，再经过网络送到平台，最后由平台来判断和决策。这节课我们就把这三层拆开看清楚。"
+           data-tsh="开场 - 用一个真实问题建立学习动机" data-bloom-level="remember" data-scaffold="full">
+    <div class="slide-inner">
+      <p class="level-badge">初中八年级 · 物联网与模块</p>
+      <h1>物联网概念与架构</h1>
+      <p class="subtitle">一间普通的教室，怎样才能自己「知道」屋里闷了、灯还亮着，并且自己做出反应？</p>
+      <figure class="ta-standard-figure" style="margin-top:24px">
+        <img src="./assets/it-m-iot-concept-hero.webp" alt="物联网三层架构知识结构图：感知层、网络层、应用层三栏">
+        <figcaption>感知层（采集与执行）→ 网络层（距离·带宽·功耗）→ 应用层（判断·决策·展示）：数据向上汇聚，指令向下回传</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide-page" id="problem-anchor" data-page-type="interactive" data-page-index="1"
+           data-tts="problem-anchor" data-tts-alias="anchor"
+           data-tts-script="在开始之前，先选出你最想弄明白的那个问题。是想知道物联网到底和互联网有什么不一样，还是想知道传感器是凭什么把温度变成数字的，又或者你想亲手把一条从采集到动作的完整链路搭起来。选好之后，就带着这个问题往下看。"
+           data-tsh="问题锚点 - 先确定今天最想弄明白的问题">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">问题锚点</span>
+          <h2>今天最想弄明白哪一件事？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你真正好奇的问题，后面的实验都会围着它转。</p>
+        <div class="grid">
+          <button class="choice" data-anchor-choice="物联网和互联网到底差在哪里"><strong>物联网和互联网到底差在哪里？</strong><br><span style="color:var(--muted);font-size:14px">不都是联网吗，为什么单分一类</span></button>
+          <button class="choice" data-anchor-choice="传感器凭什么把温度变成数字"><strong>传感器凭什么把温度变成数字？</strong><br><span style="color:var(--muted);font-size:14px">物理量怎么才能被计算机读懂</span></button>
+          <button class="choice" data-anchor-choice="三层架构每层到底在干什么"><strong>三层架构每层到底在干什么？</strong><br><span style="color:var(--muted);font-size:14px">分三层有什么必要</span></button>
+          <button class="choice" data-anchor-choice="怎么给设备选一种合适的连接方式"><strong>怎么给设备选一种合适的连接方式？</strong><br><span style="color:var(--muted);font-size:14px">距离、速度、耗电怎么权衡</span></button>
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己最想知道的问题
+          <input id="learner-question-input" placeholder="把你好奇的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives"
+           data-tts-script="这节课有四个目标。第一，能说出物联网是什么，知道它连接的对象是物，而互联网连接的对象主要是人。第二，能说出感知层的作用，理解传感器把连续变化的物理量转换成有限级数数字量的过程，知道量化误差不可避免。第三，能说出网络层的作用，会根据距离、带宽和功耗为设备选择合适的连接方式。第四，能说出应用层的作用，并把一个真实场景拆成感知层、网络层、应用层三部分。"
+           data-tsh="学习目标 - 明确这节课结束时能做到什么" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">学习目标</span>
+          <h2>这节课结束时，你应该能做到</h2>
+        </div>
+        <ul class="objectives">
+          <li>能说出物联网是什么，区分物联网与互联网连接对象的差别</li>
+          <li>能说明感知层把物理量转换为数字量的过程，并解释量化误差产生的原因</li>
+          <li>能根据距离、带宽与功耗，为采集设备选择合适的连接方式</li>
+          <li>能把一个真实场景拆解为感知层、网络层、应用层三部分并说明各部分作用</li>
+        </ul>
+        <div class="kid-note" style="margin-top:16px">
+          <span class="emoji">🎯</span>
+          <div><strong>课标依据：</strong>《义务教育信息科技课程标准（2022年版2025年修订）》初中「物联网与模块」——理解物联网感知层、网络层、应用层的基本架构。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="3" data-tts="pretest"
+           data-tts-script="先做三道小题，凭你现在的想法选就行，选错了也没关系，正好能看出哪里需要重点听。选完会立刻出现解释。"
+           data-tsh="先测一测：物联网到底物在哪里？ - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">前测</span>
+          <h2>先测一测：物联网到底物在哪里？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="pre-1">
+          <p><strong>1. 下面哪一件事属于物联网要做的事？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-1" data-correct="1">把教室里的温度和人数自动采集起来送到平台，并据此决定要不要开窗</button>
+            <button class="choice" data-q="pre-1" data-correct="0">用手机看一段在线视频</button>
+            <button class="choice" data-q="pre-1" data-correct="0">把一份文档存到网盘里</button>
+          </div>
+          <p class="result warn" data-explain="pre-1" style="display:none;margin-top:10px">物联网的关键是「物」自己产生数据：传感器采集、网络传输、平台决策。看视频和存文档连接的都是人和信息，属于互联网。<strong>错因提醒：</strong>把上网和物联网搞混，是这一课最常见的错误。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-2">
+          <p><strong>2. 传感器把 0 ℃ 到 50 ℃ 的温度范围用 8 位来表示，这意味着：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-2" data-correct="1">这 50 ℃ 的范围被切成了 256 级，每一级之间还会有一点点误差</button>
+            <button class="choice" data-q="pre-2" data-correct="0">传感器能测到小数点后无限多位</button>
+            <button class="choice" data-q="pre-2" data-correct="0">温度可以完全精确地还原，没有任何误差</button>
+          </div>
+          <p class="result warn" data-explain="pre-2" style="display:none;margin-top:10px">有限位数的数字量只能表示有限个等级，真实值落在两级之间时只能就近取整，这就产生了量化误差。<strong>错因提醒：</strong>很多同学误认为数字量一定比模拟量更精确，其实精度取决于位数和量程。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-3">
+          <p><strong>3. 一个装在操场角落的土壤湿度采集点，到机房平台大约有 300 米。选择连接方式时最该优先考虑的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-3" data-correct="1">这种连接方式能不能覆盖 300 米，以及它的耗电能不能接受</button>
+            <button class="choice" data-q="pre-3" data-correct="0">哪种连接方式的名字听起来更先进</button>
+            <button class="choice" data-q="pre-3" data-correct="0">哪种连接方式的线最便宜，不用管能不能覆盖</button>
+          </div>
+          <p class="result warn" data-explain="pre-3" style="display:none;margin-top:10px">网络选型看三件事：覆盖距离、带宽、功耗。这个问题先记在心里，等下我们用选型台实际算一算。</p>
+        </div>
+        <p id="pre-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="module-1"
+           data-tts-script="物联网就是让物品具备感知、联网和上报的能力。它的定义是：通过感知设备，按约定的方式把物品与网络连接起来，实现对物品的识别、数据采集和远程控制。这里要和互联网分清楚：互联网主要连接人和信息，物联网连接的是物。手机刷视频是互联网，教室里的温湿度采集终端每隔一分钟把数据发回平台，这是物联网。物联网能成立，靠三个环节：先感知，再传输，最后处理。"
+           data-tsh="物联网让物品能感知、能联网、能上报" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念一</span>
+          <h2>物联网让物品能感知、能联网、能上报</h2>
+        </div>
+
+        <div class="inner-card">
+          <p><strong>为什么要学这一课？</strong>你已经知道互联网能把人和信息连起来，也用过各种在线服务。但你有没有想过：教室里的温度、农田里的湿度、仓库里的货物，它们自己不会说话，<strong>所以</strong>我们需要一套办法，把物理世界的信息变成计算机能处理的数据，再送到平台上去判断和决策——这就是物联网。</p>
+        </div>
+        <p style="font-size:17px;margin:12px 0">物联网是指通过感知设备，按约定的方式把物品与网络连接起来，实现对物品的识别、数据采集与远程控制。<strong>它连接的对象是物，互联网连接的对象主要是人。</strong></p>
+        <div class="grid grid-3">
+          <div class="inner-card">
+            <p><strong>① 感知</strong></p>
+            <p style="color:var(--muted)">用传感器把温度、光照、气体浓度等物理量变成数字量。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>② 传输</strong></p>
+            <p style="color:var(--muted)">用有线或无线的连接方式，把数据从设备送到平台。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>③ 处理</strong></p>
+            <p style="color:var(--muted)">平台存储、分析、判断，再决定是否下发控制指令。</p>
+          </div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-iot-concept-fig1.webp" alt="感知层把连续变化的物理量经过采样和模数转换变成数字量的过程示意图">
+          <figcaption>感知层的核心工作：把连续变化的物理量，经采样与模数转换变成有限级数的数字量</figcaption>
+        </figure>
+        <div class="kid-note"><span class="emoji">🔢</span><div><strong>记忆锚点：</strong>把感知层想象成一台「翻译机」——物理世界说的是温度、光照、声音，计算机只听得懂 0 和 1，翻译机负责把前者逐级切分并翻译成后者。</div></div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>看见它</strong>：同一间教室，装不装传感器是两回事：不装，屋里闷了只能靠人进去才知道；装了，数据会自己流到平台上。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>比较它</strong>：互联网连接人和信息，物联网连接物。判断一个系统属不属于物联网，就问一句：数据是「物」自己产生的吗？</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：量化的思路到处都在用：尺子的最小刻度、电子秤的最小读数、音乐采样率，都是用有限的等级去逼近连续的真实值。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="lab-1"
+           data-tts-script="光看定义不够，我们到感知层去做一次真实的采集。左边选一种传感器，拖动滑块改变环境里的真实物理量，右边的数字会跟着变。请你盯住三个数：环境中真实的值、计算机最终拿到的整数、以及还原出来的传感器读数。你会发现，还原值和真实值之间总有一点偏差，这不是故障，而是把连续量变成有限级数必然付出的代价。"
+           data-tsh="感知层采样台：温度是怎么变成数字的？" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">感知层实验室</span>
+          <h2>感知层采样台：温度是怎么变成数字的？</h2>
+        </div>
+
+        
+<style>
+.ta-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ta-tag { padding: 4px 10px; border-radius: 999px; font-size: 13px; font-variant-numeric: tabular-nums;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); color: var(--text-secondary); }
+.ta-tag.hit { background: var(--warm-soft); border-color: var(--warm); color: var(--text-strong); font-weight: 700; }
+.ta-log { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.ta-log li { padding: 8px 10px; margin-bottom: 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); white-space: pre-wrap; }
+.ta-log li .tag { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; background: var(--brand-soft); color: var(--brand); }
+.ta-log li.no .tag { background: var(--warm-soft); color: var(--warm-deep); }
+.ta-log li.bad { border-color: var(--danger); }
+.ta-log li.ok { border-color: var(--ok); }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">选一种传感器，拖动滑块改变环境里的真实物理量，观察「真实值 → 数字量 → 还原读数」三步的变化，再做几次采集。</p>
+        <div class="lab-panel">
+          <div class="flex-row" style="margin-top:0">
+            <button class="choice" data-s1-sensor="temp" style="text-align:center">温度传感器</button>
+            <button class="choice" data-s1-sensor="light" style="text-align:center">光照传感器</button>
+            <button class="choice" data-s1-sensor="pir" style="text-align:center">人体红外传感器</button>
+          </div>
+          <div id="s1-stage" style="margin-top:14px">
+            <div class="slider-row">
+              <label for="s1-env">环境真实值</label>
+              <input type="range" id="s1-env" min="0" max="100" step="1" value="62">
+              <span class="readout-cell" style="flex:0 0 104px"><span class="k">真实值</span><span class="v" id="s1-env-val">—</span></span>
+            </div>
+            <div class="lab-readout">
+              <div class="readout-cell"><span class="k">计算机拿到的数字量</span><span class="v" id="s1-adc">—</span></div>
+              <div class="readout-cell"><span class="k">还原后的读数</span><span class="v green" id="s1-read">—</span></div>
+              <div class="readout-cell"><span class="k">量化误差</span><span class="v" id="s1-err">—</span></div>
+              <div class="readout-cell"><span class="k">数据种类</span><span class="v" id="s1-kind">—</span></div>
+            </div>
+          </div>
+          <div class="lab-readout">
+            <div class="readout-cell"><span class="k">本次已采集</span><span class="v" id="s1-count">0 条</span></div>
+            <div class="readout-cell"><span class="k">累计数据量</span><span class="v green" id="s1-bytes">0 字节</span></div>
+          </div>
+          <p style="margin:14px 0 0;font-weight:700;font-size:14px">最近采样记录</p>
+          <div class="ta-tags" id="s1-hist"></div>
+          <div class="flex-row">
+            <button class="choice" id="s1-sample" style="text-align:center;flex:1">采集一次</button>
+            <button class="choice" id="s1-reset" style="text-align:center;flex:1">清空采样记录</button>
+          </div>
+          <p class="result warn" id="s1-out" style="margin-top:12px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">📐</span><div><strong>动手比一比：</strong>把温度滑到同一个位置，再把人体的位数想成 8 位——位数越少，级数越粗，量化误差越大。所以选传感器时，位数不是一个可以随便定的数，它直接决定了你能看多细。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="6" data-tts="module-2"
+           data-tts-script="一条完整的物联网链路可以分成三层。感知层在最底下，传感器和执行器都在这里，负责把物理世界的信息变成数字量，也负责执行动作。网络层在中间，负责把数据从设备送到平台，它要解决距离、带宽和供电这三件事。应用层在最上面，负责存储、分析、判断和决策，并把结果展示给人。数据从下往上走，控制指令从上往下回，两层之间是双向的。"
+           data-tsh="感知层、网络层、应用层，各管一段" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念二</span>
+          <h2>感知层、网络层、应用层，各管一段</h2>
+        </div>
+
+        <div class="inner-card">
+          <p><strong>三层不是三个盒子，是一条流水线。</strong>数据从最底下往上走，控制指令从最上面往下回。链路里任何一层出问题，整条链路都不成立——所以工程上先分层，才能一层一层查。</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>感知层</strong>：传感器负责采集，执行器负责动作，采集终端负责把物理量变成数字量。这一层离物理世界最近。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>网络层</strong>：把数据从设备送到平台。它要同时回答三个问题——够不够远、够不够快、费不费电。</div></div>
+          <div class="step"><span class="n green">3</span><div><strong>应用层</strong>：存储数据、判断条件、下发指令、展示给人看。它决定「数据拿来做什么」。</div></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-iot-concept-fig2.webp" alt="物联网三层架构与数据流向示意图，数据向上汇聚、指令向下下发">
+          <figcaption>数据自下而上汇聚（感知 → 网络 → 应用），指令自上而下回传（应用 → 网络 → 执行）</figcaption>
+        </figure>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">最容易犯的两个错：一是误认为<strong>装了几个传感器就叫物联网</strong>——数据送不出去、平台用不上，就只是一堆孤立的测量；二是误认为<strong>执行器不属于物联网</strong>——只会采集不会动作的系统，永远停在「看见」而没有「做到」，实际项目里执行器和传感器同属感知层。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="7" data-tts="lab-2"
+           data-tts-script="现在你当一次网络工程师。设备装在哪里、每分钟要传多少数据，都是要提前算清楚的。左滑调距离，右滑调数据量，再选一种连接方式，看看它能不能连上、带宽占了多少、一节电池能撑多久。你会发现：覆盖越远的连接方式，通常越费电。选型没有最好的方案，只有在当前条件下最合适的方案。"
+           data-tsh="网络层选型台：够不够远、够不够快、费不费电" data-bloom-level="analyze" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">网络层实验室</span>
+          <h2>网络层选型台：够不够远、够不够快、费不费电</h2>
+        </div>
+
+        
+<style>
+.ta-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ta-tag { padding: 4px 10px; border-radius: 999px; font-size: 13px; font-variant-numeric: tabular-nums;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); color: var(--text-secondary); }
+.ta-tag.hit { background: var(--warm-soft); border-color: var(--warm); color: var(--text-strong); font-weight: 700; }
+.ta-log { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.ta-log li { padding: 8px 10px; margin-bottom: 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); white-space: pre-wrap; }
+.ta-log li .tag { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; background: var(--brand-soft); color: var(--brand); }
+.ta-log li.no .tag { background: var(--warm-soft); color: var(--warm-deep); }
+.ta-log li.bad { border-color: var(--danger); }
+.ta-log li.ok { border-color: var(--ok); }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">设备装在哪、每分钟传多少数据，先算清楚。再选一种连接方式，看看它能不能扛住这个任务。</p>
+        <div class="lab-panel">
+          <div id="s2-stage">
+            <div class="slider-row">
+              <label for="s2-dist">设备到平台的距离</label>
+              <input type="range" id="s2-dist" min="5" max="1500" step="5" value="80">
+              <span class="readout-cell" style="flex:0 0 100px"><span class="k">距离</span><span class="v" id="s2-dist-val">80 m</span></span>
+            </div>
+            <div class="slider-row">
+              <label for="s2-data">每分钟上报数据量</label>
+              <input type="range" id="s2-data" min="0.1" max="20" step="0.1" value="0.6">
+              <span class="readout-cell" style="flex:0 0 100px"><span class="k">数据量</span><span class="v" id="s2-data-val">0.6 KB/分</span></span>
+            </div>
+          </div>
+          <div class="flex-row">
+            <button class="choice" data-s2-link="n1" style="text-align:center">短距离低功耗无线</button>
+            <button class="choice" data-s2-link="n2" style="text-align:center">实验楼局域网无线</button>
+            <button class="choice" data-s2-link="n3" style="text-align:center">移动蜂窝网络</button>
+          </div>
+          <p class="result warn" id="s2-out" style="margin-top:12px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🔌</span><div><strong>试一试：</strong>把距离拖到 500 米以上，低功耗无线立刻连不上；再把数据量拖到 10 KB/分，局域网无线的带宽余量就吃紧了。工程选型没有「最好的方案」，只有在给定条件下最合适的那一个。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="worked-example"
+           data-tts-script="我们一起分析一道题。学校要在实验室做一个有害气体超量后自动通风的系统，请指出它的三层分别由什么构成。第一步，看清目标：要解决的是气体超量时要自动通风。第二步，找感知层：气体传感器负责采集浓度，采集终端负责把数据变成数字量，继电器负责执行开窗或启动风机。第三步，找网络层：实验室到学校平台的距离只有几十米，实验楼内的无线局域网就够用，不必用更费电的蜂窝网络。第四步，找应用层：判断浓度有没有超过阈值、什么时候下发指令、报警记录存多久、怎么通知老师。"
+           data-tsh="例题示范：一个真实场景，怎么拆成三层" data-bloom-level="analyze" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">例题示范</span>
+          <h2>例题示范：一个真实场景，怎么拆成三层</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:var(--warm)">
+          <p style="margin:0"><strong>题目：</strong>学校要在实验室做一个「有害气体超量后自动通风」的系统。请指出它的感知层、网络层、应用层分别由什么构成，并说明理由。</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>看清目标：</strong>要解决的不是「测出浓度」，而是「超量时自动通风」——把动作一起看清楚，才知道要采什么、要控什么。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>拆感知层：</strong>气体传感器采集浓度，采集终端把浓度变成数字量，继电器或推窗装置执行开窗、启动风机。采集和执行都归这一层。</div></div>
+          <div class="step"><span class="n">3</span><div><strong>拆网络层：</strong>实验室到学校平台只有几十米，实验楼内的无线局域网足够；用覆盖几公里的蜂窝网络，白白多花电费和资费。</div></div>
+          <div class="step"><span class="n green">4</span><div><strong>拆应用层：</strong>判断浓度是否超过阈值、确认多久才下发指令、报警记录保存多久、怎么通知老师——这些「数据拿来做什么」的事，全在应用层。</div></div>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">不少同学误认为「装了气体传感器就是物联网系统」，把三层里的两层都漏掉了：数据没送出去，也没有任何判断和动作。<strong>另一处容易搞混的是把执行器算到应用层</strong>——开窗的装置是物理动作，属于感知层；决定「什么时候开」才是应用层。分层的依据是「管哪一段」，不是「谁更聪明」。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="9" data-tts="conceptest-1"
+           data-tts-script="现在用三个容易弄错的说法考考你。请仔细读每一个选项，选出你认为正确的那个，然后看解释。"
+           data-tsh="概念测试：找出藏在说法里的错误 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">概念测试</span>
+          <h2>概念测试：找出藏在说法里的错误</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="ct-1">
+          <p><strong>1. 下面哪句话是正确的？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-1" data-correct="1">感知层负责把物理量变成数字量，应用层负责判断和决策</button>
+            <button class="choice" data-q="ct-1" data-correct="0">只要装了传感器，就是一个完整的物联网系统</button>
+            <button class="choice" data-q="ct-1" data-correct="0">执行器属于应用层，因为它是在执行命令</button>
+          </div>
+          <p class="result warn" data-explain="ct-1" style="display:none;margin-top:10px">三层各有分工：感知层采集与执行，网络层传输，应用层判断与决策。<strong>错因提醒：</strong>把「装了传感器」等同于「物联网系统」，是最常见的错误——没有网络与应用，传感器只是一堆孤立读数。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-2">
+          <p><strong>2. 某温度传感器的量程是 0 ℃ 到 60 ℃，用 10 位表示。关于它的读数，正确的说法是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-2" data-correct="1">它能表示有限个等级，真实温度落在两级之间时会有量化误差</button>
+            <button class="choice" data-q="ct-2" data-correct="0">它可以精确到任意小数位</button>
+            <button class="choice" data-q="ct-2" data-correct="0">只要位数足够多，误差就一定为零</button>
+          </div>
+          <p class="result warn" data-explain="ct-2" style="display:none;margin-top:10px">位数决定等级数：10 位是 1024 级，量程 60 ℃ 时每级约 0.06 ℃，误差只会变小、不会消失。<strong>错因提醒：</strong>容易误认为「换成数字量就没有误差了」，其实量化误差是这个过程固有的代价。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-3">
+          <p><strong>3. 一个采集点离平台 2 公里，每分钟只上报 0.2 KB 数据。选连接方式时，下面哪种判断最站得住脚？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-3" data-correct="1">先确认候选方案的覆盖距离能否到 2 公里，再比较它们的功耗</button>
+            <button class="choice" data-q="ct-3" data-correct="0">数据量很小，所以任何连接方式都能用</button>
+            <button class="choice" data-q="ct-3" data-correct="0">距离远，所以一定得用速率最高的那种</button>
+          </div>
+          <p class="result warn" data-explain="ct-3" style="display:none;margin-top:10px">覆盖和功耗是主要矛盾，数据量小说明带宽不是瓶颈。<strong>错因提醒：</strong>常见错误是只盯着一个指标下结论——要么以为「数据量小就随便选」，要么以为「距离远就一定要最快」。</p>
+        </div>
+        <p id="ct-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="synthesis"
+           data-tts-script="学到这里，请你当一次物联网系统集成工程师。左边选感知设备，中间选网络方式，右边选应用动作，然后点运行，看这条链路能不能跑通。要特别留意一种情况：如果应用层要用的数据，感知层根本没有采集，这条链路就是断的。这不是程序写错了，而是设计的时候没有前后对齐。"
+           data-tsh="综合任务：把一条三层链路搭起来并运行" data-bloom-level="create" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">综合任务</span>
+          <h2>综合任务：把一条三层链路搭起来并运行</h2>
+        </div>
+
+        
+<style>
+.ta-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ta-tag { padding: 4px 10px; border-radius: 999px; font-size: 13px; font-variant-numeric: tabular-nums;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); color: var(--text-secondary); }
+.ta-tag.hit { background: var(--warm-soft); border-color: var(--warm); color: var(--text-strong); font-weight: 700; }
+.ta-log { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.ta-log li { padding: 8px 10px; margin-bottom: 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); white-space: pre-wrap; }
+.ta-log li .tag { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; background: var(--brand-soft); color: var(--brand); }
+.ta-log li.no .tag { background: var(--warm-soft); color: var(--warm-deep); }
+.ta-log li.bad { border-color: var(--danger); }
+.ta-log li.ok { border-color: var(--ok); }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">场景：一间教室的采集终端装在离平台 80 米处，每分钟上报 0.6 KB 数据。请依次选好三层，再运行这条链路。</p>
+        <div class="lab-panel">
+          <div id="syn-stage">
+            <div class="slider-row" style="display:block">
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px">① 感知层（选采集设备）</div>
+              <div class="flex-row" style="margin-top:0">
+                <button class="choice" data-syn-sensor="temp" style="text-align:center">温度传感器</button>
+                <button class="choice" data-syn-sensor="gas" style="text-align:center">气体传感器</button>
+                <button class="choice" data-syn-sensor="pir" style="text-align:center">人体红外传感器</button>
+              </div>
+            </div>
+            <div class="slider-row" style="display:block">
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px">② 网络层（选连接方式）</div>
+              <div class="flex-row" style="margin-top:0">
+                <button class="choice" data-syn-link="n1" style="text-align:center">短距离低功耗无线</button>
+                <button class="choice" data-syn-link="n2" style="text-align:center">实验楼局域网无线</button>
+                <button class="choice" data-syn-link="n3" style="text-align:center">移动蜂窝网络</button>
+              </div>
+            </div>
+            <div class="slider-row" style="display:block">
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px">③ 应用层（选触发动作）</div>
+              <div class="flex-row" style="margin-top:0">
+                <button class="choice" data-syn-act="fan" style="text-align:center">开启通风设备</button>
+                <button class="choice" data-syn-act="light" style="text-align:center">开启照明</button>
+                <button class="choice" data-syn-act="report" style="text-align:center">生成日统计报表</button>
+              </div>
+            </div>
+          </div>
+          <p class="result warn" id="syn-out" style="margin-top:12px"></p>
+          <div class="flex-row">
+            <button class="choice" id="syn-run" style="text-align:center;flex:1">运行链路</button>
+            <button class="choice" id="syn-reset" style="text-align:center;flex:1">重新选择</button>
+          </div>
+        </div>
+        <div class="inner-card">
+          <p><strong>写下来，说给同桌听：</strong>如果应用层要判断的是「气体浓度超量」，而感知层只装了温度传感器，这条链路哪个环节错了？应该改哪一层？</p>
+          <textarea id="syn-answer" rows="3" placeholder="错在……因为应用层需要的数据是……所以要改的是……"></textarea>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="posttest"
+           data-tts-script="最后用新情境检验一下。这次出现了校园积水预警和图书馆座位管理，看看你能不能把三层架构和量化误差用上去。"
+           data-tsh="后测：换一个情境，看看规律还在不在 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">后测</span>
+          <h2>后测：换一个情境，看看规律还在不在</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="post-1">
+          <p><strong>1. 校园低洼处要做一个积水预警装置：水位超过 30 厘米就发提醒。下列设计里最合理的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-1" data-correct="1">用水位传感器采集水位，经网络送到平台判断阈值，超限时推送提醒</button>
+            <button class="choice" data-q="post-1" data-correct="0">只在低洼处立一块「水深危险」的牌子</button>
+            <button class="choice" data-q="post-1" data-correct="0">用水位传感器采集水位，把读数存在设备里，不用管平台</button>
+          </div>
+          <p class="result warn" data-explain="post-1" style="display:none;margin-top:10px">这是感知、传输、应用三层齐备的方案。<strong>错因提醒：</strong>第三个选项是典型的「只有感知层」——数据存下来却没人用，系统等于没建成。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-2">
+          <p><strong>2. 图书馆要统计自习座位是否被占用，用红外传感器判断「有人 / 无人」。关于这个数据，正确的说法是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-2" data-correct="1">它是开关量，只有两种取值，占用 1 位就能表示</button>
+            <button class="choice" data-q="post-2" data-correct="0">它是连续量，需要很多位才能表示</button>
+            <button class="choice" data-q="post-2" data-correct="0">它和温度一样，属于模拟量</button>
+          </div>
+          <p class="result warn" data-explain="post-2" style="display:none;margin-top:10px">「有人 / 无人」只有两种状态，是典型的开关量，1 位就够。温度、光照这类可以连续取值的是连续量。<strong>错因提醒：</strong>容易误认为凡是被传感器采集的都是连续量，其实数据类型由物理量的性质决定。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-3">
+          <p><strong>3. 一个部署在郊外的农田监测点，每天要上报一次数据，靠电池供电。最需要权衡的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-3" data-correct="1">连接方式的覆盖距离与功耗——用多久换一次电池直接决定这套装置能不能长期用下去</button>
+            <button class="choice" data-q="post-3" data-correct="0">把上报频率调到每秒一次，数据越多越好</button>
+            <button class="choice" data-q="post-3" data-correct="0">只要能把数据传回来，功耗多高都无所谓</button>
+          </div>
+          <p class="result warn" data-explain="post-3" style="display:none;margin-top:10px">郊外供电不便，功耗是决定性的约束；每天一次的频率说明带宽压力很小。<strong>错因提醒：</strong>常见错误是误认为「上报越勤越可靠」，实际上频率越高越费电，超过需要就是浪费。</p>
+        </div>
+        <p id="post-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="12" data-tts="summary"
+           data-tts-script="这节课我们弄明白了三件事。第一，物联网是让物品能感知、能联网、能上报的技术，它连接的是物，与主要连接人的互联网不是一回事。第二，感知层的核心工作是把连续变化的物理量转换成有限级数的数字量，量化误差是这个过程的正常代价，采样和上报的频率要按需要来定。第三，网络层和网络选型要从距离、带宽和功耗三方面一起权衡，应用层负责判断、决策与展示。回到开头那间教室：装上温湿度传感器和人体红外，数据经实验楼内网络送到平台，平台判断无人且灯亮就下发关闭指令，这间教室就真的能自己管自己了。"
+           data-tsh="小结：三句话，把自己讲明白" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">小结</span>
+          <h2>小结：三句话，把自己讲明白</h2>
+        </div>
+        <div class="grid">
+          <div class="summary-item"><span class="num">1</span><div><strong>物联网</strong>：通过感知设备把物品与网络连起来，实现对物的识别、采集与远程控制；它连接的是物，与连接人的互联网不同。</div></div>
+          <div class="summary-item"><span class="num">2</span><div><strong>三层架构</strong>：感知层采集与执行，网络层负责把数据送到平台，应用层负责判断、决策与展示。数据向上走，指令向下回。</div></div>
+          <div class="summary-item"><span class="num">3</span><div><strong>两个关键量</strong>：感知层要接受量化误差，网络层要在距离、带宽、功耗之间权衡——没有最好的方案，只有最合适的方案。</div></div>
+        </div>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:var(--warm)">
+          <p style="margin:0"><strong>回到开头那间教室：</strong>装上温湿度传感器和人体红外，数据经实验楼内网络送到平台，平台判断「无人且灯还亮着」就下发关闭指令——这间教室自己就能管自己了。整个过程里没有任何一步是神秘的，每一层都在做很清楚的一件事。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>给别人讲一遍：</strong>请用「感知层、网络层、应用层」这三个词，说清楚一条完整的物联网链路是怎么跑起来的。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="13" data-tts="homework"
+           data-tts-script="最后留三项作业，分三个层次。第一层基础巩固，人人要做：说出物联网三层架构的名称，并各举一个组成部件。第二层能力应用，动手做：为家里的一个场景画出三层链路图，标出数据从下往上走的路径和指令从上往下回的路径。第三层迁移挑战，选做：为学校的某个真实需求设计一个物联网方案，算出每天的数据量和设备续航，说明你为什么这样选连接方式。"
+           data-tsh="作业分层：三层练习，按自己的节奏来" data-bloom-level="create" data-scaffold="none">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">作业分层</span>
+          <h2>作业分层：三层练习，按自己的节奏来</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">三层练习，做完第一、二层就算通关；第三层留给愿意继续探索的同学。</p>
+        <div class="inner-card">
+          <p><strong>⭐ 基础巩固（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>说出物联网三层架构的名称，并各举一个组成部件。</li>
+            <li>区分互联网与物联网：它们连接的对象分别是什么？各举一个例子。</li>
+            <li>写出一条最低配的物联网链路：从「谁采集」到「谁传输」再到「谁判断」。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐ 能力应用（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>为家里的一个场景（比如阳台浇水、门口亮灯）画出三层链路图，标出数据向上、指令向下两条路径。</li>
+            <li>某传感器量程 0 ℃ 到 40 ℃，用 8 位表示。算出它的级数和每级代表的温度，并说明量化误差大约有多大。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐⭐ 迁移挑战（选做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>为学校的一个真实需求设计物联网方案（比如实验室通风、操场积水预警），给出感知设备、连接方式与判断规则。</li>
+            <li>在上一题的基础上算一算：每天上报多少次、每天产生多少数据量、用电池供电大概能用多久，并说明你为什么这样选连接方式。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page kg-page" data-page-type="summary" data-page-index="14" data-tts="knowledge-graph"
+           data-tts-script="这张图展示了这节课在信息科技知识网络里的位置。左边是先要学会的知识，右边是可以接着探索的内容，下面是同一领域的伙伴知识。可以点一点，看看还有哪些值得继续研究的问题。"
+           data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">知识图谱</span>
+          <h2>这节课在知识网络里的位置</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 10px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p class="kg-loading-hint" style="color:var(--muted);font-size:13px;margin:0 0 10px">图谱正在加载：首次进入需下载知识索引（约 1–3 秒），加载完成后本行会自动消失。</p>
+        <div data-teachany-kg="it-m-iot-concept">
+          <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="15" data-tts="ai-tutor"
+           data-tts-script="如果还有没弄明白的地方，把你的问题写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。"
+           data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+</div><!-- .slide-container -->
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-pretest",
+    "section": "pretest",
+    "src": "./tts/s04-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s05-module-1",
+    "section": "module-1",
+    "src": "./tts/s05-module-1.mp3",
+    "label": "概念一 物联网与三个环节"
+  },
+  {
+    "id": "s06-lab-1",
+    "section": "lab-1",
+    "src": "./tts/s06-lab-1.mp3",
+    "label": "实验室一 感知层采样台"
+  },
+  {
+    "id": "s07-module-2",
+    "section": "module-2",
+    "src": "./tts/s07-module-2.mp3",
+    "label": "概念二 三层架构"
+  },
+  {
+    "id": "s08-lab-2",
+    "section": "lab-2",
+    "src": "./tts/s08-lab-2.mp3",
+    "label": "实验室二 网络层选型台"
+  },
+  {
+    "id": "s09-worked-example",
+    "section": "worked-example",
+    "src": "./tts/s09-worked-example.mp3",
+    "label": "例题讲解"
+  },
+  {
+    "id": "s10-conceptest-1",
+    "section": "conceptest-1",
+    "src": "./tts/s10-conceptest-1.mp3",
+    "label": "概念测试"
+  },
+  {
+    "id": "s11-synthesis",
+    "section": "synthesis",
+    "src": "./tts/s11-synthesis.mp3",
+    "label": "综合任务 三层链路搭建"
+  },
+  {
+    "id": "s12-posttest",
+    "section": "posttest",
+    "src": "./tts/s12-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s13-summary",
+    "section": "summary",
+    "src": "./tts/s13-summary.mp3",
+    "label": "课堂小结"
+  },
+  {
+    "id": "s14-homework",
+    "section": "homework",
+    "src": "./tts/s14-homework.mp3",
+    "label": "作业分层"
+  },
+  {
+    "id": "s15-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s15-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s16-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s16-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<script>
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'it-m-iot-concept',
+    courseTitle: '物联网概念与架构',
+    subject: 'info-tech',
+    grade: '8',
+    nodeId: 'it-m-iot-concept',
+    lessonType: 'concept-inquiry',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+</script>
+
+<script>
+
+/* ============================================================
+   it-m-iot-concept 互动逻辑
+   1) 选择题接线（前测 / 概念测试 / 后测）
+   2) 感知层采样台：物理量 → 模数转换 → 数字量（量化误差可观察）
+   3) 网络层选型台：距离 / 数据量 / 功耗 → 连通性、带宽占用、续航
+   4) 三层链路搭建器：感知 → 网络 → 应用，含数据不匹配诊断
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ---------- 1. 选择题 ---------- */
+  document.querySelectorAll('[data-quiz-block]').forEach(function (block) {
+    block.querySelectorAll('.choice').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (block.dataset.answered === '1') return;
+        block.dataset.answered = '1';
+        var ok = btn.dataset.correct === '1';
+        btn.classList.add(ok ? 'correct' : 'wrong');
+        block.querySelectorAll('.choice').forEach(function (b) {
+          if (b.dataset.correct === '1') b.classList.add('correct');
+          b.disabled = true;
+        });
+        var ex = block.querySelector('[data-explain]');
+        if (ex) ex.style.display = 'block';
+      });
+    });
+  });
+
+  /* ---------- 2. 感知层采样台 ---------- */
+  var SENSORS = {
+    temp:  { n: '温度传感器', unit: '℃',  min: -10, max: 50,   bits: 8,  dec: 1, bytes: 2, kind: '连续量（数值）',
+             th: function (v) { return v > 30; }, rule: '超过 30 ℃ 判定为过热' },
+    light: { n: '光照传感器', unit: 'lx',  min: 0,   max: 1000, bits: 10, dec: 0, bytes: 2, kind: '连续量（数值）',
+             th: function (v) { return v < 200; }, rule: '低于 200 lx 判定为需要开灯' },
+    pir:   { n: '人体红外传感器', unit: '', min: 0, max: 1,    bits: 1,  dec: 0, bytes: 1, kind: '开关量（0 或 1）',
+             th: function (v) { return v > 0.5; }, rule: '为 1 时判定为有人' }
+  };
+  var stage1 = document.getElementById('s1-stage');
+  if (stage1) {
+    var cur = 'temp', total = 0, bytes = 0, history = [];
+    var eEnv = document.getElementById('s1-env');
+    var eEnvVal = document.getElementById('s1-env-val');
+    var eRead = document.getElementById('s1-read');
+    var eAdc = document.getElementById('s1-adc');
+    var eKind = document.getElementById('s1-kind');
+    var eErr = document.getElementById('s1-err');
+    var eOut = document.getElementById('s1-out');
+    var eCount = document.getElementById('s1-count');
+    var eBytes = document.getElementById('s1-bytes');
+    var eHist = document.getElementById('s1-hist');
+
+    function real(p) {
+      var S = SENSORS[cur];
+      return S.min + p / 100 * (S.max - S.min);
+    }
+    function levels() { return Math.pow(2, SENSORS[cur].bits) - 1; }
+
+    function render1() {
+      var S = SENSORS[cur], p = Number(eEnv.value);
+      var rv = real(p);
+      var lv = levels();
+      var adc = Math.round((rv - S.min) / (S.max - S.min) * lv);
+      var back = S.min + adc / lv * (S.max - S.min);
+      var err = Math.abs(back - rv);
+      var over = S.th(back);
+      var shown = S.bits === 1 ? (adc ? '有人' : '无人') : back.toFixed(S.dec) + ' ' + S.unit;
+
+      eEnvVal.textContent = rv.toFixed(S.dec) + ' ' + S.unit;
+      eRead.textContent = shown;
+      eAdc.textContent = S.bits === 1 ? String(adc) : String(adc) + ' / ' + lv;
+      eKind.textContent = S.kind;
+      eErr.textContent = S.bits === 1 ? '—' : err.toFixed(S.dec) + ' ' + S.unit;
+      eCount.textContent = total + ' 条';
+      eBytes.textContent = bytes + ' 字节';
+
+      eOut.className = 'result ' + (over ? '' : 'warn');
+      eOut.innerHTML = '<strong>' + S.n + '：</strong>用 ' + S.bits + ' 位表示，把 ' +
+        S.min + ' ~ ' + S.max + ' 的范围切成 ' + (lv + 1) + ' 级，每级约 ' +
+        ((S.max - S.min) / lv).toFixed(S.dec === 0 ? 1 : 3) + ' ' + (S.unit || '级') +
+        '。<br>判断规则「' + S.rule + '」，当前' + (over ? '已触发' : '未触发') +
+        '。<br><strong>易错点：</strong>还原值和真实值永远对不齐，这段差距叫<em>量化误差</em>，不是传感器坏了——位数越少，误差越大。';
+
+      document.querySelectorAll('[data-s1-sensor]').forEach(function (b) {
+        b.classList.toggle('selected', b.dataset.s1Sensor === cur);
+      });
+      renderHist();
+    }
+
+    function renderHist() {
+      eHist.innerHTML = '';
+      if (history.length === 0) {
+        var tip = document.createElement('span');
+        tip.className = 'ta-tag';
+        tip.textContent = '还没有采样记录，点「采集一次」试试';
+        eHist.appendChild(tip);
+        return;
+      }
+      history.slice(-8).forEach(function (h) {
+        var t = document.createElement('span');
+        t.className = 'ta-tag' + (h.hit ? ' hit' : '');
+        t.textContent = h.txt;
+        eHist.appendChild(t);
+      });
+    }
+
+    document.querySelectorAll('[data-s1-sensor]').forEach(function (b) {
+      b.addEventListener('click', function () { cur = b.dataset.s1Sensor; total = 0; bytes = 0; history = []; render1(); });
+    });
+    eEnv.addEventListener('input', render1);
+    document.getElementById('s1-sample').addEventListener('click', function () {
+      var S = SENSORS[cur], p = Number(eEnv.value);
+      var rv = real(p), lv = levels();
+      var adc = Math.round((rv - S.min) / (S.max - S.min) * lv);
+      var back = S.min + adc / lv * (S.max - S.min);
+      var txt = S.bits === 1 ? (adc ? '有人' : '无人') : back.toFixed(S.dec) + S.unit;
+      total += 1;
+      bytes += S.bytes;
+      history.push({ txt: txt, hit: S.th(back) });
+      render1();
+    });
+    document.getElementById('s1-reset').addEventListener('click', function () {
+      total = 0; bytes = 0; history = []; render1();
+    });
+    render1();
+  }
+
+  /* ---------- 3. 网络层选型台 ---------- */
+  var LINKS = {
+    n1: { n: '短距离低功耗无线', dist: 30,   rate: 0.3, power: 1,  note: '覆盖几十米，速率低，一节电池能用很久，适合室内的采集节点。' },
+    n2: { n: '实验楼局域网无线', dist: 120,  rate: 20,  power: 8,  note: '覆盖一栋楼，速率高，但需要持续供电或频繁换电。' },
+    n3: { n: '移动蜂窝网络',     dist: 5000, rate: 100, power: 30, note: '覆盖几公里，几乎不受场地限制，但耗电和费用都最高。' }
+  };
+  var stage2 = document.getElementById('s2-stage');
+  if (stage2) {
+    var link = 'n2';
+    var eDist = document.getElementById('s2-dist');
+    var eData = document.getElementById('s2-data');
+    var eDistVal = document.getElementById('s2-dist-val');
+    var eDataVal = document.getElementById('s2-data-val');
+    var eOut2 = document.getElementById('s2-out');
+
+    function render2() {
+      var L = LINKS[link];
+      var d = Number(eDist.value), kb = Number(eData.value);
+      eDistVal.textContent = d + ' m';
+      eDataVal.textContent = kb.toFixed(1) + ' KB/分';
+      var need = kb / 60;
+      var use = need / L.rate * 100;
+      var reach = d <= L.dist;
+      var enough = use <= 60;
+      var days = Math.floor(300 / L.power);
+      var ok = reach && enough;
+
+      eOut2.className = 'result ' + (ok ? '' : 'error');
+      eOut2.innerHTML = '<strong>' + L.n + '</strong>：有效距离 ' + L.dist + ' 米，速率 ' + L.rate +
+        ' KB/s，平均功耗 ' + L.power + ' 单位/天（电池按 300 单位算，可用约 ' + days + ' 天）。<br>' +
+        '当前距离 ' + d + ' 米 → ' + (reach ? '在覆盖范围内' : '超出覆盖范围，连不上') +
+        '；带宽占用 ' + use.toFixed(1) + '% → ' + (enough ? '够用' : '超出可用余量，会丢包') + '。<br>' +
+        (ok
+          ? '<strong>可以选它。</strong>' + L.note
+          : '<strong>这条路走不通。</strong>' + (reach
+              ? '距离没问题，但数据量太大，带宽吃满了——先把上报间隔调长，或换速率更高的连接方式。'
+              : '数据量没问题，但设备装在 ' + d + ' 米外，这种连接方式够不到——要么换覆盖更远的连接方式，要么把设备挪近。'));
+      document.querySelectorAll('[data-s2-link]').forEach(function (b) {
+        b.classList.toggle('selected', b.dataset.s2Link === link);
+      });
+    }
+    document.querySelectorAll('[data-s2-link]').forEach(function (b) {
+      b.addEventListener('click', function () { link = b.dataset.s2Link; render2(); });
+    });
+    eDist.addEventListener('input', render2);
+    eData.addEventListener('input', render2);
+    render2();
+  }
+
+  /* ---------- 4. 三层链路搭建器 ---------- */
+  var SRC = {
+    temp: { n: '温度传感器',   data: '温度（℃）',      bytes: 2, sample: '26.0 ℃' },
+    gas:  { n: '气体传感器',   data: '气体浓度（ppm）', bytes: 2, sample: '812 ppm' },
+    pir:  { n: '人体红外传感器', data: '有人 / 无人',    bytes: 1, sample: '有人' }
+  };
+  var ACT = {
+    fan:    { n: '开启通风设备',   need: ['gas'],  rule: '气体浓度超过 800 ppm 时开启通风设备', lack: '气体浓度' },
+    light:  { n: '开启照明',       need: ['pir'],  rule: '检测到有人且光照不足时开启照明',       lack: '有人 / 无人' },
+    report: { n: '生成日统计报表', need: ['temp', 'gas'], rule: '把连续量数据按小时汇总成报表',   lack: '一个连续量数据（温度或气体浓度）' }
+  };
+  var synStage = document.getElementById('syn-stage');
+  if (synStage) {
+    var pickSrc = 'temp', pickLink = 'n2', pickAct = 'fan', ran = false;
+
+    function renderSyn() {
+      document.querySelectorAll('[data-syn-sensor]').forEach(function (b) {
+        b.classList.toggle('selected', b.dataset.synSensor === pickSrc);
+      });
+      document.querySelectorAll('[data-syn-link]').forEach(function (b) {
+        b.classList.toggle('selected', b.dataset.synLink === pickLink);
+      });
+      document.querySelectorAll('[data-syn-act]').forEach(function (b) {
+        b.classList.toggle('selected', b.dataset.synAct === pickAct);
+      });
+      var out = document.getElementById('syn-out');
+      if (!ran) {
+        out.className = 'result warn';
+        out.textContent = '三样都选好之后，点「运行链路」看看它能不能跑通。';
+      }
+    }
+
+    document.querySelectorAll('[data-syn-sensor]').forEach(function (b) {
+      b.addEventListener('click', function () { pickSrc = b.dataset.synSensor; ran = false; renderSyn(); });
+    });
+    document.querySelectorAll('[data-syn-link]').forEach(function (b) {
+      b.addEventListener('click', function () { pickLink = b.dataset.synLink; ran = false; renderSyn(); });
+    });
+    document.querySelectorAll('[data-syn-act]').forEach(function (b) {
+      b.addEventListener('click', function () { pickAct = b.dataset.synAct; ran = false; renderSyn(); });
+    });
+
+    document.getElementById('syn-run').addEventListener('click', function () {
+      var S = SRC[pickSrc], L = LINKS[pickLink], A = ACT[pickAct];
+      var out = document.getElementById('syn-out');
+      var matched = A.need.indexOf(pickSrc) >= 0;
+      var reach = 80 <= L.dist;                 // 本场景：设备装在离平台 80 米处
+      var use = 0.6 / 60 / L.rate * 100;        // 本场景：每分钟上报 0.6 KB
+      var linkOk = reach && use <= 60;
+
+      var rows = [];
+      rows.push('<li><span class="tag">感知层</span>' + S.n + '把物理世界的量变成数字量，输出 1 条数据：' +
+        S.sample + '（' + S.bytes + ' 字节）</li>');
+      rows.push(reach
+        ? '<li' + (linkOk ? '' : ' class="bad"') + '><span class="tag">网络层</span>通过「' + L.n + '」把数据送到应用平台：延迟约 ' +
+          (0.6 / 0.3).toFixed(1) + ' 秒，带宽占用 ' + use.toFixed(1) + '%' + (linkOk ? '' : '，超出可用余量，数据会丢') + '</li>'
+        : '<li class="bad"><span class="tag">网络层</span>设备装在离平台 80 米处，而「' + L.n + '」只能覆盖 ' +
+          L.dist + ' 米——数据根本送不上去，链路在这里就断了</li>');
+      rows.push('<li><span class="tag">应用层</span>判断规则：「' + A.rule + '」</li>');
+      if (!linkOk) {
+        rows.push('<li class="bad"><span class="tag">诊断</span><strong>先解决网络层。</strong>感知层能采到数据，应用层也想好了规则，但中间这一段送不过去。工程上遇到问题，先逐层确认哪一层断了，再动手改。</li>');
+      } else if (!matched) {
+        rows.push('<li class="bad"><span class="tag">诊断</span><strong>链路对不上。</strong>应用动作「' + A.n +
+          '」需要的是' + A.lack + '，而感知层送上来的却是「' + S.data +
+          '」。这不是程序写错了，是设计时前后没有对齐——先确定应用层要用什么数据，再回头挑采集它的传感器。</li>');
+      } else {
+        rows.push('<li class="ok"><span class="tag">执行</span>应用层判定成立，下发指令：' + A.n +
+          '；同时把这次数据和指令写入日志，便于事后追溯。</li>');
+        rows.push('<li class="ok"><span class="tag">完成</span>三层全部接通：感知层有数据、网络层送得到、应用层用得上。这条链路可以跑起来了。</li>');
+      }
+      out.className = 'result ' + (matched && linkOk ? '' : 'error');
+      out.innerHTML = '<ul class="ta-log">' + rows.join('') + '</ul>';
+      ran = true;
+    });
+
+    document.getElementById('syn-reset').addEventListener('click', function () {
+      pickSrc = 'temp'; pickLink = 'n2'; pickAct = 'fan'; ran = false; renderSyn();
+    });
+    renderSyn();
+  }
+})();
+
+</script>
+
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+</body>
+</html>

@@ -1,0 +1,1659 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>《网络安全防护》 · 初中信息科技 八年级 · TeachAny</title>
+<meta name="description" content="从一次账号被异地登录的真实事件出发，理解信息安全机密性、完整性、可用性三个基本目标，识别钓鱼、口令爆破、恶意代码、窃听与未修复漏洞等常见风险入口，会用搜索空间与熵估算口令抵抗爆破的能力，并能为真实场景配置与攻击路径对应的防护措施、评估残余风险。">
+
+<meta name="course-id" content="it-m-cybersecurity">
+<meta name="course-title" content="网络安全防护">
+<meta name="course-subject" content="info-tech">
+<meta name="course-grade" content="初中八年级">
+<meta name="course-prereqs" content="无">
+<meta name="course-next" content="it-m-privacy-protection">
+<meta name="course-version" content="1.0.0">
+<meta name="teachany-version" content="7.22.0">
+<meta name="teachany-node" content="it-m-cybersecurity">
+<meta name="teachany-subject" content="info-tech">
+<meta name="teachany-grade" content="8">
+<meta name="teachany-stage" content="middle">
+<meta name="teachany-domain" content="security">
+<meta name="teachany-prerequisites" content="无（初中信息安全起点）">
+<meta name="teachany-lesson-type" content="concept-inquiry">
+<meta name="teachany-free-mode" content="false">
+<meta name="teachany-template-version" content="2.0">
+
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style>
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+</style>
+</head>
+<body class="teachany-middle">
+
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
+
+<div class="teachany-brand-bar">
+  <a class="brand-logo" href="https://www.teachany.cn/" aria-label="TeachAny Gallery">
+    <img src="https://www.teachany.cn/assets/teachany-logo.png" alt="TeachAny" style="width:28px;height:28px;border-radius:7px;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid'"><span class="brand-mark" style="display:none">T</span><span class="brand-name">TeachAny</span>
+  </a>
+  <div class="brand-right">
+    <a class="brand-link" href="https://www.teachany.cn/">Gallery</a>
+    <span class="brand-version">v<span id="course-version-display">1.0.0</span> · skill v<span id="skill-version-display">7.22.0</span></span>
+  </div>
+</div>
+
+<div class="slide-container" id="slide-container">
+
+  <section class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero"
+           data-tts-script="先看一件真实会发生的事。一个同学的账号在深夜被登录，他自己什么都没做；等到发现时，绑定在里面的信息已经被翻过一遍。数据是怎样在无人察觉的情况下被拿走的？网络安全要回答的就是这个问题：信息在存储、传输、使用的每一个环节，都可能被人盯上。这节课我们把常见风险找出来，再用能算清楚、能验证的防护手段把它挡住。"
+           data-tsh="开场 - 用一个真实问题建立学习动机" data-bloom-level="remember" data-scaffold="full">
+    <div class="slide-inner">
+      <p class="level-badge">初中八年级 · 信息安全</p>
+      <h1>网络安全防护</h1>
+      <p class="subtitle">一个账号在深夜被人登录，本人却什么都没做——数据是在哪一步丢掉的？</p>
+      <figure class="ta-standard-figure" style="margin-top:24px">
+        <img src="./assets/it-m-cybersecurity-hero.webp" alt="网络安全防护知识结构图：风险入口、安全目标与防护措施三栏">
+        <figcaption>风险入口（钓鱼·爆破·恶意代码·窃听·漏洞）→ 安全目标（机密性·完整性·可用性）→ 防护措施（认证·更新·加密·校验·备份）</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="slide-page" id="problem-anchor" data-page-type="interactive" data-page-index="1"
+           data-tts="problem-anchor" data-tts-alias="anchor"
+           data-tts-script="在开始之前，先选出你最想弄明白的那个问题。是想知道口令到底多长才算够，还是想知道在公共网络上提交的资料会不会被人看到，又或者你想亲手配一套防护方案，看它能不能挡住攻击。选好之后，就带着这个问题往下看。"
+           data-tsh="问题锚点 - 先确定今天最想弄明白的问题">
+    <div class="slide-inner">
+      <div class="card card-accent">
+        <div class="section-header">
+          <span class="phase-tag">问题锚点</span>
+          <h2>今天最想弄明白哪一件事？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 16px">选一个你真正好奇的问题，后面的实验都会围着它转。</p>
+        <div class="grid">
+          <button class="choice" data-anchor-choice="口令到底要多长才算够"><strong>口令到底要多长才算够？</strong><br><span style="color:var(--muted);font-size:14px">长度和字符种类哪个更管用</span></button>
+          <button class="choice" data-anchor-choice="在公共网络上提交资料，别人能看到吗"><strong>在公共网络上提交资料，别人能看到吗？</strong><br><span style="color:var(--muted);font-size:14px">传输过程中数据是怎么被读走的</span></button>
+          <button class="choice" data-anchor-choice="常见的攻击方式有哪些，各从哪里进来"><strong>常见的攻击方式有哪些，各从哪里进来？</strong><br><span style="color:var(--muted);font-size:14px">为什么说突破口常常是人</span></button>
+          <button class="choice" data-anchor-choice="怎样配一套真正挡得住的防护方案"><strong>怎样配一套真正挡得住的防护方案？</strong><br><span style="color:var(--muted);font-size:14px">措施要不要一条条对上攻击路径</span></button>
+        </div>
+        <label style="display:block;margin-top:20px;color:var(--muted);font-size:14px">或者，写下你自己最想知道的问题
+          <input id="learner-question-input" placeholder="把你好奇的问题写在这里" style="margin-top:8px">
+        </label>
+        <p id="anchor-feedback" class="result warn" style="margin-top:16px">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives"
+           data-tts-script="这节课有四个目标。第一，能说出信息安全的三个基本目标：机密性、完整性、可用性，并各举一个例子。第二，能说出钓鱼、口令爆破、恶意代码、窃听、未修复漏洞这些常见风险各自的原理和入口。第三，能根据搜索空间和熵，判断一个口令抵抗爆破的能力，并说明为什么还需要多因素认证。第四，能针对一个真实场景配置防护措施，并判断每条攻击路径是否被阻断、还剩多少风险。"
+           data-tsh="学习目标 - 明确这节课结束时能做到什么" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">学习目标</span>
+          <h2>这节课结束时，你应该能做到</h2>
+        </div>
+        <ul class="objectives">
+          <li>能说出机密性、完整性、可用性的含义，并各举一个对应的技术手段</li>
+          <li>能说明钓鱼、口令爆破、恶意代码、窃听、未修复漏洞各自的风险入口与基本原理</li>
+          <li>能根据搜索空间与熵估算口令抵抗爆破的能力，并解释为什么还需要多因素认证</li>
+          <li>能针对真实场景配置与攻击路径对应的防护措施，并评估残余风险等级</li>
+        </ul>
+        <div class="kid-note" style="margin-top:16px">
+          <span class="emoji">🎯</span>
+          <div><strong>课标依据：</strong>《义务教育信息科技课程标准（2022年版2025年修订）》初中「信息安全」——识别常见网络攻击方式，掌握基本防护策略。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="3" data-tts="pretest"
+           data-tts-script="先做三道小题，凭你现在的想法选就行，选错了也没关系，正好能看出哪里需要重点听。选完会立刻出现解释。"
+           data-tsh="先测一测：数据是在哪一步丢掉的？ - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">前测</span>
+          <h2>先测一测：数据是在哪一步丢掉的？</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="pre-1">
+          <p><strong>1. 下面哪一件事属于「保护数据的完整性」？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-1" data-correct="1">让接收方能够发现内容在传输途中被人改过</button>
+            <button class="choice" data-q="pre-1" data-correct="0">让无关的人看不到内容</button>
+            <button class="choice" data-q="pre-1" data-correct="0">保证系统随时都能打开、不会中断</button>
+          </div>
+          <p class="result warn" data-explain="pre-1" style="display:none;margin-top:10px">完整性针对的是「有没有被改动」，机密性针对「谁能看」，可用性针对「能不能用上」。<strong>错因提醒：</strong>这三个目标最容易搞混，判断的关键是问一句：这条措施防的到底是「被别人看到」、「被别人改」还是「用不上」。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-2">
+          <p><strong>2. 一个口令由 8 位小写字母组成，另一个由 12 位小写字母组成。关于它们的搜索空间，正确的说法是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-2" data-correct="1">12 位那个的搜索空间是 8 位那个的 26⁴ 倍，差距被指数放大</button>
+            <button class="choice" data-q="pre-2" data-correct="0">只多了 4 位，搜索空间大约只差一倍</button>
+            <button class="choice" data-q="pre-2" data-correct="0">两者差不多，因为用的字符种类完全一样</button>
+          </div>
+          <p class="result warn" data-explain="pre-2" style="display:none;margin-top:10px">搜索空间是「字符种类数的位数次方」，多一位就乘以一次底数。<strong>错因提醒：</strong>同学常误认为「多几位只是多一点点」，把加法直觉套到指数上——这里差的不是 4，而是 26 的四次方。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="pre-3">
+          <p><strong>3. 在公共场所的开放无线网络上登录账号，最需要警惕的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="pre-3" data-correct="1">同一网络里的人可能旁路截获你发送的内容</button>
+            <button class="choice" data-q="pre-3" data-correct="0">网速会比家里慢一些</button>
+            <button class="choice" data-q="pre-3" data-correct="0">路由器的外观可能会被别人看到</button>
+          </div>
+          <p class="result warn" data-explain="pre-3" style="display:none;margin-top:10px">开放网络里，旁路截获的可行性明显更高——所以要用加密连接。<strong>错因提醒：</strong>常见错误是只盯着「快不快」，把传输安全当成性能问题。</p>
+        </div>
+        <p id="pre-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="module-1"
+           data-tts-script="网络安全不是一句口号，它有明确的目标。机密性，指只有该看到的人才能看到，靠加密和权限控制来实现。完整性，指数据没有被偷偷改动，靠校验摘要来发现。可用性，指需要的时候能用得上，靠备份和冗余来保障。这三条合起来，就是信息安全的基本目标。而它们都建立在一个前提上：先确认对方到底是谁，这就是身份认证。把口令、一次性验证码、设备指纹这些不同的凭据组合起来，就是多因素认证——它的意义在于，即使口令泄露，攻击者也还差一步。"
+           data-tsh="机密性、完整性、可用性，安全有三个明确目标" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念一</span>
+          <h2>机密性、完整性、可用性，安全有三个明确目标</h2>
+        </div>
+
+        <div class="inner-card">
+          <p><strong>为什么要学这一课？</strong>你已经知道数据可以采集、传输、存储，也用过各种在线服务。但你有没有想过：数据在存储、传输、使用的每一个环节，都可能被人盯上。<strong>所以</strong>我们需要先给「安全」下可检验的定义——否则就只能靠感觉说「我觉得这样比较安全」，而感觉是没办法验证的。</p>
+        </div>
+        <p style="font-size:17px;margin:12px 0">信息安全有三个基本目标：<strong>机密性</strong>（只有该看到的人才能看到，靠加密与权限控制实现）、<strong>完整性</strong>（数据没有被偷偷改动，靠校验摘要来发现）、<strong>可用性</strong>（需要的时候能用得上，靠备份与冗余来保障）。</p>
+        <div class="grid grid-3">
+          <div class="inner-card">
+            <p><strong>① 机密性</strong></p>
+            <p style="color:var(--muted)">防「被看到」。靠加密和权限控制实现。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>② 完整性</strong></p>
+            <p style="color:var(--muted)">防「被改」。靠校验摘要及时发现改动。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>③ 可用性</strong></p>
+            <p style="color:var(--muted)">防「用不上」。靠备份和冗余撑住。</p>
+          </div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-cybersecurity-fig1.webp" alt="信息安全三要素示意图，机密性、完整性与可用性三者关系及对应手段">
+          <figcaption>机密性、完整性、可用性——三个目标各有各的对手，也各有各的技术手段</figcaption>
+        </figure>
+        <div class="kid-note"><span class="emoji">🔑</span><div><strong>记忆锚点：</strong>把三个目标记成三句反问——「这个别人能看到吗」对应机密性，「这个被人改过吗」对应完整性，「这个现在还打得开吗」对应可用性。再加一个前提：<strong>先确认对方是谁</strong>，这就是身份认证；把口令之外的第二种凭据也加上，就是多因素认证。</div></div>
+
+        <div class="inner-card" style="background:var(--accent-soft);border-color:rgba(78,205,196,.45);margin-top:16px">
+          <p style="margin:0 0 8px"><strong>🔍 深层理解</strong>　换个角度再看一遍这件事，看看能不能说出背后的原理。</p>
+          <div class="grid">
+          <div class="inner-card">
+            <p><strong>看见它</strong>：同一份数据，在一台没人管的终端上和在加密、有权限、有备份的环境里，面对的风险完全不同——安全是环境的属性，不只是数据自己的属性。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>比较它</strong>：加密是为了防止别人看懂，摘要校验是为了防止别人改完不认账。一个管「看不懂」，一个管「改不了瞒得住」，不能互相替代。</p>
+          </div>
+          <div class="inner-card">
+            <p><strong>迁移它</strong>：快递要密封（机密性）、要有封条和重量校验（完整性）、还要保证按时送达（可用性）——思路完全一样。</p>
+          </div>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="lab-1"
+           data-tts-script="光说口令要长，说服力不够，我们来算。左边选口令用到的字符种类，右边拖长度，中间会实时算出三件事：一共有多少种可能、折算成多少位熵、以及按离线破解的速度估算，平均要试多久才能碰到。请你自己找一组数：多加一个字符，和把字符种类从一种扩到四种，哪一种提升更大？算完你会发现，长度对搜索空间的贡献是按倍数放大的。"
+           data-tsh="口令强度估算台：多长才够，多一种字符能顶几位？" data-bloom-level="apply" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">口令实验室</span>
+          <h2>口令强度估算台：多长才够，多一种字符能顶几位？</h2>
+        </div>
+
+        
+<style>
+.ta-log { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.ta-log li { padding: 8px 10px; margin-bottom: 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); white-space: pre-wrap; }
+.ta-log li .tag { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; background: var(--brand-soft); color: var(--brand); }
+.ta-log li.bad { border-color: var(--danger); }
+.ta-log li.ok { border-color: var(--ok); }
+.ta-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ta-tag { padding: 4px 10px; border-radius: 999px; font-size: 13px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); color: var(--text-secondary); }
+.ta-tag.warn { background: var(--warm-soft); border-color: var(--warm); color: var(--text-strong); font-weight: 700; }
+.ta-tag.ok { background: var(--brand-2-soft); border-color: var(--brand-2); color: var(--text-strong); font-weight: 700; }
+.ta-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; word-break: break-all; }
+.sw-wrap { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.sw { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); cursor: pointer; font-size: 14px; }
+.sw .dot { flex: 0 0 34px; height: 20px; border-radius: 999px; background: rgb(var(--paper-rgb) / .3); position: relative; transition: background .2s; }
+.sw .dot::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; }
+.sw.on .dot { background: var(--brand); }
+.sw.on .dot::after { transform: translateX(14px); }
+.sw.on { border-color: var(--brand); background: var(--brand-soft); }
+.sw .name { font-weight: 700; }
+.sw .desc { color: var(--muted); font-size: 13px; }
+.bar-row { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-top: 8px; }
+.bar-row .lab { flex: 0 0 96px; color: var(--muted); }
+.bar-track { flex: 1; height: 12px; border-radius: 999px; background: rgb(var(--paper-rgb) / .18); overflow: hidden; }
+.bar-fill { display: block; height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+.bar-fill.danger { background: var(--danger); }
+.bar-row .val { flex: 0 0 92px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">先选口令用到的字符种类，再拖长度，观察搜索空间、熵和估算时长怎么变。</p>
+        <div class="lab-panel">
+          <div class="flex-row" style="margin-top:0">
+            <button class="choice" data-s1-set="lower" style="text-align:center">小写字母 26</button>
+            <button class="choice" data-s1-set="upper" style="text-align:center">大写字母 26</button>
+            <button class="choice" data-s1-set="digit" style="text-align:center">数字 10</button>
+            <button class="choice" data-s1-set="sym" style="text-align:center">常用符号 33</button>
+          </div>
+          <div id="s1-stage" style="margin-top:14px">
+            <div class="slider-row">
+              <label for="s1-len">口令长度</label>
+              <input type="range" id="s1-len" min="4" max="20" step="1" value="8">
+              <span class="readout-cell" style="flex:0 0 96px"><span class="k">长度</span><span class="v" id="s1-len-val">8 位</span></span>
+            </div>
+            <div class="lab-readout">
+              <div class="readout-cell" style="min-width:200px"><span class="k">候选字符集</span><span class="v" id="s1-pool" style="font-size:15px">—</span></div>
+              <div class="readout-cell"><span class="k">搜索空间</span><span class="v" id="s1-space">—</span></div>
+              <div class="readout-cell"><span class="k">熵（bit）</span><span class="v green" id="s1-ent">—</span></div>
+              <div class="readout-cell"><span class="k">平均估算时长</span><span class="v" id="s1-time">—</span></div>
+            </div>
+            <div class="bar-row">
+              <span class="lab">强度评分</span>
+              <span class="bar-track"><span class="bar-fill" id="s1-bar"></span></span>
+              <span class="val" id="s1-bar-val">—</span>
+            </div>
+          </div>
+          <p class="result warn" id="s1-out" style="margin-top:12px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">📐</span><div><strong>估算前提说清楚：</strong>「每秒尝试 10 的 10 次方次」指的是离线暴力尝试在专用硬件上的量级，用来说明不同口令的相对强弱，不代表我们在尝试攻破任何系统。真正要记住的是：<strong>长度对搜索空间的贡献是指数级的</strong>。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="6" data-tts="module-2"
+           data-tts-script="风险通常从五个入口进来。钓鱼靠伪装成可信的来源骗取凭据，突破口是人，不是技术。口令爆破利用弱口令，或者你在别处泄露过的那一个口令。恶意代码把自己伪装成正常文件，等你亲手运行。窃听发生在传输途中，在公共网络上传输明文，等于把内容写在明信片上寄出去。未修复漏洞则是系统里已知的缺陷一直没补。对应的防护也很清楚：不从陌生链接进入、长口令加多因素认证、只从可信来源安装、使用加密连接、及时安装安全更新。要注意，没有绝对的安全，只有把风险降到可以接受的程度。"
+           data-tsh="五个入口，五类防护，一条一条对上" data-bloom-level="understand" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">概念二</span>
+          <h2>五个入口，五类防护，一条一条对上</h2>
+        </div>
+
+        <div class="inner-card">
+          <p><strong>风险不是抽象的，它总是从某个具体的入口进来。</strong>把入口找出来，防护措施才有地方可放；找不到入口的防护，多半只是心理安慰。</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>钓鱼（社会工程）</strong>：伪装成可信来源骗取凭据，突破口是人不是技术。对策：不点陌生链接，固定从官方入口进入，可疑请求要二次确认。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>口令爆破与撞库</strong>：利用弱口令，或你在别处泄露过的那一个口令。对策：够长的口令 + 多因素认证。</div></div>
+          <div class="step"><span class="n">3</span><div><strong>恶意代码</strong>：把自己伪装成正常文件，等你亲手运行。对策：只从可信来源获取，及时更新系统。</div></div>
+          <div class="step"><span class="n">4</span><div><strong>窃听与中间人</strong>：在传输途中读取或篡改内容。对策：全程使用加密连接，并对内容做完整性校验。</div></div>
+          <div class="step"><span class="n green">5</span><div><strong>未修复漏洞</strong>：系统里已经公开的缺陷一直没补。对策：及时安装安全更新，关闭用不到的服务与端口。</div></div>
+        </div>
+        <figure class="ta-standard-figure">
+          <img src="./assets/it-m-cybersecurity-fig2.webp" alt="常见网络风险入口与对应防护策略对照示意图">
+          <figcaption>五条常见入口，对上五类可验证的防护措施——措施必须打在入口上</figcaption>
+        </figure>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">最容易犯的两个错：一是<strong>误认为口令足够复杂就万事大吉</strong>——钓鱼和撞库根本不靠猜，所以多因素认证不是可选项；二是<strong>搞混「加密」与「完整」</strong>——加密只让内容看不懂，挡不住别人把内容改掉，要发现改动还得靠完整性校验。另外要接受一件事：<strong>没有绝对的安全</strong>，只有把风险降到可以接受的程度。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="7" data-tts="lab-2"
+           data-tts-script="现在你当一次中间的攻击者视角，看看同一条消息在两种传输方式下有什么不同。先选传输通道，再决定要不要加密，然后点发送。观测台上会同时列出你写进去的原文和链路上被看到的内容。加密之后，窃听者拿到的是一段看不出含义的数据；而只要完整性校验开着，任何偷偷改动都会在到达时被发现。"
+           data-tsh="传输链路观测台：同一条消息，被看到的内容一样吗？" data-bloom-level="analyze" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">传输实验室</span>
+          <h2>传输链路观测台：同一条消息，被看到的内容一样吗？</h2>
+        </div>
+
+        
+<style>
+.ta-log { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.ta-log li { padding: 8px 10px; margin-bottom: 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); white-space: pre-wrap; }
+.ta-log li .tag { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; background: var(--brand-soft); color: var(--brand); }
+.ta-log li.bad { border-color: var(--danger); }
+.ta-log li.ok { border-color: var(--ok); }
+.ta-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ta-tag { padding: 4px 10px; border-radius: 999px; font-size: 13px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); color: var(--text-secondary); }
+.ta-tag.warn { background: var(--warm-soft); border-color: var(--warm); color: var(--text-strong); font-weight: 700; }
+.ta-tag.ok { background: var(--brand-2-soft); border-color: var(--brand-2); color: var(--text-strong); font-weight: 700; }
+.ta-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; word-break: break-all; }
+.sw-wrap { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.sw { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); cursor: pointer; font-size: 14px; }
+.sw .dot { flex: 0 0 34px; height: 20px; border-radius: 999px; background: rgb(var(--paper-rgb) / .3); position: relative; transition: background .2s; }
+.sw .dot::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; }
+.sw.on .dot { background: var(--brand); }
+.sw.on .dot::after { transform: translateX(14px); }
+.sw.on { border-color: var(--brand); background: var(--brand-soft); }
+.sw .name { font-weight: 700; }
+.sw .desc { color: var(--muted); font-size: 13px; }
+.bar-row { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-top: 8px; }
+.bar-row .lab { flex: 0 0 96px; color: var(--muted); }
+.bar-track { flex: 1; height: 12px; border-radius: 999px; background: rgb(var(--paper-rgb) / .18); overflow: hidden; }
+.bar-fill { display: block; height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+.bar-fill.danger { background: var(--danger); }
+.bar-row .val { flex: 0 0 92px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">选一条传输通道，再决定要不要加密、要不要做完整性校验，然后发送并观测。</p>
+        <div class="lab-panel">
+          <div class="flex-row" style="margin-top:0">
+            <button class="choice" data-s2-ch="home" style="text-align:center">可信的校园网</button>
+            <button class="choice" data-s2-ch="public" style="text-align:center">公共场所的开放无线网络</button>
+          </div>
+          <div id="s2-stage" style="margin-top:14px">
+            <div class="sw-wrap">
+              <div class="sw" id="s2-enc"><span class="dot"></span><span><span class="name">对传输内容加密</span><br><span class="desc">在加密通道里发送，链路上只能看到密文</span></span></div>
+              <div class="sw" id="s2-integ"><span class="dot"></span><span><span class="name">校验内容完整性</span><br><span class="desc">接收方核对摘要，发现途中被改动过</span></span></div>
+            </div>
+            <label style="display:block;margin-top:12px;font-weight:700;font-size:14px">要发送的内容
+              <input id="s2-text" value="登录凭据：账号与口令" style="margin-top:6px">
+            </label>
+            <div class="lab-readout">
+              <div class="readout-cell" style="min-width:220px"><span class="k">你写下的原文</span><span class="v ta-mono" id="s2-plain" style="font-size:14px;font-weight:600">—</span></div>
+              <div class="readout-cell" style="min-width:220px"><span class="k">链路上被看到的内容</span><span class="v ta-mono" id="s2-seen" style="font-size:14px;font-weight:600">—</span></div>
+            </div>
+          </div>
+          <div class="flex-row">
+            <button class="choice" id="s2-send" style="text-align:center;flex:1">发送并观测</button>
+            <button class="choice" id="s2-reset" style="text-align:center;flex:1">重置</button>
+          </div>
+          <p class="result warn" id="s2-out" style="margin-top:12px"></p>
+        </div>
+        <div class="kid-note" style="margin-top:14px"><span class="emoji">🛡️</span><div><strong>动手比一比：</strong>先在开放网络上不加密发一次，看看链路上显示什么；再打开加密发一次。同一个通道，两种结果。<strong>易错点：</strong>加密之后内容看不懂了，但如果没开完整性校验，内容被改掉仍然发现不了——这两件事必须一起做。</div></div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="concept" data-page-index="8" data-tts="worked-example"
+           data-tts-script="我们一起分析一次账号被盗事件。第一步，界定资产和影响：可能被拿走的是登录凭据、通讯录和绑定的其他账号。第二步，找入口：登录记录显示异地、连续失败几十次之后成功，说明这不是被猜中心思，而是被反复尝试——原因通常是口令强度不够，而且没有开多因素认证。第三步，判损失范围：如果他多个平台用同一个口令，那么泄露一个就等于泄露全部，这叫撞库。第四步，处置：立刻修改口令、开启多因素认证、退出所有设备的登录、检查第三方授权、打开登录提醒。第五步，加固与复盘：改用长口令且不复用、不在未加密页面提交凭据、重要数据定期备份。"
+           data-tsh="例题示范：一次账号被盗，怎么一步步查清楚" data-bloom-level="analyze" data-scaffold="full">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag">例题示范</span>
+          <h2>例题示范：一次账号被盗，怎么一步步查清楚</h2>
+        </div>
+
+        <div class="inner-card" style="background:var(--warm-soft);border-color:var(--warm)">
+          <p style="margin:0"><strong>题目：</strong>某同学的账号在深夜被异地登录。请分析可能的入口，给出处置步骤和加固方案。</p>
+        </div>
+        <div class="step-grid">
+          <div class="step"><span class="n">1</span><div><strong>界定资产与影响：</strong>可能被拿走的不只是登录凭据，还有通讯录、聊天记录，以及绑定的其他平台账号。先算清楚「丢了什么」，才知道要处置到什么程度。</div></div>
+          <div class="step"><span class="n">2</span><div><strong>找入口：</strong>登录记录显示异地、连续失败几十次之后成功。连续失败说明是被反复尝试，而不是被猜中心思——入口很可能是口令强度不足，并且没有开启多因素认证。</div></div>
+          <div class="step"><span class="n">3</span><div><strong>判断扩散范围：</strong>如果他在多个平台用了同一个口令，泄露一个就等于泄露全部，这就是撞库。要逐个平台检查。</div></div>
+          <div class="step"><span class="n">4</span><div><strong>处置：</strong>立刻修改为互不复用的长口令、开启多因素认证、退出所有设备的登录、检查第三方授权应用并撤销可疑授权、打开异地登录提醒。</div></div>
+          <div class="step"><span class="n green">5</span><div><strong>加固与复盘：</strong>不在未加密页面提交凭据、只从官方入口进入、及时安装安全更新、重要数据定期备份。写下来的是清单，做出来的才叫防护。</div></div>
+        </div>
+        <div class="misconception">
+          <span class="lab">常见错误</span>
+          <p style="margin:6px 0 0">不少同学误认为「账号被盗一定是被破解了密码」，于是只想着换一个更复杂的口令。但钓鱼和撞库根本不靠猜——如果入口是钓鱼页面，再长的口令也是自己交出去的，这时候唯一能救场的是多因素认证。另一处容易搞混的是把「改口令」当成处置的全部：<strong>没有退出其他设备的登录、没有检查第三方授权</strong>，攻击者手里的凭据可能依然有效。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="9" data-tts="conceptest-1"
+           data-tts-script="现在用三个容易弄错的说法考考你。请仔细读每一个选项，选出你认为正确的那个，然后看解释。"
+           data-tsh="概念测试：找出藏在说法里的错误 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">概念测试</span>
+          <h2>概念测试：找出藏在说法里的错误</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="ct-1">
+          <p><strong>1. 下面哪句话是正确的？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-1" data-correct="1">加密让内容看不懂，完整性校验让改动瞒不住，两者不能相互替代</button>
+            <button class="choice" data-q="ct-1" data-correct="0">只要加密了，内容就一定不会被改动</button>
+            <button class="choice" data-q="ct-1" data-correct="0">设置了复杂口令，就不需要再开多因素认证</button>
+          </div>
+          <p class="result warn" data-explain="ct-1" style="display:none;margin-top:10px">机密性与完整性防的是两件事：一个防「被看到」，一个防「被改」。<strong>错因提醒：</strong>最常见的是误认为加密顺带把完整性也解决了；实际上加密之后内容依然可能被替换成另一段合法密文。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-2">
+          <p><strong>2. 一个口令由 10 位构成，只用数字；另一个由 8 位构成，使用小写字母加数字。关于它们的搜索空间，正确的是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-2" data-correct="1">数字 10 位是 10 的 10 次方，约 1 亿的 100 倍；字母数字 8 位是 36 的 8 次方，量级相当甚至更大</button>
+            <button class="choice" data-q="ct-2" data-correct="0">字符种类多的那个一定更强，与长度无关</button>
+            <button class="choice" data-q="ct-2" data-correct="0">数字 10 位明显更弱，因为数字只有 10 种</button>
+          </div>
+          <p class="result warn" data-explain="ct-2" style="display:none;margin-top:10px">要分别算底数的位数次方，再比较量级：10¹⁰ ≈ 1×10¹⁰，36⁸ ≈ 2.8×10¹²。<strong>错因提醒：</strong>容易只盯着字符种类下结论，忘记长度在指数位置上——这正是这一课要纠正的加法直觉。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="ct-3">
+          <p><strong>3. 关于「防护措施」，下面哪种判断最站得住脚？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="ct-3" data-correct="1">一项措施要靠得上某条攻击路径，否则开了也没用</button>
+            <button class="choice" data-q="ct-3" data-correct="0">防护措施开得越多越安全，不必考虑它挡的是谁</button>
+            <button class="choice" data-q="ct-3" data-correct="0">只要把系统更新到最新，就不需要其他措施了</button>
+          </div>
+          <p class="result warn" data-explain="ct-3" style="display:none;margin-top:10px">防护要有针对性：措施与路径一一对应，才是有效配置。<strong>错因提醒：</strong>常见错误是把安全当成「堆措施」——开了一堆按钮却挡不住任何一条实际路径，只是增加了操作负担。</p>
+        </div>
+        <p id="ct-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="10" data-tts="synthesis"
+           data-tts-script="学到这里，请你当一次安全加固工程师。左边是四条常见的攻击路径，右边是四项防护措施，你来决定开哪几项，然后点评估。系统会逐条判断每条路径能不能被挡住，最后给出残余风险评分。要特别留意一件事：防护措施不是越多越好，而是要和它挡住的那条路径对得上——开了一项却挡不住任何路径，等于没有作用。"
+           data-tsh="综合任务：给一位同学配一份防护方案" data-bloom-level="create" data-scaffold="partial">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="success">综合任务</span>
+          <h2>综合任务：给一位同学配一份防护方案</h2>
+        </div>
+
+        
+<style>
+.ta-log { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.ta-log li { padding: 8px 10px; margin-bottom: 6px; border-radius: 10px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); white-space: pre-wrap; }
+.ta-log li .tag { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; background: var(--brand-soft); color: var(--brand); }
+.ta-log li.bad { border-color: var(--danger); }
+.ta-log li.ok { border-color: var(--ok); }
+.ta-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ta-tag { padding: 4px 10px; border-radius: 999px; font-size: 13px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); color: var(--text-secondary); }
+.ta-tag.warn { background: var(--warm-soft); border-color: var(--warm); color: var(--text-strong); font-weight: 700; }
+.ta-tag.ok { background: var(--brand-2-soft); border-color: var(--brand-2); color: var(--text-strong); font-weight: 700; }
+.ta-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; word-break: break-all; }
+.sw-wrap { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.sw { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;
+  background: var(--bg-subtle); border: 1px solid var(--line-subtle); cursor: pointer; font-size: 14px; }
+.sw .dot { flex: 0 0 34px; height: 20px; border-radius: 999px; background: rgb(var(--paper-rgb) / .3); position: relative; transition: background .2s; }
+.sw .dot::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; }
+.sw.on .dot { background: var(--brand); }
+.sw.on .dot::after { transform: translateX(14px); }
+.sw.on { border-color: var(--brand); background: var(--brand-soft); }
+.sw .name { font-weight: 700; }
+.sw .desc { color: var(--muted); font-size: 13px; }
+.bar-row { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-top: 8px; }
+.bar-row .lab { flex: 0 0 96px; color: var(--muted); }
+.bar-track { flex: 1; height: 12px; border-radius: 999px; background: rgb(var(--paper-rgb) / .18); overflow: hidden; }
+.bar-fill { display: block; height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+.bar-fill.danger { background: var(--danger); }
+.bar-row .val { flex: 0 0 92px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+</style>
+
+        <p style="color:var(--muted);margin:0 0 12px">场景：同学甲的日常设备要长期使用，目前四项防护都没有开。请决定开启哪几项，然后点评估。</p>
+        <div class="lab-panel">
+          <div class="grid grid-2">
+            <div>
+              <p style="font-weight:700;font-size:14px;margin:0 0 8px">① 已识别的攻击路径</p>
+              <ul class="ta-log">
+                <li><span class="tag">路径</span>口令爆破 / 撞库（权重 30）</li>
+                <li><span class="tag">路径</span>钓鱼骗取凭据（权重 30）</li>
+                <li><span class="tag">路径</span>利用未修复漏洞（权重 25）</li>
+                <li><span class="tag">路径</span>开放网络窃听（权重 25）</li>
+              </ul>
+            </div>
+            <div>
+              <p style="font-weight:700;font-size:14px;margin:0 0 8px">② 可开启的措施</p>
+              <div class="sw-wrap" id="syn-stage">
+                <div class="sw" id="syn-sw-mfa" data-syn-sw="mfa"><span class="dot"></span><span><span class="name">多因素认证</span><br><span class="desc">口令之外再加一道验证</span></span></div>
+                <div class="sw" id="syn-sw-entry" data-syn-sw="entry"><span class="dot"></span><span><span class="name">只走官方入口</span><br><span class="desc">不点陌生链接，从官方入口进入</span></span></div>
+                <div class="sw" id="syn-sw-patch" data-syn-sw="patch"><span class="dot"></span><span><span class="name">及时安装安全更新</span><br><span class="desc">把已公开的缺陷补上</span></span></div>
+                <div class="sw" id="syn-sw-tls" data-syn-sw="tls"><span class="dot"></span><span><span class="name">使用加密连接</span><br><span class="desc">在加密通道里提交凭据</span></span></div>
+                <div class="sw" id="syn-sw-backup" data-syn-sw="backup"><span class="dot"></span><span><span class="name">定期备份重要数据</span><br><span class="desc">不阻断攻击，把损失压到可恢复</span></span></div>
+              </div>
+            </div>
+          </div>
+          <p class="result warn" id="syn-out" style="margin-top:12px"></p>
+          <div class="flex-row">
+            <button class="choice" id="syn-run" style="text-align:center;flex:1">评估这份方案</button>
+            <button class="choice" id="syn-reset" style="text-align:center;flex:1">重置</button>
+          </div>
+        </div>
+        <div class="inner-card">
+          <p><strong>写下来，说给同桌听：</strong>如果只允许开一项措施，你会开哪一项？请说明理由，以及它没能覆盖的那几条路径你打算怎么处理。</p>
+          <textarea id="syn-answer" rows="3" placeholder="我会先开……因为它挡住了……这条路径；剩下没覆盖的是……我打算……"></textarea>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="11" data-tts="posttest"
+           data-tts-script="最后用新情境检验一下。这次出现了公共无线网络和长期未更新的设备，看看你能不能把三要素、口令强度和防护配置用上去。"
+           data-tsh="后测：换一个情境，看看规律还在不在 - 用选择题把想法暴露出来" data-bloom-level="apply">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">后测</span>
+          <h2>后测：换一个情境，看看规律还在不在</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 6px">先凭直觉选一个，选完立刻看到解释——错了也没关系，正好知道要重点听哪里。</p>
+        <div class="inner-card" data-quiz-block="post-1">
+          <p><strong>1. 一位同学在图书馆的开放无线网络上要提交一份资料。下面哪种做法最合理？</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-1" data-correct="1">确认地址栏是加密连接后再提交，并尽量避免在开放网络上处理敏感内容</button>
+            <button class="choice" data-q="post-1" data-correct="0">开放网络速度快，直接提交就好</button>
+            <button class="choice" data-q="post-1" data-correct="0">先把资料存到本地，等下次用自己的网络再提交——但不必关心是否加密</button>
+          </div>
+          <p class="result warn" data-explain="post-1" style="display:none;margin-top:10px">开放网络旁路截获的可行性更高，所以传输过程必须加密。<strong>错因提醒：</strong>常见错误是误认为「换个时间提交」就等于安全了；只要在未加密的页面上提交，风险始终存在。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-2">
+          <p><strong>2. 一台设备长期提示有安全更新但没有安装。主要风险是：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-2" data-correct="1">已公开的缺陷一直没补，等于给攻击者留了一个已知入口</button>
+            <button class="choice" data-q="post-2" data-correct="0">设备会变慢，其余没有影响</button>
+            <button class="choice" data-q="post-2" data-correct="0">更新会占用空间，所以不更新反而更安全</button>
+          </div>
+          <p class="result warn" data-explain="post-2" style="display:none;margin-top:10px">未修复漏洞是五条常见入口之一，而且它的特点是被公开过、利用方式明确。<strong>错因提醒：</strong>很多同学把安全更新当成「性能优化」，误认为它只影响速度，其实它补的是可被利用的缺陷。</p>
+        </div>
+        <div class="inner-card" data-quiz-block="post-3">
+          <p><strong>3. 小李说：「我的口令有 16 位，非常强，所以不需要开多因素认证。」这个说法的问题在于：</strong></p>
+          <div class="grid" style="margin-top:10px">
+            <button class="choice" data-q="post-3" data-correct="1">长口令提升的是抵抗爆破的能力，而钓鱼、撞库根本不靠猜，仍需要第二道凭据</button>
+            <button class="choice" data-q="post-3" data-correct="0">16 位其实不够长，加固到 24 位就可以了</button>
+            <button class="choice" data-q="post-3" data-correct="0">多因素认证只是为了方便找回账号，和安全没关系</button>
+          </div>
+          <p class="result warn" data-explain="post-3" style="display:none;margin-top:10px">口令强度和身份认证是两个层面：前者让「猜」变难，后者让「拿到口令也不够用」。<strong>错因提醒：</strong>把强度当成万能，是这一课最需要纠正的想法。</p>
+        </div>
+        <p id="post-score" class="result" style="margin-top:14px;display:none"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="summary" data-page-index="12" data-tts="summary"
+           data-tts-script="这节课我们弄明白了三件事。第一，信息安全有三个基本目标：机密性、完整性、可用性，它们都建立在身份认证这个前提上。第二，风险主要从五个入口进来——钓鱼、口令爆破、恶意代码、窃听和未修复漏洞，对应五类可验证的防护措施。第三，安全不是绝对状态，而是把风险降到可接受的程度：长口令提升搜索空间，多因素认证补上最后一道闸，加密连接保护传输过程，及时更新和备份让损失可控。回到开头那个账号：只要当初开过多因素认证，就算口令被别人拿到，那次深夜登录也不会成功。"
+           data-tsh="小结：三句话，把自己讲明白" data-bloom-level="understand">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">小结</span>
+          <h2>小结：三句话，把自己讲明白</h2>
+        </div>
+        <div class="grid">
+          <div class="summary-item"><span class="num">1</span><div><strong>三个目标</strong>：机密性防「被看到」，完整性防「被改」，可用性防「用不上」；它们都建立在身份认证这个前提上。</div></div>
+          <div class="summary-item"><span class="num">2</span><div><strong>五个入口</strong>：钓鱼、口令爆破、恶意代码、窃听、未修复漏洞——防护措施必须对得上具体的入口，否则只是操作负担。</div></div>
+          <div class="summary-item"><span class="num">3</span><div><strong>两个可算的量</strong>：口令的搜索空间是「字符种类数的位数次方」，长度贡献在指数位置上；加密与完整性校验解决的是两件不同的事。</div></div>
+        </div>
+        <div class="inner-card" style="background:var(--warm-soft);border-color:var(--warm)">
+          <p style="margin:0"><strong>回到开头那个深夜被登录的账号：</strong>如果当初开了多因素认证，即使口令已经泄露，攻击者也还差一步，那次登录就不会成功。整个防护过程里没有一步是神秘的——每一项措施都对应着一条明确的攻击路径。</p>
+        </div>
+        <div class="inner-card">
+          <p><strong>给别人讲一遍：</strong>请用「机密性、完整性、可用性」三个词，再挑两条攻击路径，说清楚这个场景里应该配哪些措施、为什么配它们。</p>
+        </div>
+    
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="quiz" data-page-index="13" data-tts="homework"
+           data-tts-script="最后留三项作业，分三个层次。第一层基础巩固，人人要做：写出一致性三要素各自的含义，并举出对应的防护手段。第二层能力应用，动手做：用课堂上的估算台比较三组口令的搜索空间和估算时长，写一句话说明长度与字符种类哪一个影响更大。第三层迁移挑战，选做：为家里的一台常用设备做一份加固清单，逐条说明它挡住了哪一条攻击路径，以及还剩哪些风险没能覆盖。"
+           data-tsh="作业分层：三层练习，按自己的节奏来" data-bloom-level="create" data-scaffold="none">
+    <div class="slide-inner">
+      <div class="card">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="warn">作业分层</span>
+          <h2>作业分层：三层练习，按自己的节奏来</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 12px">三层练习，做完第一、二层就算通关；第三层留给愿意继续探索的同学。</p>
+        <div class="inner-card">
+          <p><strong>⭐ 基础巩固（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>写出一致性三要素（机密性、完整性、可用性）各自的含义，并为每一项举出一个对应的技术手段。</li>
+            <li>列举四条常见的安全风险入口，并各写一句它的突破口在哪里（人、口令、文件、链路还是系统缺陷）。</li>
+            <li>说明身份认证与多因素认证的区别：多因素认证多出来的那「一个因素」解决了什么问题？</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐ 能力应用（必做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>用课堂上的估算台比较三组口令，记录各自的搜索空间和估算时长，写一句话说明长度与字符种类哪一个影响更大。</li>
+            <li>画一条「你 → 网络 → 服务器」的传输链路，在图上标出窃听点与篡改点，并标出加密和完整性校验分别在哪一步起作用。</li>
+          </ul>
+        </div>
+        <div class="inner-card">
+          <p><strong>⭐⭐⭐ 迁移挑战（选做）</strong></p>
+          <ul class="objectives" style="margin-top:8px">
+            <li>为家里的一台常用设备做一份加固清单，逐条说明它挡住了哪一条攻击路径，并指出还剩哪些风险没有被覆盖。</li>
+            <li>在上述清单基础上评估：如果只允许保留三项措施，你会留下哪三项？请用「残余风险」的说法说明取舍理由。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page kg-page" data-page-type="summary" data-page-index="14" data-tts="knowledge-graph"
+           data-tts-script="这张图展示了这节课在信息科技知识网络里的位置。左边是先要学会的知识，右边是可以接着探索的内容，下面是同一领域的伙伴知识。可以点一点，看看还有哪些值得继续研究的问题。"
+           data-tsh="知识图谱 - 看看这节课在科学知识网里的位置">
+    <div class="slide-inner">
+      <div class="card card-glow">
+        <div class="section-header">
+          <span class="phase-tag" data-variant="purple">知识图谱</span>
+          <h2>这节课在知识网络里的位置</h2>
+        </div>
+        <p style="color:var(--muted);margin:0 0 10px">左边是学它之前要先会的，右边是学会之后可以继续探索的，下面是同一领域的伙伴知识。</p>
+        <p class="kg-loading-hint" style="color:var(--muted);font-size:13px;margin:0 0 10px">图谱正在加载：首次进入需下载知识索引（约 1–3 秒），加载完成后本行会自动消失。</p>
+        <div data-teachany-kg="it-m-cybersecurity">
+          <canvas class="tkg-fallback-canvas" width="720" height="140" aria-label="知识图谱互动画布" style="display:block;width:100%;border-radius:12px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide-page" data-page-type="interactive" data-page-index="15" data-tts="ai-tutor"
+           data-tts-script="如果还有没弄明白的地方，把你的问题写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。"
+           data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+    <div class="slide-inner">
+      <div data-teachany-tutor-card></div>
+    </div>
+  </section>
+</div><!-- .slide-container -->
+
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01-hero",
+    "section": "hero",
+    "src": "./tts/s01-hero.mp3",
+    "label": "开场"
+  },
+  {
+    "id": "s02-problem-anchor",
+    "section": "problem-anchor",
+    "src": "./tts/s02-problem-anchor.mp3",
+    "label": "问题锚点"
+  },
+  {
+    "id": "s03-objectives",
+    "section": "objectives",
+    "src": "./tts/s03-objectives.mp3",
+    "label": "学习目标"
+  },
+  {
+    "id": "s04-pretest",
+    "section": "pretest",
+    "src": "./tts/s04-pretest.mp3",
+    "label": "前测"
+  },
+  {
+    "id": "s05-module-1",
+    "section": "module-1",
+    "src": "./tts/s05-module-1.mp3",
+    "label": "概念一 三个基本目标与身份认证"
+  },
+  {
+    "id": "s06-lab-1",
+    "section": "lab-1",
+    "src": "./tts/s06-lab-1.mp3",
+    "label": "实验室一 口令强度估算台"
+  },
+  {
+    "id": "s07-module-2",
+    "section": "module-2",
+    "src": "./tts/s07-module-2.mp3",
+    "label": "概念二 五个入口与五类防护"
+  },
+  {
+    "id": "s08-lab-2",
+    "section": "lab-2",
+    "src": "./tts/s08-lab-2.mp3",
+    "label": "实验室二 传输链路观测台"
+  },
+  {
+    "id": "s09-worked-example",
+    "section": "worked-example",
+    "src": "./tts/s09-worked-example.mp3",
+    "label": "例题讲解"
+  },
+  {
+    "id": "s10-conceptest-1",
+    "section": "conceptest-1",
+    "src": "./tts/s10-conceptest-1.mp3",
+    "label": "概念测试"
+  },
+  {
+    "id": "s11-synthesis",
+    "section": "synthesis",
+    "src": "./tts/s11-synthesis.mp3",
+    "label": "综合任务 防护策略配置台"
+  },
+  {
+    "id": "s12-posttest",
+    "section": "posttest",
+    "src": "./tts/s12-posttest.mp3",
+    "label": "后测"
+  },
+  {
+    "id": "s13-summary",
+    "section": "summary",
+    "src": "./tts/s13-summary.mp3",
+    "label": "课堂小结"
+  },
+  {
+    "id": "s14-homework",
+    "section": "homework",
+    "src": "./tts/s14-homework.mp3",
+    "label": "作业分层"
+  },
+  {
+    "id": "s15-knowledge-graph",
+    "section": "knowledge-graph",
+    "src": "./tts/s15-knowledge-graph.mp3",
+    "label": "知识图谱"
+  },
+  {
+    "id": "s16-ai-tutor",
+    "section": "ai-tutor",
+    "src": "./tts/s16-ai-tutor.mp3",
+    "label": "AI 学伴"
+  }
+]
+  </script>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<script>
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'it-m-cybersecurity',
+    courseTitle: '网络安全防护',
+    subject: 'info-tech',
+    grade: '8',
+    nodeId: 'it-m-cybersecurity',
+    lessonType: 'concept-inquiry',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    if (cv) document.getElementById('course-version-display').textContent = cv;
+    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+</script>
+
+<script>
+
+/* ============================================================
+   it-m-cybersecurity 互动逻辑
+   1) 选择题接线（前测 / 概念测试 / 后测）
+   2) 口令强度估算台：字符集 + 长度 → 搜索空间 / 熵 / 估算时长
+   3) 传输链路观测台：通道 × 加密 × 完整性 → 窃听者所见与篡改是否暴露
+   4) 防护策略配置台：4 条攻击路径 × 5 项措施 → 逐条阻断判定与残余风险
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ---------- 1. 选择题 ---------- */
+  document.querySelectorAll('[data-quiz-block]').forEach(function (block) {
+    block.querySelectorAll('.choice').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (block.dataset.answered === '1') return;
+        block.dataset.answered = '1';
+        var ok = btn.dataset.correct === '1';
+        btn.classList.add(ok ? 'correct' : 'wrong');
+        block.querySelectorAll('.choice').forEach(function (b) {
+          if (b.dataset.correct === '1') b.classList.add('correct');
+          b.disabled = true;
+        });
+        var ex = block.querySelector('[data-explain]');
+        if (ex) ex.style.display = 'block';
+      });
+    });
+  });
+
+  /* ---------- 通用：数字与时长格式化 ---------- */
+  function sci(n) {
+    if (!isFinite(n)) return '无法估算';
+    if (n < 1e4) return String(Math.round(n));
+    if (n < 1e12) return (n / 1e4).toFixed(0) + ' 万';
+    var e = Math.floor(Math.log10(n));
+    return (n / Math.pow(10, e)).toFixed(2) + ' × 10<sup>' + e + '</sup>';
+  }
+  var SEC_YEAR = 31536000;
+  function dur(s) {
+    if (!isFinite(s)) return '无法估算';
+    if (s <= 0.5) return '不到 1 秒';
+    var units = [['秒', 1], ['分', 60], ['小时', 3600], ['天', 86400], ['年', SEC_YEAR],
+                 ['万年', SEC_YEAR * 1e4], ['亿年', SEC_YEAR * 1e8]];
+    var pick = units[0];
+    for (var i = 0; i < units.length; i++) { if (s >= units[i][1]) pick = units[i]; }
+    var v = s / pick[1];
+    var txt = v >= 1000 ? String(Math.round(v)) : v.toFixed(v < 10 ? 1 : 0);
+    return txt + ' ' + pick[0];
+  }
+
+  /* ---------- 2. 口令强度估算台 ---------- */
+  var CHARSETS = {
+    lower: { n: '小写字母', size: 26 },
+    upper: { n: '大写字母', size: 26 },
+    digit: { n: '数字', size: 10 },
+    sym:   { n: '常用符号', size: 33 }
+  };
+  var GUESS_PER_SEC = 1e10;   // 估算前提：离线暴力尝试速度（专用硬件量级）
+  var s1 = document.getElementById('s1-stage');
+  if (s1) {
+    var chosen = { lower: true, upper: false, digit: true, sym: false };
+    var eLen = document.getElementById('s1-len');
+    var eLenVal = document.getElementById('s1-len-val');
+    var ePool = document.getElementById('s1-pool');
+    var eSpace = document.getElementById('s1-space');
+    var eEnt = document.getElementById('s1-ent');
+    var eTime = document.getElementById('s1-time');
+    var eBar = document.getElementById('s1-bar');
+    var eBarVal = document.getElementById('s1-bar-val');
+    var eOut = document.getElementById('s1-out');
+
+    function render1() {
+      var size = 0, names = [];
+      Object.keys(chosen).forEach(function (k) {
+        if (chosen[k]) { size += CHARSETS[k].size; names.push(CHARSETS[k].n); }
+      });
+      var L = Number(eLen.value);
+      eLenVal.textContent = L + ' 位';
+      document.querySelectorAll('[data-s1-set]').forEach(function (b) {
+        b.classList.toggle('selected', !!chosen[b.dataset.s1Set]);
+      });
+
+      if (size === 0) {
+        ePool.textContent = '—'; eSpace.textContent = '—'; eEnt.textContent = '—'; eTime.textContent = '—';
+        eBar.style.width = '0%'; eBarVal.textContent = '—';
+        eOut.className = 'result error';
+        eOut.innerHTML = '<strong>至少选一种字符。</strong>没有候选字符，就没有可估算的搜索空间。';
+        return;
+      }
+      var pool = names.join(' + ') + ' 共 ' + size + ' 种字符';
+      var space = Math.pow(size, L);
+      var ent = L * Math.log2(size);
+      var avg = space / 2 / GUESS_PER_SEC;      // 平均尝试次数约为搜索空间的一半
+
+      ePool.textContent = pool;
+      eSpace.innerHTML = sci(space) + ' 种';
+      eEnt.textContent = ent.toFixed(1) + ' 位';
+      eTime.textContent = dur(avg);
+
+      var score = Math.max(0, Math.min(100, ent / 90 * 100));
+      eBar.style.width = score.toFixed(1) + '%';
+      eBar.className = 'bar-fill' + (score < 45 ? ' danger' : '');
+      eBarVal.textContent = score.toFixed(0) + ' / 100';
+
+      // 找一个还没被选中的字符集，用来说明「补一种字符」到底把底数抬到多少
+      var spare = 0;
+      Object.keys(chosen).forEach(function (k) { if (!chosen[k] && CHARSETS[k].size > spare) spare = CHARSETS[k].size; });
+      var cmpTip = spare > 0
+        ? '从公式看，多一位是把搜索空间乘上 ' + size + ' 倍；而补一种字符只是把底数从 ' + size + ' 抬到 ' + (size + spare) + '，' +
+          '大约只乘 ' + ((size + spare) / size).toFixed(2) + ' 倍。'
+        : '从公式看，多一位是把搜索空间乘上 ' + size + ' 倍；而字符种类已经全选上了，再想变强就只能继续加长。';
+
+      var grade, advice;
+      if (ent < 40) { grade = '很弱'; advice = '这样的搜索空间用普通设备就能在很短时间内试完，必须加长，并且一定要开多因素认证。'; }
+      else if (ent < 60) { grade = '偏弱'; advice = '已经能挡住随手一猜，但挡不住有备而来的离线破解。再长几位，或补上一种字符。'; }
+      else if (ent < 80) { grade = '够用'; advice = '搜索空间足够大，离线破解的代价已经很高。仍然建议开多因素认证，因为泄露未必来自破解。'; }
+      else { grade = '强'; advice = '搜索空间非常大，估算时长已经远远超出攻击者愿意付出的成本。别忘了口令再强也挡不住钓鱼。'; }
+
+      eOut.className = 'result ' + (ent < 40 ? 'error' : (ent < 60 ? 'warn' : ''));
+      eOut.innerHTML = '<strong>当前口令：' + L + ' 位，字符集 ' + size + ' 种，强度评估为「' + grade + '」。</strong><br>' +
+        '搜索空间 = ' + size + '<sup>' + L + '</sup>，约等于 ' + sci(space) + ' 种组合；' +
+        '熵约 ' + ent.toFixed(1) + ' 位。<br>' +
+        '按每秒尝试 ' + GUESS_PER_SEC.toExponential(0) + ' 次的估算前提，平均要试 ' +
+        dur(avg) + ' 才可能碰到一次（平均尝试次数约为搜索空间的一半）。<br>' +
+        '<strong>易错点：</strong>很多同学误认为「加一个符号」比「多一位」更管用。' +
+        cmpTip + '长度对搜索空间的贡献在指数位置上，这也是安全规范都强调「口令要够长」的原因。<br>' + advice;
+    }
+
+    document.querySelectorAll('[data-s1-set]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        chosen[b.dataset.s1Set] = !chosen[b.dataset.s1Set];
+        render1();
+      });
+    });
+    eLen.addEventListener('input', render1);
+    render1();
+  }
+
+  /* ---------- 3. 传输链路观测台 ---------- */
+  var CHANNELS = {
+    home: { n: '可信的校园网（有人维护）', risk: 0.15, note: '接入点由学校统一管理，被旁路窃听的难度较高。' },
+    public: { n: '公共场所的开放无线网络', risk: 0.85, note: '任何人都在同一个广播域里，旁路窃听的可行性很高。' }
+  };
+  var s2 = document.getElementById('s2-stage');
+  if (s2) {
+    var ch = 'public', enc = false, integ = false, sent = false;
+
+    function mask(t) {
+      var out = '';
+      for (var i = 0; i < t.length; i++) { out += (((i * 7 + 3) % 10 < 6) ? String.fromCharCode(0x4E00 + ((i * 137 + t.charCodeAt(i)) % 900)) : '#'); }
+      return out;
+    }
+
+    function render2() {
+      document.querySelectorAll('[data-s2-ch]').forEach(function (b) { b.classList.toggle('selected', b.dataset.s2Ch === ch); });
+      document.getElementById('s2-enc').classList.toggle('on', enc);
+      document.getElementById('s2-integ').classList.toggle('on', integ);
+      var ePlain = document.getElementById('s2-plain');
+      var eSeen = document.getElementById('s2-seen');
+      var eOut = document.getElementById('s2-out');
+      var text = document.getElementById('s2-text').value || '（请在下面写一条要发送的内容）';
+      if (!sent) {
+        ePlain.textContent = text;
+        eSeen.textContent = '—';
+        eOut.className = 'result warn';
+        eOut.innerHTML = '选好通道、设置好两个开关之后，点「发送并观测」。';
+        return;
+      }
+      ePlain.textContent = text;
+      var seen = enc ? mask(text) : text;
+      eSeen.textContent = seen;
+
+      var snoop = CHANNELS[ch].risk >= 0.5;
+      var rows = [];
+      rows.push('<li><span class="tag">发送方</span>把内容「' + text + '」交给传输通道。</li>');
+      rows.push('<li><span class="tag">通道</span>' + CHANNELS[ch].n + '：' + CHANNELS[ch].note + '</li>');
+      if (snoop) {
+        rows.push('<li' + (enc ? '' : ' class="bad"') + '><span class="tag">窃听者</span>截获到：<span class="ta-mono">' +
+          (enc ? seen : text) + '</span> —— ' +
+          (enc ? '这是一段加密后的数据，没有密钥就无法还原出原文。' : '<strong>原文完整可读</strong>，凭据等于直接交了出去。') + '</li>');
+      } else {
+        rows.push('<li><span class="tag">窃听者</span>在这个通道上很难旁路截获数据。注意：这只是难度更高，不等于不可能。</li>');
+      }
+      rows.push('<li' + (integ ? ' class="ok"' : ' class="bad"') + '><span class="tag">完整性</span>' +
+        (integ ? '接收方校验摘要一致，内容在途中没有被改动过。' : '没有任何校验手段，途中被改动过也发现不了——收到的内容不可信。') + '</li>');
+      rows.push('<li' + ((!snoop || enc) && integ ? ' class="ok"' : ' class="bad"') +
+        '><span class="tag">结论</span>' +
+        ((!snoop || enc) && integ
+          ? '这条链路同时守住了机密性和完整性：内容看不到，改动瞒不了。'
+          : (!enc && snoop
+              ? '<strong>机密性失守。</strong>在开放网络上传输不加密的内容，只要被旁路截获，原文就直接暴露。'
+              : '<strong>完整性没有保障。</strong>内容改过也看不出来，接收方无法判断数据是否可信。')) + '</li>');
+      eOut.className = 'result ' + ((!snoop || enc) && integ ? '' : 'error');
+      eOut.innerHTML = '<ul class="ta-log">' + rows.join('') + '</ul>';
+    }
+
+    document.querySelectorAll('[data-s2-ch]').forEach(function (b) {
+      b.addEventListener('click', function () { ch = b.dataset.s2Ch; sent = false; render2(); });
+    });
+    document.getElementById('s2-enc').addEventListener('click', function () { enc = !enc; sent = false; render2(); });
+    document.getElementById('s2-integ').addEventListener('click', function () { integ = !integ; sent = false; render2(); });
+    document.getElementById('s2-text').addEventListener('input', function () { render2(); });
+    document.getElementById('s2-send').addEventListener('click', function () { sent = true; render2(); });
+    document.getElementById('s2-reset').addEventListener('click', function () { ch = 'public'; enc = false; integ = false; sent = false; render2(); });
+    render2();
+  }
+
+  /* ---------- 4. 防护策略配置台 ---------- */
+  var PATHS = {
+    brute: { n: '口令爆破 / 撞库', weight: 30, by: 'mfa',
+             why: '多因素认证要求「口令之外再加一个因素」，口令即使泄露也不够用。' },
+    phish: { n: '钓鱼骗取凭据', weight: 30, by: 'entry',
+             why: '固定从官方入口进入、不打开陌生链接，能阻断大多数伪装页面。' },
+    vuln:  { n: '利用未修复漏洞', weight: 25, by: 'patch',
+             why: '及时安装安全更新，把已知缺陷这个入口关掉。' },
+    sniff: { n: '开放网络窃听', weight: 25, by: 'tls',
+             why: '使用加密连接，让链路上的内容无法被直接读懂。' }
+  };
+  var MEASURES = {
+    mfa:   { n: '多因素认证', desc: '口令之外再加一道验证' },
+    entry: { n: '只走官方入口', desc: '不点陌生链接，从书签或官方入口进入' },
+    patch: { n: '及时安装安全更新', desc: '把已公开的缺陷尽快补上' },
+    tls:   { n: '使用加密连接', desc: '在加密通道里提交凭据' },
+    backup:{ n: '定期备份重要数据', desc: '不阻断攻击，但把损失压到可恢复' }
+  };
+  var syn = document.getElementById('syn-stage');
+  if (syn) {
+    var on = { mfa: false, entry: false, patch: false, tls: false, backup: false };
+    var ran = false;
+
+    function renderSyn() {
+      Object.keys(MEASURES).forEach(function (k) {
+        var el = document.getElementById('syn-sw-' + k);
+        if (el) el.classList.toggle('on', on[k]);
+      });
+      var out = document.getElementById('syn-out');
+      if (!ran) {
+        out.className = 'result warn';
+        out.textContent = '选好要开启的措施，然后点「评估这份方案」。';
+      }
+    }
+
+    document.querySelectorAll('[data-syn-sw]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        on[el.dataset.synSw] = !on[el.dataset.synSw];
+        ran = false;
+        renderSyn();
+      });
+    });
+
+    document.getElementById('syn-run').addEventListener('click', function () {
+      var rows = [], left = 0, blocked = 0;
+      Object.keys(PATHS).forEach(function (k) {
+        var P = PATHS[k];
+        var stop = !!on[P.by];
+        if (stop) blocked++; else left += P.weight;
+        rows.push('<li' + (stop ? ' class="ok"' : ' class="bad"') + '><span class="tag">' + P.n + '</span>' +
+          (stop ? '已阻断。' + P.why : '未被阻断，权重 ' + P.weight + ' 分。目前没有任何一项措施对上这条路径。') + '</li>');
+      });
+      var score = Math.max(0, left - (on.backup ? 10 : 0));
+      var level = score <= 15 ? '低' : (score <= 45 ? '中' : '高');
+      rows.push('<li class="' + (score <= 45 ? 'ok' : 'bad') + '"><span class="tag">评估</span>' +
+        '共 ' + Object.keys(PATHS).length + ' 条攻击路径，已阻断 ' + blocked + ' 条；' +
+        '残余风险 ' + left + ' 分' + (on.backup ? '，定期备份再减轻 10 分（它不阻断攻击，但把损失变成可恢复）' : '') +
+        '，最终评分 ' + score + ' 分，风险等级：<strong>' + level + '</strong>。</li>');
+      var idle = Object.keys(MEASURES).filter(function (k) { return on[k] && !Object.keys(PATHS).some(function (p) { return PATHS[p].by === k; }); });
+      if (idle.length) {
+        rows.push('<li class="bad"><span class="tag">提示</span>「' + idle.map(function (k) { return MEASURES[k].n; }).join('」和「') +
+          '」没有对上任何一条路径。防护措施要看它挡的是谁，开一项挡不住任何东西的措施，只是增加了操作负担。</li>');
+      }
+      if (score === 0) rows.push('<li class="ok"><span class="tag">完成</span>四条已识别的路径都被覆盖。请记住：这只是把已知风险降到可接受，新的路径会不断出现，安全是一项持续的工作。</li>');
+      var out = document.getElementById('syn-out');
+      out.className = 'result ' + (score <= 30 ? '' : (score <= 45 ? 'warn' : 'error'));
+      out.innerHTML = '<ul class="ta-log">' + rows.join('') + '</ul>';
+      ran = true;
+    });
+
+    document.getElementById('syn-reset').addEventListener('click', function () {
+      on = { mfa: false, entry: false, patch: false, tls: false, backup: false };
+      ran = false; renderSyn();
+    });
+    renderSyn();
+  }
+})();
+
+</script>
+
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js?v=paged-20260919" defer></script>
+</body>
+</html>
