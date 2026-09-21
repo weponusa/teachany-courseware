@@ -18,6 +18,10 @@ COMMUNITY_EXCLUDES=(
   --exclude='.teachany-image-gen-probe.json'
   --exclude='section1.webp'
   --exclude='section2.webp'
+  # 非运行时文件（只占配额，页面从不请求）：
+  #   *.md 构建产物（PLAN.md/README.md）· knowledge-context.json 只被构建期 python 工具读取
+  --exclude='*.md'
+  --exclude='knowledge-context.json'
   --exclude-from="$ROOT/.publish-excludes"
 )
 
@@ -28,6 +32,30 @@ mkdir -p "$OUT"
 
 # 1. 社区课件（排除草稿/待审/归档/重复 reading-academy/打包文件）
 rsync -a "${COMMUNITY_EXCLUDES[@]}" "$ROOT/community/" "$OUT/community/"
+
+# 1b. 剔除资产里"已有 webp 孪生、且页面并未引用"的原始 png（纯构建中间产物）
+#     仅在 index.html 不引用该 png 时才删，避免 404。
+/usr/bin/env python3 - "$OUT/community" <<'PRUNE_PY'
+import sys, pathlib
+root = pathlib.Path(sys.argv[1])
+removed = 0
+for course in root.iterdir():
+    if not course.is_dir():
+        continue
+    assets = course / 'assets'
+    html = course / 'index.html'
+    if not assets.is_dir() or not html.exists():
+        continue
+    body = html.read_text(encoding='utf-8', errors='ignore')
+    for png in assets.glob('*.png'):
+        if not png.with_suffix('.webp').exists():
+            continue
+        if png.name in body:          # 页面确实引用 png → 保留
+            continue
+        png.unlink()
+        removed += 1
+print(f"   🧹 剔除未引用的重复 png: {removed} 个")
+PRUNE_PY
 
 # 2. 站点公共资源
 rsync -a --exclude='maps/physical/coastline/' --exclude='maps/physical/rivers/' --exclude='maps/physical/lakes/' "$ROOT/assets/" "$OUT/assets/"
