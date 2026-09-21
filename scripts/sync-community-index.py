@@ -48,7 +48,7 @@ def main():
         if not cid:
             continue
         old_entry = old_map.get(cid, {})
-        courses.append({
+        entry = {
             "id": cid,
             "node_id": c.get("node_id", ""),
             "name": c.get("name", cid),
@@ -61,7 +61,15 @@ def main():
             "status": old_entry.get("status") or "active",
             "tags": c.get("tags", []) or old_entry.get("tags", []),
             "name_en": c.get("name_en", ""),
-        })
+        }
+        # 链接投稿：课件本体托管在站外，仓库内只留落地页（community/<id>/index.html）。
+        # download_url 仍指向 teachany.cn 下的落地页以通过 URL 合法性校验；
+        # 真实外链记在 source_url，前端可据此显示「外链」标识 / 直达原站。
+        if c.get("hosting"):
+            entry["hosting"] = c["hosting"]
+        if c.get("source_url"):
+            entry["source_url"] = c["source_url"]
+        courses.append(entry)
 
     courses.sort(key=lambda x: (x.get("subject", ""), str(x.get("grade", "")), x.get("id", "")))
     out = {
