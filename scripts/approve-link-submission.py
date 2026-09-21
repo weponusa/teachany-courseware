@@ -314,7 +314,7 @@ def build_registry_entry(meta: dict, course_id: str) -> dict:
 
 # ------------------------------------------------------------------ 主流程
 
-def approve(path: Path, dry_run: bool = False) -> dict:
+def approve(path: Path, dry_run: bool = False, force: bool = False) -> dict:
     meta = load_json(path, None)
     if not isinstance(meta, dict):
         return {"file": path.name, "ok": False, "reason": "JSON 解析失败"}
@@ -334,6 +334,21 @@ def approve(path: Path, dry_run: bool = False) -> dict:
     reg = load_json(REGISTRY, {"courses": []})
     if any(c.get("id") == course_id for c in reg.get("courses", [])):
         return {"file": path.name, "ok": False, "reason": f"registry 中已存在 id={course_id}"}
+
+    # 同一条外链重复投稿：落地页 id 带时间戳永不撞车，所以只靠 id 判重会放进重复条目。
+    # 同一 node_id + 同一 source_url 已入库时默认拦下，除非显式 --force。
+    node = meta.get("node_id") or course_id
+    dup = [
+        c for c in reg.get("courses", [])
+        if c.get("hosting") == "external-link"
+        and c.get("node_id") == node
+        and (c.get("source_url") or "") == url
+    ]
+    if dup and not force:
+        return {
+            "file": path.name, "ok": False,
+            "reason": f"同一外链已入库：{dup[0]['id']}（确认要重投请加 --force）",
+        }
 
     # 目录已存在视为重跑（上一次可能中途失败），允许覆盖落地页
     overwrite = target_dir.exists()
@@ -379,6 +394,7 @@ def main() -> int:
     ap.add_argument("--all", action="store_true", help="处理全部待审投稿")
     ap.add_argument("--list", action="store_true", help="只列出待审投稿")
     ap.add_argument("--dry-run", action="store_true", help="只预览，不写任何文件")
+    ap.add_argument("--force", action="store_true", help="同一条外链重复投稿时允许强制入库")
     ap.add_argument("--no-sync", action="store_true", help="不自动刷新 community/index.json")
     args = ap.parse_args()
 
@@ -414,7 +430,7 @@ def main() -> int:
         if not p.exists():
             results.append({"file": p.name, "ok": False, "reason": "文件不存在"})
             continue
-        results.append(approve(p, dry_run=args.dry_run))
+        results.append(approve(p, dry_run=args.dry_run, force=args.force))
 
     ok = [r for r in results if r.get("ok")]
     bad = [r for r in results if not r.get("ok")]
