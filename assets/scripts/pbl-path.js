@@ -885,6 +885,7 @@ class PBLPathBuilder {
 
   /** 保底/检索用宽池：窄池不足时并回全科 K12 子图，避免只在 3 个候选里打转 */
   _getBroadCurriculumPool(goal, narrowPool = [], minSize = 50) {
+    if (this._jevRecallLock && narrowPool?.length) return narrowPool;
     const archetype = this._resolveArchetype(goal);
     const allowed = this._getAllowedSubjects(goal, archetype);
     const subjectGate = (pool) => (allowed?.size
@@ -3509,6 +3510,86 @@ class PBLPathBuilder {
       matchReason,
       _fuzzyScore: n._score,
     }));
+  }
+
+  _selectJevRecall(scored) {
+    const threshold = 0.20;
+    const anchor = 0.70;
+    const ranked = (scored || [])
+      .filter(s => Number.isFinite(Number(s?.noul)))
+      .map(s => ({ ...s, noul: Number(s.noul) }))
+      .sort((a, b) => b.noul - a.noul);
+    const maxBy = new Map();
+    for (const row of ranked) {
+      const subject = String(row.subject || '');
+      const prev = maxBy.get(subject);
+      if (prev == null || row.noul > prev) maxBy.set(subject, row.noul);
+    }
+    const subjects = [...maxBy.entries()].filter(([, max]) => max >= anchor).map(([subject]) => subject);
+    return ranked.filter(s => subjects.includes(String(s.subject || '')) && s.noul >= threshold).slice(0, 16);
+  }
+
+  async _jevCatalogRecall(goal, blueprint, activeSystems) {
+    const spec = this._activeProjectSpec;
+    const band = this._gradeBandFromProjectSpec(spec);
+    if (!band?.explicit || !activeSystems?.includes('cn')) return null;
+    if (spec?.gradeLevel === 'university' || spec?.gradeLevel === 'adult') return null;
+    const task = String(spec?.task || '').trim();
+    if (!task) return null;
+    const deliverable = String(blueprint?.deliverable || '').trim();
+    const items = [];
+    this.unifiedIndex.forEach((node) => {
+      if (node.system !== 'cn') return;
+      const grade = parseInt(node.grade, 10) || 0;
+      if (grade < band.minGrade || grade > band.maxGrade) return;
+      const name = String(node.name || '').trim();
+      if (!name) return;
+      if (node.status && node.status !== 'active') return;
+      items.push({
+        id: node.id,
+        name,
+        subject: node.subject || '',
+        point: String((node.curriculum_points || [])[0] || node.definition || '').slice(0, 180),
+      });
+    });
+    if (items.length < 8 || items.length > 500) return null;
+
+    const url = this._getPBLAnalyzeUrl().replace(/\/analyze$/, '/recall');
+    const chunks = [];
+    for (let i = 0; i < items.length; i += 36) chunks.push(items.slice(i, i + 36));
+    const scores = [];
+    let cursor = 0;
+    const runChunk = async () => {
+      while (cursor < chunks.length) {
+        const chunk = chunks[cursor++];
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), 25000);
+        try {
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: ac.signal,
+            body: JSON.stringify({ task, deliverable, items: chunk }),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || data.fallback) throw new Error(data.reason || data.error || `recall ${resp.status}`);
+          (data.scores || []).forEach(s => scores.push(s));
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+    };
+    try {
+      await Promise.all([runChunk(), runChunk(), runChunk()]);
+    } catch (e) {
+      console.warn('[PBL] Jev 召回失败，回退关键词:', e.message);
+      return null;
+    }
+    const kept = this._selectJevRecall(scores);
+    const nodes = kept.map(s => this.unifiedIndex.get(s.id)).filter(Boolean);
+    if (!nodes.length) return null;
+    console.info('[PBL] Jev 召回学科', [...new Set(kept.map(s => s.subject))].join(','), kept.map(s => `${s.name}:${s.noul.toFixed(2)}`).join('、'));
+    return nodes.map(n => ({ ...n, matchReason: 'Jev目录召回', confidence: 0.8 }));
   }
 
   _autonomousKeywordRecall(goal, blueprint, archetype, options = {}) {
@@ -8688,21 +8769,30 @@ class PBLPathBuilder {
       }
     }
 
-    this._reportPBLStatus(onStatus, '关键词模糊检索 K12 知识点...');
-    const fuzzyRecalled = this._autonomousKeywordRecall(goal, projectBlueprint, archetype, {
-      pool: this._getBroadCurriculumPool(goal, stage1.filteredCandidates, 80),
-      selectedSystems: activeSystems,
-      projectSpec: this._activeProjectSpec,
-      scope: this._shouldExtendFullGraph() ? 'full' : 'k12',
-      limit: 32,
-    });
-    if (fuzzyRecalled.length) {
-      const recallCap = Math.max(90, stage1.filteredCandidates.length + fuzzyRecalled.length);
-      stage1.filteredCandidates = this._unionCandidateNodes(
-        [fuzzyRecalled, stage1.filteredCandidates],
-        recallCap
-      );
-      console.info(`[PBL] 模糊检索并入候选池，当前 ${stage1.filteredCandidates.length} 个`);
+    this._jevRecallLock = false;
+    this._reportPBLStatus(onStatus, '按课标目录做语义召回...');
+    const jevRecalled = await this._jevCatalogRecall(goal, projectBlueprint, activeSystems);
+    if (jevRecalled?.length) {
+      stage1.filteredCandidates = jevRecalled;
+      this._jevRecallLock = true;
+      console.info(`[PBL] Jev 目录召回替换候选池，当前 ${stage1.filteredCandidates.length} 个`);
+    } else {
+      this._reportPBLStatus(onStatus, '关键词模糊检索 K12 知识点...');
+      const fuzzyRecalled = this._autonomousKeywordRecall(goal, projectBlueprint, archetype, {
+        pool: this._getBroadCurriculumPool(goal, stage1.filteredCandidates, 80),
+        selectedSystems: activeSystems,
+        projectSpec: this._activeProjectSpec,
+        scope: this._shouldExtendFullGraph() ? 'full' : 'k12',
+        limit: 32,
+      });
+      if (fuzzyRecalled.length) {
+        const recallCap = Math.max(90, stage1.filteredCandidates.length + fuzzyRecalled.length);
+        stage1.filteredCandidates = this._unionCandidateNodes(
+          [fuzzyRecalled, stage1.filteredCandidates],
+          recallCap
+        );
+        console.info(`[PBL] 模糊检索并入候选池，当前 ${stage1.filteredCandidates.length} 个`);
+      }
     }
 
     // 6. 知识点提案 → 图谱对齐 → validate-match（失败回退 index match）

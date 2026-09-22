@@ -155,7 +155,7 @@ export async function onRequestPost(context) {
   let jevMeta = null;
   let skipLlm = false;
 
-  if (!body.messagesOnly && (stage === 'verify-relevance' || stage === 'review-curriculum')) {
+  if (String(env.PBL_JEV_GATE || '') === 'legacy' && !body.messagesOnly && (stage === 'verify-relevance' || stage === 'review-curriculum')) {
     const items = stage === 'verify-relevance' ? matched : nodes;
     const gate = await runJevIndependentGate(env, {
       goal,
