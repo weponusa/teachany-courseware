@@ -39,6 +39,36 @@ import {
   resolvePBLStageModelChain,
 } from '../../_lib/llm-backends.js';
 import { logPBLCall } from '../../_lib/pbl-logger.js';
+import { extractJsonObject, mergeJevRemoves, runJevIndependentGate } from '../../_lib/pbl-jev-gate.js';
+
+function jevMetaForClient(gate) {
+  if (!gate) return null;
+  return {
+    fallback: !!gate.fallback,
+    reason: gate.reason || '',
+    threshold: gate.threshold,
+    scored: gate.scored,
+    failed: gate.failed,
+    dropCount: (gate.drops || []).length,
+    elapsedMs: gate.elapsedMs,
+    scores: (gate.scores || []).map(s => ({
+      index: s.index,
+      name: s.name,
+      noul: s.noul,
+      error: s.error || '',
+    })),
+  };
+}
+
+function applyJevContent(rawContent, jevDrops, jevMeta) {
+  if (!jevMeta) return rawContent;
+  try {
+    return JSON.stringify(mergeJevRemoves(extractJsonObject(rawContent), jevDrops, jevMeta));
+  } catch {
+    if (!jevDrops.length) return rawContent;
+    return JSON.stringify(mergeJevRemoves({ remove: [], summary: '' }, jevDrops, jevMeta));
+  }
+}
 
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: CORS });
@@ -119,6 +149,30 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: 'Too many linked nodes' }, 400);
   }
 
+  let matched = Array.isArray(body.matched) ? body.matched : [];
+  let nodes = Array.isArray(body.nodes) ? body.nodes : [];
+  let jevDrops = [];
+  let jevMeta = null;
+  let skipLlm = false;
+
+  if (!body.messagesOnly && (stage === 'verify-relevance' || stage === 'review-curriculum')) {
+    const items = stage === 'verify-relevance' ? matched : nodes;
+    const gate = await runJevIndependentGate(env, {
+      goal,
+      deliverable: body.deliverable || '',
+      items,
+    });
+    jevMeta = jevMetaForClient(gate);
+    if (!gate.fallback) {
+      jevDrops = gate.drops || [];
+      const dropSet = new Set(jevDrops.map(d => Number(d.index)));
+      const kept = items.filter(n => !dropSet.has(Number(n.index)));
+      if (stage === 'verify-relevance') matched = kept;
+      else nodes = kept;
+      skipLlm = kept.length === 0;
+    }
+  }
+
   let messages;
   try {
     if (stage === 'verify-deps') {
@@ -128,7 +182,7 @@ export async function onRequestPost(context) {
         goal,
         deliverable: body.deliverable || '',
         projectBlueprint: body.projectBlueprint || null,
-        matched: body.matched || [],
+        matched,
       });
     } else if (stage === 'review-curriculum') {
       messages = buildReviewCurriculumMessages({
@@ -136,7 +190,7 @@ export async function onRequestPost(context) {
         deliverable: body.deliverable || '',
         projectBlueprint: body.projectBlueprint || null,
         projectSpec: body.projectSpec || null,
-        nodes: body.nodes || [],
+        nodes,
       });
     } else if (stage === 'propose-curriculum') {
       messages = buildProposeCurriculumMessages({
@@ -196,6 +250,26 @@ export async function onRequestPost(context) {
     });
   }
 
+  if (skipLlm) {
+    const content = JSON.stringify(mergeJevRemoves({
+      remove: [],
+      summary: `Jev闸门已剔除全部 ${jevDrops.length} 个候选，跳过 LLM`,
+    }, jevDrops, jevMeta));
+    await logPBLCall(env, {
+      stage,
+      goal,
+      model: 'jev-latest',
+      backend: 'typesafe',
+      complex: !!body.complex,
+      latencyMs: jevMeta?.elapsedMs || 0,
+      error: '',
+      messages,
+      responseText: content,
+      request,
+    });
+    return jsonResponse({ content, model: 'jev-latest', backend: 'typesafe' });
+  }
+
   const llmOpts = {
     maxTokens: stage === 'match' ? 8000
       : (stage === 'validate-match' ? 6000
@@ -224,7 +298,8 @@ export async function onRequestPost(context) {
 
   const t0 = Date.now();
   try {
-    const { content, model, backendId } = await callBackendLLM(env, messages, llmOpts);
+    const { content: rawContent, model, backendId } = await callBackendLLM(env, messages, llmOpts);
+    const content = applyJevContent(rawContent, jevDrops, jevMeta);
     const latencyMs = Date.now() - t0;
 
     await logPBLCall(env, {
@@ -243,6 +318,25 @@ export async function onRequestPost(context) {
     return jsonResponse({ content, model, backend: backendId });
   } catch (e) {
     const latencyMs = Date.now() - t0;
+    if (jevDrops.length) {
+      const content = JSON.stringify(mergeJevRemoves({
+        remove: [],
+        summary: 'LLM失败，仅应用Jev闸门',
+      }, jevDrops, jevMeta));
+      await logPBLCall(env, {
+        stage,
+        goal,
+        model: 'jev-latest',
+        backend: 'typesafe',
+        complex: !!body.complex,
+        latencyMs,
+        error: e.message || 'LLM failed',
+        messages,
+        responseText: content,
+        request,
+      });
+      return jsonResponse({ content, model: 'jev-latest', backend: 'typesafe' });
+    }
     await logPBLCall(env, {
       stage,
       goal,
