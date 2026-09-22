@@ -57,6 +57,30 @@ for course in root.iterdir():
 print(f"   🧹 剔除未引用的重复 png: {removed} 个")
 PRUNE_PY
 
+# 1c. reading-academy 不在发布目录里（1176 文件 / 39MB，排除以控配额），
+#     但它在「其他知识」树上有节点、registry 里也有条目，树页面链接指向
+#     /community/reading-academy/。补一个 1 文件的跳转桩避免 404 —— 实际入口是 read.teachany.cn。
+if [ ! -f "$OUT/community/reading-academy/index.html" ]; then
+  mkdir -p "$OUT/community/reading-academy"
+  cat > "$OUT/community/reading-academy/index.html" <<'READING_STUB'
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>魔法阅读学院 — TeachAny</title>
+<meta http-equiv="refresh" content="0;url=https://read.teachany.cn/">
+<link rel="canonical" href="https://read.teachany.cn/">
+<script>location.replace('https://read.teachany.cn/');</script>
+</head>
+<body>
+<p>正在跳转到 <a href="https://read.teachany.cn/">魔法阅读学院</a>…</p>
+</body>
+</html>
+READING_STUB
+  echo "   ↪ 已为 reading-academy 生成跳转桩（→ read.teachany.cn）"
+fi
+
 # 2. 站点公共资源
 rsync -a --exclude='maps/physical/coastline/' --exclude='maps/physical/rivers/' --exclude='maps/physical/lakes/' "$ROOT/assets/" "$OUT/assets/"
 
