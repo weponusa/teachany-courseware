@@ -22,6 +22,12 @@ COMMUNITY_EXCLUDES=(
   #   *.md 构建产物（PLAN.md/README.md）· knowledge-context.json 只被构建期 python 工具读取
   --exclude='*.md'
   --exclude='knowledge-context.json'
+  # 开发残留（未被 index.html 引用，只白占 Cloudflare 文件配额）：
+  #   *.pre-strip-upgrade.html 681 个 · *.legacy-messy.html · test-*.html
+  # 注：index_en.html 是双语版本（qc-all-py.py 会检查），必须保留。
+  --exclude='*.pre-strip-upgrade.html'
+  --exclude='*.legacy-messy.html'
+  --exclude='test-*.html'
   --exclude-from="$ROOT/.publish-excludes"
 )
 
