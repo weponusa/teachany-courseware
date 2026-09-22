@@ -17,8 +17,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-PLACEHOLDER = [r'待补充', r'TODO', r'待完善', r'占位', r'Lorem', r'此处省略',
+# ★ 注意：不要把「占位」列入 —— 它在小学数学里是正当术语
+#   （"哪一位上一个单位也没有就写 0 占位""数位表占位"），
+#   实测 9 门"硬阻断"里 8 门是它造成的误报。单列一个不阻断的软信号。
+PLACEHOLDER = [r'待补充', r'TODO', r'待完善', r'Lorem', r'此处省略',
                r'敬请期待', r'即将上线', r'待生成', r'示例文本', r'暂无内容']
+SOFT_TERM = [r'占位']
 # 外链「库」（可本地化） vs 外链「应用」（只能做降级提示）
 LIB_HOSTS = ('unpkg.com', 'cdn.jsdelivr.net', 'd3js.org', '3Dmol.org', 'cdnjs.cloudflare.com')
 APP_HOSTS = ('phet.colorado.edu', 'www.geogebra.org', 'basic.smartedu.cn')
@@ -74,6 +78,7 @@ def scan_static():
             'ta_figure': len(re.findall(r'ta-standard-figure', h)),
             'v2_paged': ('slide-page' in h and 'sidenav' in h),
             'placeholder_hits': sum(len(re.findall(p, h, re.I)) for p in PLACEHOLDER),
+            'soft_term_hits': sum(len(re.findall(p, h, re.I)) for p in SOFT_TERM),
             'has_tutor': 'ai-tutor' in h or 'TeachAnyTutor' in h,
             'has_kg': 'data-teachany-kg' in h or 'teachany-knowledge-graph' in h,
             # 标记经 433 门 v2 课件校准（2026-09-22）：

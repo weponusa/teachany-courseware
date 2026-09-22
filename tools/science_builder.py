@@ -580,8 +580,11 @@ CONTROLLER_JS = r"""
   document.addEventListener('DOMContentLoaded', () => {
     const cv = document.querySelector('meta[name="course-version"]')?.content;
     const sv = document.querySelector('meta[name="teachany-version"]')?.content;
-    if (cv) document.getElementById('course-version-display').textContent = cv;
-    if (sv) document.getElementById('skill-version-display').textContent = sv.replace(/^v/, '');
+    // 旧课件品牌栏可能没有这两个 span —— 必须同时判元素存在，否则整段脚本崩
+    const cvEl = document.getElementById('course-version-display');
+    const svEl = document.getElementById('skill-version-display');
+    if (cv && cvEl) cvEl.textContent = cv;
+    if (sv && svEl) svEl.textContent = sv.replace(/^v/, '');
   });
 
   if (location.hostname === 'localhost' || location.search.includes('debug')) {
