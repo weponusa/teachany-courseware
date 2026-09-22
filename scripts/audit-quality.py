@@ -20,9 +20,19 @@ ROOT = Path(__file__).resolve().parents[1]
 # ★ 注意：不要把「占位」列入 —— 它在小学数学里是正当术语
 #   （"哪一位上一个单位也没有就写 0 占位""数位表占位"），
 #   实测 9 门"硬阻断"里 8 门是它造成的误报。单列一个不阻断的软信号。
-PLACEHOLDER = [r'待补充', r'TODO', r'待完善', r'Lorem', r'此处省略',
-               r'敬请期待', r'即将上线', r'待生成', r'示例文本', r'暂无内容']
+# 中文占位词（大小写无关）
+PLACEHOLDER_CI = [r'待补充', r'待完善', r'Lorem', r'此处省略',
+                  r'敬请期待', r'即将上线', r'待生成', r'示例文本', r'暂无内容']
+# ★ TODO 必须**大小写敏感**：`"status": "todo"` 是知识点状态枚举（表示后续未开课），
+#   不是占位符。实测它造成了 1 门误报。
+PLACEHOLDER_CS = [r'\bTODO\b']
 SOFT_TERM = [r'占位']
+
+
+def count_placeholders(html):
+    n = sum(len(re.findall(p, html, re.I)) for p in PLACEHOLDER_CI)
+    n += sum(len(re.findall(p, html)) for p in PLACEHOLDER_CS)
+    return n
 # 外链「库」（可本地化） vs 外链「应用」（只能做降级提示）
 LIB_HOSTS = ('unpkg.com', 'cdn.jsdelivr.net', 'd3js.org', '3Dmol.org', 'cdnjs.cloudflare.com')
 APP_HOSTS = ('phet.colorado.edu', 'www.geogebra.org', 'basic.smartedu.cn')
@@ -77,7 +87,7 @@ def scan_static():
             'canvas': len(re.findall(r'<canvas', h, re.I)),
             'ta_figure': len(re.findall(r'ta-standard-figure', h)),
             'v2_paged': ('slide-page' in h and 'sidenav' in h),
-            'placeholder_hits': sum(len(re.findall(p, h, re.I)) for p in PLACEHOLDER),
+            'placeholder_hits': count_placeholders(h),
             'soft_term_hits': sum(len(re.findall(p, h, re.I)) for p in SOFT_TERM),
             'has_tutor': 'ai-tutor' in h or 'TeachAnyTutor' in h,
             'has_kg': 'data-teachany-kg' in h or 'teachany-knowledge-graph' in h,
