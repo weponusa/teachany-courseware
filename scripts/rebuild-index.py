@@ -656,7 +656,7 @@ def main():
     virtual_tree_path = Path('data/trees/other/user-generated.json')
     if virtual_tree_path.exists():
         virtual_nodes = []
-        orphan_reasons = {'ext_manifest': 0, 'ext_passed': 0, 'ext_rejected': 0, 'ext_skipped_non_hash': 0}
+        orphan_reasons = {'ext_manifest': 0, 'ext_passed': 0, 'ext_rejected': 0, 'ext_skipped_non_hash': 0, 'orphan_fallback': 0}
 
         for cid, (manifest, _src) in sorted(courses.items()):
             nid = (manifest.get('node_id', '') or '').strip()
@@ -788,6 +788,38 @@ def main():
                 }
                 courses[d.name] = (synthetic_manifest, base_dir)
 
+        # 兜底：node_id 不属于任何正式课标树的课件，一并收进「其他知识」
+        # （例：reading-academy 这类站点功能型课件、以及树上确实没有对应节点的单点课件）
+        # 注：collect_official_node_ids() 明确排除 other/，所以这条路不会被自己的输出抵消。
+        for cid, (manifest, _src) in sorted(courses.items()):
+            nid = (manifest.get('node_id', '') or '').strip()
+            if not nid or EXT_NODE_RE.match(nid):
+                continue
+            if nid in all_official_node_ids:
+                continue
+            if any(vn['id'] == nid for vn in virtual_nodes):
+                continue
+            try:
+                grade = int(manifest.get('grade', 0) or 0)
+            except (TypeError, ValueError):
+                grade = 0
+            virtual_nodes.append({
+                'id': nid,
+                'name': manifest.get('title') or manifest.get('name') or cid,
+                'name_en': manifest.get('title_en', '') or manifest.get('name_en', ''),
+                'grade': grade,
+                'subject': manifest.get('subject', 'other'),
+                'prerequisites': [],
+                'extends': [],
+                'parallel': [],
+                'courses': [cid],
+                'status': 'active',
+                'source': 'orphan-fallback',
+                'curriculum_points': [manifest.get('description_zh', '') or manifest.get('description', '')],
+                'excerpt_ids': []
+            })
+            orphan_reasons['orphan_fallback'] += 1
+
         # 按 subject 聚合去重（同一 virtual id 可能对应多个 cid）
         merged = {}
         for n in virtual_nodes:
@@ -801,13 +833,15 @@ def main():
         # 回写虚拟树（「其他知识」）
         virtual_tree = json.loads(virtual_tree_path.read_text(encoding='utf-8'))
         virtual_tree['_comment'] = (
-            '由 scripts/rebuild-index.py 自动填充。仅收纳 PBL 路径拆解生成的 ext-{hash} 外部知识点课件。'
-            'K12/探究课不得写入此文件。手工编辑将被下次 rebuild 覆盖。'
+            '由 scripts/rebuild-index.py 自动填充。收纳两类课件：'
+            '(1) PBL 路径拆解生成的 ext-{hash} 外部知识点；(2) node_id 不属于任何正式课标树的孤儿课件（source=orphan-fallback）。'
+            '手工编辑将被下次 rebuild 覆盖。'
         )
         if virtual_tree.get('domains'):
             virtual_tree['domains'][0]['description'] = (
-                'PBL 学习路径拆解出的课标外知识点（node_id 形如 ext-47db7bcd）。'
-                '常规 K12 与探究课请见各学科课标树。'
+                'PBL 学习路径拆解出的课标外知识点（node_id 形如 ext-47db7bcd），'
+                '以及尚未挂到任何课标树上的课件（source=orphan-fallback）。'
+                '常规 K12 请见各学科课标树。'
             )
             virtual_tree['domains'][0]['nodes'] = virtual_nodes
         virtual_tree_path.write_text(
@@ -818,7 +852,8 @@ def main():
         print(f'     ext manifest: {orphan_reasons["ext_manifest"]}, '
               f'ext HTML 质检通过: {orphan_reasons["ext_passed"]}, '
               f'拒绝: {orphan_reasons["ext_rejected"]}, '
-              f'非 hash 节点跳过: {orphan_reasons["ext_skipped_non_hash"]}')
+              f'非 hash 节点跳过: {orphan_reasons["ext_skipped_non_hash"]}, '
+              f'孤儿课件兜底: {orphan_reasons["orphan_fallback"]}')
 
         if ext_dirs_scanned:
             print(f'     ext-* 目录扫描: {ext_dirs_scanned} 个')
