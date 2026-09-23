@@ -279,6 +279,37 @@ svg { width: 100%; height: 100%; display: block; }
   text-align: center;
 }
 .tooltip .tree-make-course-btn:hover { filter: brightness(1.08); }
+/* 底部动作行：没课件的点「制作」，已经有课件的点「投稿」 */
+.tooltip .tree-tooltip-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.tooltip .tree-tooltip-actions .tree-make-course-btn {
+  flex: 1 1 0;
+  width: auto;
+  margin-top: 0;
+}
+.tooltip .tree-submit-link-btn {
+  flex: 1 1 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  color: #93c5fd;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.15s, border-color 0.15s;
+}
+.tooltip .tree-submit-link-btn:hover {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: rgba(96, 165, 250, 0.85);
+}
 .tooltip .gap-msg {
   margin-top: 8px;
   padding: 6px 10px;
@@ -1466,6 +1497,19 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// ── 投稿入口：课件放在老师自己的资料库里，把地址贴进来就能挂到这个知识点上 ──
+// 走社区站（免审直推）。带上 node_id + name，投稿页会预填，落库节点就是确定的。
+const SUBMIT_LINK_BASE = 'https://teachany-community.pages.dev/submit';
+
+function submitLinkAttrs(nodeId, nodeName) {
+  const qs = new URLSearchParams();
+  if (nodeId) qs.set('node_id', nodeId);
+  if (nodeName) qs.set('name', nodeName);
+  const q = qs.toString();
+  const href = escapeHtml(SUBMIT_LINK_BASE + (q ? '?' + q : ''));
+  return `href="${href}" target="_blank" rel="noopener noreferrer" title="课件放在你自己的资料库（WorkBuddy / 腾讯文档 / 任意可公开访问的地址），把链接贴进来就挂到这个知识点上"`;
+}
+
 // ── Tooltip 交互（固定定位 + 延迟隐藏，确保按钮可点击）──
 
 let tooltipLocked = false;   // tooltip 被锁定（用户鼠标在 tooltip 上）
@@ -1634,7 +1678,11 @@ function showTooltip(event, d) {
     html += `</div>`;
   }
 
+  // 底部动作：没课件的去「制作」，已经有课件的去「投稿」（投稿走外链，自带 node_id）
+  html += `<div class="tree-tooltip-actions">`;
   html += `<button type="button" class="tree-make-course-btn" data-tree-make-course="${escapeHtml(d.id)}">✨ 制作课件</button>`;
+  html += `<a class="tree-submit-link-btn" ${submitLinkAttrs(d.id, d.name)}>🔗 投稿课件</a>`;
+  html += `</div>`;
 
   tooltip.innerHTML = html;
 
