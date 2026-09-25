@@ -180,6 +180,27 @@ body {
   margin-bottom: 10px;
 }
 .pbl-form-grid .pbl-field-task { grid-column: 1 / -1; }
+.place-box { grid-column: 1 / -1; }
+.place-label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 8px; }
+.place-row, .place-query-wrap { display: flex; gap: 8px; flex-wrap: wrap; }
+.place-query-wrap { position: relative; display: block; margin-bottom: 8px; }
+.place-row select, .place-landmark {
+  flex: 1; min-width: 140px; width: 100%; box-sizing: border-box;
+  padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 14px;
+}
+.place-suggest {
+  position: absolute; z-index: 6; left: 0; right: 0; top: calc(100% + 4px);
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; text-align: left;
+}
+.place-suggest button {
+  display: block; width: 100%; text-align: left; padding: 8px 10px;
+  background: transparent; color: var(--text); border: 0; cursor: pointer; font-size: 14px;
+}
+.place-hint, .place-practice-kicker, .place-practice-drop { font-size: 12px; color: var(--dimmer); }
+.place-practice { margin: 0 0 12px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(245,158,11,0.08); }
+.place-practice-name { font-weight: 700; margin: 0 0 6px; }
+.place-practice-dist { color: var(--accent); font-weight: 650; margin: 0 0 6px; }
 .pbl-form-more {
   grid-column: 1 / -1;
   margin: 2px 0 4px;
@@ -1228,13 +1249,14 @@ body {
     <div class="pbl-title">🧭 PBL 项目式学习路径发现</div>
     <button type="button" class="pbl-settings-btn" id="pblSettingsBtn" onclick="toggleSettings()" title="TeachAny 服务端默认 · Qwen3 Next 80B">⚙️ 服务端默认</button>
     <div class="pbl-desc">
-      选择学段并描述项目任务，即可拆解学习路径；无需指定具体年级。可跳转或一键生成课件。
+      选择学段并描述项目任务，即可拆解学习路径；无需指定具体年级。选好区县和学校后，会按每周至少半天校外实践，在周边找能看见课题对象的具体地点。
     </div>
     <div class="pbl-form-grid">
       <div class="pbl-field pbl-field-task">
         <label for="pblTaskInput">项目任务 <span style="color:var(--accent)">*</span></label>
         <textarea id="pblTaskInput" class="pbl-textarea" placeholder="描述要做什么，如：为校园写一组家乡主题现代诗并编成诗集"></textarea>
       </div>
+      <div class="pbl-field pbl-field-full" id="pblPlaceMount"></div>
       <div class="pbl-field">
         <label for="pblGradeLevel">学段</label>
         <select id="pblGradeLevel">
@@ -1450,6 +1472,8 @@ body {
 <script src="./assets/scripts/pbl-archetypes.js?v=20260609-hybrid-recall"></script>
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
 <script src="./assets/scripts/knowledge-node-display.js?v=20260623"></script>
+<script src="./assets/scripts/cn-pca.js?v=20260925-place"></script>
+<script src="./assets/scripts/place-rings.js?v=20260925-place"></script>
 <script src="./assets/scripts/pbl-path.js?v=20260922-jev-recall"></script>
 <script src="./assets/scripts/pbl-support-modules.js?v=20260619-support-pack-v2"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
@@ -1505,7 +1529,16 @@ function togglePBLDeliverableCustom() {
 }
 
 function getPBLProjectSpec() {
-  return window.PBLProjectForm?.readProjectSpecFromDOM?.() || { task: '' };
+  const spec = window.PBLProjectForm?.readProjectSpecFromDOM?.() || { task: '' };
+  if (window.PlaceRings) {
+    spec.place = PlaceRings.readPlace(document, {
+      province: 'pbl-place-province',
+      city: 'pbl-place-city',
+      district: 'pbl-place-district',
+      landmark: 'pbl-place-landmark',
+    });
+  }
+  return spec;
 }
 
 function buildPBLGoalFromForm() {
@@ -2425,6 +2458,46 @@ function highlightPBLPhase(el) {
   }
 }
 
+let pblPlaceToken = 0;
+
+async function refreshPBLOffCampus(result, token) {
+  const place = result && result.projectSpec && result.projectSpec.place;
+  if (!window.PlaceRings || !place || !place.districtCode || !String(place.landmark || '').trim()) return;
+  const goal = [result.goal, result.projectSpec && result.projectSpec.task].filter(Boolean).join(' ');
+  let mapped = { candidates: [], center: null };
+  try {
+    mapped = await PlaceRings.recallMapped(place, goal);
+  } catch (e) {
+    mapped = { candidates: [], center: null };
+  }
+  if (token !== pblPlaceToken) return;
+  let off = PlaceRings.resolve({
+    place,
+    goal,
+    mode: 'pbl',
+    candidates: mapped.candidates || [],
+    center: mapped.center,
+  });
+  if (!off) return;
+  try {
+    off = await PlaceRings.rescoreWithJev(off, {
+      goal,
+      deliverable: '可复核的现场记录',
+      endpoint: `${location.origin}/api/pbl/analyze`,
+      timeoutMs: 8000,
+    });
+  } catch (e) { /* 筛选连不上就保留地图结果 */ }
+  if (!off || token !== pblPlaceToken) return;
+  const builder = window.PBLPathBuilder;
+  const pathPlan = builder && typeof builder.buildPathPlanFromResult === 'function'
+    ? builder.buildPathPlanFromResult(result) : result.pathPlan;
+  if (!pathPlan) return;
+  PlaceRings.applyToPathPlan(pathPlan, off);
+  result.pathPlan = pathPlan;
+  const body = document.getElementById('pblTechRouteBody');
+  if (body) body.innerHTML = PlaceRings.cardHTML(off) + renderPBLPathPlanHTML(pathPlan);
+}
+
 function showPBLTechRoute(result) {
   const techRouteEl = document.getElementById('pblTechRoute');
   const techRouteBody = document.getElementById('pblTechRouteBody');
@@ -2439,6 +2512,8 @@ function showPBLTechRoute(result) {
     techRouteBody.innerHTML = renderPBLPathPlanHTML(pathPlan);
     techRouteEl.style.display = 'block';
     techRouteEl.classList.remove('collapsed');
+    const token = ++pblPlaceToken;
+    refreshPBLOffCampus(result, token);
     return;
   }
   if (routeText || nodeCount > 0) {
@@ -3201,6 +3276,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   togglePBLDeliverableCustom();
+  const placeMount = document.getElementById('pblPlaceMount');
+  if (placeMount && window.PlaceRings) {
+    const placeIds = {
+      province: 'pbl-place-province',
+      city: 'pbl-place-city',
+      district: 'pbl-place-district',
+      landmark: 'pbl-place-landmark',
+    };
+    placeMount.innerHTML = PlaceRings.fieldsHTML(placeIds);
+    PlaceRings.mount(placeMount, placeIds, null);
+  }
   if (window.PBLProjectForm?.renderSubjectTags) {
     window.PBLProjectForm.renderSubjectTags();
   }
