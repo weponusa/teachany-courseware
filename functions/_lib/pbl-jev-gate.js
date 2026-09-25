@@ -11,6 +11,7 @@
  */
 
 export const JEV_INDEPENDENT_THRESHOLD = 0.20;
+export const JEV_PLACE_THRESHOLD = 0.50;
 export const JEV_MODEL = 'jev-latest';
 export const JEV_ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
 
@@ -36,6 +37,37 @@ function knowledgeNeed(goal, deliverable) {
 
 function candidateTitle(item) {
   return String(item?.name || item?.title || '').trim();
+}
+
+/** 校外 POI：只问这个地点能不能看见课题对象。名称里的普通词重合不算。 */
+function placeKnowledgeNeed(goal, deliverable, placeLabel) {
+  return [
+    `课题：${String(goal || '').trim()}`,
+    deliverable ? `要带回：${String(deliverable).trim()}` : '',
+    placeLabel ? `出发地：${String(placeLabel).trim()}` : '',
+    '需求：一次可到场的校外实践。学生要在对外开放区域直接看见课题对象，并说得出带回什么可复核证据。',
+    '不要用「未来、科学、生态、能源、生活」这类修饰词去对地名。同城景点、名称沾边、比喻硬凑都不要召回。',
+  ].filter(Boolean).join('｜');
+}
+
+function placeNoulBody(need, title) {
+  return {
+    model: JEV_MODEL,
+    state: {
+      knowledge_need: need,
+      candidate: title,
+    },
+    questions: {
+      matches: {
+        type: 'noul',
+        instructions: '候选地点 `candidate` 是这次校外实践该去的地方吗？只判断学生能否在这里直接看见课题对象。指得出「去这里看什么、带回什么证据」= true。地名里有相同的字、同城、类型沾边或比喻硬凑 = false。课题是氢能时，「未来科学城公园」只因为带了「未来」，必须判 false。',
+        criteria: {
+          true: '指得出在这个具体地点的开放区域能看见的对象，以及能带回的证据。',
+          false: '看不出和课题对象的直接关系，只是地名、同城或硬凑。',
+        },
+      },
+    },
+  };
 }
 
 /** Independent noul body — identical to 旁路影子/shadow/jev_vs_truth.py. */
@@ -64,7 +96,7 @@ function parseNoul(data) {
   return Number.isFinite(n) ? n : null;
 }
 
-async function scoreOne({ apiKey, need, title, signal, timeoutMs }) {
+async function scoreOne({ apiKey, need, title, signal, timeoutMs, kind }) {
   const controller = new AbortController();
   const onAbort = () => controller.abort();
   if (signal) {
@@ -72,6 +104,7 @@ async function scoreOne({ apiKey, need, title, signal, timeoutMs }) {
     signal.addEventListener('abort', onAbort, { once: true });
   }
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const body = kind === 'place' ? placeNoulBody(need, title) : independentNoulBody(need, title);
   try {
     const resp = await fetch(JEV_ENDPOINT, {
       method: 'POST',
@@ -79,7 +112,7 @@ async function scoreOne({ apiKey, need, title, signal, timeoutMs }) {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(independentNoulBody(need, title)),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
     const text = await resp.text();
@@ -162,7 +195,10 @@ export function mergeJevRemoves(llmJson, jevDrops, jevMeta) {
  */
 export async function runJevIndependentGate(env, opts) {
   const started = Date.now();
-  const threshold = Number.isFinite(opts?.threshold) ? opts.threshold : JEV_INDEPENDENT_THRESHOLD;
+  const kind = opts?.kind === 'place' ? 'place' : 'curriculum';
+  const threshold = Number.isFinite(opts?.threshold)
+    ? opts.threshold
+    : (kind === 'place' ? JEV_PLACE_THRESHOLD : JEV_INDEPENDENT_THRESHOLD);
   const items = Array.isArray(opts?.items) ? opts.items : [];
   const empty = {
     fallback: true,
@@ -186,7 +222,9 @@ export async function runJevIndependentGate(env, opts) {
     return { ...empty, reason: 'no-items', fallback: false, elapsedMs: Date.now() - started };
   }
 
-  const need = knowledgeNeed(opts.goal, opts.deliverable);
+  const need = kind === 'place'
+    ? placeKnowledgeNeed(opts.goal, opts.deliverable, opts.placeLabel)
+    : knowledgeNeed(opts.goal, opts.deliverable);
   if (!need) {
     return { ...empty, reason: 'no-need', elapsedMs: Date.now() - started };
   }
@@ -216,6 +254,7 @@ export async function runJevIndependentGate(env, opts) {
           title,
           signal: abort.signal,
           timeoutMs: Math.min(PER_CALL_TIMEOUT_MS, remain),
+          kind,
         });
         if (row.noul == null) row.error = 'no-noul';
       } catch (e) {
