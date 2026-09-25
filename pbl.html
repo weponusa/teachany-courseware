@@ -200,7 +200,15 @@ body {
 .place-hint, .place-practice-kicker, .place-practice-drop { font-size: 12px; color: var(--dimmer); }
 .place-practice { margin: 0 0 12px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(245,158,11,0.08); }
 .place-practice-name { font-weight: 700; margin: 0 0 6px; }
-.place-practice-dist { color: var(--accent); font-weight: 650; margin: 0 0 6px; }
+.place-module h3 { margin: 0 0 8px; font-size: 18px; }
+.place-module-kicker { font-size: 12px; color: var(--dim); margin: 0 0 6px; }
+.pbl-place-module {
+  margin: 16px 0;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(245, 158, 11, 0.08);
+}
 .pbl-form-more {
   grid-column: 1 / -1;
   margin: 2px 0 4px;
@@ -1402,6 +1410,11 @@ body {
     <div class="pbl-stats" id="pblStats"></div>
   </div>
 
+  <!-- 周边资源分析与校外实践设计 -->
+  <div id="pblPlaceModule" class="pbl-place-module" style="display:none" aria-live="polite">
+    <div class="pbl-place-module-body" id="pblPlaceModuleBody"></div>
+  </div>
+
   <!-- 项目全链路拆解（方案 → 阶段，先于课标匹配） -->
   <div id="pblDecompose" class="pbl-decompose-panel" style="display:none" aria-live="polite">
     <div class="pbl-decompose-header" onclick="this.parentElement.classList.toggle('collapsed')">
@@ -1473,7 +1486,7 @@ body {
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
 <script src="./assets/scripts/knowledge-node-display.js?v=20260623"></script>
 <script src="./assets/scripts/cn-pca.js?v=20260925-place"></script>
-<script src="./assets/scripts/place-rings.js?v=20260925-place"></script>
+<script src="./assets/scripts/place-rings.js?v=20260925-module"></script>
 <script src="./assets/scripts/pbl-path.js?v=20260922-jev-recall"></script>
 <script src="./assets/scripts/pbl-support-modules.js?v=20260619-support-pack-v2"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
@@ -2466,11 +2479,24 @@ function highlightPBLPhase(el) {
   }
 }
 
+function renderPBLPlaceModule(result, off, status) {
+  const panel = document.getElementById('pblPlaceModule');
+  const body = document.getElementById('pblPlaceModuleBody');
+  if (!panel || !body || !window.PlaceRings) return;
+  const spec = (result && result.projectSpec) || {};
+  const place = spec.place || null;
+  const goal = [result && result.goal, spec.task].filter(Boolean).join(' ');
+  body.innerHTML = PlaceRings.moduleHTML({ place, offCampus: off || null, goal, status });
+  panel.style.display = 'block';
+}
+
 let pblPlaceToken = 0;
 
 async function refreshPBLOffCampus(result, token) {
   const place = result && result.projectSpec && result.projectSpec.place;
-  if (!window.PlaceRings || !place || !place.districtCode || !String(place.landmark || '').trim()) return;
+  const ready = place && place.districtCode && String(place.landmark || '').trim();
+  renderPBLPlaceModule(result, null, ready ? 'searching' : '');
+  if (!window.PlaceRings || !ready) return;
   const goal = [result.goal, result.projectSpec && result.projectSpec.task].filter(Boolean).join(' ');
   let mapped = { candidates: [], center: null };
   try {
@@ -2486,24 +2512,27 @@ async function refreshPBLOffCampus(result, token) {
     candidates: mapped.candidates || [],
     center: mapped.center,
   });
+  if (off) {
+    try {
+      off = await PlaceRings.rescoreWithJev(off, {
+        goal,
+        deliverable: '可复核的现场记录',
+        endpoint: `${location.origin}/api/pbl/analyze`,
+        timeoutMs: 8000,
+      });
+    } catch (e) { /* 筛选连不上就保留地图结果 */ }
+  }
+  if (token !== pblPlaceToken) return;
+  renderPBLPlaceModule(result, off, '');
   if (!off) return;
-  try {
-    off = await PlaceRings.rescoreWithJev(off, {
-      goal,
-      deliverable: '可复核的现场记录',
-      endpoint: `${location.origin}/api/pbl/analyze`,
-      timeoutMs: 8000,
-    });
-  } catch (e) { /* 筛选连不上就保留地图结果 */ }
-  if (!off || token !== pblPlaceToken) return;
   const builder = window.PBLPathBuilder;
   const pathPlan = builder && typeof builder.buildPathPlanFromResult === 'function'
     ? builder.buildPathPlanFromResult(result) : result.pathPlan;
   if (!pathPlan) return;
   PlaceRings.applyToPathPlan(pathPlan, off);
   result.pathPlan = pathPlan;
-  const body = document.getElementById('pblTechRouteBody');
-  if (body) body.innerHTML = PlaceRings.cardHTML(off) + renderPBLPathPlanHTML(pathPlan);
+  const routeBody = document.getElementById('pblTechRouteBody');
+  if (routeBody) routeBody.innerHTML = renderPBLPathPlanHTML(pathPlan);
 }
 
 function showPBLTechRoute(result) {
@@ -2531,6 +2560,8 @@ function showPBLTechRoute(result) {
   } else {
     techRouteEl.style.display = 'none';
   }
+  const token = ++pblPlaceToken;
+  refreshPBLOffCampus(result, token);
 }
 
 function togglePBLExportBar(show) {

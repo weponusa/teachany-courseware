@@ -798,6 +798,36 @@
     return pathPlan;
   }
 
+  function moduleHTML(opts) {
+    const options = opts || {};
+    const place = options.place || null;
+    const bound = options.offCampus || null;
+    const goal = options.goal || '';
+    const terms = searchTerms(goal, place);
+    const ready = !!(place && place.districtCode && String(place.landmark || '').trim());
+    const where = ready
+      ? [place.province, place.city && place.city !== place.province ? place.city : '', place.district, place.landmark].filter(Boolean).join('')
+      : '';
+    const objects = terms.length ? terms.join('、') : '这个课题没有需要到场看见的对象';
+    let detail = '';
+    if (!ready) {
+      detail = '<p>填写区县，以及学校名称或地址。这里会列出周边具体地点、距离，并写成一次校外实践。</p>';
+    } else if (options.status === 'searching') {
+      detail = `<p>正在从「${esc(place.landmark)}」出发，检索${esc(objects)}。</p>`;
+    } else if (!bound) {
+      detail = `<p>已从「${esc(place.landmark)}」检索${esc(objects)}。服务半径内没有对得上的具体地点，这次不安排校外实践。</p>`;
+    } else {
+      detail = cardHTML(bound);
+    }
+    return `<div class="place-module">
+      <p class="place-module-kicker">每周至少半天 · 纳入教育教学计划</p>
+      <h3>周边资源分析与校外实践设计</h3>
+      <p><b>分析对象：</b>${esc(objects)}</p>
+      <p><b>出发地：</b>${where ? esc(where) : '未填写'}</p>
+      ${detail}
+    </div>`;
+  }
+
   function cardHTML(bound) {
     if (!bound) return '';
     const dropped = (bound.dropped || []).slice(0, 4).map(venue => {
@@ -999,6 +1029,7 @@
     applyToTasks,
     applyToPathPlan,
     cardHTML,
+    moduleHTML,
     fieldsHTML,
     mount,
     readPlace,
