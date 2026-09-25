@@ -88,7 +88,7 @@ export async function onRequestPost(context) {
   if (stage !== 'decompose' && stage !== 'review-decompose' && stage !== 'filter' && stage !== 'match'
     && stage !== 'propose-curriculum' && stage !== 'validate-match'
     && stage !== 'verify-relevance' && stage !== 'review-curriculum'
-    && stage !== 'verify-deps' && stage !== 'refine') {
+    && stage !== 'verify-deps' && stage !== 'refine' && stage !== 'verify-places') {
     return jsonResponse({ error: 'Invalid stage' }, 400);
   }
 
@@ -147,6 +147,25 @@ export async function onRequestPost(context) {
 
   if (stage === 'validate-match' && body.linked.length > 24) {
     return jsonResponse({ error: 'Too many linked nodes' }, 400);
+  }
+
+  if (stage === 'verify-places') {
+    const items = Array.isArray(body.items) ? body.items.slice(0, 8) : [];
+    if (!items.length) return jsonResponse({ error: 'items required' }, 400);
+    const gate = await runJevIndependentGate(env, {
+      kind: 'place',
+      goal,
+      deliverable: body.deliverable || '可复核的现场记录',
+      placeLabel: body.placeLabel || '',
+      items,
+    });
+    return jsonResponse({
+      fallback: gate.fallback,
+      reason: gate.reason,
+      threshold: gate.threshold,
+      scores: gate.scores,
+      drops: gate.drops,
+    });
   }
 
   let matched = Array.isArray(body.matched) ? body.matched : [];
