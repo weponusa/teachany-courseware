@@ -187,6 +187,7 @@ async function searchAround(center, topics) {
         [/自然博物馆|地质博物馆|化石|恐龙/, /自然|地质|化石|恐龙/],
         [/植物园/, /植物/],
         [/动物园/, /动物|昆虫|鸟/],
+        [/农业|农场|农庄|种业|温室/, /农业|农场|农庄|农园|种业|温室|果园/],
       ];
       const stem = stems.find(pair => pair[0].test(wanted));
       if (stem && !stem[1].test(placeName)) return;

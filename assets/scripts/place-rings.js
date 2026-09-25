@@ -28,7 +28,7 @@
   const LEAD = /^(在|对|把|将|从|为|和|与|及|的|了|是|有|其|该|本|一处|一次|一组|一家|一件|一份|一项|一些|不同)+/;
   const TAIL = /(在|对|把|将|从|为|和|与|及|的|了|是|有|其|该|本|并)+$/;
   const KEEP_TAIL = ['开放日'];
-  const SKIP_GRAM = new Set(['方式', '公共', '不同', '一处', '一次', '一组', '本地', '我们', '什么', '为什么', '怎么', '怎样', '如何', '会飞', '那么', '未来', '能源', '清洁', '科学', '生态', '生活', '原理', '效率', '应用', '前景']);
+  const SKIP_GRAM = new Set(['方式', '公共', '不同', '一处', '一次', '一组', '本地', '我们', '什么', '为什么', '怎么', '怎样', '如何', '会飞', '那么', '未来', '能源', '清洁', '科学', '生态', '生活', '原理', '效率', '应用', '前景', '初中', '小学', '高中', '跨学', '产出', '报告']);
   const NOT_A_PLACE = /什么|为什么|怎么|怎样|如何|会飞|那么|哪儿|哪里|未来|能源|清洁|科学|生态/;
 
   function topicPieces(part) {
@@ -102,7 +102,7 @@
     { re: /垃圾|废弃|废旧|回收|变废|填埋|再生资源|分类投放|扔掉/, stem: /回收|分类|填埋|转运|再生|垃圾|焚烧/, terms: ['再生资源回收', '垃圾分类', '填埋场', '垃圾转运'] },
     { re: /天文|星空|星座|行星|月球|月相|月亮|星星/, stem: /天文/, terms: ['天文馆', '天文台'] },
     { re: /恐龙|化石|矿物|地质/, stem: /自然|地质|化石|恐龙/, terms: ['自然博物馆', '地质博物馆'] },
-    { re: /植物|绿植|树木|花园/, stem: /植物/, terms: ['植物园'] },
+    { re: /农业|农事|农场|农庄|种植|作物|农田|蔬菜|果园|种业/, stem: /农业|农场|农庄|农园|种业|温室|菜田|果园/, terms: ['现代农业园区', '农业科技园', '农业公园', '种业科技园'] },
     { re: /动物|昆虫|鸟类|动物园/, stem: /动物|昆虫|鸟/, terms: ['动物园'] },
     { re: /河|江|湖|水质|湿地|潮汐/, stem: /河|江|湖|湿地|渠|溪/, terms: ['湿地公园', '河'] },
     { re: /古建|斗拱|遗址|文物|古迹/, stem: /博物|古迹|遗址|文保|塔/, terms: ['博物馆'] },
@@ -112,7 +112,7 @@
     const prefixed = [];
     const plain = [];
     terms.forEach(term => {
-      if (city && /博物馆|大学|天文馆|植物园|动物园/.test(term) && !/^中国|^国家/.test(term)) prefixed.push(city + term);
+      if (city && /博物馆|大学|天文馆|植物园|动物园|农业园|科技园|农业公园/.test(term) && !/^中国|^国家/.test(term)) prefixed.push(city + term);
       plain.push(term);
     });
     return [...new Set(prefixed.concat(plain))].slice(0, 4);
@@ -122,8 +122,17 @@
     return SEE_AT.find(rule => rule.re.test(String(text || ''))) || null;
   }
 
+  function focusGoal(text) {
+    return String(text || '')
+      .replace(/产出[:：][^｜|\n]*/g, ' ')
+      .replace(/场景[:：][^｜|\n]*/g, ' ')
+      .replace(/周期[:：][^｜|\n]*/g, ' ')
+      .replace(/约束[:：][^｜|\n]*/g, ' ')
+      .replace(/小学|初中|高中|跨学科|自动推断|研究报告|调查报告/g, ' ');
+  }
+
   function searchTerms(text, place) {
-    const src = String(text || '');
+    const src = focusGoal(text);
     const city = String((place && (place.city || place.province)) || '').replace(/市$/, '');
     const rule = seeAt(src);
     if (rule) {
@@ -272,6 +281,7 @@
     if (/点|亭|驿站|社区|网格|投放|便民/.test(text)) return 2;
     if (/回收|分类|recycling|加油站|加氢站|菜市|卫生服务/.test(text)) return 5;
     if (/氢能|燃料电池/.test(text)) return 15;
+    if (/农业园|农业公园|农业科技|现代农业|农场|农庄|种业/.test(text)) return 40;
     if (/公园|文化馆|图书馆|体育馆|展览馆/.test(text)) return 15;
     return null;
   }
