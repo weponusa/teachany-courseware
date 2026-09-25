@@ -548,15 +548,17 @@ ${formatTopicAnchorBlock(goal)}｜类型：${p.label}
 ## 你的任务
 像直接回答教师提问一样，把项目拆成可实施的路线：
 1. 写清 drivingQuestion、最终 deliverable、约束与验收标准
-2. 给出 ${schemeCount} 套 **实质不同** 的方案（schemes），差异在：菌种/样本策略/对照设计/周期/仪器深度/课堂可行性等，禁止只改标题
+2. 给出 ${schemeCount} 套 **实质不同** 的方案（schemes），差异在：样本或对象、对照设计、周期、工具深度、课堂可行性，禁止只改标题
 3. 推荐方案含 4-5 个阶段（phases），每阶段 ≥2 条 **具体可执行** steps（含变量、指标、次数、仪器或表格名）
 4. knowledgeHints 可留空 [] 或每阶段 0-3 个检索词；**不要编造课标节点名**
 
 ## 质量要求（简洁）
 - steps 写「做什么+怎么做+产出什么」，禁止「查阅资料并分析」「完成本阶段」「环境搭建」
-- deliverable 用具体名称（XX实验记录表/降解曲线图/菌种比选报告），禁「阶段成果」「方案」
-- tools 写方法要点（变量对照表规范、培养条件、测色方法），禁文具清单
+- deliverable 用具体名称（写清是哪份记录、图表或报告），禁「阶段成果」「方案」
+- tools 写方法要点，禁文具清单
 - 科学实验类：须写清自变量/因变量/对照、重复次数、测量指标与安全边界
+- 课题对象若能在公开场所看见，推荐方案必须有一个 venue 为「校外」的阶段：写清去哪里一类场所、看什么、记录什么、带回什么证据。禁止把与题目无关的实验室培养或菌种实验套进来
+- 题目里没有的专名一律不要写，尤其不要出现菌丝体、食用菌、合成染料、甲基橙、刚果红，除非题目原文就在研究这些
 ${polPsychHint ? `\n${polPsychHint}` : ''}
 
 只返回 JSON，不要 markdown。`;
@@ -565,38 +567,38 @@ ${polPsychHint ? `\n${polPsychHint}` : ''}
 function decomposeJsonExample(goal) {
   const subject = parseGoalSubject(goal);
   const type = classifyProjectType(goal);
-  if (type === 'scientific-inquiry' || /实验|降解|菌|培养|对照|变量/.test(String(goal || ''))) {
+  if (type === 'scientific-inquiry' || /实验|对照|变量|测量|观测/.test(String(goal || ''))) {
     return `{
-  "drivingQuestion": "哪种食用菌菌丝体对目标合成染料降解最快？降解率与培养条件有何关系？",
-  "projectSummary": "比较多种食用菌菌丝体对合成染料的降解能力，通过对照实验测定降解率并筛选最优菌种",
-  "deliverable": "菌种降解能力比选报告（含实验设计表、数据曲线、结论与局限）",
+  "drivingQuestion": "围绕「${subject}」的可验证问句，必须使用题目里的对象，不得改成别的实验",
+  "projectSummary": "谁、针对「${subject}」用什么方法、做出什么",
+  "deliverable": "与「${subject}」对应的记录或报告名称",
   "schemes": [
     {
       "id": "A",
-      "name": "多菌种平行对照路线",
-      "summary": "选3-5种菌株，固定染料浓度与培养条件，平行重复测定7-14天降解率",
-      "pros": ["可比性强", "结论直接"],
-      "cons": ["菌种获取与培养周期较长"],
+      "name": "实地对照路线",
+      "summary": "先在校外公开场所观察「${subject}」，再回教室对照分析",
+      "pros": ["证据来自真实对象"],
+      "cons": ["需要成人陪同并控制范围"],
       "phases": [
         {
-          "phase": "文献调研与菌种确定",
-          "venue": "教室+实验室",
+          "phase": "周边资源与本地调研",
+          "venue": "校外",
           "steps": [
-            "确定2种目标染料（如甲基橙、刚果红）及3-5种待测食用菌菌株，列出培养温度/湿度要求",
-            "编制实验变量表：自变量=菌种种类，因变量=染料浓度/吸光度，对照=无菌丝培养基"
+            "从学校出发，在服务半径内找到能直接看见「${subject}」的公开场所，记下名称和距离",
+            "在开放区域记录看到的现象、位置和下一步怎么用；不进入私人住宅、生产区和诊疗区"
           ],
-          "deliverable": "实验变量与菌种清单表",
-          "tools": ["变量对照设计表", "培养条件记录规范"],
+          "deliverable": "本地调研记录（地点、距离、现象）",
+          "tools": ["观察记录表", "距离与安全边界"],
           "knowledgeHints": []
         }
       ]
     },
     {
       "id": "B",
-      "name": "单菌种多条件优化路线",
-      "summary": "先筛出1种降解力强的菌，再优化温度/pH/接种量",
-      "pros": ["深入机理", "课时可控"],
-      "cons": ["初筛阶段可能遗漏优质菌种"],
+      "name": "课堂测量路线",
+      "summary": "用可在教室完成的测量验证「${subject}」的一个变量",
+      "pros": ["课时可控"],
+      "cons": ["缺少现场证据"],
       "phases": []
     }
   ],
@@ -630,7 +632,7 @@ function decomposeQualityExtra(goal) {
 【输出前自检】
 - schemes≥2，路线差异可辨认（不是同义改写）
 - 推荐方案 phases 4-5，每阶段 steps≥2 且具体
-- steps/deliverable 紧扣「${subject}」及题目专名（染料、菌丝体、降解等）
+- steps/deliverable 只写「${subject}」和题目原文里的对象。题目没写的专名不要出现
 - 禁止空泛套话与文具清单`;
 }
 
@@ -644,7 +646,7 @@ function userPromptDecompose(goal, complex, projectSpec = null) {
 返回 JSON，字段含：drivingQuestion, projectSummary, deliverable, reportOutline, formativeCheckpoints, collaborationRoles, constraints, scopeLimits, successCriteria, subsystems, schemes(≥2), recommendedSchemeId, knowledgeChain。
 knowledgeHints 可省略或留空，后续再匹配课标。
 
-结构参考（须按本题改写，勿照搬示例菌种/染料名除非题目相关）：
+结构参考（只借结构，专名必须换成题目里的对象；示例里没有的菌种、染料、菌丝体一律不要写）：
 ${example}`;
 }
 
