@@ -124,6 +124,14 @@ globalThis.fetch = async (input) => {
           properties: { name: '农业银行大厦', osm_key: 'office', osm_value: 'financial' },
           geometry: { coordinates: [114.01, 22.55] },
         },
+        {
+          properties: { name: '南山公共充电站', osm_key: 'amenity', osm_value: 'charging_station' },
+          geometry: { coordinates: [114.02, 22.56] },
+        },
+        {
+          properties: { name: '中心公园', osm_key: 'leisure', osm_value: 'park' },
+          geometry: { coordinates: [114.03, 22.57] },
+        },
       ],
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
@@ -188,6 +196,40 @@ try {
   assert.equal(fallbackBody.center.approximate, true);
   assert.equal(fallbackBody.center.confidence, 'low');
   assert.ok(fallbackBody.warnings.some(item => item.includes('未精确定位学校')));
+
+  const evRequest = new Request('https://www.teachany.cn/api/pbl/places', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      place: { landmark: '模拟学校', lat: 22.55, lon: 114.05 },
+      goal: '研究新能源汽车的普及率',
+      requirement: {
+        campusOnly: false,
+        object: '居民家庭',
+        queryGroups: [{ keywords: ['居民家庭'], types: ['community'], priority: 1 }],
+      },
+    }),
+  });
+  const evResponse = await placesPost({ request: evRequest, env: {} });
+  const evBody = await evResponse.json();
+  assert.ok(evBody.queries.includes('充电站'));
+  assert.ok(evBody.candidates.some(item => item.name === '南山公共充电站'));
+  assert.ok(!evBody.requirement.activities.includes('入户调查'));
+
+  const geoRequest = new Request('https://www.teachany.cn/api/pbl/places', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      place: { landmark: '模拟学校', lat: 22.55, lon: 114.05 },
+      goal: '初一经纬度知识点实践',
+      requirement: null,
+      topics: ['经纬度'],
+    }),
+  });
+  const geoResponse = await placesPost({ request: geoRequest, env: {} });
+  const geoBody = await geoResponse.json();
+  assert.ok(geoBody.queries.includes('公园'));
+  assert.ok(geoBody.candidates.some(item => item.name === '中心公园'));
 } finally {
   globalThis.fetch = originalFetch;
 }

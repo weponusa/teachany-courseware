@@ -562,6 +562,7 @@ ${formatTopicAnchorBlock(goal)}｜类型：${p.label}
 - 科学实验类：须写清自变量/因变量/对照、重复次数、测量指标与安全边界
 - 仅当 placeRequirement.campusOnly=false 时，推荐方案才安排 venue 为「校外」的阶段：写清去什么类型场所、看什么、记录什么、带回什么证据。水火箭、纸桥、编程、纯数学、阅读写作、校园观察等不因普通科技馆“可能有展项”而强加出行
 - placeRequirement.queryGroups.types 只能使用：museum_named, science_named, park_named, historic, canal, sluice, wetland, forest, geology, farm, recycling, wastewater, energy, industrial, laboratory, university, community, theatre, marketplace, fuel_named, airport, rail_transit, hospital
+- 未成年人社会调查只在公共区域进行，禁止入户访问陌生家庭、进入私人住宅、采集姓名住址或拍摄完整车牌；普及率调查优先用公共停车区计数、公共设施观察和匿名访谈
 - 题目里没有的专名一律不要写，尤其不要出现菌丝体、食用菌、合成染料、甲基橙、刚果红，除非题目原文就在研究这些
 ${polPsychHint ? `\n${polPsychHint}` : ''}
 
