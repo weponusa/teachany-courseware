@@ -303,6 +303,34 @@ async function geocodeCenter(place, env) {
     ranked.sort((a, b) => b.score - a.score);
     if (ranked[0]) return ranked[0];
   }
+  const areaQuery = [
+    place.city && place.city !== place.province ? place.city : place.province,
+    place.district,
+  ].filter(Boolean).join('');
+  if (areaQuery) {
+    try {
+      const rows = await fetchJson(
+        `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=cn&q=${encodeURIComponent(areaQuery)}`,
+        null,
+        10000,
+      );
+      const hit = Array.isArray(rows) ? rows[0] : null;
+      const lon = Number(hit?.lon);
+      const lat = Number(hit?.lat);
+      if (Number.isFinite(lon) && Number.isFinite(lat)) {
+        return {
+          lon,
+          lat,
+          name: `${areaQuery}近似中心`,
+          score: 1,
+          source: 'nominatim-area',
+          coordinateSystem: 'WGS84',
+          confidence: 'low',
+          approximate: true,
+        };
+      }
+    } catch (e) { /* 区县中心也失败才停止召回 */ }
+  }
   return null;
 }
 
@@ -724,6 +752,7 @@ export async function onRequestPost(context) {
         source: center.source,
         coordinateSystem: center.coordinateSystem,
         confidence: center.confidence,
+        approximate: !!center.approximate,
       },
       candidates: [],
       queries: [],
@@ -734,6 +763,9 @@ export async function onRequestPost(context) {
   }
   let candidates = [];
   const warnings = [];
+  if (center.approximate || center.confidence === 'low') {
+    warnings.push(`未精确定位学校，暂以${center.name}召回；请核对学校地址或坐标`);
+  }
   try {
     candidates = await searchAroundAmap(center, plan.requirement, travel, context.env);
   } catch (e) {
@@ -759,6 +791,7 @@ export async function onRequestPost(context) {
       source: center.source,
       coordinateSystem: center.coordinateSystem,
       confidence: center.confidence,
+      approximate: !!center.approximate,
     },
     candidates: ranked,
     ranked,
