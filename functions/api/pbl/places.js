@@ -560,17 +560,24 @@ async function venuesFromPhoton(center, topics, city) {
   ])].filter(Boolean).slice(0, 6);
   const lists = await Promise.all(terms.map(async term => {
     try {
-      return await fetchJson(`https://photon.komoot.io/api/?limit=6&lat=${center.lat}&lon=${center.lon}&location_bias_scale=0.2&q=${encodeURIComponent(term)}`);
+      const data = await fetchJson(`https://photon.komoot.io/api/?limit=6&lat=${center.lat}&lon=${center.lon}&location_bias_scale=0.2&q=${encodeURIComponent(term)}`);
+      return { data, term };
     } catch (e) {
       return null;
     }
   }));
   const venues = [];
-  lists.forEach(data => {
-    ((data && data.features) || []).forEach(feature => {
+  lists.forEach(entry => {
+    const term = String(entry?.term || '');
+    ((entry?.data && entry.data.features) || []).forEach(feature => {
       const props = feature.properties || {};
       const coords = (feature.geometry && feature.geometry.coordinates) || [];
       const tags = { name: props.name || '' };
+      const name = String(tags.name || '');
+      if (!term || !name.includes(term)) return;
+      const topicBlob = (topics || []).join('');
+      if (/银行|金融中心|写字楼|办公楼|商务楼|酒店|住宅|小区|家园/.test(name)
+        && !/银行|金融|商业|办公|酒店|住宅|社区/.test(topicBlob)) return;
       if (props.osm_key && props.osm_value) tags[props.osm_key] = props.osm_value;
       if (!usable(tags, topics)) return;
       if (/小学|中学|幼儿园/.test(tags.name)) return;
@@ -583,6 +590,8 @@ async function venuesFromPhoton(center, topics, city) {
         name: tags.name,
         category: tags.waterway || tags.tourism || tags.leisure || 'place',
         classHit: !!tags.waterway || undefined,
+        queryHit: term,
+        nameHit: true,
         ringId: ring.id,
         ringLabel: ring.label,
         distanceKm,
