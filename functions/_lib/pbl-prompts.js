@@ -534,6 +534,7 @@ const PBL_DESIGN_LOGIC_BLOCK = `
 5. reportOutline：3-7 段，对应最终 deliverable 的章节结构（按本题自定义，禁套固定范例）
 6. collaborationRoles：2-4 人小组时写角色+职责（按任务类型自定义）
 7. 每阶段 acceptance：2-4 条可勾选验收项（□ 开头）
+8. placeRequirement：先判断校外是否必要。能在校园/家庭/课堂/屏幕完成且题目未要求外部调查时 campusOnly=true；否则写 object、see、evidence、activities、queryGroups、reject、accessNeeds。只写地点类型与检索词，不编造场馆专名
 须按本题专名与交付物自定义，禁止照搬任何固定项目（如购车/研学等）的固定句式。`;
 
 function systemPromptDecompose(complex, goal, projectSpec = null) {
@@ -542,6 +543,8 @@ function systemPromptDecompose(complex, goal, projectSpec = null) {
   const schemeCount = complex ? '2-3' : '至少2';
   const polPsychHint = formatPolPsychDecomposeHint(projectSpec, goal);
   return `你是资深 PBL/探究项目设计教师。本阶段只做「项目完整拆解」，**不选课标、不写课标节点名**；课标匹配在后续独立步骤完成。
+
+${PBL_DESIGN_LOGIC_BLOCK}
 
 ${formatTopicAnchorBlock(goal)}｜类型：${p.label}
 
@@ -557,7 +560,8 @@ ${formatTopicAnchorBlock(goal)}｜类型：${p.label}
 - deliverable 用具体名称（写清是哪份记录、图表或报告），禁「阶段成果」「方案」
 - tools 写方法要点，禁文具清单
 - 科学实验类：须写清自变量/因变量/对照、重复次数、测量指标与安全边界
-- 课题对象若能在公开场所看见，推荐方案必须有一个 venue 为「校外」的阶段：写清去哪里一类场所、看什么、记录什么、带回什么证据。禁止把与题目无关的实验室培养或菌种实验套进来
+- 仅当 placeRequirement.campusOnly=false 时，推荐方案才安排 venue 为「校外」的阶段：写清去什么类型场所、看什么、记录什么、带回什么证据。水火箭、纸桥、编程、纯数学、阅读写作、校园观察等不因普通科技馆“可能有展项”而强加出行
+- placeRequirement.queryGroups.types 只能使用：museum_named, science_named, park_named, historic, canal, sluice, wetland, forest, geology, farm, recycling, wastewater, energy, industrial, laboratory, university, community, theatre, marketplace, fuel_named, airport, rail_transit, hospital
 - 题目里没有的专名一律不要写，尤其不要出现菌丝体、食用菌、合成染料、甲基橙、刚果红，除非题目原文就在研究这些
 ${polPsychHint ? `\n${polPsychHint}` : ''}
 
@@ -572,6 +576,7 @@ function decomposeJsonExample(goal) {
   "drivingQuestion": "围绕「${subject}」的可验证问句，必须使用题目里的对象，不得改成别的实验",
   "projectSummary": "谁、针对「${subject}」用什么方法、做出什么",
   "deliverable": "与「${subject}」对应的记录或报告名称",
+  "placeRequirement": {"campusOnly":false,"object":"${subject}","see":["现场对象"],"evidence":["可复核记录"],"activities":["观察","测量"],"queryGroups":[{"keywords":["${subject}"],"types":[],"priority":1,"purpose":"寻找直接载体"}],"reject":["住宅","道路","普通办公楼"],"accessNeeds":["团体开放","成人陪同"],"reason":"题目要求现实对象或现场数据"},
   "schemes": [
     {
       "id": "A",
@@ -609,6 +614,7 @@ function decomposeJsonExample(goal) {
     return `{
   "drivingQuestion": "…可验证问句…",
   "deliverable": "调查报告",
+  "placeRequirement": {"campusOnly":false,"object":"调查对象","see":["现场行为或设施"],"evidence":["计数","访谈"],"activities":["调查","访谈"],"queryGroups":[{"keywords":["对象词"],"types":["community"],"priority":1,"purpose":"现场调查"}],"reject":["住宅"],"accessNeeds":["允许团队访谈"],"reason":"需要校外样本"},
   "schemes": [{"id":"A","name":"…","phases":[{"phase":"调查设计","steps":["设计10题问卷…","确定样本≥30人…"],"deliverable":"问卷定稿","knowledgeHints":[]}]}],
   "recommendedSchemeId": "A"
 }`;
@@ -617,6 +623,7 @@ function decomposeJsonExample(goal) {
   "drivingQuestion": "围绕「${subject}」的可验证问句",
   "projectSummary": "40-80字概括谁、用什么方法、做出什么",
   "deliverable": "具体成果名（报告/模型/方案册）",
+  "placeRequirement": {"campusOnly":true,"object":"","see":[],"evidence":[],"activities":[],"queryGroups":[],"reject":[],"accessNeeds":[],"reason":"可在校内完成"},
   "schemes": [
     {"id":"A","name":"路线A名称","summary":"与B不同的技术/样本/周期路线","phases":[{"phase":"阶段名","steps":["具体步骤1","具体步骤2"],"deliverable":"阶段产出名","knowledgeHints":[]}]},
     {"id":"B","name":"路线B名称","summary":"另一套实质不同的路线","phases":[]}
@@ -643,7 +650,7 @@ function userPromptDecompose(goal, complex, projectSpec = null) {
   const example = decomposeJsonExample(goal);
   return `${task}${specBlock}${decomposeQualityExtra(goal)}
 
-返回 JSON，字段含：drivingQuestion, projectSummary, deliverable, reportOutline, formativeCheckpoints, collaborationRoles, constraints, scopeLimits, successCriteria, subsystems, schemes(≥2), recommendedSchemeId, knowledgeChain。
+返回 JSON，字段含：drivingQuestion, projectSummary, deliverable, placeRequirement, reportOutline, formativeCheckpoints, collaborationRoles, constraints, scopeLimits, successCriteria, subsystems, schemes(≥2), recommendedSchemeId, knowledgeChain。
 knowledgeHints 可省略或留空，后续再匹配课标。
 
 结构参考（只借结构，专名必须换成题目里的对象；示例里没有的菌种、染料、菌丝体一律不要写）：
