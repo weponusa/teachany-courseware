@@ -111,10 +111,20 @@ globalThis.fetch = async (input) => {
   }
   if (url.includes('photon.komoot.io')) {
     return new Response(JSON.stringify({
-      features: [{
-        properties: { name: '现代农业示范农场', osm_key: 'landuse', osm_value: 'farmland' },
-        geometry: { coordinates: [114.08, 22.57] },
-      }],
+      features: [
+        {
+          properties: { name: '现代农业示范农场', osm_key: 'landuse', osm_value: 'farmland' },
+          geometry: { coordinates: [114.08, 22.57] },
+        },
+        {
+          properties: { name: '深圳机场', osm_key: 'aeroway', osm_value: 'aerodrome' },
+          geometry: { coordinates: [113.82, 22.64] },
+        },
+        {
+          properties: { name: '农业银行大厦', osm_key: 'office', osm_value: 'financial' },
+          geometry: { coordinates: [114.01, 22.55] },
+        },
+      ],
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
   if (url.includes('nominatim.openstreetmap.org')) {
@@ -149,6 +159,7 @@ try {
   const fieldBody = await fieldResponse.json();
   assert.equal(fieldBody.routeSource, 'fixed-radius');
   assert.equal(fieldBody.candidates[0].name, '现代农业示范农场');
+  assert.equal(fieldBody.candidates.some(item => /机场|银行/.test(item.name)), false);
   assert.equal(fieldBody.candidates[0].rangeShape, 'parallelogram');
   assert.equal(fieldBody.area.radiusKm, 30);
   assert.ok(fieldBody.warnings.some(item => item.includes('平行四边形')));
