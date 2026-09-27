@@ -11,7 +11,9 @@
  */
 
 export const JEV_INDEPENDENT_THRESHOLD = 0.20;
-export const JEV_PLACE_THRESHOLD = 0.50;
+// 100 条现网课题 / 152 个候选的暂定点；项目分组 bootstrap 中 74.1% 选择 T=0.35。
+// 仅 9 个正例项目且使用模拟圆心，后续仍需用真实出发地留出集复核。
+export const JEV_PLACE_THRESHOLD = 0.35;
 export const JEV_MODEL = 'jev-latest';
 export const JEV_ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
 
@@ -45,8 +47,9 @@ function placeKnowledgeNeed(goal, deliverable, placeLabel) {
     `课题：${String(goal || '').trim()}`,
     deliverable ? `要带回：${String(deliverable).trim()}` : '',
     placeLabel ? `出发地：${String(placeLabel).trim()}` : '',
-    '需求：一次可到场的校外实践。学生要在对外开放区域直接看见课题对象，并说得出带回什么可复核证据。',
-    '不要用「未来、科学、生态、能源、生活」这类修饰词去对地名。同城景点、名称沾边、比喻硬凑都不要召回。',
+    '需求：一次可到场的校外实践。学生要在对外开放区域直接看见课题对象或公认载体，并说得出带回什么可复核证据。',
+    '只用候选名称和括号内的地图类别判断，禁止猜测普通博物馆、科技馆、剧场、农场或图书馆“可能有”题目所需展项。',
+    '公认载体可以召回：运河、水闸对水利或水能；充电站对电动车；农场或温室对种植；回收点或转运站对垃圾。普通公司、销售中心、办公楼、住宅、道路、学校和只共享修饰词的地点不要召回。',
   ].filter(Boolean).join('｜');
 }
 
@@ -60,10 +63,10 @@ function placeNoulBody(need, title) {
     questions: {
       matches: {
         type: 'noul',
-        instructions: '候选地点 `candidate` 是这次校外实践该去的地方吗？只判断学生能否在这里直接看见课题对象。指得出「去这里看什么、带回什么证据」= true。地名里有相同的字、同城、类型沾边或比喻硬凑 = false。课题是氢能时，「未来科学城公园」只因为带了「未来」，必须判 false。',
+        instructions: '候选地点适合这次校外实践吗？只根据 candidate 的地点名称和地图类别判断。名称或类别能明确证明学生在开放区域可看见课题对象或公认载体，并能带回证据 = true。明确例：充电站对电动车、鲁迅纪念馆对鲁迅、木偶剧院对木偶、运河或水闸对水利、农场或温室对种植。普通博物馆、科技馆、剧场、图书馆、农场如果名称没有明确对象，不许猜测“可能有”相关展项；普通公司、销售中心、办公楼、住宅、道路、学校、食堂，以及只共享智慧、未来、科学、生态、能源、测试等修饰词 = false。项目只做小程序、写作、计算或校内实验且无现场对照物 = false。',
         criteria: {
-          true: '指得出在这个具体地点的开放区域能看见的对象，以及能带回的证据。',
-          false: '看不出和课题对象的直接关系，只是地名、同城或硬凑。',
+          true: '名称或地图类别直接证明能看见课题对象或公认载体。',
+          false: '需要猜测展项、开放性或用途；只是同城、行业词、修饰词或硬凑。',
         },
       },
     },

@@ -16,6 +16,12 @@ PBL 拆解默认走 **TeachAny 服务端中转**（OpenRouter 付费 `qwen/qwen3
 
 需配置 Pages 加密环境变量：`OPENROUTER_KEY`（主 Key）、`SILICONFLOW_KEY`（兜底）、`PARATERA_KEY`（兜底）。
 
+校外基地可选配置 `AMAP_WEB_KEY`（高德 Web Service Key）：
+- 已配置：学校地理编码和周边 POI 优先走高德
+- 未配置或调用失败：退回开放地图
+- 范围统一用学校周边东西、南北各约30公里的经纬度包络平行四边形近似“一小时”，不请求路线 ETA、不表达实时路况
+- 企业、实验室、医院等即使地图命中，仍须核实团体预约、容量、开放时间与安全边界
+
 可选：`PBL_MATCH_MODEL` / `PBL_MODEL_OVERRIDE` 锁定单模型做 A/B。
 
 ## D1 日志表

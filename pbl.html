@@ -1486,8 +1486,8 @@ body {
 <script src="./assets/scripts/pbl-topic-anchors.js?v=20260609-topic-recall"></script>
 <script src="./assets/scripts/knowledge-node-display.js?v=20260623"></script>
 <script src="./assets/scripts/cn-pca.js?v=20260925-place"></script>
-<script src="./assets/scripts/place-rings.js?v=20260925-bands"></script>
-<script src="./assets/scripts/pbl-path.js?v=20260922-jev-recall"></script>
+<script src="./assets/scripts/place-rings.js?v=20260927-onehour-box"></script>
+<script src="./assets/scripts/pbl-path.js?v=20260927-place-requirement-3"></script>
 <script src="./assets/scripts/pbl-support-modules.js?v=20260619-support-pack-v2"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
 <script src="./assets/scripts/teachany-make-course.js"></script>
@@ -2292,6 +2292,16 @@ function renderPBLDecomposeHTML(blueprint) {
     html += `<div><strong>模块主线</strong>：${escapePBLHtml(blueprint.moduleChain)}</div>`;
   }
   html += `<div>${escapePBLHtml(blueprint.projectSummary || '')}</div>`;
+  if (blueprint.placeRequirement) {
+    const pr = blueprint.placeRequirement;
+    const see = Array.isArray(pr.see) ? pr.see.join('、') : String(pr.see || '');
+    const evidence = Array.isArray(pr.evidence) ? pr.evidence.join('、') : String(pr.evidence || '');
+    html += `<div style="margin-top:8px"><strong>场地判断</strong>：${
+      pr.campusOnly === true || pr.campus_only === true
+        ? '本项目可在校园/家庭/课堂内完成，不强加校外环节'
+        : `需要校外现实对象${see ? `；现场看：${escapePBLHtml(see)}` : ''}${evidence ? `；带回：${escapePBLHtml(evidence)}` : ''}`
+    }</div>`;
+  }
   if (blueprint.knowledgeChain) {
     html += `<div style="margin-top:8px"><strong>知识链</strong>：${escapePBLHtml(blueprint.knowledgeChain)}</div>`;
   }
@@ -2494,29 +2504,43 @@ let pblPlaceToken = 0;
 
 async function refreshPBLOffCampus(result, token) {
   const place = result && result.projectSpec && result.projectSpec.place;
-  const ready = place && place.districtCode && String(place.landmark || '').trim();
+  const requirement = result && result.projectBlueprint && result.projectBlueprint.placeRequirement;
+  const ready = place && String(place.landmark || '').trim();
   renderPBLPlaceModule(result, null, ready ? 'searching' : '');
   if (!window.PlaceRings || !ready) return;
   const goal = [result.goal, result.projectSpec && result.projectSpec.task].filter(Boolean).join(' ');
   let mapped = { candidates: [], center: null };
   try {
-    mapped = await PlaceRings.recallMapped(place, goal);
+    mapped = await PlaceRings.recallMapped(place, goal, {
+      requirement: requirement || null,
+      gradeBand: result.projectSpec && result.projectSpec.gradeBand,
+      duration: result.projectSpec && result.projectSpec.period,
+    });
   } catch (e) {
     mapped = { candidates: [], center: null };
   }
   if (token !== pblPlaceToken) return;
+  if (mapped.reason === 'campus') {
+    renderPBLPlaceModule(result, { status: 'campus', requirement: mapped.requirement || requirement }, '');
+    return;
+  }
   let off = PlaceRings.resolve({
     place,
     goal,
     mode: 'pbl',
     candidates: mapped.candidates || [],
     center: mapped.center,
+    queries: mapped.queries || [],
+    requirement: mapped.requirement || requirement || null,
+    travel: mapped.travel || null,
+    warnings: mapped.warnings || [],
+    routeSource: mapped.routeSource || '',
   });
   if (off) {
     try {
       off = await PlaceRings.rescoreWithJev(off, {
         goal,
-        deliverable: '可复核的现场记录',
+        deliverable: (mapped.requirement && mapped.requirement.evidence || []).join('、') || '可复核的现场记录',
         endpoint: `${location.origin}/api/pbl/analyze`,
         timeoutMs: 8000,
       });

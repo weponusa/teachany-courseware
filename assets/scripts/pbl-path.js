@@ -1358,9 +1358,61 @@ class PBLPathBuilder {
     return Array.isArray(val) ? val : [];
   }
 
+  _normalizePlaceRequirement(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const list = (value, limit = 8) => [...new Set(
+      (Array.isArray(value) ? value : (value ? [value] : []))
+        .map(item => String(item || '').trim())
+        .filter(Boolean)
+    )].slice(0, limit);
+    return {
+      campusOnly: raw.campusOnly === true || raw.campus_only === true,
+      object: String(raw.object || '').trim().slice(0, 120),
+      see: list(raw.see),
+      evidence: list(raw.evidence),
+      activities: list(raw.activities),
+      queryGroups: this._asArray(raw.queryGroups).slice(0, 6).map((group, index) => ({
+        keywords: list(group?.keywords),
+        types: list(group?.types, 6),
+        priority: Number.isFinite(Number(group?.priority)) ? Number(group.priority) : index + 1,
+        purpose: String(group?.purpose || '').slice(0, 80),
+      })).filter(group => group.keywords.length || group.types.length),
+      reject: list(raw.reject || raw.reject_names, 12),
+      accessNeeds: list(raw.accessNeeds),
+      reason: String(raw.reason || '').trim().slice(0, 160),
+    };
+  }
+
+  _alignBlueprintVenueWithRequirement(blueprint) {
+    const requirement = blueprint?.placeRequirement;
+    if (!requirement || !blueprint?.schemes?.length) return blueprint;
+    const scheme = blueprint.schemes.find(s => s.id === blueprint.recommendedSchemeId) || blueprint.schemes[0];
+    if (!scheme?.phases?.length) return blueprint;
+    if (requirement.campusOnly) {
+      scheme.phases.forEach(phase => {
+        if (/校外|实地/.test(String(phase.venue || ''))) {
+          phase.venue = '校内/校园';
+          delete phase.venueKind;
+        }
+      });
+      return blueprint;
+    }
+    if (scheme.phases.some(phase => /校外|实地/.test(String(phase.venue || '')))) return blueprint;
+    const phase = scheme.phases.find(item => /实地|数据收集|观察|采样|访谈|考察/.test(
+      `${item.phase || ''} ${(item.steps || []).join(' ')}`
+    )) || scheme.phases.find(item => {
+      const text = `${item.phase || ''} ${(item.steps || []).join(' ')}`;
+      return /调查|调研/.test(text) && !/调查设计|调研设计/.test(text);
+    }) || scheme.phases[Math.min(1, scheme.phases.length - 1)];
+    phase.venue = '校外/实地';
+    phase.venueKind = 'off-campus';
+    return blueprint;
+  }
+
   _normalizeBlueprint(bp) {
     if (!bp || typeof bp !== 'object') return bp;
     const out = { ...bp };
+    out.placeRequirement = this._normalizePlaceRequirement(out.placeRequirement);
     out.reportOutline = this._asStringArray(out.reportOutline);
     out.formativeCheckpoints = this._asStringArray(out.formativeCheckpoints);
     out.collaborationRoles = Array.isArray(out.collaborationRoles) ? out.collaborationRoles : [];
@@ -1384,7 +1436,7 @@ class PBLPathBuilder {
       })),
     }));
     if (typeof out.drivingQuestion !== 'string') out.drivingQuestion = out.drivingQuestion ? String(out.drivingQuestion) : '';
-    return out;
+    return this._alignBlueprintVenueWithRequirement(out);
   }
 
   _cloneBlueprint(blueprint) {

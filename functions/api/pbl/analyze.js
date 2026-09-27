@@ -150,6 +150,7 @@ export async function onRequestPost(context) {
   }
 
   if (stage === 'verify-places') {
+    const t0 = Date.now();
     const items = Array.isArray(body.items) ? body.items.slice(0, 8) : [];
     if (!items.length) return jsonResponse({ error: 'items required' }, 400);
     const gate = await runJevIndependentGate(env, {
@@ -159,13 +160,40 @@ export async function onRequestPost(context) {
       placeLabel: body.placeLabel || '',
       items,
     });
-    return jsonResponse({
+    const result = {
       fallback: gate.fallback,
       reason: gate.reason,
       threshold: gate.threshold,
       scores: gate.scores,
       drops: gate.drops,
+    };
+    await logPBLCall(env, {
+      stage,
+      goal,
+      model: 'jev-latest',
+      backend: 'typesafe',
+      complex: false,
+      latencyMs: Date.now() - t0,
+      error: gate.fallback && gate.reason !== 'no-key' ? gate.reason : '',
+      messages: [
+        {
+          role: 'system',
+          content: '校外实践地点独立相关性审核：只根据名称、地图类别和现场证据判断，不猜测展项或开放性。',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            goal,
+            deliverable: body.deliverable || '可复核的现场记录',
+            placeLabel: body.placeLabel || '',
+            items,
+          }),
+        },
+      ],
+      responseText: JSON.stringify(result),
+      request,
     });
+    return jsonResponse(result);
   }
 
   let matched = Array.isArray(body.matched) ? body.matched : [];

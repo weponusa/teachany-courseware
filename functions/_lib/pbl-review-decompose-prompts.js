@@ -53,6 +53,7 @@ ${formatUniversalDecomposePrinciples(goal)}
 - 步骤须含题目关键词；调查/测算类禁接线/原型/硬件套话；工程类禁空泛「环境搭建」
 - knowledgeHints 为检索词（2-5/阶段），非课标节点名
 - tools 为方法指导（题型设计/统计规范/论证结构），禁文具耗材
+- 保留并修订 placeRequirement：能在校内完成则 campusOnly=true；确需校外时写明 object/see/evidence/activities/queryGroups/reject/accessNeeds，禁止编造场馆专名
 - 只输出修订后 JSON，不要 markdown、不要解释${polPsychHint}`;
 
   const user = `${ctx}
@@ -64,7 +65,7 @@ ${issuesBlock}
 【初稿 JSON】
 ${draftJson}
 
-返回与 decompose 相同字段的**完整** JSON（含全部 schemes、subsystems、constraints、scopeLimits、successCriteria）。
+返回与 decompose 相同字段的**完整** JSON（含 placeRequirement、全部 schemes、subsystems、constraints、scopeLimits、successCriteria）。
 ${complex ? '复杂项目：保留 2-3 套方案差异。' : '至少 2 套方案。'}`;
 
   return [
