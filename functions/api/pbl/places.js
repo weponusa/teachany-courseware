@@ -434,7 +434,10 @@ async function searchAround(center, topics, poi) {
       if (filter.namedClass && filter.fuelNamed) lines.push(`nwr(${around})["amenity"="fuel"]["name"~"${filter.namedClass}"];`);
       if (filter.museumBroad) lines.push(`nwr(${around})["tourism"="museum"]["name"];`);
       if (filter.parkBroad) lines.push(`nwr(${around})["leisure"="park"]["name"];`);
-      if (filter.fuelBroad) lines.push(`nwr(${around})["amenity"="fuel"]["name"];`);
+      if (filter.fuelBroad) {
+        lines.push(`nwr(${around})["amenity"="fuel"]["name"];`);
+        lines.push(`nwr(${around})["amenity"="charging_station"]["name"];`);
+      }
     });
     if (!lines.length) return [];
     let elements = [];
@@ -473,7 +476,7 @@ async function searchAround(center, topics, poi) {
         || (classes.has('museum_named') && tags.tourism === 'museum')
         || (classes.has('science_named') && tags.tourism === 'museum')
         || (classes.has('park_named') && tags.leisure === 'park')
-        || (classes.has('fuel_named') && tags.amenity === 'fuel')
+        || (classes.has('fuel_named') && /fuel|charging_station/.test(tags.amenity || ''))
         || (classes.has('farm') && /farmland|greenhouse_horticulture/.test(tags.landuse || ''))
         || (classes.has('industrial') && tags.landuse === 'industrial')
         || (classes.has('community') && tags.amenity === 'community_centre')
@@ -650,7 +653,7 @@ museum_named 博物馆；science_named 科技馆；park_named 公园；historic 
 
 function cleanQueries(list) {
   return [...new Set((list || []).map(item => String(item || '').trim()).filter(item => (
-    /^[\u4e00-\u9fa5]{2,8}$/.test(item) && !/^(智慧|测试|未来|科学|生态|能源|生活|项目|装置|博物馆|公园|大学|商场)$/.test(item)
+    /^[\u4e00-\u9fa5]{2,8}$/.test(item) && !/^(智慧|测试|未来|科学|生态|能源|生活|项目|装置|大学|商场)$/.test(item)
   )))].slice(0, 8);
 }
 
@@ -698,6 +701,52 @@ async function planPlaceQueries(env, topics, goal) {
   return { campus: false, queries: fallback, poi: [], requirement };
 }
 
+function repairRequirementForGoal(goal, rawRequirement) {
+  const text = String(goal || '');
+  const requirement = normalizePlaceRequirement(rawRequirement || {});
+  if (/新能源.{0,8}(普及率|拥有率|使用率)|(?:电动|新能源)汽车.{0,8}(调查|普及)/.test(text)) {
+    return normalizePlaceRequirement({
+      campusOnly: false,
+      object: '新能源汽车与公共充电设施',
+      see: ['公共停车区域的新能源汽车', '公共充电站或充电桩'],
+      evidence: ['分时段车辆计数', '充电设施数量与使用状态', '匿名短访谈记录'],
+      activities: ['公共区域计数', '设施观察', '匿名访谈'],
+      queryGroups: [
+        {
+          keywords: ['充电站', '充电桩', '新能源汽车', '公共停车场'],
+          types: ['fuel_named', 'marketplace'],
+          priority: 1,
+          purpose: '在公共空间统计车辆与充电设施',
+        },
+      ],
+      reject: ['私人住宅', '入户调查', '可识别车牌拍摄', '普通办公楼'],
+      accessNeeds: ['只在公共区域活动', '不采集姓名、住址、完整车牌'],
+      reason: '普及率应以公共空间匿名计数和设施观察取样，不进入私人家庭',
+    });
+  }
+  if (/经纬度|经度.{0,6}纬度|纬度.{0,6}经度/.test(text)) {
+    return normalizePlaceRequirement({
+      campusOnly: false,
+      object: '经纬度定位与空间方位',
+      see: ['开阔观测点', '可在地图中确认坐标的公共地标'],
+      evidence: ['坐标截图', '方位与直线距离记录', '观测点分布图'],
+      activities: ['坐标读取', '方位观察', '地图标注'],
+      queryGroups: [
+        {
+          keywords: ['公园', '广场', '地标', '观景台'],
+          types: ['park_named', 'historic'],
+          priority: 1,
+          purpose: '选择安全开放且坐标明确的观测点',
+        },
+      ],
+      reject: ['私人住宅', '封闭生产区', '危险山地'],
+      accessNeeds: ['公共开放', '适合学生停留观测'],
+      reason: '用多个真实公共点位把抽象经纬度转化为坐标、方向和距离证据',
+    });
+  }
+  return requirement;
+}
+
 function rankPlaces(candidates) {
   return (candidates || []).map(venue => {
     const km = venue.distanceKm;
@@ -741,7 +790,7 @@ export async function onRequestPost(context) {
   searchAround.city = place.city || '';
   let plan;
   if (body.requirement && typeof body.requirement === 'object') {
-    const requirement = normalizePlaceRequirement(body.requirement);
+    const requirement = repairRequirementForGoal(goal, body.requirement);
     const flattened = flattenPlaceQueries(requirement);
     plan = {
       campus: requirement.campusOnly,
@@ -751,6 +800,11 @@ export async function onRequestPost(context) {
     };
   } else {
     plan = await planPlaceQueries(context.env, topics, goal);
+    plan.requirement = repairRequirementForGoal(goal, plan.requirement);
+    const repaired = flattenPlaceQueries(plan.requirement);
+    plan.campus = plan.requirement.campusOnly;
+    plan.queries = cleanQueries(repaired.queries.length ? repaired.queries : plan.queries);
+    plan.poi = cleanPoi(repaired.types.length ? repaired.types : plan.poi);
   }
   if (plan.campus) {
     return jsonResponse({
