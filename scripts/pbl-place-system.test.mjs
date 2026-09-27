@@ -117,6 +117,13 @@ globalThis.fetch = async (input) => {
       }],
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
+  if (url.includes('nominatim.openstreetmap.org')) {
+    return new Response(JSON.stringify([{
+      display_name: '南山区, 深圳市, 广东省, 中国',
+      lon: '113.9256',
+      lat: '22.5360',
+    }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
   throw new Error(`unexpected fetch ${url}`);
 };
 try {
@@ -145,6 +152,31 @@ try {
   assert.equal(fieldBody.candidates[0].rangeShape, 'parallelogram');
   assert.equal(fieldBody.area.radiusKm, 30);
   assert.ok(fieldBody.warnings.some(item => item.includes('平行四边形')));
+
+  const fallbackRequest = new Request('https://www.teachany.cn/api/pbl/places', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      place: {
+        province: '广东省',
+        city: '深圳市',
+        district: '南山区',
+        landmark: '地图中不存在的测试学校',
+      },
+      goal: '现代农业调查',
+      requirement: {
+        campusOnly: false,
+        object: '现代农业',
+        queryGroups: [{ keywords: ['农场'], types: ['farm'], priority: 1 }],
+      },
+    }),
+  });
+  const fallbackResponse = await placesPost({ request: fallbackRequest, env: {} });
+  const fallbackBody = await fallbackResponse.json();
+  assert.equal(fallbackResponse.status, 200);
+  assert.equal(fallbackBody.center.approximate, true);
+  assert.equal(fallbackBody.center.confidence, 'low');
+  assert.ok(fallbackBody.warnings.some(item => item.includes('未精确定位学校')));
 } finally {
   globalThis.fetch = originalFetch;
 }
