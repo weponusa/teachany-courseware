@@ -122,7 +122,9 @@ def migrate(cid, dry=False):
         if first < 0 or last_sec < 0:
             print("❌ 找不到 slide-page 节")
             return 1
-        h = (h[:first] + '<div id="slide-container">\n' + h[first:last] +
+        # ★ 必须同时给 class：外壳 CSS 选的是 .slide-container（负责 overflow-y/scroll-snap/高度），
+        #   只给 id 会让容器不可滚动、点导航不跳页。实测踩过。
+        h = (h[:first] + '<div class="slide-container" id="slide-container">\n' + h[first:last] +
              '\n</div><!-- .slide-container -->\n' + h[last:])
     # 5) 尾部（导航/FAB/工具栏）
     if M_NAV not in h:

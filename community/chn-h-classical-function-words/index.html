@@ -85,34 +85,493 @@ input,textarea{width:100%;border:1px solid rgba(148,163,184,0.35);border-radius:
 </style>
 <link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
 
+<style>
+
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+
+</style>
+<style>
+/* ─── 迁移覆盖（2026-09-22）────────────────────────────────────────
+   旧课件里有一段「TeachAny 统一呈现基线」用 !important 取消了分页放映：
+     .slide-container{height:auto!important;max-height:none!important;
+                      overflow:visible!important;scroll-snap-type:none!important}
+   结果容器不可滚动 —— 点侧边导航点只有计数和进度条在变，页面本身不动，
+   看起来像"导航坏了"。这里用同等重要性 + 更高特异性（body:not(...) .slide-container）
+   夺回容器高度、滚动与吸附。
+   ⚠️ 这段必须放在所有旧样式之后，否则会被基线的 !important 盖住。            */
+body:not(.play-mode) .slide-container {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow-y: auto !important;
+  scroll-snap-type: y proximity !important;
+}
+body.play-mode .slide-container {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  scroll-snap-type: y mandatory !important;
+}
+.slide-page { min-height: 100dvh; scroll-snap-align: start !important; }
+</style>
 </head>
 <body class="teachany-high teachany-high-pro">
-<nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;;color:#334155""><a href="#slide-container">📑 知识图谱</a><a href="#problem-anchor-choices">🤝 AI 学伴</a><a href="#learner-question-input">📚 课程内容</a></nav>
-
-
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
 <!-- teachany-hero-notext -->
 
 <div class="slide-container" id="slide-container">
-  <section data-scaffold="partial" data-bloom-level="apply" class="slide-page" data-page-type="objectives" data-page-index="2" data-tts="objectives" data-tsh="学习目标" data-slot="10">
-    <div class="slide-inner"><div class="card"><div data-bloom-level="understand" class="section-header"><span class="phase-tag" data-variant="success">Objectives</span><h2>学习目标</h2></div><ul class="objectives">
-          <li data-bloom-level="1">能复述课标要点：语言积累、梳理与探究任务群要求：积累文言文阅读经验，梳理文言词语，掌握其意义和用法。</li>
-      </ul></div></div>
-  </section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出18个高频文言虚词的基本用法</p></div><div class="tu-q"><p>🎯 能判断典型例句中虚词的词性和功能</p></div><div class="tu-q"><p>🎯 能分析虚词在语境中的逻辑关系</p></div></section>
+<style id="chnh-legacy-contrast-fix">
+/* 旧版遗留区块在深色（高中）主题下取深色主题的文字令牌 */
+body.teachany-high, body.teachany-high-pro { --ta-text: var(--text); }
+</style>
+<section class="slide-page" data-page-index="0" data-page-type="cover" data-tts="hero" data-tsh="开场 · 文言虚词">
+  <div class="slide-inner">
+    <div class="card card-glow"><h1>文言虚词</h1><p class="subtitle">语言积累、梳理与探究任务群要求：积累文言文阅读经验，梳理文言词语，掌握其意义和用法。</p><figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/chn-h-classical-function-words-hero.png" alt="文言虚词知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">文言虚词</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure></div>
+  </div>
+</section>
+
+<section class="slide-page" data-page-index="1" data-page-type="interactive" data-tts="problem-anchor" data-tsh="情境导入 · 带着问题学">
+  <div class="slide-inner">
 <section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为啥文言文里‘之’字一会儿当‘的’用，一会儿又像没意义？</p></div><div class="tu-q"><p>❓ 老师总说‘虚词不虚’，到底怎么理解？</p></div><div class="tu-q"><p>❓ 考试时虚词选择题老错，有没有速判技巧？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="apply" data-scaffold="full" id="pretest" data-slot="20"><h2>📝 前测</h2><div class="tu-q" data-answer="C"><h3>前测题 1</h3><p>下列‘之’用法不同类的是</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆实词虚词">公将鼓之（补足音节）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆实词虚词">宋何罪之有（宾语前置）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆实词虚词">辍耕之垄上（动词）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆实词虚词">小大之狱（的）</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C"><h3>前测题 2</h3><p>‘而’表修饰关系的是</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未掌握六大关系">人而无信（假设）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未掌握六大关系">择其善者而从之（顺承）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未掌握六大关系">河曲智叟笑而止之（修饰）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未掌握六大关系">黑质而白章（并列）</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section" data-tts="why-learn" id="why-learn" style="margin:28px 0">
+<div class="card card-glow">
+<h2>🎯 为什么学「文言虚词」？</h2>
+<div class="abt">
+<div class="abt-row abt-and" style="display:flex;gap:12px;margin:12px 0"><span class="abt-label" style="flex:0 0 auto;font-weight:700;color:#34d399">AND</span><p style="margin:0">你已经学过文言实词，具备继续探索的底座；在日常生活中，你也早就接触过与「文言虚词」相关的现象。</p></div>
+<div class="abt-row abt-but" style="display:flex;gap:12px;margin:12px 0"><span class="abt-label" style="flex:0 0 auto;font-weight:700;color:#f87171">BUT</span><p style="margin:0">但当问题换了一个情境出现——需要你解释原因、做出判断或解决实际任务时，仅凭零散的旧知识就很容易卡住。</p></div>
+<div class="abt-row abt-therefore" style="display:flex;gap:12px;margin:12px 0"><span class="abt-label" style="flex:0 0 auto;font-weight:700;color:#60a5fa">THEREFORE</span><p style="margin:0">所以本课用一个贯穿的情境任务，带你把「文言虚词」拆成可操作的步骤：先看懂它，再动手试，最后用练习和迁移把它变成自己的能力。</p></div>
+</div>
+</div>
+</section>
+    <section class="section">
+      <div class="card">
+        <h3>把你的问题写下来</h3>
+        <p style="opacity:.85">选一个最像你的困惑，或自己写一句。这节课会围绕你的问题展开。</p>
+        <div class="grid" style="gap:8px">
+          <button type="button" class="choice" data-anchor-choice="为啥文言文里“之”字一会儿当“的”用，一会儿又像没意义？">为啥文言文里“之”字一会儿当“的”用，一会儿又像没意义？</button>
+          <button type="button" class="choice" data-anchor-choice="老师总说“虚词不虚”，到底怎么理解？">老师总说“虚词不虚”，到底怎么理解？</button>
+          <button type="button" class="choice" data-anchor-choice="考试时虚词选择题老错，有没有速判技巧？">考试时虚词选择题老错，有没有速判技巧？</button>
+        </div>
+        <label for="learner-question-input" style="display:block;margin:14px 0 6px;font-weight:700">或者，写下你自己的问题</label>
+        <textarea id="learner-question-input" rows="2" placeholder="例如：虚词那么多用法，考试时到底先看什么？"></textarea>
+        <p class="feedback" id="anchor-feedback">选择或输入后，这节课会围绕你的问题展开。</p>
+      </div>
+    </section>
+  </div>
+</section>
 
+<section class="slide-page" data-page-index="2" data-page-type="objectives" data-tts="objectives" data-tsh="学习目标">
+  <div class="slide-inner">
+    <div class="card">
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出18个高频文言虚词的基本用法</p></div><div class="tu-q"><p>🎯 能判断典型例句中虚词的词性和功能</p></div><div class="tu-q"><p>🎯 能分析虚词在语境中的逻辑关系</p></div></section>
+      <ul class="objectives" style="margin-top:14px">
+        <li data-bloom-level="1">能复述课标要点：语言积累、梳理与探究任务群要求：积累文言文阅读经验，梳理文言词语，掌握其意义和用法。</li>
+      </ul>
+    </div>
+  </div>
+</section>
 
-<section class="slide-page" data-page-type="concept" data-page-index="4" data-tts="concept-core" data-tsh="核心 - 文言虚词" data-bloom-level="2" data-scaffold="full" data-slot="35">
-    <div class="slide-inner"><div class="card card-accent"><div class="section-header"><span class="phase-tag">Concept</span><h2>文言虚词：课标核心是什么？</h2></div><p><strong>文言虚词</strong>是高中语文的重要内容。语言积累、梳理与探究任务群要求：积累文言文阅读经验，梳理文言词语，掌握其意义和用法。</p><p>语言积累与建构目标：积累较为丰富的语言材料和言语活动经验，形成良好的语感；在探究中理解、掌握祖国语言文字运用的基本规律。</p></div></div>
-  </section>
+<section class="slide-page" data-page-index="3" data-page-type="quiz" data-tts="pretest" data-tsh="前测 · 起点诊断">
+  <div class="slide-inner">
+    <div class="card"><section class="section teachany-upgrade-block" data-bloom-level="apply" data-scaffold="full" id="pretest" data-slot="20"><h2>📝 前测</h2><div class="tu-q" data-answer="C"><h3>前测题 1</h3><p>下列‘之’用法不同类的是</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆实词虚词">公将鼓之（补足音节）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆实词虚词">宋何罪之有（宾语前置）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆实词虚词">辍耕之垄上（动词）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆实词虚词">小大之狱（的）</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>前测题 2</h3><p>‘而’表修饰关系的是</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未掌握六大关系">人而无信（假设）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未掌握六大关系">择其善者而从之（顺承）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未掌握六大关系">河曲智叟笑而止之（修饰）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未掌握六大关系">黑质而白章（并列）</button></div><div class="tu-fb" hidden></div></div></section></div>
+  </div>
+</section>
 
-<section class="slide-page" data-page-type="concept" data-page-index="7" data-tts="knowledge-graph" data-tsh="知识图谱" data-bloom-level="2" data-scaffold="full">
-    <div class="slide-inner"></div>
-  </section>
-<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
-  <section class="section chnh-depth core-knowledge-module text-module" id="lesson-focus"
+<section class="slide-page" data-page-index="4" data-page-type="concept" data-tts="module-1" data-tsh="概念一 · 课标核心与知识精讲">
+  <div class="slide-inner">
+<div class="card card-accent"><div class="section-header"><span class="phase-tag">Concept</span><h2>文言虚词：课标核心是什么？</h2></div><p><strong>文言虚词</strong>是高中语文的重要内容。语言积累、梳理与探究任务群要求：积累文言文阅读经验，梳理文言词语，掌握其意义和用法。</p><p>语言积累与建构目标：积累较为丰富的语言材料和言语活动经验，形成良好的语感；在探究中理解、掌握祖国语言文字运用的基本规律。</p></div>
+<section class="section chnh-depth core-knowledge-module text-module" id="lesson-focus"
     data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
       <span class="phase-tag">知识精讲</span>
@@ -121,9 +580,58 @@ input,textarea{width:100%;border:1px solid rgba(148,163,184,0.35);border-radius:
     </div>
   </section>
 <figure class="ta-standard-figure"><figcaption>文言虚词分类体系与复习方法结构示意图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect x="0" y="0" width="640" height="420" fill="#0a1520"/><rect x="8" y="8" width="624" height="404" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(100,116,139,0.1)" stroke-width="0.5"/></pattern><rect x="8" y="8" width="624" height="404" fill="url(#grid)"/><ellipse cx="320" cy="80" rx="120" ry="35" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2" rx="12"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></ellipse><text x="320" y="88" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">文言虚词<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><rect x="50" y="140" width="140" height="80" rx="10" fill="url(#bg2)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="120" y="165" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">代词类<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="120" y="185" text-anchor="middle" fill="#e2e8f0" font-size="12">之、其<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><text x="120" y="205" text-anchor="middle" fill="#e2e8f0" font-size="12">者、所<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><rect x="220" y="140" width="140" height="80" rx="10" fill="url(#bg3)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="290" y="165" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">介词类<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><text x="290" y="185" text-anchor="middle" fill="#e2e8f0" font-size="12">以、于<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="290" y="205" text-anchor="middle" fill="#e2e8f0" font-size="12">为<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><rect x="390" y="140" width="140" height="80" rx="10" fill="url(#bg4)" stroke="#a78bfa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></rect><text x="460" y="165" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">连词类<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><text x="460" y="185" text-anchor="middle" fill="#e2e8f0" font-size="12">而、则<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><text x="460" y="205" text-anchor="middle" fill="#e2e8f0" font-size="12">若、乃<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></text><rect x="100" y="270" width="180" height="60" rx="8" fill="url(#bg5)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></rect><text x="190" y="295" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">复习方法<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></text><text x="190" y="315" text-anchor="middle" fill="#e2e8f0" font-size="12">词—用法—例句<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><rect x="360" y="270" width="180" height="60" rx="8" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></rect><text x="450" y="295" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">比较辨析<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></text><text x="450" y="315" text-anchor="middle" fill="#e2e8f0" font-size="12">易混虚词对比<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></text><path d="M 320 115 L 120 140" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></path><path d="M 320 115 L 290 140" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></path><path d="M 320 115 L 460 140" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></path><path d="M 190 220 L 190 270" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" fill="none" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></path><path d="M 450 220 L 450 270" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="7 5" fill="none" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></path><circle cx="120" cy="125" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/></circle><circle cx="290" cy="125" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/></circle><circle cx="460" cy="125" r="4" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/></circle><rect x="480" y="350" width="140" height="55" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></rect><text x="490" y="370" fill="#fbbf24" font-size="13" font-weight="bold">图例说明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><rect x="490" y="375" width="12" height="8" fill="url(#bg2)"/><text x="510" y="382" fill="#e2e8f0" font-size="11">词类分布<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></text><rect x="490" y="388" width="12" height="8" fill="url(#bg5)"/><text x="510" y="395" fill="#e2e8f0" font-size="11">学习策略<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><ellipse cx="80" cy="350" rx="25" ry="15" fill="url(#bg3)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></ellipse><text x="80" y="355" text-anchor="middle" fill="#e2e8f0" font-size="12">之<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></text><ellipse cx="150" cy="350" rx="25" ry="15" fill="url(#bg4)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></ellipse><text x="150" y="355" text-anchor="middle" fill="#e2e8f0" font-size="12">其<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></text><ellipse cx="220" cy="350" rx="25" ry="15" fill="url(#bg2)" stroke="#fb923c" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.95s" fill="freeze"/></ellipse><text x="220" y="355" text-anchor="middle" fill="#e2e8f0" font-size="12">以<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></text><ellipse cx="290" cy="350" rx="25" ry="15" fill="url(#bg1)" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.25s" fill="freeze"/></ellipse><text x="290" y="355" text-anchor="middle" fill="#e2e8f0" font-size="12">于<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></text><ellipse cx="360" cy="350" rx="25" ry="15" fill="url(#bg5)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.55s" fill="freeze"/></ellipse><text x="360" y="355" text-anchor="middle" fill="#e2e8f0" font-size="12">而<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.7s" fill="freeze"/></text></svg></figure>
+  </div>
+</section>
 
-</section><section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="35">
-  <section class="section chnh-depth core-knowledge-module text-module" id="lesson-method"
+<section class="slide-page" data-page-index="5" data-page-type="interactive" data-tts="lab-1" data-tsh="互动一 · 概念检测">
+  <div class="slide-inner">
+    <div class="card"><section class="section teachany-upgrade-block" data-interactive="conceptest" data-conceptest="true" data-bloom-level="understand" data-scaffold="full"><h2>💡 概念检测（互动）</h2><p>下列对文言虚词特点的表述正确的是</p><div class="tu-opts tu-concept">
+<button type="button" class="tu-opt" data-choice="A" data-correct="true" data-diagnosis="如'其'可作代词/语气词等">A. 同一虚词可能兼有多种语法功能</button>
+<button type="button" class="tu-opt" data-choice="B" data-correct="false" data-diagnosis="虚词常需语境判断">B. 虚词必须对应现代汉语某个词语</button>
+<button type="button" class="tu-opt" data-choice="C" data-correct="false" data-diagnosis="部分虚词可作状语等">C. 虚词在句中永远不作句子成分</button>
+<button type="button" class="tu-opt" data-choice="D" data-correct="false" data-diagnosis="虚词多表语法关系">D. 虚词意义比实词更具体明确</button>
+</div><div class="tu-fb" hidden></div></section></div>
+  </div>
+</section>
+
+<section class="slide-page" data-page-index="6" data-page-type="concept" data-tts="module-2" data-tsh="概念二 · 深度理解与知识脉络">
+  <div class="slide-inner">
+<section class="section" id="deep-understanding" data-bloom-level="understand" data-tts="deep-understanding" data-tsh="深度理解">
+  <h2 class="section-title">📚 深度理解</h2>
+<section class="card">
+<h3>🔍 易错点辨析</h3>
+<p>错误一：混淆"之"作代词与助词的用法。学生常将《鸿门宴》"项伯乃夜驰之沛公军"的"之"误判为结构助词，实为动词"到"。认知根源在于忽视虚词的多义性，仅记忆高频用法。正确理解需结合语境，当"之"后接地点名词且句子缺少谓语时，应优先考虑动词用法。</p>
+<p>错误二：忽视"而"表修饰与承接的差异。在《劝学》"吾尝终日而思矣"中，学生易将表修饰的"而"误作承接关系。根源在于对前后成分逻辑分析不足，修饰关系要求前项是后项的方式或状态。正确判断需验证前项能否回答"怎样做"的问题。</p>
+<p>错误三：误判"以"的因果连词属性。面对《六国论》"不赂者以赂者丧"，学生常将表原因的"以"误解为手段介词。这源于对文言因果逻辑链的敏感度不足，此处"以"连接的是"丧"的结果与"赂"的原因，可通过添加"是因为"进行验证。</p>
+</section>
+</section>
+<section class="card purple">
+<h3>📖 知识脉络梳理</h3>
+<p>文言虚词理解始于把握其"功能大于意义"的本质特征。先以《赤壁赋》"耳得之而为声"切入，展示"而"连接感官动词与结果时的强制出现特性，接着对比《师说》"惑而不从师"中表转折的用法，揭示虚词对逻辑关系的标记作用。核心在于建立"语法位置-功能类型-语境验证"的三步分析法，比如处理"其"字时，先观察位于句首（90%为副词）或主谓间（75%为代词），再通过删除法验证——若删除后影响句意完整性则为代词。最后落实到《谏逐客书》的实战训练，统计显示"以"作目的连词时，后接动词概率达82%，而介词用法后接名词短语占91%，这种量化规律能有效辅助判断。特别要注意虚词用法的历时演变，比如战国策中"所"字结构带宾语（"所善荆卿"）的用例比西汉减少60%，这种变化直接影响对文本年代的判定。</p>
+</section>
+  </div>
+</section>
+
+<section class="slide-page" data-page-index="7" data-page-type="interactive" data-tts="lab-2" data-tsh="互动二 · 应用追问与探究实验">
+  <div class="slide-inner">
+<section class="card teal">
+<h3>🌏 生活与科技中的应用</h3>
+<p>实例一：古籍数字化工程中，北京大学团队开发"荀子"语义分析系统时，准确识别《劝学》中12处"而"的修饰关系，使机器学习模型对"终日而思"与"跂而望"的语法关系判断准确率提升至91%。</p>
+<p>实例二：故宫博物院修复明代奏折时，通过辨析"所"字结构在"所司查核"中的指代功能，确认该文书应转交兵部而非礼部处理，还原了万历年间辽东军饷调拨的历史细节。</p>
+<p>实例三：法律文书智能校对系统在处理"其"字指代时，参照《唐律疏议》中"其知情者"的指代规则，成功修正现代合同条款中3处指代歧义，使腾讯与字节跳动的合作协议争议率下降37%。</p>
+</section>
+<section class="card amber">
+<h3>🧩 深入追问</h3>
+<p>问题一：《阿房宫赋》"使负栋之柱，多于南亩之农夫"中，为何"之"不适用"取消句子独立性"的解释？引导分析：比较"负栋之柱"与"师道之不传"的结构差异，注意中心词"柱"的语义实在性，思考定语与中心语的修饰关系如何影响"之"的功能判定。</p>
+<p>问题二：统计显示《论语》中"焉"作兼词占比68%，但《荀子》中降至42%，这种差异可能反映什么语言演变规律？引导分析：考察两部典籍的文体特征与成书年代，联系"焉"从"于之"合音到句末语气词的语法化进程，注意战国后期介词结构的精密化趋势。</p>
+</section>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 《论语》虚词分布规律探究</h2><p>统计《论语》前五章中'而、之、者、也'的出现频率及功能分类</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="'而'多用于转折关系，'者'多构成者字结构"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="需标注每个虚词所在句子及语法作用"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="高频虚词与论说文的议论特性相关"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+  </div>
+</section>
+
+<section class="slide-page" data-page-index="8" data-page-type="concept" data-tts="worked-example" data-tsh="例析 · 方法与范例">
+  <div class="slide-inner">
+<section class="section chnh-depth core-knowledge-module text-module" id="lesson-method"
     data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
     <div class="card">
       <span class="phase-tag">方法与范例</span>
@@ -140,78 +648,12 @@ input,textarea{width:100%;border:1px solid rgba(148,163,184,0.35);border-radius:
     </div>
   </section>
 <figure class="ta-standard-figure"><figcaption>文言虚词辨析的完整处理机制与方法流程图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="bg5" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="ar2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#7dd3fc"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="20" y="20" width="600" height="380" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(100,116,139,0.1)" stroke-width="0.5"/></pattern><rect x="20" y="20" width="600" height="380" fill="url(#grid)"/><text x="320" y="50" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">文言虚词辨析机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><rect x="50" y="80" width="150" height="80" rx="10" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="125" y="110" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">输入层</text><text x="125" y="130" text-anchor="middle" fill="#e2e8f0" font-size="12">虚词在句中</text><text x="125" y="145" text-anchor="middle" fill="#e2e8f0" font-size="12">"以君之力"</text><rect x="245" y="70" width="150" height="100" rx="10" fill="url(#bg2)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="320" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">判断词性</text><circle cx="270" cy="115" r="8" fill="#f59e0b" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1s"/></circle><text x="285" y="120" fill="#e2e8f0" font-size="11">介词</text><circle cx="270" cy="135" r="8" fill="#f59e0b" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.2s"/></circle><text x="285" y="140" fill="#e2e8f0" font-size="11">连词</text><circle cx="270" cy="155" r="8" fill="#f59e0b" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.4s"/></circle><text x="285" y="160" fill="#e2e8f0" font-size="11">助词</text><rect x="440" y="70" width="150" height="100" rx="10" fill="url(#bg3)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="515" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">确定关系</text><ellipse cx="490" cy="120" rx="25" ry="12" fill="#34d399" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></ellipse><text x="490" y="125" text-anchor="middle" fill="#e2e8f0" font-size="10">凭借</text><ellipse cx="540" cy="120" rx="25" ry="12" fill="#34d399" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></ellipse><text x="540" y="125" text-anchor="middle" fill="#e2e8f0" font-size="10">原因</text><ellipse cx="515" cy="145" rx="25" ry="12" fill="#34d399" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></ellipse><text x="515" y="150" text-anchor="middle" fill="#e2e8f0" font-size="10">目的</text><rect x="120" y="200" width="400" height="80" rx="12" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="320" y="225" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">翻译处理层</text><text x="150" y="245" fill="#e2e8f0" font-size="12">补出关系："凭借你的力量"</text><text x="150" y="265" fill="#7dd3fc" font-size="12">勿空翻：不能只译成"你的力量"</text><rect x="50" y="310" width="200" height="80" rx="10" fill="url(#bg4)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="150" y="335" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">常见误区</text><text x="70" y="355" fill="#e2e8f0" font-size="11">• 只会一种用法</text><text x="70" y="370" fill="#e2e8f0" font-size="11">• 脱离句子死记</text><rect x="390" y="310" width="200" height="80" rx="10" fill="url(#bg3)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="490" y="335" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">正确方法</text><text x="410" y="355" fill="#e2e8f0" font-size="11">B. 结合句子判断</text><text x="410" y="370" fill="#e2e8f0" font-size="11">词性与语法作用</text><path d="M200 120 Q220 120 245 120" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="1s"/></path><path d="M395 120 Q415 120 440 120" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="1.5s"/></path><path d="M320 170 Q320 185 320 200" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="2s"/></path><path d="M220 280 Q270 295 390 350" fill="none" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.5s" fill="freeze"/></path><circle cx="220" cy="280" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.5s" fill="freeze"/></circle><text x="280" y="320" fill="rgba(100,116,139,0.7)" font-size="11">避免误区</text><rect x="450" y="350" width="140" height="50" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></rect><text x="460" y="365" fill="#e2e8f0" font-size="11" font-weight="bold">图例说明</text><rect x="455" y="370" width="8" height="8" fill="#3b82f6"/><text x="470" y="378" fill="#e2e8f0" font-size="10">输入</text><rect x="500" y="370" width="8" height="8" fill="#f59e0b"/><text x="515" y="378" fill="#e2e8f0" font-size="10">分析</text><rect x="545" y="370" width="8" height="8" fill="#34d399"/><text x="560" y="378" fill="#e2e8f0" font-size="10">输出</text><rect x="455" y="385" width="8" height="8" fill="#a78bfa"/><text x="470" y="393" fill="#e2e8f0" font-size="10">处理</text><rect x="500" y="385" width="8" height="8" fill="#ef4444"/><text x="515" y="393" fill="#e2e8f0" font-size="10">误区</text></svg></figure>
-
-<section class="card teal">
-<h3>🌏 生活与科技中的应用</h3>
-<p>实例一：古籍数字化工程中，北京大学团队开发"荀子"语义分析系统时，准确识别《劝学》中12处"而"的修饰关系，使机器学习模型对"终日而思"与"跂而望"的语法关系判断准确率提升至91%。</p>
-<p>实例二：故宫博物院修复明代奏折时，通过辨析"所"字结构在"所司查核"中的指代功能，确认该文书应转交兵部而非礼部处理，还原了万历年间辽东军饷调拨的历史细节。</p>
-<p>实例三：法律文书智能校对系统在处理"其"字指代时，参照《唐律疏议》中"其知情者"的指代规则，成功修正现代合同条款中3处指代歧义，使腾讯与字节跳动的合作协议争议率下降37%。</p>
-</section>
-<section class="card amber">
-<h3>🧩 深入追问</h3>
-<p>问题一：《阿房宫赋》"使负栋之柱，多于南亩之农夫"中，为何"之"不适用"取消句子独立性"的解释？引导分析：比较"负栋之柱"与"师道之不传"的结构差异，注意中心词"柱"的语义实在性，思考定语与中心语的修饰关系如何影响"之"的功能判定。</p>
-<p>问题二：统计显示《论语》中"焉"作兼词占比68%，但《荀子》中降至42%，这种差异可能反映什么语言演变规律？引导分析：考察两部典籍的文体特征与成书年代，联系"焉"从"于之"合音到句末语气词的语法化进程，注意战国后期介词结构的精密化趋势。</p>
-</section>
-<section class="card purple">
-<h3>📖 知识脉络梳理</h3>
-<p>文言虚词理解始于把握其"功能大于意义"的本质特征。先以《赤壁赋》"耳得之而为声"切入，展示"而"连接感官动词与结果时的强制出现特性，接着对比《师说》"惑而不从师"中表转折的用法，揭示虚词对逻辑关系的标记作用。核心在于建立"语法位置-功能类型-语境验证"的三步分析法，比如处理"其"字时，先观察位于句首（90%为副词）或主谓间（75%为代词），再通过删除法验证——若删除后影响句意完整性则为代词。最后落实到《谏逐客书》的实战训练，统计显示"以"作目的连词时，后接动词概率达82%，而介词用法后接名词短语占91%，这种量化规律能有效辅助判断。特别要注意虚词用法的历时演变，比如战国策中"所"字结构带宾语（"所善荆卿"）的用例比西汉减少60%，这种变化直接影响对文本年代的判定。</p>
-</section>
-<section class="section" data-tts="why-learn" id="why-learn" style="margin:28px 0">
-<div class="card card-glow">
-<h2>🎯 为什么学「文言虚词」？</h2>
-<div class="abt">
-<div class="abt-row abt-and" style="display:flex;gap:12px;margin:12px 0"><span class="abt-label" style="flex:0 0 auto;font-weight:700;color:#34d399">AND</span><p style="margin:0">你已经学过文言实词，具备继续探索的底座；在日常生活中，你也早就接触过与「文言虚词」相关的现象。</p></div>
-<div class="abt-row abt-but" style="display:flex;gap:12px;margin:12px 0"><span class="abt-label" style="flex:0 0 auto;font-weight:700;color:#f87171">BUT</span><p style="margin:0">但当问题换了一个情境出现——需要你解释原因、做出判断或解决实际任务时，仅凭零散的旧知识就很容易卡住。</p></div>
-<div class="abt-row abt-therefore" style="display:flex;gap:12px;margin:12px 0"><span class="abt-label" style="flex:0 0 auto;font-weight:700;color:#60a5fa">THEREFORE</span><p style="margin:0">所以本课用一个贯穿的情境任务，带你把「文言虚词」拆成可操作的步骤：先看懂它，再动手试，最后用练习和迁移把它变成自己的能力。</p></div>
-</div>
-</div>
-</section>
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
-  <div data-teachany-tutor-card></div>
-</section>
-<section class="section" id="deep-understanding" data-bloom-level="understand" data-tts="deep-understanding" data-tsh="深度理解">
-  <h2 class="section-title">📚 深度理解</h2>
-<section class="card">
-<h3>🔍 易错点辨析</h3>
-<p>错误一：混淆"之"作代词与助词的用法。学生常将《鸿门宴》"项伯乃夜驰之沛公军"的"之"误判为结构助词，实为动词"到"。认知根源在于忽视虚词的多义性，仅记忆高频用法。正确理解需结合语境，当"之"后接地点名词且句子缺少谓语时，应优先考虑动词用法。</p>
-<p>错误二：忽视"而"表修饰与承接的差异。在《劝学》"吾尝终日而思矣"中，学生易将表修饰的"而"误作承接关系。根源在于对前后成分逻辑分析不足，修饰关系要求前项是后项的方式或状态。正确判断需验证前项能否回答"怎样做"的问题。</p>
-<p>错误三：误判"以"的因果连词属性。面对《六国论》"不赂者以赂者丧"，学生常将表原因的"以"误解为手段介词。这源于对文言因果逻辑链的敏感度不足，此处"以"连接的是"丧"的结果与"赂"的原因，可通过添加"是因为"进行验证。</p>
-</section>
-</section></section><section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero" data-tsh="开场 - 文言虚词" data-slot="35">
-    <div class="slide-inner"><div class="card card-glow"><h1>文言虚词</h1><p class="subtitle">语言积累、梳理与探究任务群要求：积累文言文阅读经验，梳理文言词语，掌握其意义和用法。</p><figure class="ta-standard-figure" style="margin-top:28px"><section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
-<figure class="ta-standard-figure ta-figure-labeled">
-  <div class="ta-figure-wrap">
-    <img class="hero-cover-img" src="./assets/chn-h-classical-function-words-hero.png" alt="文言虚词知识结构（无字）" loading="eager">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">文言虚词</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
   </div>
-  <figcaption>无字生图 + HTML 中文叠标</figcaption>
-</figure>
 </section>
-</figure></div></div></section><section class="slide-page" data-page-type="summary" data-page-index="8" data-tts="summary" data-tsh="总结迁移" data-bloom-level="2" data-scaffold="full" data-slot="35">
-    <div class="slide-inner"><div class="card card-glow"><div class="section-header"><span class="phase-tag" data-variant="success">Summary</span><h2>这节课我们学会了</h2></div>
-      <div class="summary-item"><span class="num">1</span><div>明确了文言虚词的课标核心要求。</div></div>
-      <div class="summary-item"><span class="num">2</span><div>掌握了学习文言虚词的基本路径：概念—方法—应用。</div></div>
-      <div class="summary-item"><span class="num">3</span><div>能识别常见误区并主动纠错。</div></div>
-<p style="margin-top:16px"><strong>迁移任务：</strong>找一道与「文言虚词」相关的练习题或生活情境，用本课方法完整解答一遍。</p></div></div>
-  </section>
-<section class="slide-page" data-page-index="9" data-page-type="concept" data-tsh="AI 多模态互动" data-slot="35"><section class="section" data-tts="ai-media" id="ai-media-zone">
-<div class="card card-glow"><h2>🎨 AI 多模态互动</h2>
-<p>复制提示词到 AI 学伴，生成「文言虚词」的思维导图或赏析提纲；也可以上传你手绘的示意图，请 AI 学伴点评。</p>
-<textarea id="ai-prompt-box" rows="3" style="width:100%">请用表格总结「文言虚词」的核心意象、写作手法和一个易错点，并画一张文字版思维导图。</textarea>
-<button class="choice" id="copy-ai-prompt" type="button">📋 复制提示词</button>
-<p class="feedback" id="ai-zone-feedback">复制后可粘贴到 AI 学伴继续对话。</p>
-</div>
-<script>(function(){var b=document.getElementById('copy-ai-prompt');if(!b)return;b.addEventListener('click',function(){var t=document.getElementById('ai-prompt-box');if(!t)return;t.focus();t.select();try{document.execCommand('copy');}catch(e){}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value);var f=document.getElementById('ai-zone-feedback');if(f)f.textContent='✅ 已复制，去 AI 学伴粘贴吧';});})();</script>
-</section>
-<section class="section teachany-upgrade-block" data-interactive="conceptest" data-conceptest="true" data-bloom-level="understand" data-scaffold="full"><h2>💡 概念检测（互动）</h2><p>下列对文言虚词特点的表述正确的是</p><div class="tu-opts tu-concept">
-<button type="button" class="tu-opt" data-choice="A" data-correct="true" data-diagnosis="如'其'可作代词/语气词等">A. 同一虚词可能兼有多种语法功能</button>
-<button type="button" class="tu-opt" data-choice="B" data-correct="false" data-diagnosis="虚词常需语境判断">B. 虚词必须对应现代汉语某个词语</button>
-<button type="button" class="tu-opt" data-choice="C" data-correct="false" data-diagnosis="部分虚词可作状语等">C. 虚词在句中永远不作句子成分</button>
-<button type="button" class="tu-opt" data-choice="D" data-correct="false" data-diagnosis="虚词多表语法关系">D. 虚词意义比实词更具体明确</button>
-</div><div class="tu-fb" hidden></div></section>
-<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 《论语》虚词分布规律探究</h2><p>统计《论语》前五章中'而、之、者、也'的出现频率及功能分类</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="'而'多用于转折关系，'者'多构成者字结构"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="需标注每个虚词所在句子及语法作用"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="高频虚词与论说文的议论特性相关"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
-</section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+
+<section class="slide-page" data-page-index="9" data-page-type="quiz" data-tts="conceptest-1" data-tsh="概念测 · 真题练习">
+  <div class="slide-inner">
+    <div class="card"><section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
 <div class="tu-q" data-answer="D">
 <h3>选择题 1</h3><p>下列句中'以'字用法与其他三项不同的是</p><div class="tu-opts">
 <button type="button" class="tu-opt" data-choice="A" data-diagnosis="此处'以'后省略宾语'之'">A. 贫者自南海还，以告富者</button>
@@ -235,14 +677,131 @@ input,textarea{width:100%;border:1px solid rgba(148,163,184,0.35);border-radius:
 </div><div class="tu-fb" hidden></div></div>
 <div class="tu-fill"><h3>填空题 1</h3><p>'其'在'安陵君其许寡人'中作____词，表____语气</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>语气,祈使</p><p>此处'其'加强命令语气，非代词用法</p></details></div>
 <div class="tu-fill"><h3>填空题 2</h3><p>虚词'之'在'公将鼓之'中起到____作用，现代汉语常省略</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>衬音</p><p>此处'之'无实义，仅调节音节</p></details></div>
+</section></div>
+  </div>
 </section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="D"><h3>后测题 1</h3><p>（真题）‘其’字用法与其他三项不同的是</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="代词与语气副词混淆">其真无马邪（反问）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="代词与语气副词混淆">其如土石何（加强语气）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="代词与语气副词混淆">安陵君其许寡人（祈使）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="代词与语气副词混淆">其岸势犬牙差互（代词）</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C"><h3>后测题 2</h3><p>（迁移）现代哪句的‘所以’与‘师者所以传道’功能相同</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="古今‘所以’表工具差异">他所以成功是靠努力（因果）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="古今‘所以’表工具差异">此先汉所以兴隆也（原因）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="古今‘所以’表工具差异">钢笔是用来写字的（工具）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="古今‘所以’表工具差异">所以禁止吸烟（强调）</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>（逻辑）‘以子之矛陷子之盾’中‘以’相当于</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="介词核心义项混淆">因为</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="介词核心义项混淆">用</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="介词核心义项混淆">凭借</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="介词核心义项混淆">认为</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把‘以’一律当‘因为’</h3><p>✅ 区分介词（以刀劈狼）vs连词（以中有足乐者）</p><p>💡 忽视语法位置</p></div><div class="tu-q"><h3>❌ 认为‘焉’都是语气词</h3><p>✅ 识别代词（心不在焉）兼词（积土成山，风雨兴焉）</p><p>💡 死记硬背不辨语境</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>虚词不虚功能强，语法逻辑两头忙</p><p><strong>类比：</strong>像乐高连接件，本身没造型但决定搭建方式</p></div></section>
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：文言虚词</h2><div data-teachany-kg="chn-h-classical-function-words"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
 
+<section class="slide-page" data-page-index="10" data-page-type="interactive" data-tts="synthesis" data-tsh="综合任务 · AI 多模态互动">
+  <div class="slide-inner">
+<section class="section" data-tts="ai-media" id="ai-media-zone">
+<div class="card card-glow"><h2>🎨 AI 多模态互动</h2>
+<p>复制提示词到 AI 学伴，生成「文言虚词」的思维导图或赏析提纲；也可以上传你手绘的示意图，请 AI 学伴点评。</p>
+<textarea id="ai-prompt-box" rows="3" style="width:100%">请用表格总结「文言虚词」的核心意象、写作手法和一个易错点，并画一张文字版思维导图。</textarea>
+<button class="choice" id="copy-ai-prompt" type="button">📋 复制提示词</button>
+<p class="feedback" id="ai-zone-feedback">复制后可粘贴到 AI 学伴继续对话。</p>
+</div>
+<script>(function(){var b=document.getElementById('copy-ai-prompt');if(!b)return;b.addEventListener('click',function(){var t=document.getElementById('ai-prompt-box');if(!t)return;t.focus();t.select();try{document.execCommand('copy');}catch(e){}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value);var f=document.getElementById('ai-zone-feedback');if(f)f.textContent='✅ 已复制，去 AI 学伴粘贴吧';});})();</script>
+</section>
+  </div>
+</section>
+
+<section class="slide-page" data-page-index="11" data-page-type="quiz" data-tts="posttest" data-tsh="后测 · 达标检测">
+  <div class="slide-inner">
+    <div class="card"><section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="D"><h3>后测题 1</h3><p>（真题）‘其’字用法与其他三项不同的是</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="代词与语气副词混淆">其真无马邪（反问）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="代词与语气副词混淆">其如土石何（加强语气）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="代词与语气副词混淆">安陵君其许寡人（祈使）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="代词与语气副词混淆">其岸势犬牙差互（代词）</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 2</h3><p>（迁移）现代哪句的‘所以’与‘师者所以传道’功能相同</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="古今‘所以’表工具差异">他所以成功是靠努力（因果）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="古今‘所以’表工具差异">此先汉所以兴隆也（原因）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="古今‘所以’表工具差异">钢笔是用来写字的（工具）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="古今‘所以’表工具差异">所以禁止吸烟（强调）</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 3</h3><p>（逻辑）‘以子之矛陷子之盾’中‘以’相当于</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="介词核心义项混淆">因为</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="介词核心义项混淆">用</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="介词核心义项混淆">凭借</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="介词核心义项混淆">认为</button></div><div class="tu-fb" hidden></div></div></section></div>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把‘以’一律当‘因为’</h3><p>✅ 区分介词（以刀劈狼）vs连词（以中有足乐者）</p><p>💡 忽视语法位置</p></div><div class="tu-q"><h3>❌ 认为‘焉’都是语气词</h3><p>✅ 识别代词（心不在焉）兼词（积土成山，风雨兴焉）</p><p>💡 死记硬背不辨语境</p></div></section>
+  </div>
+</section>
+
+<section class="slide-page" data-page-index="12" data-page-type="summary" data-tts="summary" data-tsh="小结 · 迁移与记忆锚点">
+  <div class="slide-inner">
+<div class="card card-glow"><div class="section-header"><span class="phase-tag" data-variant="success">Summary</span><h2>这节课我们学会了</h2></div>
+      <div class="summary-item"><span class="num">1</span><div>明确了文言虚词的课标核心要求。</div></div>
+      <div class="summary-item"><span class="num">2</span><div>掌握了学习文言虚词的基本路径：概念—方法—应用。</div></div>
+      <div class="summary-item"><span class="num">3</span><div>能识别常见误区并主动纠错。</div></div>
+<p style="margin-top:16px"><strong>迁移任务：</strong>找一道与「文言虚词」相关的练习题或生活情境，用本课方法完整解答一遍。</p></div>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>虚词不虚功能强，语法逻辑两头忙</p><p><strong>类比：</strong>像乐高连接件，本身没造型但决定搭建方式</p></div></section>
+  </div>
+</section>
+
+<section class="slide-page" data-page-index="13" data-page-type="homework" data-tts="homework" data-tsh="分层作业 · ⭐／⭐⭐／⭐⭐⭐">
+  <div class="slide-inner">
+    <div class="card card-accent">
+      <div class="section-header"><span class="phase-tag" data-variant="warn">Homework</span><h2>分层作业 · 文言虚词</h2></div>
+      <p style="opacity:.85">按星级自选：⭐ 基础巩固必做，⭐⭐ 能力应用力求完成，⭐⭐⭐ 迁移挑战选做一题。点选项会立即给出对错与错因诊断。</p>
+
+      <h3 style="margin-top:18px">⭐ 基础巩固（3 题）</h3>
+
+      <div class="tu-q" data-answer="B">
+        <h3>⭐ 1. 下列句中“之”用作动词的一项是？</h3>
+        <div class="tu-opts">
+          <button type="button" class="tu-opt" data-choice="A" data-diagnosis="“小大之狱”的“之”连接定语与中心语，是结构助词，可译为“的”。">A. 小大之狱</button>
+          <button type="button" class="tu-opt" data-choice="B" data-diagnosis="“之”后接处所名词“垄上”而句子缺少谓语，此时“之”是动词“到、往”。">B. 辍耕之垄上</button>
+          <button type="button" class="tu-opt" data-choice="C" data-diagnosis="“公将鼓之”的“之”只起调节音节的作用，是衬音助词。">C. 公将鼓之</button>
+          <button type="button" class="tu-opt" data-choice="D" data-diagnosis="“宋何罪之有”是宾语前置，“之”是提宾标志，不是动词。">D. 宋何罪之有</button>
+        </div>
+        <div class="tu-fb" hidden></div>
+      </div>
+
+      <div class="tu-q" data-answer="C">
+        <h3>⭐ 2. 下列句中“而”表转折关系的一项是？</h3>
+        <div class="tu-opts">
+          <button type="button" class="tu-opt" data-choice="A" data-diagnosis="“择其善者而从之”是先择后从，属承接关系。">A. 择其善者而从之</button>
+          <button type="button" class="tu-opt" data-choice="B" data-diagnosis="“黑质而白章”前后并列，属并列关系。">B. 黑质而白章</button>
+          <button type="button" class="tu-opt" data-choice="C" data-diagnosis="“不知”与“不愠”语义相对，正是转折关系。">C. 人不知而不愠</button>
+          <button type="button" class="tu-opt" data-choice="D" data-diagnosis="“笑而止之”中“而”连接状语与中心语，表修饰。">D. 河曲智叟笑而止之</button>
+        </div>
+        <div class="tu-fb" hidden></div>
+      </div>
+
+      <div class="tu-q" data-answer="B">
+        <h3>⭐ 3. “以刀劈狼首”中“以”的意义和用法是？</h3>
+        <div class="tu-opts">
+          <button type="button" class="tu-opt" data-choice="A" data-diagnosis="表原因的“以”后面通常接原因分句，如“不赂者以赂者丧”。">A. 连词，因为</button>
+          <button type="button" class="tu-opt" data-choice="B" data-diagnosis="“以”后接工具名词“刀”，是表工具的介词，译为“用、拿”。">B. 介词，用、拿</button>
+          <button type="button" class="tu-opt" data-choice="C" data-diagnosis="表凭借时后面多接抽象条件，如“以君之力”。">C. 介词，凭借</button>
+          <button type="button" class="tu-opt" data-choice="D" data-diagnosis="作动词“认为”时后面接的是看法内容，如“皆以美于徐公”。">D. 动词，认为</button>
+        </div>
+        <div class="tu-fb" hidden></div>
+      </div>
+
+      <h3 style="margin-top:22px">⭐⭐ 能力应用（2 题）</h3>
+
+      <div class="tu-fill">
+        <h3>⭐⭐ 1. “其”在“安陵君其许寡人”中作什么词、表什么语气？再另举一例说明同一虚词的不同语气用法。</h3>
+        <textarea rows="3" placeholder="先写下你的答案，再展开对照参考答案"></textarea>
+        <details><summary>查看参考答案与解析</summary><p><strong>参考答案：</strong>“其”是语气副词，表祈使（加强命令）语气，可译为“可要、一定”。另有“其真无马邪”表反问，“其如土石何”用来加强语气。</p><p>判断要点：句中主谓已经完整，“其”不指代任何人或事物，只表达说话人的语气——这正是要把词性与语气类型分开来说的原因。</p></details>
+      </div>
+
+      <div class="tu-fill">
+        <h3>⭐⭐ 2. 说明“者……也”在判断句中的作用，并写出这类句子的翻译方法。</h3>
+        <textarea rows="3" placeholder="先写下你的答案，再展开对照参考答案"></textarea>
+        <details><summary>查看参考答案与解析</summary><p><strong>参考答案：</strong>“者”用在主语之后表示提顿，“也”用在谓语之后表示判断，二者配合构成“……者，……也”判断句，翻译为“……是……”。</p><p>例：“师者，所以传道受业解惑也”——老师，是用来传授道理、教授学业、解答疑难问题的人。</p></details>
+      </div>
+
+      <h3 style="margin-top:22px">⭐⭐⭐ 迁移挑战（2 题）</h3>
+
+      <div class="tu-fill">
+        <h3>⭐⭐⭐ 1. 语料探究：统计《论语》前五章中“而、之、者、也”四字的出现频率与功能分布（可借助电子文本检索），写出你的假设、证据与结论。</h3>
+        <textarea rows="3" placeholder="写清你的思路、依据与结论"></textarea>
+        <details><summary>查看评价标准与示例</summary><p><strong>评价标准：</strong>A 假设可检验（1 分）；B 证据要标注具体句子及其语法作用，而不是只给数字（1 分）；C 结论能联系论说文的文体特征（1 分）。</p><p>示例思路：“而”在议论语境中多以转折、承接标记出现，“者”大量构成者字结构充当主语，这与论说文重推理、重判断的特点直接相关。</p></details>
+      </div>
+
+      <div class="tu-fill">
+        <h3>⭐⭐⭐ 2. 翻译“以子之矛陷子之盾”，指出其中两个“之”与一个“以”的用法；并说明把“以”理解为“因为”会错在哪里。</h3>
+        <textarea rows="3" placeholder="写清你的思路、依据与结论"></textarea>
+        <details><summary>查看评价标准与示例</summary><p><strong>参考答案：</strong>全句译为“用你的矛去刺你的盾”。“以”是介词，表工具／凭借，译为“用、拿”；两个“之”都是结构助词，译为“的”。</p><p><strong>错在哪里：</strong>若把“以”理解为“因为”，句中就缺少表示动作工具的成分，与谓语“陷”（刺）的语义关系不符，原句的比喻逻辑也随之瓦解。</p></details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide-page" data-page-index="14" data-page-type="knowledge-graph" data-tts="knowledge-graph" data-tsh="知识图谱 · 本课节点位置">
+  <div class="slide-inner">
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：文言虚词</h2><div data-teachany-kg="chn-h-classical-function-words"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+  </div>
+</section>
+
+<section class="slide-page" data-page-index="15" data-page-type="ai-tutor" data-tts="ai-tutor" data-tsh="AI 学伴 · 随时提问">
+  <div class="slide-inner">
+<section class="ta-standard-section" id="teachany-ai-tutor-card">
+  <div data-teachany-tutor-card></div>
+</section>
+    <div class="card"><h3>AI 学伴能做什么</h3><p>它已加载本课的课标要求、核心知识点与易错点：可以追问概念、让它点评你的作答，或让它用生活例子把难点讲一遍。</p><ul><li>这节课最关键的一句话是什么？</li><li>我做错了课件中的练习，能帮我看看吗？</li><li>这个知识点和上一节的关系是什么？</li></ul></div>
+    <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+  </div>
+</section>
 
 <script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "chn-h-classical-function-words", "name": "文言虚词", "status": "active"}, "extends": []};
 // auto-injected standard graph data</script>
@@ -284,8 +843,8 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <!-- slides-deduped -->
 <!-- slides-deduped -->
 <script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
-</div>
 
+</div>
 <!-- v7.20 标准连续音频配置（apply-standard-modules 自动补齐） -->
 <div id="audio-config" data-teachany-audio hidden>
   <script type="application/json" data-teachany-audio-playlist>
@@ -353,5 +912,209 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 ]
   </script>
 </div>
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+
+<script>
+
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'sci-e-buoyancy',
+    courseTitle: '浮力：为什么有的东西浮在水上？',
+    subject: 'science',
+    grade: '5',
+    nodeId: 'sci-e-buoyancy',
+    lessonType: 'experiment-inquiry',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    // 旧课件品牌栏可能没有这两个 span —— 必须同时判元素存在，否则整段脚本崩
+    const cvEl = document.getElementById('course-version-display');
+    const svEl = document.getElementById('skill-version-display');
+    if (cv && cvEl) cvEl.textContent = cv;
+    if (sv && svEl) svEl.textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+
+</script>
+<script>window.__TEACHANY_TUTOR_CONFIG__ = Object.assign({}, window.__TEACHANY_TUTOR_CONFIG__, { courseId: 'chn-h-classical-function-words', courseTitle: '文言虚词', title: '文言虚词', subject: 'chinese', grade: '10', nodeId: 'chn-h-classical-function-words' });</script>
 </body>
 </html>

@@ -385,3 +385,25 @@ body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
 body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
 body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
 body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+
+/* ─── 迁移覆盖（2026-09-22）────────────────────────────────────────
+   旧课件里有一段「TeachAny 统一呈现基线」用 !important 取消了分页放映：
+     .slide-container{height:auto!important;max-height:none!important;
+                      overflow:visible!important;scroll-snap-type:none!important}
+   结果容器不可滚动 —— 点侧边导航点只有计数和进度条在变，页面本身不动，
+   看起来像"导航坏了"。这里用同等重要性 + 更高特异性（body:not(...) .slide-container）
+   夺回容器高度、滚动与吸附。
+   ⚠️ 这段必须放在所有旧样式之后，否则会被基线的 !important 盖住。            */
+body:not(.play-mode) .slide-container {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow-y: auto !important;
+  scroll-snap-type: y proximity !important;
+}
+body.play-mode .slide-container {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  scroll-snap-type: y mandatory !important;
+}
+.slide-page { min-height: 100dvh; scroll-snap-align: start !important; }
