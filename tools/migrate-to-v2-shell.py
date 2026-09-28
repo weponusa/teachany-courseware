@@ -81,6 +81,21 @@ def report(h):
         print(f"  ⚠️ 页数 {len(idx)} ≠ 16（规范值），需要 agent 增删/合并页")
 
 
+
+def inject_tail(h, block):
+    """把 block 放到"文档真正末尾"。
+
+    ★ 不能简单用 replace('</body>', …)：实测有课件把 </body></html> 写在**文档中间**
+      （后面还跟着若干 <section>），那样会把外壳 DOM 插到错位置，
+      结果是 getElementById 取不到 → 控制器抛 null 错误、工具栏不显示。
+      策略：只有当最后一个 </body> 之后确实没有实质内容时才插在它前面，
+      否则直接追加到文件末尾（浏览器会把尾部元素并入 body，功能正常）。
+    """
+    i = h.rfind('</body>')
+    if i >= 0 and not h[i + len('</body>'):].strip():
+        return h[:i] + block + h[i:]
+    return h + block
+
 def migrate(cid, dry=False):
     d = course_dir(cid)
     if not d:
@@ -108,12 +123,32 @@ def migrate(cid, dry=False):
 
     # 1) 旧版导航条
     h = re.sub(r'<nav class="teachany-page-nav"[\s\S]*?</nav>\s*', '', h, count=1)
-    # 2) CSS
+    # 2) CSS —— ★ 不能假设有 </head>：实测 34 门物理课件**整个 head 没有闭合标签**，
+    #    用 replace('</head>', …) 会静默失败（只注入了 JS/尾部 DOM，没注 CSS），
+    #    结果没有外壳样式 → 容器沿用旧基线 overflow:visible → 点导航只有计数变、页面不动。
+    #    注入点按可靠性依次回退，并在全部失败时报警（不再静默跳过）。
     if '.slide-progress-bar' not in h:
-        h = h.replace('</head>', f'<style>\n{css}\n</style>\n</head>', 1)
+        block = f'<style>\n{css}\n</style>\n'
+        if '</head>' in h:
+            h = h.replace('</head>', block + '</head>', 1)
+            print('     CSS 注入点: </head> 之前')
+        elif '<body' in h:
+            i = h.find('<body')
+            h = h[:i] + block + h[i:]
+            print('     CSS 注入点: <body> 之前（该课件没有 </head>，已回退）')
+        else:
+            i = h.find('<section')
+            i = 0 if i < 0 else i
+            h = h[:i] + block + h[i:]
+            print('     ⚠️ CSS 注入点: 文件开头（连 <body> 都没有，请人工核对）')
     # 3) 进度条
     if M_PROG not in h:
-        h = re.sub(r'(<body[^>]*>)', lambda m: m.group(1) + '\n' + head, h, count=1)
+        if '<body' in h:
+            h = re.sub(r'(<body[^>]*>)', lambda m: m.group(1) + '\n' + head, h, count=1)
+        else:
+            i = h.find('<section')
+            i = 0 if i < 0 else i
+            h = h[:i] + head + '\n' + h[i:]
     # 4) 包 container
     if M_CONTAINER not in h:
         first = h.find('<section class="slide-page"')
@@ -128,10 +163,32 @@ def migrate(cid, dry=False):
              '\n</div><!-- .slide-container -->\n' + h[last:])
     # 5) 尾部（导航/FAB/工具栏）
     if M_NAV not in h:
-        h = h.replace('</body>', tail + '\n</body>', 1)
+        h = inject_tail(h, tail + '\n')
     # 6) 控制器
+    # ★ 有些课件（实测 34 门物理）**自带一份旧版控制器**——和本模板同源但更早的修订：
+    #   没有空引用加固，且它在 DOM 里位于我注入的外壳之前，取不到 #slide-progress-bar
+    #   等元素而抛错。处理：把它整块移除，改用本模板这版已加固、已验证的控制器。
+    removed = 0
+    for m in list(re.finditer(r'<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?</script>', h)):
+        if "getElementById('slide-container')" in m.group(0):
+            h = h[:m.start()] + h[m.end():]
+            removed += 1
+    if removed:
+        print(f'     移除了课件自带的 {removed} 个旧控制器（改用加固版）')
     if M_CTRL not in h:
-        h = h.replace('</body>', f'<script>\n{js}\n</script>\n</body>', 1)
+        h = inject_tail(h, f'<script>\n{js}\n</script>\n')
+    # 6b) 占位补全：旧课件的一些内联脚本会写
+    #     getElementById('course-version-display').textContent=…，而它没有品牌栏的那两个 span，
+    #     缺了就整段抛错。补一对隐藏占位（无副作用）。
+    if 'id="course-version-display"' not in h:
+        stub = ('<div hidden aria-hidden="true" style="display:none">'
+                '<span id="course-version-display"></span>'
+                '<span id="skill-version-display"></span></div>')
+        if '<body' in h:
+            h = re.sub(r'(<body[^>]*>)', lambda m: m.group(1) + stub, h, count=1)
+        else:
+            h = stub + h
+
     # 7) 重排 data-page-index
     cnt = [0]
 
