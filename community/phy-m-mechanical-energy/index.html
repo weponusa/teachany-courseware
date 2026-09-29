@@ -1,4 +1,4 @@
-<!-- teachany-hero-notext -->
+<div hidden aria-hidden="true" style="display:none"><span id="course-version-display"></span><span id="skill-version-display"></span></div><!-- teachany-hero-notext -->
 <!doctype html>
 
 <html lang="zh-CN">
@@ -155,6 +155,419 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 .steps{margin:0;padding-left:1.2em;line-height:1.8}.steps li{margin:6px 0}
 </style>
 
+<style>
+
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+
+/* ─── 迁移覆盖（2026-09-22）────────────────────────────────────────
+   旧课件里有一段「TeachAny 统一呈现基线」用 !important 取消了分页放映：
+     .slide-container{height:auto!important;max-height:none!important;
+                      overflow:visible!important;scroll-snap-type:none!important}
+   结果容器不可滚动 —— 点侧边导航点只有计数和进度条在变，页面本身不动，
+   看起来像"导航坏了"。这里用同等重要性 + 更高特异性（body:not(...) .slide-container）
+   夺回容器高度、滚动与吸附。
+   ⚠️ 这段必须放在所有旧样式之后，否则会被基线的 !important 盖住。            */
+body:not(.play-mode) .slide-container {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow-y: auto !important;
+  scroll-snap-type: y proximity !important;
+}
+body.play-mode .slide-container {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  scroll-snap-type: y mandatory !important;
+}
+.slide-page { min-height: 100dvh; scroll-snap-align: start !important; }
+
+</style>
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
 <section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
@@ -173,26 +586,50 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
 <section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出动能和势能的定义及计算公式</p></div><div class="tu-q"><p>🎯 能判断物体运动过程中机械能是否守恒</p></div><div class="tu-q"><p>🎯 能分析简单情境中动能与势能的相互转化</p></div></section>
 <section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么过山车在最高点速度最慢？</p></div><div class="tu-q"><p>❓ 跳起来时动能和势能怎么变？</p></div><div class="tu-q"><p>❓ 弹簧压缩时能量藏哪儿去了？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
 <section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 动能初探</h2><div class="tu-q"><p><strong>And：</strong>学生知道运动的物体有能量</p><p><strong>But：</strong>不清楚如何定量描述</p><p><strong>Therefore：</strong>建立动能与速度、质量的关系</p></div><div class="tu-q"><p>动能是运动物体具有的能量，大小与质量、速度平方成正比。比如时速60km的汽车（约1200kg）动能约16万焦耳，是时速30km时的4倍——速度加倍动能变4倍！注意单位换算：1m/s=3.6km/h。</p></div><div class="tu-q"><p>🌍 暴雨时的小石子能砸碎车窗（质量小但速度大），而缓慢滚动的保龄球（质量大但速度小）只能轻轻碰倒球瓶。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>卡车和自行车同速行驶，谁的动能大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选C可能忽略质量因素">A.卡车</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选C可能忽略质量因素">B.自行车</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选C可能忽略质量因素">C.一样大</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选C可能忽略质量因素">D.看路面情况</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="slide-page" data-page-index="0" data-page-type="content" data-tsh="真实情境" data-slot="35">
-<section class="section" id="story" data-tts="story"><div class="lesson-panel"><span class="phase-tag">真实情境</span>
+<div class="slide-container" id="slide-container">
+<section class="slide-page" data-page-type="cover" data-page-index="0" data-tsh="开场 · 本课概览"><div class="slide-inner">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/phy-m-mechanical-energy-hero.png" alt="机械能（动能/势能）：从实验现象到变量关系知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">机械能（动能/势能）</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</div></section>
+<section class="slide-page" data-page-type="interactive" data-page-index="1" data-tsh="情境导入 · 带着问题学"><div class="slide-inner">
+<div class="lesson-panel"><span class="phase-tag">真实情境</span>
 <h2>过山车最高点与最低点能量如何变？</h2>
 <p>动能与势能统称机械能。动能与质量速度有关，重力势能与质量高度有关。</p>
 <div class="mini-grid">
 <div class="mini-panel"><h3>已有经验</h3><p>越高越危险的直觉。</p></div>
 <div class="mini-panel"><h3>真正卡点</h3><p>动能势能公式混用；忽略单位。</p></div>
 <div class="mini-panel"><h3>本课任务</h3><p>动能→势能→机械能。</p></div>
-</div></div></section></section>
-
-
-
-<section class="slide-page" data-page-index="4" data-page-type="content" data-tsh="例题" data-slot="35">
-<section class="section" id="worked-example" data-tts="worked-example"><div class="lesson-panel"><span class="phase-tag">例题拆解</span>
-<h2>例：同一小球，高度升高</h2>
-<ol class="steps"><li>重力势能增大</li><li>若静止动能不变为零</li><li>机械能是否守恒看条件</li></ol>
-</div></section></section>
-
-<section class="slide-page" data-page-index="2" data-page-type="content" data-tsh="核心" data-slot="35">
-<section class="section" id="core" data-tts="core"><div class="lesson-panel"><span class="phase-tag">核心概念</span>
+</div></div>
+<h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么过山车在最高点速度最慢？</p></div><div class="tu-q"><p>❓ 跳起来时动能和势能怎么变？</p></div><div class="tu-q"><p>❓ 弹簧压缩时能量藏哪儿去了？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p>
+</div></section>
+<section class="slide-page" data-page-type="objectives" data-page-index="2" data-tsh="学习目标"><div class="slide-inner">
+<h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出动能和势能的定义及计算公式</p></div><div class="tu-q"><p>🎯 能判断物体运动过程中机械能是否守恒</p></div><div class="tu-q"><p>🎯 能分析简单情境中动能与势能的相互转化</p></div>
+</div></section>
+<section class="slide-page" data-page-type="quiz" data-page-index="3" data-tsh="前测 · 起点诊断"><div class="slide-inner">
+<section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"></section>
+<script>
+(function(){
+  const c=document.getElementById('physics-canvas'); if(!c) return;
+  const ctx=c.getContext('2d');
+  const a=document.getElementById('lab-a'), b=document.getElementById('lab-b'), fb=document.getElementById('lab-feedback');
+  function draw(){
+    const A=+a.value,B=+b.value;
+    ctx.clearRect(0,0,c.width,c.height); ctx.fillStyle='#081426'; ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#fbbf24'; ctx.font='24px PingFang SC,sans-serif'; ctx.fillText('机械能 · 本地示意',60,50);
+    ctx.fillStyle='#38bdf8'; ctx.fillRect(80,160,A*40,40); ctx.fillStyle='#a78bfa'; ctx.fillRect(80,220,B*40,40);
+    fb.textContent='A='+A+'，B='+B+'。完整操作请用下方 PhET。';
+  }
+  a.addEventListener('input',draw); b.addEventListener('input',draw); draw();
+})();
+</script>
+</div></section>
+<section class="slide-page" data-page-type="concept" data-page-index="4" data-tsh="概念一 · 核心知识"><div class="slide-inner">
+<div class="lesson-panel"><span class="phase-tag">核心概念</span>
 <h2>机械能</h2>
 <div class="mini-grid"><div class="mini-panel"><h3>动能</h3><p>运动的能量</p></div><div class="mini-panel"><h3>势能</h3><p>重力势能等</p></div><div class="mini-panel"><h3>机械能</h3><p>动能+势能</p></div></div>
 <figure class="ta-standard-figure ta-figure-labeled" style="margin-top:16px">
@@ -202,26 +639,61 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
   </div>
   <figcaption>核心示意（无字底图 + 中文叠标）</figcaption>
 </figure>
-</div></section></section>
+</div>
+<h2>📖 动能初探</h2><div class="tu-q"><p><strong>And：</strong>学生知道运动的物体有能量</p><p><strong>But：</strong>不清楚如何定量描述</p><p><strong>Therefore：</strong>建立动能与速度、质量的关系</p></div><div class="tu-q"><p>动能是运动物体具有的能量，大小与质量、速度平方成正比。比如时速60km的汽车（约1200kg）动能约16万焦耳，是时速30km时的4倍——速度加倍动能变4倍！注意单位换算：1m/s=3.6km/h。</p></div><div class="tu-q"><p>🌍 暴雨时的小石子能砸碎车窗（质量小但速度大），而缓慢滚动的保龄球（质量大但速度小）只能轻轻碰倒球瓶。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>卡车和自行车同速行驶，谁的动能大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选C可能忽略质量因素">A.卡车</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选C可能忽略质量因素">B.自行车</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选C可能忽略质量因素">C.一样大</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选C可能忽略质量因素">D.看路面情况</button></div><div class="tu-fb" hidden></div></div>
 
-
-<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-focus"
-    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
     <div class="card">
       <span class="phase-tag">知识精讲</span>
       <h2>机械能及其转化</h2>
       <p>动能与物体的质量和速度有关，重力势能与质量和高度有关，弹性势能与弹性形变程度有关。动能与势能统称机械能，二者可以相互转化。在只有动能和势能相互转化的过程中（不计摩擦和空气阻力），机械能的总量保持不变。</p>
     </div>
-  </section>
+</div></section>
+<section class="slide-page" data-page-type="interactive" data-page-index="5" data-tsh="互动一 · 概念应用"><div class="slide-inner">
+<div class="lesson-panel"><span class="phase-tag">互动实验</span>
+<h2>调参数，观察与「机械能」相关的变化</h2>
+<div class="control-row">
+<label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
+<label>变量 B<input id="lab-b" type="range" min="1" max="10" value="3"></label>
+</div>
+<div class="canvas-wrap"><canvas id="physics-canvas" class="wide-canvas" width="900" height="300"></canvas></div>
+<div id="lab-feedback" class="feedback">结合下方 PhET 做完整探究。</div></div>
+<h2>📖 势能解密</h2><div class="tu-q"><p><strong>And：</strong>知道高处物体下落会加速</p><p><strong>But：</strong>不理解储存的能量形式</p><p><strong>Therefore：</strong>揭示重力势能与高度的关系</p></div><div class="tu-q"><p>被举高的物体具有重力势能，大小=质量×重力加速度×高度。比如3楼阳台的花盆（5kg，约10米高）势能约500焦耳，是同样花盆放在1楼时的3倍。记住：高度是相对参考面的垂直距离！</p></div><div class="tu-q"><p>🌍 水库发电利用水的势能——新安江水库水位差70米，1吨水下落就能发0.2度电（约72万焦耳）。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>同一本书放在哪势能最大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A可能没注意测量起点">A.课桌上</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A可能没注意测量起点">B.地面</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A可能没注意测量起点">C.书架顶层</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A可能没注意测量起点">D.平放手心</button></div><div class="tu-fb" hidden></div></div>
+</div></section>
+<section class="slide-page" data-page-type="concept" data-page-index="6" data-tsh="概念二 · 深层理解"><div class="slide-inner">
+<h2>📖 机械能守恒</h2><div class="tu-q"><p><strong>And：</strong>已掌握动能势能单独计算</p><p><strong>But：</strong>不理解二者转化规律</p><p><strong>Therefore：</strong>发现能量转化中的守恒特性</p></div><div class="tu-q"><p>只有重力做功时，动能+势能的总和（机械能）保持不变。比如秋千从最高点（速度0，势能最大）到最低点（速度最大，势能最小），机械能始终等于最高点的势能值。忽略空气阻力时，1kg的摆锤从1米高摆下，最低点速度刚好是√20≈4.47m/s。</p></div><div class="tu-q"><p>🌍 过山车设计关键：第一个坡最高，后续坡逐渐降低，就是利用机械能守恒保证安全速度。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>忽略摩擦时，小球滚下斜面会怎样？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D可能混淆实际与理想情况">A.到底端速度不变</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D可能混淆实际与理想情况">B.中途停止</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D可能混淆实际与理想情况">C.越滚越快</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D可能混淆实际与理想情况">D.机械能减少</button></div><div class="tu-fb" hidden></div></div>
+<div class="lesson-panel"><span class="phase-tag">易混辨析</span>
+<h2>易错点</h2>
+<ul class="steps"><li>质量越大、速度越大，动能越大。</li><li>越高重力势能越大（同一星球表面近似）。</li><li>弹性势能与形变有关。</li></ul>
+<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
+  <div class="ta-figure-wrap">
+    <img src="./assets/phy-m-mechanical-energy-section2.png" alt="机械能对比（无字）">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
+  </div>
+  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
+</figure>
+</div>
+</div></section>
+<section class="slide-page" data-page-type="interactive" data-page-index="7" data-tsh="互动二 · AI 多模态"><div class="slide-inner">
+<h2>📖 测量转化</h2><div class="tu-q"><p><strong>And：</strong>能定性分析能量变化</p><p><strong>But：</strong>不会用公式定量测算</p><p><strong>Therefore：</strong>实现现象到数据的科学转化</p></div><div class="tu-q"><p>用公式Eₖ=½mv²和Eₚ=mgh进行换算。例如让500g钢球从80cm高落下，理论着地速度应为√(2gh)≈4m/s。实际测量若得3.6m/s，说明约19%能量转化为内能（空气阻力+声音）。注意g取9.8N/kg时高度要用米作单位。</p></div><div class="tu-q"><p>🌍 蹦极绳长度设计：体重60kg的人从50米跳下，在绳绷直前瞬间动能约30千焦，需精确计算绳的弹性势能储存量。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>计算2kg水桶从3楼（9m）坠地的动能（g=10N/kg）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能漏乘高度">A.180J</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能漏乘高度">B.90J</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能漏乘高度">C.60J</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能漏乘高度">D.30J</button></div><div class="tu-fb" hidden></div></div>
 
+  <div class="lesson-panel">
+    <span class="phase-tag">网络仿真 · PhET</span>
+    <h2>PhET · 能量滑板公园</h2>
+    <div class="iframe-wrap">
+      <iframe src="https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html" title="PhET · 能量滑板公园" allowfullscreen loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <p class="feedback" style="margin-top:12px">💡 观察高度与速度变化时动能势能的此消彼长。</p>
+    <p style="font-size:12px;color:#cbd5e1;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html</a></p>
+  </div>
+</div></section>
+<section class="slide-page" data-page-type="concept" data-page-index="8" data-tsh="例析 · 方法与范例"><div class="slide-inner">
+<div class="lesson-panel"><span class="phase-tag">例题拆解</span>
+<h2>例：同一小球，高度升高</h2>
+<ol class="steps"><li>重力势能增大</li><li>若静止动能不变为零</li><li>机械能是否守恒看条件</li></ol>
+</div>
 
-
-
-</section>
-<section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="35">
-  <section class="section phym-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
     <div class="card">
       <span class="phase-tag">方法与范例</span>
       <h2>方法：抓高度与速度的此消彼长</h2>
@@ -241,49 +713,63 @@ input[type="checkbox"],input[type="radio"]{width:18px!important;height:18px!impo
         <div class="phym-feedback" id="phym-depth-feedback-2" role="status"></div>
       </div>
     </div>
-  </section>
-</section>
-
-<section class="slide-page" data-page-index="5" data-page-type="content" data-tsh="互动" data-slot="35"><section class="section" id="interactive-lab" data-tts="interactive-lab" data-interactive="generic-lab"><div class="lesson-panel"><span class="phase-tag">互动实验</span>
-<h2>调参数，观察与「机械能」相关的变化</h2>
-<div class="control-row">
-<label>变量 A<input id="lab-a" type="range" min="1" max="10" value="5"></label>
-<label>变量 B<input id="lab-b" type="range" min="1" max="10" value="3"></label>
+</div></section>
+<section class="slide-page" data-page-type="quiz" data-page-index="9" data-tsh="概念测 · 即时检验"><div class="slide-inner">
+<div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
+<h2>含错因</h2>
+<div class="practice-block"><h3>3</h3><p>静止在桌面的书</p>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 动能不为零必</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 动能可为零，有重力势能</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 没有势能</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 质量为零</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block"><h3>4</h3><p>过山车下降过程通常</p>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 重力势能转动能</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 动能变质量</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 电荷增加</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 温度必降为绝对零</button>
+<div id="l2b-feedback" class="feedback"></div></div>
 </div>
-<div class="canvas-wrap"><canvas id="physics-canvas" class="wide-canvas" width="900" height="300"></canvas></div>
-<div id="lab-feedback" class="feedback">结合下方 PhET 做完整探究。</div></div></section>
-<script>
-(function(){
-  const c=document.getElementById('physics-canvas'); if(!c) return;
-  const ctx=c.getContext('2d');
-  const a=document.getElementById('lab-a'), b=document.getElementById('lab-b'), fb=document.getElementById('lab-feedback');
-  function draw(){
-    const A=+a.value,B=+b.value;
-    ctx.clearRect(0,0,c.width,c.height); ctx.fillStyle='#081426'; ctx.fillRect(0,0,c.width,c.height);
-    ctx.fillStyle='#fbbf24'; ctx.font='24px PingFang SC,sans-serif'; ctx.fillText('机械能 · 本地示意',60,50);
-    ctx.fillStyle='#38bdf8'; ctx.fillRect(80,160,A*40,40); ctx.fillStyle='#a78bfa'; ctx.fillRect(80,220,B*40,40);
-    fb.textContent='A='+A+'，B='+B+'。完整操作请用下方 PhET。';
-  }
-  a.addEventListener('input',draw); b.addEventListener('input',draw); draw();
-})();
-</script></section>
+</div></section>
+<section class="slide-page" data-page-type="interactive" data-page-index="10" data-tsh="综合任务 · 迁移应用"><div class="slide-inner">
+<div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>机械能及其转化</h2>
+      <p>动能与物体的质量和速度有关，重力势能与质量和高度有关，弹性势能与弹性形变程度有关。动能与势能统称机械能，二者可以相互转化。在只有动能和势能相互转化的过程中（不计摩擦和空气阻力），机械能的总量保持不变。</p>
+    </div>
+  
+
+<div class="residue-block">
+<div class="residue-block"></div></div>
+
+
+
+<div class="residue-block">
+<div class="residue-block"></div></div>
+
+<div class="residue-block">
+<div class="residue-block"></div></div>
+
+
+<div class="residue-block">
+  <div class="residue-block"></div>
 
 
 
 
-
-<section class="slide-page" data-page-index="9" data-page-type="content" data-tsh="小结" data-slot="35">
-<section class="section" id="summary" data-tts="summary"><div class="lesson-panel">
-<span class="phase-tag">小结清单</span>
-<h2>这节课你应能做到</h2>
-<div class="checklist" id="summary-checklist">
-      <label><input type="checkbox" class="recap-check"><span>区分动能势能</span></label>
-      <label><input type="checkbox" class="recap-check"><span>理解影响因素</span></label>
-      <label><input type="checkbox" class="recap-check"><span>能描述简单转化</span></label>
-      <label><input type="checkbox" class="recap-check"><span>会结合仿真观察</span></label>
 </div>
-<p id="summary-feedback" class="feedback" style="margin-top:12px">勾选你已掌握的条目。</p>
-</div></section></section>
+<div class="residue-block">
+  <div class="residue-block"></div>
+</div>
+
+<div class="residue-block"></div>
+
+
+
+
+
+<div class="residue-block">
+<div class="residue-block"></div></div>
 <script>
 const FEEDBACK = {"pretest": "动能+势能。", "l1a": "动能大。", "l1b": "势能大。", "l2a": "动能零势能有。", "l2b": "势能→动能。", "l3a": "模型。", "open": "量规：动能、势能、转化。"};
 function checkAnswer(btn,ok,target){
@@ -306,13 +792,13 @@ document.querySelectorAll('.recap-check').forEach(cb=>{
 });
 </script>
 
-<section class="slide-page" data-page-index="10" data-page-type="content" data-tsh="知识图谱 - 查看前置、后续与同域知识">
+<div class="residue-block">
 
-</section>
+</div>
 
-<section class="slide-page" data-page-index="11" data-page-type="content" data-tsh="AI 学伴 - 先诊断卡点，再给最小提示">
+<div class="residue-block">
 
-</section>
+</div>
 
 
 
@@ -385,69 +871,57 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 
 <script defer src="../../assets/teachany-slide-v2.js"></script>
 <script src="../../assets/scripts/feedback-widget.js" defer></script>
-<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
 
 
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 势能解密</h2><div class="tu-q"><p><strong>And：</strong>知道高处物体下落会加速</p><p><strong>But：</strong>不理解储存的能量形式</p><p><strong>Therefore：</strong>揭示重力势能与高度的关系</p></div><div class="tu-q"><p>被举高的物体具有重力势能，大小=质量×重力加速度×高度。比如3楼阳台的花盆（5kg，约10米高）势能约500焦耳，是同样花盆放在1楼时的3倍。记住：高度是相对参考面的垂直距离！</p></div><div class="tu-q"><p>🌍 水库发电利用水的势能——新安江水库水位差70米，1吨水下落就能发0.2度电（约72万焦耳）。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>同一本书放在哪势能最大？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选A可能没注意测量起点">A.课桌上</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选A可能没注意测量起点">B.地面</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选A可能没注意测量起点">C.书架顶层</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选A可能没注意测量起点">D.平放手心</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 机械能守恒</h2><div class="tu-q"><p><strong>And：</strong>已掌握动能势能单独计算</p><p><strong>But：</strong>不理解二者转化规律</p><p><strong>Therefore：</strong>发现能量转化中的守恒特性</p></div><div class="tu-q"><p>只有重力做功时，动能+势能的总和（机械能）保持不变。比如秋千从最高点（速度0，势能最大）到最低点（速度最大，势能最小），机械能始终等于最高点的势能值。忽略空气阻力时，1kg的摆锤从1米高摆下，最低点速度刚好是√20≈4.47m/s。</p></div><div class="tu-q"><p>🌍 过山车设计关键：第一个坡最高，后续坡逐渐降低，就是利用机械能守恒保证安全速度。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>忽略摩擦时，小球滚下斜面会怎样？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选D可能混淆实际与理想情况">A.到底端速度不变</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选D可能混淆实际与理想情况">B.中途停止</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选D可能混淆实际与理想情况">C.越滚越快</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选D可能混淆实际与理想情况">D.机械能减少</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4" data-slot="55"><h2>📖 测量转化</h2><div class="tu-q"><p><strong>And：</strong>能定性分析能量变化</p><p><strong>But：</strong>不会用公式定量测算</p><p><strong>Therefore：</strong>实现现象到数据的科学转化</p></div><div class="tu-q"><p>用公式Eₖ=½mv²和Eₚ=mgh进行换算。例如让500g钢球从80cm高落下，理论着地速度应为√(2gh)≈4m/s。实际测量若得3.6m/s，说明约19%能量转化为内能（空气阻力+声音）。注意g取9.8N/kg时高度要用米作单位。</p></div><div class="tu-q"><p>🌍 蹦极绳长度设计：体重60kg的人从50米跳下，在绳绷直前瞬间动能约30千焦，需精确计算绳的弹性势能储存量。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>计算2kg水桶从3楼（9m）坠地的动能（g=10N/kg）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误选B可能漏乘高度">A.180J</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误选B可能漏乘高度">B.90J</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误选B可能漏乘高度">C.60J</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误选B可能漏乘高度">D.30J</button></div><div class="tu-fb" hidden></div></div></section>
 
-<!-- 课程导览图（互动画布） -->
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（升学题）质量为2kg的物体从5m高处自由落下，落地时动能约为？（g=10N/kg）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="能量转化计算错误">A.50J</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="能量转化计算错误">B.100J</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="能量转化计算错误">C.150J</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="能量转化计算错误">D.200J</button></div><div class="tu-fb" hidden></div></div>
+<div class="residue-block"></div>
+<div class="residue-block"></div>
+<div class="residue-block"></div>
+
+
+<div class="residue-block"></div>
+<div class="residue-block">
+<div class="residue-block"></div></div>
+
+<div class="residue-block">
+<div class="residue-block"></div></div>
+
+<div class="residue-block"></div>
+<div class="residue-block"></div>
+<div class="residue-block">
+<div class="residue-block"></div>
+</div>
+
+<div class="residue-block">
+
+
+<div class="residue-block"></div></div>
+
+<div class="residue-block">
+<div class="residue-block"></div>
+</div></section>
+<section class="slide-page" data-page-type="quiz" data-page-index="11" data-tsh="后测 · 达标检测与易错点"><div class="slide-inner">
+<h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（升学题）质量为2kg的物体从5m高处自由落下，落地时动能约为？（g=10N/kg）</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="能量转化计算错误">A.50J</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="能量转化计算错误">B.100J</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="能量转化计算错误">C.150J</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="能量转化计算错误">D.200J</button></div><div class="tu-fb" hidden></div></div>
 <div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>（迁移题）游乐场大摆锤上升过程中，能量如何转化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="不理解动态转化过程">A.动能全部转为势能</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="不理解动态转化过程">B.动能减少势能增加</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="不理解动态转化过程">C.机械能逐渐增大</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="不理解动态转化过程">D.势能持续减小</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>（概念题）关于弹性势能，正确的是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="对弹性势能本质理解偏差">A.与形变成反比</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="对弹性势能本质理解偏差">B.只存在于弹簧</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="对弹性势能本质理解偏差">C.来自物体形变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="对弹性势能本质理解偏差">D.永远不变</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="slide-page" data-page-index="3" data-page-type="content" data-tsh="易混" data-slot="95">
-<section class="section" id="deep-understanding" data-tts="deep-understanding"><div class="lesson-panel"><span class="phase-tag">易混辨析</span>
-<h2>易错点</h2>
-<ul class="steps"><li>质量越大、速度越大，动能越大。</li><li>越高重力势能越大（同一星球表面近似）。</li><li>弹性势能与形变有关。</li></ul>
-<figure class="ta-standard-figure ta-figure-labeled" style="margin-top:14px">
-  <div class="ta-figure-wrap">
-    <img src="./assets/phy-m-mechanical-energy-section2.png" alt="机械能对比（无字）">
-    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:35%;left:30%">对比A</span><span class="ta-fig-tag" style="top:60%;left:70%">对比B</span></div>
-  </div>
-  <figcaption>对比与迁移（无字底图 + 中文叠标）</figcaption>
-</figure>
-</div></section></section>
-
-<section class="slide-page" data-page-index="7" data-page-type="content" data-tsh="L2" data-slot="95">
-<section class="section" id="practice-l2" data-tts="practice-l2"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span>
-<h2>含错因</h2>
-<div class="practice-block"><h3>3</h3><p>静止在桌面的书</p>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">A. 动能不为零必</button>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">B. 动能可为零，有重力势能</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 没有势能</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 质量为零</button>
-<div id="l2a-feedback" class="feedback"></div></div>
-<div class="practice-block"><h3>4</h3><p>过山车下降过程通常</p>
-<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 重力势能转动能</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 动能变质量</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 电荷增加</button>
-<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 温度必降为绝对零</button>
-<div id="l2b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为静止物体没有机械能</h3><p>✅ 静止物体可能有重力势能</p><p>💡 忽略势能的存在条件</p></div><div class="tu-q"><h3>❌ 计算动能时漏乘1/2</h3><p>✅ 必须使用完整公式E_k=1/2mv²</p><p>💡 公式记忆不完整</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>高处势能低处动，速度质量都要用</p><p><strong>类比：</strong>像压紧的弹簧玩具，松手时储存的能量变成运动</p></div></section>
-<section class="slide-page" data-page-index="9b" data-page-type="content" data-tsh="PhET 网络仿真" data-slot="110">
-<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="phet">
-  <div class="lesson-panel">
-    <span class="phase-tag">网络仿真 · PhET</span>
-    <h2>PhET · 能量滑板公园</h2>
-    <div class="iframe-wrap">
-      <iframe src="https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html" title="PhET · 能量滑板公园" allowfullscreen loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
-    </div>
-    <p class="feedback" style="margin-top:12px">💡 观察高度与速度变化时动能势能的此消彼长。</p>
-    <p style="font-size:12px;color:#cbd5e1;margin:8px 0 0">外链：<a href="https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/energy-skate-park-basics/latest/energy-skate-park-basics_zh_CN.html</a></p>
-  </div>
-</section>
-</section>
-
-<section class="slide-page" data-page-index="6" data-page-type="content" data-tsh="L1" data-slot="115">
-
-
-<section class="section" id="practice-l1" data-tts="practice-l1"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
+<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>（概念题）关于弹性势能，正确的是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="对弹性势能本质理解偏差">A.与形变成反比</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="对弹性势能本质理解偏差">B.只存在于弹簧</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="对弹性势能本质理解偏差">C.来自物体形变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="对弹性势能本质理解偏差">D.永远不变</button></div><div class="tu-fb" hidden></div></div>
+<h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为静止物体没有机械能</h3><p>✅ 静止物体可能有重力势能</p><p>💡 忽略势能的存在条件</p></div><div class="tu-q"><h3>❌ 计算动能时漏乘1/2</h3><p>✅ 必须使用完整公式E_k=1/2mv²</p><p>💡 公式记忆不完整</p></div>
+</div></section>
+<section class="slide-page" data-page-type="summary" data-page-index="12" data-tsh="小结 · 迁移与记忆锚点"><div class="slide-inner">
+<div class="lesson-panel">
+<span class="phase-tag">小结清单</span>
+<h2>这节课你应能做到</h2>
+<div class="checklist" id="summary-checklist">
+      <label><input type="checkbox" class="recap-check"><span>区分动能势能</span></label>
+      <label><input type="checkbox" class="recap-check"><span>理解影响因素</span></label>
+      <label><input type="checkbox" class="recap-check"><span>能描述简单转化</span></label>
+      <label><input type="checkbox" class="recap-check"><span>会结合仿真观察</span></label>
+</div>
+<p id="summary-feedback" class="feedback" style="margin-top:12px">勾选你已掌握的条目。</p>
+</div>
+<h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>高处势能低处动，速度质量都要用</p><p><strong>类比：</strong>像压紧的弹簧玩具，松手时储存的能量变成运动</p></div>
+</div></section>
+<section class="slide-page" data-page-type="homework" data-page-index="13" data-tsh="分层作业 · 基础/应用/挑战"><div class="slide-inner">
+<div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span>
 <h2>先过关</h2>
 <div class="practice-block"><h3>1</h3><p>速度越大（质量一定）动能</p>
 <button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">A. 越小</button>
@@ -461,10 +935,8 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 不变</button>
 <button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 为零</button>
 <div id="l1b-feedback" class="feedback"></div></div>
-</div></section></section>
-
-<section class="slide-page" data-page-index="8" data-page-type="content" data-tsh="L3" data-slot="115">
-<section class="section" id="practice-l3" data-tts="practice-l3"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
+</div>
+<div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span>
 <h2>迁移与产出</h2>
 <div class="practice-block"><h3>5</h3><p>研究能量转化可用</p>
 <button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 能量滑板模型</button>
@@ -477,7 +949,26 @@ if (location.hostname === 'localhost' || location.search.includes('debug')) {
 <textarea id="l3-open" rows="3" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:#0b1628;color:#e2e8f0"></textarea>
 <button type="button" class="quiz-option" style="margin-top:10px;text-align:center" onclick="showOpenRubric()">对照量规自检</button>
 <div id="l3-open-feedback" class="feedback" hidden></div></div>
-</div></section></section>
+</div>
+<h2>分层作业</h2>
+<h3>⭐ 基础巩固（必做）</h3>
+<p>复述本课两个核心概念的定义。</p>
+<h3>⭐⭐ 能力应用</h3>
+<p>用本课方法分析一个新例子。</p>
+<h3>⭐⭐⭐ 迁移挑战（选做）</h3>
+<p>有同学认为：认为静止物体没有机械能 —— 请说明错在哪里。</p>
+<p>有同学认为：计算动能时漏乘1/2 —— 请说明错在哪里。</p>
+</div></section>
+<section class="slide-page" data-page-type="knowledge-graph" data-page-index="14" data-tsh="知识图谱 · 本课节点位置"><div class="slide-inner">
+<h2 class="section-title">🗺️ 知识图谱：机械能</h2><div data-teachany-kg="phy-m-mechanical-energy"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div>
+</div></section>
+<section class="slide-page" data-page-type="ai-tutor" data-page-index="15" data-tsh="AI 学伴 · 随时提问"><div class="slide-inner">
+<h2>AI 学伴 · 随时提问</h2>
+<p>把还没弄明白的地方写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。</p>
+<div data-teachany-tutor-card></div>
+</div></section>
+</div><!-- .slide-container -->
+</section>
 
 <section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
   <div data-teachany-tutor-card></div>
@@ -540,3 +1031,206 @@ function phymDepthCheck(button, isCorrect, feedbackId, explanation) {
 </html>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：机械能</h2><div data-teachany-kg="phy-m-mechanical-energy"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
 
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+
+<script>
+
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'sci-e-buoyancy',
+    courseTitle: '浮力：为什么有的东西浮在水上？',
+    subject: 'science',
+    grade: '5',
+    nodeId: 'sci-e-buoyancy',
+    lessonType: 'experiment-inquiry',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    // 旧课件品牌栏可能没有这两个 span —— 必须同时判元素存在，否则整段脚本崩
+    const cvEl = document.getElementById('course-version-display');
+    const svEl = document.getElementById('skill-version-display');
+    if (cv && cvEl) cvEl.textContent = cv;
+    if (sv && svEl) svEl.textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+
+</script>
