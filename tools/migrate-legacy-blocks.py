@@ -36,21 +36,24 @@ AI_TUTOR_HTML = (
     '<div data-teachany-tutor-card></div>')
 
 SPEC = [
-    # (页型, 导航提示, 内容源列表) —— 一页可容纳多块，保证 21 块全部有归属、不丢内容
-    ('cover',           '开场 · 本课概览',          ['开场', 'hero-infographic']),
-    ('interactive',     '情境导入 · 带着问题学',     ['anchor']),
+    # (页型, 导航提示, [候选源...]) —— 一页可给多个候选 id，**按顺序取第一个未用的**。
+    # 不同学科的内容块词汇不同（语文是 anchor/lesson-focus/…，
+    # 物理还有 story / worked-example / module-1..4 / interactive-lab / phet-lab /
+    # practice-l1..l3 / core / summary），用候选列表让同一份映射跨学科通用。
+    ('cover',           '开场 · 本课概览',          ['hero-infographic', 'cover']),
+    ('interactive',     '情境导入 · 带着问题学',     ['story', 'anchor']),
     ('objectives',      '学习目标',                ['objectives']),
     ('quiz',            '前测 · 起点诊断',          ['pretest']),
-    ('concept',         '概念一 · 核心知识',        ['核心', 'lesson-focus']),
-    ('interactive',     '互动一 · 概念应用',        ['module-1']),
-    ('concept',         '概念二 · 深层理解',        ['deep-understanding']),
-    ('interactive',     '互动二 · AI 多模态与概念检测', ['ai-media-zone']),
-    ('concept',         '例析 · 精讲与方法范例',     ['精讲', '方法范例', 'lesson-method']),
-    ('quiz',            '概念测 · 真题练习',        []),
-    ('interactive',     '综合任务 · 探究应用',      []),
+    ('concept',         '概念一 · 核心知识',        ['核心', 'core', 'module-1', 'lesson-focus']),
+    ('interactive',     '互动一 · 概念应用',        ['地图探究', 'interactive-lab', 'module-2']),
+    ('concept',         '概念二 · 深层理解',        ['module-3', 'deep-understanding']),
+    ('interactive',     '互动二 · AI 多模态',       ['module-4', 'ai-media-zone', 'phet-lab', '历史地图']),
+    ('concept',         '例析 · 方法与范例',        ['worked-example', 'lesson-method']),
+    ('quiz',            '概念测 · 即时检验',        ['practice-l2']),
+    ('interactive',     '综合任务 · 迁移应用',      ['lesson-focus', '精讲']),
     ('quiz',            '后测 · 达标检测与易错点',   ['posttest', 'error-clinic']),
-    ('summary',         '小结 · 迁移与记忆锚点',     ['memory-anchor']),
-    ('homework',        '分层作业 · 基础/应用/挑战',  ['gen:homework']),
+    ('summary',         '小结 · 迁移与记忆锚点',     ['summary', '小结', 'memory-anchor']),
+    ('homework',        '分层作业 · 基础/应用/挑战',  ['practice-l1', 'practice-l3', 'gen:homework']),
     ('knowledge-graph', '知识图谱 · 本课节点位置',    ['knowledge-graph']),
     ('ai-tutor',        'AI 学伴 · 随时提问',       ['const:ai-tutor']),
 ]
@@ -308,16 +311,55 @@ def build(cid, dry=False, verify=False):
     # 也会把后面生成的页面解析成嵌套，导致"页数对但导航点错乱"（实测 11 页/17 点）。
     residue = re.sub(r'<section\b[^>]*>', '<div class="residue-block">', residue)
     residue = re.sub(r'</section\s*>', '</div>', residue)
+    # ★ 残留里的 <div> 可能不配平（原文档被切开导致）——不补齐会把**后面生成的页面吞进它里面**，
+    #   症状是"页数比 16 少、导航点却是 16"（实测某门只剩 7 页 / 16 点）。这里补齐闭合标签。
+    # 双向配平：多开就补闭合；**多闭合也要补开头**——多出来的 </div> 会提前关闭
+    # 我生成的页面，症状同样是"页数少于 16、导航点却是 16"。
+    _o = len(re.findall(r'<div\b[^>]*>', residue))
+    _c = len(re.findall(r'</div\s*>', residue))
+    if _o > _c:
+        residue += '\n' + '</div>' * (_o - _c)
+        print(f"   🔧 残留 div 多开 {_o - _c} 个，已补 </div>")
+    elif _c > _o:
+        residue = '<div class="residue-pad">' * (_c - _o) + residue
+        print(f"   🔧 残留 div 多闭 {_c - _o} 个，已在开头补 <div>")
+    # 同样处理 section 之外可能残留的其它容器标签：span/p 等不影响分页，忽略。
+    # 最后统一包一层，确保残留不泄漏到相邻页面。
+    residue = '<div class="residue-wrap">' + residue + '</div>'
     if len(re.findall(r'[\u4e00-\u9fff]', re.sub(r'<[^>]+>', ' ', residue))) >= 20:
-        for b in built:
-            if '综合任务' in b[2]:
-                b[3] = (b[3] or '') + '\n' + residue
-                print("   ➕ 容器残留内容（非 section 模块）已保留到「综合任务」页（%d 字节）" % len(residue))
-                break
+        # ★ 残留必须放到**容器内的最后一页**，不能放中间页。
+        #   残留是"原文档被切开后剩下的碎片"，标签未必配平；一旦它多一个未闭合标签，
+        #   就会把**它后面的所有页面吞进去**，症状是"页数少于 16、导航点却是 16"
+        #   （实测 11 页 / 19 点）。放到最后一页则后面没有页面可被吞。
+        built[-1][3] = (built[-1][3] or '') + '\n' + residue
+        print("   ➕ 容器残留内容（非 section 模块）已保留到末页「%s」（%d 字节）"
+              % (built[-1][2], len(residue)))
+
+    # ★ 逐页做 div 配平（关键）。
+    #   内容块来自"原文档被切开"的片段，可能自带宽余的 </div>；
+    #   一旦某页多一个 </div>，浏览器会**提前关闭 #slide-container**，
+    #   它后面的页面就被"弹出"成 BODY 的兄弟节点 —— 症状是"直属子节点只有 11 个、
+    #   导航点却是 17 个，且缺失的页正好是后几页"（实测 hist-m-qin-han-unification）。
+    #   逐页配平后，每页自己闭合，容器不会被提前关掉。
+    balanced = []
+    fixed = 0
+    for i, pt, t, bd in built:
+        body = inner_wrap(bd)
+        _o = len(re.findall(r'<div\b[^>]*>', body))
+        _c = len(re.findall(r'</div\s*>', body))
+        if _o > _c:
+            body += '\n' + '</div>' * (_o - _c)
+            fixed += 1
+        elif _c > _o:
+            body = '<div class="page-pad">' * (_c - _o) + body
+            fixed += 1
+        balanced.append((i, pt, t, body))
+    if fixed:
+        print(f"   🔧 逐页 div 配平：{fixed} 页有失衡已修正")
 
     sections = '\n'.join(
         '<section class="slide-page" data-page-type="%s" data-page-index="%d" data-tsh="%s">%s</section>'
-        % (pt, i, t, inner_wrap(bd)) for i, pt, t, bd in built)
+        % (pt, i, t, bd) for i, pt, t, bd in balanced)
 
     start = h.find('id="slide-container"')
     start = h.rfind('<', 0, start)
@@ -326,7 +368,21 @@ def build(cid, dry=False, verify=False):
     if close < 0:
         print("❌ 容器标签未配平，放弃（不破坏文件）")
         return 1
-    h2 = h[:open_end] + '\n' + sections + '\n' + h[close:]
+    # ★ 容器**之外**可能还残留原始的 <section class="slide-page">：
+    #   有些课件的容器只包住一部分分页节，其余散落在容器外面。
+    #   我的替换只动容器内部，于是这些散落的原始页会留下来 → 导航点变成 19 个、
+    #   而容器直属子节点只有 11 个（实测 hist-m-qin-han-unification）。
+    #   它们的内容已经作为"内容块"进入我重建的 16 页，所以这里直接清掉。
+    tail_part = h[close:]
+    # ★ 不能只匹配 `<section class="slide-page"`：有课件的 class **不在第一位**
+    #   （写成 `<section data-conceptest="true" … class="slide-page">`），会漏掉，
+    #   症状是"页数 16 正确、导航点却 17 个"（实测 hist-m-qin-han-unification）。
+    SP_OPEN = r'<section\b(?=[^>]*\bslide-page\b)[^>]*>'
+    n_out = len(re.findall(SP_OPEN, tail_part))
+    if n_out:
+        tail_part = re.sub(SP_OPEN + r'[\s\S]*?</section>', '', tail_part)
+        print(f"   🔧 清掉容器外残留的 {n_out} 个原始分页节")
+    h2 = h[:open_end] + '\n' + sections + '\n' + tail_part
 
     if dry:
         print("   (--dry-run) 将重建为 %d 页" % len(built))
@@ -343,6 +399,26 @@ def build(cid, dry=False, verify=False):
         if ratio < 0.98:
             print("   ❌ 保留率 < 98%，**拒绝写入**")
             return 2
+
+    # ★ 收尾：去掉重复的内联脚本。
+    #   有些 <script>（如 const knowledgeGraphData=…）位于 <section> **之外**，
+    #   既被原位置保留、又随"残留"兜底进来一份 → 重复声明，
+    #   报 "Identifier 'xxx' has already been declared" 导致后一份整段不执行。
+    #   处理：同内容的（归一化后）脚本块只保留第一份。
+    seen_scripts = {}
+    def dedupe_scripts(m):
+        body = re.sub(r'\s+', ' ', m.group(1)).strip()
+        if len(body) < 80:
+            return m.group(0)
+        if body in seen_scripts:
+            return '<!-- 重复脚本已移除（同一段内联脚本出现两次，会导致 Identifier 重复声明） -->'
+        seen_scripts[body] = True
+        return m.group(0)
+
+    h2_before = h2
+    h2 = re.sub(r'<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)</script>', dedupe_scripts, h2)
+    if h2 != h2_before:
+        print(f"   🔧 移除了重复内联脚本，减少 {len(h2_before) - len(h2)} 字节")
 
     p.write_text(h2, encoding='utf-8')
     print("   ✅ 已重建为 %d 页 · %d → %d 字节" % (len(built), len(orig), len(h2)))

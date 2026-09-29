@@ -87,16 +87,425 @@ input,textarea{width:100%;border:1px solid #94a3b8;border-radius:10px;padding:12
 </style>
 <link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
 
+<style>
+
+
+:root {
+  --bg: #fffbf0;
+  --bg-subtle: #fff7e6;
+  --panel: #fffdf8;
+  --card: #ffffff;
+  --card-elevated: #ffffff;
+  --line: #f2e3c9;
+  --line-subtle: rgb(var(--paper-rgb) / 0.16);
+  --text: var(--text-strong);
+  --text-secondary: var(--text-secondary);
+  --muted: #94866c;
+  /* 主题可覆盖的派生色（学段切换用） */
+  --text-strong: #3a3126;
+  --link: #e05555;
+  --accent-deep: #14897f;
+  --warm-deep: #b07d12;
+  --warn-deep: #b45309;
+  --bg-rgb: 255 251 240;
+  --brand-rgb: 255 107 107;
+  --brand2-rgb: 78 205 196;
+  --warm-rgb: 255 209 102;
+  --paper-rgb: 191 155 96;
+  --brand: #ff6b6b;
+  --brand-soft: rgb(var(--brand-rgb) / 0.10);
+  --brand-2: #4ecdc4;
+  --brand-2-soft: rgb(var(--brand2-rgb) / 0.10);
+  --accent: #4ecdc4;
+  --accent-soft: rgb(var(--brand2-rgb) / 0.12);
+  --warm: #ffd166;
+  --warm-soft: rgb(var(--warm-rgb) / 0.18);
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --page-padding: 24px;
+  --card-radius: 20px;
+  --card-radius-sm: 14px;
+  --slide-height: 100vh;
+  --slide-height-fallback: 100dvh;
+  --toolbar-height: 56px;
+  --brandbar-height: 52px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+body {
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Source Han Sans SC", system-ui, sans-serif;
+  line-height: 1.75;
+  font-size: 16px;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, a, input, select, textarea { min-height: 44px; }
+img, video, canvas, svg { max-width: 100%; height: auto; }
+h1, h2, h3, h4 { margin: 0; }
+
+.slide-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: var(--slide-height-fallback, var(--slide-height));
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+body:not(.play-mode) .slide-container { scroll-snap-type: y proximity; }
+body.play-mode .slide-container { scroll-snap-type: y mandatory; overflow: hidden; }
+
+.slide-page {
+  min-height: var(--slide-height-fallback, var(--slide-height));
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: calc(var(--page-padding) + var(--brandbar-height)) var(--page-padding) var(--page-padding);
+  padding-bottom: calc(var(--page-padding) + var(--toolbar-height));
+  position: relative;
+  overflow: visible;
+}
+/* margin:auto —— 富余空间时垂直居中；内容高于一屏时 auto 退化为 0，从顶部排布，
+   避免 justify-content:center 造成的顶部负溢出（长页标题被切） */
+.slide-page .slide-inner { max-width: 880px; width: 100%; position: relative; z-index: 2; margin: auto; }
+.slide-page .slide-inner > * { width: 100%; box-sizing: border-box; }
+.card .card { padding: 18px; box-shadow: none; border: 1px solid var(--line-subtle); }
+
+/* 页型底色 */
+.slide-page[data-page-type="cover"] {
+  background:
+    radial-gradient(ellipse at 20% 20%, rgb(var(--brand-rgb) / 0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgb(var(--brand2-rgb) / 0.14), transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgb(var(--warm-rgb) / 0.10), transparent 60%);
+  text-align: center;
+}
+.slide-page[data-page-type="cover"] h1 {
+  font-size: clamp(30px, 6.4vw, 52px);
+  line-height: 1.16;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--warm) 55%, var(--brand-2) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 14px;
+}
+.slide-page[data-page-type="cover"] .subtitle {
+  color: var(--text-secondary); font-size: clamp(16px, 3vw, 21px);
+  max-width: 700px; margin: 0 auto; font-weight: 600;
+}
+.slide-page[data-page-type="objectives"] {
+  background: radial-gradient(circle at 0% 100%, rgb(var(--brand2-rgb) / 0.12), transparent 42%),
+              radial-gradient(circle at 100% 0%, rgb(var(--brand-rgb) / 0.08), transparent 42%);
+}
+.slide-page[data-page-type="concept"] {
+  background: radial-gradient(circle at 30% 20%, rgb(var(--warm-rgb) / 0.10), transparent 36%),
+              radial-gradient(circle at 70% 80%, rgb(var(--brand2-rgb) / 0.09), transparent 36%);
+}
+.slide-page[data-page-type="interactive"] {
+  background: radial-gradient(circle at 50% 0%, rgb(var(--brand2-rgb) / 0.14), transparent 42%),
+              radial-gradient(circle at 80% 100%, rgb(var(--brand-rgb) / 0.07), transparent 36%);
+}
+.slide-page[data-page-type="quiz"] {
+  background: radial-gradient(circle at 20% 80%, rgb(var(--warm-rgb) / 0.16), transparent 38%),
+              radial-gradient(circle at 80% 20%, rgb(var(--brand-rgb) / 0.07), transparent 38%);
+}
+.slide-page[data-page-type="summary"] {
+  background: radial-gradient(circle at 50% 50%, rgb(var(--brand2-rgb) / 0.13), transparent 46%),
+              radial-gradient(circle at 20% 20%, rgb(var(--warm-rgb) / 0.10), transparent 32%);
+}
+.slide-page[data-page-type="cover"],
+.slide-page[data-page-type="objectives"],
+.slide-page[data-page-type="concept"],
+.slide-page[data-page-type="interactive"],
+.slide-page[data-page-type="quiz"],
+.slide-page[data-page-type="summary"] { background-color: var(--bg); }
+
+/* 品牌栏 */
+.teachany-brand-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-rgb) / 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-subtle);
+  transition: transform 0.3s ease;
+}
+body.play-mode .teachany-brand-bar { transform: translateY(-100%); }
+.brand-logo { display: flex; align-items: center; gap: 8px; color: var(--text-strong); text-decoration: none; font-weight: 800; }
+.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 900; font-size: 14px; }
+.brand-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.brand-link { color: var(--muted); }
+.brand-link:hover { color: var(--link); text-decoration: none; }
+.brand-version { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgb(var(--paper-rgb) / .12); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+
+/* 卡片 */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 6px 22px rgb(var(--paper-rgb) / 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+}
+.card-accent { border-top: 4px solid var(--warm); }
+.card-glow { box-shadow: 0 6px 22px rgb(var(--paper-rgb) / .14), 0 0 34px rgb(var(--brand2-rgb) / .12); }
+
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.section-header h2 { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.3; color: var(--text-strong); }
+
+.phase-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--link); background: var(--brand-soft);
+  border: 1px solid rgb(var(--brand-rgb) / .24);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+}
+.phase-tag[data-variant="success"] { color: var(--accent-deep); background: var(--accent-soft); border-color: rgb(var(--brand2-rgb) / .28); }
+.phase-tag[data-variant="purple"] { color: var(--warm-deep); background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .5); }
+.phase-tag[data-variant="warn"] { color: var(--warn-deep); background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.28); }
+
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+.grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
+
+.flex-row { display: flex; gap: 12px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.flex-row .choice { flex: 1; min-width: 120px; text-align: center; }
+
+.inner-card { margin: 12px 0; padding: 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--bg-subtle); }
+.inner-card p { margin: 0 0 6px; }
+.inner-card p:last-child { margin-bottom: 0; }
+
+.objectives { display: grid; grid-template-columns: 1fr; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.objectives li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: var(--card-radius-sm);
+  background: var(--brand-soft); border: 1px solid var(--line-subtle);
+}
+.objectives li::before { content: "✦"; color: var(--brand); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
+
+.choice {
+  width: 100%; text-align: left;
+  border: 1px solid rgb(var(--brand-rgb) / .22);
+  border-radius: var(--card-radius-sm);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px 20px; cursor: pointer; font-size: 15px; line-height: 1.55;
+  transition: all .18s ease;
+}
+.choice:hover { background: var(--brand-soft); border-color: rgb(var(--brand-rgb) / .45); transform: translateX(4px); }
+.choice.selected { border-color: var(--brand); background: rgb(var(--brand-rgb) / .16); }
+.choice.correct { border-color: var(--ok); background: rgba(34,197,94,.12); }
+.choice.wrong { border-color: var(--danger); background: rgba(239,68,68,.10); }
+.choice:disabled { cursor: default; opacity: .95; }
+
+input, textarea {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); padding: 14px 16px; font-size: 15px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgb(var(--brand-rgb) / .14); }
+
+.result { padding: 16px 20px; border-radius: var(--card-radius-sm); background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.24); font-size: 15px; }
+.result.warn { background: var(--warm-soft); border-color: rgb(var(--warm-rgb) / .55); }
+.result.error { background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.24); }
+
+.canvas-wrap { overflow: auto; background: var(--card); border: 1px solid var(--line-subtle); border-radius: 16px; padding: 16px; }
+
+.ta-standard-figure { margin: 20px auto; max-width: 980px; }
+.ta-standard-figure img { display: block; width: 100%; border-radius: 16px; border: 1px solid var(--line-subtle); background: var(--card); }
+.ta-standard-figure figcaption { margin-top: 10px; color: var(--muted); font-size: 14px; text-align: center; }
+
+/* 进度条 / 底部工具栏 / 侧边导航 / FAB */
+.slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); z-index: 200; transition: width .3s ease; }
+.slide-toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; padding-bottom: calc(10px + var(--safe-bottom));
+  background: rgb(var(--bg-rgb) / .95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-subtle);
+  transform: translateY(100%); transition: transform .3s ease;
+}
+body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; border-radius: 10px;
+  background: rgb(var(--paper-rgb) / .14); color: var(--text-secondary); cursor: pointer; font-size: 18px;
+}
+.toolbar-btn:hover { background: rgb(var(--paper-rgb) / .24); }
+.toolbar-btn.active { background: var(--brand-soft); color: var(--brand); }
+.toolbar-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toolbar-page-info { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 60px; text-align: center; }
+.toolbar-progress { flex: 1; max-width: 200px; height: 4px; background: rgb(var(--paper-rgb) / .2); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.toolbar-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .3s ease; }
+
+.slide-sidenav {
+  position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  opacity: 0; transition: opacity .3s ease; max-height: 70vh; overflow-y: auto;
+  scrollbar-width: none; padding: 8px 4px; border-radius: 12px;
+  background: rgb(var(--bg-rgb) / .72); backdrop-filter: blur(12px);
+  border: 1px solid var(--line-subtle);
+}
+.slide-sidenav::-webkit-scrollbar { display: none; }
+body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+.sidenav-dot { width: 26px; height: 5px; border-radius: 3px; background: rgb(var(--paper-rgb) / .35); border: none; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); padding: 0; flex-shrink: 0; }
+.sidenav-dot:hover { background: rgb(var(--brand-rgb) / .5); width: 34px; }
+.sidenav-dot.active { background: var(--brand); width: 34px; box-shadow: 0 0 10px rgb(var(--brand-rgb) / .45); }
+.sidenav-counter { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; font-variant-numeric: tabular-nums; width: 100%; }
+
+.play-mode-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90; width: 48px; height: 48px;
+  border-radius: 50%; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgb(var(--brand-rgb) / .32); transition: all .3s ease;
+}
+.play-mode-fab:hover { transform: scale(1.08); }
+body.play-mode .play-mode-fab { bottom: calc(var(--toolbar-height) + 16px + var(--safe-bottom)); }
+.play-mode-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+body.play-mode .slide-page { animation: slideIn .4s ease-out; }
+@keyframes slideIn { from { opacity: .65; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── 小学科学专用组件 ─── */
+.level-badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; color: var(--warm-deep); background: var(--warm-soft); border: 1px solid rgb(var(--warm-rgb) / .6); border-radius: 999px; padding: 4px 12px; }
+.kid-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--card-radius-sm); background: var(--warm-soft); border: 1px dashed rgb(var(--warm-rgb) / .8); font-size: 15px; }
+.kid-note .emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+.lab-panel { background: var(--card); border: 1px solid var(--line-subtle); border-radius: 18px; padding: 18px; }
+.lab-stage { position: relative; height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-subtle); background: linear-gradient(180deg,#f7fbff 0%, #eaf6ff 62%, #d8ecff 62.5%, #cbe6ff 100%); }
+.lab-stage .airline { position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: rgb(var(--brand2-rgb) / .7); }
+.lab-stage .bubble { position: absolute; bottom: 6px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--warm-rgb) / .9); border: 1px solid rgba(200,150,20,.5); animation: rise 2.6s linear infinite; }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: .9; } 100% { transform: translateY(-190px) scale(1.15); opacity: 0; } }
+.lab-obj { position: absolute; left: 50%; transform: translateX(-50%); display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 13px; color: #fff; transition: top .8s cubic-bezier(.34,1.2,.5,1), background .4s ease; }
+.lab-readout { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.readout-cell { flex: 1; min-width: 118px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 12px; text-align: center; }
+.readout-cell .k { display: block; font-size: 12px; color: var(--muted); }
+.readout-cell .v { font-size: 20px; font-weight: 800; color: var(--link); font-variant-numeric: tabular-nums; }
+.readout-cell .v.green { color: var(--accent-deep); }
+
+.slider-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slider-row label { min-width: 96px; font-weight: 700; font-size: 14px; }
+input[type="range"] { flex: 1; min-height: 32px; accent-color: var(--brand); }
+
+.sort-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; min-height: 56px; }
+.sort-item {
+  border: 1px solid rgb(var(--brand-rgb) / .28); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; font-size: 14px; cursor: pointer; transition: all .18s;
+}
+.sort-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgb(var(--paper-rgb) / .22); }
+.sort-item.done { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+.sort-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sort-bin { border: 2px dashed rgb(var(--paper-rgb) / .45); border-radius: 14px; padding: 12px; min-height: 120px; background: var(--bg-subtle); }
+.sort-bin h4 { font-size: 15px; margin-bottom: 8px; color: var(--text-secondary); }
+.sort-bin .tag { display: inline-block; margin: 3px 4px 0 0; padding: 5px 10px; border-radius: 999px; font-size: 13px; background: var(--card); border: 1px solid var(--line-subtle); }
+.sort-bin.ok { border-color: rgb(var(--brand2-rgb) / .8); }
+.sort-bin.no { border-color: rgba(239,68,68,.6); }
+
+.step-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.step { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--bg-subtle); border: 1px solid var(--line-subtle); }
+.step .n { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: #fff; font-size: 13px; font-weight: 800; }
+.step .n.green { background: var(--brand-2); }
+
+.summary-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--card-radius-sm); border: 1px solid var(--line-subtle); background: var(--card); }
+.summary-item .num { font-weight: 800; flex-shrink: 0; color: var(--link); }
+
+.misconception { border-left: 5px solid var(--danger); background: rgba(239,68,68,.06); border-radius: 0 12px 12px 0; padding: 12px 16px; margin-top: 10px; }
+.misconception .lab { font-weight: 800; color: #c2410c; font-size: 13px; }
+
+/* ─── 知识图谱页专用：模块的 .tkg-body 是 2fr/1fr 栅格，容器太窄会把图挤成 2/3 宽，
+     中文节点标签在 500px 左右必然重叠；右栏内容又会把整页撑高。这里放宽容器并给右栏限高。 ─── */
+.slide-page.kg-page .slide-inner { max-width: 1240px; }
+.slide-page.kg-page .card { padding: 20px; }
+.slide-page.kg-page .tkg-body { align-items: start; }
+.slide-page.kg-page .tkg-body > *:last-child { max-height: 56vh; overflow-y: auto; }
+.slide-page.kg-page .tkg-canvas { height: 460px; min-height: 460px; }
+
+@media (max-width: 768px) {
+  :root { --page-padding: 16px; --card-radius: 16px; }
+  .slide-page { padding: calc(16px + var(--brandbar-height)) 14px 16px; padding-bottom: calc(16px + var(--toolbar-height)); }
+  .grid, .grid-2, .grid-3, .objectives, .sort-bins { grid-template-columns: 1fr !important; }
+  .flex-row { flex-direction: column; }
+  .flex-row .choice { min-width: 100%; }
+  .card { padding: 18px; }
+  .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+  .sidenav-dot { width: 20px; height: 4px; }
+  .teachany-brand-bar { padding: 8px 12px; }
+  .brand-name { display: none; }
+  .lab-stage { height: 200px; }
+}
+@media (max-width: 480px) {
+  .slide-page[data-page-type="cover"] h1 { font-size: 26px; }
+  .toolbar-progress { max-width: 110px; }
+}
+
+
+/* ─── 学段主题（初中/高中覆盖变量；小学为默认） ─── */
+body.teachany-middle {
+  --bg: #f8fafc; --bg-subtle: #f1f5f9; --panel: #ffffff; --card: #ffffff; --card-elevated: #ffffff;
+  --line: #e2e8f0; --line-subtle: rgba(100, 116, 139, 0.16);
+  --text: #1e293b; --text-secondary: #475569; --muted: #64748b;
+  --brand: #3b82f6; --brand-2: #06b6d4; --warm: #f59e0b; --accent: #06b6d4;
+  --brand-soft: rgba(59, 130, 246, 0.10); --brand-2-soft: rgba(6, 182, 212, 0.10);
+  --accent-soft: rgba(6, 182, 212, 0.12); --warm-soft: rgba(245, 158, 11, 0.14);
+  --text-strong: #0f172a; --link: #2563eb; --accent-deep: #0e7490;
+  --warm-deep: #b45309; --warn-deep: #b45309;
+  --bg-rgb: 248 250 252; --brand-rgb: 59 130 246; --brand2-rgb: 6 182 212;
+  --warm-rgb: 245 158 11; --paper-rgb: 100 116 139;
+  --card-radius: 14px; --card-radius-sm: 10px;
+}
+body.teachany-high {
+  --bg: #0f172a; --bg-subtle: #131c31; --panel: #16233c; --card: #17243c; --card-elevated: #1c2b47;
+  --line: #2a3d5c; --line-subtle: rgba(148, 163, 184, 0.16);
+  --text: #e8eefb; --text-secondary: #c3cfe3; --muted: #93a4bf;
+  --brand: #60a5fa; --brand-2: #a78bfa; --warm: #fbbf24; --accent: #a78bfa;
+  --brand-soft: rgba(96, 165, 250, 0.14); --brand-2-soft: rgba(167, 139, 250, 0.14);
+  --accent-soft: rgba(167, 139, 250, 0.14); --warm-soft: rgba(251, 191, 36, 0.14);
+  --text-strong: #f1f5f9; --link: #7cb3ff; --accent-deep: #c4b5fd;
+  --warm-deep: #fcd34d; --warn-deep: #fbbf24;
+  --bg-rgb: 15 23 42; --brand-rgb: 96 165 250; --brand2-rgb: 167 139 250;
+  --warm-rgb: 251 191 36; --paper-rgb: 148 163 184;
+  --card-radius: 12px; --card-radius-sm: 10px;
+}
+body.teachany-high .teachany-brand-bar { background: rgba(15, 23, 42, 0.92); }
+body.teachany-high .slide-toolbar { background: rgba(15, 23, 42, 0.94); }
+body.teachany-high .toolbar-btn { background: rgba(148, 163, 184, 0.14); color: var(--text); }
+body.teachany-high .slide-sidenav { background: rgba(15, 23, 42, 0.7); }
+body.teachany-high .lab-stage { background: linear-gradient(180deg, #16233c 0%, #1b2b49 62%, #22345a 62.5%, #1b2b49 100%); }
+
+/* ─── 迁移覆盖（2026-09-22）────────────────────────────────────────
+   旧课件里有一段「TeachAny 统一呈现基线」用 !important 取消了分页放映：
+     .slide-container{height:auto!important;max-height:none!important;
+                      overflow:visible!important;scroll-snap-type:none!important}
+   结果容器不可滚动 —— 点侧边导航点只有计数和进度条在变，页面本身不动，
+   看起来像"导航坏了"。这里用同等重要性 + 更高特异性（body:not(...) .slide-container）
+   夺回容器高度、滚动与吸附。
+   ⚠️ 这段必须放在所有旧样式之后，否则会被基线的 !important 盖住。            */
+body:not(.play-mode) .slide-container {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow-y: auto !important;
+  scroll-snap-type: y proximity !important;
+}
+body.play-mode .slide-container {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  scroll-snap-type: y mandatory !important;
+}
+.slide-page { min-height: 100dvh; scroll-snap-align: start !important; }
+
+</style>
 </head>
-<body class="teachany-middle teachany-middle-pro">
-<nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;;color:#334155""><a href="#slide-container">📑 知识图谱</a><a href="#problem-anchor-choices">🤝 AI 学伴</a><a href="#learner-question-input">📚 课程内容</a></nav>
-
-
+<body class="teachany-middle teachany-middle-pro"><div hidden aria-hidden="true" style="display:none"><span id="course-version-display"></span><span id="skill-version-display"></span></div>
+<div class="slide-progress-bar" id="slide-progress-bar" style="width: 0%"></div>
 <!-- teachany-hero-notext -->
 
 <div class="slide-container" id="slide-container">
-  <section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="slide-page" data-page-type="cover" data-page-index="0" data-tts="hero" data-tsh="开场 - 古代亚非文明（古埃及/古巴比伦/古印度）" data-slot="35">
-    <div class="slide-inner"><div class="card card-glow"><h1>古代亚非文明（古埃及/古巴比伦/古印度）</h1><p class="subtitle">世界古代史课程内容包括区域文明的多元发展，使学生了解人类文明从分散到整体的历程。</p><figure class="ta-standard-figure" style="margin-top:28px"><section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<section class="slide-page" data-page-type="cover" data-page-index="0" data-tsh="开场 · 本课概览"><div class="slide-inner">
 <figure class="ta-standard-figure ta-figure-labeled">
   <div class="ta-figure-wrap">
     <img class="hero-cover-img" src="./assets/hist-m-ancient-civilizations-hero.png" alt="古代亚非文明（古埃及/古巴比伦/古印度）知识结构（无字）" loading="eager">
@@ -104,19 +513,27 @@ input,textarea{width:100%;border:1px solid #94a3b8;border-radius:10px;padding:12
   </div>
   <figcaption>无字生图 + HTML 中文叠标</figcaption>
 </figure>
-</section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出尼罗河对古埃及农业的影响</p></div><div class="tu-q"><p>🎯 能判断楔形文字与象形文字的区别</p></div><div class="tu-q"><p>🎯 能分析种姓制度对印度社会的影响</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么金字塔要建在沙漠里？</p></div><div class="tu-q"><p>❓ 汉谟拉比法典真的公平吗？</p></div><div class="tu-q"><p>❓ 印度种姓制度现在还有吗？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
-<section class="section teachany-upgrade-block" data-bloom-level="apply" data-scaffold="full" id="pretest"><h2>📝 前测</h2><div class="tu-q" data-answer="A"><h3>前测题 1</h3><p>古埃及人测量尼罗河水位用于？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆农业与宗教目的">预测收成</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆农业与宗教目的">计算税收</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆农业与宗教目的">规划战争</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆农业与宗教目的">祭祀神灵</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C"><h3>前测题 2</h3><p>楔形文字载体是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误用其他古文明书写材料">纸草</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误用其他古文明书写材料">龟甲</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误用其他古文明书写材料">泥板</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误用其他古文明书写材料">竹简</button></div><div class="tu-fb" hidden></div></div></section>
+</div></section>
+<section class="slide-page" data-page-type="interactive" data-page-index="1" data-tsh="情境导入 · 带着问题学"><div class="slide-inner">
+<h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么金字塔要建在沙漠里？</p></div><div class="tu-q"><p>❓ 汉谟拉比法典真的公平吗？</p></div><div class="tu-q"><p>❓ 印度种姓制度现在还有吗？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p>
+</div></section>
+<section class="slide-page" data-page-type="objectives" data-page-index="2" data-tsh="学习目标"><div class="slide-inner">
+<h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出尼罗河对古埃及农业的影响</p></div><div class="tu-q"><p>🎯 能判断楔形文字与象形文字的区别</p></div><div class="tu-q"><p>🎯 能分析种姓制度对印度社会的影响</p></div>
+</div></section>
+<section class="slide-page" data-page-type="quiz" data-page-index="3" data-tsh="前测 · 起点诊断"><div class="slide-inner">
+<h2>📝 前测</h2><div class="tu-q" data-answer="A"><h3>前测题 1</h3><p>古埃及人测量尼罗河水位用于？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆农业与宗教目的">预测收成</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆农业与宗教目的">计算税收</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆农业与宗教目的">规划战争</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆农业与宗教目的">祭祀神灵</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>前测题 2</h3><p>楔形文字载体是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误用其他古文明书写材料">纸草</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误用其他古文明书写材料">龟甲</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误用其他古文明书写材料">泥板</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误用其他古文明书写材料">竹简</button></div><div class="tu-fb" hidden></div></div>
+</div></section>
+<section class="slide-page" data-page-type="concept" data-page-index="4" data-tsh="概念一 · 核心知识"><div class="slide-inner"><div class="card card-accent"><div class="section-header"><span class="phase-tag">Concept</span><h2>古代亚非文明（古埃及/古巴比伦/古印度）：课标核心是什么？</h2></div><p><strong>古代亚非文明（古埃及/古巴比伦/古印度）</strong>是初中历史的重要内容。世界古代史课程内容包括区域文明的多元发展，使学生了解人类文明从分散到整体的历程。</p><p>通过了解古代主要文明区域，认识世界古代文明的多元特点，理解人类文明的共同价值。</p></div></div>
+  
+<h2>📖 尼罗河赠礼</h2><div class="tu-q"><p><strong>And：</strong>学生知道埃及有金字塔</p><p><strong>But：</strong>但不懂为何只有尼罗河能孕育古埃及文明</p><p><strong>Therefore：</strong>理解地理环境对文明的决定作用</p></div><div class="tu-q"><p>古埃及文明被称为'尼罗河的赠礼'，因为这条每年7-10月定期泛滥的河流，不仅带来肥沃淤泥（洪水退后每平方米沉积2厘米厚淤泥），还形成天然灌溉系统。例如法老美尼斯在公元前3100年统一上下埃及后，组织修建的蓄水池工程可灌溉50万亩农田，这解释了为何埃及能养活百万人口并建造金字塔。</p></div><div class="tu-q"><p>🌍 就像今天长江三角洲的稻田依赖长江水，古埃及人在尼罗河畔种植小麦和大麦。我们吃的面包最早就是古埃及人用尼罗河三角洲的小麦发明的，他们甚至用面粉当工资发给工人。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>古埃及人称尼罗河泛滥季为'阿赫特'，主要是因为洪水带来了什么？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B/C/D的同学要注意：虽然尼罗河确实有这些功能，但文明发展的关键是农业基础，黑色淤泥使粮食产量提升3倍以上">A.肥沃的黑色淤泥</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B/C/D的同学要注意：虽然尼罗河确实有这些功能，但文明发展的关键是农业基础，黑色淤泥使粮食产量提升3倍以上">B.大量的鱼群</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B/C/D的同学要注意：虽然尼罗河确实有这些功能，但文明发展的关键是农业基础，黑色淤泥使粮食产量提升3倍以上">C.饮用水源</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B/C/D的同学要注意：虽然尼罗河确实有这些功能，但文明发展的关键是农业基础，黑色淤泥使粮食产量提升3倍以上">D.运输通道</button></div><div class="tu-fb" hidden></div></div>
 
-
-</figure></div></div></section><section class="slide-page" data-page-type="concept" data-page-index="3" data-tts="concept-core" data-tsh="核心 - 古代亚非文明（古埃及/古巴比伦/古印度）" data-bloom-level="2" data-scaffold="full" data-slot="35">
-    <div class="slide-inner"><div class="card card-accent"><div class="section-header"><span class="phase-tag">Concept</span><h2>古代亚非文明（古埃及/古巴比伦/古印度）：课标核心是什么？</h2></div><p><strong>古代亚非文明（古埃及/古巴比伦/古印度）</strong>是初中历史的重要内容。世界古代史课程内容包括区域文明的多元发展，使学生了解人类文明从分散到整体的历程。</p><p>通过了解古代主要文明区域，认识世界古代文明的多元特点，理解人类文明的共同价值。</p></div></div>
-  </section>
-
-<section class="slide-page" data-page-type="interactive" data-page-index="5" data-tts="map-explore" data-tsh="地图探究" data-bloom-level="3" data-scaffold="partial" data-slot="35">
-    <div class="slide-inner"><div class="card card-glow"><div class="section-header"><span class="phase-tag" data-variant="success">Map</span><h2>古代亚非文明（古埃及/古巴比伦/古印度） · 历史地图</h2></div><p style="margin:0 0 12px;color:inherit;opacity:.85">点击时代/图层按钮切换地图；悬停边界，点击城市标记查看说明。</p><div class="map-host" data-teachany-map="thm-hist-m-ancient-civilizations" data-teachany-map-scope="china" data-teachany-map-title="古代亚非文明（古埃及/古巴比伦/古印度） · 历史地图"><script type="application/json" data-teachany-map-config>
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>古代亚非文明</h2>
+      <p>古埃及、古巴比伦、古印度等亚非文明发源于大河流域，创造了文字、法律、数学与宗教文化成就。认识它们要抓住自然环境与文明特征的关系，并理解人类文明的多元起源。</p>
+    </div></section>
+<section class="slide-page" data-page-type="interactive" data-page-index="5" data-tsh="互动一 · 概念应用"><div class="slide-inner"><div class="card card-glow"><div class="section-header"><span class="phase-tag" data-variant="success">Map</span><h2>古代亚非文明（古埃及/古巴比伦/古印度） · 历史地图</h2></div><p style="margin:0 0 12px;color:inherit;opacity:.85">点击时代/图层按钮切换地图；悬停边界，点击城市标记查看说明。</p><div class="map-host" data-teachany-map="thm-hist-m-ancient-civilizations" data-teachany-map-scope="china" data-teachany-map-title="古代亚非文明（古埃及/古巴比伦/古印度） · 历史地图"><script type="application/json" data-teachany-map-config>
 {
   "eras": [
     {
@@ -160,12 +577,11 @@ input,textarea{width:100%;border:1px solid #94a3b8;border-radius:10px;padding:12
   ],
   "terrain": true
 }
-</script></div></div></div>
-  </section>
-<section class="slide-page" data-page-type="concept" data-page-index="7" data-tts="knowledge-graph" data-tsh="知识图谱" data-bloom-level="2" data-scaffold="full">
-    <div class="slide-inner"></div>
-  </section>
-<section class="slide-page" data-page-index="8" data-page-type="concept" data-tsh="AI 多模态互动" data-slot="35"><section class="section" data-tts="ai-media" id="ai-media-zone">
+</script></div></div></div></section>
+<section class="slide-page" data-page-type="concept" data-page-index="6" data-tsh="概念二 · 深层理解"><div class="slide-inner">
+<h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>金字塔=法老陵墓+数学奇迹+奴隶血泪</p></div><div class="tu-q"><h3>💡解释它</h3><p>汉谟拉比法典用'以眼还眼'维护阶级统治</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>埃及信阿蒙神，巴比伦拜马尔杜克，印度崇梵天</p></div><div class="tu-q"><h3>👁️看见它</h3><p>想象自己用芦苇笔在泥板上刻楔形文字</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>大河流域文明都靠治水发展出强大王权</p></div>
+</div></section>
+<section class="slide-page" data-page-type="interactive" data-page-index="7" data-tsh="互动二 · AI 多模态"><div class="slide-inner">
 <div class="card card-glow"><h2>🎨 AI 多模态互动</h2>
 <p>复制提示词到 AI 学伴，生成「古代亚非文明（古埃及/古巴比伦/古印度）」的时间轴或事件提纲；也可以上传你手绘的示意图，请 AI 学伴点评。</p>
 <textarea id="ai-prompt-box" rows="3" style="width:100%">请用表格总结「古代亚非文明（古埃及/古巴比伦/古印度）」的背景、经过、影响，并给出一条时间轴和一个易混点辨析。</textarea>
@@ -173,30 +589,9 @@ input,textarea{width:100%;border:1px solid #94a3b8;border-radius:10px;padding:12
 <p class="feedback" id="ai-zone-feedback">复制后可粘贴到 AI 学伴继续对话。</p>
 </div>
 <script>(function(){var b=document.getElementById('copy-ai-prompt');if(!b)return;b.addEventListener('click',function(){var t=document.getElementById('ai-prompt-box');if(!t)return;t.focus();t.select();try{document.execCommand('copy');}catch(e){}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value);var f=document.getElementById('ai-zone-feedback');if(f)f.textContent='✅ 已复制，去 AI 学伴粘贴吧';});})();</script>
-</section>
-<section class="section teachany-upgrade-block" data-interactive="conceptest" data-conceptest="true" data-bloom-level="understand" data-scaffold="full"><h2>💡 概念检测（互动）</h2><p>下列文明成果与地理特征匹配正确的是</p><div class="tu-opts tu-concept">
-<button type="button" class="tu-opt" data-choice="A" data-correct="true" data-diagnosis="太阳历为预测尼罗河泛滥而创制">A. 古埃及-太阳历-尼罗河定期泛滥</button>
-<button type="button" class="tu-opt" data-choice="B" data-correct="false" data-diagnosis="种姓制度属古印度文明">B. 古巴比伦-种姓制度-底格里斯河航运</button>
-<button type="button" class="tu-opt" data-choice="C" data-correct="false" data-diagnosis="金字塔是古埃及建筑">C. 古印度-金字塔-印度河平原</button>
-<button type="button" class="tu-opt" data-choice="D" data-correct="false" data-diagnosis="楔形文字起源于两河流域">D. 中国-楔形文字-黄河泛滥</button>
-</div><div class="tu-fb" hidden></div></section>
-<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 大河文明对比表</h2><p>根据四大文明古国的考古发现，完成特征对比表格</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="不同流域的自然条件影响文明发展方向"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="农作物种类/建筑材质/文字载体等实物证据"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="灌溉农业是早期文明共同基础"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
-</section>
-<section class="slide-page" data-page-type="content" data-tsh="精讲" data-slot="35">
-  <section class="section histm-depth core-knowledge-module text-module" id="lesson-focus"
-    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
-    <div class="card">
-      <span class="phase-tag">知识精讲</span>
-      <h2>古代亚非文明</h2>
-      <p>古埃及、古巴比伦、古印度等亚非文明发源于大河流域，创造了文字、法律、数学与宗教文化成就。认识它们要抓住自然环境与文明特征的关系，并理解人类文明的多元起源。</p>
-    </div>
-  </section>
-<figure class="ta-standard-figure"><figcaption>古代亚非三大文明发源地及其核心特征对比图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34d399" stop-opacity="0.25"/><stop offset="1" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="1" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="river" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dd3fc" stop-opacity="0.4"/><stop offset="1" stop-color="#0ea5e9" stop-opacity="0.2"/></linearGradient><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="10" y="10" width="620" height="400" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" fill="freeze"/></rect><path d="M30 30 L610 30 M30 60 L610 60 M30 90 L610 90 M30 120 L610 120" stroke="rgba(100,116,139,0.15)" stroke-width="0.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.1s" fill="freeze"/></path><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">古代亚非文明发源地<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.2s" fill="freeze"/></text><rect x="50" y="80" width="160" height="280" rx="12" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="130" y="105" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古埃及文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><path d="M70 120 Q130 140 190 120" fill="url(#river)" stroke="#0ea5e9" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></path><text x="130" y="135" text-anchor="middle" fill="#7dd3fc" font-size="12">尼罗河<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><circle cx="80" cy="160" r="8" fill="rgba(239,68,68,0.3)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="1.5s"/></circle><text x="95" y="165" fill="#e2e8f0" font-size="12">金字塔<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><circle cx="80" cy="190" r="6" fill="rgba(52,211,153,0.3)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></circle><text x="95" y="195" fill="#e2e8f0" font-size="12">象形文字<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><circle cx="80" cy="220" r="6" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></circle><text x="95" y="225" fill="#e2e8f0" font-size="12">法老专制<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><rect x="240" y="80" width="160" height="280" rx="12" fill="url(#bg2)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="320" y="105" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古巴比伦文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><path d="M260 120 Q300 130 340 125 Q360 120 380 125" fill="url(#river)" stroke="#0ea5e9" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></path><text x="320" y="140" text-anchor="middle" fill="#7dd3fc" font-size="12">两河流域<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><circle cx="270" cy="160" r="8" fill="rgba(239,68,68,0.3)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="1.5s"/></circle><text x="285" y="165" fill="#e2e8f0" font-size="12">汉谟拉比法典<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><circle cx="270" cy="190" r="6" fill="rgba(52,211,153,0.3)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></circle><text x="285" y="195" fill="#e2e8f0" font-size="12">楔形文字<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><circle cx="270" cy="220" r="6" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></circle><text x="285" y="225" fill="#e2e8f0" font-size="12">城邦制度<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><rect x="430" y="80" width="160" height="280" rx="12" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="510" y="105" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古印度文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><path d="M450 120 Q490 135 530 125 Q550 120 570 130" fill="url(#river)" stroke="#0ea5e9" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></path><text x="510" y="140" text-anchor="middle" fill="#7dd3fc" font-size="12">印度河流域<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><circle cx="460" cy="160" r="8" fill="rgba(239,68,68,0.3)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="1.5s"/></circle><text x="475" y="165" fill="#e2e8f0" font-size="12">种姓制度<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><circle cx="460" cy="190" r="6" fill="rgba(52,211,153,0.3)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></circle><text x="475" y="195" fill="#e2e8f0" font-size="12">佛教起源<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><circle cx="460" cy="220" r="6" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></circle><text x="475" y="225" fill="#e2e8f0" font-size="12">数学成就<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><path d="M130 270 Q200 250 270 270" stroke="rgba(100,116,139,0.7)" stroke-width="2" fill="none" marker-end="url(#arrow)" stroke-dasharray="8 4"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.5s" repeatCount="indefinite" begin="2s"/></path><text x="200" y="245" text-anchor="middle" fill="#e2e8f0" font-size="11">文化交流<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.2s" fill="freeze"/></text><path d="M320 270 Q375 250 430 270" stroke="rgba(100,116,139,0.7)" stroke-width="2" fill="none" marker-end="url(#arrow)" stroke-dasharray="8 4"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.5s" repeatCount="indefinite" begin="2.3s"/></path><text x="375" y="245" text-anchor="middle" fill="#e2e8f0" font-size="11">贸易往来<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.5s" fill="freeze"/></text><ellipse cx="320" cy="320" rx="250" ry="25" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5 3"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></ellipse><text x="320" y="327" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">大河流域孕育人类早期文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.9s" fill="freeze"/></text><rect x="450" y="340" width="180" height="70" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.1s" fill="freeze"/></rect><text x="460" y="355" fill="#e2e8f0" font-size="11" font-weight="bold">文明特征要素:<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><circle cx="465" cy="365" r="3" fill="#f87171"/><text x="475" y="369" fill="#e2e8f0" font-size="10">政治制度<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.5s" fill="freeze"/></text><circle cx="465" cy="378" r="3" fill="#4ade80"/><text x="475" y="382" fill="#e2e8f0" font-size="10">文字系统<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.7s" fill="freeze"/></text><circle cx="465" cy="391" r="3" fill="#a78bfa"/><text x="475" y="395" fill="#e2e8f0" font-size="10">宗教文化<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><circle cx="540" cy="365" r="3" fill="#7dd3fc"/><text x="550" y="369" fill="#e2e8f0" font-size="10">地理环境<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.1s" fill="freeze"/></text><circle cx="540" cy="378" r="3" fill="#fbbf24"/><text x="550" y="382" fill="#e2e8f0" font-size="10">科技成就<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.3s" fill="freeze"/></text></svg></figure>
-
-</section><section class="slide-page" data-page-type="content" data-tsh="方法范例" data-slot="35">
-  <section class="section histm-depth core-knowledge-module text-module" id="lesson-method"
-    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
-    <div class="card">
+</div></section>
+<section class="slide-page" data-page-type="concept" data-page-index="8" data-tsh="例析 · 方法与范例"><div class="slide-inner">
+<div class="card">
       <span class="phase-tag">方法与范例</span>
       <h2>方法：大河—成就—特征对照</h2>
       <p>每个文明记一条代表性成就：如埃及金字塔与象形文字、古巴比伦《汉谟拉比法典》、古印度种姓与佛教起源等。</p>
@@ -209,15 +604,15 @@ input,textarea{width:100%;border:1px solid #94a3b8;border-radius:10px;padding:12
         <div class="histm-feedback" id="histm-depth-feedback" role="status"></div>
       </div>
     </div>
-  </section>
-<figure class="ta-standard-figure"><figcaption>古代亚非文明大河流域发展机制与代表性成就对照图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(59,130,246,0.25)"/><stop offset="100%" stop-color="rgba(59,130,246,0.10)"/></linearGradient><linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(245,158,11,0.25)"/><stop offset="100%" stop-color="rgba(245,158,11,0.10)"/></linearGradient><linearGradient id="bg3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(52,211,153,0.25)"/><stop offset="100%" stop-color="rgba(52,211,153,0.10)"/></linearGradient><linearGradient id="bg4" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(239,68,68,0.25)"/><stop offset="100%" stop-color="rgba(239,68,68,0.10)"/></linearGradient><linearGradient id="bg5" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(167,139,250,0.25)"/><stop offset="100%" stop-color="rgba(167,139,250,0.10)"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect x="0" y="0" width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.3"><path d="M40 40 L600 40 M40 80 L600 80 M40 120 L600 120 M40 160 L600 160 M40 200 L600 200 M40 240 L600 240 M40 280 L600 280 M40 320 L600 320 M40 360 L600 360" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/><path d="M80 30 L80 390 M160 30 L160 390 M240 30 L240 390 M320 30 L320 390 M400 30 L400 390 M480 30 L480 390 M560 30 L560 390" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/></g><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">古代亚非文明发展机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><rect x="50" y="70" width="160" height="280" rx="10" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="130" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古埃及文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><ellipse cx="130" cy="120" rx="25" ry="15" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></ellipse><text x="130" y="125" text-anchor="middle" fill="#e2e8f0" font-size="11">尼罗河<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><path d="M130 135 Q130 150 130 165" stroke="#7dd3fc" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><rect x="65" y="170" width="130" height="45" rx="8" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="130" y="185" text-anchor="middle" fill="#e2e8f0" font-size="10">农业发展<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="130" y="200" text-anchor="middle" fill="#e2e8f0" font-size="10">政治统一<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><circle cx="80" cy="240" r="12" fill="rgba(239,68,68,0.3)" stroke="#ef4444" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="2s"/></circle><text x="80" y="245" text-anchor="middle" fill="#e2e8f0" font-size="9">金字塔<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><circle cx="180" cy="240" r="12" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="2.2s"/></circle><text x="180" y="245" text-anchor="middle" fill="#e2e8f0" font-size="9">象形文字<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></text><rect x="240" y="70" width="160" height="280" rx="10" fill="url(#bg2)" stroke="#f59e0b" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="320" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古巴比伦文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><ellipse cx="320" cy="120" rx="30" ry="15" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></ellipse><text x="320" y="125" text-anchor="middle" fill="#e2e8f0" font-size="11">两河流域<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><path d="M320 135 Q320 150 320 165" stroke="#7dd3fc" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><rect x="255" y="170" width="130" height="45" rx="8" fill="rgba(59,130,246,0.2)" stroke="#3b82f6" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="320" y="185" text-anchor="middle" fill="#e2e8f0" font-size="10">城邦制度<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="320" y="200" text-anchor="middle" fill="#e2e8f0" font-size="10">商业贸易<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><rect x="270" y="230" width="100" height="35" rx="6" fill="rgba(239,68,68,0.3)" stroke="#ef4444" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="2s"/></rect><text x="320" y="245" text-anchor="middle" fill="#fbbf24" font-size="10">汉谟拉比法典<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><text x="320" y="258" text-anchor="middle" fill="#e2e8f0" font-size="9">成文法<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><rect x="430" y="70" width="160" height="280" rx="10" fill="url(#bg3)" stroke="#34d399" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="510" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古印度文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><ellipse cx="510" cy="120" rx="25" ry="15" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></ellipse><text x="510" y="125" text-anchor="middle" fill="#e2e8f0" font-size="11">印度河<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><path d="M510 135 Q510 150 510 165" stroke="#7dd3fc" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><rect x="445" y="170" width="130" height="45" rx="8" fill="rgba(167,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="510" y="185" text-anchor="middle" fill="#e2e8f0" font-size="10">农业城市<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="510" y="200" text-anchor="middle" fill="#e2e8f0" font-size="10">手工业<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><circle cx="470" cy="240" r="12" fill="rgba(239,68,68,0.3)" stroke="#ef4444" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="2s"/></circle><text x="470" y="245" text-anchor="middle" fill="#e2e8f0" font-size="9">种姓制<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><circle cx="550" cy="240" r="12" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="2.2s"/></circle><text x="550" y="245" text-anchor="middle" fill="#e2e8f0" font-size="9">佛教<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></text><path d="M210 210 Q280 210 240 210" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" fill="none" stroke-dasharray="5 3"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></path><path d="M400 210 Q440 210 430 210" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" fill="none" stroke-dasharray="5 3"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></path><circle cx="130" cy="300" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></circle><path d="M133 300 L180 300" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></path><text x="185" y="305" fill="#e2e8f0" font-size="11">大河流域→农业基础<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></text><circle cx="320" cy="300" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></circle><path d="M323 300 L370 300" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></path><text x="375" y="305" fill="#e2e8f0" font-size="11">法律制度→文明规范<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></text><circle cx="510" cy="300" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></circle><path d="M513 300 L560 300" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></path><text x="565" y="305" fill="#e2e8f0" font-size="11">宗教思想→精神文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></text><rect x="480" y="320" width="140" height="80" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></rect><text x="490" y="335" fill="#fbbf24" font-size="12" font-weight="bold">发展规律<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></text><rect x="490" y="345" width="8" height="8" fill="#34d399"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></rect><text x="505" y="353" fill="#e2e8f0" font-size="10">大河流域<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></text><rect x="490" y="360" width="8" height="8" fill="#f59e0b"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></rect><text x="505" y="368" fill="#e2e8f0" font-size="10">社会发展<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></text><rect x="490" y="375" width="8" height="8" fill="#ef4444"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></rect><text x="505" y="383" fill="#e2e8f0" font-size="10">文明成就<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></text></svg></figure>
-
-<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 尼罗河赠礼</h2><div class="tu-q"><p><strong>And：</strong>学生知道埃及有金字塔</p><p><strong>But：</strong>但不懂为何只有尼罗河能孕育古埃及文明</p><p><strong>Therefore：</strong>理解地理环境对文明的决定作用</p></div><div class="tu-q"><p>古埃及文明被称为'尼罗河的赠礼'，因为这条每年7-10月定期泛滥的河流，不仅带来肥沃淤泥（洪水退后每平方米沉积2厘米厚淤泥），还形成天然灌溉系统。例如法老美尼斯在公元前3100年统一上下埃及后，组织修建的蓄水池工程可灌溉50万亩农田，这解释了为何埃及能养活百万人口并建造金字塔。</p></div><div class="tu-q"><p>🌍 就像今天长江三角洲的稻田依赖长江水，古埃及人在尼罗河畔种植小麦和大麦。我们吃的面包最早就是古埃及人用尼罗河三角洲的小麦发明的，他们甚至用面粉当工资发给工人。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>古埃及人称尼罗河泛滥季为'阿赫特'，主要是因为洪水带来了什么？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B/C/D的同学要注意：虽然尼罗河确实有这些功能，但文明发展的关键是农业基础，黑色淤泥使粮食产量提升3倍以上">A.肥沃的黑色淤泥</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B/C/D的同学要注意：虽然尼罗河确实有这些功能，但文明发展的关键是农业基础，黑色淤泥使粮食产量提升3倍以上">B.大量的鱼群</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B/C/D的同学要注意：虽然尼罗河确实有这些功能，但文明发展的关键是农业基础，黑色淤泥使粮食产量提升3倍以上">C.饮用水源</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B/C/D的同学要注意：虽然尼罗河确实有这些功能，但文明发展的关键是农业基础，黑色淤泥使粮食产量提升3倍以上">D.运输通道</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="ta-standard-section" id="teachany-ai-tutor-card">
-  <div data-teachany-tutor-card></div>
-</section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>金字塔=法老陵墓+数学奇迹+奴隶血泪</p></div><div class="tu-q"><h3>💡解释它</h3><p>汉谟拉比法典用'以眼还眼'维护阶级统治</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>埃及信阿蒙神，巴比伦拜马尔杜克，印度崇梵天</p></div><div class="tu-q"><h3>👁️看见它</h3><p>想象自己用芦苇笔在泥板上刻楔形文字</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>大河流域文明都靠治水发展出强大王权</p></div></section>
-</section><section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+</div></section>
+<section class="slide-page" data-page-type="quiz" data-page-index="9" data-tsh="概念测 · 即时检验"><div class="slide-inner">
+<h2>💡 概念检测（互动）</h2><p>下列文明成果与地理特征匹配正确的是</p><div class="tu-opts tu-concept">
+<button type="button" class="tu-opt" data-choice="A" data-correct="true" data-diagnosis="太阳历为预测尼罗河泛滥而创制">A. 古埃及-太阳历-尼罗河定期泛滥</button>
+<button type="button" class="tu-opt" data-choice="B" data-correct="false" data-diagnosis="种姓制度属古印度文明">B. 古巴比伦-种姓制度-底格里斯河航运</button>
+<button type="button" class="tu-opt" data-choice="C" data-correct="false" data-diagnosis="金字塔是古埃及建筑">C. 古印度-金字塔-印度河平原</button>
+<button type="button" class="tu-opt" data-choice="D" data-correct="false" data-diagnosis="楔形文字起源于两河流域">D. 中国-楔形文字-黄河泛滥</button>
+</div><div class="tu-fb" hidden></div>
+<h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
 <div class="tu-q" data-answer="C">
 <h3>选择题 1</h3><p>卢克索壁画中出现的书写材料最可能是</p><div class="tu-opts">
 <button type="button" class="tu-opt" data-choice="A" data-diagnosis="羊皮纸流行于古代欧洲">A. 羊皮纸</button>
@@ -241,13 +636,54 @@ input,textarea{width:100%;border:1px solid #94a3b8;border-radius:10px;padding:12
 </div><div class="tu-fb" hidden></div></div>
 <div class="tu-fill"><h3>填空题 1</h3><p>古埃及人把尼罗河每年泛滥带来的肥沃泥土称为____</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>黑色土地</p><p>与沙漠的'红色土地'相对，特指适合农耕的冲积平原</p></details></div>
 <div class="tu-fill"><h3>填空题 2</h3><p>迄今发现最完整的古巴比伦法典刻在____材质的石柱上</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>玄武岩</p><p>汉谟拉比法典原文刻于2.25米高的黑色玄武岩石柱</p></details></div>
-</section>
-<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）《汉谟拉比法典》石柱上部浮雕反映？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="需结合君权神授特点">国王授权</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="需结合君权神授特点">神灵授法</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="需结合君权神授特点">战争场景</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="需结合君权神授特点">贸易活动</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>若古印度医生治死婆罗门，根据法典应？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="需迁移'以牙还牙'原则">罚款</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="需迁移'以牙还牙'原则">断手</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="需迁移'以牙还牙'原则">流放</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="需迁移'以牙还牙'原则">死刑</button></div><div class="tu-fb" hidden></div></div>
-<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>大河流域文明共同点不包括？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆东西方政治制度差异">青铜器发达</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆东西方政治制度差异">信仰多神教</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆东西方政治制度差异">实行民主制</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆东西方政治制度差异">历法精确</button></div><div class="tu-fb" hidden></div></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为木乃伊是干尸所以很轻</h3><p>✅ 木乃伊裹百层布重达100公斤</p><p>💡 忽视防腐处理重量</p></div><div class="tu-q"><h3>❌ 以为种姓制度只有四大等级</h3><p>✅ 实际有3000+亚种姓</p><p>💡 教材简化表述</p></div></section>
-<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>埃及金字塔河边立，巴比伦法刻石柱，印度种姓分四等</p><p><strong>类比：</strong>文明像大树，河流是根，城市是果</p></div></section>
-<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：古代亚非文明</h2><div data-teachany-kg="hist-m-ancient-civilizations"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+</div></section>
+<section class="slide-page" data-page-type="interactive" data-page-index="10" data-tsh="综合任务 · 迁移应用"><div class="slide-inner">
+<div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>古代亚非文明</h2>
+      <p>古埃及、古巴比伦、古印度等亚非文明发源于大河流域，创造了文字、法律、数学与宗教文化成就。认识它们要抓住自然环境与文明特征的关系，并理解人类文明的多元起源。</p>
+    </div>
+  
+
+  <section class="section histm-depth core-knowledge-module text-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus"></section>
+<figure class="ta-standard-figure"><figcaption>古代亚非三大文明发源地及其核心特征对比图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34d399" stop-opacity="0.25"/><stop offset="1" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="1" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="river" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dd3fc" stop-opacity="0.4"/><stop offset="1" stop-color="#0ea5e9" stop-opacity="0.2"/></linearGradient><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="10" y="10" width="620" height="400" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" fill="freeze"/></rect><path d="M30 30 L610 30 M30 60 L610 60 M30 90 L610 90 M30 120 L610 120" stroke="rgba(100,116,139,0.15)" stroke-width="0.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.1s" fill="freeze"/></path><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">古代亚非文明发源地<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.2s" fill="freeze"/></text><rect x="50" y="80" width="160" height="280" rx="12" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="130" y="105" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古埃及文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><path d="M70 120 Q130 140 190 120" fill="url(#river)" stroke="#0ea5e9" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></path><text x="130" y="135" text-anchor="middle" fill="#7dd3fc" font-size="12">尼罗河<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><circle cx="80" cy="160" r="8" fill="rgba(239,68,68,0.3)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="1.5s"/></circle><text x="95" y="165" fill="#e2e8f0" font-size="12">金字塔<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><circle cx="80" cy="190" r="6" fill="rgba(52,211,153,0.3)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></circle><text x="95" y="195" fill="#e2e8f0" font-size="12">象形文字<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><circle cx="80" cy="220" r="6" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></circle><text x="95" y="225" fill="#e2e8f0" font-size="12">法老专制<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><rect x="240" y="80" width="160" height="280" rx="12" fill="url(#bg2)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="320" y="105" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古巴比伦文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><path d="M260 120 Q300 130 340 125 Q360 120 380 125" fill="url(#river)" stroke="#0ea5e9" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></path><text x="320" y="140" text-anchor="middle" fill="#7dd3fc" font-size="12">两河流域<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><circle cx="270" cy="160" r="8" fill="rgba(239,68,68,0.3)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="1.5s"/></circle><text x="285" y="165" fill="#e2e8f0" font-size="12">汉谟拉比法典<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><circle cx="270" cy="190" r="6" fill="rgba(52,211,153,0.3)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></circle><text x="285" y="195" fill="#e2e8f0" font-size="12">楔形文字<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><circle cx="270" cy="220" r="6" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></circle><text x="285" y="225" fill="#e2e8f0" font-size="12">城邦制度<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><rect x="430" y="80" width="160" height="280" rx="12" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="510" y="105" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古印度文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><path d="M450 120 Q490 135 530 125 Q550 120 570 130" fill="url(#river)" stroke="#0ea5e9" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></path><text x="510" y="140" text-anchor="middle" fill="#7dd3fc" font-size="12">印度河流域<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><circle cx="460" cy="160" r="8" fill="rgba(239,68,68,0.3)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="1.5s"/></circle><text x="475" y="165" fill="#e2e8f0" font-size="12">种姓制度<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><circle cx="460" cy="190" r="6" fill="rgba(52,211,153,0.3)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></circle><text x="475" y="195" fill="#e2e8f0" font-size="12">佛教起源<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><circle cx="460" cy="220" r="6" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></circle><text x="475" y="225" fill="#e2e8f0" font-size="12">数学成就<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><path d="M130 270 Q200 250 270 270" stroke="rgba(100,116,139,0.7)" stroke-width="2" fill="none" marker-end="url(#arrow)" stroke-dasharray="8 4"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.5s" repeatCount="indefinite" begin="2s"/></path><text x="200" y="245" text-anchor="middle" fill="#e2e8f0" font-size="11">文化交流<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.2s" fill="freeze"/></text><path d="M320 270 Q375 250 430 270" stroke="rgba(100,116,139,0.7)" stroke-width="2" fill="none" marker-end="url(#arrow)" stroke-dasharray="8 4"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.5s" repeatCount="indefinite" begin="2.3s"/></path><text x="375" y="245" text-anchor="middle" fill="#e2e8f0" font-size="11">贸易往来<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.5s" fill="freeze"/></text><ellipse cx="320" cy="320" rx="250" ry="25" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5 3"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></ellipse><text x="320" y="327" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">大河流域孕育人类早期文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.9s" fill="freeze"/></text><rect x="450" y="340" width="180" height="70" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.1s" fill="freeze"/></rect><text x="460" y="355" fill="#e2e8f0" font-size="11" font-weight="bold">文明特征要素:<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><circle cx="465" cy="365" r="3" fill="#f87171"/><text x="475" y="369" fill="#e2e8f0" font-size="10">政治制度<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.5s" fill="freeze"/></text><circle cx="465" cy="378" r="3" fill="#4ade80"/><text x="475" y="382" fill="#e2e8f0" font-size="10">文字系统<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.7s" fill="freeze"/></text><circle cx="465" cy="391" r="3" fill="#a78bfa"/><text x="475" y="395" fill="#e2e8f0" font-size="10">宗教文化<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><circle cx="540" cy="365" r="3" fill="#7dd3fc"/><text x="550" y="369" fill="#e2e8f0" font-size="10">地理环境<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.1s" fill="freeze"/></text><circle cx="540" cy="378" r="3" fill="#fbbf24"/><text x="550" y="382" fill="#e2e8f0" font-size="10">科技成就<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.3s" fill="freeze"/></text></svg></figure>
+
+
+
+    <div class="slide-inner"><div class="card card-glow"><h1>古代亚非文明（古埃及/古巴比伦/古印度）</h1><p class="subtitle">世界古代史课程内容包括区域文明的多元发展，使学生了解人类文明从分散到整体的历程。</p><figure class="ta-standard-figure" style="margin-top:28px"><section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图"></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"></section>
+<section class="section teachany-upgrade-block" data-bloom-level="apply" data-scaffold="full" id="pretest"></section>
+
+
+</figure></div></div>
+<h2>🔬 大河文明对比表</h2><p>根据四大文明古国的考古发现，完成特征对比表格</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="不同流域的自然条件影响文明发展方向"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="农作物种类/建筑材质/文字载体等实物证据"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="灌溉农业是早期文明共同基础"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div>
+
+  <section class="section histm-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method"></section>
+<figure class="ta-standard-figure"><figcaption>古代亚非文明大河流域发展机制与代表性成就对照图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(59,130,246,0.25)"/><stop offset="100%" stop-color="rgba(59,130,246,0.10)"/></linearGradient><linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(245,158,11,0.25)"/><stop offset="100%" stop-color="rgba(245,158,11,0.10)"/></linearGradient><linearGradient id="bg3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(52,211,153,0.25)"/><stop offset="100%" stop-color="rgba(52,211,153,0.10)"/></linearGradient><linearGradient id="bg4" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(239,68,68,0.25)"/><stop offset="100%" stop-color="rgba(239,68,68,0.10)"/></linearGradient><linearGradient id="bg5" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(167,139,250,0.25)"/><stop offset="100%" stop-color="rgba(167,139,250,0.10)"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect x="0" y="0" width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.3"><path d="M40 40 L600 40 M40 80 L600 80 M40 120 L600 120 M40 160 L600 160 M40 200 L600 200 M40 240 L600 240 M40 280 L600 280 M40 320 L600 320 M40 360 L600 360" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/><path d="M80 30 L80 390 M160 30 L160 390 M240 30 L240 390 M320 30 L320 390 M400 30 L400 390 M480 30 L480 390 M560 30 L560 390" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/></g><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">古代亚非文明发展机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><rect x="50" y="70" width="160" height="280" rx="10" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="130" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古埃及文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><ellipse cx="130" cy="120" rx="25" ry="15" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></ellipse><text x="130" y="125" text-anchor="middle" fill="#e2e8f0" font-size="11">尼罗河<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><path d="M130 135 Q130 150 130 165" stroke="#7dd3fc" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><rect x="65" y="170" width="130" height="45" rx="8" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="130" y="185" text-anchor="middle" fill="#e2e8f0" font-size="10">农业发展<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="130" y="200" text-anchor="middle" fill="#e2e8f0" font-size="10">政治统一<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><circle cx="80" cy="240" r="12" fill="rgba(239,68,68,0.3)" stroke="#ef4444" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="2s"/></circle><text x="80" y="245" text-anchor="middle" fill="#e2e8f0" font-size="9">金字塔<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><circle cx="180" cy="240" r="12" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="2.2s"/></circle><text x="180" y="245" text-anchor="middle" fill="#e2e8f0" font-size="9">象形文字<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></text><rect x="240" y="70" width="160" height="280" rx="10" fill="url(#bg2)" stroke="#f59e0b" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="320" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古巴比伦文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><ellipse cx="320" cy="120" rx="30" ry="15" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></ellipse><text x="320" y="125" text-anchor="middle" fill="#e2e8f0" font-size="11">两河流域<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><path d="M320 135 Q320 150 320 165" stroke="#7dd3fc" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><rect x="255" y="170" width="130" height="45" rx="8" fill="rgba(59,130,246,0.2)" stroke="#3b82f6" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="320" y="185" text-anchor="middle" fill="#e2e8f0" font-size="10">城邦制度<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="320" y="200" text-anchor="middle" fill="#e2e8f0" font-size="10">商业贸易<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><rect x="270" y="230" width="100" height="35" rx="6" fill="rgba(239,68,68,0.3)" stroke="#ef4444" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="2s"/></rect><text x="320" y="245" text-anchor="middle" fill="#fbbf24" font-size="10">汉谟拉比法典<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><text x="320" y="258" text-anchor="middle" fill="#e2e8f0" font-size="9">成文法<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><rect x="430" y="70" width="160" height="280" rx="10" fill="url(#bg3)" stroke="#34d399" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="510" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">古印度文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><ellipse cx="510" cy="120" rx="25" ry="15" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></ellipse><text x="510" y="125" text-anchor="middle" fill="#e2e8f0" font-size="11">印度河<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><path d="M510 135 Q510 150 510 165" stroke="#7dd3fc" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><rect x="445" y="170" width="130" height="45" rx="8" fill="rgba(167,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="510" y="185" text-anchor="middle" fill="#e2e8f0" font-size="10">农业城市<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="510" y="200" text-anchor="middle" fill="#e2e8f0" font-size="10">手工业<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><circle cx="470" cy="240" r="12" fill="rgba(239,68,68,0.3)" stroke="#ef4444" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="2s"/></circle><text x="470" y="245" text-anchor="middle" fill="#e2e8f0" font-size="9">种姓制<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><circle cx="550" cy="240" r="12" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" begin="2.2s"/></circle><text x="550" y="245" text-anchor="middle" fill="#e2e8f0" font-size="9">佛教<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></text><path d="M210 210 Q280 210 240 210" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" fill="none" stroke-dasharray="5 3"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></path><path d="M400 210 Q440 210 430 210" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" fill="none" stroke-dasharray="5 3"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></path><circle cx="130" cy="300" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></circle><path d="M133 300 L180 300" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></path><text x="185" y="305" fill="#e2e8f0" font-size="11">大河流域→农业基础<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></text><circle cx="320" cy="300" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></circle><path d="M323 300 L370 300" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></path><text x="375" y="305" fill="#e2e8f0" font-size="11">法律制度→文明规范<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></text><circle cx="510" cy="300" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></circle><path d="M513 300 L560 300" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></path><text x="565" y="305" fill="#e2e8f0" font-size="11">宗教思想→精神文明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></text><rect x="480" y="320" width="140" height="80" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></rect><text x="490" y="335" fill="#fbbf24" font-size="12" font-weight="bold">发展规律<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></text><rect x="490" y="345" width="8" height="8" fill="#34d399"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></rect><text x="505" y="353" fill="#e2e8f0" font-size="10">大河流域<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></text><rect x="490" y="360" width="8" height="8" fill="#f59e0b"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></rect><text x="505" y="368" fill="#e2e8f0" font-size="10">社会发展<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></text><rect x="490" y="375" width="8" height="8" fill="#ef4444"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></rect><text x="505" y="383" fill="#e2e8f0" font-size="10">文明成就<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></text></svg></figure>
+
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"></section>
+<section class="ta-standard-section" id="teachany-ai-tutor-card"></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"></section>
+
+
+  <div class="residue-block"></div><div class="residue-block"></div>
+
+<div class="residue-block"></div>
+<div class="residue-block">
+    <div class="slide-inner"></div>
+  </div>
+<div class="residue-block"><div class="residue-block"></div>
+<div class="residue-block"></div>
+<div class="residue-block"></div>
+</div>
+<div class="residue-block"></div><div class="residue-block"></div><div class="residue-block"></div>
+<div class="residue-block"></div>
+<div class="residue-block"></div>
+<div class="residue-block"></div>
+<div class="residue-block"></div>
 
 
 <script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "hist-m-ancient-civilizations", "name": "古代亚非文明", "status": "active"}, "extends": []};
@@ -289,9 +725,37 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 <script src="../../assets/vendor/leaflet/leaflet.js"></script>
 <script src="../../assets/scripts/teachany-historical-map.js?v=2.8.2" defer></script>
-<!-- slides-deduped -->
-<!-- slides-deduped -->
+
+
 <script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+</div></section>
+<section class="slide-page" data-page-type="quiz" data-page-index="11" data-tsh="后测 · 达标检测与易错点"><div class="slide-inner">
+<h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）《汉谟拉比法典》石柱上部浮雕反映？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="需结合君权神授特点">国王授权</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="需结合君权神授特点">神灵授法</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="需结合君权神授特点">战争场景</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="需结合君权神授特点">贸易活动</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>若古印度医生治死婆罗门，根据法典应？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="需迁移'以牙还牙'原则">罚款</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="需迁移'以牙还牙'原则">断手</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="需迁移'以牙还牙'原则">流放</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="需迁移'以牙还牙'原则">死刑</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>大河流域文明共同点不包括？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆东西方政治制度差异">青铜器发达</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆东西方政治制度差异">信仰多神教</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆东西方政治制度差异">实行民主制</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆东西方政治制度差异">历法精确</button></div><div class="tu-fb" hidden></div></div>
+<h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为木乃伊是干尸所以很轻</h3><p>✅ 木乃伊裹百层布重达100公斤</p><p>💡 忽视防腐处理重量</p></div><div class="tu-q"><h3>❌ 以为种姓制度只有四大等级</h3><p>✅ 实际有3000+亚种姓</p><p>💡 教材简化表述</p></div>
+</div></section>
+<section class="slide-page" data-page-type="summary" data-page-index="12" data-tsh="小结 · 迁移与记忆锚点"><div class="slide-inner">
+<h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>埃及金字塔河边立，巴比伦法刻石柱，印度种姓分四等</p><p><strong>类比：</strong>文明像大树，河流是根，城市是果</p></div>
+</div></section>
+<section class="slide-page" data-page-type="homework" data-page-index="13" data-tsh="分层作业 · 基础/应用/挑战"><div class="slide-inner">
+<h2>分层作业</h2>
+<h3>⭐ 基础巩固（必做）</h3>
+<p>复述本课两个核心概念的定义。</p>
+<h3>⭐⭐ 能力应用</h3>
+<p>用本课方法分析一个新例子。</p>
+<h3>⭐⭐⭐ 迁移挑战（选做）</h3>
+<p>有同学认为：认为木乃伊是干尸所以很轻 —— 请说明错在哪里。</p>
+<p>有同学认为：以为种姓制度只有四大等级 —— 请说明错在哪里。</p>
+</div></section>
+<section class="slide-page" data-page-type="knowledge-graph" data-page-index="14" data-tsh="知识图谱 · 本课节点位置"><div class="slide-inner">
+<h2 class="section-title">🗺️ 知识图谱：古代亚非文明</h2><div data-teachany-kg="hist-m-ancient-civilizations"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div>
+</div></section>
+<section class="slide-page" data-page-type="ai-tutor" data-page-index="15" data-tsh="AI 学伴 · 随时提问"><div class="slide-inner">
+<h2>AI 学伴 · 随时提问</h2>
+<p>把还没弄明白的地方写下来问 AI 学伴。它会先帮你找到卡住的地方，再给你一个小小的提示，让你自己往前走一步。</p>
+<div data-teachany-tutor-card></div>
+</div></section>
 </div>
 
 <!-- v7.20 标准连续音频配置（apply-standard-modules 自动补齐） -->
@@ -363,3 +827,206 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 </div>
 </body>
 </html>
+<nav class="slide-sidenav" id="slide-sidenav" aria-label="页面导航"></nav>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换播放模式" title="切换播放模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div class="slide-toolbar" id="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页" title="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress" title="进度"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info">1 / 16</span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页" title="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放" title="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏" title="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+
+<script>
+
+
+(function() {
+  'use strict';
+  const container = document.getElementById('slide-container');
+  const pages = Array.from(document.querySelectorAll('.slide-page'));
+  const totalPages = pages.length;
+  let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+
+  const progressBar = document.getElementById('slide-progress-bar');
+  const sidenav = document.getElementById('slide-sidenav');
+  const fab = document.getElementById('play-mode-fab');
+  const fabIconPlay = document.getElementById('fab-icon-play');
+  const fabIconBrowse = document.getElementById('fab-icon-browse');
+  const tbPrev = document.getElementById('tb-prev');
+  const tbNext = document.getElementById('tb-next');
+  const tbPageInfo = document.getElementById('tb-page-info');
+  const tbProgressFill = document.getElementById('tb-progress-fill');
+  const tbProgress = document.getElementById('tb-progress');
+  const tbAutoplay = document.getElementById('tb-autoplay');
+  const tbFullscreen = document.getElementById('tb-fullscreen');
+
+  function buildSidenav() {
+    sidenav.innerHTML = '';
+    const counter = document.createElement('div');
+    counter.className = 'sidenav-counter';
+    counter.id = 'sidenav-counter';
+    counter.textContent = '1/' + totalPages;
+    sidenav.appendChild(counter);
+    pages.forEach((page, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('data-tooltip', (page.dataset.tsh || '').split(' - ')[0] || ('第' + (i + 1) + '页'));
+      dot.setAttribute('aria-label', '跳转到第' + (i + 1) + '页');
+      dot.addEventListener('click', () => goToPage(i));
+      sidenav.appendChild(dot);
+    });
+  }
+
+  function updateUI() {
+    const progress = totalPages > 1 ? (currentPage / (totalPages - 1)) * 100 : 100;
+    progressBar.style.width = progress + '%';
+    tbProgressFill.style.width = progress + '%';
+    tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+    sidenav.querySelectorAll('.sidenav-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentPage));
+    const counterEl = document.getElementById('sidenav-counter');
+    if (counterEl) counterEl.textContent = (currentPage + 1) + '/' + totalPages;
+    tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+    tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+  }
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages) return;
+    currentPage = index;
+    if (isPlayMode) pages[currentPage].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else container.scrollTo({ top: pages[currentPage].offsetTop, behavior: 'smooth' });
+    updateUI();
+    dispatchPageAudio();
+  }
+  function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+  function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+  let scrollTimeout;
+  container.addEventListener('scroll', () => {
+    if (isPlayMode) return;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollTop = container.scrollTop;
+      let closest = 0, minDist = Infinity;
+      pages.forEach((page, i) => {
+        const dist = Math.abs(page.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentPage) { currentPage = closest; updateUI(); }
+    }, 100);
+  }, { passive: true });
+
+  function togglePlayMode() {
+    isPlayMode = !isPlayMode;
+    document.body.classList.toggle('play-mode', isPlayMode);
+    document.body.classList.toggle('toolbar-visible', isPlayMode);
+    fabIconPlay.style.display = isPlayMode ? 'none' : 'block';
+    fabIconBrowse.style.display = isPlayMode ? 'block' : 'none';
+    if (isPlayMode) goToPage(currentPage);
+  }
+  fab.addEventListener('click', togglePlayMode);
+  tbPrev.addEventListener('click', prevPage);
+  tbNext.addEventListener('click', nextPage);
+  tbProgress.addEventListener('click', (e) => {
+    const rect = tbProgress.getBoundingClientRect();
+    goToPage(Math.round(((e.clientX - rect.left) / rect.width) * (totalPages - 1)));
+  });
+  tbAutoplay.addEventListener('click', () => {
+    isAutoPlay = !isAutoPlay;
+    tbAutoplay.classList.toggle('active', isAutoPlay);
+    if (isAutoPlay) {
+      stopAutoPlay();
+      autoPlayTimer = setInterval(() => {
+        if (currentPage < totalPages - 1) nextPage();
+        else { stopAutoPlay(); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+      }, 9000);
+    } else stopAutoPlay();
+  });
+  function stopAutoPlay() { if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; } }
+  tbFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+      case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+      case 'f': case 'F': if (!e.ctrlKey && !e.metaKey) togglePlayMode(); break;
+      case 'Escape': if (isPlayMode) togglePlayMode(); break;
+    }
+  });
+
+  function dispatchPageAudio() {
+    const page = pages[currentPage];
+    const ttsId = page.dataset.tts;
+    if (ttsId && window.__TEACHANY_AUDIO_PLAYER__) window.__TEACHANY_AUDIO_PLAYER__.playSection(ttsId);
+  }
+  document.addEventListener('teachany-audio-ended', () => {
+    if (isAutoPlay && currentPage < totalPages - 1) setTimeout(nextPage, 1000);
+  });
+
+  window.__TEACHANY_LEARNER_QUESTION__ = '';
+  window.__TEACHANY_TUTOR_CONFIG__ = {
+    courseId: 'sci-e-buoyancy',
+    courseTitle: '浮力：为什么有的东西浮在水上？',
+    subject: 'science',
+    grade: '5',
+    nodeId: 'sci-e-buoyancy',
+    lessonType: 'experiment-inquiry',
+    getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+    getContext: () => ((pages[currentPage] || document.body).innerText || '').slice(0, 3000)
+  };
+
+  function setLearnerQuestion(q) {
+    window.__TEACHANY_LEARNER_QUESTION__ = q || '';
+    const fb = document.getElementById('anchor-feedback');
+    if (fb) fb.textContent = q ? '你的问题：' + q : '选择或输入后，这节课会围绕你的问题展开。';
+  }
+  document.querySelectorAll('[data-anchor-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-anchor-choice]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setLearnerQuestion(btn.getAttribute('data-anchor-choice') || btn.textContent.trim());
+    });
+  });
+  document.getElementById('learner-question-input')?.addEventListener('input', (e) => setLearnerQuestion(e.target.value.trim()));
+
+  buildSidenav();
+  updateUI();
+  document.body.classList.add('toolbar-visible');
+  setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.querySelector('meta[name="course-version"]')?.content;
+    const sv = document.querySelector('meta[name="teachany-version"]')?.content;
+    // 旧课件品牌栏可能没有这两个 span —— 必须同时判元素存在，否则整段脚本崩
+    const cvEl = document.getElementById('course-version-display');
+    const svEl = document.getElementById('skill-version-display');
+    if (cv && cvEl) cvEl.textContent = cv;
+    if (sv && svEl) svEl.textContent = sv.replace(/^v/, '');
+  });
+
+  if (location.hostname === 'localhost' || location.search.includes('debug')) {
+    const checks = [
+      ['slide-pages', () => pages.length >= 8],
+      ['course-id meta', () => !!document.querySelector('meta[name="course-id"]')?.content],
+      ['template-version meta', () => document.querySelector('meta[name="teachany-template-version"]')?.content === '2.0'],
+      ['side-navigation', () => sidenav.children.length > 0],
+      ['audio playlist', () => !!document.querySelector('[data-teachany-audio-playlist]')],
+      ['AI tutor card', () => !!document.querySelector('[data-teachany-tutor-card]')],
+      ['knowledge graph', () => !!document.querySelector('[data-teachany-kg]')]
+    ];
+    checks.forEach(([name, fn]) => console[fn() ? 'log' : 'warn']('[TeachAny v2] ' + (fn() ? 'PASS' : 'MISSING') + ' ' + name));
+  }
+})();
+
+
+</script>
