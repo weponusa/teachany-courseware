@@ -40,19 +40,19 @@ SPEC = [
     # 不同学科的内容块词汇不同（语文是 anchor/lesson-focus/…，
     # 物理还有 story / worked-example / module-1..4 / interactive-lab / phet-lab /
     # practice-l1..l3 / core / summary），用候选列表让同一份映射跨学科通用。
-    ('cover',           '开场 · 本课概览',          ['hero-infographic', 'cover']),
+    ('cover',           '开场 · 本课概览',          ['hero-infographic', 'cover', '开场']),
     ('interactive',     '情境导入 · 带着问题学',     ['story', 'anchor']),
     ('objectives',      '学习目标',                ['objectives']),
     ('quiz',            '前测 · 起点诊断',          ['pretest']),
     ('concept',         '概念一 · 核心知识',        ['核心', 'core', 'module-1', 'lesson-focus']),
-    ('interactive',     '互动一 · 概念应用',        ['地图探究', 'interactive-lab', 'module-2']),
+    ('interactive',     '互动一 · 概念应用',        ['互动 - 概念归类', '地图探究', 'interactive-lab', 'module-2']),
     ('concept',         '概念二 · 深层理解',        ['module-3', 'deep-understanding']),
     ('interactive',     '互动二 · AI 多模态',       ['module-4', 'ai-media-zone', 'phet-lab', '历史地图']),
     ('concept',         '例析 · 方法与范例',        ['worked-example', 'lesson-method']),
     ('quiz',            '概念测 · 即时检验',        ['practice-l2']),
     ('interactive',     '综合任务 · 迁移应用',      ['lesson-focus', '精讲']),
     ('quiz',            '后测 · 达标检测与易错点',   ['posttest', 'error-clinic']),
-    ('summary',         '小结 · 迁移与记忆锚点',     ['summary', '小结', 'memory-anchor']),
+    ('summary',         '小结 · 迁移与记忆锚点',     ['summary', '小结', '总结迁移', 'memory-anchor']),
     ('homework',        '分层作业 · 基础/应用/挑战',  ['practice-l1', 'practice-l3', 'gen:homework']),
     ('knowledge-graph', '知识图谱 · 本课节点位置',    ['knowledge-graph']),
     ('ai-tutor',        'AI 学伴 · 随时提问',       ['const:ai-tutor']),
@@ -236,17 +236,23 @@ def build(cid, dry=False, verify=False):
             if src.startswith('const:'):
                 parts.append(AI_TUTOR_HTML)
                 continue
-            u = by_key.get(src)
-            if u is None:
-                # 外层页的 key 是完整 data-tsh（如「开场 - 《乡土中国》…」），
-                # 所以先精确匹配，再前缀匹配
-                for k, cand in by_key.items():
-                    if k.startswith(src) and k not in used:
-                        u, src = cand, k
-                        break
-            if u and strip_tags(u['inner']):
-                parts.append(u['inner'])
-                used.add(src)
+            # ★ 取**全部匹配**而不是只取第一个：
+            #   同一页可以有多个来源（如 cover = hero-infographic + 开场，
+            #   summary = 小结 + 总结迁移 + memory-anchor）。只取第一个会把其余
+            #   同类内容挤进"兜底页"，浪费了本该合并的版面。
+            hits = []
+            for k in [src]:                      # 精确
+                if k in by_key and k not in used:
+                    hits.append(k)
+            if not hits:                          # 前缀（外层页的 key 是完整 data-tsh）
+                for k in by_key:
+                    if k.startswith(src) and k not in used and k not in hits:
+                        hits.append(k)
+            for k in hits:
+                u = by_key[k]
+                if strip_tags(u['inner']):
+                    parts.append(u['inner'])
+                    used.add(k)
         if gen == 'homework':
             parts.append(gen_homework(by_key))
         elif gen == 'conceptest':
