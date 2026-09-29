@@ -127,6 +127,41 @@ def strip_tags(s):
     return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', s)).strip()
 
 
+# 课件自带的 AI 学伴块（内容比占位完整）
+OWN_TUTOR = re.compile(r'<section\b[^>]*\bid="teachany-ai-tutor-card"[^>]*>[\s\S]*?</section>', re.I)
+
+
+def harvest_own_tutor(h):
+    """取出课件自带的 AI 学伴块并从原位置摘除。
+
+    ★ 不摘除会导致**同一张卡片渲染两遍**：`teachany-tutor-card.js` 按容器数量渲染，
+      课件自带的块原先在 `#slide-container` **之外**（不属于任何一页，但脚本照样渲染），
+      再加我注入的占位就是两个容器 —— 用户看到末页那张卡片整块重复。
+    """
+    m = OWN_TUTOR.search(h)
+    if not m:
+        return h, ''
+    return h[:m.start()] + h[m.end():], m.group(0)
+
+
+
+MIN_PAGE_CJK = 40   # 一页少于这么多汉字就认为"没有内容"，不建该页
+
+
+def cjk_len(s):
+    return len(re.findall(r'[\u4e00-\u9fff]', re.sub(r'<[^>]+>', ' ', re.sub(r'<script[\s\S]*?</script>', '', s))))
+
+
+def page_has_content(body):
+    """这一页是否有真实内容。
+
+    ★ 用户明确说"没有什么 16 页限制" —— 源课件缺哪个模块就不建那一页，
+      不要为了凑页数造空页（实测 phy-m-lens 原版没有前测，硬造出来的空页
+      在用户眼里就是"缺模块 + 内容太少"）。
+    """
+    return cjk_len(body) >= MIN_PAGE_CJK
+
+
 def inner_wrap(body):
     b = body.strip()
     if 'slide-inner' in b[:400]:
@@ -220,6 +255,7 @@ def build(cid, dry=False, verify=False):
         print("%s 未注入分页外壳，先跑 tools/migrate-to-v2-shell.py" % cid)
         return 1
     orig = h
+    h, own_tutor = harvest_own_tutor(h)   # 摘出自带 AI 学伴块，避免重复渲染
     units = parse(h)
     by_key = {u['key']: u for u in units}
     print("📄 %s：展平出 %d 个内容块" % (cid, len(units)))
@@ -234,7 +270,7 @@ def build(cid, dry=False, verify=False):
                 gen = src.split(':', 1)[1]
                 continue
             if src.startswith('const:'):
-                parts.append(AI_TUTOR_HTML)
+                parts.append(own_tutor if own_tutor else AI_TUTOR_HTML)
                 continue
             # ★ 取**全部匹配**而不是只取第一个：
             #   同一页可以有多个来源（如 cover = hero-infographic + 开场，
@@ -347,6 +383,23 @@ def build(cid, dry=False, verify=False):
     #   它后面的页面就被"弹出"成 BODY 的兄弟节点 —— 症状是"直属子节点只有 11 个、
     #   导航点却是 17 个，且缺失的页正好是后几页"（实测 hist-m-qin-han-unification）。
     #   逐页配平后，每页自己闭合，容器不会被提前关掉。
+    # ★ 只保留有内容的页（cover 永远保留，它是入口）
+    kept = []
+    skipped = []
+    for i, pt, t, bd in built:
+        # cover 是入口；knowledge-graph / ai-tutor 是 **JS 渲染**的模块，
+        # 内容在脚本里，用纯文本判断会误杀（用户已决定补脚本引用，这两页必须留）
+        js_module = pt in ('knowledge-graph', 'ai-tutor')
+        if pt == 'cover' or js_module or page_has_content(bd):
+            kept.append((i, pt, t, bd))
+        else:
+            skipped.append(t)
+    if skipped:
+        print("   ✂️ 跳过无内容页 %d 个（源课件本就没有该模块）：%s"
+              % (len(skipped), '、'.join(s.split(' · ')[0] for s in skipped)))
+    # 重新编号 page-index
+    built = [(k, pt, t, bd) for k, (_, pt, t, bd) in enumerate(kept)]
+
     balanced = []
     fixed = 0
     for i, pt, t, bd in built:
@@ -358,6 +411,18 @@ def build(cid, dry=False, verify=False):
             fixed += 1
         elif _c > _o:
             body = '<div class="page-pad">' * (_c - _o) + body
+            fixed += 1
+        # ★ <section> 也要配平！内容块本身很多就是 <section class="section" id="…">，
+        #   嵌进本页的 <section class="slide-page"> 里；只要有一个未闭合，
+        #   浏览器就会把**后面的页吞进来**，症状是某页只剩一个残缺 section、
+        #   可见字数为 0（实测 phy-m-lens 第 4 页前测变成空壳，用户看到就是"缺模块"）。
+        _so = len(re.findall(r'<section\b[^>]*>', body))
+        _sc = len(re.findall(r'</section\s*>', body))
+        if _so > _sc:
+            body += '\n' + '</section>' * (_so - _sc)
+            fixed += 1
+        elif _sc > _so:
+            body = '<section class="page-pad">' * (_sc - _so) + body
             fixed += 1
         balanced.append((i, pt, t, body))
     if fixed:
@@ -372,8 +437,20 @@ def build(cid, dry=False, verify=False):
     open_end = h.find('>', start) + 1
     close = matching_div_end(h, open_end)
     if close < 0:
-        print("❌ 容器标签未配平，放弃（不破坏文件）")
-        return 1
+        # ★ 回退：原文档里可能有**未闭合的 <div>**，导致配平算法永远到不了 depth 0。
+        #   此时用"最后一个分页节的 </section> 之后"作为容器内容边界 ——
+        #   容器本来就是装分页节的。实测 geo-m-climate-basics（20 页）就是这种。
+        SP_OPEN = r'<section\b(?=[^>]*\bslide-page\b)[^>]*>'
+        last_sec = None
+        for m in re.finditer(SP_OPEN, h):
+            e = h.find('</section>', m.end())
+            if e > 0 and (last_sec is None or e > last_sec):
+                last_sec = e
+        if last_sec is None:
+            print("❌ 容器标签未配平且找不到分页节，放弃（不破坏文件）")
+            return 1
+        close = last_sec + len('</section>')
+        print("   ⚠️ 容器 div 未配平（原文档有未闭合标签），已按「最后一个分页节之后」作为边界回退")
     # ★ 容器**之外**可能还残留原始的 <section class="slide-page">：
     #   有些课件的容器只包住一部分分页节，其余散落在容器外面。
     #   我的替换只动容器内部，于是这些散落的原始页会留下来 → 导航点变成 19 个、
