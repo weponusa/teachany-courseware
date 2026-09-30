@@ -28,6 +28,10 @@ COMMUNITY_EXCLUDES=(
   --exclude='*.pre-strip-upgrade.html'
   --exclude='*.legacy-messy.html'
   --exclude='test-*.html'
+  # TTS 音频已迁到独立仓库 weponusa/teachany-audio（jsdelivr CDN 分发）：
+  #   课件里 ./tts/xxx.mp3 引用已改为 cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/<course>/xxx.mp3，
+  #   所以 **/tts/** 不再进 _site。这是把全站文件数砍掉 ~42% 的关键一步（mp3 占全站 42%）。
+  --exclude='*/tts/'
   --exclude-from="$ROOT/.publish-excludes"
 )
 
