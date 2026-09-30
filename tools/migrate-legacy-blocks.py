@@ -158,8 +158,16 @@ def page_has_content(body):
     ★ 用户明确说"没有什么 16 页限制" —— 源课件缺哪个模块就不建那一页，
       不要为了凑页数造空页（实测 phy-m-lens 原版没有前测，硬造出来的空页
       在用户眼里就是"缺模块 + 内容太少"）。
+
+    ★ 还要认**互动元素**：满屏 <textarea>/<canvas>/<input> 的块（如"校园微气候调查"
+      探究页，可见文字只有 39 字、其余是输入框），纯按字数会误判成"无内容"被跳过。
     """
-    return cjk_len(body) >= MIN_PAGE_CJK
+    if cjk_len(body) >= MIN_PAGE_CJK:
+        return True
+    # 互动元素本身即内容
+    if re.search(r'<(textarea|canvas|input|video|audio|iframe)\b', body, re.I):
+        return True
+    return False
 
 
 def inner_wrap(body):
@@ -257,7 +265,10 @@ def build(cid, dry=False, verify=False):
     orig = h
     h, own_tutor = harvest_own_tutor(h)   # 摘出自带 AI 学伴块，避免重复渲染
     units = parse(h)
-    by_key = {u['key']: u for u in units}
+    by_key = {}
+    for u in units:
+        by_key.setdefault(u['key'], u)          # 第一个同 key 的占主位
+        by_key.setdefault('%s#%d' % (u['key'], u['order']), u)   # 再按出现顺序留一个唯一键，防同 key 覆盖
     print("📄 %s：展平出 %d 个内容块" % (cid, len(units)))
     for u in units:
         print("     - %-26s %s" % (u['key'][:26], u['text'][:42]))
@@ -272,18 +283,19 @@ def build(cid, dry=False, verify=False):
             if src.startswith('const:'):
                 parts.append(own_tutor if own_tutor else AI_TUTOR_HTML)
                 continue
-            # ★ 取**全部匹配**而不是只取第一个：
-            #   同一页可以有多个来源（如 cover = hero-infographic + 开场，
-            #   summary = 小结 + 总结迁移 + memory-anchor）。只取第一个会把其余
-            #   同类内容挤进"兜底页"，浪费了本该合并的版面。
+            # ★ 取全部匹配（cover/summary/综合任务 等都合并同类内容）。
+            #   7x 超长页的真凶是「兜底残留并入综合任务」——已改为兜底每块自成页，
+            #   所以这里恢复合并，不需要 first-match（它会引入 key 冲突与内容丢失）。
             hits = []
             for k in [src]:                      # 精确
                 if k in by_key and k not in used:
                     hits.append(k)
             if not hits:                          # 前缀（外层页的 key 是完整 data-tsh）
                 for k in by_key:
-                    if k.startswith(src) and k not in used and k not in hits:
+                    base = k.split('#')[0]
+                    if base.startswith(src) and k not in used and k not in hits:
                         hits.append(k)
+            hits = list(dict.fromkeys(hits))
             for k in hits:
                 u = by_key[k]
                 if strip_tags(u['inner']):
@@ -314,17 +326,17 @@ def build(cid, dry=False, verify=False):
         if not take:
             take = [pool[0]]
         for u in take[:2]:
-            b[3] = (b[3] + '\n' + u['inner']) if b[3] else u['inner']
+            b[3] = (b[3] + '\n' + u['full']) if b[3] else u['full']
             pool.remove(u)
             leftover_used_marker = True
         print("   ➕ 剩余块 %s → 第 %d 页「%s」" % ([u['key'][:16] for u in take[:2]], b[0], b[2]))
     if pool:
-        extra = '\n'.join(u['inner'] for u in pool)
-        print("   ℹ️ 仍有 %d 块并入「综合任务」页兜底：%s" % (len(pool), [u['key'][:18] for u in pool][:6]))
-        for b in built:
-            if '综合任务' in b[2]:
-                b[3] = (b[3] or '') + '\n' + extra
-                break
+        # ★ 兜底残留**每块自成一页**，不再并入「综合任务」页
+        #   （原先把 N 个块堆进综合任务页兜底 → 单页 5–7x 视口，成了"页面嵌套滚动页面"）。
+        for u in pool:
+            title = (u['text'].split('\n')[0].strip() or u['key'])[:22]
+            built.append([len(built), 'concept', title, u['full']])
+        print("   ✂️ 兜底残留 %d 块已各自独立成页（不再并入综合任务）" % len(pool))
 
     # ★ 最后一道兜底：容器里**不属于任何已抽取 <section> 块**的内容（实测这些课件
     #   还有一批 <div> 形式的深度模块，如「知识脉络梳理 / 易错点辨析 / 深入追问」），
