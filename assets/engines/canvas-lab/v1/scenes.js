@@ -176,7 +176,249 @@
     });
   }
 
+
+  /* ---------- 5) 磁场：拖磁铁 → 吸引/排斥 + 磁力线（偶极场示意） ---------- */
+  function magnet(cfg) {
+    return global.TeachAnyLab.mount({
+      canvas: cfg.canvas, readout: cfg.readout,
+      initial: { ax: 210, ay: 220, bx: 600, by: 220, showField: true },
+      cursor: 'grab',
+      onPointer: function (type, p, s) {
+        if (type === 'pointerdown') {
+          s.drag = (Math.abs(p.x - s.ax) <= Math.abs(p.x - s.bx)) ? 'a' : 'b';
+        }
+        if (type === 'pointermove' && s.drag) {
+          if (s.drag === 'a') { s.ax = Math.max(60, Math.min(380, p.x)); s.ay = Math.max(120, Math.min(330, p.y)); }
+          else { s.bx = Math.max(420, Math.min(740, p.x)); s.by = Math.max(120, Math.min(330, p.y)); }
+        }
+        if (type === 'pointerup' || type === 'pointerleave') { s.drag = null; }
+      },
+      draw: function (ctx, W, H, s) {
+        var P = this.palette, h = this.helpers;
+        ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; h.rrect(ctx, 0, 0, W, H, 14); ctx.fill();
+        var MW = 34, MH = 108;                       // 两块磁铁等大：上 N 下 S
+        function bar(x, y) {
+          ctx.fillStyle = '#ef4444'; h.rrect(ctx, x - MW / 2, y - MH / 2, MW, MH / 2, 6); ctx.fill();
+          ctx.fillStyle = '#3b82f6'; h.rrect(ctx, x - MW / 2, y, MW, MH / 2, 6); ctx.fill();
+          h.label(ctx, 'N', x, y - MH / 4, '#fff', 15, 'center', '800');
+          h.label(ctx, 'S', x, y + MH / 4, '#fff', 15, 'center', '800');
+        }
+        var d = Math.hypot(s.bx - s.ax, s.by - s.ay);
+        var close = d < 230;
+        // 磁力线：磁铁之间 4 条弧（由 N 出发弯向另一块的 S）
+        if (s.showField) {
+          ctx.strokeStyle = P.accent2; ctx.globalAlpha = close ? 0.75 : 0.5;
+          for (var k = 0; k < 4; k++) {
+            var t = (k + 1) / 5, bow = 46 + k * 40;
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.moveTo(s.ax, s.ay - MH / 2);
+            ctx.bezierCurveTo(s.ax + (s.bx - s.ax) * 0.35, s.ay - MH / 2 - bow,
+              s.bx - (s.bx - s.ax) * 0.35, s.by - MH / 2 - bow, s.bx, s.by - MH / 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(s.ax, s.ay + MH / 2);
+            ctx.bezierCurveTo(s.ax + (s.bx - s.ax) * 0.35, s.ay + MH / 2 + bow,
+              s.bx - (s.bx - s.ax) * 0.35, s.by + MH / 2 + bow, s.bx, s.by + MH / 2);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+          h.label(ctx, '磁力线（示意）', W / 2, 20, P.accent2, 11.5, 'center', '600');
+        }
+        bar(s.ax, s.ay); bar(s.bx, s.by);
+        // 距离参考线
+        var my = Math.max(s.ay, s.by) + MH / 2 + 26;
+        ctx.strokeStyle = P.grid; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(s.ax, my); ctx.lineTo(s.bx, my); ctx.stroke(); ctx.setLineDash([]);
+        h.label(ctx, '间距 ' + Math.round(d / 6) + ' cm', (s.ax + s.bx) / 2, my, P.muted, 12, 'center', '600');
+        // 靠得近时提示相互作用（让学生自己判断吸引/排斥）
+        if (close) {
+          h.label(ctx, '很近了 —— 它们相互吸引还是排斥？', W / 2, H - 18, P.ink, 12.5, 'center', '700');
+        } else {
+          h.label(ctx, '拖动任一磁铁靠近另一块 →', W - 22, 20, P.muted, 12, 'right', '600');
+        }
+        this.readout('两块磁铁间距约 ' + Math.round(d / 6) + ' cm：让 N 极靠近 N 极观察排斥，N 极靠近 S 极观察吸引——磁极间的相互作用规律请自己试出来。');
+      }
+    });
+  }
+
+  /* ---------- 6) 月相 / 昼夜：公转位置 → 看到的月相 / 昼夜 ---------- */
+  function moon(cfg) {
+    return global.TeachAnyLab.mount({
+      canvas: cfg.canvas, readout: cfg.readout,
+      sliders: { ang: { el: cfg.slider, out: cfg.sliderOut, fmt: function (v) { return '公转位置 ' + v + '°'; } } },
+      draw: function (ctx, W, H, s) {
+        var P = this.palette, h = this.helpers;
+        ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; h.rrect(ctx, 0, 0, W, H, 14); ctx.fill();
+        var cx = W * 0.32, cy = H / 2, R = Math.min(W * 0.22, H * 0.34);
+        // 地球
+        ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.fillStyle = P.accent; ctx.fill();
+        h.label(ctx, '地球', cx, cy + 48, P.muted, 12, 'center', '600');
+        // 轨道 + 月球
+        ctx.strokeStyle = P.grid; ctx.setLineDash([5, 5]);
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        var a = (s.ang || 0) * Math.PI / 180 - Math.PI / 2;
+        var mx = cx + R * Math.cos(a), my = cy + R * Math.sin(a);
+        ctx.beginPath(); ctx.arc(mx, my, 15, 0, Math.PI * 2); ctx.fillStyle = '#cbd5e1'; ctx.fill();
+        // 太阳光方向：自左向右（示意）
+        ctx.strokeStyle = P.accent2; ctx.lineWidth = 2;
+        for (var i = 0; i < 4; i++) {
+          var yy = 40 + i * 44;
+          h.arrow(ctx, 18, yy, 78, yy, P.accent2, 2, 7);
+        }
+        h.label(ctx, '☀️ 太阳光', 20, 22, P.accent2, 12, 'left', '700');
+        // 右半区：观察者看到的月相
+        var ox = W * 0.72, oy = cy, r2 = 62;
+        ctx.beginPath(); ctx.arc(ox, oy, r2, 0, Math.PI * 2); ctx.fillStyle = '#0f172a'; ctx.globalAlpha = 0.25; ctx.fill(); ctx.globalAlpha = 1;
+        ctx.strokeStyle = P.grid; ctx.stroke();
+        // 相位：角 0=新月, 90=上弦, 180=满月, 270=下弦
+        var ph = ((s.ang || 0) % 360 + 360) % 360;
+        ctx.save();
+        ctx.beginPath(); ctx.arc(ox, oy, r2, 0, Math.PI * 2); ctx.clip();
+        ctx.fillStyle = '#e2e8f0';
+        if (ph <= 180) { ctx.beginPath(); ctx.rect(ox - r2, oy - r2, r2, r2 * 2); ctx.fill(); }
+        else { ctx.beginPath(); ctx.rect(ox, oy - r2, r2, r2 * 2); ctx.fill(); }
+        var k = Math.cos(ph * Math.PI / 180);
+        ctx.beginPath();
+        ctx.ellipse(ox, oy, Math.abs(k) * r2, r2, 0, 0, Math.PI * 2);
+        ctx.fillStyle = k > 0 ? '#e2e8f0' : '#0f172a';
+        ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
+        ctx.restore();
+        var name = ph < 22 || ph > 338 ? '新月（看不见月亮）' : ph < 68 ? '蛾眉月' : ph < 112 ? '上弦月（右半边亮）'
+          : ph < 158 ? '盈凸月' : ph < 202 ? '满月（整轮都亮）' : ph < 248 ? '亏凸月' : ph < 292 ? '下弦月（左半边亮）' : '残月';
+        h.label(ctx, '地球上看到的：' + name, ox, oy + r2 + 26, P.ink, 13, 'center', '700');
+        this.readout('月球位置 ' + Math.round(ph) + '° → 地球上看到「' + name + '」。拖动滑块让月球绕地球转一整圈，观察月相怎样从新月经上弦到满月再回到新月。');
+      }
+    });
+  }
+
+  /* ---------- 7) 雷达图：可拖拽的多个维度（能力/材料对比） ---------- */
+  function radar(cfg) {
+    var dims = cfg.dims || ['维度1', '维度2', '维度3', '维度4', '维度5'];
+    var vals = (cfg.values || [3, 4, 2, 5, 3]).slice();
+    return global.TeachAnyLab.mount({
+      canvas: cfg.canvas, readout: cfg.readout,
+      initial: { vals: vals, unit: cfg.unit || '' },
+      cursor: 'crosshair',
+      onPointer: function (type, p, s) {
+        if (type !== 'pointerdown' && type !== 'pointermove') return;
+        if (type === 'pointermove' && !s.dragAxis) return;
+        var f = this.fit();
+        var W = f.W, H = f.H, cx = W / 2, cy = H / 2 + 6, R = Math.min(W, H) * 0.32;
+        var n = s.vals.length;
+        // 找最近的轴
+        var best = -1, bd = 1e9;
+        for (var i = 0; i < n; i++) {
+          var a = -Math.PI / 2 + i * 2 * Math.PI / n;
+          var ax = cx + R * Math.cos(a), ay = cy + R * Math.sin(a);
+          var d = Math.hypot(p.x - ax, p.y - ay);
+          if (d < bd) { bd = d; best = i; }
+        }
+        if (type === 'pointerdown') { s.dragAxis = best; }
+        if (best >= 0 && bd < 200) {
+          var aa = -Math.PI / 2 + best * 2 * Math.PI / n;
+          var proj = (p.x - cx) * Math.cos(aa) + (p.y - cy) * Math.sin(aa);
+          var v = Math.max(1, Math.min(5, Math.round(proj / R * 5)));
+          s.vals[best] = v;
+        }
+      },
+      draw: function (ctx, W, H, s) {
+        var P = this.palette, h = this.helpers;
+        ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; h.rrect(ctx, 0, 0, W, H, 14); ctx.fill();
+        var cx = W / 2, cy = H / 2 + 6, R = Math.min(W, H) * 0.32, n = s.vals.length;
+        // 网格
+        ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
+        for (var ring = 1; ring <= 5; ring++) {
+          ctx.beginPath();
+          for (var i = 0; i <= n; i++) {
+            var a = -Math.PI / 2 + i * 2 * Math.PI / n;
+            var x = cx + (R * ring / 5) * Math.cos(a), y = cy + (R * ring / 5) * Math.sin(a);
+            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+          }
+          ctx.stroke();
+        }
+        for (var j = 0; j < n; j++) {
+          var aj = -Math.PI / 2 + j * 2 * Math.PI / n;
+          ctx.beginPath(); ctx.moveTo(cx, cy);
+          ctx.lineTo(cx + R * Math.cos(aj), cy + R * Math.sin(aj)); ctx.stroke();
+          var lx = cx + (R + 26) * Math.cos(aj), ly = cy + (R + 26) * Math.sin(aj);
+          h.label(ctx, dims[j], lx, ly, P.ink, 12.5, 'center', '700');
+        }
+        // 数据多边形
+        ctx.beginPath();
+        for (var q = 0; q <= n; q++) {
+          var idx = q % n, aq = -Math.PI / 2 + idx * 2 * Math.PI / n, rq = R * s.vals[idx] / 5;
+          var qx = cx + rq * Math.cos(aq), qy = cy + rq * Math.sin(aq);
+          q ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy);
+        }
+        ctx.closePath();
+        ctx.fillStyle = P.fill; ctx.fill();
+        ctx.strokeStyle = P.accent; ctx.lineWidth = 2.6; ctx.stroke();
+        s.vals.forEach(function (v, i2) {
+          var ai = -Math.PI / 2 + i2 * 2 * Math.PI / n, rr = R * v / 5;
+          ctx.beginPath(); ctx.arc(cx + rr * Math.cos(ai), cy + rr * Math.sin(ai), 5, 0, Math.PI * 2);
+          ctx.fillStyle = P.accent; ctx.fill();
+        });
+        h.label(ctx, '👆 拖动顶点调整各维度（1–5 分）', W / 2, H - 16, P.muted, 12, 'center', '600');
+        this.readout((cfg.readoutText ? cfg.readoutText(s.vals) : dims.map(function (d3, i3) { return d3 + ' ' + s.vals[i3]; }).join('｜')) + '　—— 拖动顶点改变评分，雷达圈越大说明该方面越突出。');
+      }
+    });
+  }
+
+  /* ---------- 8) 配对/分类：点击左侧项 → 点右侧目标 ---------- */
+  function match(cfg) {
+    var items = cfg.items || [];
+    return global.TeachAnyLab.mount({
+      canvas: cfg.canvas, readout: cfg.readout,
+      initial: { sel: null, done: {}, wrong: null },
+      cursor: 'pointer',
+      onPointer: function (type, p, s) {
+        if (type !== 'pointerdown') return;
+        var f = this.fit(), W = f.W, H = f.H;
+        var n = items.length, rowH = Math.min(60, (H - 90) / n);
+        for (var i = 0; i < n; i++) {
+          var y = 56 + i * rowH;
+          if (p.x < W * 0.5 && p.y > y - rowH / 2 && p.y < y + rowH / 2) { s.sel = i; s.wrong = null; return; }
+          if (p.x > W * 0.5 && p.y > y - rowH / 2 && p.y < y + rowH / 2) {
+            if (s.sel == null) return;
+            if (items[s.sel].answer === i) { s.done[s.sel] = true; s.sel = null; }
+            else { s.wrong = i; }
+            return;
+          }
+        }
+      },
+      draw: function (ctx, W, H, s) {
+        var P = this.palette, h = this.helpers;
+        ctx.clearRect(0, 0, W, H); ctx.fillStyle = P.bg; h.rrect(ctx, 0, 0, W, H, 14); ctx.fill();
+        var n = items.length, rowH = Math.min(60, (H - 90) / n);
+        h.label(ctx, '左边：感官／对象', W * 0.25, 26, P.muted, 12.5, 'center', '700');
+        h.label(ctx, '右边：对应的功能／用途', W * 0.75, 26, P.muted, 12.5, 'center', '700');
+        var rights = items.map(function (it, i) { return { t: it.right, i: i }; });
+        rights.sort(function (a, b) { return a.t.length - b.t.length; });
+        items.forEach(function (it, i) {
+          var y = 56 + i * rowH;
+          var ok = !!s.done[i];
+          ctx.fillStyle = s.sel === i ? P.fill : (ok ? 'rgba(5,150,105,.12)' : 'rgba(148,163,184,.12)');
+          ctx.strokeStyle = s.sel === i ? P.accent : (ok ? P.ok : P.grid);
+          ctx.lineWidth = 2;
+          h.rrect(ctx, W * 0.06, y - rowH * 0.34, W * 0.38, rowH * 0.68, 10); ctx.fill(); ctx.stroke();
+          h.label(ctx, it.label + (ok ? '  ✓' : ''), W * 0.25, y, P.ink, 13.5, 'center', '700');
+        });
+        rights.forEach(function (r2, k) {
+          var y = 56 + k * rowH;
+          ctx.fillStyle = 'rgba(148,163,184,.12)'; ctx.strokeStyle = P.grid;
+          h.rrect(ctx, W * 0.56, y - rowH * 0.34, W * 0.38, rowH * 0.68, 10); ctx.fill(); ctx.stroke();
+          h.label(ctx, r2.t, W * 0.75, y, P.ink, 13.5, 'center', '600');
+        });
+        var total = items.length, got = Object.keys(s.done).length;
+        this.readout('已完成 ' + got + ' / ' + total + (s.wrong != null ? '　刚才这一对不匹配，再换一个试试。' : '　先点左边一项，再点右边对应的目标。'));
+      }
+    });
+  }
+
   var SCENES = { friction: friction, pushpull: pushpull, shadow: shadow, lever: lever };
+  /* 后加入的场景（magnet/moon/radar/match）在此并入注册表 */
+  SCENES.magnet = magnet; SCENES.moon = moon; SCENES.radar = radar; SCENES.match = match;
 
   global.TeachAnyScenes = {
     mount: function (name, cfg) {

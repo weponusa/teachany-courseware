@@ -94,7 +94,9 @@
     var cv = document.getElementById(cfg.canvas);
     if (!cv) return null;
     var th = theme(cv);
-    var state = Object.assign({ t: 0, running: true }, cfg.initial || {});
+    // 多画布联动：传入 sharedState 时共享同一个状态对象
+    var state = cfg.sharedState || Object.assign({ t: 0, running: true }, cfg.initial || {});
+    if (!cfg.sharedState) { state.t = state.t || 0; state.running = true; }
     var sliders = cfg.sliders || {};
 
     Object.keys(sliders).forEach(function (key) {
@@ -105,7 +107,7 @@
       var sync = function () {
         state[key] = parseFloat(el.value);
         if (out) out.textContent = sc.fmt ? sc.fmt(state[key]) : String(state[key]);
-        if (cfg.onChange) cfg.onChange(state, key);
+        if (cfg.onChange) cfg.onChange.call(api, state, key);
         if (cfg.draw) { var _f = fit(cv); cfg.draw.call(api, _f.ctx, _f.W, _f.H, state, state.t); }
       };
       el.addEventListener('input', sync);
@@ -117,7 +119,7 @@
     (cfg.buttons ? Object.keys(cfg.buttons) : []).forEach(function (name) {
       var b = document.getElementById(cfg.buttons[name]);
       if (!b) return;
-      b.addEventListener('click', function () { cfg.onButton && cfg.onButton(name, state, api); });
+      b.addEventListener('click', function () { if (cfg.onButton) cfg.onButton.call(api, name, state, api); });
     });
 
     var pointer = { x: 0, y: 0, down: false, inside: false };
@@ -135,7 +137,7 @@
         pointer.down = (type === 'pointerdown') ? true : (type === 'pointerup' || type === 'pointerleave') ? false : pointer.down;
         pointer.inside = type !== 'pointerleave';
         if (ev.pointerType === 'touch' && type === 'pointerdown') { ev.preventDefault(); }
-        if (cfg.onPointer) cfg.onPointer(type, pointer, state, api);
+        if (cfg.onPointer) cfg.onPointer.call(api, type, pointer, state, api);
       }, { passive: false });
     });
     cv.style.cursor = cfg.cursor || 'default';
@@ -161,7 +163,7 @@
       palette: th,
       helpers: { rrect: rrect, arrow: arrow, label: label, lum: lum }
     };
-    if (cfg.onReady) cfg.onReady(state, api);
+    if (cfg.onReady) cfg.onReady.call(api, state, api);
     frame();
     return api;
   }
