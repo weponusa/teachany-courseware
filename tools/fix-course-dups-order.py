@@ -32,6 +32,9 @@ from _qa_gate import apply_guarded  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 TERMINAL = {'summary', 'homework', 'knowledge-graph', 'ai-tutor'}
+# ★ 受保护页型：这些页天生文字少（学伴 0 字、知识图谱 ~14 字），
+#   绝不能被「删空页判定」删掉——否则课件缺标准模块（实测踩过：136 门丢 KG 页）
+PROTECTED = {'ai-tutor', 'knowledge-graph', 'cover', 'objectives', 'homework', 'summary'}
 REORDERABLE = {'concept', 'quiz', 'interactive', 'content'}
 
 
@@ -164,10 +167,12 @@ def dedup_cards(block, seen):
 
 
 def dedup_pages(pages):
-    """整页重复：页文本完全相同则删后出现的那页（保留首次）。返回 (pages, removed_blocks)。"""
+    """整页重复：页文本完全相同则删后出现的那页（保留首次）。受保护页型不参与。"""
     seen = {}
     out, removed = [], []
     for p in pages:
+        if p['type'] in PROTECTED:
+            out.append(p); continue
         t = norm_text(p['block'])
         if cjk_len(t) >= 20 and t in seen:
             removed.append(p['block'])
@@ -212,8 +217,8 @@ def fix_course(path, apply=False):
         dup_cards.extend(removed)
         dup_card_raw.extend(removed)
         p = dict(p, block=nb)
-        # 删空页判定：页内无 ≥20 汉字文本
-        if cjk_len(norm_text(nb)) < 20:
+        # 删空页判定：页内无 ≥20 汉字文本（**受保护页型除外**）
+        if cjk_len(norm_text(nb)) < 20 and p['type'] not in PROTECTED:
             dup_card_raw.append(nb)          # 整页文本也算「应被删掉的量」
             dup_cards.append('<整页删除: ' + p['tsh'] + '>')
             continue
