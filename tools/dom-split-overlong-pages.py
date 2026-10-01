@@ -29,7 +29,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _qa_gate import apply_guarded  # noqa: E402
+from _qa_gate import apply_guarded, imbalance  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = 'http://127.0.0.1:8801'
@@ -239,11 +239,8 @@ async def split_courses(items, apply=False, conc=4):
                             continue
                         s, e = spans[pidx]
                         candidate = new_html[:s] + ''.join(r['htmls']) + new_html[e:]
-                        # 标签平衡校验
-                        ok = all(len(re.findall(r'<%s\b' % t, candidate)) ==
-                                 len(re.findall(r'</%s>' % t, candidate))
-                                 for t in ('section', 'div', 'figure'))
-                        if not ok:
+                        # 标签平衡校验：不得比原文件更差（原文件本身可能已有不平衡）
+                        if imbalance(candidate) > imbalance(new_html):
                             res['splits'].append({'page': pidx + 1, 'skip': '标签不平衡'})
                             continue
                         new_html = candidate

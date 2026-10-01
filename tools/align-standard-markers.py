@@ -136,6 +136,56 @@ def add_module_markers(html, need=3):
     return html, 'module-marked-%d' % len(targets)
 
 
+BLOOM_BY_TYPE = {
+    'cover': 'remember',
+    'objectives': 'understand',
+    'quiz': 'apply',
+    'interactive': 'apply',
+    'homework': 'apply',
+    'summary': 'analyze',
+    'concept': 'understand',
+}
+SCAFFOLD_BY_TYPE = {'interactive': 'partial', 'homework': 'none', 'quiz': 'partial', 'concept': 'full'}
+
+
+def ensure_bloom_scaffold(html):
+    """Bloom 需 ≥3 级、data-scaffold 需 ≥2 种。给**已有页**按页型补标记（不动内容）。
+    ★ 先收集 (位置, 待插入文本)，再按位置**逆序**插入。"""
+    levels = set(re.findall(r'data-bloom-level="([^"]+)"', html))
+    scaffolds = set(re.findall(r'data-scaffold="([^"]+)"', html))
+    if len(levels) >= 3 and len(scaffolds) >= 2:
+        return html, 'bloom-ok'
+    pages = page_spans(html)
+    if not pages:
+        return html, 'no-container'
+    inserts = []
+    for (s0, _e0, b) in pages:
+        mtype = re.search(r'data-page-type="([^"]*)"', b[:200])
+        ptype = mtype.group(1) if mtype else ''
+        if not ptype:
+            continue
+        tag_end = b.find('>')
+        if tag_end < 0:
+            continue
+        tag = b[:tag_end + 1]
+        add = ''
+        want_lv = BLOOM_BY_TYPE.get(ptype)
+        if want_lv and want_lv not in levels and 'data-bloom-level' not in tag:
+            add += ' data-bloom-level="%s"' % want_lv
+            levels.add(want_lv)
+        want_sc = SCAFFOLD_BY_TYPE.get(ptype)
+        if want_sc and want_sc not in scaffolds and 'data-scaffold' not in tag:
+            add += ' data-scaffold="%s"' % want_sc
+            scaffolds.add(want_sc)
+        if add:
+            inserts.append((s0 + tag_end, add))
+    if not inserts:
+        return html, 'no-target'
+    for pos, add in sorted(inserts, reverse=True):
+        html = html[:pos] + add + html[pos:]
+    return html, 'bloom+%d' % len(inserts)
+
+
 def fix_title(html, manifest):
     m = re.search(r'<title>([^<]*)</title>', html)
     if not m:
@@ -178,13 +228,28 @@ def main():
             except Exception:  # noqa: BLE001
                 man = {}
         r = {'cid': cid}
-        h2, w1 = fix_title(html, man)
+        # ★ 对症下药：只看校验器当前报了什么，避免无谓改动
+        _, msgs = qa_errors(cid)
+        blob = ' '.join(msgs)
+        want_title = ('TeachAny v' in blob) or (not msgs)
+        want_ct = 'ConcepTest' in blob
+        want_mod = '核心知识模块' in blob
+        want_bloom = ('Bloom' in blob) or ('脚手架' in blob)
+        h2 = html
+        w1 = w2 = w3 = w4 = 'skip'
+        if want_title:
+            h2, w1 = fix_title(html, man)
         r['title'] = w1
-        h3, w2 = add_conceptest(h2)
+        if want_ct:
+            h2, w2 = add_conceptest(h2)
         r['concepest'] = w2
-        h4, w3 = add_module_markers(h3)
+        if want_mod:
+            h2, w3 = add_module_markers(h2)
         r['modules'] = w3
-        h3 = h4
+        if want_bloom:
+            h2, w4 = ensure_bloom_scaffold(h2)
+        r['bloom'] = w4
+        h3 = h2
         if h3 == html:
             rows.append(r); continue
         r['before_errors'] = qa_errors(cid)[0]
@@ -202,6 +267,7 @@ def main():
     import collections
     print('ConcepTest:', collections.Counter(r.get('concepest') for r in rows))
     print('module   :', collections.Counter(r.get('modules') for r in rows))
+    print('bloom    :', collections.Counter(r.get('bloom') for r in rows))
     print('title    :', collections.Counter(r.get('title') for r in rows))
     for r in done[:10]:
         print(f"  {r['cid']:42s} {r.get('gate', '')}")
