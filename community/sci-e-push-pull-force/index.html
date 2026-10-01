@@ -813,5 +813,33 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 <script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
 </figure></div></div></section>
+<script src="../../assets/engines/canvas-lab/v1/lab.js"></script>
+<script src="../../assets/engines/canvas-lab/v1/scenes.js"></script>
+<script>
+/* 页面按钮用 onclick="applyForce('push'|'pull')" —— 这里提供真实实现 */
+(function(){
+  var F = 5, kind = null;
+  window.__ppApi = TeachAnyScenes.mount('pushpull', {
+    canvas:'sim-canvas', readout:'sim-status', slider:'force-slider', sliderOut:'force-val',
+    onReady: function(state){ /* 滑块变化同步到本地 F */
+      var s = document.getElementById('force-slider');
+      if (s) { F = parseFloat(s.value); s.addEventListener('input', function(){ F = parseFloat(s.value); }); }
+    }
+  });
+  window.applyForce = function(dir){
+    var s = document.getElementById('force-slider'); if (s) F = parseFloat(s.value);
+    var st = (window.__ppState = window.__ppState || {});
+    // 直接驱动场景状态
+    var api = window.__ppApi;
+    if (api) {
+      api.state.force = F;
+      api.state.dir = (dir === 'pull') ? -1 : 1;
+      api.state.v = 0;
+    }
+    var el = document.getElementById('sim-status');
+    if (el) el.textContent = (dir === 'pull' ? '施加拉力 ' : '施加推力 ') + F + ' N：木箱开始沿该方向运动，力越大速度变化越快。';
+  };
+})();
+</script>
 </body>
 </html>

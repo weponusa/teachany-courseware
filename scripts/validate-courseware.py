@@ -755,9 +755,32 @@ def validate_one(course_dir, strict_feedback=False):
             has_student_control = bool(
                 re.search(r'<(?:input|select|button)\b', full_html, re.IGNORECASE)
                 or re.search(r"createElement\s*\(\s*['\"](?:button|input|select)['\"]", full_html))
-            if not (has_canvas_logic and has_canvas_event and has_student_control):
+            # v2026-10 修误报：canvas 的绘制/交互逻辑放在仓库共享引擎里也算真实闭环。
+            #   判定口径：① 页面 mount 了共享引擎（TeachAnyModelLab.mount / <script src=…/assets/engines/…>）
+            #             ② 引擎文件在仓库内确实存在（不是 404 外链）
+            #             ③ 页面里有控件容器（.controls / modelLabControls / 原生控件）
+            #   背景：51 个 bio/geo/hist/… 课件的「🎛️ 互动实验」由 assets/engines/model-lab/v1/engine.js
+            #   统一绘制并绑定滑块（浏览器实测：画布已绘制 + 控件齐全 + 读数实时更新，0 报错）。
+            has_shared_engine = False
+            if re.search(r'TeachAnyModelLab\s*\.\s*mount\s*\(', full_html) or \
+               re.search(r'<script[^>]+src=["\'][^"\']*/assets/engines/[^"\']+', full_html):
+                ent = re.search(r'<script[^>]+src=["\']([^"\']*/assets/engines/[^"\']+)', full_html)
+                engine_ok = False
+                repo_root = Path(course_dir).resolve().parent.parent
+                if ent:
+                    rel = ent.group(1)
+                    rel = re.sub(r'^(\.\./)+', '', rel)          # 去掉 ../../ 前缀
+                    rel = rel if rel.startswith('assets/') else 'assets/' + rel.split('assets/', 1)[-1]
+                    engine_ok = (repo_root / rel).is_file()
+                else:
+                    ent2 = re.search(r'TeachAnyModelLab\s*\.\s*mount\s*\(', full_html)
+                    engine_ok = ent2 is not None and (repo_root / 'assets/engines/model-lab/v1/engine.js').is_file()
+                has_shared_engine = engine_ok and bool(
+                    re.search(r'modelLabControls|class=["\'][^"\']*\bcontrols\b', full_html, re.IGNORECASE)
+                    or re.search(r'<(?:input|select|button)\b', full_html, re.IGNORECASE))
+            if not (has_canvas_logic and has_canvas_event and has_student_control) and not has_shared_engine:
                 issues.append(('error',
-                    f'{course_dir.name}: Canvas 存在但缺少真实互动闭环（需 getContext/draw + pointer/click/input/change 事件 + 学生可操作控件）'))
+                    f'{course_dir.name}: Canvas 存在但缺少真实互动闭环（需 getContext/draw + pointer/click/input/change 事件 + 学生可操作控件，或挂载仓库共享引擎 assets/engines/**）'))
 
     # 11. 教学动画建议（v7.3 原硬规则 #32，v7.4 降级为 warn）
     #     建议课件包含 ≥1 段真实教学动画 mp4 且带 audio 流，但不阻断推送。

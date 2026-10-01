@@ -805,6 +805,100 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script src="../../assets/scripts/ai-tutor.js"></script>
 <script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
 </section>
+<script src="../../assets/engines/canvas-lab/v1/lab.js"></script>
+<script>
+(function () {
+  var H0 = 45;                      // 塔高（米）
+  var PLANETS = [[1.6,'月球'],[3.7,'火星'],[10,'地球'],[24,'木星']];
+  function planetOf(g){
+    var best = PLANETS[0];
+    for (var i=0;i<PLANETS.length;i++) if (Math.abs(PLANETS[i][0]-g) < Math.abs(best[0]-g)) best = PLANETS[i];
+    return Math.abs(best[0]-g) <= 1.2 ? best[1] : '自定义';
+  }
+  TeachAnyLab.mount({
+    canvas: 'gravityCanvas', readout: 'gravityStatus',
+    sliders: {
+      g:    { el:'gSlider',    out:'gVal',    fmt:function(v){ return v.toFixed(1)+' m/s²'; } },
+      mass: { el:'massSlider', out:'massVal', fmt:function(v){ return v+' kg'; } }
+    },
+    buttons: { launch:'launchBtn', reset:'resetBtn', compare:'compareBtn' },
+    initial: { dropped:false, y:0, v:0, tf:0, done:false, compare:false, landT:0 },
+    onChange: function(s){
+      var ph = document.getElementById('gPlanetHint');
+      if (ph) ph.textContent = '（' + planetOf(s.g) + '）';
+    },
+    onButton: function (name, s) {
+      if (name === 'launch')  { s.dropped = true; s.y = 0; s.v = 0; s.tf = 0; s.done = false; s.landT = 0; }
+      if (name === 'reset')   { s.dropped = false; s.y = 0; s.v = 0; s.tf = 0; s.done = false; s.compare = false; }
+      if (name === 'compare') { s.compare = !s.compare; s.dropped = true; s.y = 0; s.v = 0; s.tf = 0; s.done = false; }
+    },
+    draw: function (ctx, W, H, s, t) {
+      var P = this.palette, hp = this.helpers;
+      var dt = 1 / 60;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = P.bg; hp.rrect(ctx, 0, 0, W, H, 14); ctx.fill();
+
+      var pad = 54, groundY = H - 52, topY = 34;
+      var pxPerM = (groundY - topY) / H0;
+
+      // 地面 + 刻度
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(24, groundY); ctx.lineTo(W - 24, groundY); ctx.stroke();
+      ctx.strokeStyle = P.grid; ctx.lineWidth = 1;
+      for (var m = 0; m <= H0; m += 9) {
+        var yy = groundY - m * pxPerM;
+        ctx.beginPath(); ctx.moveTo(24, yy); ctx.lineTo(40, yy); ctx.stroke();
+        hp.label(ctx, m + 'm', 20, yy, P.muted, 11, 'right', '500');
+      }
+      ctx.fillStyle = P.grid; ctx.fillRect(24, groundY, W - 48, 2);
+
+      // 物理：只受重力影响 → 质量不影响落地时间（教学要点）
+      if (s.dropped && !s.done) {
+        s.v += s.g * dt; s.y = 0.5 * s.g * s.tf * s.tf; s.tf += dt;
+        if (s.y >= H0) { s.y = H0; s.done = true; s.landT = Math.sqrt(2 * H0 / s.g); }
+      }
+      var yM = Math.min(s.y, H0);
+
+      // 主球（球半径随质量轻微变化，仅视觉；时间与质量无关）
+      var r = 10 + Math.min(10, s.mass / 6);
+      var bx = s.compare ? W * 0.34 : W * 0.5;
+      var by = groundY - (H0 - yM) * pxPerM - r;   // yM=已下落距离 → 离地高度 = H0 - yM
+      ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2);
+      ctx.fillStyle = P.accent; ctx.fill();
+      ctx.strokeStyle = P.dark ? 'rgba(255,255,255,.5)' : 'rgba(15,23,42,.35)'; ctx.lineWidth = 2; ctx.stroke();
+      hp.label(ctx, s.mass + 'kg', bx + r + 22, by, P.muted, 12, 'left', '600');
+      if (!s.dropped) hp.label(ctx, '点击「🚀 发射」', bx, by - r - 20, P.accent2, 13, 'center', '700');
+      // 速度矢量
+      if (s.dropped && !s.done && s.v > 0.5) {
+        hp.arrow(ctx, bx + r + 6, by, bx + r + 6, by + Math.min(60, s.v * 3.2), P.accent2, 2.4);
+        hp.label(ctx, 'v=' + s.v.toFixed(1) + ' m/s', bx + r + 62, by + 24, P.accent2, 12, 'left', '700');
+      }
+
+      // 对比模式：同一高度、另一个 g（默认月球 1.6）
+      if (s.compare) {
+        var g2 = (Math.abs(s.g - 1.6) < 0.6) ? 10 : 1.6;
+        var y2 = Math.min(0.5 * g2 * s.tf * s.tf, H0);
+        var cx = W * 0.68, cy = groundY - (H0 - Math.min(y2, H0)) * pxPerM - r;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = P.accent2; ctx.fill(); ctx.stroke();
+        hp.label(ctx, 'g=' + g2 + ' m/s²（' + planetOf(g2) + '）', cx, cy - r - 18, P.muted, 12, 'center', '600');
+        if (y2 >= H0) hp.label(ctx, '先落地', cx, groundY + 26, P.ok, 13, 'center', '700');
+      }
+
+      // 落地标记 + 时长
+      if (s.done) {
+        var lt = s.landT;
+        hp.label(ctx, '落地用时 ' + lt.toFixed(2) + ' s', bx, groundY + 26, P.ok, 14, 'center', '700');
+        hp.label(ctx, 'v落 = ' + (s.g * lt).toFixed(1) + ' m/s', bx, groundY + 44, P.dark ? P.muted : P.muted, 12, 'center', '600');
+      }
+      this.readout(s.dropped
+        ? (s.done ? '落地用时 ' + s.landT.toFixed(2) + ' s（质量 ' + s.mass + ' kg 与 g 无关：改变质量，落地时间不变）'
+                  : '下落中：t=' + s.tf.toFixed(2) + ' s，已下落 ' + yM.toFixed(1) + ' m，v=' + s.v.toFixed(1) + ' m/s')
+        : '调节重力 g，点击「🚀 发射」观察下落');
+    }
+  });
+})();
+</script>
 </body>
 </html>
 <section id="applications" data-tsh="人造卫星不停下落，却永远不落地——这是为什么？想想向前飞和向下落的关系！" data-slot="35">

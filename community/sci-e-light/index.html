@@ -872,6 +872,36 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 ]
   </script>
 </div>
+<script src="../../assets/engines/canvas-lab/v1/lab.js"></script>
+<script src="../../assets/engines/canvas-lab/v1/scenes.js"></script>
+<script>
+/* 一天中影子的变化：时间滑块 / 预设按钮 → 太阳高度角 → 影子长短与方向 */
+(function(){
+  var TIME = 12;
+  var READY = false;
+  var api = TeachAnyScenes.mount('shadow', {
+    canvas:'day-canvas', readout:'shadow-status',
+    slider:'time-slider', sliderOut:'time-display',
+    size:null, sizeOut:null,
+    onReady: function(state){ window.__shadowState = state; READY = true; },
+    onChange: function(state, key){
+      if (key === 'time') { TIME = state.time; }
+    }
+  });
+  // 该页的时间单位是「小时」，滑块 6..18；同步显示为 HH:00
+  window.__setShadowTime = function(hour){
+    hour = Math.max(6, Math.min(18, hour));
+    TIME = hour;
+    var ph = document.getElementById('time-display');
+    if (ph) ph.textContent = ('0' + hour).slice(-2) + ':00';
+    if (api) { api.state.time = hour; }
+  };
+  // 预设按钮（data-hour）
+  document.querySelectorAll('.time-preset').forEach(function(btn){
+    btn.addEventListener('click', function(){ window.__setShadowTime(parseInt(btn.dataset.hour, 10) || 12); });
+  });
+})();
+</script>
 </body>
 </html>
 <section id="quiz" data-slot="80">
