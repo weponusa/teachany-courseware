@@ -146,9 +146,9 @@ def page_spans(html):
         if d == 0:
             close_start = i + mm.start()
             break
-    if close_start is None:
-        raise ValueError('unbalanced container')
-    inner = html[cont_open:close_start]
+    # 容器闭合定位失败（历史遗留不平衡）时兜底：直接扫到文件尾枚举页面即可，
+    # 拆页只依赖「页区间」，不需要容器闭合位置。
+    inner = html[cont_open:] if close_start is None else html[cont_open:close_start]
     spans = []
     j = 0
     while True:
