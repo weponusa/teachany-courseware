@@ -843,6 +843,118 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 <script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
 </figure></section>
+<script src="../../assets/engines/canvas-lab/v1/lab.js"></script>
+<script src="../../assets/engines/canvas-lab/v1/scenes.js"></script>
+<script>
+(function(){
+  var shared = { t:0, running:true, ang: 0 };
+  function phaseName(a){
+    a = ((a % 360) + 360) % 360;
+    if (a < 22 || a > 338) return ['新月','农历初一','月亮几乎不可见'];
+    if (a < 68)  return ['蛾眉月','农历初三~初五','右边细细一弯亮'];
+    if (a < 112) return ['上弦月','农历初七~初八','右半边亮，像字母 D'];
+    if (a < 158) return ['盈凸月','农历初十~十三','亮的部分越来越大'];
+    if (a < 202) return ['满月','农历十五~十六','整轮都亮'];
+    if (a < 248) return ['亏凸月','农历十七~二十','亮的部分开始变小'];
+    if (a < 292) return ['下弦月','农历廿二~廿三','左半边亮，像字母 C'];
+    return ['残月','农历廿六~廿八','左边细细一弯亮'];
+  }
+  function syncView(){
+    var parts = phaseName(shared.ang);
+    var n = document.getElementById('moonPhaseName'); if (n) n.textContent = parts[0];
+    var d = document.getElementById('moonLunarDay'); if (d) d.textContent = parts[1];
+    var s = document.getElementById('moonPhaseDesc'); if (s) s.textContent = parts[2];
+  }
+  function drawOrbit(ctx, W, H, st){
+    var P = this.palette, h = this.helpers;
+    ctx.clearRect(0,0,W,H); ctx.fillStyle = P.bg; h.rrect(ctx,0,0,W,H,14); ctx.fill();
+    var cx = W/2, cy = H/2, R = Math.min(W*0.30, H*0.36);
+    ctx.strokeStyle = P.grid; ctx.setLineDash([6,6]);
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(cx, cy, 26, 0, Math.PI*2); ctx.fillStyle = P.accent; ctx.fill();
+    h.label(ctx,'地球', cx, cy+44, P.muted, 12, 'center','600');
+    for (var i=0;i<8;i++){
+      var a = i*Math.PI/4 - Math.PI/2;
+      var x = cx + R*Math.cos(a), y = cy + R*Math.sin(a);
+      ctx.beginPath(); ctx.arc(x, y, i%2?5:4, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(148,163,184,.55)'; ctx.fill();
+    }
+    var aa = (st.ang||0)*Math.PI/180 - Math.PI/2;
+    var mx = cx + R*Math.cos(aa), my = cy + R*Math.sin(aa);
+    ctx.beginPath(); ctx.arc(mx, my, 14, 0, Math.PI*2); ctx.fillStyle = '#cbd5e1'; ctx.fill();
+    ctx.strokeStyle = P.accent2; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(24, 30); ctx.lineTo(24, H-30); ctx.stroke();
+    h.label(ctx,'☀️ 阳光', 30, 20, P.accent2, 12, 'left','700');
+    h.label(ctx,'👆 点击轨道上的位置，把月球放到那里', W/2, H-16, P.muted, 12, 'center','600');
+  }
+  var orbitApi = TeachAnyLab.mount({
+    canvas:'orbitCanvas', readout:'moonPhaseName', sharedState: shared,
+    cursor:'pointer',
+    onPointer: function(type, p, s){
+      if (type !== 'pointerdown') return;
+      var f = this.fit(), W = f.W, H = f.H;
+      var dx = p.x - W/2, dy = p.y - H/2;
+      var ang = (Math.atan2(dy, dx) + Math.PI/2) * 180/Math.PI;
+      s.ang = Math.round(((ang % 360) + 360) % 360);
+      syncView();
+    },
+    draw: drawOrbit
+  });
+  var simApi = TeachAnyLab.mount({
+    canvas:'moonSimCanvas', readout:null, sharedState: shared, cursor:'grab',
+    onPointer: function(type, p, s){
+      if (type!=='pointerdown' && type!=='pointermove') return;
+      if (type==='pointerdown') s.drag = true;
+      if (type==='pointerup'||type==='pointerleave') { s.drag = false; return; }
+      if (!s.drag) return;
+      var f = this.fit(), W = f.W, H = f.H;
+      var ang = (Math.atan2(p.y - H/2, p.x - W/2) + Math.PI/2) * 180/Math.PI;
+      s.ang = Math.round(((ang % 360)+360)%360);
+      syncView();
+    },
+    draw: function(ctx, W, H, s){
+      var P = this.palette, h = this.helpers;
+      ctx.clearRect(0,0,W,H); ctx.fillStyle = P.bg; h.rrect(ctx,0,0,W,H,14); ctx.fill();
+      var cx=W/2, cy=H/2, R=Math.min(W,H)*0.34;
+      ctx.beginPath(); ctx.arc(cx,cy,22,0,Math.PI*2); ctx.fillStyle=P.accent; ctx.fill();
+      ctx.strokeStyle=P.grid; ctx.setLineDash([5,5]);
+      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+      var a=(s.ang||0)*Math.PI/180 - Math.PI/2;
+      var mx=cx+R*Math.cos(a), my=cy+R*Math.sin(a);
+      ctx.beginPath(); ctx.arc(mx,my,13,0,Math.PI*2); ctx.fillStyle='#cbd5e1'; ctx.fill();
+      ctx.strokeStyle=P.accent2; ctx.lineWidth=1.6;
+      for (var i=0;i<6;i++){ var yy=40+i*52; h.arrow(ctx, 16, yy, 66, yy, P.accent2, 1.6, 6); }
+      h.label(ctx,'☀️ 阳光从左侧照来', 16, 22, P.accent2, 11.5, 'left','700');
+      h.label(ctx,'🖱️ 拖动月球绕地球公转', W/2, H-14, P.muted, 12, 'center','600');
+    }
+  });
+  TeachAnyLab.mount({
+    canvas:'moonViewCanvas', readout:null, sharedState: shared,
+    draw: function(ctx, W, H, s){
+      var P = this.palette;
+      ctx.clearRect(0,0,W,H);
+      ctx.beginPath(); ctx.arc(W/2,H/2,Math.min(W,H)/2-2,0,Math.PI*2);
+      ctx.fillStyle = '#0b1628'; ctx.fill();
+      var r = Math.min(W,H)/2 - 6, ox=W/2, oy=H/2;
+      var ph = ((s.ang||0)%360+360)%360;
+      ctx.save(); ctx.beginPath(); ctx.arc(ox,oy,r,0,Math.PI*2); ctx.clip();
+      ctx.fillStyle='#e2e8f0';
+      if (ph<=180){ ctx.fillRect(ox-r,oy-r,r,r*2); } else { ctx.fillRect(ox,oy-r,r,r*2); }
+      var k=Math.cos(ph*Math.PI/180);
+      ctx.beginPath(); ctx.ellipse(ox,oy,Math.abs(k)*r,r,0,0,Math.PI*2);
+      ctx.fillStyle = k>0 ? '#e2e8f0' : '#0b1628'; ctx.fill();
+      ctx.restore();
+    }
+  });
+  var btn = document.getElementById('autoPlayBtn');
+  if (btn) btn.addEventListener('click', function(){
+    shared.auto = !shared.auto;
+    btn.textContent = shared.auto ? '⏸ 暂停' : '▶ 自动演示';
+  });
+  setInterval(function(){ if (shared.auto) { shared.ang = (shared.ang + 1) % 360; syncView(); } }, 40);
+  syncView();
+})();
+</script>
 </body>
 </html>
 <section id="quiz" data-tsh="📝 测试一下你掌握了多少？" data-slot="80">

@@ -821,6 +821,91 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 <script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
 </section>
+<script src="../../assets/engines/canvas-lab/v1/lab.js"></script>
+<script>
+/* 昼夜交替：拖动地球自转 / 自动旋转 / 时区滑块 —— 白天黑夜覆盖比例实时更新 */
+(function(){
+  var shared = { t:0, running:true, ang: 0, auto: false };
+  function syncBadges(){
+    var a = ((shared.ang % 360) + 360) % 360;
+    // 太阳从右侧照来：右侧被照亮。转动角度 → 面向太阳的经线比例恒定，但「北京」所在点经历昼夜
+    var dayPct = Math.round(50 + 45 * Math.sin(a * Math.PI / 180));
+    var day = document.getElementById('badge-day'), night = document.getElementById('badge-night'), aa = document.getElementById('badge-angle');
+    if (day) day.textContent = '☀️ 白天覆盖: ' + dayPct + '%';
+    if (night) night.textContent = '🌙 黑夜覆盖: ' + (100 - dayPct) + '%';
+    if (aa) aa.textContent = '🔄 旋转角度: ' + Math.round(a) + '°';
+  }
+  function scene(ctx, W, H, s){
+    var P = this.palette, h = this.helpers;
+    ctx.clearRect(0,0,W,H); ctx.fillStyle = P.bg; h.rrect(ctx,0,0,W,H,16); ctx.fill();
+    var cx = W/2, cy = H/2, R = Math.min(W,H)*0.30;
+    // 阳光（自右侧）
+    ctx.strokeStyle = P.accent2; ctx.lineWidth = 2;
+    for (var i=0;i<7;i++){
+      var yy = cy - R + i*(2*R/6);
+      h.arrow(ctx, W-24, yy, W-96, yy, P.accent2, 2, 7);
+    }
+    h.label(ctx,'☀️ 太阳光', W-30, cy - R - 26, P.accent2, 12.5, 'right','700');
+    // 地球：受光的右半面固定亮（明暗分界线相对太阳不动），自转体现在经线与城市位置
+    var a = (s.ang||0) * Math.PI/180;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.clip();
+    ctx.fillStyle = '#132a45'; ctx.fillRect(cx-R, cy-R, 2*R, 2*R);           // 夜半球底色
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath(); ctx.rect(cx, cy-R, R, 2*R); ctx.fill();                 // 朝太阳的右半边
+    // 经线：随自转转动（体现地球在转）
+    ctx.strokeStyle = 'rgba(226,232,240,.4)'; ctx.lineWidth = 1.2;
+    for (var k=-2;k<=2;k++){
+      var tilt = a*0.5 + k*0.55;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, Math.abs(Math.cos(tilt))*R*0.6 + 5, R, tilt, 0, Math.PI*2);
+      ctx.stroke();
+    }
+    // 纬线（不随自转）
+    ctx.globalAlpha = 0.55;
+    for (var m=-2; m<=2; m++){
+      var yy = cy + m*R*0.34, rw = Math.sqrt(Math.max(0, R*R - (yy-cy)*(yy-cy)));
+      ctx.beginPath(); ctx.ellipse(cx, yy, rw, rw*0.16, 0, 0, Math.PI*2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    ctx.strokeStyle = P.grid; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke();
+    // 明暗分界线（固定：右侧亮）
+    ctx.strokeStyle = 'rgba(251,191,36,.55)'; ctx.lineWidth = 1.6; ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(cx, cy-R); ctx.lineTo(cx, cy+R); ctx.stroke(); ctx.setLineDash([]);
+    // 城市标记（北京）：随自转绕行，进入夜半球就显示「夜晚」
+    var bx = cx + R*0.92*Math.cos(a - Math.PI/2), by = cy + R*0.92*Math.sin(a - Math.PI/2);
+    var lit = Math.sin(a) > 0;
+    ctx.beginPath(); ctx.arc(bx, by, 7, 0, Math.PI*2);
+    ctx.fillStyle = lit ? '#fbbf24' : '#94a3b8'; ctx.fill();
+    h.label(ctx, lit ? '北京：白天' : '北京：夜晚', bx + (lit ? 14 : -14), by - 16, lit ? '#fbbf24' : P.muted, 12.5, lit ? 'left' : 'right','700');
+    h.label(ctx,'🖱️ 拖动地球自转 · 观察昼夜分界线', W/2, H-16, P.muted, 12, 'center','600');
+  }
+  var api = TeachAnyLab.mount({
+    canvas:'earthCanvas', readout:null, sharedState: shared, cursor:'grab',
+    onPointer: function(type, p, s){
+      if (type==='pointerdown') { s.drag = true; s.lastX = p.x; }
+      if (type==='pointerup'||type==='pointerleave') { s.drag = false; return; }
+      if (!s.drag || type!=='pointermove') return;
+      var dx = p.x - (s.lastX || p.x); s.lastX = p.x;
+      s.ang = (s.ang + dx * 0.9) % 360; syncBadges();
+    },
+    draw: scene
+  });
+  var auto = document.getElementById('btn-auto');
+  if (auto) auto.addEventListener('click', function(){
+    shared.auto = !shared.auto;
+    auto.textContent = shared.auto ? '⏸ 暂停' : '▶ 自动旋转';
+  });
+  var reset = document.getElementById('btn-reset');
+  if (reset) reset.addEventListener('click', function(){ shared.ang = 0; shared.auto = false; if (auto) auto.textContent = '▶ 自动旋转'; syncBadges(); });
+  var tz = document.getElementById('tz-hour');
+  if (tz) tz.addEventListener('input', function(){ shared.ang = (parseFloat(tz.value) || 0) * 15; syncBadges(); });
+  setInterval(function(){ if (shared.auto) { shared.ang += 0.6; syncBadges(); } }, 40);
+  syncBadges();
+})();
+</script>
 </body>
 </html>
 <section data-scaffold="full" data-bloom-level="apply" id="video" class="wide" data-tsh="观看视频：注意地球自转方向和昼夜分界线" data-slot="105">
