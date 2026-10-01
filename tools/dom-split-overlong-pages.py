@@ -28,6 +28,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _qa_gate import apply_guarded  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 BASE = 'http://127.0.0.1:8801'
 LIMIT = 1.6          # 超过即超长
@@ -256,7 +259,12 @@ async def split_courses(items, apply=False, conc=4):
                     res['pages_before'] = info['n']
                     res['pages_after'] = len(page_spans(new_html))
                     if apply and good:
-                        f.write_text(new_html, encoding='utf-8')
+                        okg, whyg = apply_guarded(f, new_html, cid)
+                        res['gate'] = whyg
+                        res['applied'] = okg
+                        if not okg:
+                            res['splits'] = [s for s in res['splits'] if not s.get('ok')] + \
+                                [{'page': 0, 'skip': '闸门回滚: ' + whyg}]
                     res['applied'] = bool(good)
                 except Exception as e:  # noqa: BLE001
                     res['skip'] = str(e)[:140]

@@ -27,6 +27,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _qa_gate import apply_guarded  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 TERMINAL = {'summary', 'homework', 'knowledge-graph', 'ai-tutor'}
 REORDERABLE = {'concept', 'quiz', 'interactive', 'content'}
@@ -252,7 +255,12 @@ def fix_course(path, apply=False):
         'moved': moved,
     }
     if apply and (dup_cards or moved):
-        path.write_text(new_html, encoding='utf-8')
+        ok, why = apply_guarded(path, new_html, path.parent.name)
+        info['gate'] = why
+        if not ok:
+            info['changed'] = False
+            info['gate_blocked'] = True
+            return info
     info['changed'] = bool(dup_cards or moved)
     return info
 
