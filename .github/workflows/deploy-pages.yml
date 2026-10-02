@@ -33,45 +33,65 @@ jobs:
           echo "✅ pbl-map present ($(find _site/pbl-map -type f | wc -l | tr -d ' ') files)"
 
       # 增量部署到 gh-pages：先 clone 现有分支，rsync 更新，只 push 差异
-      - name: Deploy to gh-pages (incremental)
+      # 2026-10-02：该步骤观察到偶发 exit 2（clone/rsync/push 任一处瞬时失败即整步挂掉，
+      # gh-pages 不动、站点静默停在旧版本），因此整步重试最多 3 次。
+      - name: Deploy to gh-pages (incremental, 最多重试 3 次)
         run: |
-          set -euo pipefail
+          set -uo pipefail
           REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
-          # 尝试 clone 已有的 gh-pages 分支（shallow clone 减少传输量）
-          if git clone --depth 1 --branch gh-pages "$REPO_URL" _deploy 2>/dev/null; then
-            echo "✅ Cloned existing gh-pages branch"
-          else
-            echo "⚠️ gh-pages branch not found, creating fresh"
-            mkdir _deploy && cd _deploy && git init && cd ..
-          fi
+          deploy_once() {
+            rm -rf _deploy
+            # 尝试 clone 已有的 gh-pages 分支（shallow clone 减少传输量）
+            if git clone --depth 1 --branch gh-pages "$REPO_URL" _deploy 2>/dev/null; then
+              echo "✅ Cloned existing gh-pages branch"
+            else
+              echo "⚠️ gh-pages branch not found, creating fresh"
+              mkdir _deploy && ( cd _deploy && git init -q ) || return 1
+            fi
 
-          cd _deploy
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+            cd _deploy || return 1
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 同步 _site 内容到 _deploy（删除不再存在的文件）
-          rsync -a --delete --exclude='.git/' ../_site/ ./
+            # 同步 _site 内容到 _deploy（删除不再存在的文件）
+            rsync -a --delete --no-perms --no-owner --no-group --exclude='.git/' ../_site/ ./ || return 1
 
-          touch .nojekyll
-          git add -A
-          # pbl-map/.gitignore 曾忽略 engine/，须强制纳入发布目录中的跳转 stub
-          if [ -d pbl-map/engine ]; then
-            git add -f pbl-map/engine/
-          fi
-          CHANGES=$(git diff --cached --numstat | wc -l | tr -d ' ')
-          echo "Changed files: $CHANGES"
+            touch .nojekyll
+            git add -A || return 1
+            # pbl-map/.gitignore 曾忽略 engine/，须强制纳入发布目录中的跳转 stub
+            if [ -d pbl-map/engine ]; then
+              git add -f pbl-map/engine/ || return 1
+            fi
+            CHANGES=$(git diff --cached --numstat | wc -l | tr -d ' ')
+            echo "Changed files: $CHANGES"
 
-          if [ "$CHANGES" -eq 0 ]; then
-            echo "✅ No changes to deploy"
-            exit 0
-          fi
+            if [ "$CHANGES" -eq 0 ]; then
+              echo "✅ No changes to deploy"
+              cd .. || true
+              return 0
+            fi
 
-          # 显示摘要（用 diff --stat 避免 SIGPIPE）
-          git diff --cached --stat | tail -5 || true
-          git commit -m "deploy: ${{ github.event.head_commit.message || 'manual deploy' }}"
-          git push origin HEAD:gh-pages
-          echo "✅ Deployed successfully ($CHANGES files changed)"
+            # 显示摘要（用 diff --stat 避免 SIGPIPE）
+            git diff --cached --stat | tail -5 || true
+            git commit -q -m "deploy: ${{ github.event.head_commit.message || 'manual deploy' }}" || return 1
+            git push origin HEAD:gh-pages || return 1
+            cd .. || true
+            echo "✅ Deployed successfully ($CHANGES files changed)"
+          }
+
+          for attempt in 1 2 3; do
+            echo "── 部署尝试 $attempt / 3 ──"
+            if deploy_once; then
+              exit 0
+            fi
+            echo "⚠️ 第 $attempt 次部署失败"
+            rm -rf _deploy
+            cd "$GITHUB_WORKSPACE" || true
+            [ "$attempt" -lt 3 ] && sleep 15
+          done
+          echo "❌ 三次部署均失败"
+          exit 2
 
       # teachany.cn 由 Cloudflare Pages 连接 gh-pages 分支提供静态文件（非 main 直出）
       # read.teachany.cn 由独立 Cloudflare 项目连接 gh-pages-reading 分支
