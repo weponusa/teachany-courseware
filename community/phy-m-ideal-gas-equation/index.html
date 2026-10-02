@@ -150,12 +150,18 @@
     window.__TEACHANY_TUTOR_CONFIG__ = { courseId:'phy-m-ideal-gas-equation', courseTitle:'理想气体方程：从实验定律到 pV=nRT', subject:'physics', grade:'9', nodeId:'ext-1bfbfd66', lessonType:'pbl-supplement', getLearnerQuestion:()=>window.__TEACHANY_LEARNER_QUESTION__||'', getContext:()=> (document.querySelector('section.current-section') || document.body).innerText.slice(0,3000) };
     function setQuestion(q) { window.__TEACHANY_LEARNER_QUESTION__=q||''; document.getElementById('anchor-feedback').textContent=q ? `本课将围绕：“${q}” 来检验。` : '选择一个问题；稍后用它检验你的理解。'; }
     document.querySelectorAll('[data-anchor-choice]').forEach(btn=>btn.addEventListener('click',()=>{ document.querySelectorAll('[data-anchor-choice]').forEach(x=>x.classList.remove('selected')); btn.classList.add('selected'); setQuestion(btn.dataset.anchorChoice); }));
+
+// 目标元素在本脚本之后才出现，延后到 DOM 解析完再绑定
+document.addEventListener('DOMContentLoaded',function(){
     document.getElementById('learner-question-input').addEventListener('input',e=>setQuestion(e.target.value.trim()));
     document.querySelectorAll('[data-quiz]').forEach(btn=>btn.addEventListener('click',()=>{ const group=btn.dataset.quiz, correct=btn.dataset.correct==='true', panel=btn.closest('.lesson-panel'); panel.querySelectorAll('[data-quiz]').forEach(x=>x.classList.remove('correct','wrong')); btn.classList.add(correct?'correct':'wrong'); const fb=document.getElementById(`${group}-feedback`); fb.className=`feedback ${correct?'good':'warn'}`; fb.textContent=group==='pretest' ? (correct?'正确：温度应从绝对零度起计量，使用 K。':'再想想：比例式中的温度必须使用 K。') : (correct?'正确：V、n 近似不变时，T 升高使 p 升高。':'回到微观模型：受热后分子运动更快，撞壁作用更强。'); }));
     const R=8.31, n=1, $=id=>document.getElementById(id);
     function drawLab(){ const v=+$('lab-v').value, p=+$('lab-p').value, t=+$('lab-t').value, T=t+273, pv=p*v, nrt=R*T; $('lab-v-val').textContent=`${v.toFixed(1)} L`; $('lab-p-val').textContent=`${p} kPa`; $('lab-t-val').textContent=`${t} ℃ = ${T} K`; const c=$('gas-canvas'), ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); ctx.fillStyle='#f8fbff';ctx.fillRect(0,0,c.width,c.height); const h=70+(v-8)/32*170, top=300-h; ctx.fillStyle='#dbeafe';ctx.fillRect(105,top,300,h);ctx.strokeStyle='#1d4ed8';ctx.lineWidth=4;ctx.strokeRect(105,55,300,245);ctx.fillStyle='#7dd3fc';ctx.fillRect(109,top+4,292,h-4);ctx.fillStyle='#7c3aed';ctx.fillRect(92,top-15,326,18); const particles=Math.round(16+p/15); for(let i=0;i<particles;i++){ const x=124+((i*47)%260), y=top+15+((i*61)%Math.max(24,h-30)); ctx.fillStyle=`hsl(${200-Math.min(130,(t+30)*.7)},85%,48%)`;ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill(); } ctx.fillStyle='#123057';ctx.font='700 25px system-ui';ctx.fillText(`pV = ${pv.toFixed(0)} kPa·L`,490,110);ctx.fillText(`nRT = ${nrt.toFixed(0)} J`,490,155);ctx.font='18px system-ui';ctx.fillStyle=Math.abs(pv-nrt)<120?'#15803d':'#b45309';ctx.fillText(Math.abs(pv-nrt)<120?'✓ 状态基本匹配':'△ 点击“自动匹配”校准压强',490,205);ctx.fillStyle='#64748b';ctx.fillText('蓝色区域：气体体积；彩色点：运动分子',490,255); $('lab-feedback').textContent=`当前 pV = ${pv.toFixed(0)} kPa·L，nRT = ${nrt.toFixed(0)} J。单位上 1 kPa·L = 1 J；差值反映参数是否匹配。`; }
     ['lab-v','lab-p','lab-t'].forEach(id=>$(id).addEventListener('input',drawLab)); $('match-state').addEventListener('click',()=>{ const v=+$('lab-v').value,T=+$('lab-t').value+273; $('lab-p').value=Math.round(R*T/v); drawLab(); }); drawLab();
-    document.addEventListener('DOMContentLoaded',()=>{ const v=document.querySelector('meta[name="course-version"]').content; $('course-version-display').textContent=v; });
+    
+
+});
+document.addEventListener('DOMContentLoaded',()=>{ const v=document.querySelector('meta[name="course-version"]').content; $('course-version-display').textContent=v; });
   </script>
   <script src="../../assets/scripts/ai-tutor.js"></script>
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
