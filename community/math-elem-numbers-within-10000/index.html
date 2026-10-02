@@ -607,110 +607,7 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   </section>
 </div>
 
-<script>
-// 城市建筑动画
-const cityColors = ['#ff6b6b','#ff922b','#4ecdc4','#339af0','#cc5de8'];
-const cityStage = document.getElementById('cityStage');
-const buildings = [{h:70,w:30,l:40,label:'1000'},{h:100,w:40,l:100,label:'2500'},{h:120,w:50,l:170,label:'5000'},{h:90,w:35,l:250,label:'3300'},{h:60,w:28,l:320,label:'1200'}];
-buildings.forEach((b,i) => {
-  const div = document.createElement('div');
-  div.className = 'building';
-  div.style.cssText = `left:${b.l}px;width:${b.w}px;height:${b.h}px;background:${cityColors[i%5]};animation-delay:${i*0.3}s;`;
-  div.innerHTML = `<div class="building-label">${b.label}</div>`;
-  cityStage.appendChild(div);
-});
 
-// 星星
-const starCount = document.getElementById('starCount');
-for (let i = 0; i < 30; i++) {
-  const s = document.createElement('div');
-  s.className = 'mini-star';
-  s.textContent = '⭐';
-  s.style.animationDelay = (i*0.1)+'s';
-  starCount.appendChild(s);
-}
-
-// 数位表
-const placeData = [
-  {name:'万位',value:'2',unit:'×10000',cls:'wan',color:'#cc5de8'},
-  {name:'千位',value:'3',unit:'×1000',cls:'qian',color:'#ff6b6b'},
-  {name:'百位',value:'4',unit:'×100',cls:'bai',color:'#ff922b'},
-  {name:'十位',value:'5',unit:'×10',cls:'shi',color:'#339af0'},
-  {name:'个位',value:'6',unit:'×1',cls:'ge',color:'#51cf66'}
-];
-const placeTable = document.getElementById('placeTable');
-placeTable.style.gridTemplateColumns = 'repeat(5,1fr)';
-placeData.forEach(p => {
-  const cell = document.createElement('div');
-  cell.className = `place-cell ${p.cls}`;
-  cell.innerHTML = `<div class="place-name" style="color:${p.color}">${p.name}</div><div class="place-value">${p.value}</div><div class="place-unit">${p.unit}</div>`;
-  placeTable.appendChild(cell);
-});
-
-// 分解器
-const bigSlider = document.getElementById('bigSlider');
-const bigVal = document.getElementById('bigVal');
-const bigNumShow = document.getElementById('bigNumShow');
-const decomposeResult = document.getElementById('decomposeResult');
-function updateBig() {
-  const n = parseInt(bigSlider.value);
-  bigVal.textContent = n; bigNumShow.textContent = n;
-  const wan = Math.floor(n/10000);
-  const qian = Math.floor((n%10000)/1000);
-  const bai = Math.floor((n%1000)/100);
-  const shi = Math.floor((n%100)/10);
-  const ge = n%10;
-  let parts = [];
-  if(wan>0) parts.push(`<span style="color:var(--purple);font-weight:900">${wan}个万</span>`);
-  if(qian>0) parts.push(`<span style="color:var(--primary);font-weight:900">${qian}个千</span>`);
-  if(bai>0) parts.push(`<span style="color:var(--orange);font-weight:900">${bai}个百</span>`);
-  if(shi>0) parts.push(`<span style="color:var(--blue);font-weight:900">${shi}个十</span>`);
-  if(ge>0) parts.push(`<span style="color:var(--success);font-weight:900">${ge}个一</span>`);
-  decomposeResult.innerHTML = `<strong>${n} =</strong><br>${parts.join(' + ')}`;
-
-  // 更新数位表
-  const vals = [wan,qian,bai,shi,ge];
-  document.querySelectorAll('.place-cell .place-value').forEach((v,i)=>v.textContent=vals[i]);
-}
-bigSlider.addEventListener('input', updateBig);
-updateBig();
-
-// 拖拽
-let dragSrc=null;
-document.querySelectorAll('.drag-item').forEach(item=>{item.addEventListener('dragstart',()=>dragSrc=item);});
-document.querySelectorAll('.drop-zone').forEach(zone=>{
-  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('over');});
-  zone.addEventListener('dragleave',()=>zone.classList.remove('over'));
-  zone.addEventListener('drop',e=>{
-    e.preventDefault();zone.classList.remove('over');
-    if(!dragSrc)return;
-    if(dragSrc.dataset.answer===zone.dataset.key){zone.classList.add('matched');dragSrc.style.opacity='0.3';dragSrc.draggable=false;zone.textContent=zone.dataset.key+' ✅';}
-    else{zone.classList.add('wrong-match');setTimeout(()=>zone.classList.remove('wrong-match'),500);}
-  });
-});
-function resetDrag(){document.querySelectorAll('.drag-item').forEach(i=>{i.style.opacity='1';i.draggable=true;});document.querySelectorAll('.drop-zone').forEach(z=>{z.classList.remove('matched','wrong-match');z.textContent=z.dataset.key;});}
-
-// D3
-const kgData={nodes:[{id:"100",name:"100以内数",type:"prereq"},{id:"add100",name:"100以内加减",type:"prereq"},{id:"cur",name:"万以内数",type:"current"},{id:"add10000",name:"万以内加减",type:"next"},{id:"estimate",name:"估算",type:"next"},{id:"large",name:"大数认识",type:"next"}],links:[{source:"100",target:"cur"},{source:"add100",target:"cur"},{source:"cur",target:"add10000"},{source:"cur",target:"estimate"},{source:"cur",target:"large"}]};
-const colorMap={current:"#ff6b6b",prereq:"#51cf66",next:"#4ecdc4"};
-const svgEl=document.getElementById('kg-svg');
-const W=(svgEl.parentElement.offsetWidth||600)-48,H=340;
-svgEl.setAttribute('viewBox',`0 0 ${W} ${H}`);
-const kgSvg=d3.select('#kg-svg');
-kgSvg.append('defs').append('marker').attr('id','arrow').attr('viewBox','0 -5 10 10').attr('refX',22).attr('refY',0).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto').append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#aaa');
-const sim=d3.forceSimulation(kgData.nodes).force('link',d3.forceLink(kgData.links).id(d=>d.id).distance(110)).force('charge',d3.forceManyBody().strength(-280)).force('center',d3.forceCenter(W/2,H/2));
-const linkEl=kgSvg.append('g').selectAll('line').data(kgData.links).join('line').attr('stroke','#ccc').attr('stroke-width',2).attr('marker-end','url(#arrow)');
-const nodeEl=kgSvg.append('g').selectAll('g').data(kgData.nodes).join('g').call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
-nodeEl.append('circle').attr('r',28).attr('fill',d=>colorMap[d.type]).attr('stroke','#fff').attr('stroke-width',3).style('filter','drop-shadow(0 2px 6px rgba(0,0,0,.15))');
-nodeEl.append('text').attr('text-anchor','middle').attr('dy','0.35em').attr('font-size','12px').attr('font-weight','700').attr('fill','#fff').text(d=>d.name);
-sim.on('tick',()=>{linkEl.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);nodeEl.attr('transform',d=>`translate(${d.x},${d.y})`);});
-
-let score=0,answered=[false,false,false,false,false];
-function answer(btn,type,msg){const step=btn.closest('.quiz-step');const fb=step.querySelector('.quiz-feedback');const nxt=step.querySelector('.quiz-next');if(step.querySelector('.correct')||step.querySelector('.wrong'))return;btn.classList.add(type==='correct'?'correct':'wrong');fb.textContent=msg;fb.className='quiz-feedback show '+(type==='correct'?'ok':'err');nxt.style.display='inline-block';const idx=parseInt(step.id.replace('q',''))-1;if(type==='correct'&&!answered[idx]){score++;answered[idx]=true;}}
-function nextStep(n){document.getElementById('q'+n).classList.remove('active');const next=document.getElementById('q'+(n+1));if(next){next.classList.add('active');document.getElementById('stepInd').textContent=`第 ${n+1} 题 / 共 5 题`;document.getElementById('progFill').style.width=(n*20)+'%';}}
-function showResult(){document.getElementById('q5').classList.remove('active');document.getElementById('result').classList.add('active');document.getElementById('progFill').style.width='100%';const msgs=['继续加油！','还不错哦！','做得好！','非常棒！','满分！太厉害了！'];document.getElementById('scoreText').textContent=`得了 ${score} / 5 分 — ${msgs[score]}`;}
-function restartQuiz(){score=0;answered=[false,false,false,false,false];document.querySelectorAll('.quiz-step').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.quiz-option').forEach(o=>o.classList.remove('correct','wrong'));document.querySelectorAll('.quiz-feedback').forEach(f=>f.className='quiz-feedback');document.querySelectorAll('.quiz-next').forEach(b=>b.style.display='none');document.getElementById('q1').classList.add('active');document.getElementById('stepInd').textContent='第 1 题 / 共 5 题';document.getElementById('progFill').style.width='0%';}
-</script>
 
 <!-- #05 后测 -->
 <section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
@@ -992,6 +889,113 @@ function mathelemDepthCheck(button, isCorrect, feedbackId, explanation) {
 })();
 </script>
 
+
+<!-- 该脚本要引用后面才出现的元素，移到文档末尾执行（保持全局作用域）-->
+<script>
+// 城市建筑动画
+const cityColors = ['#ff6b6b','#ff922b','#4ecdc4','#339af0','#cc5de8'];
+const cityStage = document.getElementById('cityStage');
+const buildings = [{h:70,w:30,l:40,label:'1000'},{h:100,w:40,l:100,label:'2500'},{h:120,w:50,l:170,label:'5000'},{h:90,w:35,l:250,label:'3300'},{h:60,w:28,l:320,label:'1200'}];
+buildings.forEach((b,i) => {
+  const div = document.createElement('div');
+  div.className = 'building';
+  div.style.cssText = `left:${b.l}px;width:${b.w}px;height:${b.h}px;background:${cityColors[i%5]};animation-delay:${i*0.3}s;`;
+  div.innerHTML = `<div class="building-label">${b.label}</div>`;
+  cityStage.appendChild(div);
+});
+
+// 星星
+const starCount = document.getElementById('starCount');
+for (let i = 0; i < 30; i++) {
+  const s = document.createElement('div');
+  s.className = 'mini-star';
+  s.textContent = '⭐';
+  s.style.animationDelay = (i*0.1)+'s';
+  starCount.appendChild(s);
+}
+
+// 数位表
+const placeData = [
+  {name:'万位',value:'2',unit:'×10000',cls:'wan',color:'#cc5de8'},
+  {name:'千位',value:'3',unit:'×1000',cls:'qian',color:'#ff6b6b'},
+  {name:'百位',value:'4',unit:'×100',cls:'bai',color:'#ff922b'},
+  {name:'十位',value:'5',unit:'×10',cls:'shi',color:'#339af0'},
+  {name:'个位',value:'6',unit:'×1',cls:'ge',color:'#51cf66'}
+];
+const placeTable = document.getElementById('placeTable');
+placeTable.style.gridTemplateColumns = 'repeat(5,1fr)';
+placeData.forEach(p => {
+  const cell = document.createElement('div');
+  cell.className = `place-cell ${p.cls}`;
+  cell.innerHTML = `<div class="place-name" style="color:${p.color}">${p.name}</div><div class="place-value">${p.value}</div><div class="place-unit">${p.unit}</div>`;
+  placeTable.appendChild(cell);
+});
+
+// 分解器
+const bigSlider = document.getElementById('bigSlider');
+const bigVal = document.getElementById('bigVal');
+const bigNumShow = document.getElementById('bigNumShow');
+const decomposeResult = document.getElementById('decomposeResult');
+function updateBig() {
+  const n = parseInt(bigSlider.value);
+  bigVal.textContent = n; bigNumShow.textContent = n;
+  const wan = Math.floor(n/10000);
+  const qian = Math.floor((n%10000)/1000);
+  const bai = Math.floor((n%1000)/100);
+  const shi = Math.floor((n%100)/10);
+  const ge = n%10;
+  let parts = [];
+  if(wan>0) parts.push(`<span style="color:var(--purple);font-weight:900">${wan}个万</span>`);
+  if(qian>0) parts.push(`<span style="color:var(--primary);font-weight:900">${qian}个千</span>`);
+  if(bai>0) parts.push(`<span style="color:var(--orange);font-weight:900">${bai}个百</span>`);
+  if(shi>0) parts.push(`<span style="color:var(--blue);font-weight:900">${shi}个十</span>`);
+  if(ge>0) parts.push(`<span style="color:var(--success);font-weight:900">${ge}个一</span>`);
+  decomposeResult.innerHTML = `<strong>${n} =</strong><br>${parts.join(' + ')}`;
+
+  // 更新数位表
+  const vals = [wan,qian,bai,shi,ge];
+  document.querySelectorAll('.place-cell .place-value').forEach((v,i)=>v.textContent=vals[i]);
+}
+bigSlider.addEventListener('input', updateBig);
+updateBig();
+
+// 拖拽
+let dragSrc=null;
+document.querySelectorAll('.drag-item').forEach(item=>{item.addEventListener('dragstart',()=>dragSrc=item);});
+document.querySelectorAll('.drop-zone').forEach(zone=>{
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('over');});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('over'));
+  zone.addEventListener('drop',e=>{
+    e.preventDefault();zone.classList.remove('over');
+    if(!dragSrc)return;
+    if(dragSrc.dataset.answer===zone.dataset.key){zone.classList.add('matched');dragSrc.style.opacity='0.3';dragSrc.draggable=false;zone.textContent=zone.dataset.key+' ✅';}
+    else{zone.classList.add('wrong-match');setTimeout(()=>zone.classList.remove('wrong-match'),500);}
+  });
+});
+function resetDrag(){document.querySelectorAll('.drag-item').forEach(i=>{i.style.opacity='1';i.draggable=true;});document.querySelectorAll('.drop-zone').forEach(z=>{z.classList.remove('matched','wrong-match');z.textContent=z.dataset.key;});}
+
+// D3
+const kgData={nodes:[{id:"100",name:"100以内数",type:"prereq"},{id:"add100",name:"100以内加减",type:"prereq"},{id:"cur",name:"万以内数",type:"current"},{id:"add10000",name:"万以内加减",type:"next"},{id:"estimate",name:"估算",type:"next"},{id:"large",name:"大数认识",type:"next"}],links:[{source:"100",target:"cur"},{source:"add100",target:"cur"},{source:"cur",target:"add10000"},{source:"cur",target:"estimate"},{source:"cur",target:"large"}]};
+const colorMap={current:"#ff6b6b",prereq:"#51cf66",next:"#4ecdc4"};
+const svgEl=document.getElementById('kg-svg')||(()=>{const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.id='kg-svg';s.style.display='none';const w=document.createElement('div');w.style.display='none';w.appendChild(s);document.body.appendChild(w);return s;})();
+const W=(svgEl.parentElement.offsetWidth||600)-48,H=340;
+svgEl.setAttribute('viewBox',`0 0 ${W} ${H}`);
+const kgSvg=d3.select('#kg-svg');
+kgSvg.append('defs').append('marker').attr('id','arrow').attr('viewBox','0 -5 10 10').attr('refX',22).attr('refY',0).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto').append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#aaa');
+const sim=d3.forceSimulation(kgData.nodes).force('link',d3.forceLink(kgData.links).id(d=>d.id).distance(110)).force('charge',d3.forceManyBody().strength(-280)).force('center',d3.forceCenter(W/2,H/2));
+const linkEl=kgSvg.append('g').selectAll('line').data(kgData.links).join('line').attr('stroke','#ccc').attr('stroke-width',2).attr('marker-end','url(#arrow)');
+const nodeEl=kgSvg.append('g').selectAll('g').data(kgData.nodes).join('g').call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
+nodeEl.append('circle').attr('r',28).attr('fill',d=>colorMap[d.type]).attr('stroke','#fff').attr('stroke-width',3).style('filter','drop-shadow(0 2px 6px rgba(0,0,0,.15))');
+nodeEl.append('text').attr('text-anchor','middle').attr('dy','0.35em').attr('font-size','12px').attr('font-weight','700').attr('fill','#fff').text(d=>d.name);
+sim.on('tick',()=>{linkEl.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);nodeEl.attr('transform',d=>`translate(${d.x},${d.y})`);});
+
+let score=0,answered=[false,false,false,false,false];
+function answer(btn,type,msg){const step=btn.closest('.quiz-step');const fb=step.querySelector('.quiz-feedback');const nxt=step.querySelector('.quiz-next');if(step.querySelector('.correct')||step.querySelector('.wrong'))return;btn.classList.add(type==='correct'?'correct':'wrong');fb.textContent=msg;fb.className='quiz-feedback show '+(type==='correct'?'ok':'err');nxt.style.display='inline-block';const idx=parseInt(step.id.replace('q',''))-1;if(type==='correct'&&!answered[idx]){score++;answered[idx]=true;}}
+function nextStep(n){document.getElementById('q'+n).classList.remove('active');const next=document.getElementById('q'+(n+1));if(next){next.classList.add('active');document.getElementById('stepInd').textContent=`第 ${n+1} 题 / 共 5 题`;document.getElementById('progFill').style.width=(n*20)+'%';}}
+function showResult(){document.getElementById('q5').classList.remove('active');document.getElementById('result').classList.add('active');document.getElementById('progFill').style.width='100%';const msgs=['继续加油！','还不错哦！','做得好！','非常棒！','满分！太厉害了！'];document.getElementById('scoreText').textContent=`得了 ${score} / 5 分 — ${msgs[score]}`;}
+function restartQuiz(){score=0;answered=[false,false,false,false,false];document.querySelectorAll('.quiz-step').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.quiz-option').forEach(o=>o.classList.remove('correct','wrong'));document.querySelectorAll('.quiz-feedback').forEach(f=>f.className='quiz-feedback');document.querySelectorAll('.quiz-next').forEach(b=>b.style.display='none');document.getElementById('q1').classList.add('active');document.getElementById('stepInd').textContent='第 1 题 / 共 5 题';document.getElementById('progFill').style.width='0%';}
+
+</script>
 </body>
 </html>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：万以内数的认识</h2><div data-teachany-kg="math-e-numbers-within-10000"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
