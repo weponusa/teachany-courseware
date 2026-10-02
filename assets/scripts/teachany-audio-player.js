@@ -54,7 +54,7 @@
        不渲染集中音频模块，避免打断教学主线。 */
     var list = null;
     if (!configOnly) {
-      var card = document.createElement("section");
+      var card = document.createElement("div");  // 用 div：避免在 <section id="teachany-audio-player"> 里再套一层 section
       card.className = "tap-card";
       card.innerHTML =
         '<header class="tap-card-head">' +

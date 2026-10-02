@@ -501,7 +501,7 @@
   };
 
   function defaultGetContext() {
-    const current = document.querySelector('section.current-section, section.active, .section.current');
+    const current = document.querySelector('.current-section, .section.current, section.active');
     if (current && current.innerText) return current.innerText.slice(0, 3000);
     if (location.hash) {
       const target = document.querySelector(location.hash);
@@ -516,7 +516,7 @@
   }
 
   function getCurrentSectionTitle() {
-    const current = document.querySelector('section.current-section, section.active');
+    const current = document.querySelector('.current-section, section.active');
     if (current) {
       const h = current.querySelector('h1, h2, h3');
       if (h) return h.innerText.trim().slice(0, 40);
