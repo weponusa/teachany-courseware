@@ -21,3 +21,5 @@ TeachAny **官方网站与课件资产**仓库，部署到 [www.teachany.cn](htt
 - **Skill 安装**：请使用 [weponusa/teachany](https://github.com/weponusa/teachany)，不要从本仓安装 Skill
 
 <!-- deploy-retrigger: 2026-10-02 上次 Pages 部署在 Deploy 步骤 exit 2，本地 build-publish-site.sh 复现通过（9926 文件 / 3.1G < 19000 上限），此行仅用于重新触发部署 -->
+
+<!-- deploy-retrigger-2: 2026-10-02 上次 Deploy 步骤 rsync 侧 exit 2（第 2 次），重触发 -->
