@@ -1,0 +1,34 @@
+# Cloudflare Pages 响应头（发布目录根部的 _headers 生效）
+#
+# 背景（2026-10-03 实测）：此前仓库没有 _headers，全站资源都是
+#   cache-control: public, max-age=0, must-revalidate
+#   cf-cache-status: DYNAMIC      ← 边缘完全不缓存
+# 于是每开一门课件，浏览器都要回源拉：
+#   teachany-kg-manifest.json   12.5MB（brotli 后约 895KB）
+#   node-enrichment-overlay.json 1.4MB（brotli 后约 125KB）
+#   knowledge-map-data.json      7.7MB（brotli 后约 1.1MB）
+#
+# 策略：浏览器端短缓存 + 边缘长缓存（s-maxage）+ SWR。
+# 刻意**不用 immutable**：本站资源文件名没有内容哈希（如 assets/scripts/*.js 名字固定），
+# 若客户端长期缓存，部署新脚本后老用户会一直拿旧版。max-age=600 让浏览器 10 分钟后
+# 必定回源校验，边缘命中则 304，几乎不花流量，同时内容更新不会漏。
+
+/assets/*
+  Cache-Control: public, max-age=600, s-maxage=604800, stale-while-revalidate=2592000
+
+/data/*
+  Cache-Control: public, max-age=600, s-maxage=86400, stale-while-revalidate=604800
+
+/scripts/*
+  Cache-Control: public, max-age=600, s-maxage=86400, stale-while-revalidate=604800
+
+# 页面本身永远回源校验，保证「刚部署的课件/图谱/节点」立刻可见
+/community/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

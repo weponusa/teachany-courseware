@@ -157,9 +157,14 @@ if [ -d "$ROOT/functions" ]; then
   rsync -a "$ROOT/functions/" "$OUT/functions/"
 fi
 
-# 7. Cloudflare 重定向（阅读学院已迁至 read.teachany.cn）
+# 7. Cloudflare 重定向（阅读学院已迁至 read.teachany.cn）与响应头（边缘缓存策略）
 if [ -f "$ROOT/_redirects" ]; then
   cp "$ROOT/_redirects" "$OUT/"
+fi
+# _headers 决定 Cloudflare Pages 的缓存策略；缺了它全站 max-age=0、边缘不缓存
+if [ -f "$ROOT/_headers" ]; then
+  cp "$ROOT/_headers" "$OUT/"
+  echo "  ✅ _headers 已带入发布目录（边缘缓存 + 安全头）"
 fi
 
 # 8. K12 PBL Map（pbl-map/ 目录或 ../finalpbl）
