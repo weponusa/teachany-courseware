@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="course-id" content="math-m-sampling-estimation">
+<meta name="course-subject" content="math">
+<meta name="teachany-node" content="math-m-sampling-estimation">
+  <meta name="teachany-subject" content="math">
+  <meta name="teachany-grade" content="8">
+  <meta name="teachany-domain" content="algebra">
+  <meta name="teachany-version" content="v7.12">
+  <meta name="teachany-prerequisites" content="数据的分析（均值/中位数/众数/方差）">
+  <meta name="teachany-difficulty" content="2">
+  <meta name="teachany-author" content="weponusa">
+<title>《抽样与估计》 · 初中数学 G8 · TeachAny v7.14.1</title>
+<style>
+:root{--accent:#60a5fa;--bg:#0b1120;--card:#15233f;--error:#f87171;--primary:#60a5fa;--success:#4ade80;--text:#e6edf7;--radius:12px;--shadow:0 4px 20px rgba(0,0,0,.3)}
+
+:root {
+  --bg:#f8fafc; --primary:#3b82f6; --secondary:#06b6d4; --accent:#f59e0b;
+  --card:#fff; --text:#1e293b; --muted:#64748b; --success:#10b981; --error:#ef4444;
+  --radius:14px; --shadow:0 4px 24px rgba(59,130,246,0.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;}
+.container{max-width:900px;margin:0 auto;padding:0 16px 60px;}
+.hero{background:linear-gradient(135deg,#0ea5e9,#06b6d4);color:#fff;padding:60px 40px 50px;border-radius:0 0 var(--radius) var(--radius);text-align:center;position:relative;overflow:hidden;}
+.hero::before{content:'🎯';font-size:120px;position:absolute;right:-20px;top:-20px;opacity:.15;}
+.hero h1{font-size:2.2rem;font-weight:800;margin-bottom:8px;}
+.hero p{font-size:1.1rem;opacity:.9;}
+.badge{display:inline-block;background:rgba(255,255,255,.2);border-radius:20px;padding:4px 16px;font-size:.85rem;margin-top:12px;}
+.progress-wrap{background:#e2e8f0;border-radius:10px;height:10px;margin:28px 0 8px;}
+.progress-bar{height:10px;background:linear-gradient(90deg,#0ea5e9,#06b6d4);border-radius:10px;transition:width .6s ease;}
+.section{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:32px;margin-top:24px;}
+.section-title{font-size:1.4rem;font-weight:700;color:var(--primary);margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.section-title span{font-size:1.5rem;}
+.obj-list{list-style:none;display:grid;gap:10px;}
+.obj-list li{background:linear-gradient(90deg,#eff6ff,#fff);border-left:4px solid var(--primary);border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px;}
+.obj-list li::before{content:'✓';color:var(--primary);font-weight:700;flex-shrink:0;}
+.quiz-block{margin-bottom:20px;}
+.quiz-q{font-weight:600;margin-bottom:12px;font-size:1rem;}
+.quiz-opts{display:grid;gap:8px;}
+.opt-btn{border:2px solid #e2e8f0;background:#fff;border-radius:10px;padding:10px 16px;cursor:pointer;text-align:left;font-size:.95rem;transition:all .2s;}
+.opt-btn:hover{border-color:var(--primary);background:#eff6ff;}
+.opt-btn.correct{border-color:var(--success);background:#d1fae5;color:#065f46;}
+.opt-btn.wrong{border-color:var(--error);background:#fee2e2;color:#7f1d1d;}
+.feedback{font-size:.9rem;margin-top:8px;padding:8px 12px;border-radius:8px;display:none;}
+.feedback.show{display:block;}
+.feedback.correct{background:#d1fae5;color:#065f46;}
+.feedback.wrong{background:#fee2e2;color:#7f1d1d;}
+.module{border:1px solid #e2e8f0;border-radius:var(--radius);overflow:hidden;margin-bottom:20px;}
+.module-head{background:linear-gradient(90deg,#0ea5e9,#06b6d4);color:#fff;padding:14px 20px;font-weight:700;font-size:1.05rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.module-body{padding:24px;display:none;}
+.module-body.open{display:block;}
+.abt{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:16px;}
+.abt-label{font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:6px;}
+.formula{background:#f1f5f9;border-radius:10px;padding:14px 20px;font-size:1.1rem;text-align:center;margin:12px 0;font-family:'Courier New',monospace;border-left:4px solid var(--primary);}
+canvas{display:block;margin:16px auto;border-radius:10px;}
+.data-table{width:100%;border-collapse:collapse;margin:12px 0;}
+.data-table th{background:var(--primary);color:#fff;padding:10px 14px;font-size:.9rem;}
+.data-table td{padding:9px 14px;border-bottom:1px solid #e2e8f0;font-size:.9rem;}
+.data-table tr:nth-child(even) td{background:#f8fafc;}
+.input-row{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap;}
+.input-row input{border:2px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:1rem;width:120px;outline:none;}
+.input-row input:focus{border-color:var(--primary);}
+.check-btn{background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:.95rem;transition:background .2s;}
+.check-btn:hover{background:#2563eb;}
+.achievement-bar{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+.ach{background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:10px 16px;font-size:.85rem;display:flex;align-items:center;gap:8px;transition:all .3s;}
+.ach.unlocked{border-color:var(--accent);background:#fffbeb;}
+.ach .ach-icon{font-size:1.3rem;}
+.score-display{text-align:center;padding:20px;font-size:1.8rem;font-weight:800;color:var(--primary);}
+.task-card{background:linear-gradient(135deg,#eff6ff,#f0fdfa);border:1px solid #bae6fd;border-radius:var(--radius);padding:24px;}
+.task-step{display:flex;gap:14px;margin-bottom:14px;}
+.step-num{width:30px;height:30px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+.expand-card{background:linear-gradient(135deg,#fdf4ff,#eff6ff);border:1px solid #e9d5ff;border-radius:var(--radius);padding:24px;}
+.submit-btn{background:linear-gradient(90deg,#0ea5e9,#06b6d4);color:#fff;border:none;border-radius:10px;padding:12px 32px;font-size:1rem;font-weight:700;cursor:pointer;display:block;margin:20px auto 0;transition:transform .2s;}
+.submit-btn:hover{transform:scale(1.04);}
+
+/* Sampling simulator */
+.sim-container{border:2px dashed #bae6fd;border-radius:var(--radius);padding:20px;margin:16px 0;text-align:center;}
+.balls-display{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0;min-height:40px;}
+.ball{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;cursor:default;}
+.ball.red{background:#ef4444;}
+.ball.blue{background:#3b82f6;}
+.ball.yellow{background:#f59e0b;}
+.sim-result{font-size:.95rem;margin-top:10px;padding:10px;background:#f0fdf4;border-radius:8px;}
+.concept-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0;}
+.concept-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;}
+.concept-card h4{color:var(--primary);margin-bottom:6px;font-size:.95rem;}
+@media(max-width:600px){
+  .hero{padding:40px 20px;}
+  .hero h1{font-size:1.6rem;}
+  .section{padding:20px;}
+  .concept-grid{grid-template-columns:1fr;}
+}
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+</style>
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+.practice-block{margin:14px 0;padding:14px;border:1px solid rgba(148,163,184,.22);border-radius:12px;background:rgba(15,23,42,.45)}
+.practice-block h3{margin:0 0 8px;color:#bae6fd;font-size:16px}
+.iframe-wrap{position:relative;width:100%;padding-top:62.5%;overflow:hidden;background:#0f172a;border-radius:12px;border:1px solid rgba(148,163,184,.18)}
+.iframe-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.quiz-option{display:block;width:100%;margin:8px 0;border:1px solid rgba(56,189,248,.28);background:#0b1628;color:#eef6ff;padding:12px 14px;text-align:left;cursor:pointer}
+.quiz-option.correct{border-color:#22c55e;background:rgba(34,197,94,.14)}
+.quiz-option.wrong{border-color:#f97316;background:rgba(249,115,22,.14)}
+.feedback{min-height:40px;margin-top:10px;padding:10px 12px;background:rgba(56,189,248,.10);color:#dbeafe}
+.lesson-panel{background:linear-gradient(180deg,rgba(20,35,58,.96),rgba(13,27,47,.96));border:1px solid rgba(148,163,184,.18);padding:22px;margin:16px 0;border-radius:12px}
+.checklist{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.checklist label{display:flex;gap:12px;align-items:flex-start;margin:0;padding:12px 14px;border:1px solid rgba(148,163,184,.22);border-radius:12px;background:rgba(2,6,23,.45);color:#eef6ff;line-height:1.55;cursor:pointer}
+.phase-tag{display:inline-block;font-size:12px;padding:4px 10px;border-radius:999px;background:rgba(56,189,248,.15);color:#7dd3fc;margin-bottom:8px}
+</style>
+
+
+<style id="mathm-depth-css">
+.mathm-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.mathm-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.28)}
+.mathm-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.mathm-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.mathm-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.mathm-depth .mathm-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.mathm-depth .mathm-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-external-embed.css">
+<style id="ta-tu-opt-css">
+/* TeachAny 标准随堂题样式（主题自适应：中性半透明底 + 继承文字色） */
+.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(127,127,127,.10)}
+.tu-q h3{font-size:1.05rem;margin:0 0 6px}
+.tu-opts{display:grid;gap:10px;margin-top:10px}
+.tu-opt{display:block;width:100%;text-align:left;padding:12px 14px;border-radius:10px;
+  border:1px solid rgba(127,127,127,.40);background:rgba(127,127,127,.10);
+  color:inherit;font:inherit;font-size:15px;line-height:1.6;cursor:pointer;
+  transition:border-color .15s,background .15s}
+.tu-opt:hover{border-color:rgba(96,165,250,.90);background:rgba(96,165,250,.12)}
+.tu-opt.is-right,.tu-opt.correct{border-color:#10b981;background:rgba(16,185,129,.18)}
+.tu-opt.is-wrong,.tu-opt.wrong{border-color:#ef4444;background:rgba(239,68,68,.15)}
+.tu-opt:disabled{cursor:default}
+.tu-fb{margin-top:12px;padding:12px;border-radius:10px;border:1px solid rgba(245,158,11,.40);
+  background:rgba(245,158,11,.12);line-height:1.7}
+.tu-inquiry label{display:block;margin:10px 0}
+.tu-inquiry textarea{width:100%;border-radius:10px;padding:10px;background:rgba(127,127,127,.10);
+  color:inherit;border:1px solid rgba(127,127,127,.35);font:inherit;box-sizing:border-box}
+.tu-save{margin-top:10px;padding:10px 16px;border-radius:10px;border:1px solid rgba(127,127,127,.40);
+  background:rgba(127,127,127,.12);color:inherit;cursor:pointer;font:inherit}
+</style>
+</head>
+<body>
+<nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;;color:#334155""><a href="#progress-pct">📑 知识图谱</a><a href="#progress-bar">🤝 AI 学伴</a><a href="#progress-label">📚 课程内容</a></nav>
+
+
+<!-- teachany-hero-notext -->
+
+<!-- teachany-quality-v3 fingerprint=抽样与估计 -->
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<div class="hero"><div class="container">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/math-m-sampling-estimation-hero.png" alt="抽样与估计知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">抽样与估计</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出简单随机抽样的操作步骤</p></div><div class="tu-q"><p>🎯 能判断样本量对估计精度的影响</p></div><div class="tu-q"><p>🎯 能计算样本均值与总体均值的误差范围</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么抽几个苹果就能知道整箱好不好吃？</p></div><div class="tu-q"><p>❓ 样本越大就越准吗？</p></div><div class="tu-q"><p>❓ 估计值和实际值差多少算正常？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="apply" data-scaffold="full" id="pretest" data-slot="20"><h2>📝 前测</h2><div class="tu-q" data-answer="A"><h3>前测题 1</h3><p>检测5000个灯泡寿命，最合理的抽样量是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="总体量大时，样本量无需等比增加">A.50个</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="总体量大时，样本量无需等比增加">B.500个</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="总体量大时，样本量无需等比增加">C.全部检测</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="总体量大时，样本量无需等比增加">D.按1%比例抽</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="D"><h3>前测题 2</h3><p>下列哪种属于随机抽样？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="ABC都带有主观选择倾向">A.选前30个产品</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="ABC都带有主观选择倾向">B.按工号尾数抽</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="ABC都带有主观选择倾向">C.取最容易拿的</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="ABC都带有主观选择倾向">D.用随机数表选</button></div><div class="tu-fb" hidden></div></div></section>
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section mathm-depth core-knowledge-module text-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>抽样与估计</h2>
+      <p>用样本估计总体是统计的基本思想。样本中某类个体所占比例可用来估计总体中该类个体的比例，进而估算总体数量。估计结果是近似值，样本容量越大、抽样越随机，估计通常越可靠。</p>
+    </div>
+  </section>
+
+
+
+
+</div><div class="slide-page ta-flat" data-page-type="content" data-tsh="方法范例" data-slot="35">
+  <section class="section mathm-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：算样本比例，再按比例放大</h2>
+      <p>先求样本中的比例，再乘以总体数量。作答要写“约为”，体现估计的近似性质。</p>
+      <div class="worked-example"><strong>范例：</strong>抽检 200 件产品有 40 件次品，次品率 20%，估计 10000 件中约有 10000 × 20% = 2000 件次品。</div>
+      <p id="lesson-pitfall" class="mathm-pitfall"><strong>常见误区：</strong>常见误区是把估计值说成精确值，或抽样不随机却直接推广到总体。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>用样本估计总体时，结论的可靠性主要取决于？</p>
+        <button type="button" data-correct="1" onclick="mathmDepthCheck(this,true,&#x27;mathm-depth-feedback-1&#x27;,&quot;随机性与代表性决定估计质量。&quot;)">A. 样本是否随机且有代表性</button><button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-1&#x27;,&quot;随机性与代表性决定估计质量。&quot;)">B. 计算是否使用计算器</button><button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-1&#x27;,&quot;随机性与代表性决定估计质量。&quot;)">C. 总体数量是否为整数</button><button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-1&#x27;,&quot;随机性与代表性决定估计质量。&quot;)">D. 样本中数据是否为偶数</button>
+        <div class="mathm-feedback" id="mathm-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>抽检 200 件产品发现 40 件次品，估计 10000 件中次品约有？</p>
+        <button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-2&#x27;,&quot;次品率 20%，10000×20% = 2000。&quot;)">A. 400 件</button><button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-2&#x27;,&quot;次品率 20%，10000×20% = 2000。&quot;)">B. 1000 件</button><button type="button" data-correct="1" onclick="mathmDepthCheck(this,true,&#x27;mathm-depth-feedback-2&#x27;,&quot;次品率 20%，10000×20% = 2000。&quot;)">C. 2000 件</button><button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-2&#x27;,&quot;次品率 20%，10000×20% = 2000。&quot;)">D. 4000 件</button>
+        <div class="mathm-feedback" id="mathm-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 抽样初探</h2><div class="tu-q"><p><strong>And：</strong>学生已学过普查概念</p><p><strong>But：</strong>现实中无法对所有个体调查时怎么办？</p><p><strong>Therefore：</strong>理解抽样调查的必要性</p></div><div class="tu-q"><p>抽样是从总体中选取部分个体进行调查的方法。比如要统计全校1000名学生的平均身高，逐个测量太耗时，可以随机抽50人测量，用这50人的平均身高估算全校数据。关键点：1. 样本要有代表性 2. 样本量不能太小（如至少30个）</p></div><div class="tu-q"><p>🌍 超市检查苹果质量时，不会切开所有苹果，而是从每箱随机挑几个检查，这就是抽样。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>以下哪种情况必须用抽样调查？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="B/C/D数量少可普查，A数量大必须抽样">A. 检测一批灯泡的使用寿命</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="B/C/D数量少可普查，A数量大必须抽样">B. 统计班级40人的月考平均分</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="B/C/D数量少可普查，A数量大必须抽样">C. 核对你家每月水电费</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="B/C/D数量少可普查，A数量大必须抽样">D. 清点图书馆的藏书总量</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 样本怎么选</h2><div class="tu-q"><p><strong>And：</strong>知道抽样基本概念</p><p><strong>But：</strong>随便抽和科学抽有什么区别？</p><p><strong>Therefore：</strong>掌握简单随机抽样方法</p></div><div class="tu-q"><p>科学抽样要保证每个个体被抽中的机会均等。例如从300名学生中抽30人：1. 给每人编号001-300 2. 用随机数表或抽签决定。错误做法：只抽前排同学（位置偏见）或只抽熟人（主观偏见）。样本就像汤的试味——必须搅匀再舀一勺。</p></div><div class="tu-q"><p>🌍 就像摇匀彩票箱再摸奖，医院血检也是从血管混合后取少量化验。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>下列哪种是简单随机抽样？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="A有系统偏差，C/D不随机">A. 把学生按身高排队抽前20名</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="A有系统偏差，C/D不随机">B. 用电脑给所有学号随机排序后取前10%</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="A有系统偏差，C/D不随机">C. 老师指定课代表回答问题</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="A有系统偏差，C/D不随机">D. 在操场随便拦5个同学</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 估算有门道</h2><div class="tu-q"><p><strong>And：</strong>会抽取样本</p><p><strong>But：</strong>如何用样本数据推测总体？</p><p><strong>Therefore：</strong>学习用样本均值估计总体</p></div><div class="tu-q"><p>样本均值是总体均值的无偏估计。例如抽查50袋大米平均重500g，可以推测1000袋大米总重约500×1000=500kg。注意：1. 估计会有误差 2. 样本量越大误差越小。就像尝3颗葡萄甜就说整串甜可能有误，尝10颗就更可靠。</p></div><div class="tu-q"><p>🌍 买瓜子时抓一把数坏籽比例，就是在用样本估计整袋质量。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>抽查80棵树平均高4.2米，估算2000棵树总高约为？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="计算错误，应是4.2×2000=8400">A. 8400米</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="计算错误，应是4.2×2000=8400">B. 4200米</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="计算错误，应是4.2×2000=8400">C. 21000米</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="计算错误，应是4.2×2000=8400">D. 16800米</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4"><h2>📖 误差知多少</h2><div class="tu-q"><p><strong>And：</strong>能进行简单估计</p><p><strong>But：</strong>为什么不同抽样结果不一样？</p><p><strong>Therefore：</strong>理解抽样误差的概念</p></div><div class="tu-q"><p>抽样误差是样本统计量与总体参数的差异。比如真实全校平均身高165cm，第一次抽样得163cm，第二次得166cm，这些3cm内的波动就是正常误差。影响因素：1. 样本量（样本越大误差越小）2. 总体变异程度（数据越分散误差越大）。就像用渔网捞鱼，网眼大小（样本量）决定漏网多少（误差）。</p></div><div class="tu-q"><p>🌍 天气预报用部分观测点数据推测全市温度，实际温度可能有1-2℃误差。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>以下哪项不能减小抽样误差？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="工具精度影响测量误差，与抽样误差无关">A. 增加样本量</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="工具精度影响测量误差，与抽样误差无关">B. 改用更贵的调查工具</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="工具精度影响测量误差，与抽样误差无关">C. 改进抽样随机性</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="工具精度影响测量误差，与抽样误差无关">D. 分层抽样（按男女比例抽）</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section" id="practice-l2" data-tts="practice-l2" data-bloom-level="apply" data-scaffold="partial"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span><h2>含错因</h2>
+<div class="practice-block" data-bloom-level="apply" data-scaffold="partial"><h3>3. 解「抽样与估计」类题时，常见错因是</h3>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">A. 忽略条件或单位，生搬结论</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">B. 步骤写得太清楚</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 检验得太勤</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 画图辅助</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block" data-bloom-level="apply" data-scaffold="partial"><h3>4. 若结果不合理，你应该</h3>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 回到条件与中间步骤检查</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 直接改成别人答案</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 放弃本题</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 只改最后数字</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section>
+<section class="section" id="practice-l3" data-tts="practice-l3" data-bloom-level="analyze" data-scaffold="none"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span><h2>迁移与产出</h2>
+<div class="practice-block" data-bloom-level="analyze" data-scaffold="none"><h3>5. 把「抽样与估计」迁移到新情境，最重要的是</h3>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 识别结构相同点，再迁移方法</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 原题数字照抄</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 换个名字就算迁移</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 不需要检验</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<p><strong>开放任务：</strong>用三步写出你如何向同学讲清「抽样与估计」。</p></div></section>
+<section class="ta-standard-section" id="teachany-audio-player">
+  <div data-teachany-audio>
+    <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "sectionId": "anchor",
+    "title": "课程导入：math-m-sampling-estimation",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-m-sampling-estimation/enhance-1.mp3"
+  },
+  {
+    "sectionId": "objectives",
+    "title": "讲解 1",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-m-sampling-estimation/enhance-2.mp3"
+  },
+  {
+    "sectionId": "pretest",
+    "title": "讲解 2",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-m-sampling-estimation/enhance-3.mp3"
+  }
+]
+    </script>
+  </div>
+</section>
+<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="ta-standard-section" id="teachany-ai-tutor-card">
+  <div data-teachany-tutor-card></div>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>抽样如同尝汤勺判断整锅咸淡</p></div><div class="tu-q"><h3>💡解释它</h3><p>用部分代表整体时需保证每个个体被抽中的机会均等</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>分层抽样比简单随机抽样在群体差异大时更精确</p></div><div class="tu-q"><h3>👁️看见它</h3><p>超市质检员从不同区域各取5个苹果检测</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>用班级10%同学的睡眠时间推算全校情况</p></div></section>
+<section class="section teachany-upgrade-block" data-interactive="conceptest" data-conceptest="true" data-bloom-level="understand" data-scaffold="full"><h2>💡 概念检测（互动）</h2><p>在统计调查中，样本的选择应该遵循什么原则？</p><div class="tu-opts tu-concept">
+<button type="button" class="tu-opt" data-choice="A" data-correct="true" data-diagnosis="样本的选择应遵循随机性原则，以确保样本具有代表性。">A. 随机性</button>
+<button type="button" class="tu-opt" data-choice="B" data-correct="false" data-diagnosis="便利性选择样本可能导致样本不具有代表性。">B. 便利性</button>
+<button type="button" class="tu-opt" data-choice="C" data-correct="false" data-diagnosis="主观性选择样本可能导致样本不具有代表性。">C. 主观性</button>
+<button type="button" class="tu-opt" data-choice="D" data-correct="false" data-diagnosis="确定性选择样本可能导致样本不具有代表性。">D. 确定性</button>
+</div><div class="tu-fb" hidden></div></section>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 超市苹果质量调查</h2><p>设计一个调查方案，估计超市所有苹果的平均重量和合格率。</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="假设样本的平均重量和合格率可以代表总体的平均重量和合格率。"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="通过随机抽取50箱苹果进行检查，记录每箱苹果的平均重量和合格率。"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="根据样本数据，估计超市所有苹果的平均重量和合格率。"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="sim">
+  <div class="lesson-panel"><span class="phase-tag">网络仿真</span>
+  <h2>PhET · 抽样直觉</h2>
+  <div class="iframe-wrap"><iframe src="https://phet.colorado.edu/sims/html/plinko-probability/latest/plinko-probability_zh_CN.html" title="PhET · 抽样直觉" allowfullscreen loading="lazy"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+    referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+  <p class="feedback" style="margin-top:12px">💡 用样本频率推断总体。</p>
+  <p style="font-size:12px;color:#cbd5e1">外链：<a href="https://phet.colorado.edu/sims/html/plinko-probability/latest/plinko-probability_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/plinko-probability/latest/plinko-probability_zh_CN.html</a></p>
+  </div>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="C">
+<h3>选择题 1</h3><p>在超市苹果质量调查中，调查员随机抽取了50箱苹果进行检查。这种抽样方法属于什么类型？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="简单随机抽样是每个个体都有相同被抽中的机会，不符合情景。">A. 简单随机抽样</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="分层抽样是将总体分成若干层，然后从每层中抽取样本，不符合情景。">B. 分层抽样</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="整群抽样是将总体分成若干群，然后随机抽取若干群作为样本。">C. 整群抽样</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="系统抽样是按照一定的规则或间隔抽取样本，不符合情景。">D. 系统抽样</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C">
+<h3>选择题 2</h3><p>如果调查员想要估计超市所有苹果的平均重量，应该使用哪个统计量？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="中位数主要用于描述数据的中心位置，不适用于估计平均值。">A. 样本中位数</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="众数是数据中出现频率最高的值，不适用于估计平均值。">B. 样本众数</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="样本平均数是估计总体平均值的常用统计量。">C. 样本平均数</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="极差是数据的最大值与最小值之差，不适用于估计平均值。">D. 样本极差</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C">
+<h3>选择题 3</h3><p>在调查中，调查员发现样本中有85%的苹果是合格的。如果想要估计总体中合格苹果的比例，应该使用哪个统计量？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="中位数主要用于描述数据的中心位置，不适用于估计比例。">A. 样本中位数</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="众数是数据中出现频率最高的值，不适用于估计比例。">B. 样本众数</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="样本比例是估计总体比例的常用统计量。">C. 样本比例</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="极差是数据的最大值与最小值之差，不适用于估计比例。">D. 样本极差</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>在超市苹果质量调查中，调查员随机抽取了50箱苹果进行检查。如果每箱有20个苹果，那么样本中共有____个苹果。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>1000</p><p>样本中的苹果总数=抽取的箱数×每箱的苹果数=50×20=1000。</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>如果调查员发现样本中有85%的苹果是合格的，那么估计总体中合格苹果的比例为____%。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>85</p><p>样本比例可以直接用于估计总体比例。</p></details></div>
+</section>
+<section class="section" id="practice-l1" data-tts="practice-l1" data-bloom-level="remember" data-scaffold="full"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span><h2>先过关</h2>
+<div class="practice-block" data-bloom-level="remember" data-scaffold="full"><h3>1. 「抽样与估计」学习时，第一步通常应</h3>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 明确概念与适用条件</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 直接猜答案</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 跳过例题</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 只看图不看文字</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block" data-bloom-level="remember" data-scaffold="full"><h3>2. 判断下列说法：学习「抽样与估计」可以完全不联系生活或图像</h3>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 正确</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 错误：数形/实验/情境能帮助理解</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 只对高中正确</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 无法判断</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为样本量越大误差越小</h3><p>✅ 误差与√n成反比，当n足够大后精度提升有限</p><p>💡 混淆了样本量与误差率的非线性关系</p></div><div class="tu-q"><h3>❌ 用方便抽样代替随机抽样</h3><p>✅ 必须使用抽签法或随机数表法</p><p>💡 忽视抽样方法的科学性</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>抽样要随机，估计才靠谱</p><p><strong>类比：</strong>像试吃蛋糕的一角来判断整个蛋糕的味道</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考真题）要估计池塘鱼数，先捕100条做标记后放回，第二次捕80条中有5条带标记，估算鱼总数约为？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="标记重捕法公式：总数=初捕数×再捕数/重捕标记数">A.800</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="标记重捕法公式：总数=初捕数×再捕数/重捕标记数">B.1600</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="标记重捕法公式：总数=初捕数×再捕数/重捕标记数">C.2000</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="标记重捕法公式：总数=初捕数×再捕数/重捕标记数">D.2500</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>超市用10箱苹果（每箱20个）的检测结果推算500箱质量，这属于？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="用部分数据推断总体特征">A.普查</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="用部分数据推断总体特征">B.抽样调查</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="用部分数据推断总体特征">C.重点调查</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="用部分数据推断总体特征">D.典型调查</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>（迁移题）若想将抽样误差缩小为原来的1/3，样本量应？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="误差与√n成反比，需n变为9倍">A.增加3倍</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="误差与√n成反比，需n变为9倍">B.增加8倍</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="误差与√n成反比，需n变为9倍">C.增加9倍</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="误差与√n成反比，需n变为9倍">D.减少到1/3</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：抽样与估计</h2><div data-teachany-kg="math-m-sampling-estimation"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "math-m-sampling-estimation", "name": "抽样与估计", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<script id="ta-upgrade-check-js">
+window.checkAnswer=window.checkAnswer||function(btn,ok,target){
+  const fb=document.getElementById(target+'-feedback')||btn.parentElement.querySelector('.feedback');
+  btn.parentElement.querySelectorAll('button.quiz-option').forEach(b=>{b.classList.remove('correct','wrong');b.disabled=true;});
+  btn.classList.add(ok?'correct':'wrong');
+  if(fb){const map=window.__TA_FB||{}; fb.textContent=(ok?'✓ ':'✗ ')+(map[target]||(ok?'正确，抓住关键条件。':'再想：条件、单位、定义是否用对？'));}
+};
+</script>
+
+
+<script id="mathm-depth-js">
+function mathmDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+</script>
+
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseId: 'math-m-sampling-estimation',
+  courseTitle: "抽样与估计",
+  subject: 'math',
+  grade: '8',
+  nodeId: 'math-m-sampling-estimation',
+  getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+  getContext: () => {
+    const current = document.querySelector('.current-section') || (location.hash ? document.querySelector(location.hash) : null);
+    return (current || document.body).innerText.slice(0, 3000);
+  }
+};
+</script>
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+</div></div></div>
+  <script src="../../assets/scripts/teachany-external-embed.js" defer></script>
+</body>
+</html>

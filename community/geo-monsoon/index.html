@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全球季风系统 · 高中地理 G10 · TeachAny v6.1</title>
+  <meta name="description" content="高中地理全球季风系统互动课件：用 Leaflet 真实地图、拖拽成因链和东亚南亚对比理解海陆热力差异如何驱动季风。">
+  <!-- TeachAny 元信息 -->
+  <meta name="teachany-node" content="monsoon-system">
+  <meta name="teachany-subject" content="geography">
+  <meta name="teachany-domain" content="atmosphere">
+  <meta name="teachany-grade" content="10">
+  <meta name="teachany-prerequisites" content="atmospheric-circulation">
+  <meta name="teachany-difficulty" content="3">
+  <meta name="teachany-version" content="6.1">
+  <meta name="teachany-author" content="teachany">
+  <!-- === TeachAny 路由元数据（跨课件导航） === -->
+  <meta name="course-id" content="geo-monsoon">
+  <meta name="course-node" content="monsoon-system">
+  <meta name="course-subject" content="geography">
+  <meta name="course-title" content="全球季风系统">
+  <meta name="course-prereqs" content="geo-h-atmospheric-circulation,geo-h-atmospheric-heating">
+  <meta name="course-next" content="geo-h-climate-types,geo-h-climate-change">
+  <meta name="registry-url" content="../../courseware-registry.json">
+  <!-- Leaflet CSS: 带SRI完整性校验 -->
+  <link rel="stylesheet" href="../../assets/vendor/leaflet/leaflet.css" onerror="this.onerror=null;this.integrity='';this.href='https://registry.npmmirror.com/leaflet/1.9.4/files/dist/leaflet.css'"/>
+  <!-- Leaflet JS: 多CDN回退加载（带SRI完整性校验） -->
+  <script>
+  (function loadLeaflet(sources, idx) {
+    if (idx >= sources.length) { console.error('❌ Leaflet 加载失败'); return; }
+    var s = document.createElement('script');
+    s.src = sources[idx].url;
+    s.integrity = sources[idx].sri;
+    s.crossOrigin = 'anonymous';
+    s.onload = function() { console.log('✅ Leaflet loaded from', sources[idx].url); };
+    s.onerror = function() { console.warn('⚠️ Leaflet CDN failed:', sources[idx].url); loadLeaflet(sources, idx + 1); };
+    document.head.appendChild(s);
+  })([
+    {url:'https://cdn.bootcdn.net/ajax/libs/leaflet/1.9.4/leaflet.min.js',sri:'sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO'},
+    {url:'https://cdn.staticfile.net/leaflet/1.9.4/leaflet.min.js',sri:'sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO'},
+    {url:'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',sri:'sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH'},
+    {url:'../../assets/vendor/leaflet/leaflet.js',sri:'sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH'},
+    {url:'https://registry.npmmirror.com/leaflet/1.9.4/files/dist/leaflet.js',sri:'sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH'}
+  ], 0);
+  </script>
+  <style>
+:root{--accent:#60a5fa;--bg:#0b1120;--border:#2a3a5e;--card:#15233f;--primary:#60a5fa;--secondary:#818cf8;--success:#4ade80;--text:#e6edf7;--danger:#f87171;--green:#4ade80;--pink:#f472b6;--primary-light:#93c5fd;--radius:12px;--red:#f87171;--shadow:0 4px 20px rgba(0,0,0,.3);--text-secondary:#8aa0c0;--shadow-lg:0 8px 32px rgba(0,0,0,.4);--violet:#a78bfa}
+
+    /* ═══════════ 高中地理模板设计系统（v6.1 深色 · 青蓝 #0891b2） ═══════════ */
+    :root {
+      --bg: #0b1420;
+      --bg2: #12202f;
+      --primary: #0891b2;
+      --primary-light: #22d3ee;
+      --secondary: #3b82f6;
+      --accent: #f59e0b;
+      --violet: #8b5cf6;
+      --pink: #ec4899;
+      --green: #10b981;
+      --red: #ef4444;
+      --card: rgba(18,32,47,.85);
+      --text: #f1f7fc;
+      --text-secondary: #94a3b8;
+      --border: rgba(148,163,184,.16);
+      --success: #10b981;
+      --danger: #ef4444;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,.35);
+      --shadow-lg: 0 16px 56px rgba(0,0,0,.5);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(8,145,178,.10), transparent 34%),
+        radial-gradient(circle at 88% 12%, rgba(59,130,246,.08), transparent 28%),
+        var(--bg);
+      color: var(--text); line-height: 1.8;
+      font-size: 16px;
+    }
+
+    /* ─── 顶部进度条 ─── */
+    .progress-bar { position: fixed; top: 36px; left: 0; height: 3px; z-index: 200;
+      background: linear-gradient(90deg, var(--primary-light), var(--secondary), var(--accent));
+      transition: width .2s; border-radius: 0 2px 2px 0; }
+
+    /* ─── 吸顶导航 ─── */
+    .nav-bar {
+      position: sticky; top: 36px; z-index: 150;
+      display: flex; align-items: center; gap: 4px;
+      background: rgba(11,20,32,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px; overflow-x: auto; scrollbar-width: none;
+    }
+    .nav-bar::-webkit-scrollbar { display: none; }
+    .nav-bar .brand { font-weight: 800; font-size: 15px; color: var(--primary-light);
+      margin-right: 12px; white-space: nowrap; }
+    .nav-bar a {
+      padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      color: var(--text-secondary); text-decoration: none; white-space: nowrap;
+      transition: all .2s;
+    }
+    .nav-bar a:hover { background: rgba(34,211,238,.12); color: var(--primary-light); }
+    .nav-bar a.active { background: var(--primary); color: #fff; }
+
+    /* ─── Hero ─── */
+    .hero {
+      background: linear-gradient(135deg, #0c2536 0%, #0e3a4d 45%, #155e75 100%);
+      color: #fff; text-align: center; padding: 56px 24px 48px;
+      position: relative; overflow: hidden;
+      border-bottom: 1px solid rgba(34,211,238,.25);
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(34,211,238,.14) 0, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(59,130,246,.12) 0, transparent 40%);
+      pointer-events: none;
+    }
+    .hero h1 { font-size: 2.5rem; font-weight: 900; letter-spacing: 1px; position: relative; }
+    .hero .subtitle { font-size: 1.1rem; opacity: .92; margin-top: 12px; position: relative; color: #c8d7e8; }
+    .hero .tags { display: flex; gap: 8px; justify-content: center; margin-top: 20px; flex-wrap: wrap; position: relative; }
+    .hero .tag {
+      background: rgba(34,211,238,.10); border: 1px solid rgba(34,211,238,.4);
+      color: #c9f5fb; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    }
+    .hero .stats { display: flex; gap: 26px; justify-content: center; margin-top: 26px; position: relative; flex-wrap: wrap; }
+    .hero .stat { text-align: center; }
+    .hero .stat b { display: block; font-size: 1.4rem; font-weight: 800; color: var(--primary-light); }
+    .hero .stat span { font-size: 12px; opacity: .85; }
+    .hero-img {
+      display: block; max-width: 720px; width: calc(100% - 32px); margin: 30px auto 0;
+      border-radius: 16px; box-shadow: 0 24px 64px rgba(0,0,0,.55); position: relative;
+      border: 1px solid rgba(34,211,238,.3);
+    }
+
+    /* ─── 版面容器 ─── */
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+    .section { margin: 40px auto; scroll-margin-top: 110px; }
+    .section-title {
+      font-size: 1.4rem; font-weight: 800; margin-bottom: 18px;
+      padding-left: 14px; border-left: 5px solid var(--primary-light);
+      line-height: 1.3;
+    }
+    .section-sub { color: var(--text-secondary); font-size: 14px; margin: -12px 0 16px 19px; }
+
+    /* ─── 卡片 ─── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 22px 24px;
+      margin-bottom: 16px; box-shadow: var(--shadow);
+      border-left: 4px solid var(--primary-light);
+      backdrop-filter: blur(8px);
+    }
+    .card.teal { border-left-color: var(--secondary); }
+    .card.amber { border-left-color: var(--accent); }
+    .card.purple { border-left-color: var(--violet); }
+    .card.green { border-left-color: var(--green); }
+    .card.red { border-left-color: var(--red); }
+    .card.pink { border-left-color: var(--pink); }
+    .card h3 { font-size: 1.08rem; font-weight: 700; margin-bottom: 12px; color: var(--primary-light); }
+    .card ul { padding-left: 22px; }
+    .card li { margin-bottom: 8px; }
+    .card p { margin-bottom: 10px; }
+    .card p:last-child { margin-bottom: 0; }
+    .muted { color: var(--text-secondary); font-size: 14px; }
+
+    /* ─── ABT 叙事块（深色三卡） ─── */
+    .abt-grid { display: grid; gap: 12px; }
+    .abt-item { border-radius: 12px; padding: 16px 18px; border: 1px solid var(--border); background: rgba(255,255,255,.03); }
+    .abt-item .abt-label { font-size: 12px; font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; }
+    .abt-item.and { background: rgba(16,185,129,.08); border-color: rgba(16,185,129,.3); }
+    .abt-item.and .abt-label { color: var(--green); }
+    .abt-item.but { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.3); }
+    .abt-item.but .abt-label { color: var(--accent); }
+    .abt-item.therefore { background: rgba(34,211,238,.08); border-color: rgba(34,211,238,.3); }
+    .abt-item.therefore .abt-label { color: var(--primary-light); }
+    .abt-item p { font-size: 14.5px; line-height: 1.75; }
+
+    /* ─── 角色徽章 ─── */
+    .role-badge {
+      display: inline-block; background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff; padding: 4px 16px; border-radius: 20px;
+      font-size: 13px; font-weight: 800; margin-bottom: 14px;
+    }
+
+    /* ─── 对比表格 ─── */
+    .cmp-table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 12px 0; }
+    .cmp-table th, .cmp-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+    .cmp-table th { background: rgba(34,211,238,.10); font-weight: 700; color: var(--primary-light); font-size: 13.5px; }
+    .cmp-table td { color: var(--text); }
+    .cmp-table td:first-child { font-weight: 600; color: var(--text-secondary); font-size: 13.5px; }
+    .cmp-table tr:hover td { background: rgba(255,255,255,.03); }
+
+    /* ─── 标签 ─── */
+    .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .tag-red { background: rgba(239,68,68,.15); color: #f87171; }
+    .tag-blue { background: rgba(59,130,246,.15); color: #60a5fa; }
+    .tag-pink { background: rgba(236,72,153,.15); color: #f472b6; }
+    .tag-purple { background: rgba(139,92,246,.15); color: #a78bfa; }
+    .tag-green { background: rgba(16,185,129,.15); color: #34d399; }
+    .tag-cyan { background: rgba(34,211,238,.15); color: #22d3ee; }
+    .tag-yellow { background: rgba(245,158,11,.15); color: #fbbf24; }
+
+    /* ─── 测验 ─── */
+    .quiz-option {
+      display: block; width: 100%; text-align: left; padding: 13px 18px;
+      margin: 8px 0; border: 1.5px solid var(--border); border-radius: 10px;
+      background: rgba(255,255,255,.04); cursor: pointer; font-size: 15px; color: var(--text);
+      transition: all .2s; font-family: inherit;
+    }
+    .quiz-option:hover { border-color: var(--primary-light); transform: translateX(3px); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(16,185,129,.12); }
+    .quiz-option.wrong { border-color: var(--danger); background: rgba(239,68,68,.12); }
+    .quiz-feedback { padding: 12px 16px; border-radius: 10px; margin-top: 10px; font-size: 14.5px; display: none; line-height: 1.7; }
+    .quiz-feedback.show { display: block; animation: fadeIn .3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ─── insight ─── */
+    .insight-box {
+      background: linear-gradient(135deg, rgba(139,92,246,.1), rgba(59,130,246,.08));
+      border-left: 4px solid var(--violet); padding: 16px 20px;
+      border-radius: 0 12px 12px 0; margin: 14px 0;
+    }
+    .insight-box h4 { color: #a78bfa; font-size: 15px; margin-bottom: 6px; }
+    .insight-box p { color: var(--text); font-size: 14.5px; margin: 0; }
+
+    /* ─── 时间线 ─── */
+    .timeline-item { display: flex; gap: 14px; margin-bottom: 14px; position: relative; padding-left: 6px; }
+    .timeline-dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 7px; flex-shrink: 0; }
+    .timeline-content { flex: 1; }
+    .timeline-content h5 { font-size: 15px; margin-bottom: 3px; }
+    .timeline-content p { font-size: 13.5px; color: var(--text-secondary); margin: 0; }
+
+    /* ─── 季节切换 ─── */
+    .season-toggle { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; justify-content: center; }
+    .season-btn { padding: 9px 22px; border-radius: 24px; border: 2px solid var(--border); background: transparent; color: var(--text-secondary); font-size: 14.5px; font-weight: 600; cursor: pointer; transition: all .25s; font-family: inherit; }
+    .season-btn.active { border-color: var(--primary-light); background: rgba(34,211,238,.12); color: var(--primary-light); }
+    .season-btn.summer-active { border-color: var(--red); background: rgba(239,68,68,.12); color: #f87171; }
+
+    /* ─── 拖拽成因链 ─── */
+    .drag-item { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; margin: 4px; font-size: 13.5px; background: rgba(18,32,47,.8); border: 1px solid var(--border); cursor: grab; user-select: none; transition: all .2s; }
+    .drag-item.dragging { opacity: .5; transform: scale(.97); }
+    #chainZone { min-height: 80px; padding: 14px; background: rgba(18,32,47,.5); border-radius: 12px; border: 2px dashed var(--primary-light); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; transition: all .2s; }
+
+    /* ─── 进度/得分 ─── */
+    .quiz-progress { height: 6px; background: rgba(148,163,184,.2); border-radius: 3px; overflow: hidden; margin: 12px 0; }
+    .quiz-progress-fill { height: 100%; border-radius: 3px; transition: width .4s ease; background: linear-gradient(90deg, var(--primary-light), var(--secondary)); }
+    .score-card { text-align: center; padding: 22px; background: linear-gradient(135deg, rgba(16,185,129,.08), rgba(34,211,238,.06)); border-radius: 16px; margin: 18px 0; }
+    .score-num { font-size: 44px; font-weight: 800; background: linear-gradient(135deg, var(--success), var(--primary-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ─── 三段式标签 ─── */
+    .level-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; margin-right: 6px; }
+    .level-tag.l1 { background: rgba(16,185,129,.15); color: var(--green); }
+    .level-tag.l2 { background: rgba(245,158,11,.15); color: var(--accent); }
+    .level-tag.l3 { background: rgba(239,68,68,.15); color: var(--red); }
+
+    /* ─── 结课导航卡 ─── */
+    .next-course {
+      background: linear-gradient(135deg, rgba(34,211,238,.08), rgba(59,130,246,.08));
+      border: 1px solid rgba(34,211,238,.3); border-radius: var(--radius);
+      padding: 26px; text-align: center; margin: 40px 0;
+    }
+    .next-course h3 { font-size: 1.15rem; margin-bottom: 8px; }
+    .next-course p { color: var(--text-secondary); font-size: 14px; margin-bottom: 16px; }
+    .next-course .nc-links { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .next-course a {
+      display: inline-block; padding: 11px 24px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff;
+      text-decoration: none; font-weight: 800; font-size: 15px;
+      transition: filter .2s;
+    }
+    .next-course a:hover { filter: brightness(1.12); }
+    .next-course a.alt { background: transparent; color: var(--primary-light); border: 1.5px solid var(--primary-light); }
+    .next-course a.alt:hover { background: rgba(34,211,238,.1); }
+
+    /* ─── 页脚 ─── */
+    .footer { text-align: center; padding: 30px 20px 60px; color: var(--text-secondary); font-size: 13px; }
+
+    /* ─── 标准模块容器 ─── */
+    .ta-standard-section { max-width: 880px; margin: 40px auto; padding: 0 20px; }
+
+    /* ─── 学习闭环 UI ─── */
+    .ta-toast { position: fixed; top: 56px; right: -460px; z-index: 10000; display: flex; align-items: center; gap: 12px;
+      padding: 14px 22px; border-radius: 14px; background: linear-gradient(135deg,#22d3ee,#3b82f6); color: #06202c;
+      box-shadow: 0 8px 32px rgba(34,211,238,.3); transition: right .4s cubic-bezier(.34,1.56,.64,1);
+      font-family: system-ui,sans-serif; max-width: 360px; font-weight: 700; }
+    .ta-toast.show { right: 20px; }
+    .ta-toast .ti { font-size: 28px; }
+    .ta-toast .tc { display: flex; flex-direction: column; }
+    .ta-toast .tc strong { font-size: 12px; opacity: .7; }
+    .ta-toast .tc span { font-size: 15px; font-weight: 800; }
+    .ta-toast.info { background: linear-gradient(135deg,#3b82f6,#22d3ee); color: #06202c; }
+    .ta-toast.success { background: linear-gradient(135deg,#34d399,#22d3ee); color: #06202c; }
+    .ta-resume { position: fixed; top: 96px; left: 50%; transform: translateX(-50%); z-index: 9990;
+      background: rgba(18,32,47,.95); border: 1px solid rgba(34,211,238,.3); border-left: 4px solid var(--primary-light);
+      border-radius: 14px; padding: 12px 20px; box-shadow: var(--shadow-lg);
+      display: flex; gap: 14px; align-items: center; font-size: 14px; max-width: 92vw; backdrop-filter: blur(10px); }
+    .ta-resume button { border: none; border-radius: 10px; padding: 7px 14px; font-size: 13px; font-weight: 800; cursor: pointer; background: linear-gradient(135deg,#22d3ee,#3b82f6); color: #06202c; }
+    .ta-resume button.sec { background: rgba(255,255,255,.09); color: #cbd5e1; border: 1px solid var(--border); }
+    .ta-banner { border-radius: 14px; padding: 16px 20px; margin: 18px 0; font-size: 15px; line-height: 1.7;
+      display: flex; gap: 12px; align-items: flex-start; }
+    .ta-banner .bi { font-size: 24px; flex-shrink: 0; }
+    .ta-banner.warn { background: rgba(245,158,11,.09); border: 1px solid rgba(245,158,11,.3); border-left: 4px solid var(--accent); color: #fcd34d; }
+    .ta-banner.challenge { background: rgba(34,211,238,.08); border: 1px solid rgba(34,211,238,.3); border-left: 4px solid var(--primary-light); color: #a5f3fc; }
+    .ta-banner a { color: var(--primary-light); font-weight: 700; }
+    .ta-modal-mask { position: fixed; inset: 0; background: rgba(5,10,16,.75); display: flex; align-items: center; justify-content: center; z-index: 10001; font-family: system-ui,sans-serif; }
+    .ta-modal { background: linear-gradient(180deg, rgba(18,32,47,.97), rgba(11,20,32,.97)); border: 1px solid var(--border); border-radius: 18px; padding: 28px 30px; max-width: 480px; width: 90%; box-shadow: 0 24px 80px rgba(0,0,0,.5); }
+    .ta-modal h3 { margin: 0 0 10px; font-size: 18px; color: var(--accent); }
+    .ta-modal p { margin: 0 0 14px; font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+    .ta-modal ul { margin: 0 0 18px; padding: 0; list-style: none; }
+    .ta-modal li { padding: 10px 14px; margin-bottom: 8px; border-radius: 10px; background: rgba(245,158,11,.08); border-left: 3px solid var(--accent); font-size: 14px; }
+    .ta-modal li a { color: var(--primary-light); text-decoration: none; font-weight: 700; }
+    .ta-modal li .st { font-size: 12px; color: #cbd5e1; }
+    .ta-modal .acts { display: flex; gap: 10px; }
+    .ta-modal .acts button { flex: 1; padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 800; }
+    .ta-modal .b1 { background: linear-gradient(135deg,#22d3ee,#3b82f6); color: #06202c; }
+    .ta-modal .b2 { background: rgba(255,255,255,.09); color: #cbd5e1; }
+    .ta-done-mask { position: fixed; inset: 0; background: rgba(5,10,16,.8); display: flex; align-items: center; justify-content: center; z-index: 10001; font-family: system-ui,sans-serif; }
+    .ta-done { background: linear-gradient(135deg, rgba(18,32,47,.98), rgba(11,20,32,.98)); border: 1px solid rgba(34,211,238,.3); border-radius: 20px; padding: 38px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 24px 70px rgba(0,0,0,.6); }
+    .ta-done h2 { margin: 0 0 8px; font-size: 24px; color: #fff; }
+    .ta-done p { margin: 0 0 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+    .ta-done a { display: inline-block; padding: 13px 30px; background: linear-gradient(135deg,#22d3ee,#3b82f6); color: #06202c; border-radius: 12px; text-decoration: none; font-size: 16px; font-weight: 800; }
+    .ta-done .later { display: block; margin-top: 14px; color: #cbd5e1; font-size: 13px; cursor: pointer; text-decoration: underline; }
+
+    /* ─── 响应式 ─── */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 1.7rem; }
+      .hero .stats { gap: 16px; }
+      .section-title { font-size: 1.2rem; }
+      .card { padding: 18px; }
+      .nav-bar { padding: 8px 12px; }
+    }
+  </style>
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-historical-map.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+</head>
+<body>
+<!-- teachany-hero-notext -->
+
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<div class="progress-bar" id="progressBar" style="width:0%"></div>
+
+<!-- ═══ 吸顶导航 ═══ -->
+<nav class="nav-bar" id="navbar">
+  <span class="brand">🌍 全球季风系统</span>
+  <a href="#why-learn">引入</a>
+  <a href="#objectives">目标</a>
+  <a href="#pretest">前测</a>
+  <a href="#module-1">模块1·什么是季风</a>
+  <a href="#module-2">模块2·成因</a>
+  <a href="#module-3">模块3·三大季风区</a>
+  <a href="#module-4">模块4·应用</a>
+  <a href="#posttest">后测</a>
+  <a href="#summary">小结</a>
+  <a href="#knowledge-graph">图谱</a>
+</nav>
+
+<!-- ═══ Hero ═══ -->
+<header class="hero" id="hero">
+  <h1>🌍 全球季风系统</h1>
+  <p class="subtitle">为什么夏天吹东南风、冬天吹西北风？——从海陆热力差异到全球大气环流</p>
+  <div class="tags">
+    <span class="tag">高中地理</span>
+    <span class="tag">G10</span>
+    <span class="tag">大气环流</span>
+    <span class="tag">新授课</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>4</b><span>核心模块</span></div>
+    <div class="stat"><b>9</b><span>诊断题</span></div>
+    <div class="stat"><b>2</b><span>交互实验</span></div>
+    <div class="stat"><b>≈40</b><span>分钟</span></div>
+  </div>
+  <img class="hero-img" src="./assets/geo-monsoon-hero.png" alt="全球季风系统：夏季风与冬季风风向反转示意">
+</header>
+
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/geo-monsoon-hero.png" alt="全球季风系统知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">全球季风系统</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+<div class="wrap">
+
+  <!-- ═══ 为什么学（ABT） ═══ -->
+  <section class="section" id="objectives" data-tts="objectives" data-tsh="学习目标" data-bloom-level="apply" data-scaffold="full" data-slot="10">
+    <h2 class="section-title">🎯 学习目标</h2>
+    <div class="card">
+      <ul>
+        <li><strong>理解季风本质</strong>：知道季风是大范围盛行风向随季节显著变化的风，由海陆热力差异驱动</li>
+        <li><strong>掌握三大季风区</strong>：能在世界地图上标出东亚、南亚、澳大利亚季风区的位置和风向特征</li>
+        <li><strong>解释成因异同</strong>：能区分东亚与南亚季风的成因差异（海陆差 vs 海陆差+气压带移动+地转偏向）</li>
+        <li><strong>分析实际影响</strong>：能说明季风对农业、城市规划和气候异常的影响</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══ 前测 ═══ -->
+  <section class="section" id="why-learn" data-tts="why-learn" data-tsh="为什么学" data-bloom-level="understand" data-scaffold="full" data-slot="16">
+    <h2 class="section-title">🧭 为什么学全球季风系统？</h2>
+    <div class="card">
+      <div class="role-badge">🌏 气候分析师</div>
+      <div class="abt-grid">
+        <div class="abt-item and">
+          <div class="abt-label">✅ AND · 你已经知道</div>
+          <p>中国每年夏天都有梅雨季节，冬天北方干燥寒冷，南方温暖湿润——这些都是季风的"杰作"。</p>
+        </div>
+        <div class="abt-item but">
+          <div class="abt-label">⚠️ BUT · 但你还不知道</div>
+          <p>季风是怎么形成的？为什么风向会随季节反转？东亚季风和南亚季风有什么不同？</p>
+        </div>
+        <div class="abt-item therefore">
+          <div class="abt-label">🎯 THEREFORE · 所以今天学</div>
+          <p>理解<strong>海陆热力差异</strong>如何驱动季风，掌握东亚季风和南亚季风的成因及对中国气候的影响。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 学习目标 ═══ -->
+  <section class="section" id="pretest" data-tts="pretest" data-tsh="前测" data-bloom-level="remember" data-scaffold="partial" data-slot="20">
+    <h2 class="section-title">📋 前测（3 题）</h2>
+    <p class="section-sub">检查你的前序知识：比热容、风的形成、中国风向规律。</p>
+    <div class="card teal">
+      <h3>❶ 夏天摸水泥地和草地，哪个更烫？</h3>
+      <div class="quiz-option" data-q="pre1" data-ans="A" onclick="checkQuiz(this)">A. 水泥地——比热容小，升温快</div>
+      <div class="quiz-option" data-q="pre1" data-ans="B" onclick="checkQuiz(this)">B. 草地——草吸收了更多阳光</div>
+      <div class="quiz-option" data-q="pre1" data-ans="C" onclick="checkQuiz(this)">C. 差不多</div>
+      <div class="quiz-feedback" id="fb-pre1-A"><span class="tag tag-green">✅ 正确！</span> 这就是<strong>"海陆热力性质差异"</strong>的微观版本。</div>
+      <div class="quiz-feedback" id="fb-pre1-B"><span class="tag tag-red">❌</span> 根本原因是比热容不同。</div>
+      <div class="quiz-feedback" id="fb-pre1-C"><span class="tag tag-red">❌</span> 不一样的。</div>
+    </div>
+    <div class="card teal">
+      <h3>❷ 风怎么形成？</h3>
+      <div class="quiz-option" data-q="pre2" data-ans="A" onclick="checkQuiz(this)">A. 空气从高压流向低压</div>
+      <div class="quiz-option" data-q="pre2" data-ans="B" onclick="checkQuiz(this)">B. 地球自转效应</div>
+      <div class="quiz-option" data-q="pre2" data-ans="C" onclick="checkQuiz(this)">C. 太阳辐射直接推动</div>
+      <div class="quiz-feedback" id="fb-pre2-A"><span class="tag tag-green">✅ 正确！</span> 驱动力是水平气压梯度力。</div>
+      <div class="quiz-feedback" id="fb-pre2-B"><span class="tag tag-yellow">⚠️ 部分</span> 科氏力影响风向但不形成风。</div>
+      <div class="quiz-feedback" id="fb-pre2-C"><span class="tag tag-red">❌</span> 直接驱动的是气压差。</div>
+    </div>
+    <div class="card teal">
+      <h3>❸ 中国大部分地区的风向规律？</h3>
+      <div class="quiz-option" data-q="pre3" data-ans="A" onclick="checkQuiz(this)">A. 全年同一方向</div>
+      <div class="quiz-option" data-q="pre3" data-ans="B" onclick="checkQuiz(this)">B. 冬夏风向相反</div>
+      <div class="quiz-option" data-q="pre3" data-ans="C" onclick="checkQuiz(this)">C. 完全随机</div>
+      <div class="quiz-feedback" id="fb-pre3-A"><span class="tag tag-red">❌</span> 全年同向就不叫"季风"了。</div>
+      <div class="quiz-feedback" id="fb-pre3-B"><span class="tag tag-green">✅ 正确！</span> 夏季偏南（暖湿），冬季偏北（干冷）。</div>
+      <div class="quiz-feedback" id="fb-pre3-C"><span class="tag tag-red">❌</span> 季风区有明显的季节规律。</div>
+    </div>
+  </section>
+
+  <!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+  
+
+  <!-- ═══ 模块 1：什么是季风 ═══ -->
+  <section class="section" id="module-1" data-tts="module-1" data-tsh="模块1：什么是季风" data-bloom-level="understand" data-scaffold="full" data-slot="30">
+    <h2 class="section-title">💨 模块 1：什么是季风？</h2>
+
+    <div class="insight-box">
+      <h4>🤔 从生活体验开始</h4>
+      <p><strong>[And]</strong> 你知道夏天中国东南沿海常下雨，冬天北方干冷。<br>
+      <strong>[But]</strong> 这种"冬夏完全不同的天气模式"只在地球上特定区域发生。<br>
+      <strong>[Therefore]</strong> 这些区域叫<strong>"季风气候区"</strong>——风向和降水随季节剧烈变化。</p>
+    </div>
+
+    <div class="card">
+      <h3>📖 定义</h3>
+      <table class="cmp-table">
+        <tr><th>术语</th><th>含义</th></tr>
+        <tr><td><strong>季风 Monsoon</strong></td><td>大范围内盛行风向随季节显著变化的现象（通常冬夏方向相反）</td></tr>
+        <tr><td><strong>季风气候</strong></td><td>由季风主导：<strong>雨热同期、旱雨分明</strong></td></tr>
+      </table>
+      <p style="margin-top:10px;text-align:center;padding:10px;background:rgba(245,158,11,.07);border-radius:10px;font-size:16px">关键词：<span style="color:var(--accent);font-weight:700">风向随季节变化 + 大范围 + 显著</span></p>
+    </div>
+
+    <!-- Leaflet 真实地图 -->
+    <div class="card">
+      <h3>🗺️ 全球三大季风区 · 交互地图</h3>
+      <div class="season-toggle">
+        <button class="season-btn summer-active" id="btnSum" onclick="setSeason('summer')">☀️ 夏季（7月）</button>
+        <button class="season-btn" id="btnWin" onclick="setSeason('winter')">❄️ 冬季（1月）</button>
+      </div>
+      <div data-teachany-map="thm-geo-monsoon" data-teachany-map-scope="world" data-teachany-map-title="全球三大季风区">
+        <script type="application/json" data-teachany-map-config>
+{
+  "crs": "EPSG4326",
+  "baseImage": {
+    "url": "../../assets/maps/physical/hillshade/global-color-hillshade-4k.jpg",
+    "bounds": [
+      [
+        -90,
+        -180
+      ],
+      [
+        90,
+        180
+      ]
+    ],
+    "opacity": 1,
+    "attribution": "© Natural Earth / TeachAny 自带地形晕渲"
+  },
+  "fitBounds": [
+    [
+      -45,
+      -30
+    ],
+    [
+      70,
+      160
+    ]
+  ],
+  "refitEra": false,
+  "eras": [
+    {
+      "id": "world",
+      "label": "世界政区",
+      "file": "../../assets/maps/political/world/countries.geojson",
+      "fill": "#ffffff",
+      "fillOpacity": 0.08,
+      "stroke": "#94a3b8",
+      "weight": 0.8,
+      "strokeOpacity": 0.5,
+      "desc": "<strong>全球三大季风区</strong>：切换夏冬两季按钮，观察风向反转与气压中心移动。季风区多边形、风向箭头与气压标签由课件交互层叠加。",
+      "cities": []
+    }
+  ],
+  "zoom": 2.25,
+  "zoomSnap": 0.25,
+  "zoomDelta": 0.5,
+  "minZoom": 1.5
+}
+        </script>
+      </div>
+      <p class="muted" style="text-align:center;margin-top:8px">↑ 可拖动/缩放地图 · 点击季风区查看详情 · 切换季节观察风向变化</p>
+      <img src="./assets/monsoon-scene.png" alt="季风气候场景" style="display:block;max-width:100%;margin:14px auto 0;border-radius:10px;box-shadow:0 2px 12px rgba(255,255,255,0.06)">
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+      <div class="card red" style="text-align:center;padding:18px"><h3 style="color:#f87171">🇨🇳 东亚季风区</h3><p class="muted">中国东部、朝鲜半岛、日本<br>世界最大季风区</p></div>
+      <div class="card pink" style="text-align:center;padding:18px"><h3 style="color:#f472b6">🇮🇳 南亚季风区</h3><p class="muted">印度半岛、中南半岛、菲律宾<br>季风最盛地区</p></div>
+      <div class="card green" style="text-align:center;padding:18px"><h3 style="color:#34d399">🇦🇺 澳大利亚季风区</h3><p class="muted">澳大利亚北部<br>季节与北半球相反</p></div>
+    </div>
+  </section>
+
+  <!-- ═══ 模块 2：成因 ═══ -->
+  <section class="section" id="monsoon-lab" data-tts data-slot="35">
+    <h2 class="section-title">🧪 互动演示：冬夏季风风向切换</h2>
+    <p style="text-align:center;color:var(--text-dim,#94a3b8);font-size:14px;margin-bottom:10px;">点击按钮或点击画布，切换夏季/冬季，观察风向与气压中心的反转</p>
+    <div style="text-align:center;">
+      <canvas id="monsoonCanvas" width="720" height="380" style="max-width:100%;border-radius:12px;background:#0b2545;touch-action:manipulation;cursor:pointer;" aria-label="季风风向互动画布"></canvas>
+      <div style="margin-top:12px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="b1" id="btnSummer" style="padding:10px 20px;min-height:44px;">☀️ 夏季风（7月）</button>
+        <button class="b1" id="btnWinter" style="padding:10px 20px;min-height:44px;">❄️ 冬季风（1月）</button>
+      </div>
+      <p id="monsoonNote" style="margin-top:10px;font-size:14px;color:#7dd3fc;"></p>
+    </div>
+  </section>
+
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 模拟季风指数测算</h2><p>给定10年北京与孟买的6-8月气压差数据</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="季风强度与海陆气压差呈正相关"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="计算相关系数并绘制散点图"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="验证热力差异是季风驱动力"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<section class="section" id="figures" data-tts="figures" data-tsh="图文速览" data-slot="35">
+    <h2 class="section-title">🖼️ 图文速览</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+      </div>
+  </section>
+
+<section class="section" id="module-2" data-tts="module-2" data-tsh="模块2：成因分析" data-bloom-level="analyze" data-scaffold="full" data-slot="40">
+    <h2 class="section-title">🔬 模块 2：成因——深层理解</h2>
+
+    <div class="insight-box">
+      <h4>🤔 核心问题</h4>
+      <p>既然风从高压吹向低压，为什么高压低压的位置会随季节<strong>互换</strong>？</p>
+    </div>
+
+    <div class="card">
+      <h3>🔍 第一步：陆地 vs 海洋 谁升温快？</h3>
+      <div style="display:flex;gap:18px;margin:14px 0;flex-wrap:wrap;justify-content:center;align-items:center">
+        <div style="text-align:center;padding:18px;background:rgba(239,68,68,.07);border-radius:12px;min-width:170px">
+          <div style="font-size:36px;margin-bottom:6px">🏜️</div><div style="font-size:16px;font-weight:700;color:#f87171">陆地</div>
+          <div class="muted" style="margin-top:4px">比热容 <strong>小</strong><br>升温快 ↓ 降温也快</div>
+        </div>
+        <div style="font-size:26px;color:var(--text-secondary)">↔️</div>
+        <div style="text-align:center;padding:18px;background:rgba(59,130,246,.07);border-radius:12px;min-width:170px">
+          <div style="font-size:36px;margin-bottom:6px">🌊</div><div style="font-size:16px;font-weight:700;color:#60a5fa">海洋</div>
+          <div class="muted" style="margin-top:4px">比热容 <strong>大</strong><br>升温慢 ↓ 降温也慢</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card teal">
+      <h3>🔧 第二步：夏季过程</h3>
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--red)"></div><div class="timeline-content"><h5>☀️ 太阳直射点北移</h5><p>陆地快速升温 → <strong>低压中心</strong>（亚洲低压）</p></div></div>
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--secondary)"></div><div class="timeline-content"><h5>🌊 海洋升温慢</h5><p>海洋保持较低温度 → <strong>高压中心</strong>（太平洋副高）</p></div></div>
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--green)"></div><div class="timeline-content"><h5>💨 风从海→陆</h5><p>空气从海洋高压→陆地低压 → <strong>夏季风</strong>：温暖湿润</p></div></div>
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--primary-light)"></div><div class="timeline-content"><h5>🌧️ 雨季到来</h5><p>暖湿气流遇地形抬升 → 凝结成雨 → <strong>雨季</strong></p></div></div>
+    </div>
+
+    <div class="card">
+      <h3>❄️ 第三步：冬季镜像翻转</h3>
+      <ul>
+        <li>陆地迅速冷却 → <strong>高压</strong>（蒙古-西伯利亚高压）</li>
+        <li>海洋降温慢 → 相对<strong>低压</strong></li>
+        <li>风从陆→海 → <strong>冬季风</strong>：寒冷干燥</li>
+        <li>结果 → <strong>旱季</strong></li>
+      </ul>
+    </div>
+
+    <!-- ConcepTest -->
+    <div class="card amber" data-conceptest="true" data-scaffold="partial" data-bloom-level="analyze">
+      <h3>💡 辨析：关于季风，哪项<strong>错误</strong>？</h3>
+      <div class="quiz-option" data-q="cp1" data-ans="A" onclick="checkQuiz(this)">A. 季风风向随季节变化，信风常年稳定</div>
+      <div class="quiz-option" data-q="cp1" data-ans="B" onclick="checkQuiz(this)">B. 季风由海陆差异造成，信风由副高辐散造成</div>
+      <div class="quiz-option" data-q="cp1" data-ans="C" onclick="checkQuiz(this)">C. 季风区和信风区完全不重叠</div>
+      <div class="quiz-feedback" id="fb-cp1-A"><span class="tag tag-green">✅ 正确区分！</span> 季风=季节性反转；信风=常年稳定。</div>
+      <div class="quiz-feedback" id="fb-cp1-B"><span class="tag tag-green">✅ 也对！</span></div>
+      <div class="quiz-feedback" id="fb-cp1-C"><span class="tag tag-yellow">这就是错误项 ✓</span> 实际上可重叠！如印度洋北部。</div>
+    </div>
+  </section>
+
+  <!-- ═══ 模块 3：三大季风区 ═══ -->
+  <section class="section" id="module-3" data-tts="module-3" data-tsh="模块3：三大季风区" data-bloom-level="analyze" data-scaffold="full" data-slot="50">
+    <h2 class="section-title">🌏 模块 3：三大季风区</h2>
+
+    <!-- 东亚 -->
+    <div class="card red">
+      <h3>🇨🇳 东亚季风——最经典案例</h3>
+      <table class="cmp-table">
+        <tr><th></th><th>夏季</th><th>冬季</th></tr>
+        <tr><td><strong>风向</strong></td><td><span class="tag tag-red">东南风 SE</span></td><td><span class="tag tag-blue">西北风 NW</span></td></tr>
+        <tr><td><strong>性质</strong></td><td>温暖湿润</td><td>寒冷干燥</td></tr>
+        <tr><td><strong>影响</strong></td><td>高温多雨（雨季）</td><td>低温少雨（旱季）</td></tr>
+        <tr><td><strong>成因</strong></td><td colspan="2" style="text-align:center"><strong>海陆热力差异</strong>（单因）</td></tr>
+      </table>
+      <div class="insight-box" style="margin-bottom:0">
+        <h4>🧠 为什么东亚最"纯粹"？</h4>
+        <p>成因相对简单——主要是海陆热力差异。太平洋最大大洋+欧亚大陆=温差极致。</p>
+      </div>
+    </div>
+
+    <!-- 南亚 -->
+    <div class="card pink">
+      <h3>🇮🇳 南亚季风——最强盛最复杂</h3>
+      <table class="cmp-table">
+        <tr><th></th><th>夏季</th><th>冬季</th></tr>
+        <tr><td><strong>风向</strong></td><td><span class="tag tag-pink">西南风 SW</span></td><td><span class="tag tag-purple">东北风 NE</span></td></tr>
+        <tr><td><strong>特色</strong></td><td colspan="2">雨季占全年降水 80%+</td></tr>
+      </table>
+      <div style="background:rgba(236,72,153,.05);border-radius:12px;padding:16px;margin-top:14px">
+        <h4 style="font-size:15px;margin-bottom:8px">⚠️ 南亚西南风的<strong>"三重叠加"</strong>成因</h4>
+        <p class="muted" style="margin-bottom:10px">下面 5 个选项中，有 3 个是南亚夏季西南风的成因。把正确的拖入下方确认框：</p>
+        <div id="dragSource" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0">
+          <div class="drag-item" draggable="true" data-id="d1" data-correct="1">① 海陆热力差异</div>
+          <div class="drag-item" draggable="true" data-id="d2" data-correct="1">② 气压带风带季节移动（SE信风越赤道右偏→SW风）</div>
+          <div class="drag-item" draggable="true" data-id="d3" data-correct="1">③ 地转偏向力持续作用</div>
+          <div class="drag-item" draggable="true" data-id="d4" data-correct="0">④ 喜马拉雅山脉阻挡冬季风（影响冬季风，非SW成因）</div>
+          <div class="drag-item" draggable="true" data-id="d5" data-correct="0">⑤ 厄尔尼诺现象（年际变化，非常态成因）</div>
+        </div>
+        <p style="color:var(--accent);font-size:14px;font-weight:600;margin-bottom:6px">👇 拖到这里（需要 3 个）</p>
+        <div id="chainZone">
+          <span id="dropPlaceholder" style="color:var(--text-secondary);font-size:13px">将选项拖入此区域...</span>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;align-items:center">
+          <button style="padding:8px 20px;border-radius:8px;border:1px solid var(--primary-light);background:transparent;color:var(--primary-light);cursor:pointer;font-size:14px;font-weight:600;font-family:inherit" onclick="checkChain()">✅ 检查答案</button>
+          <button style="padding:8px 20px;border-radius:8px;border:1px solid var(--text-secondary);background:transparent;color:var(--text-secondary);cursor:pointer;font-size:14px;font-family:inherit" onclick="resetChain()">🔄 重置</button>
+        </div>
+        <div id="chainFeedback" class="quiz-feedback"></div>
+      </div>
+    </div>
+
+    <!-- 澳大利亚 -->
+    <div class="card green">
+      <h3>🇦🇺 澳大利亚季风——"反着来"</h3>
+      <table class="cmp-table">
+        <tr><th></th><th>北半球夏季</th><th>北半球冬季</th></tr>
+        <tr><td><strong>澳洲季节</strong></td><td>冬季（干季）</td><td>夏季（湿季）</td></tr>
+        <tr><td><strong>风向</strong></td><td><span class="tag tag-blue">东南风</span></td><td><span class="tag tag-green">西北风</span></td></tr>
+      </table>
+      <p style="margin-top:10px;padding:10px;background:rgba(245,158,11,.07);border-radius:8px;font-size:14px"><span style="color:var(--accent);font-weight:700">记忆</span>：站在赤道——北半球过夏时南半球在过冬。中国在吹 SE 湿季风时，澳洲在吹干冬季风。</p>
+    </div>
+
+    <!-- 对比 -->
+    <div class="card">
+      <h3>⚖️ 核心对比：东亚 vs 南亚</h3>
+      <table class="cmp-table">
+        <tr><th>维度</th><th>东亚</th><th>南亚</th></tr>
+        <tr><td><strong>夏风</strong></td><td><span class="tag tag-red">SE</span></td><td><span class="tag tag-pink">SW</span></td></tr>
+        <tr><td><strong>冬风</strong></td><td><span class="tag tag-blue">NW</span></td><td><span class="tag tag-purple">NE</span></td></tr>
+        <tr><td><strong>成因</strong></td><td>海陆差（单因）</td><td>海陆差+气压带移动+地转偏向（多因叠加）</td></tr>
+        <tr><td><strong>强度</strong></td><td>强</td><td><span style="color:var(--accent);font-weight:700">全球最强</span></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══ 模块 4：综合应用 ═══ -->
+  <section class="section" id="module-4" data-tts="module-4" data-tsh="模块4：综合应用" data-bloom-level="evaluate" data-scaffold="partial" data-slot="55">
+    <h2 class="section-title">🌍 模块 4：综合应用</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+      <div class="card green">
+        <h3>🌾 中国农业："靠天吃饭"</h3>
+        <ul style="font-size:14px">
+          <li><strong>春播</strong>：气温回升+SE季风登陆</li>
+          <li><strong>夏长</strong>：高温+雨热同期</li>
+          <li><strong>秋收</strong>：季风撤退</li>
+        </ul>
+        <p style="color:#f87171"><span style="color:var(--accent);font-weight:700">风险</span>：夏季风异常→干旱或洪涝。每年盼季风正常来。</p>
+      </div>
+      <div class="card pink">
+        <h3>🌊 印度：季风即命运</h3>
+        <ul style="font-size:14px">
+          <li>全国 70%+ 降水来自<strong>西南季风</strong></li>
+          <li>正常年=丰收；异常年=灾害</li>
+        </ul>
+        <p>印度气象局每年发布<strong>季风预报</strong>。"Monsoon economy"。</p>
+      </div>
+      <div class="card teal">
+        <h3>🌀 厄尔尼诺与季风</h3>
+        <ul style="font-size:14px">
+          <li>厄尔尼诺（东太平洋增温）→沃克环流减弱</li>
+          <li>→ 西太平洋对流减弱 → 季风减弱</li>
+          <li>→ 东南亚/印度/澳北降水偏少 → 干旱风险</li>
+          <li>反之拉尼娜年伴随更强季风 → 洪涝</li>
+        </ul>
+      </div>
+      <div class="card purple">
+        <h3>🏙️ 城市规划中的季风考量</h3>
+        <ul style="font-size:14px">
+          <li>工业区：放季风下风向</li>
+          <li>建筑朝向：利用 SE 风自然通风</li>
+          <li>防洪：按暴雨标准设计</li>
+          <li>机场跑道：沿盛行风向</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card purple" data-bloom-level="create" data-scaffold="partial">
+      <h3>🚀 迁移挑战：预测全球变暖背景下的季风变化</h3>
+      <p>如果全球持续变暖，亚洲季风系统可能发生什么变化？请从"海陆温差""极端天气""农业生产"三个角度写出你的预测和理由，并说明这对中国东部区域经济可能带来的影响。</p>
+      <p class="muted" style="margin-top:8px">提示：陆地升温比海洋快，海陆温差可能如何变化？季风强度和降水模式又会怎样连锁反应？</p>
+    </div>
+  </section>
+
+  <!-- ═══ 后测 ═══ -->
+  
+  <!-- ═══ 互动：季风风向演示（Canvas） ═══ -->
+  <section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="B">
+<h3>选择题 1</h3><p>普洱咖啡园5月缺水的主要原因是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="副高控制主要在7-8月">A. 副热带高压控制蒸发旺盛</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="5月南海夏季风爆发但未深入内陆，西南水汽输送不足">B. 西南季风尚未完全建立</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="与植物生理特征无关">C. 咖啡树根系吸收能力弱</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="题干未提及设施问题">D. 人工灌溉系统年久失修</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A">
+<h3>选择题 2</h3><p>影响东亚季风系统的最主要因素是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="高原夏季热源形成大气泵效应">A. 青藏高原热力作用</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="洋流影响次要">B. 太平洋洋流运动</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="偏向力影响风向而非成因">C. 地球自转偏向力</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="与太阳活动无关">D. 太阳黑子活动周期</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 3</h3><p>印度季风与东亚季风的本质区别是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="两者水汽都来自印度洋">A. 水汽来源不同</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="印度季风属行星风系位移，东亚季风属海陆热力差异">B. 形成机制不同</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="范围是表象非本质">C. 影响范围不同</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="持续时间相近">D. 持续时间不同</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>南亚季风冬季盛行____风，成因是____</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>东北|海陆热力性质差异</p><p>冬季大陆冷高压吹向海洋</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>澳大利亚北部夏季的____季风，会越过赤道转为____方向影响东南亚</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>西北|西南</p><p>气压带季节移动导致风向偏转</p></details></div>
+</section>
+
+<section class="section" id="posttest" data-tts="posttest" data-tsh="后测" data-bloom-level="analyze" data-scaffold="none" data-slot="90">
+    <h2 class="section-title">📝 后测（5 题）</h2>
+    <p class="section-sub">检验学习效果，答完生成结课报告。</p>
+    <div class="quiz-progress"><div class="quiz-progress-fill" id="postProgress" style="width:0%"></div></div>
+
+    <div class="card">
+      <h3>❶ 季风形成的根本原因？</h3>
+      <div class="quiz-option post-q" data-q="p1" data-ans="A" onclick="checkPQ(this)">A. 海陆热力性质差异</div>
+      <div class="quiz-option post-q" data-q="p1" data-ans="B" onclick="checkPQ(this)">B. 地球公转轨道变化</div>
+      <div class="quiz-option post-q" data-q="p1" data-ans="C" onclick="checkPQ(this)">C. 地形起伏造成的局部环流</div>
+      <div class="quiz-feedback" id="fb-p1-A"><span class="tag tag-green">✅ 正确！</span></div>
+      <div class="quiz-feedback" id="fb-p1-B"><span class="tag tag-red">❌</span> 公转间接作用但不直接形成。</div>
+      <div class="quiz-feedback" id="fb-p1-C"><span class="tag tag-red">❌</span> 地形影响分布不形成。</div>
+    </div>
+    <div class="card teal">
+      <h3>❷ 中国东部夏季风？</h3>
+      <div class="quiz-option post-q" data-q="p2" data-ans="A" onclick="checkPQ(this)">A. 西北风，来自蒙古</div>
+      <div class="quiz-option post-q" data-q="p2" data-ans="B" onclick="checkPQ(this)">B. 东南风，来自太平洋</div>
+      <div class="quiz-option post-q" data-q="p2" data-ans="C" onclick="checkPQ(this)">C. 东北风</div>
+      <div class="quiz-feedback" id="fb-p2-A"><span class="tag tag-red">❌ 这是冬季风</span></div>
+      <div class="quiz-feedback" id="fb-p2-B"><span class="tag tag-green">✅ 正确！</span></div>
+      <div class="quiz-feedback" id="fb-p2-C"><span class="tag tag-red">❌</span></div>
+    </div>
+    <div class="card pink">
+      <h3>❸ 南亚 vs 东亚最大的区别？</h3>
+      <div class="quiz-option post-q" data-q="p3" data-ans="A" onclick="checkPQ(this)">A. 没区别，都是海陆差</div>
+      <div class="quiz-option post-q" data-q="p3" data-ans="B" onclick="checkPQ(this)">B. 南亚还叠加了气压带移动+地转偏向</div>
+      <div class="quiz-option post-q" data-q="p3" data-ans="C" onclick="checkPQ(this)">C. 主要是地形</div>
+      <div class="quiz-feedback" id="fb-p3-A"><span class="tag tag-red">❌</span></div>
+      <div class="quiz-feedback" id="fb-p3-B"><span class="tag tag-green">✅ 最佳！</span> 三重叠加造就全球最强。</div>
+      <div class="quiz-feedback" id="fb-p3-C"><span class="tag tag-red">❌</span></div>
+    </div>
+    <div class="card amber">
+      <h3>❹ 厄尔尼诺时？</h3>
+      <div class="quiz-option post-q" data-q="p4" data-ans="A" onclick="checkPQ(this)">A. 季风增强</div>
+      <div class="quiz-option post-q" data-q="p4" data-ans="B" onclick="checkPQ(this)">B. 西太平洋季风减弱</div>
+      <div class="quiz-option post-q" data-q="p4" data-ans="C" onclick="checkPQ(this)">C. 无关</div>
+      <div class="quiz-feedback" id="fb-p4-A"><span class="tag tag-red">❌ 反了</span></div>
+      <div class="quiz-feedback" id="fb-p4-B"><span class="tag tag-green">✅ 正确！</span></div>
+      <div class="quiz-feedback" id="fb-p4-C"><span class="tag tag-red">❌ ENSO 是最显著年际信号</span></div>
+    </div>
+    <div class="card purple">
+      <h3>❺ 工业区放哪里？</h3>
+      <div class="quiz-option post-q" data-q="p5" data-ans="A" onclick="checkPQ(this)">A. 冬季风下方向，减少污染</div>
+      <div class="quiz-option post-q" data-q="p5" data-ans="B" onclick="checkPQ(this)">B. 东南方向，近海交通好</div>
+      <div class="quiz-option post-q" data-q="p5" data-ans="C" onclick="checkPQ(this)">C. 城市中心</div>
+      <div class="quiz-feedback" id="fb-p5-A"><span class="tag tag-green">✅ 思路正确！</span> 冬季 NW 风下风向可最大限度减少污染。</div>
+      <div class="quiz-feedback" id="fb-p5-B"><span class="tag tag-yellow">部分合理</span> 未考虑环境。</div>
+      <div class="quiz-feedback" id="fb-p5-C"><span class="tag tag-red">❌ 违反环境规划原则</span></div>
+    </div>
+
+    <div class="score-card" id="scCard" style="display:none">
+      <div class="score-num" id="scNum">0/5</div>
+      <div style="color:var(--text-secondary);font-size:14px">后测成绩</div>
+      <p id="scComment" style="margin-top:10px;color:var(--text-secondary);font-size:14px"></p>
+    </div>
+  </section>
+
+  <!-- ═══ 小结 ═══ -->
+  <section class="section" id="summary" data-tts="summary" data-tsh="课堂小结" data-bloom-level="understand" data-scaffold="full" data-slot="97">
+    <h2 class="section-title">📌 课堂小结</h2>
+    <div class="card">
+      <h3>核心知识回顾</h3>
+      <table class="cmp-table">
+        <tr><th>知识点</th><th>核心结论</th><th>易错提醒</th></tr>
+        <tr><td>定义</td><td>大范围盛行风向随季节显著变化</td><td>"显著"≠ 微弱</td></tr>
+        <tr><td>根本成因</td><td>海陆热力性质差异</td><td>非地形/公转本身</td></tr>
+        <tr><td>东亚</td><td>夏 SE 冬 NW ｜ 单因</td><td>世界最大主体</td></tr>
+        <tr><td>南亚</td><td>夏 SW 冬 NE ｜ 三重叠加</td><td>全球最强</td></tr>
+        <tr><td>澳大利亚</td><td>季节与北半球<strong>相反</strong></td><td>北夏=澳冬</td></tr>
+        <tr><td>季风 vs 信风</td><td>季风=季节反转；信风=常年稳定</td><td>可重叠</td></tr>
+      </table>
+    </div>
+    <div class="card red">
+      <h3>⚠️ 易错提醒</h3>
+      <p><strong>季风形成原因误解</strong>：季风主要由海陆热力性质差异导致气压差异形成，赤道低压带移动只是辅助因素。<strong>风向混淆</strong>：北半球夏季风从海洋吹向陆地（东亚 SE、南亚 SW），冬季风从陆地吹向海洋（东亚 NW、南亚 NE）。记忆口诀："夏陆热低海高吹，冬陆冷高海低来；东亚东南西北风，南亚西南东北吹。"</p>
+    </div>
+  </section>
+
+
+
+
+
+  <!-- ⭐ v7.7 标准独立连续音频模块 -->
+  
+
+  
+
+<section class="ta-standard-section" id="teachany-audio-player" data-slot="120">
+    <div data-teachany-audio>
+      <script type="application/json" data-teachany-audio-playlist>
+[
+  { "id": "seg01", "sectionId": "hero", "title": "课程导入", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg01-intro_zh.mp3", "subtitle": "为什么夏天吹东南风、冬天吹西北风？从海陆热力差异出发探索全球大气环流。" },
+  { "id": "seg02", "sectionId": "objectives", "title": "学习目标", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg02-goals_zh.mp3", "subtitle": "理解季风本质、掌握三大季风区、区分东亚与南亚成因差异。" },
+  { "id": "seg03", "sectionId": "pretest", "title": "前测引导", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg03-pretest_zh.mp3", "subtitle": "三道前测题：比热容、风的形成、中国风向规律。" },
+  { "id": "seg04", "sectionId": "module-1", "title": "什么是季风", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg04-definition_zh.mp3", "subtitle": "大范围盛行风向随季节显著变化的风。关键词：风向随季节变化、大范围、显著。" },
+  { "id": "seg05", "sectionId": "module-1", "title": "交互地图导览", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg05-map_zh.mp3", "subtitle": "全球三大季风区：东亚最大、南亚最盛、澳大利亚季节相反。" },
+  { "id": "seg06", "sectionId": "module-2", "title": "海陆热力差异", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg06-cause-heat_zh.mp3", "subtitle": "陆地比热容小升温快，海洋比热容大升温慢——季风形成的根本原因。" },
+  { "id": "seg07", "sectionId": "module-2", "title": "夏季风过程", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg07-cause-summer_zh.mp3", "subtitle": "陆地热低压、海洋高压，风从海到陆带来雨季。" },
+  { "id": "seg08", "sectionId": "module-2", "title": "冬季风过程", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg08-cause-winter_zh.mp3", "subtitle": "陆地冷高压、海洋低压，风从陆到海带来旱季。" },
+  { "id": "seg09", "sectionId": "module-3", "title": "东亚季风", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg09-east-asia_zh.mp3", "subtitle": "夏东南冬西北，成因单一的海陆热力差异。" },
+  { "id": "seg10", "sectionId": "module-3", "title": "南亚季风", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg10-south-asia_zh.mp3", "subtitle": "夏西南冬东北，三重叠加成因造就全球最强季风。" },
+  { "id": "seg11", "sectionId": "module-3", "title": "东亚南亚对比", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg11-compare_zh.mp3", "subtitle": "单因 vs 三重叠加，风向与强度的系统对比。" },
+  { "id": "seg12", "sectionId": "module-4", "title": "季风与人类", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg12-application_zh.mp3", "subtitle": "农业、印度季风经济、厄尔尼诺影响与城市规划。" },
+  { "id": "seg13", "sectionId": "posttest", "title": "后测引导", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg13-posttest_zh.mp3", "subtitle": "五道题检验你对季风系统的理解。" },
+  { "id": "seg14", "sectionId": "summary", "title": "课程总结", "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/geo-monsoon/monsoon-full/seg14-summary_zh.mp3", "subtitle": "季风定义、根本成因、三大季风区特征回顾。" }
+]
+      </script>
+    </div>
+  </section>
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
+    <div data-teachany-tutor-card></div>
+  </section>
+
+  <!-- ═══ 结课导航 ═══ -->
+  <div class="next-course">
+    <h3>🎓 完成本课后，继续你的气候之旅</h3>
+    <p>前置复习：大气环流 · 大气受热过程 ｜ 下一步：气候类型</p>
+    <div class="nc-links">
+      <a href="../geo-h-atmospheric-circulation/index.html" class="alt">← 复习：大气环流</a>
+      <a href="../geo-h-climate-types/index.html">下一课：气候类型 →</a>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<div class="footer">
+  TeachAny 全球季风系统互动课件 · 高中地理 G10 · v6.1<br>
+  学习闭环：自适应掌握度 · 进度保存 · 间隔重复 · 成就激励
+</div>
+
+<!-- teachany-enhanced -->
+
+<!-- ═══ 核心交互脚本 ═══ -->
+<script>
+// ═══ 答题逻辑 ═══
+let ansd = {}; let pSc = 0; const pT = 5;
+
+function checkQuiz(el) {
+  const q = el.dataset.q, a = el.dataset.ans;
+  el.parentElement.querySelectorAll('.quiz-feedback').forEach(s => s.classList.remove('show'));
+  el.parentElement.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('correct', 'wrong'));
+  const fb = document.getElementById(`fb-${q}-${a}`);
+  const isCorrect = fb && (fb.innerHTML.includes('正确') || fb.innerHTML.includes('最佳'));
+  if (isCorrect) el.classList.add('correct'); else el.classList.add('wrong');
+  if (fb) fb.classList.add('show');
+  if (typeof window.__onQuizAnswer === 'function') window.__onQuizAnswer(q, isCorrect);
+}
+
+function checkPQ(el) {
+  const q = el.dataset.q;
+  if (ansd[q]) return;
+  ansd[q] = true;
+  const a = el.dataset.ans;
+  el.parentElement.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('correct', 'wrong'));
+  const fb = document.getElementById(`fb-${q}-${a}`);
+  const isCorrect = fb && (fb.innerHTML.includes('正确') || fb.innerHTML.includes('最佳'));
+  if (isCorrect) { el.classList.add('correct'); pSc++; } else el.classList.add('wrong');
+  if (fb) fb.classList.add('show');
+  if (typeof window.__onQuizAnswer === 'function') window.__onQuizAnswer(q, isCorrect);
+  const d = Object.keys(ansd).length;
+  document.getElementById('postProgress').style.width = (d / pT * 100) + '%';
+  if (d === pT) {
+    setTimeout(() => {
+      const sc = document.getElementById('scCard');
+      sc.style.display = 'block';
+      document.getElementById('scNum').textContent = `${pSc}/${pT}`;
+      document.getElementById('scComment').textContent = pSc >= 4 ? '🎉 出色！' : pSc >= 2 ? '👍 还不错' : '💪 复习三重成因和对比表';
+      sc.scrollIntoView({ behavior: 'smooth' });
+      onModuleComplete('posttest', pSc, pT);
+    }, 600);
+  }
+}
+
+// 模块完成回调（学习闭环挂钩点）
+function onModuleComplete(moduleId, score, total) {
+  if (typeof window.__onModuleComplete === 'function') window.__onModuleComplete(moduleId, score, total);
+}
+
+/* ========== Leaflet 真实地图（等待CDN加载） ========== */
+let curS = 'summer';
+let map, zoneLayer, arrowLayer, labelLayer;
+
+function initMap() {
+  // 底图由 data-teachany-map 声明式标准模块接管（自带晕渲图 + EPSG4326），
+  // 本函数只负责从全局注册表取实例后叠加季风交互层（RULES #21/#21a）。
+  var std = (window.TeachAnyMaps || {})['thm-geo-monsoon'];
+  if (typeof L === 'undefined' || !std) { setTimeout(initMap, 200); return; }
+  map = std;
+
+  L.polyline([[0, -180], [0, 180]], { color: '#f59e0b', weight: 1.5, dashArray: '8,6', opacity: 0.5 }).addTo(map)
+    .bindTooltip('赤道', { permanent: true, direction: 'right', offset: [6, 0], className: 'eq-tip' });
+
+  var eastAsiaCoords = [[50, 100], [50, 135], [40, 140], [25, 125], [20, 105], [25, 100], [35, 95]];
+  var southAsiaCoords = [[30, 65], [30, 100], [20, 108], [5, 100], [5, 70], [10, 65], [20, 60]];
+  var ausCoords = [[-10, 120], [-10, 145], [-20, 148], [-25, 140], [-22, 120], [-15, 115]];
+
+  zoneLayer = L.layerGroup().addTo(map);
+  arrowLayer = L.layerGroup().addTo(map);
+  labelLayer = L.layerGroup().addTo(map);
+
+  window._monsoonCoords = { eastAsiaCoords, southAsiaCoords, ausCoords };
+  setSeason('summer');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMap);
+} else {
+  initMap();
+}
+
+function makeArrowIcon(angle, color) {
+  return L.divIcon({
+    className: 'wind-arrow',
+    html: `<svg width="28" height="28" viewBox="0 0 28 28" style="transform:rotate(${angle}deg)">
+      <line x1="14" y1="24" x2="14" y2="6" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+      <polygon points="14,2 8,10 20,10" fill="${color}"/>
+    </svg>`,
+    iconSize: [28, 28], iconAnchor: [14, 14]
+  });
+}
+
+function addLabel(lat, lng, text, color) {
+  const icon = L.divIcon({
+    className: 'map-label',
+    html: `<div style="color:${color};font-size:12px;font-weight:700;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,.8),0 0 3px rgba(0,0,0,.6)">${text}</div>`,
+    iconSize: [120, 20], iconAnchor: [60, 10]
+  });
+  L.marker([lat, lng], { icon, interactive: false }).addTo(labelLayer);
+}
+
+function setSeason(s) {
+  curS = s;
+  document.getElementById('btnSum').classList.toggle('summer-active', s === 'summer');
+  document.getElementById('btnWin').classList.toggle('active', s === 'winter');
+  document.getElementById('btnSum').classList.remove('active');
+  if (s === 'summer') document.getElementById('btnSum').classList.add('summer-active');
+  else document.getElementById('btnWin').classList.add('active');
+
+  zoneLayer.clearLayers(); arrowLayer.clearLayers(); labelLayer.clearLayers();
+  const isS = s === 'summer';
+  const c = window._monsoonCoords || {};
+  const eastAsiaCoords = c.eastAsiaCoords || [];
+  const southAsiaCoords = c.southAsiaCoords || [];
+  const ausCoords = c.ausCoords || [];
+
+  L.polygon(eastAsiaCoords, { color: isS ? '#ef4444' : '#3b82f6', fillColor: isS ? '#ef4444' : '#3b82f6', fillOpacity: 0.15, weight: 2 }).addTo(zoneLayer)
+    .bindPopup(`<b style="color:${isS ? '#ef4444' : '#3b82f6'}">🇨🇳 东亚季风区</b><br>风向：${isS ? '东南风(SE) 暖湿' : '西北风(NW) 干冷'}<br>成因：海陆热力差异`);
+  L.polygon(southAsiaCoords, { color: isS ? '#ec4899' : '#8b5cf6', fillColor: isS ? '#ec4899' : '#8b5cf6', fillOpacity: 0.15, weight: 2 }).addTo(zoneLayer)
+    .bindPopup(`<b style="color:${isS ? '#ec4899' : '#8b5cf6'}">🇮🇳 南亚季风区</b><br>风向：${isS ? '西南风(SW) 暖湿' : '东北风(NE) 干冷'}<br>成因：海陆差+气压带移动+地转偏向`);
+  L.polygon(ausCoords, { color: isS ? '#64748b' : '#10b981', fillColor: isS ? '#64748b' : '#10b981', fillOpacity: 0.15, weight: 2 }).addTo(zoneLayer)
+    .bindPopup(`<b style="color:${isS ? '#64748b' : '#10b981'}">🇦🇺 澳大利亚季风区</b><br>${isS ? '北半球夏=澳洲冬(干季) 东南风' : '北半球冬=澳洲夏(湿季) 西北风'}`);
+
+  const eaArrows = isS ? [
+    { lat: 45, lng: 130, a: 135 }, { lat: 40, lng: 120, a: 140 }, { lat: 35, lng: 115, a: 135 },
+    { lat: 30, lng: 118, a: 130 }, { lat: 28, lng: 125, a: 125 }, { lat: 25, lng: 112, a: 140 }
+  ] : [
+    { lat: 28, lng: 108, a: 315 }, { lat: 32, lng: 112, a: 320 }, { lat: 35, lng: 120, a: 315 },
+    { lat: 40, lng: 125, a: 310 }, { lat: 38, lng: 130, a: 305 }, { lat: 30, lng: 115, a: 320 }
+  ];
+  const saArrows = isS ? [
+    { lat: 20, lng: 70, a: 225 }, { lat: 18, lng: 78, a: 220 }, { lat: 15, lng: 85, a: 225 },
+    { lat: 12, lng: 75, a: 230 }, { lat: 10, lng: 90, a: 220 }, { lat: 22, lng: 95, a: 230 }
+  ] : [
+    { lat: 22, lng: 80, a: 45 }, { lat: 18, lng: 88, a: 40 }, { lat: 15, lng: 78, a: 50 },
+    { lat: 12, lng: 85, a: 45 }, { lat: 20, lng: 95, a: 40 }
+  ];
+  const auArrows = isS ? [
+    { lat: -14, lng: 128, a: 315 }, { lat: -16, lng: 135, a: 310 }, { lat: -12, lng: 138, a: 320 }
+  ] : [
+    { lat: -14, lng: 128, a: 135 }, { lat: -16, lng: 135, a: 130 }, { lat: -12, lng: 138, a: 140 }
+  ];
+
+  const eaColor = isS ? '#ef4444' : '#3b82f6';
+  const saColor = isS ? '#ec4899' : '#8b5cf6';
+  const auColor = isS ? '#64748b' : '#10b981';
+
+  eaArrows.forEach(p => L.marker([p.lat, p.lng], { icon: makeArrowIcon(p.a, eaColor), interactive: false }).addTo(arrowLayer));
+  saArrows.forEach(p => L.marker([p.lat, p.lng], { icon: makeArrowIcon(p.a, saColor), interactive: false }).addTo(arrowLayer));
+  auArrows.forEach(p => L.marker([p.lat, p.lng], { icon: makeArrowIcon(p.a, auColor), interactive: false }).addTo(arrowLayer));
+
+  if (isS) {
+    addLabel(40, 85, '亚洲低压(印度低压)', '#ef4444');
+    addLabel(30, 150, '太平洋副高', '#3b82f6');
+  } else {
+    addLabel(48, 95, '蒙古-西伯利亚高压', '#3b82f6');
+    addLabel(25, 150, '阿留申低压', '#ef4444');
+  }
+  addLabel(35, 115, '东亚季风区', eaColor);
+  addLabel(18, 78, '南亚季风区', saColor);
+  addLabel(-16, 132, '澳北季风区', auColor);
+}
+
+/* ========== 拖拽成因链 ========== */
+const dragItems = document.querySelectorAll('#dragSource .drag-item');
+const chainZone = document.getElementById('chainZone');
+const dropHint = document.getElementById('dropPlaceholder');
+let draggedEl = null;
+
+dragItems.forEach(it => {
+  it.addEventListener('dragstart', e => {
+    draggedEl = it;
+    e.dataTransfer.setData('text/plain', it.dataset.id);
+    it.classList.add('dragging');
+    setTimeout(() => it.style.opacity = '0.4', 0);
+  });
+  it.addEventListener('dragend', () => {
+    it.classList.remove('dragging');
+    it.style.opacity = '1';
+    draggedEl = null;
+  });
+});
+
+chainZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  chainZone.classList.add('active');
+  chainZone.style.borderColor = 'var(--primary-light)';
+  chainZone.style.background = 'rgba(34,211,238,.08)';
+});
+chainZone.addEventListener('dragleave', () => {
+  chainZone.classList.remove('active');
+  chainZone.style.borderColor = 'var(--primary-light)';
+  chainZone.style.background = 'rgba(18,32,47,.5)';
+});
+chainZone.addEventListener('drop', e => {
+  e.preventDefault();
+  chainZone.classList.remove('active');
+  chainZone.style.borderColor = 'var(--primary-light)';
+  chainZone.style.background = 'rgba(18,32,47,.5)';
+  const id = e.dataTransfer.getData('text/plain');
+  if (chainZone.querySelector(`[data-id="${id}"]`)) return;
+  if (dropHint) dropHint.style.display = 'none';
+  const src = document.querySelector(`#dragSource [data-id="${id}"]`);
+  if (!src) return;
+  const clone = document.createElement('div');
+  clone.className = 'drag-item';
+  clone.textContent = src.textContent;
+  clone.dataset.id = src.dataset.id;
+  clone.dataset.correct = src.dataset.correct;
+  clone.draggable = false;
+  clone.style.cursor = 'pointer';
+  clone.title = '点击移除';
+  clone.addEventListener('click', () => {
+    clone.remove();
+    src.style.opacity = '1'; src.style.pointerEvents = 'auto';
+    if (!chainZone.querySelector('.drag-item') && dropHint) dropHint.style.display = '';
+  });
+  chainZone.appendChild(clone);
+  src.style.opacity = '0.3'; src.style.pointerEvents = 'none';
+});
+
+function checkChain() {
+  const dropped = chainZone.querySelectorAll('.drag-item');
+  const fb = document.getElementById('chainFeedback');
+  fb.classList.add('show');
+  let correctCount = 0, wrongCount = 0;
+  dropped.forEach(d => {
+    if (d.dataset.correct === '1') { correctCount++; d.style.borderColor = 'var(--success)'; d.style.background = 'rgba(16,185,129,.12)'; }
+    else { wrongCount++; d.style.borderColor = 'var(--danger)'; d.style.background = 'rgba(239,68,68,.12)'; }
+  });
+  if (correctCount === 3 && wrongCount === 0) {
+    fb.innerHTML = '<span class="tag tag-green">✅ 完全正确！</span> 三重成因都找到了：海陆热力差异是基础，气压带风带季节移动使 SE 信风越过赤道，地转偏向力使其右偏成 SW 风。';
+    fb.style.background = 'rgba(16,185,129,.1)';
+  } else if (correctCount > 0 && wrongCount === 0) {
+    fb.innerHTML = `<span class="tag tag-yellow">⚠️ ${correctCount}/3</span> 找对了 ${correctCount} 个，还差 ${3 - correctCount} 个正确选项。`;
+    fb.style.background = 'rgba(245,158,11,.1)';
+  } else if (wrongCount > 0) {
+    fb.innerHTML = `<span class="tag tag-red">❌ 有 ${wrongCount} 个错误选项</span> 红色边框的是错误项，请点击移除后重新选择。正确答案是"三重叠加"成因。`;
+    fb.style.background = 'rgba(239,68,68,.08)';
+  } else {
+    fb.innerHTML = '<span class="tag tag-yellow">请先拖入选项</span>';
+    fb.style.background = 'rgba(245,158,11,.1)';
+  }
+  if (typeof window.__onChainCheck === 'function') window.__onChainCheck(correctCount, wrongCount);
+}
+
+function resetChain() {
+  chainZone.querySelectorAll('.drag-item').forEach(d => d.remove());
+  if (dropHint) dropHint.style.display = '';
+  dragItems.forEach(it => { it.style.opacity = '1'; it.style.pointerEvents = 'auto'; });
+  const fb = document.getElementById('chainFeedback');
+  fb.classList.remove('show'); fb.textContent = '';
+}
+
+// ═══ 导航高亮 + 滚动进度 ═══
+(function(){
+  const navLinks = document.querySelectorAll('.nav-bar a');
+  const progressBar = document.getElementById('progressBar');
+  const sections = document.querySelectorAll('.section[id], .hero[id]');
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    let current = '';
+    sections.forEach(sec => { if (sec.offsetTop - 160 <= scrollTop) current = sec.id; });
+    navLinks.forEach(link => {
+      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+    });
+  }, { passive: true });
+})();
+</script>
+
+<!-- ═══ 标准模块脚本 ═══ -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "全球季风系统",
+  subject: "geography",
+  grade: 10,
+  learningObjectives: ["理解季风是大范围盛行风向随季节显著变化的风","在世界地图上标出三大季风区的位置和风向特征","区分东亚与南亚季风的成因差异","分析季风对农业、城市规划和气候异常的影响"]
+};
+</script>
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-historical-map.js?v=2.11" defer></script>
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+
+<!-- ═══════════ TeachAny 学习闭环引擎（深色青蓝适配） ═══════════ -->
+<script>
+(function(){
+'use strict';
+/* ---------- 课程信息 ---------- */
+const COURSE={id:'geo-monsoon',node:'monsoon-system',title:'全球季风系统',
+  prereqs:[{id:'geo-h-atmospheric-circulation',node:'atmospheric-circulation',title:'大气环流'},
+           {id:'geo-h-atmospheric-heating',node:'atmospheric-heating',title:'大气受热过程'}],
+  next:[{id:'geo-h-climate-types',title:'气候类型'},{id:'geo-h-climate-change',title:'气候变化'}]};
+const peer=id=>'../'+id+'/index.html';
+
+/* ---------- 1. 自适应引擎 ---------- */
+const TeachAnyAdaptive=(()=>{
+  const KEY='teachany_mastery';
+  const get=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}};
+  const save=d=>localStorage.setItem(KEY,JSON.stringify(d));
+  function getNodeMastery(n){return get()[n]?.level||0}
+  function updateMastery(n,correct,bloom=1){
+    const d=get(),prev=d[n]?.level||0,w=0.1+(bloom-1)*0.04,s=correct?1:0;
+    const lv=Math.min(1,Math.max(0,prev*(1-w)+s*w));
+    d[n]={level:Math.round(lv*1000)/1000,attempts:(d[n]?.attempts||0)+1,lastCorrect:correct,lastAttempt:Date.now(),bloomMax:Math.max(d[n]?.bloomMax||0,correct?bloom:0)};
+    save(d);return d[n];
+  }
+  return{getNodeMastery,updateMastery,getMastery:get};
+})();
+
+/* ---------- 2. 进度持久化 ---------- */
+const TeachAnyProgress=(()=>{
+  const key=c=>'teachany_progress_'+c;
+  const get=c=>{try{return JSON.parse(localStorage.getItem(key(c))||'{}')}catch(e){return{}}};
+  const save=(c,d)=>{const m={...get(c),...d,lastUpdated:Date.now()};localStorage.setItem(key(c),JSON.stringify(m))};
+  function completeModule(c,mid,r={}){const p=get(c);p.modules=p.modules||{};p.modules[mid]={completed:true,completedAt:Date.now(),score:r.score||0,total:r.totalQuestions||0,bloom:r.bloomLevel||1};save(c,p)}
+  const saveScroll=c=>localStorage.setItem('teachany_scroll_'+c,String(window.scrollY));
+  const restoreScroll=c=>{const p=localStorage.getItem('teachany_scroll_'+c);if(p)requestAnimationFrame(()=>window.scrollTo(0,parseInt(p)))};
+  function recordTime(c,s=30){const p=get(c);p.timeSpent=(p.timeSpent||0)+s;save(c,p)}
+  function getGlobalStats(){try{return JSON.parse(localStorage.getItem('teachany_stats')||'{}')}catch(e){return{}}}
+  function updateGlobalStats(){const s=getGlobalStats(),today=new Date().toISOString().slice(0,10);
+    if(s.lastActiveDate!==today){const y=new Date(Date.now()-864e5).toISOString().slice(0,10);s.streak=(s.lastActiveDate===y)?(s.streak||0)+1:1;s.lastActiveDate=today}
+    s.totalSessions=(s.totalSessions||0)+1;s.maxStreak=Math.max(s.maxStreak||0,s.streak);
+    localStorage.setItem('teachany_stats',JSON.stringify(s));return s}
+  return{getProgress:get,saveProgress:save,completeModule,saveScrollPosition:saveScroll,restoreScrollPosition:restoreScroll,recordTime,getGlobalStats,updateGlobalStats};
+})();
+
+/* ---------- 3. 间隔重复（SM-2 简化） ---------- */
+const TeachAnySR=(()=>{
+  const KEY='teachany_review';
+  const get=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}};
+  function addToReview(n,name,url){const d=get();if(!d[n]){d[n]={name,url,interval:1,easeFactor:2.5,repetitions:0,nextReview:Date.now()+864e5,lastReview:Date.now(),quality:null};localStorage.setItem(KEY,JSON.stringify(d))}}
+  return{addToReview,getData:get};
+})();
+
+/* ---------- 4. 成就系统 ---------- */
+const TeachAnyAchievements=(()=>{
+  const KEY='teachany_achievements';
+  const DEF={'first-lesson':{n:'第一步',i:'🌱'},'perfect-score':{n:'满分达人',i:'⭐'},'streak-3':{n:'连续学习',i:'🔥'},'streak-7':{n:'周冠军',i:'💪'},'drag-master':{n:'拖拽大师',i:'🧩'}};
+  const get=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}};
+  function toast(icon,title,sub,cls=''){const t=document.createElement('div');t.className='ta-toast '+cls;
+    t.innerHTML=`<div class="ti">${icon}</div><div class="tc"><strong>${title}</strong><span>${sub}</span></div>`;
+    document.body.appendChild(t);requestAnimationFrame(()=>t.classList.add('show'));
+    setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400)},3200)}
+  function award(id){const d=get();if(d[id])return false;d[id]={earnedAt:Date.now()};localStorage.setItem(KEY,JSON.stringify(d));
+    const f=DEF[id];if(f)toast(f.i,'🎉 解锁成就',f.n);return true}
+  function checkAndAward(){const s=TeachAnyProgress.getGlobalStats();
+    let total=0;for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);
+      if(k&&k.startsWith('teachany_progress_')){try{const p=JSON.parse(localStorage.getItem(k));total+=Object.values(p.modules||{}).filter(x=>x.completed).length}catch(e){}}}
+    if(total>=1)award('first-lesson');
+    if(s.streak>=3)award('streak-3');if(s.streak>=7)award('streak-7');}
+  return{award,checkAndAward,toast,getAchievements:get};
+})();
+
+/* ---------- 5. 前置知识检查 ---------- */
+function masteryStatus(node){const l=TeachAnyAdaptive.getNodeMastery(node);return l>=0.6?'ready':l>0?'weak':'none'}
+function warnPrereqs(){
+  const gaps=COURSE.prereqs.filter(p=>masteryStatus(p.node)!=='ready');
+  if(!gaps.length)return;
+  const mask=document.createElement('div');mask.className='ta-modal-mask';
+  mask.innerHTML=`<div class="ta-modal"><h3>⚠️ 前置知识检查</h3><p>本课件有 ${gaps.length} 个前置知识点尚未掌握，建议先复习再继续（也可以直接开始）：</p>
+    <ul>${gaps.map(g=>`<li><a href="#" onclick="go('${g.id}');return false;">${g.title}</a> <span class="st">— ${masteryStatus(g.node)==='weak'?'已学习但未巩固':'尚未开始'}</span></li>`).join('')}</ul>
+    <div class="acts"><button class="b1" onclick="go('${gaps[0].id}')">去复习：${gaps[0].title}</button>
+    <button class="b2" id="ta-prereq-skip">我已了解，继续学习</button></div></div>`;
+  document.body.appendChild(mask);
+  mask.querySelector('#ta-prereq-skip').onclick=()=>mask.remove();
+  mask.addEventListener('click',e=>{if(e.target===mask)mask.remove()});
+}
+function showBanner(cls,icon,html,anchor){
+  const b=document.createElement('div');b.className='ta-banner '+cls;
+  b.innerHTML=`<span class="bi">${icon}</span><div>${html}</div>`;
+  const target=document.querySelector(anchor);
+  if(target)target.after(b);else document.body.appendChild(b);
+  b.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+/* ---------- 6. 答题挂钩 ---------- */
+const preAnswered=new Set();
+window.__onQuizAnswer=function(qid,correct){
+  if(qid.startsWith('pre')){
+    TeachAnyAdaptive.updateMastery('atmospheric-circulation',correct,2);
+    preAnswered.add(qid);
+    if(preAnswered.size>=3){
+      const score=[...preAnswered].filter(id=>{
+        const el=document.querySelector(`.quiz-option[data-q="${id}"].correct`);
+        return !!el;
+      }).length;
+      TeachAnyProgress.completeModule(COURSE.id,'pretest',{score,totalQuestions:3,bloomLevel:2});
+      const gaps=COURSE.prereqs.filter(p=>TeachAnyAdaptive.getNodeMastery(p.node)<0.5);
+      if(gaps.length){showBanner('warn','📋',`<b>前置诊断：</b>大气环流基础还不够扎实（前测 ${score}/3）。<br>建议先复习：${gaps.map(g=>`<a href="#" onclick="go('${g.id}');return false;">${g.title} →</a>`).join('、')}，也可以直接继续。`,'#pretest')}
+      else{TeachAnyAchievements.toast('🚀','前测通过','大气环流基础扎实，直奔季风成因','success')}
+    }
+  } else if(qid==='cp1'){
+    TeachAnyAdaptive.updateMastery('monsoon-system',correct,4);
+  } else {
+    TeachAnyAdaptive.updateMastery('monsoon-system',correct,4);
+  }
+};
+
+/* 拖拽成因链挂钩 */
+window.__onChainCheck=function(correctCount,wrongCount){
+  if(correctCount===3&&wrongCount===0){
+    TeachAnyAdaptive.updateMastery('monsoon-system',true,4);
+    TeachAnyProgress.completeModule(COURSE.id,'drag-chain',{score:3,totalQuestions:3,bloomLevel:4});
+    TeachAnyAchievements.award('drag-master');
+    TeachAnyAchievements.checkAndAward();
+  }
+};
+
+/* 后测完成 → 结课 */
+let postDoneFired=false;
+window.__onModuleComplete=function(moduleId,score,total){
+  if(moduleId!=='posttest'||postDoneFired)return;
+  postDoneFired=true;
+  TeachAnyProgress.completeModule(COURSE.id,'posttest',{score,totalQuestions:total,bloomLevel:4});
+  TeachAnyAdaptive.updateMastery('monsoon-system',score>=4,4);
+  TeachAnySR.addToReview('monsoon-system','全球季风系统',location.href.split('#')[0]);
+  TeachAnyAchievements.checkAndAward();
+  if(score===total)TeachAnyAchievements.award('perfect-score');
+  const m=TeachAnyAdaptive.getNodeMastery('monsoon-system');
+  if(score<=2){showBanner('warn','🪜',`<b>脚手架路径：</b>后测 ${score}/${total}，建议回看"三重成因"拖拽链和东亚/南亚对比表，重点区分海陆热力差异与气压带风带季节移动两个成因层次。`,'#posttest')}
+  const mask=document.createElement('div');mask.className='ta-done-mask';
+  mask.innerHTML=`<div class="ta-done"><div style="font-size:46px;margin-bottom:12px;">${score===total?'🏆':score>=3?'🎉':'💪'}</div>
+    <h2>后测 ${score}/${total}</h2>
+    <p>${score===total?'满分！全球季风系统已完全掌握，知识点已加入间隔复习队列。当前掌握度 '+(m*100|0)+'%。':score>=3?'不错！错题解析再看一眼，注意东亚与南亚季风的成因差异。知识点已加入复习队列。':'建议重点巩固季风形成的三重成因机制。知识点已加入复习队列。'}</p>
+    <a href="#" onclick="go('${COURSE.next[0].id}');return false;">继续学习：${COURSE.next[0].title} →</a>
+    <span class="later" id="ta-done-close">稍后再说</span></div>`;
+  document.body.appendChild(mask);
+  mask.querySelector('#ta-done-close').onclick=()=>mask.remove();
+};
+
+/* ---------- 7. 初始化 ---------- */
+TeachAnyProgress.restoreScrollPosition(COURSE.id);
+let st2;window.addEventListener('scroll',()=>{clearTimeout(st2);st2=setTimeout(()=>TeachAnyProgress.saveScrollPosition(COURSE.id),500)},{passive:true});
+setInterval(()=>TeachAnyProgress.recordTime(COURSE.id,30),30000);
+TeachAnyProgress.updateGlobalStats();
+const prog=TeachAnyProgress.getProgress(COURSE.id);
+const doneMods=Object.values(prog.modules||{}).filter(m=>m.completed).length;
+if(doneMods>0&&doneMods<4){
+  const r=document.createElement('div');r.className='ta-resume';
+  r.innerHTML=`<span>📚 欢迎回来！本课已完成 ${doneMods}/4 个阶段。</span><button id="ta-r1">继续学习 →</button><button class="sec" id="ta-r2">从头开始</button>`;
+  document.body.appendChild(r);
+  r.querySelector('#ta-r1').onclick=()=>r.remove();
+  r.querySelector('#ta-r2').onclick=()=>{window.scrollTo({top:0,behavior:'smooth'});r.remove()};
+  setTimeout(()=>r.remove(),12000);
+}
+setTimeout(warnPrereqs,800);
+})();
+</script>
+<script>function go(id){ if(typeof peer==='function'){ location.assign(peer(id)); } }</script>
+<script>
+(function(){
+var season = 'summer';
+function drawArrow(ctx, x1, y1, x2, y2, color) {
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  var a = Math.atan2(y2 - y1, x2 - x1), s = 14;
+  ctx.beginPath(); ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - s * Math.cos(a - 0.45), y2 - s * Math.sin(a - 0.45));
+  ctx.lineTo(x2 - s * Math.cos(a + 0.45), y2 - s * Math.sin(a + 0.45));
+  ctx.closePath(); ctx.fill();
+}
+function drawMonsoon() {
+  var cv = document.getElementById('monsoonCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#123a6b'; ctx.fillRect(0, 0, W, H);
+  // 陆地（亚欧大陆简化形）
+  ctx.fillStyle = '#3f6212';
+  ctx.beginPath();
+  ctx.moveTo(40, 40); ctx.lineTo(360, 30); ctx.lineTo(430, 110); ctx.lineTo(380, 200);
+  ctx.lineTo(300, 250); ctx.lineTo(180, 260); ctx.lineTo(80, 220); ctx.lineTo(30, 130);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e7f6d5'; ctx.font = 'bold 18px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('亚 欧 大 陆', 220, 140);
+  // 海洋标注
+  ctx.fillStyle = '#bfe3ff'; ctx.font = '16px "PingFang SC",sans-serif';
+  ctx.fillText('太 平 洋', 600, 190);
+  ctx.fillText('印 度 洋', 260, 340);
+  // 气压中心
+  var note = document.getElementById('monsoonNote');
+  if (season === 'summer') {
+    ctx.fillStyle = '#f87171';
+    ctx.beginPath(); ctx.arc(230, 140, 30, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('热低压', 230, 145);
+    ctx.fillStyle = '#60a5fa';
+    ctx.beginPath(); ctx.arc(600, 200, 26, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.fillText('高压', 600, 205);
+    drawArrow(ctx, 570, 210, 400, 180, '#fbbf24');
+    drawArrow(ctx, 310, 320, 290, 250, '#fbbf24');
+    ctx.fillStyle = '#fde68a'; ctx.font = 'bold 16px "PingFang SC",sans-serif';
+    ctx.fillText('东南风（太平洋）', 480, 160);
+    ctx.fillText('西南风（印度洋）', 250, 300);
+    note.textContent = '夏季：陆地热低压 + 海洋高压 → 风从海洋吹向陆地，温暖湿润，带来雨季。';
+  } else {
+    ctx.fillStyle = '#60a5fa';
+    ctx.beginPath(); ctx.arc(230, 140, 30, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('冷高压', 230, 145);
+    ctx.fillStyle = '#f87171';
+    ctx.beginPath(); ctx.arc(600, 200, 26, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.fillText('低压', 600, 205);
+    drawArrow(ctx, 380, 170, 560, 200, '#7dd3fc');
+    drawArrow(ctx, 290, 250, 300, 315, '#7dd3fc');
+    ctx.fillStyle = '#bae6fd'; ctx.font = 'bold 16px "PingFang SC",sans-serif';
+    ctx.fillText('西北风', 480, 160);
+    ctx.fillText('东北风', 330, 300);
+    note.textContent = '冬季：陆地冷高压 + 海洋低压 → 风从陆地吹向海洋，寒冷干燥。';
+  }
+  ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = '13px "PingFang SC",sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(season === 'summer' ? '☀️ 夏季（7月）' : '❄️ 冬季（1月）', 16, H - 14);
+}
+function toggleSeason(s) {
+  season = s || (season === 'summer' ? 'winter' : 'summer');
+  drawMonsoon();
+}
+document.getElementById('btnSummer').addEventListener('click', function(){ toggleSeason('summer'); });
+document.getElementById('btnWinter').addEventListener('click', function(){ toggleSeason('winter'); });
+document.getElementById('monsoonCanvas').addEventListener('click', function(){ toggleSeason(); });
+window.addEventListener('DOMContentLoaded', drawMonsoon);
+if (document.readyState !== 'loading') drawMonsoon();
+})();
+</script>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：全球季风系统</h2><div data-teachany-kg="geo-h-monsoon-system"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+</body>
+</html>

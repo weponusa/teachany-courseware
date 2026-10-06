@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学期覆盖包 — PBL Map</title>
+  <link rel="stylesheet" href="./assets/css/pblmap.css">
+  <style>
+    .pack-hero { padding: 32px 24px; border-bottom: 1px solid var(--border); background: rgba(139,92,246,0.06); }
+    .pack-hero h2 { font-size: 24px; margin-bottom: 8px; }
+    .pack-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgba(139,92,246,0.2); color: #c4b5fd; font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+    .ledger-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+    .ledger-bar input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); }
+    .progress-track { height: 10px; border-radius: 5px; background: rgba(148,163,184,0.15); overflow: hidden; display: flex; margin-top: 12px; }
+    .progress-track span { height: 100%; }
+    .prog-m { background: var(--success); }
+    .prog-c { background: var(--warn); }
+    .prog-gap { background: rgba(239,68,68,0.4); }
+    .sub-project { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 14px; overflow: hidden; background: var(--card); }
+    .sub-head { padding: 14px 16px; cursor: pointer; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .sub-head:hover { background: rgba(59,130,246,0.04); }
+    .sub-body { display: none; padding: 0 16px 16px; border-top: 1px solid var(--border); }
+    .sub-project.open .sub-body { display: block; }
+    .sub-meta { font-size: 12px; color: var(--dim); }
+    .node-pill { display: inline-block; font-size: 10px; padding: 2px 8px; margin: 2px; border-radius: 4px; border: 1px solid var(--border); }
+    .node-pill.M { background: rgba(16,185,129,0.12); color: #6ee7b7; }
+    .node-pill.C { background: rgba(234,179,8,0.1); color: #fcd34d; }
+    .node-pill.gap { color: var(--dimmer); }
+    .gate-box { font-size: 12px; padding: 10px; border-radius: 8px; background: rgba(15,23,42,0.5); border: 1px solid var(--border); margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <h1>PBL Map · 覆盖包</h1>
+    <nav class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="catalog.html">K12 目录</a>
+      <a href="pack.html" class="active">覆盖包</a>
+      <a href="docs/MULTI-PBL-FULL-COVERAGE.md">设计说明</a>
+    </nav>
+  </header>
+
+  <section class="pack-hero">
+    <span class="pack-badge">Semester Coverage Pack · 多 PBL 全覆盖</span>
+    <h2 id="packTitle">加载中…</h2>
+    <p class="sub-meta" id="packMeta"></p>
+    <p class="sub-meta" id="packRules" style="margin-top:8px"></p>
+    <div class="ledger-bar">
+      <label>学生 ID <input id="studentId" value="demo-student" style="width:120px" /></label>
+      <button class="btn btn-secondary" type="button" onclick="refreshLedger()">刷新台账</button>
+      <span id="ledgerSummary" class="sub-meta"></span>
+    </div>
+    <div class="progress-track" id="ledgerProgress"></div>
+  </section>
+
+  <main class="container">
+    <div class="panel">
+      <div class="panel-title" id="projectPanelTitle">子 PBL（人人必做 · 节点无交叠）</div>
+      <p class="sub-meta" style="margin-bottom:16px">
+        <strong style="color:var(--text)">M</strong> = 产出掌握 ·
+        <strong style="color:var(--text)">C</strong> = micro-block 过关 ·
+        完成 mandatory 方可进入下一项
+      </p>
+      <div id="projectList"></div>
+    </div>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./scripts/pbl-semester-pack.js"></script>
+  <script>
+    let pack = null;
+
+    async function init() {
+      const id = new URLSearchParams(location.search).get('id') || 'g11-spring-pack';
+      pack = await PBLSemesterPack.loadPack(id);
+      document.title = pack.title + ' — PBL Map';
+      document.getElementById('packTitle').textContent = pack.title;
+      document.getElementById('packMeta').textContent = [
+        pack.themeChain,
+        `${pack.projectCount} 个子项目`,
+        `${pack.nodePoolSize} 节点`,
+        `${pack.totalWeeks} 周 + 检核`,
+      ].join(' · ');
+      document.getElementById('packRules').textContent = (pack.themeShell?.constraints || []).join('；');
+      document.getElementById('projectPanelTitle').textContent =
+        `${pack.projectCount} 个子 PBL（人人必做 · 节点无交叠）`;
+      renderProjects();
+      refreshLedger();
+      document.getElementById('studentId').addEventListener('change', refreshLedger);
+    }
+
+    function renderProjects() {
+      const sid = document.getElementById('studentId').value;
+      const ledger = PBLSemesterPack.loadLedger(sid);
+      document.getElementById('projectList').innerHTML = (pack.projects || []).map((p, i) => {
+        const done = ledger.packProgress[p.id]?.status === 'completed';
+        const mNodes = (p.knowledgePoints?.mandatory || []).map(n => {
+          const st = ledger.entries[n.id]?.state || 'gap';
+          return `<span class="node-pill ${st}" title="${n.name}">${n.subjectLabel}·${n.name.slice(0,8)}…</span>`;
+        }).join('');
+        const cNodes = (p.knowledgePoints?.certified || []).map(n => {
+          const st = ledger.entries[n.id]?.state || 'gap';
+          return `<span class="node-pill ${st}">${n.name.slice(0,6)}…</span>`;
+        }).join('');
+        return `
+          <div class="sub-project" data-pid="${p.id}">
+            <div class="sub-head" onclick="toggleSub('${p.id}')">
+              <div>
+                <strong>${i + 1}. ${p.title}</strong> ${done ? '✓' : ''}
+                <div class="sub-meta">${p.weeks} 周 · ${p.stats.total} 节点（M ${p.stats.mandatory} + C ${p.stats.certified}）</div>
+                <div class="sub-meta">${p.themeAngle}</div>
+              </div>
+              <div>
+                <button class="btn btn-primary btn-sm" type="button" onclick="event.stopPropagation();openTeachAny('${p.id}')">拆解</button>
+                <a class="btn btn-secondary btn-sm" href="demo.html?project=${p.id}" onclick="event.stopPropagation()">演示</a>
+                <button class="btn btn-secondary btn-sm" type="button" onclick="event.stopPropagation();demoComplete('${p.id}')">演示过关</button>
+              </div>
+            </div>
+            <div class="sub-body">
+              <p class="sub-meta"><strong>驱动问：</strong>${p.drivingQuestion}</p>
+              <div class="gate-box">${p.completionGate?.description || ''}</div>
+              <p class="sub-meta" style="margin-top:12px"><strong>M mandatory</strong></p>
+              <div>${mNodes}</div>
+              <p class="sub-meta" style="margin-top:8px"><strong>C certified</strong></p>
+              <div>${cNodes}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function toggleSub(id) {
+      document.querySelector(`.sub-project[data-pid="${id}"]`)?.classList.toggle('open');
+    }
+
+    function openTeachAny(projectId) {
+      const p = pack.projects.find(x => x.id === projectId);
+      if (p) window.location.href = PBLSemesterPack.buildTeachAnyUrl(p, pack);
+    }
+
+    function demoComplete(projectId) {
+      const sid = document.getElementById('studentId').value;
+      const p = pack.projects.find(x => x.id === projectId);
+      if (!p) return;
+      (p.knowledgePoints?.mandatory || []).forEach(n => PBLSemesterPack.markNode(sid, n.id, 'M', projectId, 'demo'));
+      (p.knowledgePoints?.certified || []).forEach(n => PBLSemesterPack.markNode(sid, n.id, 'C', projectId, 'demo'));
+      PBLSemesterPack.markProjectComplete(sid, projectId);
+      renderProjects();
+      refreshLedger();
+    }
+
+    function refreshLedger() {
+      const sid = document.getElementById('studentId').value;
+      const s = PBLSemesterPack.summarizeLedger(pack, sid);
+      document.getElementById('ledgerSummary').innerHTML =
+        `M ${s.M} · C ${s.C} · gap ${s.gap} · 项目 ${s.projectsDone}/${s.projectsTotal}` +
+        (s.semesterClear ? ' · <strong style="color:var(--success)">学期过关</strong>' : '');
+      const total = s.total || 1;
+      document.getElementById('ledgerProgress').innerHTML =
+        `<span class="prog-m" style="width:${(s.M/total*100).toFixed(1)}%"></span>` +
+        `<span class="prog-c" style="width:${(s.C/total*100).toFixed(1)}%"></span>` +
+        `<span class="prog-gap" style="width:${(s.gap/total*100).toFixed(1)}%"></span>`;
+      renderProjects();
+    }
+
+    init();
+  </script>
+</body>
+</html>

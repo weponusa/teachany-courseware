@@ -1,0 +1,129 @@
+name: Community Submit (Dispatch Handler)
+
+on:
+  repository_dispatch:
+    types: [community-submit]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract payload
+        id: payload
+        shell: bash
+        run: |
+          # Extract course_id and payload from dispatch event
+          COURSE_ID="${{ github.event.client_payload.course_id }}"
+          AUTHOR="${{ github.event.client_payload.author || 'anonymous' }}"
+          MESSAGE="${{ github.event.client_payload.message || '' }}"
+          PACKAGE_URL="${{ github.event.client_payload.package_url }}"
+          
+          if [ -z "$COURSE_ID" ]; then
+            echo "❌ Missing course_id in dispatch payload"
+            exit 1
+          fi
+          
+          echo "course_id=$COURSE_ID" >> "$GITHUB_OUTPUT"
+          echo "author=$AUTHOR" >> "$GITHUB_OUTPUT"
+          echo "message=$MESSAGE" >> "$GITHUB_OUTPUT"
+          echo "package_url=$PACKAGE_URL" >> "$GITHUB_OUTPUT"
+          echo "📦 Received submission: $COURSE_ID (by $AUTHOR)"
+
+      - name: Download package
+        id: download
+        shell: bash
+        run: |
+          COURSE_ID="${{ steps.payload.outputs.course_id }}"
+          PACKAGE_URL="${{ steps.payload.outputs.package_url }}"
+          PENDING_DIR="community/pending"
+          
+          mkdir -p "$PENDING_DIR"
+          
+          if [ -n "$PACKAGE_URL" ]; then
+            echo "⬇️  Downloading package from $PACKAGE_URL"
+            curl -sL "$PACKAGE_URL" -o "$PENDING_DIR/${COURSE_ID}.teachany"
+            size=$(wc -c < "$PENDING_DIR/${COURSE_ID}.teachany" | tr -d ' ')
+            echo "package_size=$size" >> "$GITHUB_OUTPUT"
+            echo "Downloaded: $((size/1024))KB"
+          else
+            echo "⚠️  No package_url provided"
+            echo "package_size=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create metadata JSON
+        shell: bash
+        run: |
+          COURSE_ID="${{ steps.payload.outputs.course_id }}"
+          AUTHOR="${{ steps.payload.outputs.author }}"
+          MESSAGE="${{ steps.payload.outputs.message }}"
+          PACKAGE_URL="${{ steps.payload.outputs.package_url }}"
+          PACKAGE_SIZE="${{ steps.download.outputs.package_size }}"
+          PENDING_DIR="community/pending"
+          
+          cat > "$PENDING_DIR/${COURSE_ID}.json" << EOF
+          {
+            "id": "$COURSE_ID",
+            "author": "$AUTHOR",
+            "message": "$MESSAGE",
+            "submitted_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "package_url": "$PACKAGE_URL",
+            "package_size_bytes": $PACKAGE_SIZE,
+            "status": "pending"
+          }
+          EOF
+
+      - name: Create branch and commit
+        shell: bash
+        run: |
+          BRANCH="community-submit/${{ steps.payload.outputs.course_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add community/pending/
+          git commit -m "submit: community/${{ steps.payload.outputs.course_id }} by ${{ steps.payload.outputs.author }}"
+          git push origin "$BRANCH"
+
+      - name: Create Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const course_id = '${{ steps.payload.outputs.course_id }}';
+            const author = '${{ steps.payload.outputs.author }}';
+            const message = '${{ steps.payload.outputs.message }}';
+            const branch = `community-submit/${course_id}`;
+            
+            const title = `🆕 社区课件提交: ${course_id}`;
+            const body = `## 社区课件提交\n\n` +
+              `- **课件 ID**: \`${course_id}\`\n` +
+              `- **提交者**: ${author}\n` +
+              `- **说明**: ${message}\n\n` +
+              `---\n` +
+              `@weponusa 请审核。`;
+            
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head: branch,
+              base: 'main',
+              body
+            });
+            
+            // Add community-courseware label for auto-merge to pick up
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.data.number,
+              labels: ['community-courseware']
+            });
+            
+            console.log(`✅ PR created: ${pr.data.html_url}`);

@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="teachany-node" content="bio-m-plant-classification">
+<meta name="teachany-subject" content="biology">
+<meta name="teachany-domain" content="plant-reproduction">
+<meta name="teachany-grade" content="grade7">
+<meta name="teachany-prerequisites" content="asexual-reproduction,fruit-seed-formation,cell-structure">
+<meta name="teachany-difficulty" content="medium">
+<meta name="teachany-version" content="1.0.0">
+<meta name="teachany-author" content="TeachAny">
+<title>植物类群 · 初中生物 G7 · TeachAny v6.1</title>
+<style>
+:root{--primary:#7c3aed;--primary-light:#ede9fe;--primary-dark:#5b21b6;--accent:#f59e0b;--bg:#fafafa;--card:#fff;--text:#1e293b;--muted:#64748b;--border:#e2e8f0;--radius:12px;--shadow:0 2px 12px rgba(0,0,0,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
+header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:20px 24px 16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+header h1{font-size:1.3rem;font-weight:700;margin-bottom:2px}
+header p{font-size:.82rem;opacity:.85}
+.nav-tabs{display:flex;gap:4px;background:#fff2;border-radius:8px;padding:4px;margin-top:12px;overflow-x:auto}
+.nav-tab{flex:1;min-width:52px;padding:7px 4px;background:transparent;border:none;color:#fff;font-size:.78rem;cursor:pointer;border-radius:6px;transition:.2s;white-space:nowrap;text-align:center}
+.nav-tab.active{background:#fff;color:var(--primary);font-weight:600}
+.section{padding:16px;max-width:780px;margin:0 auto;animation:fadeIn .3s}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card{background:var(--card);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h2{font-size:1.05rem;font-weight:700;color:var(--primary);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.card h2::before{content:'';width:4px;height:1.1em;background:var(--primary);border-radius:2px;display:inline-block}
+.abt-hook{background:linear-gradient(135deg,var(--primary-light),#fff);border-left:4px solid var(--primary);padding:14px 16px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:14px;font-size:.92rem;line-height:1.7;color:var(--text)}
+.abt-but{background:#fef3c7;border-left:4px solid var(--accent);padding:12px 16px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:14px;font-size:.92rem;line-height:1.7}
+.abt-therefore{background:#f0fdf4;border-left:4px solid #16a34a;padding:12px 16px;border-radius:0 var(--radius) var(--radius) 0;font-size:.92rem;line-height:1.7}
+.label{display:inline-block;font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:4px;margin-bottom:6px}
+.label-hook{background:var(--primary);color:#fff}
+.label-but{background:var(--accent);color:#fff}
+.label-therefore{background:#16a34a;color:#fff}
+canvas{display:block;width:100%;border-radius:8px;background:#f8f7ff;border:1px solid var(--border)}
+.ctrl-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;justify-content:center}
+.btn{padding:8px 16px;border:none;border-radius:8px;font-size:.85rem;cursor:pointer;transition:.2s;font-weight:500}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-outline{background:#fff;border:2px solid var(--primary);color:var(--primary)}
+.btn-outline:hover{background:var(--primary-light)}
+.btn-sm{padding:5px 10px;font-size:.78rem}
+.btn-accent{background:var(--accent);color:#fff}
+.evolution-timeline{display:flex;flex-direction:column;gap:0}
+.evo-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px dashed var(--border)}
+.evo-item:last-child{border-bottom:none}
+.evo-node{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.evo-arrow{display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--primary);padding:4px 0}
+.evo-info h3{font-size:.9rem;font-weight:700;color:var(--primary);margin-bottom:3px}
+.evo-info p{font-size:.82rem;color:var(--muted);line-height:1.5}
+.evo-tag{display:inline-block;font-size:.7rem;padding:1px 6px;border-radius:3px;margin-right:4px;margin-top:3px}
+.tag-no-vascular{background:#fde68a;color:#92400e}
+.tag-vascular{background:#bfdbfe;color:#1e40af}
+.tag-seed{background:#bbf7d0;color:#166534}
+.tag-flower{background:#fbcfe8;color:#9d174d}
+.compare-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:8px}
+.compare-card{background:var(--primary-light);border-radius:8px;padding:12px;text-align:center}
+.compare-card .emoji{font-size:2rem;margin-bottom:6px}
+.compare-card h4{font-size:.85rem;font-weight:700;color:var(--primary);margin-bottom:4px}
+.compare-card p{font-size:.78rem;color:var(--muted);line-height:1.4}
+.drag-container{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.drag-items{background:#f8f7ff;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.drag-items h3{font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:4px}
+.drag-item{background:#fff;border:2px solid var(--border);border-radius:6px;padding:8px 12px;font-size:.85rem;cursor:grab;transition:.2s;user-select:none}
+.drag-item:hover{border-color:var(--primary);background:var(--primary-light)}
+.drag-item.dragging{opacity:.5;border-color:var(--primary);cursor:grabbing}
+.drop-zones{display:flex;flex-direction:column;gap:8px}
+.drop-zone{background:#fff;border:2px dashed var(--border);border-radius:8px;padding:12px;min-height:70px;transition:.2s}
+.drop-zone.drag-over{border-color:var(--primary);background:var(--primary-light)}
+.drop-zone.correct{border-color:#16a34a;background:#f0fdf4}
+.drop-zone.wrong{border-color:#ef4444;background:#fef2f2}
+.drop-zone h4{font-size:.78rem;font-weight:700;color:var(--primary);margin-bottom:6px}
+.drop-zone .dropped{display:flex;flex-wrap:wrap;gap:4px}
+.drop-zone .dropped .drag-item{font-size:.78rem;padding:4px 8px;cursor:default}
+.quiz-block{margin-bottom:18px}
+.quiz-q{font-size:.9rem;font-weight:600;margin-bottom:10px;line-height:1.5}
+.quiz-opts{display:flex;flex-direction:column;gap:7px}
+.quiz-opt{background:#f8f7ff;border:2px solid var(--border);border-radius:8px;padding:9px 14px;font-size:.85rem;cursor:pointer;transition:.2s;text-align:left}
+.quiz-opt:hover{border-color:var(--primary);background:var(--primary-light)}
+.quiz-opt.correct{border-color:#16a34a;background:#dcfce7;color:#166534;font-weight:600;pointer-events:none}
+.quiz-opt.wrong{border-color:#ef4444;background:#fee2e2;color:#991b1b;pointer-events:none}
+.quiz-explain{display:none;margin-top:10px;padding:10px 14px;background:#fffbeb;border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-size:.83rem;line-height:1.6;color:var(--text)}
+.kg-wrap{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:12px;margin-top:8px}
+.kg-col h3{font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--border)}
+.kg-node{background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:.82rem;margin-bottom:7px;cursor:pointer;transition:.2s;line-height:1.4}
+.kg-node:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.kg-node.prereq{border-left:4px solid #94a3b8}
+.kg-node.current{border-left:4px solid var(--primary);background:var(--primary-light);font-weight:600}
+.kg-node.extend{border-left:4px solid var(--accent)}
+.kg-node .node-title{font-weight:600;margin-bottom:2px}
+.kg-node .node-desc{font-size:.75rem;color:var(--muted)}
+.audio-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;z-index:200;box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+.audio-title{flex:1;font-size:.82rem;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.audio-btn{width:34px;height:34px;border-radius:50%;border:none;background:var(--primary);color:#fff;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;flex-shrink:0}
+.audio-btn:hover{background:var(--primary-dark)}
+.audio-progress{flex:2;height:4px;background:var(--border);border-radius:2px;cursor:pointer;position:relative;min-width:60px}
+.audio-progress-fill{height:100%;background:var(--primary);border-radius:2px;width:0%;transition:width .1s linear}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.summary-card{background:linear-gradient(135deg,var(--primary-light),#fff);border-radius:var(--radius);padding:16px;border:1px solid var(--primary-light)}
+.summary-card h3{font-size:.88rem;font-weight:700;color:var(--primary);margin-bottom:8px}
+.summary-card ul{padding-left:16px}
+.summary-card li{font-size:.82rem;line-height:1.6;color:var(--text);margin-bottom:3px}
+table{width:100%;border-collapse:collapse;font-size:.83rem;margin-top:8px}
+th{background:var(--primary);color:#fff;padding:8px 10px;text-align:left;font-weight:600}
+td{padding:7px 10px;border-bottom:1px solid var(--border)}
+tr:nth-child(even) td{background:#f8f7ff}
+
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+
+    /* ═══ PPT 播放模式（v6.1 轻量注入） ═══ */
+    body.play-mode { overflow: hidden; }
+    body.play-mode .slide-wrapper {
+      scroll-snap-type: y mandatory;
+      overflow-y: auto;
+      height: 100dvh;
+      -webkit-overflow-scrolling: touch;
+    }
+    .slide-wrapper { position: relative; }
+    .slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary, #3b82f6), var(--secondary, #06b6d4));
+      z-index: 201; transition: width 0.3s; border-radius: 0 2px 2px 0; pointer-events: none; }
+    .slide-toolbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 20px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border, #e5e7eb);
+      transform: translateY(100%); transition: transform 0.3s ease; }
+    body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+    .toolbar-btn { background: none; border: none; cursor: pointer; padding: 8px;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary, #6b7280); transition: all 0.2s; }
+    .toolbar-btn:hover { background: var(--border, #e5e7eb); color: var(--text, #1f2937); }
+    .toolbar-btn.active { color: var(--primary, #3b82f6); }
+    .toolbar-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2;
+      fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .toolbar-progress { flex: 1; max-width: 200px; height: 4px;
+      background: var(--border, #e5e7eb); border-radius: 2px; cursor: pointer; position: relative; }
+    .toolbar-progress-fill { height: 100%; background: var(--primary, #3b82f6);
+      border-radius: 2px; transition: width 0.3s; }
+    .toolbar-page-info { font-size: 12px; color: var(--text-secondary, #6b7280);
+      min-width: 50px; text-align: center; }
+    .play-mode-fab { position: fixed; bottom: 80px; right: 20px; z-index: 101;
+      width: 48px; height: 48px; border-radius: 50%; border: none;
+      background: var(--primary, #3b82f6); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3); transition: all 0.3s; }
+    .play-mode-fab:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(59,130,246,0.4); }
+    .play-mode-fab svg { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+    .slide-sidenav { position: fixed; right: 12px; top: 50%; transform: translateY(-50%);
+      z-index: 90; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+      opacity: 0; transition: opacity 0.3s; max-height: 70vh; overflow-y: auto;
+      padding: 8px 4px; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(12px);
+      border: 1px solid var(--border, #e5e7eb); }
+    .slide-sidenav::-webkit-scrollbar { display: none; }
+    body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+    .sidenav-dot { width: 24px; height: 4px; border-radius: 2px;
+      background: var(--border, #e5e7eb); border: none; cursor: pointer;
+      transition: all 0.2s; padding: 0; }
+    .sidenav-dot.active { width: 32px; background: var(--primary, #3b82f6); }
+    .sidenav-dot:hover { background: var(--primary, #3b82f6); opacity: 0.7; }
+    .sidenav-counter { font-size: 10px; color: var(--text-secondary, #6b7280);
+      text-align: center; margin-bottom: 4px; }
+    /* 隐藏旧版 tab 导航（播放模式下） */
+    body.play-mode #main-nav, body.play-mode nav[id="nav"], body.play-mode nav.nav { display: none !important; }
+    @media (max-width:768px) {
+      .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+      .sidenav-dot { width: 20px; height: 3px; }
+    }
+
+  </style>
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+</head>
+<body>
+<nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;;color:#334155""><a href="#nav">📑 知识图谱</a><a href="#intro">🤝 AI 学伴</a><a href="#evoTimeline">📚 课程内容</a></nav>
+
+
+<!-- teachany-hero-notext -->
+
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+
+<header>
+  <h1>🌿 植物类群</h1>
+  <p>从藻类到被子植物——植物的进化与分类</p>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('intro')">导入</button>
+    <button class="nav-tab" onclick="showTab('learn')">探究</button>
+    <button class="nav-tab" onclick="showTab('practice')">练习</button>
+    <button class="nav-tab" onclick="showTab('summary')">总结</button>
+    <button class="nav-tab" onclick="showTab('graph')">图谱</button>
+  </div>
+</header>
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/bio-plant-classify-hero.png" alt="植物类群知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">植物类群</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出藻类/苔藓/蕨类/裸子/被子植物的5个关键特征</p></div><div class="tu-q"><p>🎯 能判断给定植物所属类群及其进化地位</p></div><div class="tu-q"><p>🎯 能分析不同类群结构与环境的适应性关系</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么藻类植物都生活在水里？</p></div><div class="tu-q"><p>❓ 苔藓为什么长不高？和树比缺了什么？</p></div><div class="tu-q"><p>❓ 银杏是裸子植物，那它的种子到底藏在哪里？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="section active" id="intro" data-slot="16">
+  <div class="card">
+    <div class="label label-hook">Hook — 引入</div>
+    <div class="abt-hook">
+      🌱 地球上已知植物超过 <strong>37万种</strong>，从显微镜下才能看见的单细胞绿藻，到高达100米的巨杉；从无根无叶的苔藓，到开出五彩花朵的被子植物……
+      植物世界如此多样，它们之间究竟有什么联系？
+    </div>
+    <div class="label label-but">But — 矛盾</div>
+    <div class="abt-but">
+      🤔 面对如此繁多的植物，生物学家如何对它们进行系统分类？不同类群之间有什么本质区别？为什么说植物经历了一段漫长的"进化之旅"？
+    </div>
+    <div class="label label-therefore">Therefore — 目标</div>
+    <div class="abt-therefore">
+      🎯 本节课将带你了解植物五大类群（藻类、苔藓、蕨类、裸子植物、被子植物）的特征，理解植物从水生到陆生的进化历程，掌握各类群的代表植物与生存特点。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>植物进化阶梯</h2>
+    <div class="evolution-timeline" id="evoTimeline">
+      <div class="evo-item">
+        <div class="evo-node" style="background:#bbf7d0">🌊</div>
+        <div class="evo-info">
+          <h3>藻类植物（最低等）</h3>
+          <p>无根、茎、叶分化；大多生活在水中；以孢子繁殖；代表：水绵、海带、衣藻</p>
+          <span class="evo-tag tag-no-vascular">无维管束</span>
+          <span class="evo-tag tag-no-vascular">无种子</span>
+        </div>
+      </div>
+      <div class="evo-arrow">⬇️ 登陆</div>
+      <div class="evo-item">
+        <div class="evo-node" style="background:#a7f3d0">🌿</div>
+        <div class="evo-info">
+          <h3>苔藓植物</h3>
+          <p>有茎和叶，无真正的根（假根）；无维管束；生活在阴湿环境；孢子繁殖；代表：葫芦藓</p>
+          <span class="evo-tag tag-no-vascular">无维管束</span>
+          <span class="evo-tag tag-no-vascular">无种子</span>
+        </div>
+      </div>
+      <div class="evo-arrow">⬇️ 发展维管束</div>
+      <div class="evo-item">
+        <div class="evo-node" style="background:#bfdbfe">🌾</div>
+        <div class="evo-info">
+          <h3>蕨类植物</h3>
+          <p>有根、茎、叶；有维管束（输导组织）；能在较干燥环境生存；孢子繁殖；代表：肾蕨、蕨</p>
+          <span class="evo-tag tag-vascular">有维管束</span>
+          <span class="evo-tag tag-no-vascular">无种子</span>
+        </div>
+      </div>
+      <div class="evo-arrow">⬇️ 产生种子</div>
+      <div class="evo-item">
+        <div class="evo-node" style="background:#fef3c7">🌲</div>
+        <div class="evo-info">
+          <h3>裸子植物</h3>
+          <p>有根、茎、叶；有维管束；种子裸露（无果皮包被）；花粉管授粉；代表：松、柏、银杏</p>
+          <span class="evo-tag tag-vascular">有维管束</span>
+          <span class="evo-tag tag-seed">有种子</span>
+        </div>
+      </div>
+      <div class="evo-arrow">⬇️ 出现花与果实</div>
+      <div class="evo-item">
+        <div class="evo-node" style="background:#fbcfe8">🌸</div>
+        <div class="evo-info">
+          <h3>被子植物（最高等）</h3>
+          <p>有根、茎、叶、花、果实、种子六大器官；种子有果皮包被；适应性最强；代表：水稻、苹果、玫瑰</p>
+          <span class="evo-tag tag-vascular">有维管束</span>
+          <span class="evo-tag tag-seed">有种子</span>
+          <span class="evo-tag tag-flower">有花果实</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="apply" data-scaffold="full" id="pretest" data-slot="20"><h2>📝 前测</h2><div class="tu-q" data-answer="C"><h3>前测题 1</h3><p>下列哪类植物具有维管束？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆藻类/苔藓/蕨类的组织结构">A.海带</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆藻类/苔藓/蕨类的组织结构">B.葫芦藓</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆藻类/苔藓/蕨类的组织结构">C.肾蕨</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆藻类/苔藓/蕨类的组织结构">D.水绵</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>前测题 2</h3><p>松树的种子裸露在何处？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="被子植物与裸子植物种子位置混淆">A.果实里</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="被子植物与裸子植物种子位置混淆">B.球果的鳞片上</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="被子植物与裸子植物种子位置混淆">C.花朵中</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="被子植物与裸子植物种子位置混淆">D.地下茎里</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 不同生境中的植物适应特征</h2><p>比较水池、墙角、花坛三个区域的植物形态差异</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="不同环境中的植物具有特殊的适应结构"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="记录叶片厚度/根系形态/表面蜡质等特征"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="陆生植物演化出防止水分散失的结构"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="section" id="lesson-focus" data-slot="60">
+  <div class="card">
+    <h2>进化历程动画</h2>
+    <canvas id="evoCanvas" height="280"></canvas>
+<div class="canvas-status" id="labReadout-evoCanvas" role="status">点击图中的结构查看说明</div>
+    <div class="ctrl-row">
+      <button class="btn btn-primary btn-sm" onclick="showGroup('algae')">🌊 藻类</button>
+      <button class="btn btn-outline btn-sm" onclick="showGroup('moss')">🌿 苔藓</button>
+      <button class="btn btn-outline btn-sm" onclick="showGroup('fern')">🌾 蕨类</button>
+      <button class="btn btn-outline btn-sm" onclick="showGroup('gymnosperm')">🌲 裸子</button>
+      <button class="btn btn-outline btn-sm" onclick="showGroup('angiosperm')">🌸 被子</button>
+      <button class="btn btn-accent btn-sm" onclick="autoPlay()">▶ 自动演示</button>
+    </div>
+    <p id="evoDesc" style="margin-top:10px;font-size:.85rem;color:var(--muted);line-height:1.6;text-align:center"></p>
+  </div>
+
+  <div class="card">
+    <h2>各类群特征对比</h2>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr><th>类群</th><th>根茎叶</th><th>维管束</th><th>种子</th><th>花果实</th><th>繁殖方式</th><th>生境</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>藻类</td><td>无</td><td>无</td><td>无</td><td>无</td><td>孢子/分裂</td><td>水中</td></tr>
+          <tr><td>苔藓</td><td>有茎叶,假根</td><td>无</td><td>无</td><td>无</td><td>孢子</td><td>阴湿陆地</td></tr>
+          <tr><td>蕨类</td><td>有</td><td>有</td><td>无</td><td>无</td><td>孢子</td><td>阴湿陆地</td></tr>
+          <tr><td>裸子</td><td>有</td><td>有</td><td>有(裸露)</td><td>无</td><td>种子</td><td>各种陆地</td></tr>
+          <tr><td>被子</td><td>有</td><td>有</td><td>有(包被)</td><td>有</td><td>种子</td><td>各种环境</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>代表植物图鉴</h2>
+    <div class="compare-grid">
+      <div class="compare-card">
+        <div class="emoji">🌊</div>
+        <h4>海带</h4>
+        <p>大型褐藻，无真正根茎叶，全身吸收营养</p>
+      </div>
+      <div class="compare-card">
+        <div class="emoji">🌿</div>
+        <h4>葫芦藓</h4>
+        <p>苔藓代表，高约数厘米，假根固定不吸水</p>
+      </div>
+      <div class="compare-card">
+        <div class="emoji">🌾</div>
+        <h4>肾蕨</h4>
+        <p>蕨类植物，叶背面有孢子囊群，茎有维管束</p>
+      </div>
+      <div class="compare-card">
+        <div class="emoji">🌲</div>
+        <h4>银杏</h4>
+        <p>裸子植物活化石，种子银白色，无果皮包被</p>
+      </div>
+      <div class="compare-card">
+        <div class="emoji">🍎</div>
+        <h4>苹果树</h4>
+        <p>被子植物，花→受精→果实（肉质），种子在果实内</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>从细胞→组织→器官层面拆解不同类群的结构差异</p></div><div class="tu-q"><h3>💡解释它</h3><p>用'从水生到陆生'解释植物器官的进化逻辑</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>对比藻类无根茎叶与被子植物的完整器官系统</p></div><div class="tu-q"><h3>👁️看见它</h3><p>观察苔藓假根与蕨类真根的横切面显微图</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>用进化规律解释为什么水果多是被子植物</p></div></section>
+
+<section data-scaffold="full" data-bloom-level="apply" class="section" id="practice" data-slot="85">
+  <div class="card">
+    <h2>拖拽分类</h2>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:10px">将下列植物拖入正确的类群框中</p>
+    <div class="drag-container">
+      <div class="drag-items">
+        <h3>待分类植物</h3>
+        <div class="drag-item" draggable="true" data-type="algae" ondragstart="dragStart(event)">🌊 水绵</div>
+        <div class="drag-item" draggable="true" data-type="moss" ondragstart="dragStart(event)">🌿 葫芦藓</div>
+        <div class="drag-item" draggable="true" data-type="fern" ondragstart="dragStart(event)">🌾 肾蕨</div>
+        <div class="drag-item" draggable="true" data-type="gymnosperm" ondragstart="dragStart(event)">🌲 松树</div>
+        <div class="drag-item" draggable="true" data-type="angiosperm" ondragstart="dragStart(event)">🌸 水稻</div>
+        <div class="drag-item" draggable="true" data-type="algae" ondragstart="dragStart(event)">🌿 衣藻</div>
+      </div>
+      <div class="drop-zones">
+        <div class="drop-zone" id="zone-algae" ondragover="dragOver(event)" ondrop="drop(event,'algae')">
+          <h4>🌊 藻类植物</h4>
+          <div class="dropped"></div>
+        </div>
+        <div class="drop-zone" id="zone-moss" ondragover="dragOver(event)" ondrop="drop(event,'moss')">
+          <h4>🌿 苔藓植物</h4>
+          <div class="dropped"></div>
+        </div>
+        <div class="drop-zone" id="zone-fern" ondragover="dragOver(event)" ondrop="drop(event,'fern')">
+          <h4>🌾 蕨类植物</h4>
+          <div class="dropped"></div>
+        </div>
+        <div class="drop-zone" id="zone-gymnosperm" ondragover="dragOver(event)" ondrop="drop(event,'gymnosperm')">
+          <h4>🌲 裸子植物</h4>
+          <div class="dropped"></div>
+        </div>
+        <div class="drop-zone" id="zone-angiosperm" ondragover="dragOver(event)" ondrop="drop(event,'angiosperm')">
+          <h4>🌸 被子植物</h4>
+          <div class="dropped"></div>
+        </div>
+      </div>
+    </div>
+    <div class="ctrl-row">
+      <button class="btn btn-outline btn-sm" onclick="resetDrop()">↺ 重置</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>随堂测验</h2>
+    <div class="quiz-block">
+      <p class="quiz-q">1. 下列植物中，属于苔藓植物的是（　）</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt" onclick="answerQ(1,'A',this,'A')">A. 葫芦藓</button>
+        <button class="quiz-opt" onclick="answerQ(1,'B',this,'A')">B. 肾蕨</button>
+        <button class="quiz-opt" onclick="answerQ(1,'C',this,'A')">C. 海带</button>
+        <button class="quiz-opt" onclick="answerQ(1,'D',this,'A')">D. 银杏</button>
+      </div>
+      <div class="quiz-explain" id="qe1">✅ 葫芦藓是苔藓植物的代表。苔藓植物有茎和叶但无真正的根（只有假根），无维管束，用孢子繁殖。肾蕨属蕨类，海带属藻类，银杏属裸子植物。</div>
+    </div>
+    <div class="quiz-block">
+      <p class="quiz-q">2. 区分裸子植物和被子植物最本质的特征是（　）</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt" onclick="answerQ(2,'A',this,'C')">A. 有没有根茎叶</button>
+        <button class="quiz-opt" onclick="answerQ(2,'B',this,'C')">B. 有没有维管束</button>
+        <button class="quiz-opt" onclick="answerQ(2,'C',this,'C')">C. 种子有没有果皮包被</button>
+        <button class="quiz-opt" onclick="answerQ(2,'D',this,'C')">D. 生活环境是否相同</button>
+      </div>
+      <div class="quiz-explain" id="qe2">✅ 裸子植物的种子裸露，没有果皮包被；被子植物的种子有果皮（果实）包被，这是二者最本质的区别。A、B选项是区分蕨类与藻苔的特征，D不是分类依据。</div>
+    </div>
+    <div class="quiz-block">
+      <p class="quiz-q">3. 蕨类植物与苔藓植物相比，进化上的主要进步是（　）</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt" onclick="answerQ(3,'A',this,'B')">A. 出现了种子</button>
+        <button class="quiz-opt" onclick="answerQ(3,'B',this,'B')">B. 出现了维管束（输导组织）</button>
+        <button class="quiz-opt" onclick="answerQ(3,'C',this,'B')">C. 出现了花和果实</button>
+        <button class="quiz-opt" onclick="answerQ(3,'D',this,'B')">D. 适应了水生环境</button>
+      </div>
+      <div class="quiz-explain" id="qe3">✅ 蕨类植物出现了维管束（输导组织），能高效运输水分和有机物，这是相比苔藓植物的重大进化突破。种子出现于裸子植物，花果实出现于被子植物。蕨类植物是更适应陆地而非水生环境。</div>
+    </div>
+    <div class="quiz-block">
+      <p class="quiz-q">4. 被子植物是植物界中最高等的类群，其原因是（　）</p>
+      <div class="quiz-opts">
+        <button class="quiz-opt" onclick="answerQ(4,'A',this,'D')">A. 体形最大</button>
+        <button class="quiz-opt" onclick="answerQ(4,'B',this,'D')">B. 数量最多</button>
+        <button class="quiz-opt" onclick="answerQ(4,'C',this,'D')">C. 寿命最长</button>
+        <button class="quiz-opt" onclick="answerQ(4,'D',this,'D')">D. 有花、果实，种子发育完善，适应能力最强</button>
+      </div>
+      <div class="quiz-explain" id="qe4">✅ 被子植物具有花、果实，种子有果皮保护，传播方式多样，对环境适应能力最强，是进化程度最高的植物类群。数量多是适应能力强的结果，而非原因。</div>
+    </div>
+  </div>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="C">
+<h3>选择题 1</h3><p>下列哪种植物的繁殖方式与其他三种明显不同？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="松树虽无花但属于裸子植物">A. 校园里结松果的雪松</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="月季是被子植物">B. 花坛中开花的月季</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="肾蕨通过孢子繁殖，其他三种都是种子植物">C. 池塘边的肾蕨</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="狗尾草是被子植物">D. 草坪上结籽的狗尾草</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 2</h3><p>实验室显微镜下观察到某植物没有真正的根，只有假根，这可能是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="藻类无根茎叶分化">A. 海带</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="苔藓植物具有假根结构">B. 葫芦藓</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="蕨类有真正的根">C. 铁线蕨</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="裸子植物有发达根系">D. 银杏</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C">
+<h3>选择题 3</h3><p>下列特征最能区分藻类与苔藓植物的是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="两者都含叶绿素">A. 是否含有叶绿素</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="生存环境有重叠">B. 是否生活在潮湿环境</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="苔藓有茎叶分化而藻类没有">C. 是否有茎叶分化</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="两者都能光合作用">D. 是否能进行光合作用</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>蕨类植物比苔藓植物高等的主要表现是具有真正的____和____组织</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>根、输导</p><p>蕨类出现根和维管束结构</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>校园里松树属于____植物亚门，其种子外没有____包被</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>裸子、果皮</p><p>裸子植物种子裸露</p></details></div>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="B"><h3>后测题 1</h3><p>（中考题）下列植物进化顺序正确的是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="进化时序记忆错误">A.苔藓→藻类→蕨类</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="进化时序记忆错误">B.藻类→苔藓→裸子</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="进化时序记忆错误">C.被子→蕨类→苔藓</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="进化时序记忆错误">D.裸子→藻类→被子</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="D"><h3>后测题 2</h3><p>香蕉的种子退化，它属于：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="被可见特征干扰分类依据">A.藻类植物</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="被可见特征干扰分类依据">B.苔藓植物</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="被可见特征干扰分类依据">C.裸子植物</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="被可见特征干扰分类依据">D.被子植物</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>若发现某化石植物有根但无种子，它可能是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未能关联结构与进化阶段">A.早期藻类</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未能关联结构与进化阶段">B.原始苔藓</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未能关联结构与进化阶段">C.古代蕨类</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未能关联结构与进化阶段">D.被子植物</button></div><div class="tu-fb" hidden></div></div></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为所有绿色植物都能开花</h3><p>✅ 只有被子植物有真正的花</p><p>💡 将日常经验与科学分类混淆</p></div><div class="tu-q"><h3>❌ 把地钱当做苔藓植物</h3><p>✅ 地钱属于苔类，苔藓是藓类</p><p>💡 忽视苔藓植物门的细分</p></div></section>
+<section data-scaffold="partial" data-bloom-level="remember" class="section" id="summary" data-slot="97">
+  <div class="card">
+    <h2>核心要点总结</h2>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h3>🌊 藻类</h3>
+        <ul>
+          <li>无根茎叶分化</li>
+          <li>无维管束，无种子</li>
+          <li>水中生活为主</li>
+          <li>孢子或分裂繁殖</li>
+        </ul>
+      </div>
+      <div class="summary-card">
+        <h3>🌿 苔藓</h3>
+        <ul>
+          <li>有茎叶，假根</li>
+          <li>无维管束，无种子</li>
+          <li>阴湿环境，环境监测</li>
+          <li>孢子繁殖</li>
+        </ul>
+      </div>
+      <div class="summary-card">
+        <h3>🌾 蕨类</h3>
+        <ul>
+          <li>有根茎叶</li>
+          <li>有维管束，无种子</li>
+          <li>古代大量存在→煤炭</li>
+          <li>孢子繁殖</li>
+        </ul>
+      </div>
+      <div class="summary-card">
+        <h3>🌲 裸子</h3>
+        <ul>
+          <li>有根茎叶</li>
+          <li>有维管束，有种子</li>
+          <li>种子裸露，无果皮</li>
+          <li>种子繁殖</li>
+        </ul>
+      </div>
+      <div class="summary-card">
+        <h3>🌸 被子</h3>
+        <ul>
+          <li>六大器官齐全</li>
+          <li>有维管束，有种子</li>
+          <li>种子有果皮包被</li>
+          <li>种子繁殖，最高等</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>进化规律记忆口诀</h2>
+    <div class="abt-therefore" style="font-size:.95rem">
+      🎵 <strong>藻类无叶水中生，苔藓阴湿叶茎行；蕨类维管能上陆，裸子种子无果皮；被子花果结种子，最高等的植物界。</strong><br><br>
+      进化趋势：水生→陆生 | 低等→高等 | 孢子繁殖→种子繁殖 | 无维管→有维管
+    </div>
+  </div>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>藻苔蕨裸被，水生到陆生，结构渐复杂，种子是关键</p><p><strong>类比：</strong>植物进化像搬家：藻类住水下→苔藓住岸边→蕨类搬陆地→裸子带帐篷→被子有房子</p></div></section>
+<section data-bloom-level="apply" class="ta-standard-section" id="teachany-audio-player" data-slot="120">
+  <div data-teachany-audio>
+    <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "plant-classify-intro",
+    "section": "plant-classify-intro",
+    "sectionId": "plant-classify-intro",
+    "title": "植物类群 讲解 plant-classify-intro",
+    "label": "植物类群 讲解 plant-classify-intro",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/bio-plant-classify/plant-classify-intro.mp3"
+  },
+  {
+    "id": "plant-classify-learn",
+    "section": "plant-classify-learn",
+    "sectionId": "plant-classify-learn",
+    "title": "植物类群 讲解 plant-classify-learn",
+    "label": "植物类群 讲解 plant-classify-learn",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/bio-plant-classify/plant-classify-learn.mp3"
+  },
+  {
+    "id": "plant-classify-practice",
+    "section": "plant-classify-practice",
+    "sectionId": "plant-classify-practice",
+    "title": "植物类群 讲解 plant-classify-practice",
+    "label": "植物类群 讲解 plant-classify-practice",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/bio-plant-classify/plant-classify-practice.mp3"
+  },
+  {
+    "id": "plant-classify-summary",
+    "section": "plant-classify-summary",
+    "sectionId": "plant-classify-summary",
+    "title": "植物类群 讲解 plant-classify-summary",
+    "label": "植物类群 讲解 plant-classify-summary",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/bio-plant-classify/plant-classify-summary.mp3"
+  }
+]
+</script>
+  </div>
+</section>
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
+  <div data-teachany-tutor-card></div>
+</section>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：植物类群</h2><div data-teachany-kg="bio-m-plant-classification"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "asexual-reproduction", "name": "asexual-reproduction"}, {"id": "fruit-seed-formation", "name": "fruit-seed-formation"}, {"id": "cell-structure", "name": "cell-structure"}], "current": {"id": "bio-m-plant-classification", "name": "植物类群", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+<!-- ═══ PPT 播放控件（v6.1 轻量注入） ═══ -->
+<div class="slide-progress-bar" id="slide-progress-bar" style="width:0%"></div>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换演示模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+</button>
+
+<div class="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info"></span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav"></nav>
+
+<script>
+/* ═══════ Slide Controller v6.1 (轻量注入) ═══════ */
+(function(){
+'use strict';
+/* 检测页面元素：.section 或 .screen */
+const allSections = Array.from(document.querySelectorAll('.section, .screen'));
+if(!allSections.length) return;
+const totalPages = allSections.length;
+
+let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+const progressBar = document.getElementById('slide-progress-bar');
+const sidenav = document.getElementById('slide-sidenav');
+const fab = document.getElementById('play-mode-fab');
+const fabPlay = document.getElementById('fab-icon-play');
+const fabBrowse = document.getElementById('fab-icon-browse');
+const tbPrev = document.getElementById('tb-prev');
+const tbNext = document.getElementById('tb-next');
+const tbPageInfo = document.getElementById('tb-page-info');
+const tbProgressFill = document.getElementById('tb-progress-fill');
+const tbProgress = document.getElementById('tb-progress');
+const tbAutoplay = document.getElementById('tb-autoplay');
+const tbFullscreen = document.getElementById('tb-fullscreen');
+
+/* 提取标签名 */
+function getPageLabel(el) {
+  const h = el.querySelector('h1,h2,h3,.section-title');
+  if (h) return h.textContent.trim().slice(0, 20);
+  const btn = document.querySelector('.nav-btn.active, .nav-tab.active');
+  if (btn) return btn.textContent.trim().slice(0, 20);
+  return '第' + (allSections.indexOf(el) + 1) + '页';
+}
+
+function buildSidenav() {
+  sidenav.innerHTML = '';
+  const counter = document.createElement('div');
+  counter.className = 'sidenav-counter'; counter.id = 'sidenav-counter';
+  counter.textContent = '1/' + totalPages;
+  sidenav.appendChild(counter);
+  allSections.forEach((p, i) => {
+    const d = document.createElement('button');
+    d.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+    d.setAttribute('aria-label', getPageLabel(p));
+    d.addEventListener('click', () => goToPage(i));
+    sidenav.appendChild(d);
+  });
+}
+
+function updateUI() {
+  const prog = totalPages > 1 ? currentPage / (totalPages - 1) * 100 : 100;
+  if (progressBar) progressBar.style.width = prog + '%';
+  if (tbProgressFill) tbProgressFill.style.width = prog + '%';
+  if (tbPageInfo) tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+  sidenav.querySelectorAll('.sidenav-dot').forEach((d, i) => d.classList.toggle('active', i === currentPage));
+  const ce = document.getElementById('sidenav-counter');
+  if (ce) ce.textContent = (currentPage + 1) + '/' + totalPages;
+  if (tbPrev) tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+  if (tbNext) tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+}
+
+function goToPage(i) {
+  if (i < 0 || i >= totalPages) return;
+  currentPage = i;
+  const target = allSections[currentPage];
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateUI();
+}
+
+function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+/* Scroll-based page tracking */
+let scrollTimeout;
+function onScroll() {
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => {
+    const st = window.scrollY;
+    let closest = 0, minD = Infinity;
+    allSections.forEach((p, i) => {
+      const d = Math.abs(p.offsetTop - st - 100);
+      if (d < minD) { minD = d; closest = i; }
+    });
+    if (closest !== currentPage) { currentPage = closest; updateUI(); }
+  }, 120);
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+
+function togglePlayMode() {
+  isPlayMode = !isPlayMode;
+  document.body.classList.toggle('play-mode', isPlayMode);
+  document.body.classList.toggle('toolbar-visible', isPlayMode);
+  if (fabPlay) fabPlay.style.display = isPlayMode ? 'none' : 'block';
+  if (fabBrowse) fabBrowse.style.display = isPlayMode ? 'block' : 'none';
+  if (isPlayMode) {
+    document.documentElement.style.overflow = 'hidden';
+    goToPage(currentPage);
+  } else {
+    document.documentElement.style.overflow = '';
+  }
+}
+
+if (fab) fab.addEventListener('click', togglePlayMode);
+if (tbPrev) tbPrev.addEventListener('click', prevPage);
+if (tbNext) tbNext.addEventListener('click', nextPage);
+if (tbProgress) tbProgress.addEventListener('click', e => {
+  const r = tbProgress.getBoundingClientRect();
+  goToPage(Math.round((e.clientX - r.left) / r.width * (totalPages - 1)));
+});
+if (tbAutoplay) tbAutoplay.addEventListener('click', () => {
+  isAutoPlay = !isAutoPlay;
+  tbAutoplay.classList.toggle('active', isAutoPlay);
+  if (isAutoPlay) {
+    autoPlayTimer = setInterval(() => {
+      if (currentPage < totalPages - 1) nextPage();
+      else { clearInterval(autoPlayTimer); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+    }, 8000);
+  } else { clearInterval(autoPlayTimer); }
+});
+if (tbFullscreen) tbFullscreen.addEventListener('click', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (!isPlayMode) {
+    if (e.key === 'f' || e.key === 'F') { if (!e.ctrlKey && !e.metaKey) togglePlayMode(); }
+    return;
+  }
+  switch (e.key) {
+    case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+    case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+    case 'Escape': togglePlayMode(); break;
+  }
+});
+
+buildSidenav();
+
+/* ═══ v6.2 自动初始化：连续阅读模式下预加载动态内容 ═══ */
+(function(){
+  try {
+    var inited = new Set();
+    allSections.forEach(function(screen) {
+      var id = screen.id;
+      if (!id || inited.has(id)) return;
+      inited.add(id);
+      /* 根据屏幕 ID 推测并调用对应的 init 函数 */
+      var caps = id.charAt(0).toUpperCase() + id.slice(1);
+      var candidates = [
+        'init' + caps,              /* initWarmup, initL1, initBoss ... */
+        'init_' + id,               /* init_warmup */
+        'load' + caps,              /* loadBoss */
+        'build' + caps,             /* buildQuiz */
+        'render' + caps,            /* renderContent */
+        'setup' + caps,             /* setupLevel */
+      ];
+      for (var i = 0; i < candidates.length; i++) {
+        if (typeof window[candidates[i]] === 'function') {
+          try { window[candidates[i]](); } catch(e) {}
+          break;
+        }
+      }
+    });
+  } catch(e) {}
+})();
+/* ═══ end v6.2 auto-init ═══ */
+
+updateUI();
+document.body.classList.add('toolbar-visible');
+setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+})();
+</script>
+
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseId: 'bio-plant-classify',
+  courseTitle: "植物类群",
+  subject: 'biology',
+  grade: '7',
+  nodeId: 'bio-m-plant-classification',
+  getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+  getContext: () => {
+    const current = document.querySelector('.current-section') || (location.hash ? document.querySelector(location.hash) : null);
+    return (current || document.body).innerText.slice(0, 3000);
+  }
+};
+</script>
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+  <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+
+<script src="../../assets/engines/canvas-lab/v1/lab.js"></script>
+<script src="../../assets/engines/canvas-lab/v1/scenes.js"></script>
+<script>
+TeachAnyScenes.mount('parts', {"canvas": "evoCanvas", "readout": "labReadout-evoCanvas", "bg": [{"t": "line", "x1": 90, "y1": 250, "x2": 660, "y2": 250, "w": 2.5, "color": "#94a3b8"}, {"t": "ellipse", "x": 150, "y": 220, "rx": 22, "ry": 18, "fill": "rgba(34,197,94,.6)", "stroke": "#16a34a"}, {"t": "ellipse", "x": 250, "y": 200, "rx": 20, "ry": 26, "fill": "rgba(34,197,94,.6)", "stroke": "#16a34a"}, {"t": "ellipse", "x": 350, "y": 180, "rx": 18, "ry": 34, "fill": "rgba(34,197,94,.6)", "stroke": "#16a34a"}, {"t": "ellipse", "x": 450, "y": 160, "rx": 20, "ry": 40, "fill": "rgba(34,197,94,.6)", "stroke": "#16a34a"}, {"t": "ellipse", "x": 560, "y": 140, "rx": 26, "ry": 48, "fill": "rgba(34,197,94,.6)", "stroke": "#16a34a"}, {"t": "text", "x": 150, "y": 285, "t2": "藻类", "size": 13, "align": "center"}, {"t": "text", "x": 250, "y": 285, "t2": "苔藓", "size": 13, "align": "center"}, {"t": "text", "x": 350, "y": 285, "t2": "蕨类", "size": 13, "align": "center"}, {"t": "text", "x": 450, "y": 285, "t2": "裸子植物", "size": 13, "align": "center"}, {"t": "text", "x": 560, "y": 285, "t2": "被子植物", "size": 13, "align": "center"}, {"t": "text", "x": 390, "y": 40, "t2": "植 物 的 进 化 历 程（从水生到陆生、从简单到复杂）", "size": 13.5, "align": "center"}], "parts": [{"x": 150, "y": 220, "name": "藻类植物", "info": "生活在水中，没有根、茎、叶的分化——最低等的植物。", "r": 26, "lx": 150, "ly": 178}, {"x": 250, "y": 200, "name": "苔藓植物", "info": "有茎和叶，但没有真正的根，用孢子繁殖，长得矮小，需要潮湿环境。", "r": 26, "lx": 250, "ly": 150}, {"x": 350, "y": 180, "name": "蕨类植物", "info": "有根、茎、叶，还有输导组织，长得比苔藓高大，仍用孢子繁殖。", "r": 26, "lx": 350, "ly": 128}, {"x": 450, "y": 160, "name": "裸子植物", "info": "种子外面没有果皮包被（如松、杉、柏），用种子繁殖，更适应陆地。", "r": 26, "lx": 450, "ly": 106}, {"x": 560, "y": 140, "name": "被子植物", "info": "种子外有果皮包被，有花、果实，是最高等、种类最多的植物。", "r": 26, "lx": 560, "ly": 84}], "tip": "👆 点击各植物类群，看它们的进化特征"});
+</script>
+</body>
+</html>

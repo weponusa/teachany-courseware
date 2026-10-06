@@ -1,0 +1,181 @@
+name: Publish Community Submission
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'community/pending/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: community-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY_TOKEN: ${{ secrets.TEACHANY_REGISTRY_PAT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Unpack submitted .teachany packages
+        id: unpack
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p community
+          published_file=/tmp/published-courses.txt
+          : > "$published_file"
+
+          # Find pending JSON files. On normal push, handle all pending packages to avoid missed runs.
+          shopt -s nullglob
+          for json_file in community/pending/*.json; do
+            base=$(basename "$json_file" .json)
+            pkg="community/pending/$base.teachany"
+            if [ ! -f "$pkg" ]; then
+              echo "⚠️ $base: missing .teachany package, skip"
+              continue
+            fi
+
+            tmp=$(mktemp -d)
+            unzip -o -q "$pkg" -d "$tmp"
+            if [ ! -f "$tmp/index.html" ] || [ ! -f "$tmp/manifest.json" ]; then
+              echo "❌ $base: package must contain index.html + manifest.json"
+              rm -rf "$tmp"
+              exit 1
+            fi
+
+            course_id=$(python3 -c "import json,re; m=json.load(open('$tmp/manifest.json')); raw=str(m.get('id') or '$base').strip().lower(); raw=re.sub(r'[^a-z0-9-]+','-',raw).strip('-'); print(raw or '$base')")
+            submitted_id=$(python3 -c "import json,re; m=json.load(open('$json_file')); raw=str(m.get('id') or '$base').strip().lower(); raw=re.sub(r'[^a-z0-9-]+','-',raw).strip('-'); print(raw or '$base')")
+            node_id=$(python3 -c "import json,re; m=json.load(open('$json_file')); raw=str(m.get('node_id') or '').strip().lower(); raw=re.sub(r'[^a-z0-9-]+','-',raw).strip('-'); print(raw)")
+            target="community/$course_id"
+            if [ -d "$target" ]; then
+              echo "⚠️ $course_id exists, replacing with new approved package"
+              rm -rf "$target"
+            fi
+            mkdir -p "$target"
+            cp -R "$tmp/"* "$target/"
+            rm -rf "$tmp"
+
+            # 兼容旧模板/旧 skill：解包时统一修正 logo 与标准运行时路径。
+            python3 -c 'import sys; from pathlib import Path; p=Path(sys.argv[1]); html=p.read_text(encoding="utf-8", errors="ignore"); repl={"https://www.teachany.cn/assets/teachany-logo.png":"https://www.teachany.cn/assets/teachany-logo.png","https://www.teachany.cn/scripts/":"../../assets/scripts/","https://www.teachany.cn/scripts/":"../../assets/scripts/","../../scripts/":"../../assets/scripts/"}; [None for old,new in repl.items() if not (html:=html.replace(old,new))]; p.write_text(html, encoding="utf-8")' "$target/index.html"
+
+            # 强制 finalize：地图 + 幻灯片内知识图谱 + CDN 模块路径
+            python3 scripts/finalize-courseware.py "$target" --no-audio || exit 1
+
+            # 为用户可能拿到的提交 ID / node_id 生成兼容入口，避免 PR 合并后因 manifest.id 与提交 ID 不一致而 404。
+            python3 - "$course_id" "$submitted_id" "$node_id" <<'PY'
+import sys
+from pathlib import Path
+course_id, submitted_id, node_id = sys.argv[1:4]
+base = Path('community')
+target_url = f'https://www.teachany.cn/community/{course_id}/index.html'
+html = f'''<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="refresh" content="0; url={target_url}">
+  <link rel="canonical" href="{target_url}">
+  <title>正在打开 TeachAny 课件</title>
+  <script>window.location.replace('{target_url}');</script>
+</head>
+<body style="margin:0;background:#07111f;color:#e5f2ff;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;display:grid;min-height:100vh;place-items:center;text-align:center">
+  <main>
+    <p>正在打开课件，请稍候…</p>
+    <p><a style="color:#7dd3fc" href="{target_url}">如果没有自动打开，点这里</a></p>
+  </main>
+</body>
+</html>
+'''
+for alias in {submitted_id, node_id}:
+    if not alias or alias == course_id:
+        continue
+    d = base / alias
+    if (d / 'manifest.json').exists():
+        print(f'↪️ alias {alias}: real course exists, skip')
+        continue
+    d.mkdir(parents=True, exist_ok=True)
+    (d / 'index.html').write_text(html, encoding='utf-8')
+    print(f'🔁 alias {alias} -> {course_id}')
+PY
+
+            echo "$course_id" >> "$published_file"
+            echo "✅ Published $pkg → $target"
+
+            # Remove pending files after successful publish.
+            rm -f "$json_file" "$pkg"
+          done
+
+          if [ -s "$published_file" ]; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "courses=$(paste -sd, "$published_file")" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            echo "No pending packages to publish."
+          fi
+
+      - name: Rebuild registry and link indexes
+        if: steps.unpack.outputs.published == 'true'
+        shell: bash
+        run: |
+          set -e
+          python3 scripts/rebuild-index.py
+          python3 scripts/check-courseware-links.py
+
+      - name: Commit published courseware
+        if: steps.unpack.outputs.published == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add community/ registry.json registry-v2.json data/trees/ data/node-index.json data/nodes-metadata.json data/nodes-selector.json scripts/teachany-kg-manifest.json
+          git commit -m "community: publish submitted courseware (${{ steps.unpack.outputs.courses }})"
+          git push origin main
+
+      - name: Build publish directory
+        if: steps.unpack.outputs.published == 'true'
+        shell: bash
+        run: bash scripts/build-publish-site.sh _site
+
+      - name: Deploy updated site to gh-pages
+        if: steps.unpack.outputs.published == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd _site
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          echo "Staged files count: $(git status --short | wc -l)"
+          git commit -m "deploy: community publish (${{ steps.unpack.outputs.courses }})"
+          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages
+
+      - name: Notify registry repo
+        if: steps.unpack.outputs.published == 'true' && env.REGISTRY_TOKEN != ''
+        shell: bash
+        run: |
+          payload=$(python3 -c "import json; courses='${{ steps.unpack.outputs.courses }}'.split(','); print(json.dumps({'event_type':'courseware-published','client_payload':{'courses':courses}}))")
+          curl -fsSL -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $REGISTRY_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/weponusa/teachany/dispatches \
+            -d "$payload"
+          echo "✅ Registry sync dispatched: ${{ steps.unpack.outputs.courses }}"
+
+      - name: Explain registry secret requirement
+        if: steps.unpack.outputs.published == 'true' && env.REGISTRY_TOKEN == ''
+        run: |
+          echo "⚠️ Courseware published, but registry sync was not dispatched."
+          echo "Add repository secret TEACHANY_REGISTRY_PAT in weponusa/teachany-courseware."
+          echo "The token must have Contents: Read/Write and Actions: Read/Write for weponusa/teachany."

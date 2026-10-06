@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="teachany-node" content="chn-e-radical-recognition">
+<meta name="teachany-subject" content="chinese">
+<meta name="teachany-domain" content="literacy">
+<meta name="teachany-grade" content="3">
+<meta name="teachany-difficulty" content="2">
+<meta name="teachany-version" content="7.21.0">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-author" content="weponusa">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部首识别 - 一年级语文 · 小学 · 语文 · G3 · TeachAny v7.12</title>
+<style>
+:root{--bg:#fffbf0;--primary:#ff6b6b;--secondary:#4ecdc4;--accent:#ffe66d;--card:#fff;--ink:#1a1a2e;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);font-family:'楷体','KaiTi','STKaiti',serif;color:var(--ink);overflow-x:hidden;}
+
+/* HERO */
+#hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#fce4ec,#f8bbd0,#f48fb1);position:relative;overflow:hidden;}
+#hero h1{font-size:clamp(2.5rem,8vw,4.5rem);color:#c62828;text-shadow:3px 3px 0 rgba(0,0,0,.1);}
+#hero .subtitle{font-size:1.3rem;color:#e53935;margin-bottom:2rem;}
+.grade-badge{background:var(--accent);color:var(--ink);padding:.4rem 1.2rem;border-radius:20px;font-size:1rem;font-weight:bold;margin-bottom:1.5rem;}
+.btn-start{background:var(--primary);color:#fff;border:none;padding:1rem 3rem;font-size:1.3rem;
+  border-radius:50px;cursor:pointer;box-shadow:0 6px 20px rgba(255,107,107,.4);transition:all .3s;font-family:inherit;}
+.btn-start:hover{transform:translateY(-3px);}
+.float-radical{position:absolute;font-size:4rem;opacity:.1;animation:fr 5s ease-in-out infinite;}
+@keyframes fr{0%,100%{transform:translateY(0);}50%{transform:translateY(-15px);}}
+
+/* PROGRESS */
+#progress-bar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.92);
+  backdrop-filter:blur(10px);padding:.5rem 1.5rem;display:flex;align-items:center;gap:1rem;
+  box-shadow:0 2px 10px rgba(0,0,0,.1);}
+.progress-track{flex:1;height:8px;background:#eee;border-radius:4px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:4px;transition:width .5s;}
+
+/* SECTIONS */
+section, .ta-flat{min-height:100vh;padding:80px 20px 40px;max-width:950px;margin:0 auto;}
+.section-title{font-size:2rem;color:var(--primary);margin-bottom:1.5rem;text-align:center;}
+.section-title::after{content:'';display:block;width:60px;height:4px;background:var(--accent);margin:.5rem auto 0;border-radius:2px;}
+nav.snav{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;}
+nav.snav button{background:#fff;border:2px solid #eee;padding:.5rem 1.2rem;border-radius:20px;
+  cursor:pointer;font-family:inherit;transition:all .2s;}
+nav.snav button:hover{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+/* RADICAL CARDS */
+.radical-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1.2rem;margin-bottom:1.5rem;}
+.radical-card{background:var(--card);border-radius:20px;padding:1.5rem;text-align:center;cursor:pointer;
+  box-shadow:0 4px 15px rgba(0,0,0,.08);border:3px solid transparent;transition:all .3s;position:relative;overflow:hidden;}
+.radical-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:20px 20px 0 0;}
+.radical-card.r-water::before{background:#2196f3;}
+.radical-card.r-fire::before{background:#f44336;}
+.radical-card.r-wood::before{background:#4caf50;}
+.radical-card.r-person::before{background:#9c27b0;}
+.radical-card.r-heart::before{background:#e91e63;}
+.radical-card.r-mouth::before{background:#ff9800;}
+.radical-card.r-sun::before{background:#ffc107;}
+.radical-card.r-earth::before{background:#795548;}
+.radical-card:hover,.radical-card.active{border-color:var(--primary);transform:translateY(-4px);box-shadow:0 8px 25px rgba(0,0,0,.15);}
+.radical-char{font-size:3.5rem;margin-bottom:.5rem;line-height:1;}
+.radical-name{font-size:1.1rem;font-weight:bold;color:var(--ink);margin-bottom:.2rem;}
+.radical-meaning{font-size:.8rem;color:#888;}
+.radical-count{position:absolute;top:8px;right:8px;background:var(--accent);border-radius:50%;
+  width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:bold;}
+
+/* DETAIL PANEL */
+.detail-panel{background:var(--card);border-radius:20px;padding:2rem;box-shadow:0 6px 25px rgba(0,0,0,.12);margin-bottom:1.5rem;}
+.detail-header{display:flex;gap:1.5rem;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;}
+.detail-char-big{font-size:6rem;color:var(--primary);line-height:1;}
+.detail-info h2{font-size:1.6rem;color:var(--ink);margin-bottom:.4rem;}
+.detail-info p{font-size:.95rem;color:#666;line-height:1.6;}
+.detail-examples{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:.8rem;margin-top:1rem;}
+.example-word{background:#f5f5f5;border-radius:12px;padding:.8rem;text-align:center;cursor:pointer;
+  transition:all .2s;border:2px solid transparent;}
+.example-word:hover{background:var(--accent);border-color:var(--primary);}
+.example-word .word-char{font-size:1.8rem;color:var(--ink);}
+.example-word .word-meaning{font-size:.75rem;color:#888;margin-top:.2rem;}
+.example-word .radical-highlight{color:var(--primary);font-weight:bold;}
+
+/* MATCHING GAME */
+.match-game{background:var(--card);border-radius:20px;padding:2rem;box-shadow:0 6px 25px rgba(0,0,0,.12);}
+.match-instructions{font-size:1rem;color:#666;text-align:center;margin-bottom:1.5rem;}
+.match-columns{display:grid;grid-template-columns:1fr 1fr;gap:2rem;}
+.match-col{display:flex;flex-direction:column;gap:.8rem;}
+.match-col-title{text-align:center;font-size:1rem;color:var(--secondary);margin-bottom:.5rem;font-weight:bold;}
+.match-item{background:#f5f5f5;border:2px solid #eee;border-radius:12px;padding:.8rem 1rem;
+  text-align:center;cursor:pointer;transition:all .2s;user-select:none;}
+.match-item:hover{border-color:var(--secondary);}
+.match-item.selected{background:var(--accent);border-color:var(--primary);}
+.match-item.matched-ok{background:#c8f7c5;border-color:#4caf50;}
+.match-item.matched-no{background:#ffd7d7;border-color:#f44;}
+.match-item .mi-char{font-size:2rem;margin-bottom:.2rem;}
+.match-item .mi-label{font-size:.8rem;color:#666;}
+.match-score{text-align:center;margin-top:1rem;font-size:1.1rem;color:var(--primary);}
+
+/* FLASH CARDS */
+.flashcard-wrap{perspective:600px;width:200px;height:200px;margin:0 auto;cursor:pointer;}
+.flashcard{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .6s;}
+.flashcard.flipped{transform:rotateY(180deg);}
+.flashcard-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:20px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:0 8px 25px rgba(0,0,0,.15);}
+.flashcard-front{background:linear-gradient(135deg,var(--primary),#e53935);color:#fff;}
+.flashcard-back{background:linear-gradient(135deg,var(--secondary),#26a69a);color:#fff;transform:rotateY(180deg);}
+.flashcard-face .fc-char{font-size:5rem;margin-bottom:.5rem;}
+.flashcard-face .fc-hint{font-size:.9rem;opacity:.8;}
+.flashcard-face .fc-meaning{font-size:1.2rem;font-weight:bold;}
+.fc-nav{display:flex;gap:1rem;justify-content:center;margin-top:1rem;}
+
+/* FIND RADICAL */
+.find-game{background:var(--card);border-radius:20px;padding:2rem;box-shadow:0 6px 25px rgba(0,0,0,.12);}
+.find-question{font-size:1.1rem;color:var(--ink);margin-bottom:1rem;text-align:center;}
+.find-chars{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin:1.5rem 0;}
+.find-char-item{background:#f5f5f5;border:3px solid transparent;border-radius:16px;padding:1rem 1.5rem;
+  font-size:2.5rem;cursor:pointer;transition:all .2s;}
+.find-char-item:hover{border-color:var(--secondary);}
+.find-char-item.correct-pick{border-color:#4caf50;background:#c8f7c5;animation:correct .4s ease;}
+.find-char-item.wrong-pick{border-color:#f44;background:#ffd7d7;animation:wrong .4s ease;}
+@keyframes correct{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
+@keyframes wrong{0%,100%{transform:scale(1);}25%,75%{transform:translateX(-5px);}50%{transform:translateX(5px);}}
+.find-progress{display:flex;gap:4px;justify-content:center;margin:1rem 0;}
+.find-dot{width:12px;height:12px;border-radius:50%;background:#eee;}
+.find-dot.done{background:var(--secondary);}
+.find-dot.current{background:var(--primary);}
+
+/* LEVEL HEADER */
+.level-header{background:linear-gradient(135deg,var(--primary),#c62828);color:#fff;
+  border-radius:16px 16px 0 0;padding:1rem 1.5rem;display:flex;align-items:center;gap:.8rem;}
+.level-num{background:rgba(255,255,255,.3);border-radius:50%;width:36px;height:36px;
+  display:flex;align-items:center;justify-content:center;font-weight:bold;}
+.level-body{background:var(--card);border-radius:0 0 16px 16px;padding:1.5rem;
+  box-shadow:0 6px 20px rgba(0,0,0,.1);margin-bottom:2rem;}
+.ctrl-btn{background:#fff;border:2px solid var(--secondary);color:var(--secondary);padding:.5rem 1.2rem;
+  border-radius:20px;cursor:pointer;font-family:inherit;transition:all .2s;}
+.ctrl-btn:hover{background:var(--secondary);color:#fff;}
+.ctrl-btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+
+/* BOSS */
+#boss-section{background:linear-gradient(135deg,#4a148c,#7b1fa2);}
+#boss-section .section-title{color:#ffe66d;}
+.boss-box{background:rgba(255,255,255,.08);border-radius:20px;padding:2rem;border:2px solid rgba(255,230,110,.3);}
+.timer-bar{height:8px;background:rgba(255,255,255,.2);border-radius:4px;overflow:hidden;margin:1rem 0;}
+.timer-fill{height:100%;background:linear-gradient(90deg,#4ecdc4,#ffe66d);transition:width .1s linear;}
+.boss-q-char{font-size:5rem;color:#ffe66d;text-align:center;text-shadow:0 0 20px rgba(255,230,110,.5);margin:1rem 0;}
+.boss-opts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.8rem;max-width:400px;margin:0 auto;}
+.boss-opt{background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;
+  padding:.8rem;border-radius:12px;cursor:pointer;font-size:1.5rem;transition:all .2s;font-family:inherit;}
+.boss-opt:hover{background:rgba(255,255,255,.25);}
+.boss-opt.b-ok{background:rgba(100,200,100,.4);border-color:#4caf50;}
+.boss-opt.b-no{background:rgba(255,100,100,.3);border-color:#f44;}
+#boss-section .ctrl-btn{border-color:#ffe66d;color:#ffe66d;}
+#boss-section .ctrl-btn:hover{background:#ffe66d;color:#4a148c;}
+
+/* SCORECARD */
+#scorecard{background:linear-gradient(135deg,#e8f5e9,#c8e6c9);}
+.big-score{font-size:5rem;color:var(--primary);font-weight:bold;text-align:center;}
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin:2rem 0;}
+.ach-card{background:#fff;border-radius:16px;padding:1.2rem;text-align:center;
+  box-shadow:0 4px 12px rgba(0,0,0,.08);border:2px solid #eee;}
+.ach-card.unlocked{border-color:#ffe66d;}
+.ach-card.locked{opacity:.4;filter:grayscale(1);}
+
+/* AI BUDDY */
+#ai-buddy{position:fixed;bottom:20px;right:20px;z-index:200;}
+.buddy-btn{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#f48fb1,#e91e63);
+  border:none;font-size:1.8rem;cursor:pointer;box-shadow:0 4px 15px rgba(233,30,99,.4);transition:transform .2s;}
+.buddy-btn:hover{transform:scale(1.1);}
+.buddy-chat{position:absolute;bottom:70px;right:0;width:250px;background:#fff;
+  border-radius:16px;padding:1rem;box-shadow:0 8px 30px rgba(0,0,0,.15);display:none;}
+.buddy-chat.open{display:block;animation:su .3s ease;}
+@keyframes su{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.buddy-tip-list{list-style:none;margin-top:.5rem;}
+.buddy-tip-list li{font-size:.8rem;color:#555;padding:.3rem 0;border-bottom:1px solid #f5f5f5;}
+.buddy-tip-list li:last-child{border:none;}
+.buddy-tip-list li::before{content:'💡 ';}
+
+#toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-100px);
+  background:linear-gradient(135deg,#ff6b6b,#e53935);color:#fff;padding:.8rem 2rem;
+  border-radius:50px;z-index:300;transition:transform .4s;white-space:nowrap;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;
+  justify-content:center;z-index:400;padding:20px;}
+.modal.open{display:flex;}
+.modal-box{background:#fff;border-radius:24px;padding:2rem;max-width:380px;width:100%;
+  text-align:center;animation:popIn .3s ease;}
+@keyframes popIn{from{transform:scale(.8);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal-btn{background:var(--primary);color:#fff;border:none;padding:.8rem 2rem;border-radius:50px;font-size:1rem;cursor:pointer;font-family:inherit;}
+
+.xp-display{font-size:.9rem;color:#666;}
+.stars-display{font-size:1.1rem;}
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+</style>
+<meta name="teachany-prerequisites" content="literacy">
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+
+
+<style id="chne-depth-css">
+.chne-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.chne-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.24)}
+.chne-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.chne-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.chne-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.chne-depth .chne-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.chne-depth .chne-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+.chne-depth .chne-canvas{width:100%;max-width:560px;height:auto;background:#0b1628;border:1px solid rgba(148,163,184,.28);border-radius:12px;display:block;margin:8px auto 0}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+</head>
+<body>
+<nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;;color:#334155""><a href="#progress-bar">📑 知识图谱</a><a href="#prog-fill">🤝 AI 学伴</a><a href="#xp-disp">📚 课程内容</a></nav>
+
+
+<!-- teachany-hero-notext -->
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<div id="progress-bar" style="display:none;">
+  <span>🌟</span>
+  <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  <div class="xp-display" id="xp-disp">XP: 0</div>
+  <div class="stars-display" id="stars-disp">⭐⭐⭐⭐⭐</div>
+</div>
+
+<!-- HERO -->
+
+<p>🌍 <strong>And（已知）</strong>：我们已经有了一定的基础知识</p>
+  <p>⚡ <strong>But（问题）</strong>：但还有一个重要概念需要深入理解</p>
+  <p>💡 <strong>Therefore（新知）</strong>：因此通过本节课的学习，我们将掌握新知识并能灵活运用</p>
+
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（放在 pretest 之后，课件顶部可见） -->
+
+<script>
+function checkPretest() {
+
+  var sel0 = document.querySelector('input[name="pretest_q0"]:checked');
+  var fb0 = document.querySelector('.pretest-feedback-0');
+  if (sel0) {
+    fb0.style.display = 'block';
+    if (parseInt(sel0.value) === 1) {
+      fb0.style.background = '#d3f9d8'; fb0.style.color = '#2b8a3e';
+      fb0.textContent = '✅ 很好！你已经有了正确的认识，继续加油！';
+    } else {
+      fb0.style.background = '#fff3bf'; fb0.style.color = '#e67700';
+      fb0.textContent = '💡 这是个常见误区，学完本节课你会有新的理解！';
+    }
+  }
+  var sel1 = document.querySelector('input[name="pretest_q1"]:checked');
+  var fb1 = document.querySelector('.pretest-feedback-1');
+  if (sel1) {
+    fb1.style.display = 'block';
+    if (parseInt(sel1.value) === 2) {
+      fb1.style.background = '#d3f9d8'; fb1.style.color = '#2b8a3e';
+      fb1.textContent = '✅ 很好！你已经有了正确的认识，继续加油！';
+    } else {
+      fb1.style.background = '#fff3bf'; fb1.style.color = '#e67700';
+      fb1.textContent = '💡 这是个常见误区，学完本节课你会有新的理解！';
+    }
+  }
+}
+</script>
+
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/chn-e-radical-recognition-hero.png" alt="部首识别知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">部首识别</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+
+<!-- OBJECTIVES -->
+<section data-scaffold="full" data-bloom-level="apply" id="objectives" style="display:none;" data-slot="10">
+  <h2 class="section-title">学习目标</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+    <div style="background:#fff;border-radius:16px;padding:1.5rem;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.08);border-top:4px solid #2196f3;">
+      <div style="font-size:3rem;margin-bottom:.8rem;">🔍</div><h3>认识部首</h3>
+      <p style="font-size:.85rem;color:#666;margin-top:.3rem;">认识8种常见部首，了解含义</p>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:1.5rem;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.08);border-top:4px solid #4caf50;">
+      <div style="font-size:3rem;margin-bottom:.8rem;">🃏</div><h3>图文配对</h3>
+      <p style="font-size:.85rem;color:#666;margin-top:.3rem;">通过图片理解部首的含义</p>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:1.5rem;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.08);border-top:4px solid #ff9800;">
+      <div style="font-size:3rem;margin-bottom:.8rem;">🎯</div><h3>找部首</h3>
+      <p style="font-size:.85rem;color:#666;margin-top:.3rem;">在汉字中准确识别部首位置</p>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:1.5rem;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.08);border-top:4px solid #9c27b0;">
+      <div style="font-size:3rem;margin-bottom:.8rem;">📖</div><h3>扩展字族</h3>
+      <p style="font-size:.85rem;color:#666;margin-top:.3rem;">记住每个部首下的常用汉字</p>
+    </div>
+  </div>
+  <nav class="snav"><button onclick="goSection('warmup')">热身活动 →</button></nav>
+</section>
+
+<!-- WARMUP -->
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么‘河’和‘湖’都有三点水？</p></div><div class="tu-q"><p>❓ 三点水的字都和水有关吗？</p></div><div class="tu-q"><p>❓ 怎么记住带三点水的字？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+
+<section data-scaffold="partial" data-bloom-level="remember" id="pretest" style="display:none;" data-slot="20">
+  <h2 class="section-title">认识部首大家族</h2>
+  <p style="text-align:center;color:#666;margin-bottom:1.5rem;">点击部首卡片，了解它的故事 👇</p>
+  <div class="radical-grid">
+    <div class="radical-card r-water" onclick="showRadicalDetail('water')">
+      <div class="radical-count">10+</div>
+      <div class="radical-char">氵</div>
+      <div class="radical-name">三点水</div>
+      <div class="radical-meaning">与水有关</div>
+    </div>
+    <div class="radical-card r-fire" onclick="showRadicalDetail('fire')">
+      <div class="radical-count">8+</div>
+      <div class="radical-char">火</div>
+      <div class="radical-name">火字旁</div>
+      <div class="radical-meaning">与火有关</div>
+    </div>
+    <div class="radical-card r-wood" onclick="showRadicalDetail('wood')">
+      <div class="radical-count">12+</div>
+      <div class="radical-char">木</div>
+      <div class="radical-name">木字旁</div>
+      <div class="radical-meaning">与树木有关</div>
+    </div>
+    <div class="radical-card r-person" onclick="showRadicalDetail('person')">
+      <div class="radical-count">15+</div>
+      <div class="radical-char">亻</div>
+      <div class="radical-name">单人旁</div>
+      <div class="radical-meaning">与人有关</div>
+    </div>
+    <div class="radical-card r-heart" onclick="showRadicalDetail('heart')">
+      <div class="radical-count">10+</div>
+      <div class="radical-char">忄</div>
+      <div class="radical-name">竖心旁</div>
+      <div class="radical-meaning">与心情有关</div>
+    </div>
+    <div class="radical-card r-mouth" onclick="showRadicalDetail('mouth')">
+      <div class="radical-count">12+</div>
+      <div class="radical-char">口</div>
+      <div class="radical-name">口字旁</div>
+      <div class="radical-meaning">与嘴巴有关</div>
+    </div>
+    <div class="radical-card r-sun" onclick="showRadicalDetail('sun')">
+      <div class="radical-count">8+</div>
+      <div class="radical-char">日</div>
+      <div class="radical-name">日字旁</div>
+      <div class="radical-meaning">与太阳有关</div>
+    </div>
+    <div class="radical-card r-earth" onclick="showRadicalDetail('earth')">
+      <div class="radical-count">10+</div>
+      <div class="radical-char">土</div>
+      <div class="radical-name">土字旁</div>
+      <div class="radical-meaning">与土地有关</div>
+    </div>
+  </div>
+  <div id="radical-detail-panel" style="display:none;">
+    <div class="detail-panel">
+      <div class="detail-header">
+        <div class="detail-char-big" id="dp-char">氵</div>
+        <div class="detail-info">
+          <h2 id="dp-name">三点水</h2>
+          <p id="dp-origin">起源说明</p>
+          <p id="dp-meaning">含义解释</p>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:.95rem;color:#888;margin-bottom:.8rem;">📚 认识这些字：</div>
+        <div class="detail-examples" id="dp-examples"></div>
+      </div>
+    </div>
+  </div>
+  <nav class="snav"><button onclick="goSection('level1')">第一关：认识 →</button></nav>
+</section>
+
+<!-- LEVEL 1: Flashcards -->
+
+<section class="section ta-diagram-section" data-tts>
+  <figure class="ta-standard-figure">
+    <img src="./assets/knowledge-map.svg" alt="部首识别 - 一年级语文 知识结构图：本课模块与要点关系" loading="lazy" style="width:100%;height:auto;border-radius:16px">
+    <figcaption>部首识别 - 一年级语文 · 知识结构图：把本课各模块与要点放在一张图上对照</figcaption>
+  </figure>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 部首是什么</h2><div class="tu-q"><p><strong>And：</strong>学生已经认识一些简单汉字</p><p><strong>But：</strong>不知道汉字偏旁有规律</p><p><strong>Therefore：</strong>明白部首是汉字的'分类标签'</p></div><div class="tu-q"><p>部首就像汉字的'小队长'，帮我们把汉字分类。比如'河'字左边的'氵'叫三点水部首，所有带这个部首的字都和水有关。我们学过的'海''湖''江'都有它！现在汉字字典里有201个部首，就像201个不同的小队长。</p></div><div class="tu-q"><p>🌍 超市里饮料区会有'氵'标志，看到这个就知道是卖水的地方啦！妈妈买的矿泉水瓶子上也有'氵'呢。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下面哪个字有'氵'部首？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="记住：三点水像小水滴，要找左边有三点的">A.河</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="记住：三点水像小水滴，要找左边有三点的">B.可</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="记住：三点水像小水滴，要找左边有三点的">C.丁</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="记住：三点水像小水滴，要找左边有三点的">D.力</button></div><div class="tu-fb" hidden></div></div></section>
+<section id="boss-section" style="display:none;" data-slot="35">
+  <h2 class="section-title">⚔️ Boss关：部首大考验</h2>
+  <div class="boss-box">
+    <p style="color:#ccc;text-align:center;margin-bottom:1rem;">看汉字，选正确的部首！50秒内尽量多答题！</p>
+    <div class="timer-bar"><div class="timer-fill" id="boss-tf" style="width:100%"></div></div>
+    <div id="boss-time-d" style="color:#ffe66d;text-align:center;margin-bottom:1rem;">50秒</div>
+    <div id="boss-q-char" class="boss-q-char">—</div>
+    <p style="color:#aaa;text-align:center;margin-bottom:1rem;" id="boss-q-ask">这个字的部首是？</p>
+    <div class="boss-opts-grid" id="boss-opts-grid"></div>
+    <div style="color:#ffe66d;text-align:center;margin-top:1rem;font-size:1rem;">
+      ✅ <span id="boss-ok">0</span> &nbsp;❌ <span id="boss-no">0</span>
+    </div>
+    <div style="text-align:center;margin-top:1.5rem;">
+      <button class="ctrl-btn" onclick="startBoss()">🚀 开始挑战</button>
+    </div>
+  </div>
+  <nav class="snav"><button onclick="goSection('scorecard')">查看成绩 →</button></nav>
+</section>
+
+<!-- SCORECARD -->
+<section id="scorecard" style="display:none;">
+  <h2 class="section-title">🏆 成绩单</h2>
+  <div class="big-score" id="final-score">0</div>
+  <div style="text-align:center;margin-bottom:2rem;color:#666;font-size:1.2rem;">总分</div>
+  <div style="text-align:center;font-size:2rem;margin-bottom:1rem;" id="final-stars">⭐⭐⭐</div>
+  <div class="ach-grid" id="ach-grid"></div>
+  <div style="text-align:center;margin-top:1.5rem;">
+    <button class="btn-start" onclick="goSection('extension')" style="font-size:1rem;padding:.8rem 2rem;">继续学习 →</button>
+  </div>
+</section>
+
+<!-- EXTENSION -->
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 部首变形探秘</h2><p>观察'心(忄)、火(灬)、手(扌)'等部首的不同形态</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="同一部首在不同位置可能有不同写法"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="对比'情(忄)-想(心)'、'热(灬)-炎(火)'等字"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="部首位置影响形体变化"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.88);color:inherit}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#2563eb;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#2563eb}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section chne-depth core-knowledge-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>部首识别：快速找到查字入口</h2>
+      <p>用部首查字法必须先正确判断一个字的部首。有的部首在左边，有的在上、下或外围。练会识别部首，查字典才快得起来。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>部首识别方法示意图：展示左右、上下、包围三种字形结构的部首位置规律</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar-s2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="arBlue" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#60a5fa"/></marker><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.3" opacity="0.3"/></pattern></defs><rect width="640" height="420" fill="#0a1520"/><rect width="640" height="420" fill="url(#grid)"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="320" y="45" text-anchor="middle" font-size="16" font-weight="bold" fill="#fbbf24">部首识别方法 - 快速定位查字入口<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><rect x="50" y="70" width="180" height="120" rx="10" fill="url(#blueGrad-s2)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="140" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">左右结构<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="90" y="115" font-size="24" font-weight="bold" fill="#e2e8f0">木<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><text x="140" y="115" font-size="24" font-weight="bold" fill="#7dd3fc">林<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><text x="90" y="140" font-size="24" font-weight="bold" fill="#e2e8f0">氵<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><text x="140" y="140" font-size="24" font-weight="bold" fill="#7dd3fc">河<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><text x="140" y="165" text-anchor="middle" font-size="12" fill="#e2e8f0">部首在左边<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><rect x="270" y="70" width="180" height="120" rx="10" fill="url(#orangeGrad-s2)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></rect><text x="360" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">上下结构<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><text x="360" y="115" font-size="24" font-weight="bold" fill="#7dd3fc">花<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><text x="340" y="135" font-size="18" fill="#e2e8f0">艹<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><text x="380" y="135" font-size="18" fill="#94a3b8">化<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></text><text x="360" y="165" text-anchor="middle" font-size="12" fill="#e2e8f0">部首在上面<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><rect x="480" y="70" width="130" height="120" rx="10" fill="url(#greenGrad-s2)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></rect><text x="545" y="90" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">包围结构<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><text x="545" y="120" font-size="24" font-weight="bold" fill="#7dd3fc">国<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></text><text x="545" y="145" text-anchor="middle" font-size="12" fill="#e2e8f0">囗(外围)<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></text><text x="545" y="165" text-anchor="middle" font-size="12" fill="#e2e8f0">部首在外围<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></text><rect x="80" y="220" width="480" height="80" rx="12" fill="url(#purpleGrad-s2)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></rect><text x="320" y="245" text-anchor="middle" font-size="15" font-weight="bold" fill="#fbbf24">部首识别流程<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></text><circle cx="120" cy="270" r="8" fill="url(#blueGrad-s2)" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></circle><text x="140" y="275" font-size="12" fill="#e2e8f0">1.观察字形<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></text><circle cx="240" cy="270" r="8" fill="url(#orangeGrad-s2)" stroke="#fb923c" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></circle><text x="260" y="275" font-size="12" fill="#e2e8f0">2.判断结构<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></text><circle cx="360" cy="270" r="8" fill="url(#greenGrad-s2)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></circle><text x="380" y="275" font-size="12" fill="#e2e8f0">3.找出部首<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></text><circle cx="480" cy="270" r="8" fill="url(#redGrad-s2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></circle><text x="500" y="275" font-size="12" fill="#e2e8f0">4.快速查找<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></text><path d="M 130 270 Q 180 250 230 270" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#arBlue)" stroke-dasharray="6 4"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.5s" repeatCount="indefinite" begin="4.5s"/></path><path d="M 250 270 Q 300 250 350 270" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#arBlue)" stroke-dasharray="6 4"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.5s" repeatCount="indefinite" begin="4.7s"/></path><path d="M 370 270 Q 420 250 470 270" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#arBlue)" stroke-dasharray="6 4"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.5s" repeatCount="indefinite" begin="4.9s"/></path><rect x="100" y="330" width="440" height="60" rx="8" fill="url(#redGrad-s2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></rect><text x="320" y="350" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">记忆口诀<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.25s" fill="freeze"/></text><text x="320" y="370" text-anchor="middle" font-size="13" fill="#e2e8f0">左右结构看左边，上下结构看上面<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></text><text x="320" y="385" text-anchor="middle" font-size="13" fill="#e2e8f0">包围结构看外围，独体字就是本身<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.55s" fill="freeze"/></text><line x1="90" y1="200" x2="90" y2="210" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.7s" fill="freeze"/></line><circle cx="90" cy="215" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.85s" fill="freeze"/></circle><line x1="340" y1="200" x2="340" y2="210" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6s" fill="freeze"/></line><circle cx="340" cy="215" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.15s" fill="freeze"/></circle><line x1="520" y1="200" x2="520" y2="210" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.3s" fill="freeze"/></line><circle cx="520" cy="215" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.45s" fill="freeze"/></circle><rect x="480" y="320" width="140" height="80" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.6s" fill="freeze"/></rect><text x="490" y="335" font-size="12" font-weight="bold" fill="#fbbf24">图例说明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.75s" fill="freeze"/></text><rect x="490" y="345" width="12" height="8" fill="url(#blueGrad-s2)"/><text x="508" y="352" font-size="10" fill="#e2e8f0">左右结构<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.9s" fill="freeze"/></text><rect x="490" y="358" width="12" height="8" fill="url(#orangeGrad-s2)"/><text x="508" y="365" font-size="10" fill="#e2e8f0">上下结构<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.05s" fill="freeze"/></text><rect x="490" y="371" width="12" height="8" fill="url(#greenGrad-s2)"/><text x="508" y="378" font-size="10" fill="#e2e8f0">包围结构<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.2s" fill="freeze"/></text><rect x="490" y="384" width="12" height="8" fill="url(#purpleGrad-s2)"/><text x="508" y="391" font-size="10" fill="#e2e8f0">识别流程<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.35s" fill="freeze"/></text><circle cx="90" cy="115" r="15" fill="none" stroke="#ef4444" stroke-width="2" opacity="0.8"><animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite" begin="7.5s"/></circle><circle cx="340" cy="135" r="15" fill="none" stroke="#ef4444" stroke-width="2" opacity="0.8"><animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite" begin="7.7s"/></circle><rect x="530" y="105" width="30" height="30" fill="none" stroke="#ef4444" stroke-width="2" opacity="0.8"><animate attributeName="opacity" values="0.8;0.3;0.8" dur="2s" repeatCount="indefinite" begin="7.9s"/></rect></svg></figure>
+
+</div>
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="方法范例" data-slot="35">
+  <section class="section chne-depth core-knowledge-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：看位置、想常见部、核对目录</h2>
+      <p>先观察汉字哪一部分像常见部首，优先考虑左边、上边或包围部分。拿不准就翻部首目录比对。剩余笔画要数准，才能准确定位。</p>
+      <div class="worked-example"><strong>范例：</strong>“打”查提手旁，“花”查草字头，“园”查大口框。找对部首，再数剩下笔画即可。</div>
+      <p id="lesson-pitfall" class="chne-pitfall"><strong>常见误区：</strong>常见误区是把声旁当部首，或剩余笔画数错。应熟悉常用部首位置和写法。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>用部首查字法，第一步通常是？</p>
+        <button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;部首查字法首先要确定部首。&quot;)">A. 直接猜页码</button><button type="button" data-correct="1" onclick="chneDepthCheck(this,true,&#x27;chne-depth-feedback&#x27;,&quot;部首查字法首先要确定部首。&quot;)">B. 确定这个字的部首</button><button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;部首查字法首先要确定部首。&quot;)">C. 只数总笔画不管部首</button><button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;部首查字法首先要确定部首。&quot;)">D. 丢掉字典</button>
+        <div class="chne-feedback" id="chne-depth-feedback" role="status"></div>
+      </div>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>部首识别三步法机制分解图：观察位置→核对目录→数剩余笔画</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient></defs><rect width="640" height="420" fill="#0a1520"/><rect x="20" y="20" width="600" height="380" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><g opacity="0.15"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="140" x2="620" y2="140" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="200" x2="620" y2="200" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="260" x2="620" y2="260" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155" stroke-width="0.5"/></g><text x="320" y="50" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">部首识别三步法机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></text><rect x="50" y="70" width="140" height="80" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="120" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第一步<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></text><text x="120" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">观察位置<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="120" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">找部首<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><rect x="250" y="70" width="140" height="80" rx="10" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="320" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第二步<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><text x="320" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">核对目录<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><text x="320" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">确认部首<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><rect x="450" y="70" width="140" height="80" rx="10" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></rect><text x="520" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">第三步<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><text x="520" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">数剩余笔画<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><text x="520" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">准确定位<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><path d="M190 110 Q220 110 250 110" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></path><path d="M390 110 Q420 110 450 110" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></path><rect x="60" y="180" width="180" height="120" rx="8" fill="url(#purpleGrad)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></rect><text x="150" y="205" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">位置优先原则<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><circle cx="90" cy="225" r="5" fill="#34d399" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="3s"/></circle><text x="105" y="230" fill="#e2e8f0" font-size="12">左边部首<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></text><circle cx="90" cy="245" r="5" fill="#34d399" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="3.15s"/></circle><text x="105" y="250" fill="#e2e8f0" font-size="12">上边部首<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><circle cx="90" cy="265" r="5" fill="#34d399" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="3.3s"/></circle><text x="105" y="270" fill="#e2e8f0" font-size="12">包围部首<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><rect x="280" y="180" width="280" height="120" rx="8" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></rect><text x="420" y="205" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">实例分析<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><rect x="300" y="215" width="60" height="25" rx="5" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></rect><text x="330" y="232" text-anchor="middle" fill="#7dd3fc" font-size="18" font-weight="bold">打<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><text x="380" y="232" fill="#e2e8f0" font-size="12">→ 提手旁<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></text><rect x="300" y="245" width="60" height="25" rx="5" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></rect><text x="330" y="262" text-anchor="middle" fill="#7dd3fc" font-size="18" font-weight="bold">花<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></text><text x="380" y="262" fill="#e2e8f0" font-size="12">→ 草字头<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></text><rect x="300" y="275" width="60" height="25" rx="5" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></rect><text x="330" y="292" text-anchor="middle" fill="#7dd3fc" font-size="18" font-weight="bold">园<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></text><text x="380" y="292" fill="#e2e8f0" font-size="12">→ 大口框<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.95s" fill="freeze"/></text><rect x="80" y="330" width="200" height="60" rx="8" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></rect><text x="180" y="350" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">常见误区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.25s" fill="freeze"/></text><text x="180" y="370" text-anchor="middle" fill="#e2e8f0" font-size="12">声旁当部首 / 笔画数错<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></text><rect x="320" y="330" width="220" height="60" rx="8" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.55s" fill="freeze"/></rect><text x="430" y="350" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">练习题<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.7s" fill="freeze"/></text><text x="430" y="370" text-anchor="middle" fill="#e2e8f0" font-size="12">第一步通常是？ → B.确定部首<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.85s" fill="freeze"/></text><line x1="120" y1="150" x2="120" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6s" fill="freeze"/></line><circle cx="120" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.15s" fill="freeze"/></circle><line x1="420" y1="300" x2="420" y2="330" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.3s" fill="freeze"/></line><circle cx="420" cy="330" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.45s" fill="freeze"/></circle><rect x="560" y="320" width="70" height="80" rx="5" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.6s" fill="freeze"/></rect><text x="595" y="335" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="bold">图例<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.75s" fill="freeze"/></text><rect x="565" y="340" width="8" height="8" fill="#3b82f6" opacity="0.25"><animate attributeName="opacity" from="0" to="0.25" dur="0.5s" begin="6.9s" fill="freeze"/></rect><text x="578" y="348" fill="#e2e8f0" font-size="10">步骤<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.05s" fill="freeze"/></text><rect x="565" y="355" width="8" height="8" fill="#a78bfa" opacity="0.25"><animate attributeName="opacity" from="0" to="0.25" dur="0.5s" begin="7.2s" fill="freeze"/></rect><text x="578" y="363" fill="#e2e8f0" font-size="10">原则<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.35s" fill="freeze"/></text><rect x="565" y="370" width="8" height="8" fill="#ef4444" opacity="0.25"><animate attributeName="opacity" from="0" to="0.25" dur="0.5s" begin="7.5s" fill="freeze"/></rect><text x="578" y="378" fill="#e2e8f0" font-size="10">误区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.65s" fill="freeze"/></text><rect x="565" y="385" width="8" height="8" fill="#f59e0b" opacity="0.25"><animate attributeName="opacity" from="0" to="0.25" dur="0.5s" begin="7.8s" fill="freeze"/></rect><text x="578" y="393" fill="#e2e8f0" font-size="10">练习<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.95s" fill="freeze"/></text></svg></figure>
+
+</div>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 部首藏哪里</h2><div class="tu-q"><p><strong>And：</strong>知道部首存在</p><p><strong>But：</strong>找不到部首位置</p><p><strong>Therefore：</strong>掌握'左偏右旁'规律</p></div><div class="tu-q"><p>80%的部首像害羞的小朋友，喜欢躲在汉字左边。比如'打'字的'扌'提手旁、'饭'字的'饣'食字旁。不过也有调皮的：'剑'字部首在右边是'刂'，'国'字部首在外面是'囗'。记住口诀：'先左后右，找不着再转圈'！</p></div><div class="tu-q"><p>🌍 就像我们排队时矮个子站前面，汉字也把重要的部首放在显眼位置。看教室门牌'三年级2班'，'班'字的'王'旁就在左边哦。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>'们'字的部首在什么位置？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="单人旁'亻'总站在左边，像个小卫兵">A.左边</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="单人旁'亻'总站在左边，像个小卫兵">B.右边</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="单人旁'亻'总站在左边，像个小卫兵">C.上边</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="单人旁'亻'总站在左边，像个小卫兵">D.下边</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 部首变魔术</h2><div class="tu-q"><p><strong>And：</strong>能找到部首位置</p><p><strong>But：</strong>不认识变形部首</p><p><strong>Therefore：</strong>破解部首'变形记'</p></div><div class="tu-q"><p>有些部首会变装！比如'心'字做底会变成'⺗'（竖心旁），'水'字变'氵'，'火'字变'灬'。最厉害的是'手'字，能变成'扌''龵''⺤'三种样子。不过别怕，就像孙悟空七十二变，不管怎么变我们都能认出来！</p></div><div class="tu-q"><p>🌍 就像同学们体育课换运动服，'足'字变成'⻊'（足字旁）时，'跑''跳'这些字都穿着运动服呢！</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>'热'字的'灬'其实是哪个字的变形？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="四点底是'火'的变身，想想热的东西会冒火">A.火</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="四点底是'火'的变身，想想热的东西会冒火">B.水</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="四点底是'火'的变身，想想热的东西会冒火">C.木</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="四点底是'火'的变身，想想热的东西会冒火">D.土</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4" data-slot="55"><h2>📖 部首猜意思</h2><div class="tu-q"><p><strong>And：</strong>认识常见部首</p><p><strong>But：</strong>不会用部首猜字义</p><p><strong>Therefore：</strong>成为汉字小侦探</p></div><div class="tu-q"><p>部首是汉字的'线索密码'！带'艹'的字80%和植物有关（花、草），带'钅'的字90%是金属（铁、铜）。遇到生字别慌，比如'鲈'字有'鱼'部，肯定是种鱼！老师查过，《现代汉语词典》里'女'部的字有681个，大多和女性相关。</p></div><div class="tu-q"><p>🌍 去动物园看到'狮''狼''猫'，发现都有'犭'反犬旁，马上知道它们都是动物！</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>'菠'字可能和什么有关？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="看到'艹'草字头，就像看到小草在招手">A.植物</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="看到'艹'草字头，就像看到小草在招手">B.石头</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="看到'艹'草字头，就像看到小草在招手">C.颜色</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="看到'艹'草字头，就像看到小草在招手">D.动作</button></div><div class="tu-fb" hidden></div></div></section>
+
+<!-- ⭐ v7.7 标准独立连续音频模块 -->
+
+<!-- 课程导览图（互动画布） -->
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>用色块标红偏旁，如‘江’字拆成‘氵+工’</p></div><div class="tu-q"><h3>💡解释它</h3><p>三点水像水滴，多表示与水相关的意义</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>对比‘冫（两点水）’表示低温，如‘冰’‘冷’</p></div><div class="tu-q"><h3>👁️看见它</h3><p>展示水滴动画强化‘氵’的象形特征</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>用‘洗’字联想洗手、洗脸等生活场景</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="A">
+<h3>选择题 1</h3><p>下列哪组字的部首都是'扌'？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="'打扫挂'都含提手旁，表示与手部动作相关">A. 打 扫 挂</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="'休'是'亻'旁">B. 拍 把 休</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="'你'是'亻'旁">C. 拉 推 你</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="'好'是'女'旁">D. 捉 抱 好</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C">
+<h3>选择题 2</h3><p>'初'字的正确部首是：</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="易与'补'等字混淆">A. 衤（衣字旁）</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="示字旁多与祭祀相关">B. 礻（示字旁）</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="'初'由'衣'和'刀'组成，传统归部在'刀'">C. 刀</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="无关联">D. 巾</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A">
+<h3>选择题 3</h3><p>下列部首与'吃'字部首相同的是：</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="'吃、叫'都是'口'字旁">A. 叫</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="'日'旁">B. 明</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="'木'旁">C. 森</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="'爪'旁">D. 采</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>'江、海、泪'的共同部首是____</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>氵</p><p>三点水旁表示与水相关</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>写出含'女'部首的字：____、____（示例：好）</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>妈 妹</p><p>女字旁多与女性相关，其他答案如'姐、姑'也可</p></details></div>
+</section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把‘冫’当作三点水</h3><p>✅ 对比两点水（结冰）和三点水（流动）的汉字</p><p>💡 形近部首混淆</p></div><div class="tu-q"><h3>❌ 认为‘法’‘没’与水有关</h3><p>✅ 特殊记忆：法律像水一样公平，沉‘没’入水</p><p>💡 过度泛化部首表意</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>三点水旁站，江河湖海漫</p><p><strong>类比：</strong>像浇花的水壶，三点水是汉字的小水滴</p></div></section>
+<section id="extension" style="display:none;" data-slot="100">
+  <h2 class="section-title">🌈 拓展：部首大全</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;">
+    <div style="background:#fff;border-radius:16px;padding:1.5rem;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.08);" onclick="showExtR('more')">
+      <div style="font-size:2.5rem;margin-bottom:.8rem;">📚</div>
+      <h3 style="color:var(--primary);">更多部首</h3>
+      <p style="font-size:.85rem;color:#666;">认识更多常见部首</p>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:1.5rem;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.08);" onclick="showExtR('history')">
+      <div style="font-size:2.5rem;margin-bottom:.8rem;">🏺</div>
+      <h3 style="color:var(--primary);">部首演变</h3>
+      <p style="font-size:.85rem;color:#666;">部首从象形到现代的变化</p>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:1.5rem;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.08);" onclick="showExtR('trick')">
+      <div style="font-size:2.5rem;margin-bottom:.8rem;">🧠</div>
+      <h3 style="color:var(--primary);">记忆小窍门</h3>
+      <p style="font-size:.85rem;color:#666;">用联想记忆法学部首</p>
+    </div>
+  </div>
+  <div id="ext-r-box" style="margin-top:2rem;background:#fff;border-radius:16px;padding:1.5rem;display:none;box-shadow:0 4px 12px rgba(0,0,0,.08);"></div>
+</section>
+
+<!-- AI BUDDY -->
+<div id="ai-buddy">
+  <div class="buddy-chat" id="buddy-chat">
+    <div style="font-size:.9rem;"><strong>🐛 小虫说：</strong></div>
+    </div>
+
+<div style="display:grid;gap:12px;">
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #51cf66;">
+      <span style="font-size:11px;color:#1e7e34;font-weight:700;">记忆层</span>
+      <p style="margin-top:6px;font-size:14px;">回忆：今天学了哪些关键词和规则？试着说出来。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #339af0;">
+      <span style="font-size:11px;color:#1971c2;font-weight:700;">理解层</span>
+      <p style="margin-top:6px;font-size:14px;">用自己的话解释今天学的核心概念，不看书能说清楚吗？</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #f59f00;">
+      <span style="font-size:11px;color:#b35900;font-weight:700;">应用层</span>
+      <p style="margin-top:6px;font-size:14px;">用今天的知识解决一个实际问题，或写一个新例子。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #cc5de8;">
+      <span style="font-size:11px;color:#862e9c;font-weight:700;">分析→创造层</span>
+      <p style="margin-top:6px;font-size:14px;">把今天的知识与已有知识联系起来：有什么共同点？有什么区别？能不能自己创造一道新题？</p>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;gap:10px;">
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🎯 本质：</strong><span style="color:#666;font-size:14px;">这个知识的核心是什么？用一句话概括。</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🔗 联系：</strong><span style="color:#666;font-size:14px;">它和你已知的哪些知识有关联？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🌍 应用：</strong><span style="color:#666;font-size:14px;">在生活中，你在哪里见过这个知识？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>❓ 疑问：</strong><span style="color:#666;font-size:14px;">学完之后，你还有什么不明白的地方？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>💡 洞见：</strong><span style="color:#666;font-size:14px;">学完后，你觉得最有意思或最让你惊讶的是什么？</span></div>
+  </div>
+
+
+<!-- TTS 音频 #TeachAny Edge-TTS -->
+<div class="teachany-audio-intro" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
+  <button onclick="document.getElementById('ta-audio').play()"
+    style="background:linear-gradient(135deg,#ff6b6b,#ee5a24);color:#fff;border:none;
+    width:52px;height:52px;border-radius:50%;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 16px rgba(255,107,107,0.4);display:flex;align-items:center;justify-content:center;"
+    title="播放课程介绍">🔊</button>
+  <audio id="ta-audio" src="audio/intro.mp3" preload="auto"></audio>
+</div>
+
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "部首识别 - 一年级语文",
+  subject: "chinese",
+  grade: 3,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴脚本（左下角 FAB · 首次点击引导配置 API） -->
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+
+<!-- teachany-enhanced -->
+
+<!-- teachany-upgrade-v2 -->
+<!-- upgrade topic: 部首识别 -->
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="拓展应用" data-slot="100">
+  <section class="section chne-depth core-knowledge-module" id="lesson-extend"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-extend">
+    <div class="card">
+      <span class="phase-tag" data-variant="success">拓展应用</span>
+      <h2>拓展应用：六十秒找部首</h2>
+      <p>计时一分钟，给十个字写出部首，比准确率。经常练，查字典速度明显提升。</p>
+    </div>
+  </section>
+</div>
+
+<section data-bloom-level="understand" id="level1" style="display:none;" data-slot="115">
+  <div class="level-header">
+    <div class="level-num">1</div>
+    <div><div style="font-size:1.1rem;font-weight:bold;">第一关：记忆卡片</div>
+    <div style="font-size:.85rem;opacity:.8;">翻转卡片，记住部首和含义</div></div>
+    <div style="margin-left:auto;">⭐×25</div>
+  </div>
+  <div class="level-body">
+    <p style="text-align:center;color:#666;margin-bottom:1.5rem;">👆 点击卡片翻转，查看部首含义</p>
+    <div class="flashcard-wrap" onclick="flipCard()">
+      <div class="flashcard" id="flashcard">
+        <div class="flashcard-face flashcard-front">
+          <div class="fc-char" id="fc-front-char">氵</div>
+          <div class="fc-hint">这个部首是什么？</div>
+        </div>
+        <div class="flashcard-face flashcard-back">
+          <div class="fc-char" id="fc-back-char">💧</div>
+          <div class="fc-meaning" id="fc-back-meaning">三点水 = 与水有关</div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;color:#666;font-size:.9rem;margin:1rem 0;" id="fc-counter">第 1 / 8 张</div>
+    <div class="fc-nav">
+      <button class="ctrl-btn" onclick="prevCard()">← 上一张</button>
+      <button class="ctrl-btn primary" onclick="nextCard()">下一张 →</button>
+    </div>
+    <div style="text-align:center;margin-top:1rem;">
+      <button class="ctrl-btn primary" onclick="completeLevel1()">✓ 全部记住了！</button>
+    </div>
+  </div>
+  <nav class="snav"><button onclick="goSection('level2')">第二关：配对 →</button></nav>
+</section>
+
+<!-- LEVEL 2: Matching -->
+<section data-bloom-level="apply" id="level2" style="display:none;" data-slot="115">
+  <div class="level-header" style="background:linear-gradient(135deg,var(--secondary),#26a69a);">
+    <div class="level-num">2</div>
+    <div><div style="font-size:1.1rem;font-weight:bold;">第二关：图文配对</div>
+    <div style="font-size:.85rem;opacity:.8;">将部首与图片意思配对</div></div>
+    <div style="margin-left:auto;">⭐×30</div>
+  </div>
+  <div class="level-body">
+    <div class="match-game">
+      <div class="match-instructions">👆 先点击左边的部首，再点击右边对应的意思</div>
+      <div class="match-columns">
+        <div class="match-col">
+          <div class="match-col-title">部首</div>
+          <div id="left-items"></div>
+        </div>
+        <div class="match-col">
+          <div class="match-col-title">意思</div>
+          <div id="right-items"></div>
+        </div>
+      </div>
+      <div class="match-score">配对正确：<span id="match-count">0</span> / 6</div>
+      <div style="display:flex;gap:.8rem;justify-content:center;margin-top:1rem;">
+        <button class="ctrl-btn" onclick="resetMatch()">↺ 重置</button>
+        <button class="ctrl-btn primary" onclick="completeLevel2()">✓ 完成配对</button>
+      </div>
+    </div>
+  </div>
+  <nav class="snav"><button onclick="goSection('level3')">第三关：找部首 →</button></nav>
+</section>
+
+<!-- LEVEL 3: Find Radical -->
+<section id="level3" style="display:none;" data-slot="115">
+  <div class="level-header" style="background:linear-gradient(135deg,#f4a261,#e76f51);">
+    <div class="level-num">3</div>
+    <div><div style="font-size:1.1rem;font-weight:bold;">第三关：找一找</div>
+    <div style="font-size:.85rem;opacity:.8;">找出含有指定部首的汉字</div></div>
+    <div style="margin-left:auto;">⭐×35</div>
+  </div>
+  <div class="level-body">
+    <div class="find-game">
+      <div class="find-question" id="find-q">找出含有 <b id="find-radical" style="color:var(--primary);font-size:1.5rem;">氵</b> 的字：</div>
+      <div class="find-chars" id="find-chars"></div>
+      <div class="find-progress" id="find-prog"></div>
+      <div style="display:flex;gap:.8rem;justify-content:center;margin-top:1rem;">
+        <button class="ctrl-btn" onclick="nextFindQ()">→ 下一题</button>
+        <button class="ctrl-btn primary" onclick="completeLevel3()">✓ 完成</button>
+      </div>
+    </div>
+  </div>
+  <nav class="snav"><button onclick="goSection('boss-section')">挑战Boss关 →</button></nav>
+</section>
+
+<!-- BOSS -->
+<section class="ta-standard-section" id="teachany-audio-player" data-slot="120">
+  <div data-teachany-audio>
+    <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "sectionId": "anchor",
+    "title": "课程导入：chn-e-radical-recognition",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/chn-e-radical-recognition/enhance-1.mp3"
+  },
+  {
+    "sectionId": "objectives",
+    "title": "讲解 1",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/chn-e-radical-recognition/enhance-2.mp3"
+  },
+  {
+    "sectionId": "module-1",
+    "title": "讲解 2",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/chn-e-radical-recognition/enhance-3.mp3"
+  }
+]
+    </script>
+  </div>
+</section>
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
+  <div data-teachany-tutor-card></div>
+</section>
+
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "chn-e-radical-recognition", "name": "部首识别", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<script id="chne-depth-js">
+function chneDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+(function () {
+  function draw(cv) {
+    var ctx = cv.getContext('2d'); var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
+    // 节奏/停顿示意：把诗句音节画成带停顿的方块
+    var tokens = ['床前', '·', '明月', '·', '光'];
+    var x = 30, y = H / 2;
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillText('朗读节奏示意：床前 / 明月 / 光', W / 2, 30);
+    tokens.forEach(function (t) {
+      if (t === '·') { ctx.fillStyle = '#f472b6'; ctx.fillText('/', x + 12, y + 6); x += 26; return; }
+      ctx.fillStyle = 'rgba(56,189,248,.22)'; ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      var w = 64; ctx.fillRect(x, y - 22, w, 44); ctx.strokeRect(x, y - 22, w, 44);
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText(t, x + w / 2, y + 6); x += w + 8;
+    });
+    ctx.fillStyle = '#94a3b8'; ctx.fillText('“光/霜/乡”押 ang 韵，读来和谐上口', W / 2, H - 20);
+  }
+  function init() { document.querySelectorAll('canvas.chne-canvas').forEach(draw); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+<script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：部首识别</h2><div data-teachany-kg="chn-e-radical-recognition"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+</body>
+</html>

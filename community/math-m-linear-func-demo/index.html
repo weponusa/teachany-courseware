@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="course-id" content="math-m-linear-func-demo">
+<meta name="course-node" content="math-m-linear-function">
+<meta name="course-subject" content="math">
+<meta name="course-title" content="一次函数">
+<meta name="course-prereqs" content="math-m-coordinate-system,math-m-proportional-function">
+<title>一次函数 · 初中数学 G8 · TeachAny v7.9.14</title>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--primary:#3b82f6;--secondary:#06b6d4;--accent:#f59e0b;--text:#1e293b;--text2:#64748b;--border:#e2e8f0;--green:#22c55e;--red:#ef4444}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;line-height:1.75}
+.container{max-width:860px;margin:0 auto;padding:0 16px 80px}
+/* Nav */
+.sticky-nav{position:sticky;top:0;z-index:100;background:rgba(248,250,252,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.sticky-nav a{font-size:13px;color:var(--text2);text-decoration:none;padding:4px 10px;border-radius:20px;transition:all .2s}
+.sticky-nav a:hover,.sticky-nav a.active{background:var(--primary);color:#fff}
+/* Hero */
+.hero{text-align:center;padding:48px 24px 32px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-radius:16px;margin:24px 0 0}
+.hero .tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.tag{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;background:rgba(59,130,246,.1);color:var(--primary)}
+.hero h1{font-size:clamp(28px,5vw,42px);font-weight:800;color:var(--text);margin-bottom:12px}
+.hero p{color:var(--text2);font-size:15px;max-width:560px;margin:0 auto}
+/* Hero figure */
+.hero-figure{margin:24px 0;text-align:center}
+.hero-figure svg{max-width:680px;width:100%;border-radius:12px;background:#1e293b}
+.hero-figure figcaption{font-size:13px;color:var(--text2);margin-top:8px}
+/* Cards */
+.section{margin:32px 0}
+.section h2{font-size:20px;font-weight:700;color:var(--text);margin-bottom:16px;padding-left:12px;border-left:4px solid var(--primary)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card h3{font-size:16px;font-weight:700;margin-bottom:10px;color:var(--text)}
+.card p,.card li{font-size:15px;color:var(--text2);line-height:1.8}
+.card ul{padding-left:20px}
+/* Objectives */
+.obj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.obj-card{background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-radius:12px;padding:16px;border-left:4px solid var(--primary)}
+.obj-card .bloom{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--primary);margin-bottom:6px}
+.obj-card p{font-size:14px;color:var(--text);line-height:1.6}
+/* Pre-test */
+.quiz-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px}
+.quiz-card .question{font-size:15px;font-weight:600;margin-bottom:12px;color:var(--text)}
+.options{display:grid;gap:8px}
+.option{padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;font-size:14px;color:var(--text);background:var(--card)}
+.option:hover{border-color:var(--primary);background:#eff6ff}
+.option.correct{border-color:var(--green);background:#f0fdf4;color:#166534}
+.option.wrong{border-color:var(--red);background:#fef2f2;color:#991b1b}
+/* Canvas area */
+.canvas-wrap{background:#1e293b;border-radius:12px;overflow:hidden;margin:12px 0}
+canvas{display:block;width:100%;touch-action:none}
+.slider-group{display:flex;flex-wrap:wrap;gap:16px;margin:12px 0}
+.slider-item{display:flex;align-items:center;gap:10px;flex:1;min-width:200px}
+.slider-item label{font-size:13px;color:var(--text2);white-space:nowrap;min-width:60px}
+.slider-item input[type=range]{flex:1;accent-color:var(--primary)}
+.slider-item span{font-size:14px;font-weight:700;color:var(--primary);min-width:36px;text-align:right}
+/* Steps */
+.steps{counter-reset:step}
+.step{position:relative;padding:16px 16px 16px 52px;border-left:2px solid var(--primary);margin-bottom:12px}
+.step::before{counter-increment:step;content:counter(step);position:absolute;left:-16px;top:12px;width:30px;height:30px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+/* Error cards */
+.error-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.error-card{background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px}
+.error-card .label{font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px;text-transform:uppercase}
+.error-card .desc{font-size:14px;color:#991b1b;margin-bottom:8px}
+.error-card .fix{font-size:13px;color:#166534;background:#f0fdf4;padding:8px;border-radius:8px}
+/* Tutor card */
+.tutor-card{background:linear-gradient(135deg,#eff6ff,#eef2ff);border:1.5px solid #bfdbfe;border-radius:16px;padding:24px;text-align:center;margin:24px 0}
+.tutor-card h3{font-size:17px;font-weight:700;color:var(--primary);margin-bottom:8px}
+.tutor-card p{font-size:14px;color:var(--text2);margin-bottom:16px}
+.tutor-btns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.tutor-btn{padding:8px 16px;border:1.5px solid var(--primary);border-radius:20px;font-size:13px;color:var(--primary);background:rgba(59,130,246,.08);cursor:pointer;transition:all .2s}
+.tutor-btn:hover{background:var(--primary);color:#fff}
+/* Summary */
+.summary-box{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1.5px solid #86efac;border-radius:14px;padding:20px}
+.summary-box ul{padding-left:20px}
+.summary-box li{font-size:15px;color:#166534;line-height:1.9}
+/* KG */
+#knowledge-graph{background:#1e293b;border-radius:14px;padding:20px;margin:24px 0;min-height:120px;display:flex;align-items:center;justify-content:center}
+#knowledge-graph .kg-placeholder{color:var(--text2);font-size:13px;text-align:center}
+/* Math */
+.math{font-style:italic;font-family:'Times New Roman',serif}
+.formula-block{background:#1e293b;color:#1e293b;padding:14px 18px;border-radius:10px;font-family:'Times New Roman',serif;font-size:16px;margin:10px 0;text-align:center;letter-spacing:.5px}
+.badge-correct{display:inline-block;padding:4px 10px;background:#f0fdf4;color:#166534;border-radius:8px;font-size:13px;font-weight:600;margin-top:6px}
+.badge-wrong{display:inline-block;padding:4px 10px;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:13px;font-weight:600;margin-top:6px}
+@media(max-width:600px){.slider-group{flex-direction:column}}
+</style>
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+  <meta name="teachany-node" content="math-m-linear-function">
+  <meta name="teachany-subject" content="math">
+  <meta name="teachany-grade" content="8">
+  <meta name="teachany-version" content="v7.9.14">
+  <meta name="teachany-prerequisites" content="正比例函数、一元一次方程">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+.practice-block{margin:14px 0;padding:14px;border:1px solid rgba(148,163,184,.22);border-radius:12px;background:rgba(15,23,42,.45)}
+.practice-block h3{margin:0 0 8px;color:#bae6fd;font-size:16px}
+.iframe-wrap{position:relative;width:100%;padding-top:62.5%;overflow:hidden;background:#0f172a;border-radius:12px;border:1px solid rgba(148,163,184,.18)}
+.iframe-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.quiz-option{display:block;width:100%;margin:8px 0;border:1px solid rgba(56,189,248,.28);background:#0b1628;color:#eef6ff;padding:12px 14px;text-align:left;cursor:pointer}
+.quiz-option.correct{border-color:#22c55e;background:rgba(34,197,94,.14)}
+.quiz-option.wrong{border-color:#f97316;background:rgba(249,115,22,.14)}
+.feedback{min-height:40px;margin-top:10px;padding:10px 12px;background:rgba(56,189,248,.10);color:#dbeafe}
+.lesson-panel{background:linear-gradient(180deg,rgba(20,35,58,.96),rgba(13,27,47,.96));border:1px solid rgba(148,163,184,.18);padding:22px;margin:16px 0;border-radius:12px}
+.checklist{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.checklist label{display:flex;gap:12px;align-items:flex-start;margin:0;padding:12px 14px;border:1px solid rgba(148,163,184,.22);border-radius:12px;background:rgba(2,6,23,.45);color:#eef6ff;line-height:1.55;cursor:pointer}
+.phase-tag{display:inline-block;font-size:12px;padding:4px 10px;border-radius:999px;background:rgba(56,189,248,.15);color:#7dd3fc;margin-bottom:8px}
+</style>
+
+
+<style id="mathm-depth-css">
+.mathm-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.mathm-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.28)}
+.mathm-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.mathm-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.mathm-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.mathm-depth .mathm-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.mathm-depth .mathm-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-external-embed.css">
+</head>
+<body>
+<!-- teachany-hero-notext -->
+
+<!-- teachany-quality-v3 fingerprint=一次函数 -->
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<nav class="sticky-nav">
+  <a href="#objectives">🎯 学习目标</a>
+  <a href="#pretest">📝 前测</a>
+  <a href="#module1">📐 图象特征</a>
+  <a href="#module2">🎛️ 参数探索</a>
+  <a href="#module3">💡 应用解题</a>
+  <a href="#errors">⚠️ 易错点</a>
+  <a href="#posttest">✅ 后测</a>
+</nav>
+
+<div class="container">
+  <!-- Hero -->
+  <div data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="hero ta-flat" data-slot="0">
+    <section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/math-m-linear-func-demo-hero.png" alt="一次函数知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">一次函数</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+    <div class="tags">
+      <span class="tag">初中数学</span>
+      <span class="tag">八年级</span>
+      <span class="tag">新授课</span>
+      <span class="tag">函数与坐标系</span>
+    </div>
+    <h1>一次函数</h1>
+    <p>你已会画线段和坐标系 · 但曲线与速率的世界还等着你 · 一次函数就是连接"关系"与"图形"的桥梁</p>
+  </div>
+
+  <!-- Hero figure -->
+  <figure class="hero-figure">
+    <svg viewBox="0 0 680 260" aria-label="一次函数知识结构主图">
+      <rect width="680" height="260" fill="#1e293b" rx="12"/>
+      <!-- Central node -->
+      <rect x="260" y="110" width="160" height="40" rx="8" fill="#3b82f6" opacity=".9"/>
+      <text x="340" y="135" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">一次函数 y=kx+b</text>
+      <!-- Left nodes -->
+      <rect x="40" y="60" width="140" height="36" rx="8" fill="#06b6d4" opacity=".8"/>
+      <text x="110" y="83" fill="#fff" font-size="13" text-anchor="middle">图象：直线</text>
+      <rect x="40" y="160" width="140" height="36" rx="8" fill="#8b5cf6" opacity=".8"/>
+      <text x="110" y="183" fill="#fff" font-size="13" text-anchor="middle">斜率 k：倾斜程度</text>
+      <!-- Right nodes -->
+      <rect x="500" y="60" width="140" height="36" rx="8" fill="#f59e0b" opacity=".8"/>
+      <text x="570" y="83" fill="#fff" font-size="13" text-anchor="middle">截距 b：纵截距</text>
+      <rect x="500" y="160" width="140" height="36" rx="8" fill="#22c55e" opacity=".8"/>
+      <text x="570" y="183" fill="#fff" font-size="13" text-anchor="middle">应用：待定系数法</text>
+      <!-- Lines -->
+      <line x1="180" y1="78" x2="260" y2="125" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="180" y1="178" x2="260" y2="135" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="420" y1="125" x2="500" y2="78" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="420" y1="135" x2="500" y2="178" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <!-- Labels -->
+      <text x="340" y="240" fill="#64748b" font-size="11" text-anchor="middle">4 大学习模块 · 图象 → 参数 → 特殊值 → 应用</text>
+    </svg>
+    <figcaption>知识结构主图：一次函数的四大模块及关系</figcaption>
+  </figure>
+
+  <!-- Objectives -->
+  <section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="section" id="objectives" data-slot="10">
+    <h2>🎯 学习目标</h2>
+    <div class="obj-grid">
+      <div class="obj-card">
+        <div class="bloom">Bloom L2 · 理解</div>
+        <p>能解释 k、b 对图象的几何意义（斜率 / 纵截距）</p>
+      </div>
+      <div class="obj-card">
+        <div class="bloom">Bloom L3 · 应用</div>
+        <p>会用待定系数法，根据两点求一次函数解析式</p>
+      </div>
+      <div class="obj-card">
+        <div class="bloom">Bloom L4 · 分析</div>
+        <p>能分析 k/b 正负对图象位置的影响并归纳规律</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pre-test -->
+  <section data-scaffold="full" data-bloom-level="apply" class="section" id="pretest" data-slot="20">
+    <h2>📝 前测（2 题）</h2>
+    <div class="quiz-card" id="q1">
+      <p class="question">1. 函数 y = 3x − 2 中，哪个是斜率？</p>
+      <div class="options">
+        <div class="option" onclick="answer(this,'q1','A')">A. −2</div>
+        <div class="option" onclick="answer(this,'q1','B')">B. 3（正确）</div>
+        <div class="option" onclick="answer(this,'q1','C')">C. x</div>
+        <div class="option" onclick="answer(this,'q1','D')">D. y</div>
+      </div>
+    </div>
+    <div class="quiz-card" id="q2">
+      <p class="question">2. 直线 y = kx+b 经过原点，则 b = ?</p>
+      <div class="options">
+        <div class="option" onclick="answer(this,'q2','A')">A. b = k</div>
+        <div class="option" onclick="answer(this,'q2','B')">B. b = 1</div>
+        <div class="option" onclick="answer(this,'q2','C')">C. b = 0（正确）</div>
+        <div class="option" onclick="answer(this,'q2','D')">D. b 可以是任意值</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Module 1: Graph features -->
+  <section data-scaffold="partial" data-bloom-level="remember" class="section" id="module1" data-slot="30">
+    <h2>📐 模块一：一次函数的图象</h2>
+    <div class="card">
+      <h3>ABT 引入</h3>
+      <p><strong>已知（And）：</strong>你会在坐标系里描点、连线。</p>
+      <p><strong>问题（But）：</strong>给你 y = 2x+1，每次都要算好几个点才能画——太慢了！</p>
+      <p><strong>因此（Therefore）：</strong>掌握"截距法"，只需 2 个特殊点就能精准画出直线。</p>
+    </div>
+    <div class="card">
+      <h3>核心方法：截距法</h3>
+      <div class="steps">
+        <div class="step">令 x = 0，求纵截距：y = b → 点 (0, b)</div>
+        <div class="step">令 y = 0，求横截距：x = −b/k → 点 (−b/k, 0)</div>
+        <div class="step">连两点画直线，注意 k≠0</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🎯 即时练习</h3>
+      <p class="question">用截距法画 y = 2x − 4 时，两个截距点是？</p>
+      <div class="quiz-card" id="q3" style="margin-top:8px">
+        <div class="options">
+          <div class="option" onclick="answer(this,'q3','A')">A. (0, 4) 和 (2, 0)</div>
+          <div class="option" onclick="answer(this,'q3','B')">B. (0, −4) 和 (2, 0)（正确）</div>
+          <div class="option" onclick="answer(this,'q3','C')">C. (0, 4) 和 (−2, 0)</div>
+          <div class="option" onclick="answer(this,'q3','D')">D. (−4, 0) 和 (0, 2)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Module 2: Interactive parameter canvas -->
+  <section class="section" data-bloom-level="remember" data-scaffold="full" data-slot="35"><h2>一次函数的定义</h2><p style="line-height:1.9;">一次函数是形如 y = kx + b 的函数，其中 k 和 b 是常数，且 k ≠ 0。这里的 x 是自变量，y 是因变量。k 称为斜率，表示函数的倾斜程度；b 称为截距，表示函数与 y 轴的交点。例如，y = 2x + 3 是一个一次函数，斜率为 2，截距为 3。生活中，一次函数可以用来描述匀速运动的距离与时间的关系。假设一辆汽车以每小时 60 公里的速度行驶，行驶 t 小时后行驶的距离 s 可以表示为 s = 60t，这就是一个一次函数。</p></section>
+<section class="section" data-bloom-level="understand" data-scaffold="partial" data-slot="35"><h2>一次函数的图像</h2><p style="line-height:1.9;">一次函数的图像是一条直线。斜率和截距决定了这条直线的位置和倾斜程度。例如，函数 y = 2x + 1 的图像是一条斜率为 2、截距为 1 的直线。当斜率为正时，直线从左下方向右上方倾斜；当斜率为负时，直线从左上方向右下方倾斜。截距决定了直线与 y 轴的交点。例如，y = -3x + 4 的图像是一条斜率为 -3、截距为 4 的直线。在实际应用中，可以通过图像直观地理解函数的性质，比如速度随时间的变化。</p></section>
+<section class="section" data-bloom-level="apply" data-scaffold="full" data-slot="35"><h2>斜率的计算与意义</h2><p style="line-height:1.9;">斜率 k 表示函数的变化率，可以通过两点坐标计算。给定两点 (x₁, y₁) 和 (x₂, y₂)，斜率 k = (y₂ - y₁) / (x₂ - x₁)。例如，点 (1, 3) 和 (2, 5) 的斜率为 (5 - 3) / (2 - 1) = 2。斜率的意义在于描述函数的增减性：k > 0 时，函数递增；k < 0 时，函数递减。生活中，斜率可以用来表示速度、价格变化率等。比如，某商品的价格每天上涨 5 元，其价格与时间的关系可以用斜率为 5 的一次函数表示。</p></section>
+<section class="section" data-bloom-level="analyze" data-scaffold="partial" data-slot="35"><h2>截距的意义与应用</h2><p style="line-height:1.9;">截距 b 表示当 x = 0 时 y 的值，即函数与 y 轴的交点。例如，y = 3x + 2 的截距为 2，表示当 x = 0 时 y = 2。截距在实际问题中常常表示初始值。比如，某手机套餐的月费为 50 元，每分钟通话费用为 0.1 元，则总费用 y 与通话时间 x 的关系为 y = 0.1x + 50，截距 50 表示即使不打电话也需要支付的固定费用。截距还可以用于解决实际问题，比如计算初始成本或初始距离。</p></section>
+
+<!-- teachany-upgrade-v2 -->
+<!-- upgrade topic: 一次函数 -->
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 手机套餐费用分析</h2><p>调查两种手机套餐：A套餐月租30元含100分钟，超时0.3元/分钟；B套餐无月租0.5元/分钟</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="猜测不同通话时长下哪种套餐更划算"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="建立两个费用函数并求交点"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="当通话时间少于150分钟时B划算，超过150分钟A划算"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.88);color:inherit}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#2563eb;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#2563eb}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section mathm-depth core-knowledge-module text-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>一次函数</h2>
+      <p>形如 y = kx + b（k≠0）的函数叫一次函数，图像是一条直线。k 是斜率，决定倾斜方向与陡缓；b 是纵截距，是图像与 y 轴交点的纵坐标。当 b=0 时退化为正比例函数。</p>
+    </div>
+  </section>
+
+
+
+
+</div>
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="方法范例" data-slot="35">
+  <section class="section mathm-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：k 定趋势，b 定位置</h2>
+      <p>求解析式常用待定系数法：两点代入解方程组。求与坐标轴交点：令 y=0 求 x 轴交点，令 x=0 求 y 轴交点。</p>
+      <div class="worked-example"><strong>范例：</strong>y = 2x − 3 中，令 y=0 得 x=1.5，故与 x 轴交点为 (1.5, 0)。</div>
+      <p id="lesson-pitfall" class="mathm-pitfall"><strong>常见误区：</strong>常见误区是把 b 当成与 x 轴交点，或认为 k＞0 就一定过第一、二、三象限而不看 b。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>一次函数 y = kx + b 的图像与 y 轴交点的纵坐标是？</p>
+        <button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-1&#x27;,&quot;令 x=0 得 y=b。&quot;)">A. k</button><button type="button" data-correct="1" onclick="mathmDepthCheck(this,true,&#x27;mathm-depth-feedback-1&#x27;,&quot;令 x=0 得 y=b。&quot;)">B. b</button><button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-1&#x27;,&quot;令 x=0 得 y=b。&quot;)">C. −b/k</button><button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-1&#x27;,&quot;令 x=0 得 y=b。&quot;)">D. 0</button>
+        <div class="mathm-feedback" id="mathm-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>直线 y = 2x − 3 与 x 轴交点的坐标是？</p>
+        <button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-2&#x27;,&quot;令 y=0，2x−3=0，x=1.5。&quot;)">A. (0, −3)</button><button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-2&#x27;,&quot;令 y=0，2x−3=0，x=1.5。&quot;)">B. (3, 0)</button><button type="button" data-correct="1" onclick="mathmDepthCheck(this,true,&#x27;mathm-depth-feedback-2&#x27;,&quot;令 y=0，2x−3=0，x=1.5。&quot;)">C. (1.5, 0)</button><button type="button" data-correct="0" onclick="mathmDepthCheck(this,false,&#x27;mathm-depth-feedback-2&#x27;,&quot;令 y=0，2x−3=0，x=1.5。&quot;)">D. (−1.5, 0)</button>
+        <div class="mathm-feedback" id="mathm-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<section data-bloom-level="understand" class="section" id="module2" data-scaffold="partial" data-slot="40">
+    <h2>🎛️ 模块二：参数 k 和 b 的作用（互动探索）</h2>
+    <div class="card">
+      <h3>拖动滑块，观察图象变化</h3>
+      <div class="slider-group">
+        <div class="slider-item">
+          <label>斜率 k =</label>
+          <input type="range" id="sliderK" min="-4" max="4" step="0.5" value="2" oninput="drawGraph()">
+          <span id="valK">2</span>
+        </div>
+        <div class="slider-item">
+          <label>截距 b =</label>
+          <input type="range" id="sliderB" min="-5" max="5" step="0.5" value="1" oninput="drawGraph()">
+          <span id="valB">1</span>
+        </div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="graphCanvas" height="320"></canvas>
+      </div>
+      <div id="graphDesc" style="padding:10px 0;font-size:14px;color:var(--text2)"></div>
+    </div>
+    <div class="card">
+      <h3>归纳规律</h3>
+      <div class="error-grid">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px">
+          <p style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:6px">当 k > 0 时</p>
+          <p style="font-size:14px;color:var(--text)">直线从左下到右上（单调递增）</p>
+        </div>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px">
+          <p style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px">当 k &lt; 0 时</p>
+          <p style="font-size:14px;color:var(--text)">直线从左上到右下（单调递减）</p>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px">
+          <p style="font-size:13px;font-weight:700;color:#166534;margin-bottom:6px">b 决定纵截距</p>
+          <p style="font-size:14px;color:var(--text)">b > 0：直线与 y 轴正半轴交；b &lt; 0：负半轴交</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Module 3: Application -->
+  <section data-bloom-level="apply" class="section" id="module3" data-scaffold="partial" data-slot="50">
+    <h2>💡 模块三：待定系数法</h2>
+    <div class="card">
+      <h3>例题：已知图象过 (1, 3) 和 (2, 5)，求解析式</h3>
+      <div class="steps">
+        <div class="step">设 y = kx + b</div>
+        <div class="step">代入 (1,3)：k + b = 3 &nbsp;···①</div>
+        <div class="step">代入 (2,5)：2k + b = 5 &nbsp;···②</div>
+        <div class="step">② − ①：k = 2，回代得 b = 1</div>
+        <div class="step">所以 y = 2x + 1 ✓</div>
+      </div>
+      <div class="formula-block">y = kx + b &nbsp;&nbsp;→&nbsp;&nbsp; 两点代入 → 二元一次方程组 → 解出 k, b</div>
+    </div>
+    <div class="card">
+      <h3>🎯 练一练（待定系数）</h3>
+      <div class="quiz-card" id="q4">
+        <p class="question">图象过 (0, −3) 和 (1, 1)，解析式是？</p>
+        <div class="options">
+          <div class="option" onclick="answer(this,'q4','A')">A. y = 4x + 3</div>
+          <div class="option" onclick="answer(this,'q4','B')">B. y = 4x − 3（正确）</div>
+          <div class="option" onclick="answer(this,'q4','C')">C. y = −4x − 3</div>
+          <div class="option" onclick="answer(this,'q4','D')">D. y = 3x − 4</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI 学伴入口 -->
+    <div class="tutor-card" data-teachany-tutor-card>
+      <h3>🤖 AI 学伴</h3>
+      <p>遇到困惑？问 AI 老师吧！</p>
+      <div class="tutor-btns">
+        <button class="tutor-btn">k 为什么叫斜率？</button>
+        <button class="tutor-btn">待定系数法还有哪些技巧？</button>
+        <button class="tutor-btn">一次函数和方程有啥关系？</button>
+        <button class="tutor-btn">做题总算错，怎么检查？</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Error analysis -->
+  <section class="section" data-tts="deep-understanding" id="deep-understanding" style="margin:28px 0" data-bloom-level="understand" data-scaffold="partial" data-slot="70">
+<div class="card insight-box"><h2>🔍 深层理解 · 五镜头看「一次函数」</h2>
+<p><b>👀 看见它</b>：在生活的真实场景里，「一次函数」长什么样？先找到一两个能摸得着的例子。</p>
+<p><b>🧩 拆开它</b>：它由哪几个关键部分组成？每个部分起什么作用、背后的原理是什么？</p>
+<p><b>🚀 迁移它</b>：换一个情境，这个结论还成立吗？试着解释一个课本之外的新例子。</p>
+</div>
+</section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="B">
+<h3>选择题 1</h3><p>快递公司收费规则为：首重1公斤8元，续重每公斤2元。寄3.5公斤包裹需付多少元？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="未考虑不足1公斤按整公斤计算">A. 13元</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="首重1公斤8元 + 2.5公斤×2元/公斤=5元，总计13元，但不足1公斤按1公斤计，续重按3公斤计算">B. 14元</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="错误计算续重公斤数">C. 15元</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="重复计算首重费用">D. 16元</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C">
+<h3>选择题 2</h3><p>下列哪个是一次函数的正确表达式？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="二次函数">A. y=x²+3</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="反比例函数">B. y=2/x</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="符合y=kx+b形式且k≠0">C. y=5x-1</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="含绝对值非线性">D. y=|x|</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 3</h3><p>若某函数图像经过(0,3)和(2,7)两点，其表达式是？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="斜率与截距颠倒">A. y=3x+2</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="斜率k=(7-3)/(2-0)=2，截距b=3">B. y=2x+3</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="斜率计算错误">C. y=4x-1</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="未正确使用两点坐标">D. y=x+5</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>函数y=-3x+5的图像与y轴交于点____</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>(0,5)</p><p>令x=0时y=5</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>某函数满足x每增加1，y减少2，且当x=0时y=4，其表达式是____</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>y=-2x+4</p><p>斜率k=-2，截距b=4</p></details></div>
+</section>
+
+<section class="section" id="posttest" data-bloom-level="understand" data-scaffold="partial" data-slot="90">
+    <h2>✅ 后测（综合应用）</h2>
+    <div class="quiz-card" id="q5">
+      <p class="question">某出租车收费：起步价 5 元，之后每千米 2 元。以行驶千米数 x 为自变量，费用 y 的解析式是？</p>
+      <div class="options">
+        <div class="option" onclick="answer(this,'q5','A')">A. y = 5x + 2</div>
+        <div class="option" onclick="answer(this,'q5','B')">B. y = 2x − 5</div>
+        <div class="option" onclick="answer(this,'q5','C')">C. y = 2x + 5（正确）</div>
+        <div class="option" onclick="answer(this,'q5','D')">D. y = 5 + 2</div>
+      </div>
+    </div>
+    <div class="quiz-card" id="q6">
+      <p class="question">直线 y = −3x + 6 与 x 轴的交点是？</p>
+      <div class="options">
+        <div class="option" onclick="answer(this,'q6','A')">A. (0, 6)</div>
+        <div class="option" onclick="answer(this,'q6','B')">B. (2, 0)（正确）</div>
+        <div class="option" onclick="answer(this,'q6','C')">C. (6, 0)</div>
+        <div class="option" onclick="answer(this,'q6','D')">D. (−2, 0)</div>
+      </div>
+    </div>
+    <div id="score-display" style="display:none;padding:16px;background:var(--card);border-radius:12px;text-align:center;margin-top:12px;border:1px solid var(--border)">
+      <div id="score-text" style="font-size:18px;font-weight:700;color:var(--primary)"></div>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section class="section" id="errors" data-bloom-level="understand" data-scaffold="partial" data-slot="95">
+    <h2>⚠️ 典型易错点</h2>
+    <div class="error-grid">
+      <div class="error-card">
+        <div class="label">易错 1</div>
+        <div class="desc">忘记 k ≠ 0 的条件</div>
+        <div class="fix">✅ 检查：若 k=0，y=b 是常数函数，不是一次函数</div>
+      </div>
+      <div class="error-card">
+        <div class="label">易错 2</div>
+        <div class="desc">混淆 k 和 b 的几何意义</div>
+        <div class="fix">✅ 记忆锚：k 控制"倾斜"（slope），b 控制"位置"（b=beginning）</div>
+      </div>
+      <div class="error-card">
+        <div class="label">易错 3</div>
+        <div class="desc">代点算错符号（负号漏掉）</div>
+        <div class="fix">✅ 代入后先算右边，再与左边对比确认等号成立</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Post-test -->
+
+<section class="section" id="practice-l2" data-tts="practice-l2" data-bloom-level="apply" data-scaffold="partial" data-slot="95"><div class="lesson-panel"><span class="phase-tag">练习 L2 · 能力应用</span><h2>含错因</h2>
+<div class="practice-block" data-bloom-level="apply" data-scaffold="partial"><h3>3. 解「一次函数」类题时，常见错因是</h3>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2a')">A. 忽略条件或单位，生搬结论</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">B. 步骤写得太清楚</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">C. 检验得太勤</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2a')">D. 画图辅助</button>
+<div id="l2a-feedback" class="feedback"></div></div>
+<div class="practice-block" data-bloom-level="apply" data-scaffold="partial"><h3>4. 若结果不合理，你应该</h3>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l2b')">A. 回到条件与中间步骤检查</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">B. 直接改成别人答案</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">C. 放弃本题</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l2b')">D. 只改最后数字</button>
+<div id="l2b-feedback" class="feedback"></div></div>
+</div></section>
+<section class="section" data-slot="97">
+    <h2>📌 本节小结</h2>
+    <div class="summary-box">
+      <ul>
+        <li>一次函数 y = kx+b（k≠0）的图象是一条直线</li>
+        <li>k > 0：递增；k &lt; 0：递减；|k| 越大，直线越"陡"</li>
+        <li>b 是纵截距，决定直线在 y 轴上的位置</li>
+        <li>待定系数法：两点代入 → 二元一次方程组 → 求 k、b</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Knowledge graph section -->
+
+</div>
+
+<!-- Scripts -->
+<link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+<link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+<link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+
+<script>
+// Quiz engine
+const correctAnswers = {q1:'B',q2:'C',q3:'B',q4:'B',q5:'C',q6:'B'};
+let answeredCount = 0;
+const totalPosttest = 2;
+let posttestAnswered = 0;
+let posttestCorrect = 0;
+
+function answer(el, qid, val){
+  const card = document.getElementById(qid);
+  if(card.querySelector('.correct')||card.querySelector('.wrong')) return;
+  const correct = correctAnswers[qid];
+  if(val === correct){
+    el.classList.add('correct');
+    el.innerHTML += ' ✓';
+  } else {
+    el.classList.add('wrong');
+    el.innerHTML += ' ✗';
+    card.querySelectorAll('.option').forEach(o=>{
+      if(o.textContent.trim().startsWith(correct)) o.classList.add('correct');
+    });
+  }
+  if(['q5','q6'].includes(qid)){
+    posttestAnswered++;
+    if(val===correct) posttestCorrect++;
+    if(posttestAnswered===totalPosttest){
+      const disp = document.getElementById('score-display');
+      disp.style.display='block';
+      document.getElementById('score-text').textContent = `后测得分：${posttestCorrect}/${totalPosttest} ${posttestCorrect===totalPosttest?'🎉 全对！':'💪 再想想易错点吧'}`;
+    }
+  }
+}
+
+// Canvas graph
+const canvas = document.getElementById('graphCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas(){
+  const dpr = window.devicePixelRatio||1;
+  const w = canvas.parentElement.clientWidth;
+  const h = 320;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  canvas.style.width = w+'px'; canvas.style.height = h+'px';
+  ctx.scale(dpr,dpr);
+  drawGraph();
+}
+
+function drawGraph(){
+  const w = parseInt(canvas.style.width)||canvas.width;
+  const h = parseInt(canvas.style.height)||canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const k = parseFloat(document.getElementById('sliderK').value);
+  const b = parseFloat(document.getElementById('sliderB').value);
+  document.getElementById('valK').textContent = k;
+  document.getElementById('valB').textContent = b;
+
+  const scale = 36;
+  const cx = w/2, cy = h/2;
+
+  // Grid
+  ctx.strokeStyle='#1e3a5f'; ctx.lineWidth=1;
+  for(let i=-10;i<=10;i++){
+    ctx.beginPath(); ctx.moveTo(cx+i*scale,0); ctx.lineTo(cx+i*scale,h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,cy+i*scale); ctx.lineTo(w,cy+i*scale); ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle='#475569'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(w,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,h); ctx.stroke();
+  // Axis labels
+  ctx.fillStyle='#64748b'; ctx.font='12px sans-serif';
+  ctx.textAlign='center';
+  for(let i=-8;i<=8;i+=2){ if(i!==0){ctx.fillText(i,cx+i*scale,cy+16);} }
+  ctx.textAlign='right';
+  for(let i=-6;i<=6;i+=2){ if(i!==0){ctx.fillText(-i,cx-6,cy+i*scale+4);} }
+  ctx.textAlign='center'; ctx.fillText('O',cx-10,cy+14);
+  ctx.fillText('x',w-10,cy-8); ctx.textAlign='left'; ctx.fillText('y',cx+8,14);
+
+  // Function line
+  const x1u = -w/(2*scale)-1, x2u = w/(2*scale)+1;
+  ctx.strokeStyle='#38bdf8'; ctx.lineWidth=3; ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(cx+x1u*scale, cy-(k*x1u+b)*scale);
+  ctx.lineTo(cx+x2u*scale, cy-(k*x2u+b)*scale);
+  ctx.stroke();
+
+  // Intercept points
+  ctx.fillStyle='#f59e0b';
+  // y-intercept (0, b)
+  ctx.beginPath(); ctx.arc(cx, cy-b*scale, 5, 0, 2*Math.PI); ctx.fill();
+  ctx.fillStyle='#fbbf24'; ctx.font='13px sans-serif'; ctx.textAlign='left';
+  ctx.fillText(`(0, ${b})`, cx+8, cy-b*scale-8);
+  // x-intercept (-b/k, 0)
+  if(Math.abs(k)>0.01){
+    const xi = -b/k;
+    ctx.fillStyle='#f59e0b';
+    ctx.beginPath(); ctx.arc(cx+xi*scale, cy, 5, 0, 2*Math.PI); ctx.fill();
+    ctx.fillStyle='#fbbf24'; ctx.textAlign='center';
+    ctx.fillText(`(${xi.toFixed(1)}, 0)`, cx+xi*scale, cy+18);
+  }
+
+  // Equation label
+  ctx.fillStyle='#38bdf8'; ctx.font='bold 15px sans-serif'; ctx.textAlign='left';
+  ctx.fillText(`y = ${k}x ${b>=0?'+':''}${b}`, 12, 22);
+
+  // Description
+  const dir = k>0?'递增（左下→右上）':k<0?'递减（左上→右下）':'水平线';
+  const bpos = b>0?'y轴正半轴':b<0?'y轴负半轴':'原点';
+  document.getElementById('graphDesc').textContent = `当前直线：斜率 k=${k}（${dir}），纵截距 b=${b}（交${bpos}）`;
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Nav active tracking
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.sticky-nav a');
+const observer = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      navLinks.forEach(a=>{ a.classList.toggle('active', a.getAttribute('href')==='#'+e.target.id); });
+    }
+  });
+},{threshold:.3});
+sections.forEach(s=>observer.observe(s));
+</script>
+
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: '一次函数',
+  subject: '数学',
+  grade: 8,
+  learningObjectives: ['理解 k、b 的几何意义','用待定系数法求解析式','分析图象位置特征'],
+  getContext: () => '当前学习一次函数 y=kx+b，重点是斜率与截距的意义，以及用两点待定系数法求解析式。'
+};
+</script>
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "一次函数",
+  subject: "math",
+  grade: 8,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴脚本（左下角 FAB · 首次点击引导配置 API） -->
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+
+<!-- teachany-enhanced -->
+<section class="section" id="phet-lab" data-tts="phet-lab" data-bloom-level="apply" data-scaffold="partial" data-interactive="sim" data-slot="110">
+  <div class="lesson-panel"><span class="phase-tag">网络仿真</span>
+  <h2>PhET · 图像直线</h2>
+  <div class="iframe-wrap"><iframe src="https://phet.colorado.edu/sims/html/graphing-lines/latest/graphing-lines_zh_CN.html" title="PhET · 图像直线" allowfullscreen loading="lazy"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+    referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+  <p class="feedback" style="margin-top:12px">💡 调斜率与截距，观察一次函数图像变化。</p>
+  <p style="font-size:12px;color:#475569">外链：<a href="https://phet.colorado.edu/sims/html/graphing-lines/latest/graphing-lines_zh_CN.html" target="_blank" rel="noopener">https://phet.colorado.edu/sims/html/graphing-lines/latest/graphing-lines_zh_CN.html</a></p>
+  </div>
+</section>
+
+<section class="section" id="practice-l1" data-tts="practice-l1" data-bloom-level="remember" data-scaffold="full" data-slot="115"><div class="lesson-panel"><span class="phase-tag">练习 L1 · 基础巩固</span><h2>先过关</h2>
+<div class="practice-block" data-bloom-level="remember" data-scaffold="full"><h3>1. 「一次函数」学习时，第一步通常应</h3>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1a')">A. 明确概念与适用条件</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">B. 直接猜答案</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">C. 跳过例题</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1a')">D. 只看图不看文字</button>
+<div id="l1a-feedback" class="feedback"></div></div>
+<div class="practice-block" data-bloom-level="remember" data-scaffold="full"><h3>2. 判断下列说法：学习「一次函数」可以完全不联系生活或图像</h3>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">A. 正确</button>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l1b')">B. 错误：数形/实验/情境能帮助理解</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">C. 只对高中正确</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l1b')">D. 无法判断</button>
+<div id="l1b-feedback" class="feedback"></div></div>
+</div></section>
+<section class="section" id="practice-l3" data-tts="practice-l3" data-bloom-level="analyze" data-scaffold="none" data-slot="115"><div class="lesson-panel"><span class="phase-tag">练习 L3 · 迁移</span><h2>迁移与产出</h2>
+<div class="practice-block" data-bloom-level="analyze" data-scaffold="none"><h3>5. 把「一次函数」迁移到新情境，最重要的是</h3>
+<button class="quiz-option" onclick="checkAnswer(this,true,'l3a')">A. 识别结构相同点，再迁移方法</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">B. 原题数字照抄</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">C. 换个名字就算迁移</button>
+<button class="quiz-option" onclick="checkAnswer(this,false,'l3a')">D. 不需要检验</button>
+<div id="l3a-feedback" class="feedback"></div></div>
+<p><strong>开放任务：</strong>用三步写出你如何向同学讲清「一次函数」。</p></div></section>
+<script>window.__TA_FB=Object.assign(window.__TA_FB||{}, {"pretest": "先条件与定义，再结论。", "l1a": "概念与条件优先。", "l1b": "联系图像/实验更稳。", "l2a": "错因多在条件与单位。", "l2b": "回溯检查，不要只改末位。", "l3a": "迁移看结构，不看表皮。", "open": "定义→关键关系→例题→自检。"});</script>
+
+
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "math-m-linear-function", "name": "一次函数", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<!-- Audio Config (hidden) -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "enhance-1",
+    "section": "enhance-1",
+    "sectionId": "enhance-1",
+    "title": "一次函数 讲解 enhance-1",
+    "label": "一次函数 讲解 enhance-1",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-m-linear-func-demo/enhance-1.mp3"
+  },
+  {
+    "id": "enhance-2",
+    "section": "enhance-2",
+    "sectionId": "enhance-2",
+    "title": "一次函数 讲解 enhance-2",
+    "label": "一次函数 讲解 enhance-2",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-m-linear-func-demo/enhance-2.mp3"
+  },
+  {
+    "id": "enhance-3",
+    "section": "enhance-3",
+    "sectionId": "enhance-3",
+    "title": "一次函数 讲解 enhance-3",
+    "label": "一次函数 讲解 enhance-3",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-m-linear-func-demo/enhance-3.mp3"
+  }
+]
+</script>
+</div>
+
+<script id="ta-upgrade-check-js">
+window.checkAnswer=window.checkAnswer||function(btn,ok,target){
+  const fb=document.getElementById(target+'-feedback')||btn.parentElement.querySelector('.feedback');
+  btn.parentElement.querySelectorAll('button.quiz-option').forEach(b=>{b.classList.remove('correct','wrong');b.disabled=true;});
+  btn.classList.add(ok?'correct':'wrong');
+  if(fb){const map=window.__TA_FB||{}; fb.textContent=(ok?'✓ ':'✗ ')+(map[target]||(ok?'正确，抓住关键条件。':'再想：条件、单位、定义是否用对？'));}
+};
+</script>
+
+
+<script id="mathm-depth-js">
+function mathmDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+</script>
+
+<script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
+  <script src="../../assets/scripts/teachany-external-embed.js" defer></script>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：一次函数</h2><div data-teachany-kg="math-m-linear-function"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+</body>
+</html>

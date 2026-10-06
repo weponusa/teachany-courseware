@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="course-id" content="history-ww2">
+<meta name="course-node" content="ww2">
+<meta name="course-subject" content="history">
+<meta name="course-title" content="第二次世界大战">
+<meta name="course-prereqs" content="ww1,versailles-treaty,great-depression">
+<meta name="course-next" content="cold-war">
+<meta name="teachany-node" content="hist-m-ww2">
+  <meta name="teachany-subject" content="history">
+  <meta name="teachany-grade" content="9">
+  <meta name="teachany-domain" content="世界近现代史">
+  <meta name="teachany-version" content="v7.14.1">
+  <meta name="teachany-prerequisites" content="第一次世界大战">
+  <meta name="teachany-difficulty" content="3">
+  <meta name="teachany-author" content="TeachAny 测试">
+<title>第二次世界大战 历史课件 · 初中 · 历史 · G9 · TeachAny vv6</title>
+
+<!-- Leaflet for WW2 map -->
+<link rel="stylesheet" href="../../assets/vendor/leaflet/leaflet.css">
+<script src="../../assets/vendor/leaflet/leaflet.js"></script>
+
+<style>
+:root{--accent:#60a5fa;--bg:#0b1120;--card:#15233f;--primary:#60a5fa;--secondary:#818cf8;--success:#4ade80;--text:#e6edf7;--danger:#f87171;--text-secondary:#8aa0c0}
+
+  :root {
+    --bg: #f8fafc;
+    --primary: #3b82f6;
+    --secondary: #06b6d4;
+    --accent: #f59e0b;
+    --card: #ffffff;
+    --text: #1e293b;
+    --text-secondary: #64748b;
+    --success: #22c55e;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    font-size: 15px;
+  }
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%);
+    color: white;
+    padding: 60px 24px 48px;
+    text-align: center;
+  }
+  .hero h1 { font-size: 2.2em; margin-bottom: 8px; }
+  .hero p { opacity: 0.85; font-size: 1.05em; margin-bottom: 4px; }
+  .hero .meta { display: flex; justify-content: center; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+  .hero .meta span {
+    background: rgba(255,255,255,0.15); border-radius: 20px;
+    padding: 4px 14px; font-size: 0.85em;
+  }
+  /* Nav */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(8px);
+    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 24px; display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .nav a {
+    color: var(--text-secondary); text-decoration: none;
+    padding: 6px 14px; border-radius: 8px; font-size: 0.9em;
+    transition: all 0.2s;
+  }
+  .nav a:hover, .nav a.active { background: var(--primary); color: white; }
+  /* Container */
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+  /* Section */
+  .section { margin-bottom: 48px; }
+  .section-title {
+    font-size: 1.4em; font-weight: 700;
+    border-left: 4px solid var(--primary);
+    padding-left: 14px; margin-bottom: 20px;
+  }
+  /* Card */
+  .card {
+    background: var(--card); border-radius: 14px;
+    padding: 24px; margin-bottom: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border-top: 3px solid var(--primary);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+  .card h3 { font-size: 1.1em; margin-bottom: 12px; color: var(--primary); }
+  .card p, .card li { color: var(--text); font-size: 0.95em; line-height: 1.85; }
+  .card ul, .card ol { padding-left: 20px; margin-top: 8px; }
+  .card li { margin-bottom: 6px; }
+  /* ABT Intro */
+  .abt-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .abt-box {
+    padding: 18px; border-radius: 12px; text-align: center;
+  }
+  .abt-box.and { background: #f0fdf4; border: 1px solid #22c55e; }
+  .abt-box.but { background: #fef2f2; border: 1px solid #ef4444; }
+  .abt-box.therefore { background: #eff6ff; border: 1px solid #3b82f6; }
+  .abt-box .label { font-weight: 700; font-size: 0.85em; margin-bottom: 6px; }
+  .abt-box.and .label { color: #16a34a; }
+  .abt-box.but .label { color: #dc2626; }
+  .abt-box.therefore .label { color: #1d4ed; }
+  /* Timeline */
+  .timeline { position: relative; padding-left: 32px; margin: 20px 0; }
+  .timeline::before {
+    content: ''; position: absolute; left: 10px; top: 0; bottom: 0;
+    width: 3px; background: linear-gradient(to bottom, var(--primary), var(--secondary));
+    border-radius: 2px;
+  }
+  .tl-item { position: relative; margin-bottom: 24px; }
+  .tl-dot {
+    position: absolute; left: -26px; top: 4px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--primary); border: 3px solid white;
+    box-shadow: 0 0 0 2px var(--primary);
+  }
+  .tl-year {
+    display: inline-block; background: var(--primary); color: white;
+    padding: 2px 10px; border-radius: 6px; font-size: 0.85em;
+    font-weight: 600; margin-bottom: 4px;
+  }
+  .tl-content { color: var(--text); font-size: 0.95em; line-height: 1.7; }
+  .tl-content strong { color: var(--primary); }
+  /* Map placeholder */
+  .map-placeholder {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 12px; padding: 32px; text-align: center;
+    color: #cbd5e1; margin: 16px 0;
+  }
+  .map-placeholder .icon { font-size: 3em; margin-bottom: 12px; }
+  /* Quiz */
+  .quiz-card {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 12px; padding: 20px; margin-bottom: 16px;
+  }
+  .quiz-q { font-weight: 600; margin-bottom: 12px; font-size: 1em; }
+  .quiz-opts { display: flex; flex-direction: column; gap: 8px; }
+  .quiz-opt {
+    padding: 10px 14px; border-radius: 8px;
+    border: 1px solid #e2e8f0; background: white;
+    cursor: pointer; transition: all 0.2s; font-size: 0.95em;
+  }
+  .quiz-opt:hover { border-color: var(--primary); background: #eff6ff; }
+  .quiz-opt.selected { border-color: var(--primary); background: #dbeafe; }
+  .quiz-opt.correct { border-color: var(--success); background: #dcfce7; }
+  .quiz-opt.wrong { border-color: var(--danger); background: #fee2e2; }
+  .quiz-feedback {
+    margin-top: 12px; padding: 12px; border-radius: 8px;
+    font-size: 0.9em; display: none;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct { background: #dcfce7; color: #166534; }
+  .quiz-feedback.wrong { background: #fee2e2; color: #991b1b; }
+  /* Button */
+  .btn {
+    display: inline-block; padding: 10px 24px; border-radius: 10px;
+    border: none; cursor: pointer; font-size: 0.95em; font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-secondary { background: #e2e8f0; color: var(--text); }
+  .btn-secondary:hover { background: #cbd5e1; }
+  /* Progress bar */
+  .progress-wrap {
+    background: #e2e8f0; border-radius: 8px;
+    height: 8px; margin: 24px 0 8px; overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 8px; transition: width 0.5s; width: 0%;
+  }
+  .progress-text { font-size: 0.85em; color: var(--text-secondary); margin-bottom: 20px; }
+  /* Completion */
+  .completion {
+    text-align: center; padding: 40px 24px; display: none;
+  }
+  .completion.show { display: block; }
+  .completion .icon { font-size: 4em; margin-bottom: 16px; }
+  /* Responsive */
+  @media (max-width: 640px) {
+    .abt-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 1.6em; }
+  }
+  /* Source card */
+  .source-card {
+    background: #fefce8; border-left: 4px solid var(--accent);
+    padding: 16px; border-radius: 0 10px 10px 0; margin: 12px 0;
+    font-size: 0.9em; color: #92400e;
+  }
+  .source-card .source-title { font-weight: 700; margin-bottom: 6px; }
+  /* Comparison table */
+  .compare-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9em; }
+  .compare-table th {
+    background: var(--primary); color: white;
+    padding: 10px 12px; text-align: left;
+  }
+  .compare-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+  .compare-table tr:nth-child(even) { background: #f8fafc; }
+  /* Tag */
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 6px;
+    font-size: 0.8em; font-weight: 600; margin-right: 6px;
+  }
+  .tag-blue { background: #dbeafe; color: #1e40af; }
+  .tag-green { background: #dcfce7; color: #166534; }
+  .tag-amber { background: #fefce8; color: #92400e; }
+  .tag-red { background: #fee2e2; color: #991b1b; }
+
+  /* ═══ v6 基线补丁：地图、学伴、TTS、游戏化、知识图谱 ═══ */
+  .map-container {
+    width: 100%; height: 500px; background: #0c1526;
+    border-radius: 12px; margin: 20px 0; overflow: hidden;
+  }
+  .leaflet-container { background: #0c1526; }
+  .leaflet-popup-content-wrapper { background: #1e293b; color: #f8fafc; border-radius: 8px; }
+  .leaflet-popup-tip { background: #1e293b; }
+  .leaflet-popup-content { margin: 10px 14px; font-size: 12px; line-height: 1.6; }
+  .leaflet-popup-content b { color: #fbbf24; }
+  .leaflet-control-attribution { background: rgba(30,41,59,0.85) !important; color: #cbd5e1 !important; font-size: 10px !important; }
+
+  /* 游戏化：轴心国/同盟国分类 */
+  .sort-game { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  .sort-zone {
+    border: 2px dashed #cbd5e1; border-radius: 10px; padding: 16px; min-height: 120px;
+    background: #f8fafc;
+  }
+  .sort-zone.axis { border-color: #ef4444; background: #fef2f2; }
+  .sort-zone.allies { border-color: #3b82f6; background: #eff6ff; }
+  .sort-zone h4 { margin: 0 0 12px 0; font-size: 0.95em; }
+  .sort-pool {
+    display: flex; flex-wrap: wrap; gap: 8px; padding: 12px;
+    background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 10px; margin-top: 16px;
+  }
+  .sort-chip {
+    padding: 6px 14px; background: white; border: 1px solid #e2e8f0;
+    border-radius: 999px; font-size: 0.9em; cursor: pointer;
+    transition: all .2s; user-select: none;
+  }
+  .sort-chip:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .sort-chip.placed-axis { background: #fee2e2; border-color: #ef4444; }
+  .sort-chip.placed-allies { background: #dbeafe; border-color: #3b82f6; }
+  .sort-feedback { margin-top: 12px; font-weight: 600; font-size: 0.95em; }
+  .sort-feedback.correct { color: var(--success); }
+  .sort-feedback.wrong { color: var(--danger); }
+
+  /* 知识图谱 */
+  .km-grid {
+    display: grid; grid-template-columns: 1fr 1.5fr 1fr;
+    gap: 20px; align-items: center; margin: 32px 0;
+  }
+  .km-col { text-align: center; }
+  .km-col h4 {
+    color: var(--text-secondary); font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 10px 0;
+  }
+  .km-node {
+    display: inline-block; padding: 12px 18px;
+    border: 2px solid #e2e8f0; border-radius: 12px;
+    background: white; color: var(--text); text-decoration: none;
+    font-size: 14px; transition: all .2s;
+  }
+  .km-node:hover { border-color: var(--primary); transform: translateY(-2px); }
+  .km-node.current {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white; border-color: transparent;
+    font-size: 16px; font-weight: 700; padding: 16px 24px;
+    box-shadow: 0 8px 24px rgba(59,130,246,0.4);
+  }
+  @media (max-width: 768px) {
+    .km-grid { grid-template-columns: 1fr; }
+    .sort-game { grid-template-columns: 1fr; }
+  }
+
+  /* TTS 段落高亮 */
+  .tts-active {
+    background: linear-gradient(180deg, transparent 60%, rgba(251,191,36,0.25) 60%);
+    transition: background .3s;
+  }
+
+  /* AI 学伴 左下 */
+  #ai-assistant {
+    position: fixed; left: 20px; bottom: 20px; z-index: 9998;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    color: white; border: none; font-size: 26px; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(139,92,246,0.5);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #ai-assistant-panel {
+    position: fixed; left: 20px; bottom: 90px; z-index: 9998;
+    width: 320px; max-height: 400px;
+    background: white; border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    border: 1px solid #e2e8f0; display: none;
+    flex-direction: column; overflow: hidden;
+  }
+  #ai-assistant-panel.open { display: flex; }
+  #ai-assistant-panel .panel-header {
+    padding: 16px; background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    color: white; font-weight: 600;
+  }
+  #ai-assistant-panel .panel-body {
+    padding: 16px; overflow-y: auto; font-size: 14px; line-height: 1.7;
+  }
+  #ai-assistant-panel .hint {
+    background: #f0f9ff; border-left: 3px solid #3b82f6;
+    padding: 10px 14px; margin: 8px 0; border-radius: 0 6px 6px 0;
+    font-size: 13px;
+  }
+
+  /* 全局 TTS 右下 */
+  #tts-controller {
+    position: fixed; right: 20px; bottom: 20px; z-index: 9999;
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; background: white;
+    border: 1px solid #e2e8f0; border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+  #tts-controller button {
+    background: transparent; color: var(--text);
+    border: none; cursor: pointer; font-size: 18px;
+    padding: 4px 6px;
+  }
+  #tts-controller .tts-status {
+    font-size: 11px; color: var(--text-secondary);
+    min-width: 70px; text-align: center;
+  }
+
+
+
+
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+</style>
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-historical-map.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+<style id="ta-tu-opt-css">
+/* TeachAny 标准随堂题样式（主题自适应：中性半透明底 + 继承文字色） */
+.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(127,127,127,.10)}
+.tu-q h3{font-size:1.05rem;margin:0 0 6px}
+.tu-opts{display:grid;gap:10px;margin-top:10px}
+.tu-opt{display:block;width:100%;text-align:left;padding:12px 14px;border-radius:10px;
+  border:1px solid rgba(127,127,127,.40);background:rgba(127,127,127,.10);
+  color:inherit;font:inherit;font-size:15px;line-height:1.6;cursor:pointer;
+  transition:border-color .15s,background .15s}
+.tu-opt:hover{border-color:rgba(96,165,250,.90);background:rgba(96,165,250,.12)}
+.tu-opt.is-right,.tu-opt.correct{border-color:#10b981;background:rgba(16,185,129,.18)}
+.tu-opt.is-wrong,.tu-opt.wrong{border-color:#ef4444;background:rgba(239,68,68,.15)}
+.tu-opt:disabled{cursor:default}
+.tu-fb{margin-top:12px;padding:12px;border-radius:10px;border:1px solid rgba(245,158,11,.40);
+  background:rgba(245,158,11,.12);line-height:1.7}
+.tu-inquiry label{display:block;margin:10px 0}
+.tu-inquiry textarea{width:100%;border-radius:10px;padding:10px;background:rgba(127,127,127,.10);
+  color:inherit;border:1px solid rgba(127,127,127,.35);font:inherit;box-sizing:border-box}
+.tu-save{margin-top:10px;padding:10px 16px;border-radius:10px;border:1px solid rgba(127,127,127,.40);
+  background:rgba(127,127,127,.12);color:inherit;cursor:pointer;font:inherit}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/teachany-page-nav.css">
+</head>
+<body>
+<!-- teachany-hero-notext -->
+
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+
+<!-- Hero -->
+<div class="hero" data-tts="hero"><h1>⚔️ 第二次世界大战</h1>
+  <p>初中历史 · 世界现代史</p>
+  <p>八年级/九年级 · 课标匹配</p>
+  <div class="meta">
+    <span>📖 新授课</span>
+    <span>⏱️ 约 35 分钟</span>
+    <span>🎯 理解 · 分析 · 评价</span>
+  </div>
+</div>
+
+<nav class="ta-pagenav" data-teachany-page-nav aria-label="本页目录">
+  <div class="ta-pagenav-head">📑 本页目录（16 节）</div>
+  <ol><li><a href="#hero-infographic">学习目标</a></li><li><a href="#objectives">学习目标</a></li><li><a href="#anchor">🧭 带着问题学</a></li><li><a href="#pretest">📝 前测</a></li><li><a href="#module-1">📖 战争爆发原因</a></li><li><a href="#teachany-historical-map">🗺️ 第二次世界大战</a></li><li><a href="#sec-7">🔬 战争中的科技变革</a></li><li><a href="#sec-8">🔬 战争中的科技变革</a></li><li><a href="#module-2">📖 主要战役转折</a></li><li><a href="#module-3">📖 科技改变战争</a></li><li><a href="#deep-understanding">🔍 深层理解：五镜头</a></li><li><a href="#sec-12">📝 真题练习</a></li><li><a href="#posttest">✅ 后测</a></li><li><a href="#error-clinic">⚠️ 易错点诊所</a></li><li><a href="#memory-anchor">🧠 记忆锚点</a></li><li><a href="#ai-media-zone">🎨 AI 多模态互动</a></li></ol>
+  <div class="ta-pagenav-move"><button type="button" data-pagenav-prev>↑ 上一节</button><span class="ta-pagenav-status" data-pagenav-status></span><button type="button" data-pagenav-next>↓ 下一节</button></div>
+</nav>
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/history-ww2-hero.png" alt="第二次世界大战知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">第二次世界大战</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+<section data-scaffold="full" data-bloom-level="apply" id="objectives" class="section" data-tts="objectives" data-tsh="学习目标 - 明确这节课结束时能做到什么" data-slot="10"><div class="panel"><span class="phase-tag">Learning Objectives</span><h2>学习目标</h2><ul class="grid"><li>能说出第二次世界大战 历史课件中反法西斯胜利、老师不管的含义与要点</li><li>能运用本课概念分析第二次世界大战 历史课件相关的实际问题</li><li>能结合就像打断对方说明第二次世界大战 历史课件的判断依据</li><li>能借助知识图谱说明前置知识和后续联系</li></ul></div></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么二战时德国要打那么多国家？</p></div><div class="tu-q"><p>❓ 原子弹这么可怕，美国为什么还要用？</p></div><div class="tu-q"><p>❓ 课本说二战是反法西斯战争，那苏联后来怎么又和美国打冷战了？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="apply" data-scaffold="full" id="pretest" data-slot="20"><h2>📝 前测</h2><div class="tu-q" data-answer="B"><h3>前测题 1</h3><p>下列哪项是《慕尼黑协定》的直接后果？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆不同时期的绥靖案例">德国吞并奥地利</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆不同时期的绥靖案例">捷克苏台德区被割让</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆不同时期的绥靖案例">但泽自由市成立</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆不同时期的绥靖案例">意大利入侵埃塞俄比亚</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>前测题 2</h3><p>太平洋战争爆发的标志是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="将局部冲突与全面开战混淆">九一八事变</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="将局部冲突与全面开战混淆">七七事变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="将局部冲突与全面开战混淆">珍珠港事件</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="将局部冲突与全面开战混淆">中途岛海战</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 战争爆发原因</h2><div class="tu-q"><p><strong>And：</strong>学生知道一战后的世界格局</p><p><strong>But：</strong>不理解经济危机如何引发战争</p><p><strong>Therefore：</strong>揭示二战根本诱因</p></div><div class="tu-q"><p>1929年美国经济大萧条像多米诺骨牌影响全球。德国失业率飙升到30%，民众支持希特勒‘用战争摆脱危机’的主张。例如1933年希特勒上台后，立即撕毁《凡尔赛条约》扩军，1936年德军进驻莱茵兰非军事区，英法却选择绥靖政策。</p></div><div class="tu-q"><p>🌍 就像班里有人欺负同学，老师不管，反而让欺负者胆子更大。1938年德国吞并奥地利时，其他国家就像‘旁观的同学’没阻止。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>二战爆发的直接导火索是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="注意区分根本原因（C）与直接原因">A.德国闪击波兰</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="注意区分根本原因（C）与直接原因">B.日本侵华</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="注意区分根本原因（C）与直接原因">C.经济大萧条</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="注意区分根本原因（C）与直接原因">D.意大利入侵埃塞俄比亚</button></div><div class="tu-fb" hidden></div></div></section>
+<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="ta-standard-section" id="teachany-historical-map" data-slot="35">
+  <h2 style="text-align:center;margin-bottom:16px;">🗺️ 第二次世界大战</h2>
+  <p style="text-align:center;color:#cbd5e1;margin-bottom:18px;">点击时代按钮切换疆域版图；悬停高亮边界；点击红色城市标记查看详情。</p>
+  <div data-teachany-map="thm-community-history-ww2"
+       data-teachany-map-scope="world"
+       data-teachany-map-title="第二次世界大战">
+    <script type="application/json" data-teachany-map-config>
+{
+  "eras": [
+    {
+      "id": "ce-1914",
+      "label": "1914 一战",
+      "file": "chrono-world/019-ce-1914-wwi.geojson",
+      "fill": "#94a3b8",
+      "stroke": "#64748b",
+      "desc": "<span class=\"thm-year-tag\">1914-1918</span><strong>一战与凡尔赛体系</strong>：德意日法西斯兴起埋下二战伏笔。",
+      "cities": [
+        [
+          52.52,
+          13.4,
+          "柏林",
+          "Berlin",
+          "德意志帝国"
+        ],
+        [
+          48.86,
+          2.35,
+          "巴黎",
+          "Paris",
+          "法兰西"
+        ],
+        [
+          51.51,
+          -0.13,
+          "伦敦",
+          "London",
+          "大英"
+        ]
+      ]
+    },
+    {
+      "id": "ce-1945",
+      "label": "1945 二战终",
+      "file": "chrono-world/020-ce-1945-wwii.geojson",
+      "fill": "#ef4444",
+      "stroke": "#dc2626",
+      "desc": "<span class=\"thm-year-tag\">1939-1945</span><strong>反法西斯胜利</strong>：联合国成立，冷战两极格局形成。",
+      "cities": [
+        [
+          52.52,
+          13.4,
+          "柏林",
+          "Berlin",
+          "1945.5 攻陷"
+        ],
+        [
+          55.76,
+          37.62,
+          "莫斯科",
+          "Moscow",
+          "苏联反攻"
+        ],
+        [
+          38.91,
+          -77.04,
+          "华盛顿",
+          "Washington",
+          "盟军领袖"
+        ],
+        [
+          35.68,
+          139.69,
+          "东京",
+          "Tokyo",
+          "1945.8 投降"
+        ],
+        [
+          39.9,
+          116.4,
+          "北京",
+          "Beijing",
+          "中国战区"
+        ]
+      ]
+    }
+  ],
+  "center": [
+    40,
+    20
+  ],
+  "zoom": 3,
+  "fitBounds": [
+    [
+      20,
+      -20
+    ],
+    [
+      65,
+      60
+    ]
+  ],
+  "minZoom": 2,
+  "maxZoom": 8,
+  "terrain": true
+}
+    </script>
+  </div>
+</section>
+<section class="course-gallery" id="sec-7">
+  <img src="./assets/concept-causes.png" alt="课程插图">
+  <img src="./assets/extension-peace.png" alt="课程插图">
+</section>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35" id="sec-8"><h2>🔬 战争中的科技变革</h2><p>对比二战前后军事科技发展</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="战争需求加速科技创新"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="雷达/原子弹/喷气式飞机"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="科技发展具有双重性"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 主要战役转折</h2><div class="tu-q"><p><strong>And：</strong>学生了解战争基本进程</p><p><strong>But：</strong>分不清关键战役的战略意义</p><p><strong>Therefore：</strong>理解战争转折逻辑链</p></div><div class="tu-q"><p>像游戏通关需要关键道具，二战有三大转折点：1）1942中途岛海战，美军击沉日本4艘航母，就像打断对方‘游戏金币’补给线；2）1943斯大林格勒战役，德军冻死10万人，是希特勒第一次惨败；3）1944诺曼底登陆，288万盟军开辟第二战场，德国腹背受敌。</p></div><div class="tu-q"><p>🌍 就像篮球赛最后3分钟，关键三分球+抢断+快攻能逆转比分，这些战役就是战争的‘赛点’。</p></div><div class="tu-q" data-answer="D"><h3>🏋️ 即练</h3><p>下列哪场战役最早发生？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="时间排序题，珍珠港（1941）早于其他选项">A.中途岛海战</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="时间排序题，珍珠港（1941）早于其他选项">B.诺曼底登陆</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="时间排序题，珍珠港（1941）早于其他选项">C.斯大林格勒战役</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="时间排序题，珍珠港（1941）早于其他选项">D.珍珠港事件</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 科技改变战争</h2><div class="tu-q"><p><strong>And：</strong>学生知道武器进步</p><p><strong>But：</strong>不理解科技如何决定胜负</p><p><strong>Therefore：</strong>认识科技与战争关系</p></div><div class="tu-q"><p>二战是‘军事科技博览会’：1）雷达让英国在空战中提前5分钟预警，击落1733架德机；2）青霉素拯救12%受伤士兵，相当于多10个师兵力；3）原子弹直接终结战争，但广岛7万人瞬间气化。这些技术后来转为民用，比如雷达变成气象预报工具。</p></div><div class="tu-q"><p>🌍 就像你用手机导航比纸质地图快10倍，当年雷达就是战场的‘高德地图’。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>以下哪项不是二战新技术？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="互联网诞生于1960年代，注意技术出现时间">A.航空母舰</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="互联网诞生于1960年代，注意技术出现时间">B.坦克</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="互联网诞生于1960年代，注意技术出现时间">C.互联网</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="互联网诞生于1960年代，注意技术出现时间">D.喷气式飞机</button></div><div class="tu-fb" hidden></div></div></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>按时间轴拆解欧洲战场/亚太战场关键事件</p></div><div class="tu-q"><h3>💡解释它</h3><p>法西斯主义特征：极端民族主义+独裁统治</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>对比一战凡尔赛体系与二战雅尔塔体系差异</p></div><div class="tu-q"><h3>👁️看见它</h3><p>诺曼底登陆实景地图+广岛核爆影像资料</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>讨论联合国成立如何防止战争再现</p></div></section>
+
+
+
+
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85" id="sec-12"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="B">
+<h3>选择题 1</h3><p>右图邮票纪念的事件标志着二战达到最大规模，该事件是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="是二战开端而非最大规模">A. 德国闪击波兰</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="珍珠港事件使美国参战">B. 日本偷袭珍珠港</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="是转折点而非规模最大时">C. 斯大林格勒战役</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="发生在战争后期">D. 诺曼底登陆</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="D">
+<h3>选择题 2</h3><p>中国战场牵制日军主力最久的战役是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="属于伏击战">A. 平型关大捷</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="属于防御反击战">B. 台儿庄战役</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="属于主动进攻">C. 百团大战</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="淞沪会战持续三个月">D. 淞沪会战</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A">
+<h3>选择题 3</h3><p>下列国际会议按时间排序正确的是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="1943开罗→1945雅尔塔→1945波茨坦">A. 开罗会议→雅尔塔会议→波茨坦会议</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="开罗早于德黑兰">B. 德黑兰会议→开罗会议→波茨坦会议</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="时间完全颠倒">C. 雅尔塔会议→开罗会议→德黑兰会议</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="顺序完全错误">D. 波茨坦会议→德黑兰会议→开罗会议</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>二战转折点战役：欧洲战场是____，太平洋战场是____</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>斯大林格勒战役,中途岛海战</p><p>两个战场的决定性战役</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>中国远征军入缅作战的主要目的是保卫____运输线</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>滇缅公路</p><p>当时重要国际援助通道</p></details></div>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="D"><h3>后测题 1</h3><p>（真题）雅尔塔会议中美英苏未达成：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="需区分公开决议与秘密协定">战后成立联合国</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="需区分公开决议与秘密协定">苏联对日作战</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="需区分公开决议与秘密协定">德国分区占领</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="需区分公开决议与秘密协定">波兰流亡政府重组</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 2</h3><p>若当代冲突中出现种族清洗，最可能违反：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="国际法体系演变理解不足">《凡尔赛条约》</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="国际法体系演变理解不足">《九国公约》</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="国际法体系演变理解不足">《联合国宪章》</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="国际法体系演变理解不足">《开罗宣言》</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>下列科技最早用于二战的是：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆武器研发时间线">喷气式飞机</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆武器研发时间线">弹道导弹</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆武器研发时间线">雷达系统</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆武器研发时间线">原子弹</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 日本偷袭珍珠港导致美国参战</h3><p>✅ 珍珠港前美国已通过《租借法案》援盟国</p><p>💡 忽视战事阶段性演变</p></div><div class="tu-q"><h3>❌ 斯大林格勒战役是最大规模战役</h3><p>✅ 巴巴罗萨行动（德军侵苏）规模更大</p><p>💡 混淆战役转折性与规模概念</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>德意日，轴心坏，闪击波兰掀祸害；美苏英，同盟来，诺曼底后纳粹败</p><p><strong>类比：</strong>像校园霸凌：轴心国是欺负人的小团伙，绥靖政策就像旁观者纵容</p></div></section>
+<section class="section" data-tts="ai-media" id="ai-media-zone" data-slot="125">
+<div class="card card-glow"><h2>🎨 AI 多模态互动</h2>
+<p>复制提示词到 AI 学伴，生成「第二次世界大战 历史课件」的时间轴或事件提纲；也可以上传你手绘的示意图，请 AI 学伴点评。</p>
+<textarea id="ai-prompt-box" rows="3" style="width:100%">请用表格总结「第二次世界大战 历史课件」的背景、经过、影响，并给出一条时间轴和一个易混点辨析。</textarea>
+<button class="choice" id="copy-ai-prompt" type="button">📋 复制提示词</button>
+<p class="feedback" id="ai-zone-feedback">复制后可粘贴到 AI 学伴继续对话。</p>
+</div>
+<script>(function(){var b=document.getElementById('copy-ai-prompt');if(!b)return;b.addEventListener('click',function(){var t=document.getElementById('ai-prompt-box');if(!t)return;t.focus();t.select();try{document.execCommand('copy');}catch(e){}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t.value);var f=document.getElementById('ai-zone-feedback');if(f)f.textContent='✅ 已复制，去 AI 学伴粘贴吧';});})();</script>
+</section>
+<section data-scaffold="partial" data-bloom-level="understand" class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
+  <div data-teachany-tutor-card></div>
+</section>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：第二次世界大战 历史课件</h2><div data-teachany-kg="hist-m-ww2"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "hist-m-ww2", "name": "第二次世界大战 历史课件", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseId: 'history-ww2',
+  courseTitle: "第二次世界大战",
+  subject: 'history',
+  grade: '9',
+  nodeId: 'hist-m-ww2',
+  getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+  getContext: () => {
+    const current = document.querySelector('.current-section') || (location.hash ? document.querySelector(location.hash) : null);
+    return (current || document.body).innerText.slice(0, 3000);
+  }
+};
+</script>
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
+<script src="../../assets/vendor/leaflet/leaflet.js"></script>
+<script src="../../assets/scripts/teachany-historical-map.js?v=2.8.2" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+
+<!-- v7.20 标准连续音频配置（apply-standard-modules 自动补齐） -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "game",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/game.mp3",
+    "label": "讲解 1"
+  },
+  {
+    "id": "hero",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/hero.mp3",
+    "label": "讲解 2"
+  },
+  {
+    "id": "introduction",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/introduction.mp3",
+    "label": "讲解 3"
+  },
+  {
+    "id": "knowledge-map",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/knowledge-map.mp3",
+    "label": "讲解 4"
+  },
+  {
+    "id": "module1",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/module1.mp3",
+    "label": "讲解 5"
+  },
+  {
+    "id": "module2",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/module2.mp3",
+    "label": "讲解 6"
+  },
+  {
+    "id": "module3",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/module3.mp3",
+    "label": "讲解 7"
+  },
+  {
+    "id": "module4",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/module4.mp3",
+    "label": "讲解 8"
+  },
+  {
+    "id": "objectives",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/objectives.mp3",
+    "label": "讲解 9"
+  },
+  {
+    "id": "quiz",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/quiz.mp3",
+    "label": "讲解 10"
+  },
+  {
+    "id": "summary",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/history-ww2/summary.mp3",
+    "label": "讲解 11"
+  }
+]
+  </script>
+</div>
+<script src="../../assets/scripts/teachany-page-nav.js" defer></script>
+</body>
+</html>

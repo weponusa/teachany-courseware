@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="teachany-node" content="chn-e-diary-writing">
+<meta name="teachany-subject" content="chinese">
+<meta name="teachany-domain" content="writing">
+<meta name="teachany-grade" content="3">
+<meta name="teachany-difficulty" content="2">
+<meta name="teachany-version" content="7.21.0">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-author" content="weponusa">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="teachany-prerequisites" content="基础句子写作,时间表达,情感描写">
+<title>日记写作 · 二年级语文 · 小学 · 语文 · G3 · TeachAny v7.12</title>
+<style>
+:root{
+  --bg:#fffbf0;--primary:#ff6b6b;--secondary:#4ecdc4;--accent:#ffe66d;--card:#fff;
+  --warm:#ff8c42;--mint:#a8e6cf;--lavender:#dbbfff;--peach:#ffcba4;
+  --text:#2d2d2d;--muted:#999;--radius:20px;--shadow:0 8px 32px rgba(0,0,0,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);font-family:'Comic Sans MS','Segoe UI',system-ui,sans-serif;color:var(--text);overflow-x:hidden;min-height:100vh;}
+.hidden{display:none!important;}
+canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+.screen{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px 14px;}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px;max-width:660px;width:100%;}
+.btn{cursor:pointer;border:none;border-radius:var(--radius);font-weight:900;padding:12px 30px;font-size:1rem;transition:transform .15s,box-shadow .15s;}
+.btn:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 10px 24px rgba(0,0,0,.18);}
+
+/* PROGRESS */
+#prog{position:fixed;top:0;left:0;width:100%;z-index:100;background:rgba(255,251,240,.94);backdrop-filter:blur(8px);padding:8px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.08);}
+.pb{flex:1;height:13px;background:#e0e0e0;border-radius:10px;overflow:hidden;}
+.pf{height:100%;background:linear-gradient(90deg,#ff6b6b,#ffe66d,#4ecdc4);border-radius:10px;transition:width .5s;}
+#sd{font-size:1.1rem;font-weight:700;color:var(--primary);}
+
+/* HERO */
+#s0{background:linear-gradient(135deg,#ff9a9e 0%,#fad0c4 35%,#ffecd2 100%)!important;}
+.diary-anim{font-size:5rem;animation:openDiary 1.5s ease-in-out infinite alternate;}
+@keyframes openDiary{0%{transform:rotate(-8deg) scale(.95);}100%{transform:rotate(8deg) scale(1.05);}}
+.hero-h1{font-size:2.5rem;font-weight:900;color:#fff;text-shadow:0 4px 16px rgba(0,0,0,.15);}
+.badge{background:rgba(255,255,255,.3);color:#fff;border-radius:50px;padding:5px 16px;font-size:.82rem;display:inline-block;margin-bottom:14px;}
+.meta-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:12px 0;}
+.meta-row span{background:rgba(255,255,255,.25);color:#fff;border-radius:10px;padding:3px 12px;font-size:.82rem;}
+
+/* DIARY PAGE */
+.diary-page{background:#fff9f0;border-radius:16px;border:3px solid #f0c080;padding:20px;margin-bottom:14px;position:relative;font-family:'Comic Sans MS',cursive;}
+.diary-page::before{content:'';position:absolute;left:48px;top:0;bottom:0;width:2px;background:#ff8c42;opacity:.4;}
+.diary-lines{background:repeating-linear-gradient(transparent,transparent 32px,#e8d5b7 32px,#e8d5b7 34px);border-radius:8px;padding:10px 10px 10px 56px;min-height:80px;}
+.diary-date{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+.date-field{border:2px solid #f0c080;border-radius:10px;padding:6px 12px;font-size:.9rem;width:80px;text-align:center;font-family:inherit;outline:none;}
+.date-field:focus{border-color:var(--warm);}
+.weather-pick{display:flex;gap:8px;flex-wrap:wrap;}
+.w-btn{font-size:1.4rem;cursor:pointer;border-radius:10px;border:2px solid transparent;padding:4px 8px;transition:all .2s;}
+.w-btn.active{border-color:var(--warm);background:#fff3e0;}
+.w-btn:hover{transform:scale(1.15);}
+
+/* EMOTION PICKER */
+.emo-row{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0;}
+.emo-btn{font-size:1.8rem;cursor:pointer;border-radius:12px;border:3px solid transparent;padding:6px 10px;transition:all .2s;background:#f9f9f9;}
+.emo-btn.picked{border-color:var(--primary);background:#fff3f3;transform:scale(1.12);}
+.emo-btn:hover{transform:scale(1.1);}
+
+/* WRITING AREA */
+.write-area{width:100%;min-height:110px;background:transparent;border:none;border-radius:8px;padding:6px 8px;font-size:1rem;font-family:'Comic Sans MS',cursive;resize:none;outline:none;line-height:2;color:#4a3728;}
+.write-area::placeholder{color:#c9b79c;}
+
+/* OPT BUTTONS */
+.opts-col{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.opt-row{background:#fff;border:2.5px solid #e0e0e0;border-radius:14px;padding:10px 16px;cursor:pointer;font-size:.95rem;transition:all .2s;display:flex;align-items:center;gap:10px;}
+.opt-row:hover{border-color:var(--secondary);background:#f0fdfc;}
+.opt-row.ok{border-color:#4caf50;background:#e8f5e9;}
+.opt-row.ng{border-color:var(--primary);background:#ffebee;}
+.opt-row:disabled{cursor:default;}
+.opt-icon{font-size:1.3rem;}
+
+/* WORD TOOLBOX */
+.toolbox{background:#fff9c4;border-radius:14px;padding:14px;margin-bottom:14px;}
+.toolbox-title{font-size:.9rem;font-weight:700;margin-bottom:8px;color:#7b5e00;}
+.word-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.wchip{background:var(--accent);border-radius:10px;padding:6px 14px;cursor:pointer;font-size:.9rem;font-weight:700;transition:all .2s;border:2px solid transparent;}
+.wchip:hover{background:var(--primary);color:#fff;transform:scale(1.06);}
+.wchip.in{background:var(--secondary);color:#fff;}
+
+/* FORMAT CHECKER */
+.format-items{display:flex;flex-direction:column;gap:8px;}
+.fmt-item{display:flex;align-items:center;gap:10px;background:#f9f9f9;border-radius:12px;padding:10px 14px;font-size:.9rem;}
+.fmt-check{width:24px;height:24px;border-radius:50%;border:2px solid #e0e0e0;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;flex-shrink:0;transition:all .2s;}
+.fmt-check.done{background:#4caf50;border-color:#4caf50;color:#fff;}
+
+/* GRADE PREVIEW */
+.diary-preview{background:#fffde7;border-radius:16px;border:3px dashed #f0c080;padding:18px;margin-bottom:14px;font-family:'Comic Sans MS',cursive;font-size:.95rem;line-height:2;color:#4a3728;}
+
+/* BOSS */
+.boss-wrap{background:linear-gradient(135deg,#ff8c42,#ff6b6b);color:#fff;border-radius:var(--radius);padding:28px;max-width:660px;width:100%;}
+.boss-diary{background:rgba(255,255,255,.15);border-radius:16px;padding:16px;margin-bottom:14px;}
+
+/* SCORE */
+.sc-card{background:linear-gradient(135deg,#ff8c42,#ff6b6b);color:#fff;border-radius:var(--radius);padding:32px;text-align:center;max-width:580px;width:100%;}
+.big-sc{font-size:4.5rem;font-weight:900;}
+.ach-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0;}
+.ach-t{background:rgba(255,255,255,.15);border-radius:40px;padding:5px 14px;font-size:.82rem;}
+.ach-t.on{background:var(--accent);color:#333;font-weight:700;}
+
+/* EXT */
+.ext-wrap{background:linear-gradient(135deg,#4ecdc4,#44a1a0);color:#fff;border-radius:var(--radius);padding:26px;max-width:660px;width:100%;}
+
+/* TOAST */
+#toast{position:fixed;top:78px;left:50%;transform:translateX(-50%) translateY(-40px);background:var(--warm);color:#fff;padding:12px 24px;border-radius:50px;font-weight:900;z-index:300;opacity:0;transition:all .3s;pointer-events:none;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* BUDDY */
+#buddy{position:fixed;bottom:22px;right:22px;z-index:200;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+.bb{background:var(--card);border-radius:16px 16px 4px 16px;padding:12px 14px;box-shadow:var(--shadow);font-size:.88rem;max-width:210px;}
+.bbn{width:56px;height:56px;background:linear-gradient(135deg,#ff8c42,#ff6b6b);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.9rem;cursor:pointer;box-shadow:var(--shadow);border:4px solid rgba(255,255,255,.5);transition:transform .2s;}
+.bbn:hover{transform:scale(1.1) rotate(-5deg);}
+
+/* LEVEL BADGE */
+.lbadge{display:inline-block;border-radius:50px;padding:5px 18px;font-size:.9rem;font-weight:900;color:#fff;}
+
+@media(max-width:480px){
+  .hero-h1{font-size:1.9rem;}
+  .meta-row span{font-size:.78rem;}
+}
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+</style>
+
+<style id="teachany-upgrade-styles">
+/* TeachAny UI blocks: ABT, Pretest, Posttest, Memory, Errors, AI */
+.ta-abt-block{background:linear-gradient(135deg,#fff9e6,#fff3cd);border:2px solid #ffc107;border-radius:16px;padding:20px 24px;margin:24px 0;}
+.ta-abt-block h3{color:#b35900;font-size:18px;font-weight:900;margin-bottom:12px;}
+.ta-abt-row{margin:6px 0;font-size:15px;line-height:1.7;}
+.ta-abt-label{display:inline-block;background:#e67700;color:#fff;border-radius:8px;padding:2px 10px;font-size:12px;font-weight:700;margin-right:8px;}
+.ta-test-section{background:#fff;border:2px solid #e8e8e8;border-radius:16px;padding:20px 24px;margin:24px 0;}
+.ta-test-section h2{font-size:20px;font-weight:900;margin-bottom:16px;color:#333;}
+.ta-q-block{margin:14px 0;}
+.ta-q-text{font-size:15px;font-weight:700;margin-bottom:8px;line-height:1.7;}
+.ta-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ta-opt{background:#f8f4ef;border:2px solid #e8ddd0;border-radius:10px;padding:10px 14px;cursor:pointer;font-size:14px;transition:all 0.2s;text-align:left;}
+.ta-opt:hover{border-color:#4ecdc4;background:#e0f7f4;}
+.ta-opt.correct{background:#d3f9d8;border-color:#51cf66;color:#1e7e34;}
+.ta-opt.wrong{background:#ffe3e3;border-color:#d63030;color:#c92a2a;}
+.ta-feedback{margin-top:8px;padding:8px 14px;border-radius:8px;font-size:14px;display:none;}
+.ta-feedback.ok{background:#d3f9d8;color:#1e7e34;}
+.ta-feedback.err{background:#ffe3e3;color:#c92a2a;}
+.ta-memory-block{background:linear-gradient(135deg,#e8f4fd,#d0ebff);border:2px solid #74c0fc;border-radius:16px;padding:20px 24px;margin:24px 0;}
+.ta-memory-block h3{color:#1971c2;font-size:18px;font-weight:900;margin-bottom:10px;}
+.ta-memory-content{font-size:15px;line-height:1.8;color:#1864ab;}
+.ta-errors-block{background:linear-gradient(135deg,#fff5f5,#ffe3e3);border:2px solid #ff8787;border-radius:16px;padding:20px 24px;margin:24px 0;}
+.ta-errors-block h3{color:#c92a2a;font-size:18px;font-weight:900;margin-bottom:10px;}
+.ta-errors-content{font-size:15px;line-height:1.8;color:#862e2e;}
+.ta-ai-section{background:linear-gradient(135deg,#f3f0ff,#e5dbff);border:2px solid #9775fa;border-radius:16px;padding:20px 24px;margin:24px 0;}
+.ta-ai-section h2{color:#6741d9;font-size:20px;font-weight:900;margin-bottom:12px;}
+.ai-prompt-box{background:#fff;border:2px solid #b197fc;border-radius:12px;padding:16px 20px;font-size:15px;line-height:1.8;color:#333;}
+.ai-prompt-box p{margin-bottom:8px;}
+.ai-label{background:#6741d9;color:#fff;border-radius:8px;padding:2px 10px;font-size:12px;font-weight:700;margin-bottom:10px;display:inline-block;}
+</style>
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+
+
+<style id="chne-depth-css">
+.chne-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.chne-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.24)}
+.chne-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.chne-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.chne-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.chne-depth .chne-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.chne-depth .chne-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+.chne-depth .chne-canvas{width:100%;max-width:560px;height:auto;background:#0b1628;border:1px solid rgba(148,163,184,.28);border-radius:12px;display:block;margin:8px auto 0}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+</head>
+<body>
+<nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;;color:#334155""><a href="#teachany-upgrade-styles">📑 知识图谱</a><a href="#bg">🤝 AI 学伴</a><a href="#prog">📚 课程内容</a></nav>
+
+
+<!-- teachany-hero-notext -->
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/chn-e-diary-writing-hero.png" alt="日记写作知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">日记写作</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+
+<canvas id="bg"></canvas>
+<div id="prog" class="hidden">
+  <span>📔</span>
+  <div class="pb"><div class="pf" id="pf" style="width:0%"></div></div>
+  <span id="sd">⭐ 0</span>
+</div>
+<div id="toast"></div>
+<div id="buddy">
+  <div class="bb hidden" id="bmsg">我是小日记本🐛，一起来写日记！</div>
+  <div class="bbn" onclick="toggleB()">🐛</div>
+</div>
+
+<!-- S0 HERO -->
+<div class="screen" id="s0">
+  <div style="text-align:center;">
+    <div class="diary-anim">📔</div>
+    <div class="badge">二年级语文 · 闯关模式 🌈</div>
+    <h1 class="hero-h1">日记写作大闯关！</h1>
+    <p style="color:rgba(255,255,255,.9);font-size:1rem;margin-bottom:12px;">学会写日记，记录每一天的美好时光！<br>成为日记小达人！✨</p>
+    <div class="meta-row">
+      <span>📔 3关挑战</span><span>⭐ 共200分</span>
+      <span>⏱ 约25分钟</span><span>🏆 8奖章</span>
+    </div>
+    <button class="btn" style="background:var(--accent);color:#333;font-size:1.15rem;" onclick="go(1)">🚀 开始写日记！</button>
+  </div>
+</div>
+
+<!-- S1 OBJECTIVES -->
+<div class="screen hidden" id="s1">
+  <div class="card">
+    <div style="font-size:1.4rem;font-weight:900;margin-bottom:14px;">🎯 今天学什么？</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">
+      <div style="background:#fff9c4;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.8rem;">📅</span><span><b>日记格式</b>：年月日、星期、天气，一个都不少</span>
+      </div>
+      <div style="background:#e8f5e9;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.8rem;">😊</span><span><b>情感表达</b>：写出你的心情和感受</span>
+      </div>
+      <div style="background:#e3f2fd;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.8rem;">✏️</span><span><b>写事记录</b>：今天发生了什么有趣的事？</span>
+      </div>
+      <div style="background:#f3e5f5;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.8rem;">🌟</span><span><b>好词好句</b>：用上好词，让日记更生动</span>
+      </div>
+    </div>
+    <div style="background:#fff3e0;border-radius:14px;padding:14px;margin-bottom:16px;font-size:.92rem;">
+      🐛 小日记本说：日记是你的秘密朋友，每天的所见所闻所感，都可以写进去哦！格式记牢：<b>日期→天气→正文</b>！
+    </div>
+    <button class="btn" style="background:var(--secondary);color:#fff;" onclick="go(2)">✅ 知道了！开始！</button>
+  </div>
+</div>
+
+<!-- S2 WARMUP: FORMAT -->
+<div class="screen hidden" id="s2">
+  <div class="card">
+    <div style="font-size:1.4rem;font-weight:900;margin-bottom:6px;">🔥 热身：日记格式练习</div>
+    <p style="color:var(--muted);font-size:.88rem;margin-bottom:16px;">先来练一练日记的基本格式！</p>
+
+    <div style="background:#fff9c4;border-radius:14px;padding:14px;margin-bottom:14px;">
+      <p style="font-weight:700;margin-bottom:10px;">Q1. 日记的第一行应该写什么？</p>
+      <div class="opts-col" id="q1-opts">
+        <div class="opt-row" onclick="ansQ(1,0,0)"><span class="opt-icon">📅</span>年月日、星期几、天气</div>
+        <div class="opt-row" onclick="ansQ(1,1,0)"><span class="opt-icon">📝</span>故事内容</div>
+        <div class="opt-row" onclick="ansQ(1,2,0)"><span class="opt-icon">✍️</span>自己的名字</div>
+      </div>
+    </div>
+
+    <div style="background:#e1f5fe;border-radius:14px;padding:14px;margin-bottom:14px;">
+      <p style="font-weight:700;margin-bottom:10px;">Q2. 下面哪个日期格式是正确的？</p>
+      <div class="opts-col" id="q2-opts">
+        <div class="opt-row" onclick="ansQ(2,0,1)"><span class="opt-icon">❌</span>二〇二五年月日</div>
+        <div class="opt-row" onclick="ansQ(2,1,1)"><span class="opt-icon">✅</span>2025年4月21日 星期一</div>
+        <div class="opt-row" onclick="ansQ(2,2,1)"><span class="opt-icon">❌</span>天气晴年月日</div>
+      </div>
+    </div>
+
+    <div style="background:#f3e5f5;border-radius:14px;padding:14px;margin-bottom:14px;">
+      <p style="font-weight:700;margin-bottom:10px;">Q3. 日记正文的第一行要怎么写？</p>
+      <div class="opts-col" id="q3-opts">
+        <div class="opt-row" onclick="ansQ(3,0,2)"><span class="opt-icon">❌</span>紧贴左边，不留空格</div>
+        <div class="opt-row" onclick="ansQ(3,1,2)"><span class="opt-icon">❌</span>空一格开始</div>
+        <div class="opt-row" onclick="ansQ(3,2,2)"><span class="opt-icon">✅</span>空两格（缩进）开始</div>
+      </div>
+    </div>
+
+    <div id="warm-done" class="hidden" style="text-align:center;margin-top:12px;">
+      <div id="warm-txt" style="font-size:1.15rem;font-weight:700;margin-bottom:12px;"></div>
+      <button class="btn" style="background:var(--primary);color:#fff;" onclick="go(3)">📔 进入第一关！</button>
+    </div>
+  </div>
+</div>
+
+<!-- S3 LEVEL 1: DIARY FORMAT -->
+<div class="screen hidden" id="s3">
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <span class="lbadge" style="background:var(--primary);">📅 第一关</span>
+      <span style="font-weight:900;font-size:1.1rem;">填写日记格式</span>
+      <span style="margin-left:auto;color:var(--muted);font-size:.85rem;">+35⭐</span>
+    </div>
+    <p style="color:var(--muted);font-size:.88rem;margin-bottom:14px;">在空白处填写完整的日记格式，然后写几句话。</p>
+
+    <div class="diary-page">
+      <div class="diary-date">
+        <input class="date-field" id="d-year" placeholder="年" maxlength="4" style="width:72px;">
+        <span style="font-size:1rem;">年</span>
+        <input class="date-field" id="d-month" placeholder="月" maxlength="2" style="width:52px;">
+        <span>月</span>
+        <input class="date-field" id="d-day" placeholder="日" maxlength="2" style="width:52px;">
+        <span>日</span>
+        <select class="date-field" id="d-week" style="width:100px;">
+          <option value="">星期?</option>
+          <option>星期一</option><option>星期二</option><option>星期三</option>
+          <option>星期四</option><option>星期五</option><option>星期六</option><option>星期日</option>
+        </select>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <span style="font-size:.9rem;font-weight:700;">天气：</span>
+        <div class="weather-pick" id="weather-row">
+          <span class="w-btn" onclick="pickW(this,'☀️晴')">☀️</span>
+          <span class="w-btn" onclick="pickW(this,'⛅多云')">⛅</span>
+          <span class="w-btn" onclick="pickW(this,'🌧️雨')">🌧️</span>
+          <span class="w-btn" onclick="pickW(this,'❄️雪')">❄️</span>
+          <span class="w-btn" onclick="pickW(this,'🌫️雾')">🌫️</span>
+          <span class="w-btn" onclick="pickW(this,'🌩️雷雨')">🌩️</span>
+        </div>
+        <span id="weather-val" style="font-size:.9rem;color:var(--warm);font-weight:700;"></span>
+      </div>
+
+      <p style="font-size:.9rem;font-weight:700;margin-bottom:10px;">今天的心情：</p>
+      <div class="emo-row" id="emo-row">
+        <span class="emo-btn" onclick="pickEmo(this,'😊开心')">😊</span>
+        <span class="emo-btn" onclick="pickEmo(this,'😃高兴')">😃</span>
+        <span class="emo-btn" onclick="pickEmo(this,'😢难过')">😢</span>
+        <span class="emo-btn" onclick="pickEmo(this,'😤生气')">😤</span>
+        <span class="emo-btn" onclick="pickEmo(this,'😴困')">😴</span>
+        <span class="emo-btn" onclick="pickEmo(this,'🤩惊喜')">🤩</span>
+        <span class="emo-btn" onclick="pickEmo(this,'😌满足')">😌</span>
+        <span class="emo-btn" onclick="pickEmo(this,'🥳兴奋')">🥳</span>
+      </div>
+      <input type="hidden" id="emo-val">
+
+      <div class="diary-lines">
+        <textarea class="write-area" id="l1-text" rows="4" placeholder="今天，我……（空两格开始写）"></textarea>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;font-size:.82rem;color:var(--muted);margin-bottom:12px;">
+      <span>字数：<span id="l1-count">0</span></span>
+      <span>天气：<span id="l1-weather" style="color:var(--warm);">未选</span> | 心情：<span id="l1-emo" style="color:var(--primary);">未选</span></span>
+    </div>
+    <button class="btn" style="background:var(--primary);color:#fff;" onclick="checkL1()">✅ 提交日记格式</button>
+    <div id="l1-res" class="hidden" style="margin-top:12px;border-radius:12px;padding:12px;font-size:.9rem;"></div>
+  </div>
+</div>
+
+<!-- S4 LEVEL 2: EVENT WRITING -->
+<div class="screen hidden" id="s4">
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <span class="lbadge" style="background:var(--secondary);">✏️ 第二关</span>
+      <span style="font-weight:900;font-size:1.1rem;">记录今天的事</span>
+      <span style="margin-left:auto;color:var(--muted);font-size:.85rem;">+45⭐</span>
+    </div>
+
+    <p style="font-weight:700;margin-bottom:12px;font-size:.95rem;">选一个今天发生的事情，用日记记录下来：</p>
+
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;" id="event-select">
+      <div class="opt-row" style="flex-direction:column;text-align:center;padding:14px;" onclick="pickEvent(this,'去公园玩','🌳')">
+        <span style="font-size:2rem;margin-bottom:4px;">🌳</span><span style="font-weight:700;font-size:.9rem;">去公园玩</span>
+      </div>
+      <div class="opt-row" style="flex-direction:column;text-align:center;padding:14px;" onclick="pickEvent(this,'上学第一天','🏫')">
+        <span style="font-size:2rem;margin-bottom:4px;">🏫</span><span style="font-weight:700;font-size:.9rem;">上学第一天</span>
+      </div>
+      <div class="opt-row" style="flex-direction:column;text-align:center;padding:14px;" onclick="pickEvent(this,'帮妈妈做家务','🧹')">
+        <span style="font-size:2rem;margin-bottom:4px;">🧹</span><span style="font-weight:700;font-size:.9rem;">帮妈妈做家务</span>
+      </div>
+      <div class="opt-row" style="flex-direction:column;text-align:center;padding:14px;" onclick="pickEvent(this,'下雨天的心情','🌧️')">
+        <span style="font-size:2rem;margin-bottom:4px;">🌧️</span><span style="font-weight:700;font-size:.9rem;">下雨天的心情</span>
+      </div>
+    </div>
+    <input type="hidden" id="event-val">
+
+    <div id="event-prompts" class="hidden">
+      <div style="background:#e1f5fe;border-radius:14px;padding:14px;margin-bottom:14px;">
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:8px;">💡 写作提示（按顺序想）：</div>
+        <div id="event-hints" style="font-size:.88rem;color:#1565c0;line-height:2;"></div>
+      </div>
+
+      <div class="toolbox">
+        <div class="toolbox-title">🧰 好词工具箱（点击插入）</div>
+        <div class="word-chips" id="word-toolbox"></div>
+      </div>
+
+      <div class="diary-page">
+        <div class="diary-lines">
+          <textarea class="write-area" id="l2-text" rows="6" placeholder="今天，我……"></textarea>
+        </div>
+      </div>
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px;">字数：<span id="l2-count">0</span>字 | 目标：40字以上</div>
+      <button class="btn" style="background:var(--secondary);color:#fff;" onclick="checkL2()">✅ 提交日记正文</button>
+      <div id="l2-res" class="hidden" style="margin-top:12px;border-radius:12px;padding:12px;font-size:.9rem;"></div>
+    </div>
+    <div id="event-wait" style="color:var(--muted);font-size:.9rem;text-align:center;padding:12px;">请先选择一件事情～</div>
+  </div>
+</div>
+
+<!-- S5 LEVEL 3: IMPROVE DIARY -->
+<div class="screen hidden" id="s5">
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <span class="lbadge" style="background:#9c27b0;">🌟 第三关</span>
+      <span style="font-weight:900;font-size:1.1rem;">修改完善日记</span>
+      <span style="margin-left:auto;color:var(--muted);font-size:.85rem;">+50⭐</span>
+    </div>
+
+    <p style="font-weight:700;margin-bottom:10px;font-size:.95rem;">这篇日记有4处需要改进，你能找出来吗？</p>
+
+    <div class="diary-preview" id="bad-diary">
+      <b>2025年4月5日 晴</b><br>
+      <br>
+      今天去了公园。<br>
+      公园里有花。<br>
+      我很高兴。<br>
+      我和爸爸妈妈在一起。<br>
+      我们吃了东西。<br>
+    </div>
+
+    <p style="font-weight:700;margin-bottom:8px;font-size:.92rem;">找出日记存在的问题（点击勾选）：</p>
+    <div class="format-items" id="problem-list">
+      <div class="fmt-item">
+        <div class="fmt-check" id="fc1" onclick="toggleFC('fc1')"></div>
+        <span>❌ 日期格式不完整（缺少星期几）</span>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-check" id="fc2" onclick="toggleFC('fc2')"></div>
+        <span>❌ 正文没有缩进（需要空两格）</span>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-check" id="fc3" onclick="toggleFC('fc3')"></div>
+        <span>❌ 内容太简单，没有具体描写</span>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-check" id="fc4" onclick="toggleFC('fc4')"></div>
+        <span>❌ 没有写出心情和感受</span>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-check" id="fc5" onclick="toggleFC('fc5')"></div>
+        <span>✅ 结尾用了感叹号（这是对的！）</span>
+      </div>
+    </div>
+    <input type="hidden" id="fc-vals" value="">
+
+    <div style="margin-top:16px;">
+      <p style="font-weight:700;margin-bottom:8px;font-size:.92rem;">✏️ 现在把日记改得更好！（在下面重新写）</p>
+      <div class="toolbox" style="margin-bottom:10px;">
+        <div class="toolbox-title">✨ 改写小助手 - 可以加上这些：</div>
+        <div class="word-chips">
+          <span class="wchip" onclick="insWord3('绽放着')">🌸 绽放着</span>
+          <span class="wchip" onclick="insWord3('五颜六色的')">🎨 五颜六色的</span>
+          <span class="wchip" onclick="insWord3('笑着说')">😄 笑着说</span>
+          <span class="wchip" onclick="insWord3('高兴极了')">🎉 高兴极了</span>
+          <span class="wchip" onclick="insWord3('香喷喷的')">🍱 香喷喷的</span>
+          <span class="wchip" onclick="insWord3('在阳光下')">☀️ 在阳光下</span>
+          <span class="wchip" onclick="insWord3('真美啊！')">💬 真美啊！</span>
+        </div>
+      </div>
+      <div class="diary-page">
+        <div class="diary-lines">
+          <textarea class="write-area" id="l3-text" rows="7" placeholder="2025年4月5日 星期六 晴
+  今天，我和爸爸妈妈去了公园……（空两格开始）"></textarea>
+        </div>
+      </div>
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px;">字数：<span id="l3-count">0</span>字</div>
+    </div>
+    <button class="btn" style="background:#9c27b0;color:#fff;" onclick="checkL3()">✅ 提交修改版</button>
+    <div id="l3-res" class="hidden" style="margin-top:12px;border-radius:12px;padding:12px;font-size:.9rem;"></div>
+  </div>
+</div>
+
+<!-- S6 BOSS -->
+<div class="screen hidden" id="s6">
+  <div class="boss-wrap">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:3rem;">👑</div>
+      <h2 style="color:#fff;font-size:1.5rem;margin-bottom:6px;">Boss关卡：写一篇完整日记</h2>
+      <p style="color:rgba(255,255,255,.85);font-size:.9rem;">用今天学到的方法，写一篇格式正确、内容丰富的日记</p>
+    </div>
+
+    <div class="boss-diary">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <input style="background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);border-radius:10px;padding:6px 10px;color:#fff;font-size:.88rem;width:80px;outline:none;" id="bd-year" placeholder="年">
+        <span style="color:#fff;">年</span>
+        <input style="background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);border-radius:10px;padding:6px 10px;color:#fff;font-size:.88rem;width:52px;outline:none;" id="bd-month" placeholder="月">
+        <span style="color:#fff;">月</span>
+        <input style="background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);border-radius:10px;padding:6px 10px;color:#fff;font-size:.88rem;width:52px;outline:none;" id="bd-day" placeholder="日">
+        <select style="background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);border-radius:10px;padding:6px 8px;color:#fff;font-size:.85rem;outline:none;" id="bd-week">
+          <option value="" style="color:#333;">星期?</option>
+          <option style="color:#333;">星期一</option><option style="color:#333;">星期二</option><option style="color:#333;">星期三</option>
+          <option style="color:#333;">星期四</option><option style="color:#333;">星期五</option><option style="color:#333;">星期六</option><option style="color:#333;">星期日</option>
+        </select>
+        <span style="color:#fff;">天气：</span>
+        <span style="cursor:pointer;font-size:1.4rem;" onclick="cycleBossWeather()" id="bw-disp">☀️</span>
+      </div>
+
+      <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:10px;margin-bottom:12px;font-size:.85rem;color:rgba(255,255,255,.85);">
+        <b>💡 写作检查清单：</b><br>
+        ① 日期格式完整 ② 正文空两格 ③ 写了什么事 ④ 写了心情 ⑤ 用上好词
+      </div>
+
+      <textarea style="width:100%;min-height:140px;background:rgba(255,255,255,.15);border:none;border-radius:12px;padding:12px;font-size:1rem;font-family:'Comic Sans MS',cursive;color:#fff;resize:none;outline:none;line-height:2;" id="boss-text" placeholder="  今天，……（记得空两格！）"></textarea>
+      <div style="display:flex;justify-content:space-between;font-size:.82rem;color:rgba(255,255,255,.7);margin:8px 0 12px;">
+        <span>字数：<span id="boss-count">0</span></span><span>目标：50字以上</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="btn" style="background:rgba(255,255,255,.25);color:#fff;padding:10px 20px;font-size:.9rem;" onclick="aiCheckBoss()">🔍 格式检查</button>
+    </div>
+    <div id="boss-fb" class="hidden" style="background:rgba(255,255,255,.15);border-radius:12px;padding:12px;margin-bottom:12px;font-size:.88rem;color:#fff;"></div>
+    <button class="btn" style="background:var(--accent);color:#333;width:100%;font-size:1.05rem;" onclick="submitBoss()">🏆 提交我的日记！</button>
+  </div>
+</div>
+
+<!-- S7 SCORE -->
+<div class="screen hidden" id="s7">
+  <div class="sc-card">
+    <div style="font-size:3.5rem;">📔</div>
+    <h2 style="font-size:1.6rem;margin-bottom:4px;">日记达人诞生！</h2>
+    <div class="big-sc" id="fin-score">0</div>
+    <div style="opacity:.8;margin-bottom:12px;">分</div>
+    <div id="stars-disp2" style="font-size:2.5rem;margin-bottom:12px;">⭐⭐⭐</div>
+    <div class="ach-row">
+      <div class="ach-t" id="a1">📅 格式达人</div>
+      <div class="ach-t" id="a2">✏️ 写作宝宝</div>
+      <div class="ach-t" id="a3">🔍 修改能手</div>
+      <div class="ach-t" id="a4">📔 日记达人</div>
+      <div class="ach-t" id="a5">🏆 全关通关</div>
+      <div class="ach-t" id="a6">⭐ 热身王者</div>
+      <div class="ach-t" id="a7">💯 满分日记</div>
+      <div class="ach-t" id="a8">🐛 日记好友</div>
+    </div>
+    <div style="background:rgba(255,255,255,.2);border-radius:12px;padding:14px;margin:12px 0;font-size:.88rem;text-align:left;" id="bd"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn" style="background:var(--accent);color:#333;" onclick="go(8)">🌱 拓展园地</button>
+      <button class="btn" style="background:rgba(255,255,255,.25);color:#fff;" onclick="location.reload()">🔄 再来一次</button>
+    </div>
+  </div>
+</div>
+
+<!-- S8 EXTENSION -->
+<div class="screen hidden" id="s8">
+  <div class="ext-wrap">
+    <h2 style="margin-bottom:6px;">🌱 日记拓展园地</h2>
+    <p style="opacity:.85;margin-bottom:16px;">学会了日记格式，继续练习更多写法！</p>
+    <div style="display:grid;gap:12px;">
+      <div style="background:rgba(255,255,255,.2);border-radius:14px;padding:14px;">
+        <b>📔 日记写作口诀</b>
+        <div style="font-size:.88rem;opacity:.9;margin-top:8px;line-height:2;">
+          日期天气写第一行，<br>
+          正文开头空两格，<br>
+          今天发生的事写清楚，<br>
+          心情感受不能忘，<br>
+          好词好句来装扮，<br>
+          日记就会写得棒！
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,.2);border-radius:14px;padding:14px;">
+        <b>✨ 日记好词积累</b>
+        <div style="font-size:.88rem;opacity:.9;margin-top:8px;line-height:2;">
+          天气词：阳光明媚、乌云密布、春风轻抚<br>
+          心情词：喜出望外、愁眉苦脸、兴高采烈<br>
+          动作词：蹦蹦跳跳、小心翼翼、一蹦三尺高
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,.2);border-radius:14px;padding:14px;">
+        <b>🌟 日记题材宝库</b>
+        <div style="font-size:.88rem;opacity:.9;margin-top:8px;line-height:2;">
+          📅 开心事：生日、旅游、得奖<br>
+          😢 难过事：摔跤、失去东西<br>
+          🌱 有趣事：看到新鲜的东西<br>
+          💡 想法事：有了一个好点子
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,.2);border-radius:14px;padding:14px;">
+        <b>🎯 课后挑战</b>
+        <p style="font-size:.88rem;opacity:.9;margin-top:8px;">回家后写一篇真实的日记！把今天在学校发生的一件事写下来，记得格式正确、写出心情哦！明天带来和同学分享！</p>
+      </div>
+    </div>
+    <div style="margin-top:18px;text-align:center;">
+      <button class="btn" style="background:var(--accent);color:#333;" onclick="go(0)">🏠 返回首页</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const G={stars:0,sc:0,wq:{1:null,2:null,3:null},wqS:0,weather:'',emo:'',event:'',fc:{fc1:false,fc2:false,fc3:false,fc4:false,fc5:false},l1s:0,l2s:0,l3s:0,bSc:0,achs:[]};
+const AC4=window.AudioContext||window.webkitAudioContext;let ac4;
+function ga(){if(!ac4)ac4=new AC4();return ac4;}
+function pt(f,d=.15,t='sine',v=.28){try{const a=ga(),o=a.createOscillator(),g=a.createGain();o.type=t;o.frequency.setValueAtTime(f,a.currentTime);g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+d);}catch(e){}}
+function pOk(){[523,659,784].forEach((f,i)=>setTimeout(()=>pt(f,.18),i*100));}
+function pYay(){[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>pt(f,.15),i*90));}
+function pNo(){[300,250].forEach((f,i)=>setTimeout(()=>pt(f,.16,'sawtooth',.2),i*140));}
+function pTap(){pt(440,.07,'sine',.1);}
+function pStar(){pt(880,.08);setTimeout(()=>pt(1100,.12),100);}
+
+(()=>{const c=document.getElementById('bg'),ctx=c.getContext('2d');c.width=window.innerWidth;c.height=window.innerHeight;
+const p=Array.from({length:25},()=>({x:Math.random()*c.width,y:Math.random()*c.height,e:['📝','⭐','✏️','📔','🌟','💛'][Math.floor(Math.random()*6)],s:Math.random()*16+12,v:Math.random()*.3+.1,a:Math.random()*.4+.1}));
+function dr(){ctx.clearRect(0,0,c.width,c.height);p.forEach(s=>{ctx.save();ctx.globalAlpha=s.a;ctx.font=s.s+'px serif';ctx.fillText(s.e,s.x,s.y);ctx.restore();s.y+=s.v;if(s.y>c.height+20){s.y=-20;s.x=Math.random()*c.width;}});requestAnimationFrame(dr);}
+dr();window.addEventListener('resize',()=>{c.width=window.innerWidth;c.height=window.innerHeight;});})();
+
+function go(n){pTap();document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById('s'+n).classList.remove('hidden');G.sc=n;updateP();window.scrollTo(0,0);if(n>0)document.getElementById('prog').classList.remove('hidden');updateB(n);}
+function updateP(){document.getElementById('pf').style.width=(G.sc/8*100)+'%';document.getElementById('sd').textContent='⭐ '+G.stars;}
+function addS(n){G.stars+=n;pStar();updateP();toast('⭐ +'+n+'！');}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+const bHints={0:'我是小日记本🐛，一起来写日记！',1:'日记格式：年月日→星期→天气→正文（空两格）',2:'格式是日记的骨架，先练好！',3:'仔细填写每个格子，别忘了天气和心情！',4:'把今天的事情写清楚，加上好词！',5:'找出日记的问题，然后改写得更棒！',6:'用今天学到的所有方法，写一篇完整日记！',7:'你是真正的日记达人了！继续坚持每天写！',8:'每天写日记，坚持一周就会有大进步！'};
+let bon=false;
+function toggleB(){pTap();bon=!bon;const m=document.getElementById('bmsg');if(bon){m.classList.remove('hidden');m.textContent=bHints[G.sc]||'加油！';}else m.classList.add('hidden');}
+function updateB(n){if(bon){document.getElementById('bmsg').textContent=bHints[n]||'加油！';}}
+
+// Warmup
+let wqD={1:null,2:null,3:null},wqS=0;
+function ansQ(q,sel,ans){pTap();if(wqD[q]!==null)return;wqD[q]=sel;const btns=document.querySelectorAll(`#q${q}-opts .opt-row`);btns.forEach((b,i)=>{if(i===ans)b.classList.add('ok');else if(i===sel&&sel!==ans)b.classList.add('ng');});if(sel===ans){addS(5);wqS++;pOk();}else pNo();if(wqD[1]!==null&&wqD[2]!==null&&wqD[3]!==null){document.getElementById('warm-done').classList.remove('hidden');document.getElementById('warm-txt').textContent=wqS===3?'🎉 全对！格式大师！':wqS>=2?'👍 做得不错！':' 💪 继续加油！';if(wqS===3)unlk('a6');}}
+
+// L1
+document.addEventListener('DOMContentLoaded',()=>{
+  const inputs=[['l1-text','l1-count'],['l2-text','l2-count'],['l3-text','l3-count'],['boss-text','boss-count']];
+  inputs.forEach(([id,cnt])=>{const el=document.getElementById(id);if(el)el.addEventListener('input',()=>{const c=document.getElementById(cnt);if(c)c.textContent=el.value.length;});});
+});
+function pickW(el,v){pTap();document.querySelectorAll('.w-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');G.weather=v;document.getElementById('weather-val').textContent=v;document.getElementById('l1-weather').textContent=v;}
+function pickEmo(el,v){pTap();document.querySelectorAll('.emo-btn').forEach(b=>b.classList.remove('picked'));el.classList.add('picked');G.emo=v;document.getElementById('emo-val').value=v;document.getElementById('l1-emo').textContent=v;}
+function checkL1(){pTap();let s=0;const y=document.getElementById('d-year').value.trim();const m=document.getElementById('d-month').value.trim();const d=document.getElementById('d-day').value.trim();const w=document.getElementById('d-week').value;const txt=document.getElementById('l1-text').value.trim();if(y.length>=4)s+=8;if(m.length>=1)s+=5;if(d.length>=1)s+=5;if(w)s+=7;if(G.weather)s+=5;if(G.emo)s+=5;if(txt.length>10)s+=10;G.l1s=s;addS(s);const r=document.getElementById('l1-res');r.classList.remove('hidden');if(s>=35){pOk();r.style.background='#e8f5e9';r.style.border='2px solid #4caf50';r.textContent='🎉 日记格式写得很好！';unlk('a1');}else if(s>=20){r.style.background='#fff9c4';r.style.border='2px solid #f0c080';r.textContent='👍 不错！检查一下有没有漏填的格子？';}else{pNo();r.style.background='#ffebee';r.style.border='2px solid #ef9a9a';r.textContent='💪 有些格子没填完整，再检查一下！'}setTimeout(()=>go(4),2000);}
+
+// L2 Event
+const eventData={
+  '去公园玩':{hints:'① 什么时候去的公园？\n② 看到了什么？（花、草、小动物）\n③ 做了什么游戏？\n④ 心情怎么样？',words:['鲜花盛开','绿草如茵','高兴极了','蝴蝶飞舞','阳光灿烂','欢声笑语','玩得真开心']},
+  '上学第一天':{hints:'① 第一天上学是什么感觉？\n② 遇到了什么新朋友？\n③ 老师是什么样的？\n④ 你最喜欢哪节课？',words:['紧张地','第一次','新朋友','认识了','笑眯眯','太有趣了','下次还要']},
+  '帮妈妈做家务':{hints:'① 帮妈妈做了什么家务？\n② 做的时候遇到什么困难？\n③ 结果怎么样？\n④ 妈妈说了什么？',words:['认真地','一丝不苟','夸奖我','累但开心','做得真棒','学会了','以后每天']},
+  '下雨天的心情':{hints:'① 下雨天的天气是什么样的？\n② 下雨天你做了什么？\n③ 窗外的景色是什么样的？\n④ 你对下雨天的感受？',words:['淅淅沥沥','乌云密布','雨滴声','待在家里','心情也湿了','水坑里','好喜欢下雨']},
+};
+function pickEvent(el,name,emoji){pTap();document.querySelectorAll('#event-select .opt-row').forEach(b=>b.classList.remove('ok'));el.classList.add('ok');G.event=name;document.getElementById('event-val').value=name;document.getElementById('event-wait').classList.add('hidden');const ep=document.getElementById('event-prompts');ep.classList.remove('hidden');const ed=eventData[name];document.getElementById('event-hints').innerHTML=ed.hints.split('\n').join('<br>');const wt=document.getElementById('word-toolbox');wt.innerHTML='';ed.words.forEach(w=>{const c=document.createElement('span');c.className='wchip';c.textContent=w;c.onclick=()=>{pTap();const ta=document.getElementById('l2-text');ta.value+=w;ta.focus();document.getElementById('l2-count').textContent=ta.value.length;};wt.appendChild(c);});}
+function checkL2(){pTap();const txt=document.getElementById('l2-text').value.trim();let s=0;if(txt.length>20)s+=20;if(txt.length>40)s+=15;if(txt.includes('。')||txt.includes('！'))s+=5;if(G.event)s+=5;G.l2s=s;addS(s);const r=document.getElementById('l2-res');r.classList.remove('hidden');if(s>=35){pOk();r.style.background='#e8f5e9';r.style.border='2px solid #4caf50';r.textContent='✏️ 太棒了！日记内容很丰富！';unlk('a2');}else if(s>=20){r.style.background='#fff9c4';r.style.border='2px solid #f0c080';r.textContent='👍 写得不错！再加几句话会更好！';}else{pNo();r.style.background='#ffebee';r.style.border='2px solid #ef9a9a';r.textContent='💪 内容太少了，多写几句吧！'}setTimeout(()=>go(5),2000);}
+
+// L3
+const fcCorrect=['fc1','fc2','fc3','fc4'];
+function toggleFC(id){pTap();G.fc[id]=!G.fc[id];const el=document.getElementById(id);el.classList.toggle('done',G.fc[id]);if(G.fc[id])el.textContent='✓';else el.textContent='';}
+function insWord3(w){pTap();const ta=document.getElementById('l3-text');ta.value+=w;document.getElementById('l3-count').textContent=ta.value.length;}
+function checkL3(){pTap();let fcSc=0;fcCorrect.forEach(id=>{if(G.fc[id])fcSc+=8;});if(G.fc['fc5']===false){}else fcSc-=4;const txt=document.getElementById('l3-text').value.trim();let writeSc=0;if(txt.length>30)writeSc+=10;if(txt.length>60)writeSc+=8;if(txt.includes('星期'))writeSc+=4;G.l3s=Math.max(0,fcSc+writeSc);addS(G.l3s);const r=document.getElementById('l3-res');r.classList.remove('hidden');if(G.l3s>=40){pOk();r.style.background='#e8f5e9';r.style.border='2px solid #4caf50';r.textContent='🌟 修改得非常好！你是日记修改能手！';unlk('a3');}else if(G.l3s>=20){r.style.background='#fff9c4';r.style.border='2px solid #f0c080';r.textContent='👍 找出了一些问题！继续加油！';}else{pNo();r.style.background='#ffebee';r.style.border='2px solid #ef9a9a';r.textContent='💪 再仔细看看日记，找找问题！'}setTimeout(()=>go(6),2000);}
+
+// Boss
+const weathers=['☀️','⛅','🌧️','❄️','🌫️','🌈'];let bwIdx=0;
+function cycleBossWeather(){bwIdx=(bwIdx+1)%weathers.length;document.getElementById('bw-disp').textContent=weathers[bwIdx];pTap();}
+function aiCheckBoss(){pTap();const t=document.getElementById('boss-text').value.trim();const y=document.getElementById('bd-year').value;const m=document.getElementById('bd-month').value;const d=document.getElementById('bd-day').value;const w=document.getElementById('bd-week').value;const fb=document.getElementById('boss-fb');fb.classList.remove('hidden');let html='🔍 格式检查结果：<br>';if(y&&m&&d&&w)html+='✅ 日期格式完整<br>';else html+='⚠️ 日期还未填写完整<br>';if(t.startsWith('  ')||t.startsWith('\t'))html+='✅ 正文已缩进<br>';else html+='⚠️ 别忘了正文开头空两格！<br>';if(t.length>50)html+='✅ 内容充实<br>';else html+='⚠️ 内容较少，可以多写一些<br>';if(t.includes('高兴')||t.includes('开心')||t.includes('快乐')||t.includes('难过'))html+='✅ 写出了心情<br>';else html+='💡 建议加上你的心情描述<br>';fb.innerHTML=html;}
+function submitBoss(){pTap();const t=document.getElementById('boss-text').value.trim();if(t.length<15){toast('再多写几个字哦！');return;}const y=document.getElementById('bd-year').value;const w=document.getElementById('bd-week').value;let b=50;if(y&&w)b+=15;if(t.length>60)b+=15;G.bSc=b;G.stars+=b;pYay();unlk('a4');toast('🏆 日记完成！+'+b+'⭐');setTimeout(showSc,1500);}
+function showSc(){const total=G.stars;document.getElementById('fin-score').textContent=total;document.getElementById('bd').innerHTML=`热身：${wqS*5}分 | 第一关：${G.l1s}分<br>第二关：${G.l2s}分 | 第三关：${G.l3s}分<br>Boss关：${G.bSc}分`;document.getElementById('stars-disp2').textContent=total>=150?'⭐⭐⭐':total>=90?'⭐⭐':'⭐';if(total>=180)unlk('a7');unlk('a5');unlk('a8');go(7);}
+function unlk(id){if(G.achs.includes(id))return;G.achs.push(id);const el=document.getElementById(id);if(el){el.classList.add('on');pStar();toast('🏆 奖章解锁：'+el.textContent);}}
+</script>
+
+<div class="container" style="max-width:960px;margin:0 auto;padding:0 20px;">
+
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出日记的3个基本要素（时间、事件、感受）</p></div><div class="tu-q"><p>🎯 能判断例文是否符合日记格式要求</p></div><div class="tu-q"><p>🎯 能分析优秀日记的选材特点</p></div></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么日记一定要写天气和心情？</p></div><div class="tu-q"><p>❓ 日记可不可以写今天打游戏的事？</p></div><div class="tu-q"><p>❓ 老师怎么知道我日记写的是真事还是编的？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" id="pretest" class="ta-test-section" data-slot="20">
+  <h2>📋 前测：你已经知道什么？</h2>
+  <div class="ta-q-block">
+    <div class="ta-q-text">1. 日记的格式，第一行应该写什么？</div>
+    <div class="ta-options">
+      <button class="ta-opt" onclick="taCheckQ('pre1',0,'B')" id="pre1-opt0">A. 直接开始写内容</button>
+      <button class="ta-opt" onclick="taCheckQ('pre1',1,'B')" id="pre1-opt1">B. 日期（某年某月某日）和天气</button>
+      <button class="ta-opt" onclick="taCheckQ('pre1',2,'B')" id="pre1-opt2">C. 标题</button>
+      <button class="ta-opt" onclick="taCheckQ('pre1',3,'B')" id="pre1-opt3">D. 亲爱的日记</button>
+    </div>
+    <div class="ta-feedback" id="pre1-fb"></div>
+  </div>
+  <div class="ta-q-block">
+    <div class="ta-q-text">2. 让日记更有意思的最好方法是？</div>
+    <div class="ta-options">
+      <button class="ta-opt" onclick="taCheckQ('pre2',0,'B')" id="pre2-opt0">A. 把每件事都详细记录</button>
+      <button class="ta-opt" onclick="taCheckQ('pre2',1,'B')" id="pre2-opt1">B. 只写最让自己有感触的一件事，写出当时的心情和感受</button>
+      <button class="ta-opt" onclick="taCheckQ('pre2',2,'B')" id="pre2-opt2">C. 写得越长越好</button>
+      <button class="ta-opt" onclick="taCheckQ('pre2',3,'B')" id="pre2-opt3">D. 抄别人的好词好句</button>
+    </div>
+    <div class="ta-feedback" id="pre2-fb"></div>
+  </div>
+</section>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（放在 pretest 之后，课件顶部可见） -->
+
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 日记格式小卫士</h2><div class="tu-q"><p><strong>And：</strong>学生知道日记是记录生活的方式</p><p><strong>But：</strong>经常忘记写日期/星期/天气等要素</p><p><strong>Therefore：</strong>帮学生建立规范的日记格式意识</p></div><div class="tu-q"><p>日记要有'三件套'：1.顶格写日期（2023年9月1日）和星期（星期五），2.另起一行写天气（晴），3.最后空两格开始写正文。比如：'2023年9月1日 星期五 晴  今天体育课我跳绳跳了128下，破了班级记录！'少了任何一件套，日记就像没穿校服一样不完整哦！</p></div><div class="tu-q"><p>🌍 就像妈妈发朋友圈必须配图+文字+定位，昨天她发'超市鸡蛋特价4.5元/斤'就忘了加定位，结果奶奶跑错超市了。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下面哪篇日记格式完整？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="B缺日期天气/C缺日期星期/D缺年份天气">A.2023年10月2日 星期一 阴  去动物园看到熊猫吃了5根竹子</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="B缺日期天气/C缺日期星期/D缺年份天气">B.今天爷爷教我种了3颗蒜</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="B缺日期天气/C缺日期星期/D缺年份天气">C.雨天 我和同学打了1小时羽毛球</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="B缺日期天气/C缺日期星期/D缺年份天气">D.星期二 数学考了98分</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 如何写一篇生动的日记</h2><p>请观察你的一天，记录下发生的事情，并尝试加入细节描写。</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="通过加入细节描写，可以使日记内容更加生动具体。"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="记录下你一天中发生的事情，并尝试使用形容词和比喻来描述。"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="通过加入细节描写，日记内容变得更加生动具体，读者能够更好地理解你的感受和经历。"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.88);color:inherit}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#2563eb;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#2563eb}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section chne-depth core-knowledge-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>日记写作：记录生活与心情</h2>
+      <p>日记是按日期记录当天见闻和感受的小作文。格式上有日期、星期、天气，正文写清楚发生了什么、自己怎么想。真实、具体、有一点感想，就是好日记。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>日记写作核心结构图：格式要求、内容核心与写作要点的完整体系</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg5" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="0" y="0" width="640" height="420" fill="rgba(148,163,184,0.07)" stroke="#334155" rx="8" stroke-width="1"/><g opacity="0.3"><path d="M0 60 L640 60 M0 120 L640 120 M0 180 L640 180 M0 240 L640 240 M0 300 L640 300 M0 360 L640 360" stroke="#334155" stroke-width="0.5"/><path d="M80 0 L80 420 M160 0 L160 420 M240 0 L240 420 M320 0 L320 420 M400 0 L400 420 M480 0 L480 420 M560 0 L560 420" stroke="#334155" stroke-width="0.5"/></g><rect x="50" y="40" width="540" height="320" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2" rx="12"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="320" y="70" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">日记写作结构图</text><rect x="80" y="90" width="150" height="80" fill="url(#bg2)" stroke="#f59e0b" stroke-width="2" rx="8"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="155" y="115" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">格式要求</text><text x="90" y="135" fill="#e2e8f0" font-size="12">• 日期</text><text x="90" y="150" fill="#e2e8f0" font-size="12">• 星期</text><text x="90" y="165" fill="#e2e8f0" font-size="12">• 天气</text><rect x="260" y="90" width="150" height="80" fill="url(#bg3)" stroke="#ef4444" stroke-width="2" rx="8"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="335" y="115" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">内容核心</text><text x="270" y="135" fill="#e2e8f0" font-size="12">• 发生了什么</text><text x="270" y="150" fill="#e2e8f0" font-size="12">• 自己怎么想</text><text x="270" y="165" fill="#e2e8f0" font-size="12">• 真实具体</text><rect x="440" y="90" width="130" height="80" fill="url(#bg4)" stroke="#34d399" stroke-width="2" rx="8"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="505" y="115" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">写作要点</text><text x="450" y="135" fill="#e2e8f0" font-size="12">• 按日期记录</text><text x="450" y="150" fill="#e2e8f0" font-size="12">• 见闻感受</text><text x="450" y="165" fill="#e2e8f0" font-size="12">• 有感想</text><ellipse cx="155" cy="220" rx="70" ry="35" fill="url(#bg5)" stroke="#a78bfa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></ellipse><text x="155" y="225" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">生活记录</text><ellipse cx="320" cy="220" rx="70" ry="35" fill="url(#bg5)" stroke="#a78bfa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></ellipse><text x="320" y="225" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">心情表达</text><ellipse cx="485" cy="220" rx="70" ry="35" fill="url(#bg5)" stroke="#a78bfa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></ellipse><text x="485" y="225" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">感想思考</text><rect x="120" y="280" width="400" height="60" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2" rx="10"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="320" y="305" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">好日记标准</text><text x="130" y="325" fill="#e2e8f0" font-size="12">真实记录 + 具体描述 + 个人感想 = 优质日记</text><path d="M155 170 Q155 195 155 185" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" fill="none" marker-end="url(#ar)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/></path><path d="M335 170 Q335 195 320 185" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" fill="none" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/></path><path d="M505 170 Q505 195 485 185" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" fill="none" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/></path><path d="M155 255 Q155 270 155 280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" fill="none" marker-end="url(#ar)"/><path d="M320 255 Q320 270 320 280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" fill="none" marker-end="url(#ar)"/><path d="M485 255 Q485 270 485 280" stroke="rgba(100,116,139,0.7)" stroke-width="1.5" fill="none" marker-end="url(#ar)"/><circle cx="155" cy="185" r="3" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/></circle><circle cx="320" cy="185" r="3" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/></circle><circle cx="485" cy="185" r="3" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/></circle><rect x="480" y="360" width="140" height="50" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><rect x="490" y="370" width="8" height="8" fill="#3b82f6" rx="2"/><text x="505" y="378" fill="#e2e8f0" font-size="10">结构框架</text><rect x="490" y="382" width="8" height="8" fill="#f59e0b" rx="2"/><text x="505" y="390" fill="#e2e8f0" font-size="10">格式要求</text><rect x="490" y="394" width="8" height="8" fill="#a78bfa" rx="2"/><text x="505" y="402" fill="#e2e8f0" font-size="10">核心要素</text><rect x="70" y="30" width="120" height="25" fill="rgba(15,23,42,0.6)" stroke="#334155" stroke-width="1" rx="3"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></rect><text x="130" y="47" text-anchor="middle" fill="#7dd3fc" font-size="12">2024年3月15日 星期五 晴</text><rect x="450" y="30" width="120" height="25" fill="rgba(15,23,42,0.6)" stroke="#334155" stroke-width="1" rx="3"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></rect><text x="510" y="47" text-anchor="middle" fill="#7dd3fc" font-size="12">今天我很开心...</text></svg></figure>
+
+</div>
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="方法范例" data-slot="35">
+  <section class="section chne-depth core-knowledge-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：选一件事、写清楚、谈感受</h2>
+      <p>不必记流水账，选当天最有意思或最有感触的一件事来写。把时间、地点、人物、经过写明白，结尾用一两句话写心情或收获，语言自然即可。</p>
+      <div class="worked-example"><strong>范例：</strong>日记示例：周六去公园放风筝，风筝挂在树上，爸爸找来竹竿帮忙取下。我写道：遇到麻烦不着急，想办法就能解决。</div>
+      <p id="lesson-pitfall" class="chne-pitfall"><strong>常见误区：</strong>常见误区是流水账或编造不真实的经历。日记贵在真实具体，有自己的想法。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>写日记时，较合适的内容安排是？</p>
+        <button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;日记宜选一件事写具体，并写出感受。&quot;)">A. 把一天每分钟都记下来</button><button type="button" data-correct="1" onclick="chneDepthCheck(this,true,&#x27;chne-depth-feedback&#x27;,&quot;日记宜选一件事写具体，并写出感受。&quot;)">B. 选一件事写清楚并谈谈感受</button><button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;日记宜选一件事写具体，并写出感受。&quot;)">C. 只写日期不写正文</button><button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;日记宜选一件事写具体，并写出感受。&quot;)">D. 全抄课文</button>
+        <div class="chne-feedback" id="chne-depth-feedback" role="status"></div>
+      </div>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>日记写作方法机制分解图：选事-写清-谈感受三步骤流程</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="greenArrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#34d399"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(148,163,184,0.05)" stroke-width="1"/></pattern></defs><rect x="15" y="15" width="610" height="390" fill="url(#grid)"/><rect x="50" y="40" width="180" height="120" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="140" y="60" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">选一件事<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></text><rect x="45" y="70" width="190" height="80" rx="8" fill="rgba(15,23,42,0.3)" stroke="#475569" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="55" y="90" fill="#e2e8f0" font-size="12">• 当天最有意思的事<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="55" y="110" fill="#e2e8f0" font-size="12">• 最有感触的经历<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><text x="55" y="130" fill="#e2e8f0" font-size="12">• 不记流水账<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><rect x="280" y="40" width="180" height="120" rx="10" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="370" y="60" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">写清楚<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></text><rect x="275" y="70" width="190" height="80" rx="8" fill="rgba(15,23,42,0.3)" stroke="#475569" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="285" y="90" fill="#e2e8f0" font-size="12">• 时间地点人物<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="285" y="110" fill="#e2e8f0" font-size="12">• 事情经过<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><text x="285" y="130" fill="#e2e8f0" font-size="12">• 语言自然<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><rect x="510" y="40" width="100" height="120" rx="10" fill="url(#purpleGrad)" stroke="#c4b5fd" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></rect><text x="560" y="60" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">谈感受<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></text><rect x="505" y="70" width="110" height="80" rx="8" fill="rgba(15,23,42,0.3)" stroke="#475569" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></rect><text x="515" y="90" fill="#e2e8f0" font-size="12">• 心情<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></text><text x="515" y="110" fill="#e2e8f0" font-size="12">• 收获<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><text x="515" y="130" fill="#e2e8f0" font-size="12">• 想法<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></text><path d="M 230 100 Q 255 100 280 100" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></path><path d="M 460 100 Q 485 100 510 100" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></path><rect x="60" y="190" width="280" height="140" rx="12" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></rect><text x="200" y="210" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">范例展示<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></text><rect x="70" y="220" width="260" height="100" rx="8" fill="rgba(15,23,42,0.4)" stroke="#475569" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></rect><text x="80" y="240" fill="#7dd3fc" font-size="12" font-weight="bold">周六去公园放风筝<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></text><text x="80" y="260" fill="#e2e8f0" font-size="11">风筝挂在树上，爸爸找来竹竿帮忙取下<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><text x="80" y="280" fill="#34d399" font-size="11" font-weight="bold">感受：遇到麻烦不着急，想办法就能解决<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></text><circle cx="85" cy="295" r="3" fill="#34d399"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="4s"/></circle><circle cx="105" cy="295" r="3" fill="#34d399"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="4.2s"/></circle><circle cx="125" cy="295" r="3" fill="#34d399"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="4.4s"/></circle><rect x="380" y="190" width="220" height="140" rx="12" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></rect><text x="490" y="210" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">常见误区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></text><rect x="390" y="220" width="200" height="100" rx="8" fill="rgba(15,23,42,0.4)" stroke="#475569" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></rect><text x="400" y="240" fill="#ef4444" font-size="12">✗ 记流水账<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></text><text x="400" y="260" fill="#ef4444" font-size="12">✗ 编造不真实经历<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></text><text x="400" y="280" fill="#34d399" font-size="12">✓ 真实具体有想法<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></text><rect x="100" y="350" width="440" height="50" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></rect><text x="320" y="370" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">练习：写日记时，较合适的内容安排是？<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.95s" fill="freeze"/></text><text x="110" y="390" fill="#e2e8f0" font-size="11">A.记每分钟 B.选一件事写清楚并谈感受 C.只写日期 D.全抄课文<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></text><circle cx="180" cy="385" r="4" fill="#34d399" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="5.5s"/></circle><line x1="340" y1="160" x2="200" y2="190" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.25s" fill="freeze"/></line><circle cx="340" cy="160" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></circle><line x1="340" y1="160" x2="490" y2="190" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.55s" fill="freeze"/></line><rect x="480" y="300" width="140" height="80" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.7s" fill="freeze"/></rect><text x="550" y="315" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">图例说明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.85s" fill="freeze"/></text><rect x="490" y="325" width="12" height="8" fill="url(#blueGrad)"/><text x="510" y="332" fill="#e2e8f0" font-size="10">方法步骤<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6s" fill="freeze"/></text><rect x="490" y="340" width="12" height="8" fill="url(#orangeGrad)"/><text x="510" y="347" fill="#e2e8f0" font-size="10">示例展示<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.15s" fill="freeze"/></text><rect x="490" y="355" width="12" height="8" fill="url(#redGrad)"/><text x="510" y="362" fill="#e2e8f0" font-size="10">注意事项<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.3s" fill="freeze"/></text></svg></figure>
+
+</div>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 细节放大镜</h2><div class="tu-q"><p><strong>And：</strong>学生会用'今天很开心'概括事情</p><p><strong>But：</strong>像看模糊照片看不清细节</p><p><strong>Therefore：</strong>训练用数字和动作把日记写生动</p></div><div class="tu-q"><p>好日记要像放大镜看蚂蚁：1.数清楚（蚂蚁有6条腿），2.看动作（左前腿在擦触角）。例如写吃冰淇淋，不要只说'好吃'，要写'粉色的草莓冰淇淋球滚进嘴里，3秒钟就化成了甜甜的糖水，我赶紧又舔了2大口'。数字和动作就像日记的调味料！</p></div><div class="tu-q"><p>🌍 就像你给同学讲奥特曼卡片，如果说'这张很厉害'别人听不懂，但说'这张赛罗奥特曼攻击力15000点，必杀技是艾梅利姆切割'就超有吸引力。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>哪个句子最适合放进日记？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="A缺数量/CD只有感受没有具体行为">A.我喂了小兔子</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="A缺数量/CD只有感受没有具体行为">B.我喂小兔子吃了3根胡萝卜条</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="A缺数量/CD只有感受没有具体行为">C.小兔子很可爱</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="A缺数量/CD只有感受没有具体行为">D.我喜欢小兔子</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 心情调色盘</h2><div class="tu-q"><p><strong>And：</strong>学生能记录事件经过</p><p><strong>But：</strong>日记像白开水没有心情味道</p><p><strong>Therefore：</strong>教学生用比喻表达真实情感</p></div><div class="tu-q"><p>心情要像画画调颜色：开心是红色太阳（'我举着100分试卷蹦得像跳跳糖'），难过是灰色乌云（'书包里的牛奶洒了，作业本湿出5朵棕色小花'）。比如写迟到可以这样画心情：'眼看校门在10米外关闭，我的心像被捏扁的易拉罐哐当响'。记住，日记是你心灵的照相机！</p></div><div class="tu-q"><p>🌍 就像你玩《原神》时，抽到五星角色会大喊'欧皇附体！'，抽不到会说'非酋本酋了'，这些都是心情颜色呀。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>哪句话正确使用了心情比喻？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="A只有事实/B抽象/CD没心情描写">A.我考了60分</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="A只有事实/B抽象/CD没心情描写">B.我的心里很难过</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="A只有事实/B抽象/CD没心情描写">C.60分像块大石头压得我走不动路</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="A只有事实/B抽象/CD没心情描写">D.今天发了数学试卷</button></div><div class="tu-fb" hidden></div></div></section>
+
+<!-- ⭐ v7.7 标准独立连续音频模块 -->
+
+<!-- 课程导览图（互动画布） -->
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>日记像三明治：时间天气是面包，事件是肉，感受是酱料</p></div><div class="tu-q"><h3>💡解释它</h3><p>日记是给自己看的成长相册，不是作业任务</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>比流水账多心情，比作文少套路</p></div><div class="tu-q"><h3>👁️看见它</h3><p>观察蚂蚁搬家也能写，关键写出'我'的发现</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>下次旅游时，用日记方法记录见闻</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="B">
+<h3>选择题 1</h3><p>写日记时，以下哪项是必须包含的内容？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="日记不需要特定的故事结构和结尾。">A. 故事的开头和结尾</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="日记的基本格式要求记录日期和天气，这是日记的重要组成部分。">B. 日期和天气</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="人物的对话不是日记必须包含的内容。">C. 人物的对话</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="日记不需要对事件进行详细分析。">D. 事件的详细分析</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 2</h3><p>以下哪种描写方式能使日记更生动？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="简单地列出事件会使日记内容单调。">A. 简单地列出事件</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="使用形容词和比喻可以使日记内容更加生动具体。">B. 使用形容词和比喻</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="只记录时间顺序缺乏生动性。">C. 只记录时间顺序</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="忽略细节描写会使日记内容不够丰富。">D. 忽略细节描写</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 3</h3><p>以下哪项是日记写作中需要注意的？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="复杂的句子结构不是日记写作的重点。">A. 使用复杂的句子结构</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="日记应该记录真实的感受和经历，这样才能真实反映生活。">B. 记录真实的感受和经历</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="忽略事件的细节会使日记内容不够丰富。">C. 忽略事件的细节</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="日记不仅仅记录重要事件，也要记录日常生活中的小事。">D. 只记录重要的事件</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>写日记时，应该记录____和____。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>日期、天气</p><p>日记的基本格式要求记录日期和天气，这是日记的重要组成部分。</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>为了使日记更生动，可以使用____和____。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>形容词、比喻</p><p>使用形容词和比喻可以使日记内容更加生动具体。</p></details></div>
+</section>
+
+<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" id="posttest" class="ta-test-section" data-slot="90">
+  <h2>✅ 后测：学会了吗？</h2>
+  <div class="ta-q-block">
+    <div class="ta-q-text">1. 「今天体育课踢足球，我进了一个球，很开心」——如何改进让它更生动？</div>
+    <div class="ta-options">
+      <button class="ta-opt" onclick="taCheckQ('post1',0,'B')" id="post1-opt0">A. 改成「今天我踢了球」，更简洁</button>
+      <button class="ta-opt" onclick="taCheckQ('post1',1,'B')" id="post1-opt1">B. 加入细节：进球时的动作、心跳加速的感觉、同学的反应、自己的心理活动</button>
+      <button class="ta-opt" onclick="taCheckQ('post1',2,'B')" id="post1-opt2">C. 加更多词语修饰</button>
+      <button class="ta-opt" onclick="taCheckQ('post1',3,'B')" id="post1-opt3">D. 写更多段落</button>
+    </div>
+    <div class="ta-feedback" id="post1-fb"></div>
+  </div>
+  <div class="ta-q-block">
+    <div class="ta-q-text">2. 日记中可以只写自己的感受和想法，不写具体事情吗？</div>
+    <div class="ta-options">
+      <button class="ta-opt" onclick="taCheckQ('post2',0,'B')" id="post2-opt0">A. 不可以，日记必须记事</button>
+      <button class="ta-opt" onclick="taCheckQ('post2',1,'B')" id="post2-opt1">B. 可以，日记也可以是感想日记、读书日记、观察日记等各种形式</button>
+      <button class="ta-opt" onclick="taCheckQ('post2',2,'B')" id="post2-opt2">C. 这种写法是错的</button>
+      <button class="ta-opt" onclick="taCheckQ('post2',3,'B')" id="post2-opt3">D. 只有高年级才能这样写</button>
+    </div>
+    <div class="ta-feedback" id="post2-fb"></div>
+  </div>
+</section>
+
+<section data-scaffold="partial" data-bloom-level="remember" id="common-errors" class="ta-errors-block" data-slot="95">
+  <h3>⚠️ 易错点提示</h3>
+  <div class="ta-errors-content">易错点：①忘记写日期和天气（格式分直接扣）；②写成流水账：「早上……然后……接着……最后……」——选一件事详写；③情感只写「开心/难过」，不展示具体情绪细节；④内容完全虚假，没有真实感受。</div>
+</section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把日记当流水账写</h3><p>✅ 至少写1处细节+1个心情</p><p>💡 混淆'记录'与'写作'区别</p></div><div class="tu-q"><h3>❌ 虚构事件</h3><p>✅ 用'今天真的...'开头检查真实性</p><p>💡 误解'有趣的事'就要编造</p></div></section>
+<section data-scaffold="full" data-bloom-level="apply" id="memory-anchor" class="ta-memory-block" data-slot="98">
+  <h3>🧠 记忆锚点</h3>
+  <div class="ta-memory-content">日记格式口诀：「日期天气第一行，空格开头写正文；一件感触最深事，真情实感是灵魂；好词好句加细节，长短不限要真实」。日记写什么？FELT法：Feeling（感受）、Event（事件）、Learning（收获）、Thought（想法）。</div>
+</section>
+
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="拓展应用" data-slot="100">
+  <section class="section chne-depth core-knowledge-module" id="lesson-extend"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-extend">
+    <div class="card">
+      <span class="phase-tag" data-variant="success">拓展应用</span>
+      <h2>拓展应用：主题周日记</h2>
+      <p>连续一周围绕“发现一个好人好事”或“学会一项本领”写日记，周末回顾成长。既练笔，也养成观察生活的习惯。</p>
+    </div>
+  </section>
+</div>
+
+<section class="ta-standard-section" id="teachany-audio-player" data-slot="120">
+  <div data-teachany-audio>
+    <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "sectionId": "anchor",
+    "title": "课程导入：chn-e-diary-writing",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/chn-e-diary-writing/enhance-1.mp3"
+  },
+  {
+    "sectionId": "objectives",
+    "title": "讲解 1",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/chn-e-diary-writing/enhance-2.mp3"
+  },
+  {
+    "sectionId": "pretest",
+    "title": "讲解 2",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/chn-e-diary-writing/enhance-3.mp3"
+  }
+]
+    </script>
+  </div>
+</section>
+
+<section data-bloom-level="understand" id="ai-interaction" class="ta-ai-section" data-slot="125">
+  <h2>🤖 AI 互动练习</h2>
+  <div class="ai-prompt-box">
+    <span class="ai-label">AI 对话练习</span>
+    <p>告诉我你今天（或某天）做了什么，我帮你把它改写成一篇生动有趣的日记，展示如何运用细节和情感描写。</p>
+    <p style="color:#888;font-size:13px;margin-top:8px;">📌 你可以把上面的内容复制给 AI 助手（如 DeepSeek、ChatGPT），开始互动练习！</p>
+  </div>
+</section>
+
+<script id="ta-quiz-js">
+function taCheckQ(qid, idx, correct) {
+  const opts = document.querySelectorAll('#' + qid.replace('pre','pre').replace('post','post') + '-opt0, #' + qid + '-opt1, #' + qid + '-opt2, #' + qid + '-opt3');
+  // Disable all options in this question
+  document.querySelectorAll('[id^="'+qid+'-opt"]').forEach(function(o){ o.disabled=true; });
+  const answerIdx = {'A':0,'B':1,'C':2,'D':3}[correct];
+  document.getElementById(qid+'-opt'+answerIdx).classList.add('correct');
+  if(idx !== answerIdx) {
+    document.getElementById(qid+'-opt'+idx).classList.add('wrong');
+  }
+  const fb = document.getElementById(qid+'-fb');
+  if(fb) {
+    fb.style.display='block';
+    if(idx === answerIdx) {
+      fb.className='ta-feedback ok';
+      fb.textContent='✅ 正确！';
+    } else {
+      fb.className='ta-feedback err';
+      fb.textContent='❌ 正确答案是 ' + correct;
+    }
+  }
+}
+</script>
+
+</div>
+
+<div style="display:grid;gap:12px;">
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #51cf66;">
+      <span style="font-size:11px;color:#1e7e34;font-weight:700;">记忆层</span>
+      <p style="margin-top:6px;font-size:14px;">回忆：今天学了哪些关键词和规则？试着说出来。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #339af0;">
+      <span style="font-size:11px;color:#1971c2;font-weight:700;">理解层</span>
+      <p style="margin-top:6px;font-size:14px;">用自己的话解释今天学的核心概念，不看书能说清楚吗？</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #f59f00;">
+      <span style="font-size:11px;color:#b35900;font-weight:700;">应用层</span>
+      <p style="margin-top:6px;font-size:14px;">用今天的知识解决一个实际问题，或写一个新例子。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #cc5de8;">
+      <span style="font-size:11px;color:#862e9c;font-weight:700;">分析→创造层</span>
+      <p style="margin-top:6px;font-size:14px;">把今天的知识与已有知识联系起来：有什么共同点？有什么区别？能不能自己创造一道新题？</p>
+    </div>
+  </div>
+
+
+<div style="display:grid;gap:10px;">
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🎯 本质：</strong><span style="color:#666;font-size:14px;">这个知识的核心是什么？用一句话概括。</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🔗 联系：</strong><span style="color:#666;font-size:14px;">它和你已知的哪些知识有关联？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🌍 应用：</strong><span style="color:#666;font-size:14px;">在生活中，你在哪里见过这个知识？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>❓ 疑问：</strong><span style="color:#666;font-size:14px;">学完之后，你还有什么不明白的地方？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>💡 洞见：</strong><span style="color:#666;font-size:14px;">学完后，你觉得最有意思或最让你惊讶的是什么？</span></div>
+  </div>
+
+
+<!-- TTS 音频 #TeachAny Edge-TTS -->
+<div class="teachany-audio-intro" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
+  <button onclick="document.getElementById('ta-audio').play()"
+    style="background:linear-gradient(135deg,#ff6b6b,#ee5a24);color:#fff;border:none;
+    width:52px;height:52px;border-radius:50%;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 16px rgba(255,107,107,0.4);display:flex;align-items:center;justify-content:center;"
+    title="播放课程介绍">🔊</button>
+  <audio id="ta-audio" src="audio/intro.mp3" preload="auto"></audio>
+</div>
+
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "日记写作",
+  subject: "chinese",
+  grade: 3,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴脚本（左下角 FAB · 首次点击引导配置 API） -->
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+
+<!-- teachany-enhanced -->
+
+<!-- teachany-upgrade-v2 -->
+<!-- upgrade topic: 日记写作 -->
+<section data-bloom-level="apply" class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
+  <div data-teachany-tutor-card></div>
+</section>
+
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "chn-e-diary-writing", "name": "日记写作", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<script id="chne-depth-js">
+function chneDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+(function () {
+  function draw(cv) {
+    var ctx = cv.getContext('2d'); var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
+    // 节奏/停顿示意：把诗句音节画成带停顿的方块
+    var tokens = ['床前', '·', '明月', '·', '光'];
+    var x = 30, y = H / 2;
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillText('朗读节奏示意：床前 / 明月 / 光', W / 2, 30);
+    tokens.forEach(function (t) {
+      if (t === '·') { ctx.fillStyle = '#f472b6'; ctx.fillText('/', x + 12, y + 6); x += 26; return; }
+      ctx.fillStyle = 'rgba(56,189,248,.22)'; ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      var w = 64; ctx.fillRect(x, y - 22, w, 44); ctx.strokeRect(x, y - 22, w, 44);
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText(t, x + w / 2, y + 6); x += w + 8;
+    });
+    ctx.fillStyle = '#94a3b8'; ctx.fillText('“光/霜/乡”押 ang 韵，读来和谐上口', W / 2, H - 20);
+  }
+  function init() { document.querySelectorAll('canvas.chne-canvas').forEach(draw); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：日记写作</h2><div data-teachany-kg="chn-e-diary-writing"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+</body>
+</html>

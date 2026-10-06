@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta name="teachany-prerequisites" content="addition-subtraction-within-20,place-value-tens">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="teachany-node" content="math-e-addition-subtraction-within-100">
+<meta name="teachany-subject" content="math">
+<meta name="teachany-domain" content="numbers-operations">
+<meta name="teachany-grade" content="2">
+<meta name="teachany-difficulty" content="2">
+<meta name="teachany-version" content="7.21.0">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-author" content="weponusa">
+<title>100以内加减法 · 小学数学 G2 · TeachAny v5.27</title>
+<script src="../../assets/vendor/d3.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+:root{--bg:#fffbf0;--primary:#ff6b6b;--secondary:#4ecdc4;--accent:#ffe66d;--success:#51cf66;--danger:#ff6b6b;--purple:#cc5de8;--blue:#339af0;--orange:#ff922b;--text:#2b2b2b;--dim:#666;--dimmer:#999;--card:#ffffff;--border:rgba(0,0,0,0.06);}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{font-family:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);line-height:1.85;font-size:16px;padding-bottom:70px;}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 10% 20%,rgba(255,107,107,0.06) 0%,transparent 50%),radial-gradient(circle at 90% 80%,rgba(78,205,196,0.06) 0%,transparent 50%);pointer-events:none;z-index:-1;}
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);border-bottom:3px solid var(--accent);padding:0 20px;display:flex;align-items:center;height:62px;gap:4px;overflow-x:auto;}
+.nav-brand{font-size:20px;font-weight:900;margin-right:16px;white-space:nowrap;background:linear-gradient(135deg,var(--primary),var(--orange),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav a{color:var(--dim);text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:700;transition:all 0.25s;white-space:nowrap;}
+.nav a:hover,.nav a.active{color:#fff;background:linear-gradient(135deg,var(--primary),var(--orange));}
+.container{max-width:960px;margin:0 auto;padding:80px 20px 60px;}
+.hero{text-align:center;padding:36px 0 30px;}
+.hero h1{font-size:42px;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--orange),var(--purple),var(--blue));background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:rainbowShift 6s ease infinite;margin-bottom:10px;}
+@keyframes rainbowShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+.hero .subtitle{font-size:18px;color:var(--dim);margin-bottom:16px;}
+.hero .meta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+.hero .meta span{background:#fff;border:2px solid var(--border);border-radius:24px;padding:6px 18px;font-size:14px;font-weight:700;color:var(--dim);}
+.section{margin:40px 0;}
+.section-title{font-size:26px;font-weight:900;margin-bottom:18px;padding:10px 20px;border-radius:16px;background:linear-gradient(135deg,rgba(255,107,107,0.1),rgba(78,205,196,0.1));display:inline-block;}
+.card{background:var(--card);border:2px solid var(--border);border-radius:20px;padding:24px 26px;margin-bottom:18px;box-shadow:0 4px 16px rgba(0,0,0,0.04);transition:transform 0.25s,box-shadow 0.25s;}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(255,107,107,0.12);}
+.card h3{font-size:20px;font-weight:900;margin-bottom:10px;}
+.card p,.card li{font-size:16px;line-height:1.9;color:var(--dim);}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;}
+.obj-card{text-align:center;padding:26px 16px;}
+.obj-card .icon{font-size:44px;margin-bottom:10px;display:inline-block;animation:bounce 2s ease infinite;}
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.obj-card h4{font-size:17px;font-weight:900;margin-bottom:6px;}
+.obj-card p{font-size:14px;color:var(--dim);}
+.highlight{color:var(--primary);font-weight:900;}
+/* Quiz styles */
+.quiz-option{display:block;padding:16px 20px;margin:10px 0;border-radius:16px;background:#fff;border:2.5px solid #e8e8e8;cursor:pointer;transition:all 0.25s;font-size:16px;font-weight:700;color:var(--text);}
+.quiz-option:hover{background:rgba(78,205,196,0.08);border-color:var(--secondary);transform:translateX(4px);}
+.quiz-option.correct{background:rgba(81,207,102,0.12);border-color:var(--success);color:#1e7e34;}
+.quiz-option.wrong{background:rgba(255,107,107,0.1);border-color:var(--danger);color:#c92a2a;}
+.quiz-feedback{padding:14px 18px;border-radius:14px;margin-top:10px;font-size:15px;display:none;font-weight:700;}
+.quiz-feedback.show{display:block;animation:popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes popIn{from{opacity:0;transform:scale(0.92);}to{opacity:1;transform:scale(1);}}
+.insight-box{background:linear-gradient(135deg,rgba(204,93,232,0.08),rgba(51,154,240,0.08));border-left:5px solid var(--purple);padding:18px 22px;border-radius:0 16px 16px 0;margin:16px 0;}
+.insight-box h4{color:var(--purple);font-size:17px;font-weight:900;margin-bottom:8px;}
+.insight-box p{color:var(--text);font-size:15.5px;}
+.sticker{display:inline-block;font-size:28px;animation:wiggle 3s ease-in-out infinite;}
+@keyframes wiggle{0%,100%{transform:rotate(0deg);}25%{transform:rotate(8deg);}75%{transform:rotate(-8deg);}}
+.star-reward{text-align:center;padding:20px;font-size:18px;font-weight:900;background:linear-gradient(135deg,rgba(255,230,109,0.2),rgba(255,146,43,0.1));border-radius:20px;margin-top:16px;}
+.star-reward .stars{font-size:36px;display:block;margin-bottom:8px;}
+.column-add{display:flex;gap:30px;justify-content:center;margin:16px 0;flex-wrap:wrap;}
+.col-calc{background:#fff;border:2px solid var(--primary);border-radius:16px;padding:16px 24px;text-align:right;font-size:24px;font-weight:900;font-family:monospace;min-width:120px;}
+.col-calc .carry{font-size:14px;color:var(--orange);}
+.col-calc .line{border-top:3px solid var(--primary);margin:4px 0;}
+.col-calc .result{color:var(--primary);}
+
+/* ===== 生活场景动画 ===== */
+#life-scene{background:linear-gradient(135deg,#fff9e6,#e8f8f8);border-radius:24px;padding:32px;margin:40px 0;overflow:hidden;position:relative;}
+#life-scene h2{text-align:center;margin-bottom:24px;}
+.scene-stage{position:relative;width:100%;height:200px;background:linear-gradient(180deg,#87ceeb 0%,#87ceeb 60%,#90ee90 60%,#228b22 100%);border-radius:16px;overflow:hidden;}
+.sun{position:absolute;top:10px;right:30px;width:50px;height:50px;background:#ffe66d;border-radius:50%;box-shadow:0 0 20px rgba(255,230,109,0.8);animation:sunPulse 3s ease-in-out infinite;}
+@keyframes sunPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+.cloud{position:absolute;background:white;border-radius:50px;animation:cloudFloat 8s ease-in-out infinite;}
+.cloud::before,.cloud::after{content:'';position:absolute;background:white;border-radius:50%;}
+.cloud1{width:80px;height:25px;top:20px;left:-90px;animation:cloudDrift 12s linear infinite;}
+.cloud1::before{width:40px;height:35px;top:-15px;left:15px;}
+.cloud1::after{width:30px;height:28px;top:-10px;left:35px;}
+@keyframes cloudDrift{from{left:-90px;}to{left:110%;}}
+.cloud2{width:60px;height:20px;top:35px;left:-70px;animation:cloudDrift2 16s linear 4s infinite;}
+.cloud2::before{width:30px;height:28px;top:-12px;left:10px;}
+.cloud2::after{width:25px;height:22px;top:-8px;left:28px;}
+@keyframes cloudDrift2{from{left:-70px;}to{left:110%;}}
+/* 超市小球动画 */
+.basket-a{position:absolute;bottom:50px;left:20%;display:flex;gap:6px;}
+.basket-b{position:absolute;bottom:50px;left:55%;display:flex;gap:6px;}
+.merge-arrow{position:absolute;bottom:60px;left:47%;font-size:24px;animation:arrowBounce 1s ease-in-out infinite;}
+@keyframes arrowBounce{0%,100%{transform:translateX(0);}50%{transform:translateX(6px);}}
+.ball{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:white;animation:ballAppear 0.5s ease forwards;opacity:0;}
+.ball-red{background:var(--primary);}
+.ball-blue{background:var(--blue);}
+@keyframes ballAppear{from{transform:translateY(-30px) scale(0);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
+.scene-label{position:absolute;bottom:12px;width:100%;text-align:center;font-size:13px;font-weight:700;color:white;text-shadow:0 1px 3px rgba(0,0,0,0.5);}
+.scene-result{text-align:center;margin-top:16px;font-size:20px;font-weight:900;color:var(--primary);}
+
+/* ===== 互动实验台 ===== */
+#interactive-lab{background:linear-gradient(135deg,#fff0f5,#f0fff4);border-radius:24px;padding:32px;margin:40px 0;}
+.lab-title{font-size:26px;font-weight:900;text-align:center;margin-bottom:24px;}
+.slider-demo{background:#fff;border-radius:20px;padding:24px;margin-bottom:24px;box-shadow:0 4px 16px rgba(0,0,0,0.06);}
+.slider-demo h3{font-size:18px;font-weight:900;margin-bottom:16px;color:var(--primary);}
+.slider-row{display:flex;align-items:center;gap:16px;margin:12px 0;flex-wrap:wrap;}
+.slider-row label{font-size:15px;font-weight:700;min-width:60px;}
+.slider-row input[type=range]{flex:1;min-width:120px;accent-color:var(--primary);height:6px;}
+.slider-val{font-size:20px;font-weight:900;color:var(--primary);min-width:40px;text-align:center;}
+.calc-display{background:linear-gradient(135deg,var(--primary),var(--orange));color:white;border-radius:16px;padding:20px;text-align:center;font-size:28px;font-weight:900;margin-top:16px;letter-spacing:2px;}
+/* 拖拽区 */
+.drag-section{background:#fff;border-radius:20px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,0.06);}
+.drag-section h3{font-size:18px;font-weight:900;margin-bottom:16px;color:var(--secondary);}
+.drag-instruction{font-size:14px;color:var(--dim);margin-bottom:16px;}
+.drag-zone{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:16px;background:#f8f9fa;border-radius:12px;}
+.drag-item{padding:10px 20px;background:linear-gradient(135deg,var(--secondary),var(--blue));color:white;border-radius:12px;cursor:grab;font-size:16px;font-weight:900;user-select:none;transition:transform 0.2s,box-shadow 0.2s;box-shadow:0 3px 8px rgba(0,0,0,0.15);}
+.drag-item:hover{transform:scale(1.08);box-shadow:0 6px 16px rgba(0,0,0,0.2);}
+.drag-item:active{cursor:grabbing;}
+.drag-item.dragging{opacity:0.5;}
+.drop-zone{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
+.drop-target{min-height:54px;border:3px dashed #ccc;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--dim);transition:all 0.2s;padding:8px;}
+.drop-target.drag-over{border-color:var(--secondary);background:rgba(78,205,196,0.08);}
+.drop-target.correct{border-color:var(--success);background:rgba(81,207,102,0.15);color:#1e7e34;font-weight:900;}
+.drop-target.wrong{border-color:var(--danger);background:rgba(255,107,107,0.1);color:#c92a2a;}
+.drop-result{text-align:center;margin-top:12px;font-size:16px;font-weight:700;min-height:28px;}
+
+/* ===== 知识图谱 ===== */
+#knowledge-graph{background:linear-gradient(135deg,#f0f4ff,#fff0fa);border-radius:24px;padding:32px;margin:40px 0;}
+#knowledge-graph h2{text-align:center;margin-bottom:8px;}
+#knowledge-graph .kg-desc{text-align:center;color:var(--dim);font-size:14px;margin-bottom:20px;}
+#kg-svg{width:100%;height:360px;border-radius:16px;background:rgba(255,255,255,0.6);}
+.kg-legend{display:flex;justify-content:center;gap:24px;margin-top:12px;flex-wrap:wrap;}
+.kg-legend-item{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;}
+.kg-dot{width:14px;height:14px;border-radius:50%;}
+
+/* 多步骤题 */
+.step-quiz{background:#fff;border-radius:20px;padding:24px;border:2px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,0.04);}
+.step-quiz .step-header{font-size:13px;font-weight:700;color:var(--dim);margin-bottom:8px;display:flex;gap:8px;}
+.step-quiz .step-header .step-dot{width:28px;height:28px;border-radius:50%;background:#e8e8e8;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:var(--dim);flex-shrink:0;}
+.step-quiz .step-header .step-dot.active{background:var(--primary);color:white;}
+.step-quiz .step-header .step-dot.done{background:var(--success);color:white;}
+.step-panel{display:none;}
+.step-panel.show{display:block;animation:fadeIn 0.3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.step-q{font-size:17px;font-weight:700;margin-bottom:12px;color:var(--text);}
+.step-hint{font-size:14px;color:var(--dim);background:#f8f9fa;padding:10px 14px;border-radius:10px;margin-bottom:12px;}
+.step-next-btn{margin-top:12px;padding:10px 24px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--orange));color:white;font-size:15px;font-weight:700;cursor:pointer;display:none;}
+.step-next-btn.show{display:inline-block;}
+
+footer{text-align:center;padding:36px 0;color:var(--dimmer);font-size:13px;border-top:3px dashed rgba(0,0,0,0.06);margin-top:50px;}
+.audio-bar{position:fixed;bottom:0;left:0;right:0;z-index:500;background:rgba(255,107,107,0.95);backdrop-filter:blur(12px);border-top:2px solid rgba(255,255,255,0.3);padding:10px 24px;display:flex;align-items:center;gap:14px;}
+.audio-bar .ab-btn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;background:#fff;color:var(--primary);font-size:16px;display:flex;align-items:center;justify-content:center;}
+.audio-bar .ab-info{flex:1;min-width:0;}
+.audio-bar .ab-title{font-size:13px;font-weight:700;color:#fff;}
+.audio-bar .ab-progress-wrap{height:4px;background:rgba(255,255,255,0.3);border-radius:2px;margin-top:4px;cursor:pointer;}
+.audio-bar .ab-progress{height:100%;background:#fff;border-radius:2px;width:0%;}
+.audio-bar .ab-time{font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;}
+.audio-bar .ab-vol{width:60px;accent-color:#fff;}
+
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+</style>
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+
+
+<style id="mathelem-depth-css">
+.mathelem-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.mathelem-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.24)}
+.mathelem-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.mathelem-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.mathelem-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.mathelem-depth .mathelem-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.mathelem-depth .mathelem-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+.mathelem-depth .me-visual-canvas{width:100%;max-width:560px;height:auto;background:#0b1628;border:1px solid rgba(148,163,184,.28);border-radius:12px;display:block;margin:8px auto 0}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+</head>
+<body>
+<!-- teachany-hero-notext -->
+
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<nav class="nav">
+  <span class="nav-brand">🌈 教我学 TeachAny</span>
+  <a href="#hero-infographic">首页</a>
+  <a href="#life-scene">场景</a>
+  <a href="#module-1">整十数</a>
+  <a href="#interactive-lab">实验台</a>
+  <a href="#module-2">不进位加</a>
+  <a href="#knowledge-graph">图谱</a>
+  <a href="#module-3">进位加减</a>
+  <a href="#deep-understanding">深入</a>
+  <a href="#summary">小结</a>
+</nav>
+<div class="container">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/math-elem-add-sub-within-100-hero.png" alt="100以内加减法知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">100以内加减法</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+
+
+  <!-- 学习目标 -->
+  <section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出进位加法'满十进一'的计算规则</p></div><div class="tu-q"><p>🎯 能判断两位数加减是否需要进位/退位</p></div><div class="tu-q"><p>🎯 能计算100以内连加连减的实际问题</p></div></section>
+
+  <!-- HERO -->
+
+<!-- ===== ABT 情境引入 ===== -->
+<div class="abt-card" style="background:linear-gradient(135deg,#e8f5e9,#e3f2fd);border-radius:20px;padding:24px;margin:20px auto;max-width:800px;">
+  <h3 style="color:#1565c0;margin-bottom:16px;">🌍 为什么要学这个？</h3>
+  <p>🌍 <strong>And</strong>（已知）：我们已经学会了20以内的加减法，会用凑十法和破十法</p>
+  <p>⚡ <strong>But</strong>（问题）：但是，买东西花了35元，付了50元，找回多少钱？数字超过20了！</p>
+  <p>💡 <strong>Therefore</strong>（新知）：因此，今天学习100以内的加减法——利用十位和个位分别计算，突破20的限制</p>
+</div>
+
+<!-- ===== 前测 ===== -->
+<section data-scaffold="full" data-bloom-level="apply" class="section" id="goals" data-slot="10">
+    <h2 class="section-title">🎯 学习目标</h2>
+    <div class="grid-3">
+      <div class="card obj-card">
+        <div class="icon">🔟</div>
+        <h4>整十数加减</h4>
+        <p>能快速计算整十数的加减法</p>
+      </div>
+      <div class="card obj-card">
+        <div class="icon">➕</div>
+        <h4>两位数加减</h4>
+        <p>能用竖式计算不进位和进位的加减法</p>
+      </div>
+      <div class="card obj-card">
+        <div class="icon">🏆</div>
+        <h4>解决问题</h4>
+        <p>能用100以内加减法解决生活问题</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🎬 生活场景动画 -->
+  <section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么算36+48时不能直接加6和8？</p></div><div class="tu-q"><p>❓ 退位减法借走的1到底去哪了？</p></div><div class="tu-q"><p>❓ 超市买零食怎么快速算总价？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" id="pretest" data-slot="20">
+  <div class="card">
+    <h2 class="section-title">📋 前测：你已经知道什么？</h2>
+    <p style="color:#666;margin-bottom:16px;">先来测一测你已经掌握了哪些前置知识，帮助你更好地学习新内容！</p>
+
+    <div class="pretest-item" id="pretest-q0">
+      <p><strong>第1题：</strong>20+30=？</p>
+      <button class="quiz-option" onclick="checkPretest(this,'q0',0,1,'整十数相加：十位2+3=5，结果50（个位不动）')">
+        A. 23
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q0',1,1,'整十数相加：十位2+3=5，结果50（个位不动）')">
+        B. 50
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q0',2,1,'整十数相加：十位2+3=5，结果50（个位不动）')">
+        C. 32
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q0',3,1,'整十数相加：十位2+3=5，结果50（个位不动）')">
+        D. 60
+      </button>
+      <div class="quiz-feedback" id="pretest-fb0"></div>
+    </div>
+
+    <div class="pretest-item" id="pretest-q1">
+      <p><strong>第2题：</strong>35中，十位上的数是几？表示几个十？</p>
+      <button class="quiz-option" onclick="checkPretest(this,'q1',0,1,'35：3在十位，表示3个十（即30）；5在个位，表示5个一')">
+        A. 5，5个十
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q1',1,1,'35：3在十位，表示3个十（即30）；5在个位，表示5个一')">
+        B. 3，3个十
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q1',2,1,'35：3在十位，表示3个十（即30）；5在个位，表示5个一')">
+        C. 3，3个一
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q1',3,1,'35：3在十位，表示3个十（即30）；5在个位，表示5个一')">
+        D. 5，5个一
+      </button>
+      <div class="quiz-feedback" id="pretest-fb1"></div>
+    </div>
+    <div id="pretest-result" style="display:none;margin-top:16px;padding:12px;background:#e8f5e9;border-radius:12px;font-weight:bold;"></div>
+  </div>
+  <script>
+  (function(){
+    var pretestAnswered = {};
+    window.checkPretest = function(btn, qid, chosen, ans, hint) {
+      if (pretestAnswered[qid]) return;
+      pretestAnswered[qid] = true;
+      var fb = document.getElementById('pretest-fb'+qid.replace('q',''));
+      if (chosen === ans) {
+        btn.classList.add('correct');
+        fb.className = 'quiz-feedback show';
+        fb.style.background = '#d4edda'; fb.style.color = '#155724';
+        fb.innerHTML = '✅ 正确！' + hint;
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'quiz-feedback show';
+        fb.style.background = '#f8d7da'; fb.style.color = '#721c24';
+        fb.innerHTML = '❌ 再想想。' + hint;
+      }
+    };
+  })();
+  </script>
+</section>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（放在 pretest 之后，课件顶部可见） -->
+
+
+
+<section data-bloom-level="understand" class="section" id="module-1" data-slot="30">
+    <h2 class="section-title">📖 模块一：整十数加减——十个一跳一跳！</h2>
+    <div class="card">
+      <h3>💡 整十数就是"10个捆在一起"</h3>
+      <p>20 = 2捆（2个十）&nbsp;&nbsp;30 = 3捆（3个十）&nbsp;&nbsp;50 = 5捆（5个十）</p>
+      <p style="margin-top:12px;"><strong>20 + 30 = ？</strong> → 2捆 + 3捆 = 5捆 = <strong>50</strong></p>
+      <p><strong>70 - 40 = ？</strong> → 7捆 - 4捆 = 3捆 = <strong>30</strong></p>
+    </div>
+    <!-- 多步骤题 Step 1 -->
+    <div class="step-quiz" id="stepQ1">
+      <div class="step-header">
+        <div class="step-dot active" id="sq1-dot1">1</div>
+        <div class="step-dot" id="sq1-dot2">2</div>
+        <div class="step-dot" id="sq1-dot3">3</div>
+        <span style="line-height:28px;font-size:14px;">整十数加减三步走</span>
+      </div>
+      <div class="step-panel show" id="sq1-p1">
+        <p class="step-q">Step 1：40 是几捆？</p>
+        <div class="quiz-option" onclick="stepAnswer(this,true,'sq1-p1','sq1-dot1','sq1-p2','sq1-dot2','sq1-f1')">4捆（4个十）✓</div>
+        <div class="quiz-option" onclick="stepAnswer(this,false,'sq1-p1','sq1-dot1','sq1-p2','sq1-dot2','sq1-f1')">40捆</div>
+        <div id="sq1-f1" class="quiz-feedback"></div>
+      </div>
+      <div class="step-panel" id="sq1-p2">
+        <p class="step-q">Step 2：50 是几捆？</p>
+        <div class="quiz-option" onclick="stepAnswer(this,true,'sq1-p2','sq1-dot2','sq1-p3','sq1-dot3','sq1-f2')">5捆 ✓</div>
+        <div class="quiz-option" onclick="stepAnswer(this,false,'sq1-p2','sq1-dot2','sq1-p3','sq1-dot3','sq1-f2')">50捆</div>
+        <div id="sq1-f2" class="quiz-feedback"></div>
+      </div>
+      <div class="step-panel" id="sq1-p3">
+        <p class="step-q">Step 3：40 + 50 = ？（几捆 + 几捆 = 几捆）</p>
+        <div class="quiz-option" onclick="finalStep(this,false,'sq1-f3')">80</div>
+        <div class="quiz-option" onclick="finalStep(this,true,'sq1-f3')">90 ✓（4捆+5捆=9捆=90）</div>
+        <div class="quiz-option" onclick="finalStep(this,false,'sq1-f3')">100</div>
+        <div id="sq1-f3" class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🧪 互动实验台 -->
+  <section data-scaffold="partial" data-bloom-level="remember" id="life-scene" data-slot="35">
+    <h2 class="section-title">🎬 生活情境：超市购物！</h2>
+    <p style="text-align:center;color:var(--dim);margin-bottom:20px;">小明买了 <strong>38</strong> 颗糖 🍬，小红买了 <strong>45</strong> 颗糖，他们一共有多少颗糖？</p>
+    <div class="scene-stage" id="sceneStage">
+      <div class="sun"></div>
+      <div class="cloud cloud1"></div>
+      <div class="cloud cloud2"></div>
+      <div class="basket-a" id="basketA"></div>
+      <div class="merge-arrow">➡️</div>
+      <div class="basket-b" id="basketB"></div>
+      <div class="scene-label">小明的糖 🍬×38 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 小红的糖 🍬×45</div>
+    </div>
+    <div class="scene-result" id="sceneResult"></div>
+    <div style="text-align:center;margin-top:16px;">
+      <button onclick="playScene()" style="padding:12px 32px;border:none;border-radius:20px;background:linear-gradient(135deg,var(--primary),var(--orange));color:white;font-size:16px;font-weight:900;cursor:pointer;">▶ 播放动画</button>
+    </div>
+  </section>
+
+  <!-- 模块一：整十数 -->
+  <div class="slide-page ta-flat" data-page-type="content" data-tsh="可视化" data-slot="35">
+  <section class="section mathelem-depth" id="lesson-visual" data-tts="lesson-visual">
+    <div class="card">
+      <span class="phase-tag" data-variant="success">互动可视</span>
+      <h2>数轴与100以内的数</h2>
+      <p>借助数轴看清数位与加减的移动，理解进位退位的过程。</p>
+      <canvas class="me-visual-canvas" id="me-canvas-math-elem-add-sub-within-100" width="560" height="240"
+        data-kind="numberline" role="img" aria-label="数轴与100以内的数"></canvas>
+    </div>
+  </section>
+</div>
+
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section mathelem-depth core-knowledge-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>100以内加减法：竖式与进退位</h2>
+      <p>100以内加减法要理解数位对齐和进位退位。列竖式时相同数位对齐，从个位算起。加法个位满十向十位进一；减法个位不够减时从十位退一当十再减。理解算理比死记步骤更重要。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>100以内加减法竖式计算的数位对齐与进退位运算原理示意图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><marker id="ar-s2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="arRed" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#f87171"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.15"><line x1="60" y1="20" x2="60" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="120" y1="20" x2="120" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="180" y1="20" x2="180" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="300" y1="20" x2="300" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="360" y1="20" x2="360" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="420" y1="20" x2="420" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="540" y1="20" x2="540" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="600" y1="20" x2="600" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="60" x2="620" y2="60" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="120" x2="620" y2="120" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="180" x2="620" y2="180" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="240" x2="620" y2="240" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="300" x2="620" y2="300" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="360" x2="620" y2="360" stroke="#334155" stroke-width="0.5"/></g><rect x="50" y="80" width="180" height="120" rx="10" fill="url(#blueGrad-s2)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="140" y="100" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">加法竖式</text><rect x="70" y="115" width="30" height="25" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="85" y="130" text-anchor="middle" fill="#7dd3fc" font-size="12">47</text><rect x="70" y="145" width="30" height="25" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="85" y="160" text-anchor="middle" fill="#7dd3fc" font-size="12">+35</text><line x1="70" y1="172" x2="100" y2="172" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></line><rect x="70" y="175" width="30" height="20" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="85" y="187" text-anchor="middle" fill="#34d399" font-size="12">82</text><circle cx="125" cy="140" r="8" fill="url(#orangeGrad-s2)" stroke="#f59e0b" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" begin="1.5s" repeatCount="indefinite"/></circle><text x="125" y="144" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="bold">1</text><path d="M115 135 Q110 125 105 115" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#ar-s2)" stroke-dasharray="5 3"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.2s" begin="1.5s" repeatCount="indefinite"/></path><text x="155" y="130" fill="#e2e8f0" font-size="11">个位满十</text><text x="155" y="145" fill="#e2e8f0" font-size="11">向十位进一</text><rect x="410" y="80" width="180" height="120" rx="10" fill="url(#redGrad-s2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="500" y="100" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">减法竖式</text><rect x="430" y="115" width="30" height="25" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></rect><text x="445" y="130" text-anchor="middle" fill="#7dd3fc" font-size="12">63</text><rect x="430" y="145" width="30" height="25" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></rect><text x="445" y="160" text-anchor="middle" fill="#7dd3fc" font-size="12">-28</text><line x1="430" y1="172" x2="460" y2="172" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></line><rect x="430" y="175" width="30" height="20" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></rect><text x="445" y="187" text-anchor="middle" fill="#34d399" font-size="12">35</text><circle cx="485" cy="140" r="8" fill="url(#orangeGrad-s2)" stroke="#f59e0b" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" begin="2.5s" repeatCount="indefinite"/></circle><text x="485" y="144" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="bold">1</text><path d="M495 135 Q500 125 505 115" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#arRed)" stroke-dasharray="5 3"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.2s" begin="2.5s" repeatCount="indefinite"/></path><text x="515" y="130" fill="#e2e8f0" font-size="11">十位退一</text><text x="515" y="145" fill="#e2e8f0" font-size="11">当十再减</text><rect x="150" y="240" width="340" height="80" rx="10" fill="url(#greenGrad-s2)" stroke="#34d399" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></rect><text x="320" y="265" text-anchor="middle" fill="#fbbf24" font-size="15" font-weight="bold">数位对齐原理</text><circle cx="200" cy="285" r="6" fill="#3b82f6" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></circle><text x="215" y="290" fill="#e2e8f0" font-size="12">个位对个位</text><circle cx="320" cy="285" r="6" fill="#3b82f6" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></circle><text x="335" y="290" fill="#e2e8f0" font-size="12">十位对十位</text><circle cx="440" cy="285" r="6" fill="#3b82f6" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></circle><text x="455" y="290" fill="#e2e8f0" font-size="12">从个位算起</text><text x="320" y="310" text-anchor="middle" fill="#7dd3fc" font-size="13" font-weight="bold">理解算理比死记步骤更重要</text><rect x="80" y="350" width="120" height="50" rx="8" fill="url(#blueGrad-s2)" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></rect><text x="140" y="370" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">进位加法</text><text x="140" y="385" text-anchor="middle" fill="#e2e8f0" font-size="11">满十进一</text><rect x="220" y="350" width="120" height="50" rx="8" fill="url(#orangeGrad-s2)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></rect><text x="280" y="370" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">数位对齐</text><text x="280" y="385" text-anchor="middle" fill="#e2e8f0" font-size="11">相同数位</text><rect x="360" y="350" width="120" height="50" rx="8" fill="url(#redGrad-s2)" stroke="#f87171" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></rect><text x="420" y="370" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">退位减法</text><text x="420" y="385" text-anchor="middle" fill="#e2e8f0" font-size="11">借一当十</text><path d="M140 240 Q140 220 140 200" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar-s2)" stroke-dasharray="7 5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" begin="3.5s" repeatCount="indefinite"/></path><path d="M500 240 Q500 220 500 200" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar-s2)" stroke-dasharray="7 5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" begin="3.5s" repeatCount="indefinite"/></path><line x1="30" y1="50" x2="610" y2="50" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></line><circle cx="30" cy="50" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></circle><circle cx="610" cy="50" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></circle><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">100以内加减法竖式计算</text><rect x="500" y="320" width="120" height="75" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></rect><text x="560" y="340" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="bold">图例说明</text><rect x="510" y="350" width="12" height="8" fill="url(#blueGrad-s2)" stroke="#60a5fa" stroke-width="1"/><text x="530" y="357" fill="#e2e8f0" font-size="10">加法运算</text><rect x="510" y="365" width="12" height="8" fill="url(#redGrad-s2)" stroke="#f87171" stroke-width="1"/><text x="530" y="372" fill="#e2e8f0" font-size="10">减法运算</text><circle cx="516" cy="380" r="4" fill="url(#orangeGrad-s2)" stroke="#f59e0b" stroke-width="1"/><text x="530" y="383" fill="#e2e8f0" font-size="10">进退位</text></svg></figure>
+
+</div>
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="方法范例" data-slot="35">
+  <section class="section mathelem-depth core-knowledge-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：数位对齐、逐位计算</h2>
+      <p>计算时先把两数按数位对齐写成竖式，从个位开始：加法逐位相加，满十进一；减法逐位相减，不够减就向前一位借一当十。算完再估算检验结果是否合理，养成验算的好习惯。</p>
+      <div class="worked-example"><strong>范例：</strong>计算 47+38：个位7+8=15，写5进1；十位4+3+1=8，得85。计算 62-25：个位2不够减25的5，退一当十，12-5=7；十位5-2=3，得37。</div>
+      <p id="lesson-pitfall" class="mathelem-pitfall"><strong>常见误区：</strong>常见误区是竖式数位没对齐，或进位、退位时漏加漏减。应牢记相同数位对齐、从个位算起、满十进一/退一当十，算完用估算或逆运算验算。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>计算 53-27 时，个位应怎样处理？</p>
+        <button type="button" data-correct="0" onclick="mathelemDepthCheck(this,false,&#x27;mathelem-depth-feedback&#x27;,&quot;个位3不够减7，从十位退一当十，用13-7=6。&quot;)">A. 直接3-7</button><button type="button" data-correct="1" onclick="mathelemDepthCheck(this,true,&#x27;mathelem-depth-feedback&#x27;,&quot;个位3不够减7，从十位退一当十，用13-7=6。&quot;)">B. 从十位退一，13-7</button><button type="button" data-correct="0" onclick="mathelemDepthCheck(this,false,&#x27;mathelem-depth-feedback&#x27;,&quot;个位3不够减7，从十位退一当十，用13-7=6。&quot;)">C. 十位减个位</button><button type="button" data-correct="0" onclick="mathelemDepthCheck(this,false,&#x27;mathelem-depth-feedback&#x27;,&quot;个位3不够减7，从十位退一当十，用13-7=6。&quot;)">D. 结果为0</button>
+        <div class="mathelem-feedback" id="mathelem-depth-feedback" role="status"></div>
+      </div>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>100以内加减法竖式计算的数位对齐、进退位处理机制分解图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="arGreen" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#34d399"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="8" y="8" width="624" height="404" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><g opacity="0.3"><line x1="80" y1="20" x2="80" y2="400" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/><line x1="400" y1="20" x2="400" y2="400" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/><line x1="560" y1="20" x2="560" y2="400" stroke="rgba(100,116,139,0.3)" stroke-width="0.5"/></g><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">100以内加减法竖式计算机制分解</text><rect x="40" y="70" width="180" height="150" rx="10" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="130" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">加法示例 47+38</text><rect x="60" y="105" width="30" height="25" rx="4" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5"/><text x="75" y="120" text-anchor="middle" fill="#e2e8f0" font-size="12">4</text><rect x="90" y="105" width="30" height="25" rx="4" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5"/><text x="105" y="120" text-anchor="middle" fill="#e2e8f0" font-size="12">7</text><rect x="60" y="135" width="30" height="25" rx="4" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5"/><text x="75" y="150" text-anchor="middle" fill="#e2e8f0" font-size="12">3</text><rect x="90" y="135" width="30" height="25" rx="4" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5"/><text x="105" y="150" text-anchor="middle" fill="#e2e8f0" font-size="12">8</text><line x1="60" y1="165" x2="120" y2="165" stroke="#60a5fa" stroke-width="2"/><rect x="50" y="170" width="30" height="25" rx="4" fill="url(#orangeGrad)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="65" y="185" text-anchor="middle" fill="#7dd3fc" font-size="12">8</text><rect x="80" y="170" width="30" height="25" rx="4" fill="url(#orangeGrad)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="95" y="185" text-anchor="middle" fill="#7dd3fc" font-size="12">5</text><text x="130" y="205" text-anchor="middle" fill="#e2e8f0" font-size="11">十位</text><text x="155" y="205" text-anchor="middle" fill="#e2e8f0" font-size="11">个位</text><circle cx="140" cy="115" r="3" fill="#7dd3fc"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/></circle><path d="M 140 115 Q 160 100 180 115" stroke="#7dd3fc" stroke-width="1.5" fill="none" marker-end="url(#ar)" stroke-dasharray="5 3"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.2s" repeatCount="indefinite"/></path><text x="200" y="110" fill="#34d399" font-size="12">7+8=15</text><text x="200" y="125" fill="#34d399" font-size="12">写5进1</text><rect x="260" y="70" width="180" height="150" rx="10" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="350" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">减法示例 62-25</text><rect x="280" y="105" width="30" height="25" rx="4" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="1.5"/><text x="295" y="120" text-anchor="middle" fill="#e2e8f0" font-size="12">6</text><rect x="310" y="105" width="30" height="25" rx="4" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="1.5"/><text x="325" y="120" text-anchor="middle" fill="#e2e8f0" font-size="12">2</text><rect x="280" y="135" width="30" height="25" rx="4" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="1.5"/><text x="295" y="150" text-anchor="middle" fill="#e2e8f0" font-size="12">2</text><rect x="310" y="135" width="30" height="25" rx="4" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="1.5"/><text x="325" y="150" text-anchor="middle" fill="#e2e8f0" font-size="12">5</text><line x1="280" y1="165" x2="340" y2="165" stroke="#f87171" stroke-width="2"/><rect x="270" y="170" width="30" height="25" rx="4" fill="url(#orangeGrad)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="285" y="185" text-anchor="middle" fill="#7dd3fc" font-size="12">3</text><rect x="300" y="170" width="30" height="25" rx="4" fill="url(#orangeGrad)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="315" y="185" text-anchor="middle" fill="#7dd3fc" font-size="12">7</text><path d="M 295 105 Q 280 90 265 105" stroke="#34d399" stroke-width="2" fill="none" marker-end="url(#arGreen)" stroke-dasharray="6 4"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.4s" repeatCount="indefinite"/></path><text x="240" y="95" fill="#34d399" font-size="11">退一当十</text><circle cx="325" cy="115" r="3" fill="#f59e0b"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/></circle><text x="360" y="110" fill="#34d399" font-size="12">12-5=7</text><text x="360" y="125" fill="#34d399" font-size="12">5-2=3</text><rect x="480" y="70" width="140" height="150" rx="10" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="550" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">数位对齐原则</text><rect x="500" y="105" width="25" height="20" rx="3" fill="rgba(52,211,153,0.2)" stroke="#34d399" stroke-width="1.5"/><text x="512" y="117" text-anchor="middle" fill="#e2e8f0" font-size="10">十</text><rect x="530" y="105" width="25" height="20" rx="3" fill="rgba(52,211,153,0.2)" stroke="#34d399" stroke-width="1.5"/><text x="542" y="117" text-anchor="middle" fill="#e2e8f0" font-size="10">个</text><rect x="500" y="130" width="25" height="20" rx="3" fill="rgba(52,211,153,0.2)" stroke="#34d399" stroke-width="1.5"/><text x="512" y="142" text-anchor="middle" fill="#e2e8f0" font-size="10">十</text><rect x="530" y="130" width="25" height="20" rx="3" fill="rgba(52,211,153,0.2)" stroke="#34d399" stroke-width="1.5"/><text x="542" y="142" text-anchor="middle" fill="#e2e8f0" font-size="10">个</text><line x1="505" y1="125" x2="505" y2="135" stroke="#34d399" stroke-width="1.5"/><line x1="535" y1="125" x2="535" y2="135" stroke="#34d399" stroke-width="1.5"/><text x="550" y="165" text-anchor="middle" fill="#e2e8f0" font-size="11">相同数位</text><text x="550" y="178" text-anchor="middle" fill="#e2e8f0" font-size="11">上下对齐</text><text x="550" y="195" text-anchor="middle" fill="#34d399" font-size="11">从个位开始</text><text x="550" y="208" text-anchor="middle" fill="#34d399" font-size="11">逐位计算</text><rect x="50" y="250" width="540" height="80" rx="8" fill="rgba(168,139,250,0.1)" stroke="#a78bfa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="320" y="270" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">计算流程与关键要点</text><circle cx="80" cy="295" r="8" fill="url(#blueGrad)" stroke="#3b82f6" stroke-width="1.5"/><text x="80" y="299" text-anchor="middle" fill="#e2e8f0" font-size="10">1</text><text x="120" y="299" fill="#e2e8f0" font-size="12">数位对齐</text><path d="M 150 295 L 180 295" stroke="#a78bfa" stroke-width="2" marker-end="url(#ar)" stroke-dasharray="4 2"><animate attributeName="stroke-dashoffset" from="12" to="0" dur="1s" repeatCount="indefinite"/></path><circle cx="200" cy="295" r="8" fill="url(#orangeGrad)" stroke="#f59e0b" stroke-width="1.5"/><text x="200" y="299" text-anchor="middle" fill="#e2e8f0" font-size="10">2</text><text x="240" y="299" fill="#e2e8f0" font-size="12">个位计算</text><path d="M 300 295 L 330 295" stroke="#a78bfa" stroke-width="2" marker-end="url(#ar)" stroke-dasharray="4 2"><animate attributeName="stroke-dashoffset" from="12" to="0" dur="1s" repeatCount="indefinite"/></path><circle cx="350" cy="295" r="8" fill="url(#greenGrad)" stroke="#34d399" stroke-width="1.5"/><text x="350" y="299" text-anchor="middle" fill="#e2e8f0" font-size="10">3</text><text x="390" y="299" fill="#e2e8f0" font-size="12">进位/退位</text><path d="M 460 295 L 490 295" stroke="#a78bfa" stroke-width="2" marker-end="url(#ar)" stroke-dasharray="4 2"><animate attributeName="stroke-dashoffset" from="12" to="0" dur="1s" repeatCount="indefinite"/></path><circle cx="510" cy="295" r="8" fill="url(#redGrad)" stroke="#ef4444" stroke-width="1.5"/><text x="510" y="299" text-anchor="middle" fill="#e2e8f0" font-size="10">4</text><text x="540" y="299" fill="#e2e8f0" font-size="12">验算</text><text x="80" y="315" fill="#7dd3fc" font-size="11">竖式书写</text><text x="200" y="315" fill="#7dd3fc" font-size="11">满十进一</text><text x="350" y="315" fill="#7dd3fc" font-size="11">退一当十</text><text x="510" y="315" fill="#7dd3fc" font-size="11">逆运算</text><rect x="70" y="350" width="500" height="50" rx="8" fill="rgba(52,211,153,0.08)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></rect><text x="90" y="370" fill="#fbbf24" font-size="13" font-weight="bold">马上练：</text><text x="160" y="370" fill="#e2e8f0" font-size="12">计算53-27时，个位应怎样处理？</text><text x="90" y="385" fill="#ef4444" font-size="12">A.直接3-7</text><text x="200" y="385" fill="#34d399" font-size="12">B.从十位退一，13-7</text><text x="350" y="385" fill="#e2e8f0" font-size="12">C.十位减个位</text><text x="480" y="385" fill="#e2e8f0" font-size="12">D.结果为0</text><circle cx="180" cy="382" r="6" fill="none" stroke="#34d399" stroke-width="2"><animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/></circle><rect x="460" y="320" width="160" height="70" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></rect><text x="540" y="335" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">图例说明</text><rect x="470" y="340" width="12" height="8" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="1"/><text x="490" y="347" fill="#e2e8f0" font-size="10">数位结构</text><rect x="470" y="352" width="12" height="8" fill="url(#orangeGrad)" stroke="#f59e0b" stroke-width="1"/><text x="490" y="359" fill="#e2e8f0" font-size="10">计算过程</text><rect x="470" y="364" width="12" height="8" fill="url(#greenGrad)" stroke="#34d399" stroke-width="1"/><text x="490" y="371" fill="#e2e8f0" font-size="10">进退位</text><rect x="470" y="376" width="12" height="8" fill="url(#redGrad)" stroke="#ef4444" stroke-width="1"/><text x="490" y="383" fill="#e2e8f0" font-size="10">验算检查</text></svg></figure>
+
+</div>
+<section class="section" id="module-2" data-slot="40">
+    <h2 class="section-title">📖 模块二：两位数不进位加减</h2>
+    <div class="card">
+      <h3>💡 个位和十位分开算</h3>
+      <p>算 35 + 23：个位：5+3=8 &nbsp; 十位：3+2=5(即50) &nbsp; 合起来：<strong>58</strong></p>
+      <div class="column-add">
+        <div class="col-calc">
+          <div>&nbsp;3 5</div>
+          <div>+2 3</div>
+          <div class="line"></div>
+          <div class="result">&nbsp;5 8</div>
+        </div>
+      </div>
+      <p>📝 竖式要点：<span class="highlight">相同数位对齐，从个位算起</span></p>
+    </div>
+    <!-- 多步骤题 2 -->
+    <div class="step-quiz" id="stepQ2">
+      <div class="step-header">
+        <div class="step-dot active" id="sq2-dot1">1</div>
+        <div class="step-dot" id="sq2-dot2">2</div>
+        <div class="step-dot" id="sq2-dot3">3</div>
+        <span style="line-height:28px;font-size:14px;">竖式计算 47 + 31</span>
+      </div>
+      <div class="step-panel show" id="sq2-p1">
+        <p class="step-q">Step 1：个位 7 + 1 = ？</p>
+        <div class="quiz-option" onclick="stepAnswer(this,false,'sq2-p1','sq2-dot1','sq2-p2','sq2-dot2','sq2-f1')">9</div>
+        <div class="quiz-option" onclick="stepAnswer(this,true,'sq2-p1','sq2-dot1','sq2-p2','sq2-dot2','sq2-f1')">8 ✓</div>
+        <div id="sq2-f1" class="quiz-feedback"></div>
+      </div>
+      <div class="step-panel" id="sq2-p2">
+        <p class="step-q">Step 2：十位 4 + 3 = ？（代表几十）</p>
+        <div class="quiz-option" onclick="stepAnswer(this,true,'sq2-p2','sq2-dot2','sq2-p3','sq2-dot3','sq2-f2')">7，代表70 ✓</div>
+        <div class="quiz-option" onclick="stepAnswer(this,false,'sq2-p2','sq2-dot2','sq2-p3','sq2-dot3','sq2-f2')">8，代表80</div>
+        <div id="sq2-f2" class="quiz-feedback"></div>
+      </div>
+      <div class="step-panel" id="sq2-p3">
+        <p class="step-q">Step 3：47 + 31 = ？</p>
+        <div class="quiz-option" onclick="finalStep(this,false,'sq2-f3')">77</div>
+        <div class="quiz-option" onclick="finalStep(this,true,'sq2-f3')">78 ✓（70+8=78）</div>
+        <div class="quiz-option" onclick="finalStep(this,false,'sq2-f3')">88</div>
+        <div id="sq2-f3" class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🕸️ 知识图谱 -->
+
+<!-- ⭐ v7.7 标准独立连续音频模块 -->
+
+
+  <!-- 模块三：进位加减 -->
+  <section class="section" id="module-3" data-slot="50">
+    <h2 class="section-title">📖 模块三：进位加法和退位减法</h2>
+    <div class="card">
+      <h3>💡 进位加法——个位满10要"进1"！</h3>
+      <p>算 38 + 45：个位：8+5=13，写3进1；十位：3+4+1=8；结果：<strong>83</strong></p>
+      <div class="column-add">
+        <div class="col-calc">
+          <div class="carry">&nbsp;&nbsp;1</div>
+          <div>&nbsp;3 8</div>
+          <div>+4 5</div>
+          <div class="line"></div>
+          <div class="result">&nbsp;8 3</div>
+        </div>
+      </div>
+    </div>
+    <div class="insight-box">
+      <h4>🔍 退位减法——不够减要"借1"！</h4>
+      <p>算 72 - 38：个位2不够减8，向十位借1变成12-8=4，十位6-3=3，结果34。</p>
+    </div>
+    <!-- 多步骤题 3 -->
+    <div class="step-quiz" id="stepQ3">
+      <div class="step-header">
+        <div class="step-dot active" id="sq3-dot1">1</div>
+        <div class="step-dot" id="sq3-dot2">2</div>
+        <div class="step-dot" id="sq3-dot3">3</div>
+        <span style="line-height:28px;font-size:14px;">进位加法 56 + 37</span>
+      </div>
+      <div class="step-panel show" id="sq3-p1">
+        <p class="step-q">Step 1：个位 6 + 7 = ？，需要进位吗？</p>
+        <div class="quiz-option" onclick="stepAnswer(this,true,'sq3-p1','sq3-dot1','sq3-p2','sq3-dot2','sq3-f1')">13，需要进位（写3，进1）✓</div>
+        <div class="quiz-option" onclick="stepAnswer(this,false,'sq3-p1','sq3-dot1','sq3-p2','sq3-dot2','sq3-f1')">13，不需要进位</div>
+        <div id="sq3-f1" class="quiz-feedback"></div>
+      </div>
+      <div class="step-panel" id="sq3-p2">
+        <p class="step-q">Step 2：十位 5 + 3 + 进位1 = ？</p>
+        <div class="quiz-option" onclick="stepAnswer(this,false,'sq3-p2','sq3-dot2','sq3-p3','sq3-dot3','sq3-f2')">8</div>
+        <div class="quiz-option" onclick="stepAnswer(this,true,'sq3-p2','sq3-dot2','sq3-p3','sq3-dot3','sq3-f2')">9 ✓（5+3+1=9，代表90）</div>
+        <div id="sq3-f2" class="quiz-feedback"></div>
+      </div>
+      <div class="step-panel" id="sq3-p3">
+        <p class="step-q">Step 3：56 + 37 = ？</p>
+        <div class="quiz-option" onclick="finalStep(this,false,'sq3-f3')">83（忘进位了）</div>
+        <div class="quiz-option" onclick="finalStep(this,true,'sq3-f3')">93 ✓（90+3=93）</div>
+        <div class="quiz-option" onclick="finalStep(this,false,'sq3-f3')">94</div>
+        <div id="sq3-f3" class="quiz-feedback"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 深层理解 -->
+
+<section class="section" id="deep-understanding" data-slot="70">
+    <h2 class="section-title">🧠 深层理解</h2>
+    <div class="card">
+      <h3>🌍 生活中的100以内加减法</h3>
+      <p>🛒 超市购物：买了38元零食和45元玩具，一共花了 <span class="highlight">83元</span></p>
+      <p>🎮 游戏积分：第一关56分，第二关37分，总分 <span class="highlight">93分</span></p>
+      <p>📚 图书馆：有72本书，借出38本，还剩 <span class="highlight">34本</span></p>
+    </div>
+    <div class="card">
+      <h3>⭐⭐⭐ 综合应用</h3>
+      <p>小明存了65元，买玩具花了28元，还剩多少元？</p>
+      <div class="quiz-option" onclick="checkAnswer(this,false,'deep-q1')">A. 43元</div>
+      <div class="quiz-option" onclick="checkAnswer(this,true,'deep-q1')">B. 37元 ✓（65-28：15-8=7，6-1-2=3，得37）</div>
+      <div class="quiz-option" onclick="checkAnswer(this,false,'deep-q1')">C. 47元</div>
+      <div id="deep-q1" class="quiz-feedback"></div>
+    </div>
+  </section>
+
+  <!-- 课程小结 -->
+  <section data-bloom-level="apply" id="interactive-lab" data-slot="77">
+    <div class="lab-title">🧪 互动实验台</div>
+
+    <!-- 滑块计算器 -->
+    <div class="slider-demo">
+      <h3>🎚️ 滑动拨盘——加减法计算器</h3>
+      <p style="color:var(--dim);font-size:14px;margin-bottom:16px;">拖动滑块，实时查看结果！</p>
+      <div class="slider-row">
+        <label>数A：</label>
+        <input type="range" id="sliderA" min="10" max="90" step="10" value="30" oninput="updateCalc()">
+        <span class="slider-val" id="valA">30</span>
+      </div>
+      <div class="slider-row">
+        <label>数B：</label>
+        <input type="range" id="sliderB" min="10" max="90" step="10" value="40" oninput="updateCalc()">
+        <span class="slider-val" id="valB">40</span>
+      </div>
+      <div class="slider-row">
+        <label>运算：</label>
+        <select id="opSelect" onchange="updateCalc()" style="padding:8px 16px;border-radius:10px;border:2px solid var(--border);font-size:16px;font-weight:700;">
+          <option value="+">加法 +</option>
+          <option value="-">减法 -</option>
+        </select>
+      </div>
+      <div class="calc-display" id="calcDisplay">30 + 40 = 70</div>
+    </div>
+
+    <!-- 拖拽配对：竖式连连看 -->
+    <div class="drag-section">
+      <h3>🎯 拖拽配对：把算式拖到正确答案！</h3>
+      <p class="drag-instruction">把左边的算式卡片拖到右边对应的答案格子里 👇</p>
+      <div class="drag-zone" id="dragZone">
+        <div class="drag-item" draggable="true" data-id="d1">20+50</div>
+        <div class="drag-item" draggable="true" data-id="d2">80-30</div>
+        <div class="drag-item" draggable="true" data-id="d3">35+23</div>
+        <div class="drag-item" draggable="true" data-id="d4">72-38</div>
+      </div>
+      <div class="drop-zone">
+        <div class="drop-target" data-accept="d1">答案：<strong>70</strong></div>
+        <div class="drop-target" data-accept="d2">答案：<strong>50</strong></div>
+        <div class="drop-target" data-accept="d3">答案：<strong>58</strong></div>
+        <div class="drop-target" data-accept="d4">答案：<strong>34</strong></div>
+      </div>
+      <div class="drop-result" id="dropResult"></div>
+    </div>
+  </section>
+
+  <!-- 模块二：两位数不进位加减 -->
+  <section id="posttest" data-slot="90">
+  <div class="card">
+    <h2 class="section-title">🎯 后测：学会了吗？</h2>
+    <p style="color:#666;margin-bottom:16px;">完成学习后，用这两道题检验你对"100以内加减法"的掌握程度！</p>
+
+    <div class="posttest-item" id="posttest-pq0">
+      <p><strong>第1题：</strong>56+38=？（竖式算法）</p>
+      <button class="quiz-option" onclick="checkPost(this,'pq0',0,0,'竖式：个位6+8=14，写4进1；十位5+3+1=9，结果94')">
+        A. 94
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq0',1,0,'竖式：个位6+8=14，写4进1；十位5+3+1=9，结果94')">
+        B. 84
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq0',2,0,'竖式：个位6+8=14，写4进1；十位5+3+1=9，结果94')">
+        C. 86
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq0',3,0,'竖式：个位6+8=14，写4进1；十位5+3+1=9，结果94')">
+        D. 96
+      </button>
+      <div class="quiz-feedback" id="post-fb0"></div>
+    </div>
+
+    <div class="posttest-item" id="posttest-pq1">
+      <p><strong>第2题：</strong>72-46=？</p>
+      <button class="quiz-option" onclick="checkPost(this,'pq1',0,1,'竖式：个位2-6不够，借十位；12-6=6，十位7-1-4=2，结果26')">
+        A. 34
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq1',1,1,'竖式：个位2-6不够，借十位；12-6=6，十位7-1-4=2，结果26')">
+        B. 26
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq1',2,1,'竖式：个位2-6不够，借十位；12-6=6，十位7-1-4=2，结果26')">
+        C. 36
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq1',3,1,'竖式：个位2-6不够，借十位；12-6=6，十位7-1-4=2，结果26')">
+        D. 24
+      </button>
+      <div class="quiz-feedback" id="post-fb1"></div>
+    </div>
+    <div id="posttest-summary" style="display:none;margin-top:16px;padding:16px;border-radius:12px;text-align:center;font-weight:bold;font-size:1.1rem;"></div>
+  </div>
+  <script>
+  (function(){
+    var postAnswered = {};
+    var postCount = 0;
+    var postTotal = 2;
+    window.checkPost = function(btn, qid, chosen, ans, hint) {
+      if (postAnswered[qid]) return;
+      postAnswered[qid] = true;
+      var idx = qid.replace('pq','');
+      var fb = document.getElementById('post-fb'+idx);
+      if (chosen === ans) {
+        postCount++;
+        btn.classList.add('correct');
+        fb.className = 'quiz-feedback show';
+        fb.style.background = '#d4edda'; fb.style.color = '#155724';
+        fb.innerHTML = '✅ 正确！' + hint;
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'quiz-feedback show';
+        fb.style.background = '#f8d7da'; fb.style.color = '#721c24';
+        fb.innerHTML = '❌ 错误。' + hint;
+      }
+      if (Object.keys(postAnswered).length === postTotal) {
+        var summary = document.getElementById('posttest-summary');
+        summary.style.display = 'block';
+        if (postCount === postTotal) {
+          summary.style.background = '#d4edda'; summary.style.color = '#155724';
+          summary.innerHTML = '🎉 全部正确！你已经掌握了本课内容！';
+        } else {
+          summary.style.background = '#fff3cd'; summary.style.color = '#856404';
+          summary.innerHTML = '💪 答对 ' + postCount + '/' + postTotal + ' 题。建议回顾一下未掌握的内容！';
+        }
+      }
+    };
+  })();
+  </script>
+</section>
+
+<!-- TTS 音频 #TeachAny Edge-TTS -->
+<div class="teachany-audio-intro" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
+  <button onclick="document.getElementById('ta-audio').play()"
+    style="background:linear-gradient(135deg,#ff6b6b,#ee5a24);color:#fff;border:none;
+    width:52px;height:52px;border-radius:50%;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 16px rgba(255,107,107,0.4);display:flex;align-items:center;justify-content:center;"
+    title="播放课程介绍">🔊</button>
+  <audio id="ta-audio" src="audio/intro.mp3" preload="auto"></audio>
+</div>
+
+
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "100以内加减法",
+  subject: "math",
+  grade: 2,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴脚本（左下角 FAB · 首次点击引导配置 API） -->
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+
+
+<!-- teachany-enhanced -->
+
+
+<section class="section" id="summary" data-slot="97">
+    <h2 class="section-title">📝 课程小结</h2>
+    <div class="card">
+      <h3>🌟 今天掌握了</h3>
+      <p>✅ <span class="highlight">整十数加减</span>：把数当"捆"来数，几捆加几捆</p>
+      <p>✅ <span class="highlight">竖式</span>：相同数位对齐，从个位开始算</p>
+      <p>✅ <span class="highlight">进位加法</span>：个位满10，向十位进1</p>
+      <p>✅ <span class="highlight">退位减法</span>：个位不够减，向十位借1</p>
+    </div>
+    <div class="star-reward">
+      <span class="stars">🌟🌟🌟</span>
+      100以内加减法全会了！数学小能手！🧮✨
+    </div>
+  </section>
+  <footer>
+    <p>Made with <strong>教我学 TeachAny</strong> · <a href="https://github.com/weponusa/teachany" style="color:var(--primary);">GitHub</a></p>
+    <p style="margin-top:8px;">Built on ABT Narrative · Bloom's Taxonomy · Scaffolding · Cognitive Load Theory</p>
+  </footer>
+</div>
+
+<!-- TTS 音频条 -->
+<div class="audio-bar">
+  <button class="ab-btn" id="abPrev">⏮</button>
+  <button class="ab-btn" id="abPlay">▶</button>
+  <button class="ab-btn" id="abNext">⏭</button>
+  <div class="ab-info">
+    <div class="ab-title" id="abTitle">🎵 100以内加减法 · 第1段</div>
+    <div class="ab-progress-wrap" id="abProgressWrap"><div class="ab-progress" id="abProgress"></div></div>
+    <div class="ab-time" id="abTime">0:00 / 0:00</div>
+  </div>
+  <input class="ab-vol" type="range" id="abVol" min="0" max="1" step="0.05" value="0.85">
+</div>
+
+<script>
+// ===== 生活场景动画 =====
+function playScene() {
+  const stageA = document.getElementById('basketA');
+  const stageB = document.getElementById('basketB');
+  const result = document.getElementById('sceneResult');
+  stageA.innerHTML = '';
+  stageB.innerHTML = '';
+  result.innerHTML = '';
+  const colorsA = ['#ff6b6b','#ff922b','#ffe66d','#51cf66','#4ecdc4'];
+  const colorsB = ['#339af0','#cc5de8','#ff6b6b','#ff922b','#51cf66'];
+  // 显示代表性小球（最多显示8个代表38颗）
+  for(let i=0;i<8;i++){
+    setTimeout(()=>{
+      const b = document.createElement('div');
+      b.className = 'ball';
+      b.style.background = colorsA[i%5];
+      b.style.animationDelay = '0s';
+      b.style.fontSize='10px';
+      b.textContent = i===7?'…':'🍬';
+      stageA.appendChild(b);
+    }, i*120);
+  }
+  for(let i=0;i<9;i++){
+    setTimeout(()=>{
+      const b = document.createElement('div');
+      b.className = 'ball';
+      b.style.background = colorsB[i%5];
+      b.style.animationDelay = '0s';
+      b.style.fontSize='10px';
+      b.textContent = i===8?'…':'🍭';
+      stageB.appendChild(b);
+    }, i*120+300);
+  }
+  setTimeout(()=>{
+    result.innerHTML = '🎉 38 + 45 = <span style="color:var(--primary);font-size:28px;font-weight:900;">83</span> 颗糖！';
+    result.style.animation = 'popIn 0.5s ease';
+  }, 2000);
+}
+
+// ===== 滑块计算器 =====
+function updateCalc() {
+  const a = parseInt(document.getElementById('sliderA').value);
+  const b = parseInt(document.getElementById('sliderB').value);
+  const op = document.getElementById('opSelect').value;
+  document.getElementById('valA').textContent = a;
+  document.getElementById('valB').textContent = b;
+  const result = op === '+' ? a + b : a - b;
+  document.getElementById('calcDisplay').textContent = `${a} ${op} ${b} = ${result}`;
+}
+
+// ===== 拖拽配对 =====
+let dropScore = 0;
+document.querySelectorAll('.drag-item').forEach(el => {
+  el.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text', el.dataset.id);
+    el.classList.add('dragging');
+  });
+  el.addEventListener('dragend', () => el.classList.remove('dragging'));
+});
+document.querySelectorAll('.drop-target').forEach(el => {
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('drag-over');
+    if(el.classList.contains('correct') || el.classList.contains('wrong')) return;
+    const id = e.dataTransfer.getData('text');
+    const dragEl = document.querySelector(`[data-id="${id}"]`);
+    if(id === el.dataset.accept) {
+      el.classList.add('correct');
+      el.innerHTML = el.innerHTML + ' ✅';
+      if(dragEl) dragEl.style.opacity='0.4';
+      dropScore++;
+      if(dropScore >= 4) document.getElementById('dropResult').innerHTML = '🎊 全部配对正确！你是竖式达人！';
+      else document.getElementById('dropResult').innerHTML = `✅ ${dropScore}/4 正确`;
+    } else {
+      el.classList.add('wrong');
+      setTimeout(()=>el.classList.remove('wrong'),800);
+      document.getElementById('dropResult').innerHTML = '❌ 再想想，认真计算哦～';
+    }
+  });
+});
+
+// ===== D3 知识图谱 =====
+(function initKG(){
+  const nodes = [
+    {id:'current',name:'100以内加减法',type:'current'},
+    {id:'pre1',name:'20以内加减法',type:'prereq'},
+    {id:'pre2',name:'100以内数的认识',type:'prereq'},
+    {id:'next1',name:'混合运算',type:'next'},
+    {id:'next2',name:'三位数加减',type:'next'},
+    {id:'next3',name:'乘除法初步',type:'next'},
+  ];
+  const links = [
+    {source:'pre1',target:'current'},
+    {source:'pre2',target:'current'},
+    {source:'current',target:'next1'},
+    {source:'current',target:'next2'},
+    {source:'current',target:'next3'},
+  ];
+  const colorMap = {current:'#339af0',prereq:'#51cf66',next:'#ff922b'};
+  const svg = d3.select('#kg-svg');
+  const w = document.getElementById('kg-svg').clientWidth || 700;
+  const h = 360;
+  svg.attr('viewBox',`0 0 ${w} ${h}`);
+
+  const sim = d3.forceSimulation(nodes)
+    .force('link',d3.forceLink(links).id(d=>d.id).distance(110))
+    .force('charge',d3.forceManyBody().strength(-280))
+    .force('center',d3.forceCenter(w/2,h/2))
+    .force('collision',d3.forceCollide(44));
+
+  const g = svg.append('g');
+  svg.call(d3.zoom().scaleExtent([0.5,2]).on('zoom',e=>g.attr('transform',e.transform)));
+
+  const link = g.append('g').selectAll('line').data(links).enter().append('line')
+    .attr('stroke','#ccc').attr('stroke-width',2).attr('marker-end','url(#arrow)');
+
+  svg.append('defs').append('marker').attr('id','arrow').attr('viewBox','0 -5 10 10')
+    .attr('refX',20).attr('refY',0).attr('markerWidth',6).attr('markerHeight',6)
+    .attr('orient','auto').append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#ccc');
+
+  const nodeG = g.append('g').selectAll('g').data(nodes).enter().append('g')
+    .call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;})
+      .on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}))
+    .on('click',(e,d)=>{
+      d3.selectAll('.kg-tooltip').remove();
+      const tip = svg.append('text').attr('class','kg-tooltip')
+        .attr('x',d.x).attr('y',d.y-38).attr('text-anchor','middle')
+        .attr('font-size','13').attr('font-weight','700').attr('fill','#333')
+        .text(d.name);
+      setTimeout(()=>tip.remove(),2000);
+    });
+
+  nodeG.append('circle').attr('r',d=>d.type==='current'?32:24)
+    .attr('fill',d=>colorMap[d.type]).attr('stroke','white').attr('stroke-width',3)
+    .attr('filter','drop-shadow(0 3px 6px rgba(0,0,0,0.15))');
+
+  nodeG.append('text').attr('text-anchor','middle').attr('dy','0.35em')
+    .attr('font-size',d=>d.type==='current'?'11':'10').attr('font-weight','900')
+    .attr('fill','white').each(function(d){
+      const words = d.name.length > 6 ? [d.name.slice(0,5), d.name.slice(5)] : [d.name];
+      words.forEach((w,i)=>{
+        d3.select(this).append('tspan').attr('x',0).attr('dy',i===0?`${-(words.length-1)*0.6}em`:'1.2em').text(w);
+      });
+    });
+
+  sim.on('tick',()=>{
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    nodeG.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+})();
+
+// ===== 多步骤题逻辑 =====
+function stepAnswer(el, isCorrect, curPanelId, curDotId, nextPanelId, nextDotId, feedbackId) {
+  const parent = el.closest('.step-panel');
+  if(parent.dataset.answered) return;
+  parent.dataset.answered = 'true';
+  parent.querySelectorAll('.quiz-option').forEach(o=>{o.style.pointerEvents='none';o.style.opacity='0.6';});
+  const fb = document.getElementById(feedbackId);
+  if(isCorrect) {
+    el.classList.add('correct'); el.style.opacity='1';
+    fb.innerHTML='✅ 正确！'; fb.style.background='rgba(81,207,102,0.12)'; fb.style.color='#2b8a3e';
+    fb.classList.add('show');
+    const curDot = document.getElementById(curDotId);
+    curDot.classList.remove('active'); curDot.classList.add('done'); curDot.textContent='✓';
+    setTimeout(()=>{
+      parent.classList.remove('show');
+      const next = document.getElementById(nextPanelId);
+      next.classList.add('show');
+      document.getElementById(nextDotId).classList.add('active');
+    }, 700);
+  } else {
+    el.classList.add('wrong'); el.style.opacity='1';
+    fb.innerHTML='💪 再想想！'; fb.style.background='rgba(255,107,107,0.08)'; fb.style.color='#c92a2a';
+    fb.classList.add('show');
+    setTimeout(()=>{
+      parent.dataset.answered='';
+      parent.querySelectorAll('.quiz-option').forEach(o=>{o.style.pointerEvents='';o.style.opacity='';o.classList.remove('wrong','correct');});
+      fb.classList.remove('show');
+    }, 800);
+  }
+}
+function finalStep(el, isCorrect, feedbackId) {
+  const parent = el.closest('.step-panel');
+  if(parent.dataset.answered) return;
+  parent.dataset.answered='true';
+  parent.querySelectorAll('.quiz-option').forEach(o=>{o.style.pointerEvents='none';o.style.opacity='0.6';});
+  const fb = document.getElementById(feedbackId);
+  if(isCorrect){
+    el.classList.add('correct'); el.style.opacity='1';
+    fb.innerHTML='🎉 <strong>全对！太厉害了！</strong>'; fb.style.background='rgba(81,207,102,0.12)'; fb.style.color='#2b8a3e';
+  } else {
+    el.classList.add('wrong'); el.style.opacity='1';
+    parent.querySelectorAll('.quiz-option').forEach(o=>{if(o.onclick&&o.onclick.toString().includes('true')){o.classList.add('correct');o.style.opacity='1';}});
+    fb.innerHTML='💪 看看正确答案，再来一次！'; fb.style.background='rgba(255,107,107,0.08)'; fb.style.color='#c92a2a';
+  }
+  fb.classList.add('show');
+}
+
+// ===== 普通单选题 =====
+function checkAnswer(el, isCorrect, feedbackId){
+  const parent=el.parentElement;
+  if(parent.dataset.answered)return;
+  parent.dataset.answered='true';
+  const options=parent.querySelectorAll('.quiz-option');
+  options.forEach(opt=>{opt.style.pointerEvents='none';opt.style.opacity='0.6';});
+  const feedback=document.getElementById(feedbackId);
+  if(isCorrect){el.classList.add('correct');el.style.opacity='1';feedback.innerHTML='🎉 <strong>完全正确！</strong>';feedback.style.background='rgba(81,207,102,0.12)';feedback.style.color='#2b8a3e';}
+  else{el.classList.add('wrong');el.style.opacity='1';options.forEach(opt=>{if(opt.onclick&&opt.onclick.toString().includes('true')){opt.classList.add('correct');opt.style.opacity='1';}});feedback.innerHTML='💪 <strong>加油！</strong> 注意进位哦！';feedback.style.background='rgba(255,107,107,0.08)';feedback.style.color='#c92a2a';}
+  feedback.classList.add('show');
+}
+
+// ===== TTS 音频播放器 =====
+const audioPlaylist=[
+  {src:'https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s01.mp3',title:'数字升级了！来学100以内加减法'},
+  {src:'https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s02.mp3',title:'整十数加减：把数当捆来算'},
+  {src:'https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s03.mp3',title:'竖式加法：个位十位分开算'},
+  {src:'https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s04.mp3',title:'不进位加减法练习'},
+  {src:'https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s05.mp3',title:'进位加法：满10向前进'},
+  {src:'https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s06.mp3',title:'退位减法：不够减向前借'},
+  {src:'https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s07.mp3',title:'生活中的100以内加减'},
+  {src:'https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s08.mp3',title:'课程小结：你是数学小能手！'},
+];
+let curIdx=0;
+const audio=new Audio();
+const abPlay=document.getElementById('abPlay'),abPrev=document.getElementById('abPrev'),abNext=document.getElementById('abNext');
+const abTitle=document.getElementById('abTitle'),abProgress=document.getElementById('abProgress'),abProgressWrap=document.getElementById('abProgressWrap'),abTime=document.getElementById('abTime'),abVol=document.getElementById('abVol');
+function loadTrack(idx){curIdx=idx;audio.src=audioPlaylist[idx].src;abTitle.textContent='🎵 '+audioPlaylist[idx].title;abProgress.style.width='0%';}
+abPlay.addEventListener('click',()=>{if(audio.paused){audio.play();abPlay.textContent='⏸';}else{audio.pause();abPlay.textContent='▶';}});
+abPrev.addEventListener('click',()=>{if(curIdx>0){loadTrack(curIdx-1);audio.play();abPlay.textContent='⏸';}});
+abNext.addEventListener('click',()=>{if(curIdx<audioPlaylist.length-1){loadTrack(curIdx+1);audio.play();abPlay.textContent='⏸';}});
+audio.addEventListener('timeupdate',()=>{if(audio.duration){abProgress.style.width=(audio.currentTime/audio.duration*100)+'%';}const fmt=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;abTime.textContent=fmt(audio.currentTime)+' / '+fmt(audio.duration||0);});
+audio.addEventListener('ended',()=>{if(curIdx<audioPlaylist.length-1){loadTrack(curIdx+1);audio.play();}else{abPlay.textContent='▶';}});
+abProgressWrap.addEventListener('click',e=>{const r=abProgressWrap.getBoundingClientRect();audio.currentTime=(e.clientX-r.left)/r.width*(audio.duration||0);});
+abVol.addEventListener('input',()=>{audio.volume=abVol.value;});
+audio.volume=0.85;loadTrack(0);
+
+// 导航高亮
+const sections=document.querySelectorAll('section[id]'),navLinks=document.querySelectorAll('.nav a');
+const io=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){navLinks.forEach(a=>{a.classList.remove('active');if(a.getAttribute('href')==='#'+e.target.id)a.classList.add('active');});}});},{threshold:0.3});
+sections.forEach(s=>io.observe(s));
+</script>
+
+
+<!-- ===== 易错点覆盖 ===== -->
+<div class="error-coverage" style="background:#fff8f0;border-left:4px solid #ff6b35;border-radius:0 16px 16px 0;padding:18px 22px;margin:16px 0;">
+  <h4 style="color:#d84315;margin-bottom:12px;">⚠️ 常见易错点提醒</h4>
+  <ul style="list-style:none;padding:0;line-height:2;">
+
+    <li>
+      <strong>❌ 易错：</strong>进位加法忘记向十位进1<br>
+      <span style="color:#e65100;">⚡ 易错提醒：个位相加≥10时，必须向十位进1！计算十位时要加上进来的1。如56+38，个位6+8=14，写4进1，十位要算5+3+1=9，结果94，不是84</span>
+    </li>
+
+    <li>
+      <strong>❌ 易错：</strong>混淆十位和个位含义，如35中3表示3个一<br>
+      <span style="color:#e65100;">⚡ 注意：35中3在十位，表示3个十（=30），不是3个一！个位上的5才表示5个一。进退位时要搞清哪位的数字</span>
+    </li>
+  </ul>
+  <p style="color:#999;font-size:0.85em;margin-top:8px;">注意：以上是同学们容易犯的典型错误，做题时要格外小心！</p>
+</div>
+
+<!-- ===== 记忆锚点 ===== -->
+<div class="memory-anchor" style="background:linear-gradient(135deg,#fff9e6,#fffbf0);border:2px solid #ffe66d;border-radius:16px;padding:18px 22px;margin:16px 0;">
+  <span class="anchor-icon">🧠</span>
+  <strong>记忆口诀：</strong>100以内计算口诀：个位对个位，十位对十位；加法满十要进位，减法不够要借位；进了借了要记清，别忘那个小小1！
+</div>
+
+
+<!-- ===== Bloom高阶练习 ===== -->
+<div class="bloom-exercises" style="background:linear-gradient(135deg,#f0f4ff,#f8f0ff);border-radius:16px;padding:20px;margin:16px 0;">
+  <h4 style="color:#5c35cc;margin-bottom:14px;">🧩 深度思考练习</h4>
+  <div style="margin-bottom:12px;">
+    <span style="background:#e8eaff;padding:3px 10px;border-radius:12px;font-size:0.85em;color:#5c35cc;">🔬 分析</span>
+    <p style="margin-top:6px;">归纳什么情况下加法会进位，什么情况下减法会借位</p>
+  </div>
+  <div style="margin-bottom:12px;">
+    <span style="background:#fff0e8;padding:3px 10px;border-radius:12px;font-size:0.85em;color:#cc5500;">⚖️ 评价</span>
+    <p style="margin-top:6px;">验证：56+38和38+56结果相同（加法交换律）</p>
+  </div>
+  <div>
+    <span style="background:#e8fff0;padding:3px 10px;border-radius:12px;font-size:0.85em;color:#1a7a3a;">✨ 创造</span>
+    <p style="margin-top:6px;">编写一道100以内加减法应用题，要求有进位</p>
+  </div>
+</div>
+
+<!-- ===== 后测 ===== -->
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
+  <div data-teachany-tutor-card></div>
+</section>
+<script>
+(function(){
+  var cv = document.getElementById('navMapCanvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var nodes = window.__NAV_NODES__ || [];
+  var layout = 'ring', hotspots = [];
+  function compute(){
+    var W = cv.width, H = cv.height, n = nodes.length, i, pts = [];
+    if (layout === 'ring') {
+      var cx = W/2, cy = H/2, r = Math.min(W, H)/2 - 70;
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI/2 + i * 2*Math.PI/n;
+        pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]);
+      }
+    } else {
+      var cols = n > 6 ? 2 : 1, per = Math.ceil(n/cols);
+      for (i = 0; i < n; i++) {
+        var c = Math.floor(i/per), row = i%per;
+        pts.push([W*(c?0.72:0.28), 60 + row*(H-100)/Math.max(1,per-1)]);
+      }
+    }
+    return pts;
+  }
+  function draw(){
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0,0,W,H);
+    var pts = compute();
+    hotspots = [];
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'; ctx.lineWidth = 2;
+    for (var i = 1; i < pts.length; i++) {
+      ctx.beginPath(); ctx.moveTo(pts[i-1][0], pts[i-1][1]); ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke();
+    }
+    for (i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1], nd = nodes[i];
+      ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI*2);
+      ctx.fillStyle = nd.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "PingFang SC",sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(nd.icon, x, y - 2);
+      ctx.font = '12px "PingFang SC",sans-serif';
+      ctx.fillText(nd.label.length > 6 ? nd.label.slice(0,6) : nd.label, x, y + 14);
+      hotspots.push({x:x, y:y, r:34, target:nd.target});
+    }
+  }
+  cv.addEventListener('click', function(e){
+    var rect = cv.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    var my = (e.clientY - rect.top) * (cv.height / rect.height);
+    for (var i = 0; i < hotspots.length; i++) {
+      var h = hotspots[i], dx = mx - h.x, dy = my - h.y;
+      if (dx*dx + dy*dy <= h.r*h.r) {
+        var el = document.getElementById(h.target);
+        if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+      }
+    }
+  });
+  document.getElementById('navLayoutRing').addEventListener('click', function(){ layout = 'ring'; draw(); });
+  document.getElementById('navLayoutList').addEventListener('click', function(){ layout = 'list'; draw(); });
+  draw();
+})();
+</script>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "addition-subtraction-within-20", "name": "addition-subtraction-within-20"}, {"id": "place-value-tens", "name": "place-value-tens"}], "current": {"id": "math-e-addition-subtraction-within-100", "name": "100以内加减法", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<script id="mathelem-depth-js">
+function mathelemDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+(function () {
+  function draw(cv) {
+    var kind = cv.getAttribute('data-kind');
+    var ctx = cv.getContext('2d');
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = '#94a3b8'; ctx.fillStyle = '#e5e7eb';
+    ctx.lineWidth = 2; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    if (kind === 'numberline') {
+      var y = H / 2, x0 = 40, x1 = W - 40, n = 10;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+      for (var i = 0; i <= n; i++) {
+        var x = x0 + (x1 - x0) * i / n;
+        ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8); ctx.stroke();
+        ctx.fillText(String(i), x, y + 26);
+      }
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(x0 + (x1 - x0) * 0.7, y, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (kind === 'protractor') {
+      var cx = W / 2, cy = H - 30, r = Math.min(W, H) - 60;
+      ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI); ctx.stroke();
+      for (var a = 0; a <= 180; a += 30) {
+        var rad = Math.PI + a * Math.PI / 180;
+        ctx.beginPath();
+        ctx.moveTo(cx + r * Math.cos(rad), cy + r * Math.sin(rad));
+        ctx.lineTo(cx + (r - 12) * Math.cos(rad), cy + (r - 12) * Math.sin(rad));
+        ctx.stroke();
+        ctx.fillText(String(a), cx + (r + 14) * Math.cos(rad), cy + (r + 14) * Math.sin(rad) + 4);
+      }
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r, cy); ctx.stroke();
+      var ar = Math.PI + 60 * Math.PI / 180;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * Math.cos(ar), cy + r * Math.sin(ar)); ctx.stroke();
+    } else if (kind === 'grid') {
+      var g = 28, cols = Math.floor((W - 40) / g), rows = Math.floor((H - 40) / g);
+      ctx.strokeStyle = 'rgba(148,163,184,.4)';
+      for (var c = 0; c <= cols; c++) { ctx.beginPath(); ctx.moveTo(20 + c * g, 20); ctx.lineTo(20 + c * g, 20 + rows * g); ctx.stroke(); }
+      for (var rr = 0; rr <= rows; rr++) { ctx.beginPath(); ctx.moveTo(20, 20 + rr * g); ctx.lineTo(20 + cols * g, 20 + rr * g); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(56,189,248,.25)'; ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      ctx.fillRect(20, 20, 5 * g, 3 * g); ctx.strokeRect(20, 20, 5 * g, 3 * g);
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText('长5 × 宽3 = 15 个方格', 20 + 2.5 * g, 20 + 3 * g + 20);
+    } else if (kind === 'solid') {
+      // 圆柱
+      var lx = W * 0.28, ry = 18, rx = 44, top = 40, bot = H - 50;
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(lx, top, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(lx - rx, top); ctx.lineTo(lx - rx, bot); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(lx + rx, top); ctx.lineTo(lx + rx, bot); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(lx, bot, rx, ry, 0, 0, Math.PI); ctx.stroke();
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText('圆柱', lx, bot + 26);
+      // 圆锥
+      var cx2 = W * 0.72;
+      ctx.strokeStyle = '#f472b6';
+      ctx.beginPath(); ctx.ellipse(cx2, bot, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx2 - rx, bot); ctx.lineTo(cx2, top); ctx.lineTo(cx2 + rx, bot); ctx.stroke();
+      ctx.fillText('圆锥', cx2, bot + 26);
+    } else if (kind === 'linechart') {
+      var ox = 40, oy = H - 36, ax = W - 24, ay = 24;
+      ctx.beginPath(); ctx.moveTo(ox, ay); ctx.lineTo(ox, oy); ctx.lineTo(ax, oy); ctx.stroke();
+      var data = [3, 5, 4, 7, 9, 8, 11], m = data.length;
+      ctx.strokeStyle = '#38bdf8'; ctx.fillStyle = '#38bdf8'; ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (var k = 0; k < m; k++) {
+        var px = ox + (ax - ox) * k / (m - 1);
+        var py = oy - (oy - ay) * data[k] / 12;
+        if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      for (var k2 = 0; k2 < m; k2++) {
+        var px2 = ox + (ax - ox) * k2 / (m - 1);
+        var py2 = oy - (oy - ay) * data[k2] / 12;
+        ctx.beginPath(); ctx.arc(px2, py2, 4, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+  function init() {
+    document.querySelectorAll('canvas.me-visual-canvas').forEach(draw);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+
+<!-- v7.20 标准连续音频配置（apply-standard-modules 自动补齐） -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s01.mp3",
+    "label": "讲解 1"
+  },
+  {
+    "id": "s02",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s02.mp3",
+    "label": "讲解 2"
+  },
+  {
+    "id": "s03",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s03.mp3",
+    "label": "讲解 3"
+  },
+  {
+    "id": "s04",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s04.mp3",
+    "label": "讲解 4"
+  },
+  {
+    "id": "s05",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s05.mp3",
+    "label": "讲解 5"
+  },
+  {
+    "id": "s06",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s06.mp3",
+    "label": "讲解 6"
+  },
+  {
+    "id": "s07",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s07.mp3",
+    "label": "讲解 7"
+  },
+  {
+    "id": "s08",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-add-sub-within-100/s08.mp3",
+    "label": "讲解 8"
+  }
+]
+  </script>
+</div>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：100以内加减法</h2><div data-teachany-kg="math-e-addition-subtraction-within-100"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+</body>
+</html>

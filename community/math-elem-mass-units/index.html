@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>质量单位 · 小学数学 G3 · TeachAny v5.27</title>
+<meta name="teachany-node" content="math-e-mass-units">
+<meta name="teachany-subject" content="math">
+<meta name="teachany-domain" content="measurement">
+<meta name="teachany-grade" content="3">
+<meta name="teachany-difficulty" content="2">
+<meta name="teachany-version" content="7.21.0">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-prerequisites" content="numbers-operations">
+<meta name="teachany-author" content="weponusa">
+<script src="../../assets/vendor/d3.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+:root{--bg:#fffbf0;--primary:#ff6b6b;--secondary:#4ecdc4;--accent:#ffe66d;--success:#51cf66;--card:#fff;--purple:#cc5de8;--blue:#339af0;--orange:#ff922b;--text:#2b2b2b;--dim:#666;--border:rgba(0,0,0,0.06);}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{font-family:'Noto Sans SC',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.85;font-size:16px;padding-bottom:60px;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle at 10% 20%,rgba(255,107,107,.06),transparent 50%),radial-gradient(circle at 90% 80%,rgba(78,205,196,.06),transparent 50%);pointer-events:none;z-index:-1;}
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:3px solid var(--accent);padding:0 20px;display:flex;align-items:center;height:62px;gap:4px;overflow-x:auto;}
+.nav-brand{font-size:20px;font-weight:900;margin-right:16px;white-space:nowrap;background:linear-gradient(135deg,var(--primary),var(--orange),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav a{color:var(--dim);text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:700;transition:all .25s;white-space:nowrap;}
+.nav a:hover,.nav a.active{color:#fff;background:linear-gradient(135deg,var(--primary),var(--orange));}
+.container{max-width:960px;margin:0 auto;padding:80px 20px 60px;}
+.hero{text-align:center;padding:36px 0 30px;}
+.hero h1{font-size:42px;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--orange),var(--purple),var(--blue));background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:rainbowShift 6s ease infinite;margin-bottom:10px;}
+@keyframes rainbowShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+.hero .subtitle{font-size:18px;color:var(--dim);margin-bottom:16px;}
+.hero .meta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+.hero .meta span{background:#fff;border:2px solid var(--border);border-radius:24px;padding:6px 18px;font-size:14px;font-weight:700;color:var(--dim);}
+.section{margin:40px 0;}
+.section-title{font-size:26px;font-weight:900;margin-bottom:18px;padding:10px 20px;border-radius:16px;background:linear-gradient(135deg,rgba(255,107,107,.1),rgba(78,205,196,.1));display:inline-block;}
+.card{background:var(--card);border:2px solid var(--border);border-radius:20px;padding:24px 26px;margin-bottom:18px;box-shadow:0 4px 16px rgba(0,0,0,.04);transition:transform .25s,box-shadow .25s;}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(255,107,107,.12);}
+.card h3{font-size:20px;font-weight:900;margin-bottom:10px;}
+.card p,.card li{font-size:16px;line-height:1.9;color:var(--dim);}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;}
+.highlight{color:var(--primary);font-weight:900;}
+
+/* ===== 生活场景：天平动画 ===== */
+#life-scene{background:linear-gradient(135deg,#fff8e1,#e8f5e9);border-radius:24px;padding:32px;}
+.scale-stage{position:relative;height:240px;display:flex;justify-content:center;align-items:center;}
+.scale-base{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:20px;height:120px;background:linear-gradient(180deg,#b8860b,#8B6914);border-radius:4px;}
+.scale-arm{position:absolute;bottom:130px;left:50%;transform:translateX(-50%);width:220px;height:10px;background:linear-gradient(90deg,#b8860b,#daa520,#b8860b);border-radius:5px;transform-origin:center;animation:scaleBalance 4s ease-in-out infinite;}
+@keyframes scaleBalance{0%,100%{transform:translateX(-50%) rotate(-10deg);}50%{transform:translateX(-50%) rotate(10deg);}}
+.scale-pan{position:absolute;bottom:130px;width:80px;height:14px;background:linear-gradient(135deg,#c0c0c0,#e8e8e8);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#666;}
+.pan-left{left:calc(50% - 140px);animation:panLeft 4s ease-in-out infinite;}
+.pan-right{left:calc(50% + 60px);animation:panRight 4s ease-in-out infinite;}
+@keyframes panLeft{0%,100%{bottom:100px;}50%{bottom:160px;}}
+@keyframes panRight{0%,100%{bottom:160px;}50%{bottom:100px;}}
+.weight-item{position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);font-size:24px;animation:inherit;}
+/* 苹果在天平上 */
+.scale-left-item{position:absolute;font-size:28px;animation:leftItem 4s ease-in-out infinite;}
+.scale-right-item{position:absolute;font-size:22px;animation:rightItem 4s ease-in-out infinite;}
+@keyframes leftItem{0%,100%{bottom:115px;left:calc(50% - 130px);}50%{bottom:175px;left:calc(50% - 130px);}}
+@keyframes rightItem{0%,100%{bottom:175px;left:calc(50% + 80px);}50%{bottom:115px;left:calc(50% + 80px);}}
+
+/* ===== 单位卡片 ===== */
+.unit-card{text-align:center;padding:28px 16px;}
+.unit-card .icon{font-size:48px;margin-bottom:12px;display:block;animation:bounce 2s ease infinite;}
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+
+/* ===== 互动实验台 ===== */
+#interactive-lab{padding:28px;border-radius:24px;background:linear-gradient(135deg,#f0fff4,#fffde7);}
+.slider-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.slider-row label{font-weight:700;min-width:80px;}
+input[type=range]{flex:1;min-width:140px;accent-color:var(--primary);}
+.slider-val{min-width:100px;font-weight:900;color:var(--primary);}
+.visual-scale{width:100%;height:60px;background:#f9f9f9;border-radius:12px;display:flex;align-items:center;padding:0 16px;gap:8px;overflow:hidden;}
+.scale-fill{height:30px;background:linear-gradient(90deg,var(--orange),var(--primary));border-radius:6px;transition:width .4s;min-width:4px;}
+
+/* 拖拽 */
+.drag-area{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;}
+.drag-items,.drop-zones{flex:1;min-width:180px;}
+.drag-item{padding:10px 14px;background:#fff;border:2.5px dashed var(--secondary);border-radius:14px;margin-bottom:8px;cursor:grab;font-weight:700;text-align:center;transition:all .2s;}
+.drag-item:hover{background:rgba(78,205,196,.12);transform:scale(1.04);}
+.drop-zone{padding:14px;border:2.5px dashed #ccc;border-radius:14px;margin-bottom:8px;min-height:48px;text-align:center;transition:all .2s;color:#999;font-size:14px;}
+.drop-zone.over{border-color:var(--primary);background:rgba(255,107,107,.06);}
+.drop-zone.matched{border-color:var(--success);background:rgba(81,207,102,.1);color:var(--success);font-weight:700;}
+.drop-zone.wrong-match{animation:shake .4s;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+
+/* 知识图谱 */
+#knowledge-graph{background:#fff;border-radius:24px;padding:24px;}
+#kg-svg{width:100%;height:340px;display:block;}
+.kg-legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;}
+.kg-legend-item{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;}
+.kg-dot{width:14px;height:14px;border-radius:50%;}
+
+/* 互动题 */
+.quiz-wrap{margin-top:10px;}
+.quiz-step{display:none;}
+.quiz-step.active{display:block;animation:fadeIn .4s;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.quiz-q{font-size:18px;font-weight:900;margin-bottom:18px;}
+.quiz-option{display:block;width:100%;padding:14px 20px;margin:8px 0;border-radius:16px;background:#fff;border:2.5px solid #e8e8e8;cursor:pointer;font-size:16px;font-weight:700;text-align:left;transition:all .25s;}
+.quiz-option:hover{background:rgba(78,205,196,.08);border-color:var(--secondary);}
+.quiz-option.correct{background:rgba(81,207,102,.12);border-color:var(--success);color:#1e7e34;}
+.quiz-option.wrong{background:rgba(255,107,107,.1);border-color:var(--primary);color:#c92a2a;}
+.quiz-feedback{padding:12px 18px;border-radius:14px;margin-top:10px;font-size:15px;font-weight:700;display:none;}
+.quiz-feedback.show{display:block;animation:popIn .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes popIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+.quiz-feedback.ok{background:rgba(81,207,102,.15);color:#1e7e34;}
+.quiz-feedback.err{background:rgba(255,107,107,.12);color:#c92a2a;}
+.quiz-next{margin-top:14px;padding:10px 28px;background:linear-gradient(135deg,var(--primary),var(--orange));color:#fff;border:none;border-radius:20px;font-size:16px;font-weight:900;cursor:pointer;display:none;}
+.progress-bar{height:8px;background:#f0f0f0;border-radius:4px;margin-bottom:18px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--orange));border-radius:4px;transition:width .4s;}
+.step-indicator{font-size:13px;color:var(--dim);margin-bottom:8px;font-weight:700;}
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+</style>
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+
+
+<style id="mathelem-depth-css">
+.mathelem-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.mathelem-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.24)}
+.mathelem-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.mathelem-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.mathelem-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.mathelem-depth .mathelem-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.mathelem-depth .mathelem-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+.mathelem-depth .me-visual-canvas{width:100%;max-width:560px;height:auto;background:#0b1628;border:1px solid rgba(148,163,184,.28);border-radius:12px;display:block;margin:8px auto 0}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+</head>
+<body>
+<!-- teachany-hero-notext -->
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<nav class="nav">
+  <span class="nav-brand">⚖️ 质量单位</span>
+  <a href="#life-scene">生活场景</a>
+  <a href="#concepts">单位认识</a>
+  <a href="#interactive-lab">互动实验</a>
+  <a href="#knowledge-graph">知识图谱</a>
+  <a href="#quiz">互动练习</a>
+</nav>
+
+<div class="container">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/math-elem-mass-units-hero.png" alt="质量单位 - TeachAny 互动课件知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">质量单位 - Tea</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+
+  <!-- 生活场景 -->
+
+<p>🌍 <strong>And（已知）</strong>：我们已经有了一定的基础知识</p>
+  <p>⚡ <strong>But（问题）</strong>：但还有一个重要概念需要深入理解</p>
+  <p>💡 <strong>Therefore（新知）</strong>：因此通过本节课的学习，我们将掌握新知识并能灵活运用</p>
+</div>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（放在 pretest 之后，课件顶部可见） -->
+
+<script>
+function checkPretest() {
+
+  var sel0 = document.querySelector('input[name="pretest_q0"]:checked');
+  var fb0 = document.querySelector('.pretest-feedback-0');
+  if (sel0) {
+    fb0.style.display = 'block';
+    if (parseInt(sel0.value) === 1) {
+      fb0.style.background = '#d3f9d8'; fb0.style.color = '#2b8a3e';
+      fb0.textContent = '✅ 很好！你已经有了正确的认识，继续加油！';
+    } else {
+      fb0.style.background = '#fff3bf'; fb0.style.color = '#e67700';
+      fb0.textContent = '💡 这是个常见误区，学完本节课你会有新的理解！';
+    }
+  }
+  var sel1 = document.querySelector('input[name="pretest_q1"]:checked');
+  var fb1 = document.querySelector('.pretest-feedback-1');
+  if (sel1) {
+    fb1.style.display = 'block';
+    if (parseInt(sel1.value) === 1) {
+      fb1.style.background = '#d3f9d8'; fb1.style.color = '#2b8a3e';
+      fb1.textContent = '✅ 很好！你已经有了正确的认识，继续加油！';
+    } else {
+      fb1.style.background = '#fff3bf'; fb1.style.color = '#e67700';
+      fb1.textContent = '💡 这是个常见误区，学完本节课你会有新的理解！';
+    }
+  }
+}
+</script>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出克与千克的换算关系</p></div><div class="tu-q"><p>🎯 能判断常见物体的合适质量单位</p></div><div class="tu-q"><p>🎯 能计算不同质量单位间的换算</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么买水果要用'克'和'千克'，不用'个'数呢？</p></div><div class="tu-q"><p>❓ 1千克的铁和1千克的棉花哪个更重？</p></div><div class="tu-q"><p>❓ 我的体重30千克，换成'克'是多少呢？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section text-module" id="pretest" data-bloom-level="remember" data-scaffold="full" data-tts="pretest" data-slot="20"><div class="panel"><span class="phase-tag">Pretest</span><h2>📝 课前诊断：先暴露一个误区</h2><p>1 吨等于多少千克？</p><button class="quiz-option" data-q="pre" data-a="A" data-correct="1" data-diag="1 吨＝1000 千克，1 千克＝1000 克。质量单位中相邻单位间的进率都是 1000，与多数长度单位进率为 10 的情况不同，容易记混。">A. 1000 千克</button><button class="quiz-option" data-q="pre" data-a="B">B. 100 千克</button><button class="quiz-option" data-q="pre" data-a="C">C. 10 千克</button><div class="feedback" id="fb-pre">选择后显示错因诊断。</div></div></section>
+
+  <div class="hero"><h1>⚖️ 质量单位</h1>
+    <p class="subtitle">认识克、千克、吨，学会称量与换算</p>
+    <div class="meta">
+      <span>📚 三年级</span><span>📐 测量</span><span>⏱️ 45分钟</span><span>⭐ 入门</span>
+    </div>
+  </div>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 认识质量单位</h2><div class="tu-q"><p><strong>And：</strong>学生知道物体有轻重之分</p><p><strong>But：</strong>不清楚如何用标准单位描述</p><p><strong>Therefore：</strong>建立克与千克的概念</p></div><div class="tu-q"><p>质量是物体含有物质的多少，我们用克(g)和千克(kg)来测量。1个鸡蛋约重50克，相当于2枚1元硬币的重量；1千克=1000克，像1大瓶矿泉水就是1千克。记住：轻的东西用克，重的东西用千克。</p></div><div class="tu-q"><p>🌍 买菜时阿姨说'这把青菜300克'，快递叔叔称包裹'2千克'，你的书包大概3-5千克。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>一包薯片标着净含量80(  )？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆质量与长度单位：薯片较轻应用克">A.克</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="混淆质量与长度单位：薯片较轻应用克">B.千克</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="混淆质量与长度单位：薯片较轻应用克">C.米</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="混淆质量与长度单位：薯片较轻应用克">D.升</button></div><div class="tu-fb" hidden></div></div></section>
+<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="section" id="life-scene" data-slot="35">
+    <div data-scaffold="full" data-bloom-level="remember" class="section-title">🎬 生活场景：天平称重</div>
+    <div class="scale-stage">
+      <div class="scale-base"></div>
+      <div class="scale-arm"></div>
+      <div class="pan-left scale-pan">砝码盘</div>
+      <div class="pan-right scale-pan">物体盘</div>
+      <div class="scale-left-item">⚖️</div>
+      <div class="scale-right-item">🍎</div>
+    </div>
+    <p style="text-align:center;margin-top:16px;color:var(--dim);font-size:15px;">🎯 天平两端平衡时，物体的质量 = 砝码的总质量</p>
+  </section>
+
+  <!-- 单位认识 -->
+  <section data-scaffold="partial" data-bloom-level="apply" class="section" id="concepts" data-slot="35">
+    <div data-bloom-level="understand" class="section-title">⚖️ 三大质量单位</div>
+    <div class="grid-3">
+      <div class="card unit-card">
+        <span class="icon">💊</span>
+        <h3 style="color:var(--primary);">克 (g)</h3>
+        <p style="font-size:15px;margin-bottom:6px;">最小的常用质量单位</p>
+        <p style="font-size:13px;color:var(--secondary);">1枚1元硬币 ≈ 6g</p>
+        <p style="font-size:13px;color:var(--secondary);">一张纸 ≈ 5g</p>
+      </div>
+      <div class="card unit-card">
+        <span class="icon">🍉</span>
+        <h3 style="color:var(--orange);">千克 (kg)</h3>
+        <p style="font-size:15px;margin-bottom:6px;">1千克 = 1000克</p>
+        <p style="font-size:13px;color:var(--secondary);">1个西瓜 ≈ 4~6kg</p>
+        <p style="font-size:13px;color:var(--secondary);">小学生体重 ≈ 30~40kg</p>
+      </div>
+      <div class="card unit-card">
+        <span class="icon">🐘</span>
+        <h3 style="color:var(--purple);">吨 (t)</h3>
+        <p style="font-size:15px;margin-bottom:6px;">1吨 = 1000千克</p>
+        <p style="font-size:13px;color:var(--secondary);">大象重约 4~6t</p>
+        <p style="font-size:13px;color:var(--secondary);">小汽车重约 1~2t</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🔄 换算关系</h3>
+      <ul style="list-style:none;padding:0;">
+        <li style="padding:8px 0;border-bottom:1px solid #f0f0f0;">📌 <span class="highlight">1千克 = 1000克</span>（kg→g ×1000）</li>
+        <li style="padding:8px 0;border-bottom:1px solid #f0f0f0;">📌 <span class="highlight">1吨 = 1000千克</span>（t→kg ×1000）</li>
+        <li style="padding:8px 0;">📌 <span class="highlight">1吨 = 1000000克</span>（吨→克 ×1000000）</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 互动实验台 -->
+  <section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 水果价格大比拼</h2><p>记录三种水果的单价（不同单位），统一换算后比价</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="单位统一后才能准确比较"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="需要收集原始价格和单位"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="换算公式的实际应用"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.88);color:inherit}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#2563eb;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#2563eb}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="可视化" data-slot="35">
+  <section class="section mathelem-depth" id="lesson-visual" data-tts="lesson-visual">
+    <div class="card">
+      <span class="phase-tag" data-variant="success">互动可视</span>
+      <h2>质量的轻重感</h2>
+      <p>用数轴标记克与千克的位置，体会1000克就是1千克。</p>
+      <canvas class="me-visual-canvas" id="me-canvas-math-elem-mass-units" width="560" height="240"
+        data-kind="numberline" role="img" aria-label="质量的轻重感"></canvas>
+    </div>
+  </section>
+</div>
+
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section mathelem-depth core-knowledge-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>质量单位：克、千克、吨</h2>
+      <p>质量表示物体所含物质的多少，常用单位有克（g）、千克（kg）、吨（t）。进率：1000克=1千克，1000千克=1吨。轻小物品用克，生活用品常用千克，很重的货物用吨。称重要选对秤和单位，估重要结合生活经验。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>质量单位克、千克、吨的换算关系与应用范围对比图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="rgba(59,130,246,0.25)"/><stop offset="100%" stop-color="rgba(59,130,246,0.10)"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="rgba(245,158,11,0.25)"/><stop offset="100%" stop-color="rgba(245,158,11,0.10)"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="rgba(52,211,153,0.25)"/><stop offset="100%" stop-color="rgba(52,211,153,0.10)"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="rgba(167,139,250,0.25)"/><stop offset="100%" stop-color="rgba(167,139,250,0.10)"/></linearGradient><marker id="arrow-s2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="20" y="20" width="600" height="380" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(100,116,139,0.1)" stroke-width="1"/></pattern><rect x="20" y="20" width="600" height="380" fill="url(#grid)" opacity="0.3"><animate attributeName="opacity" from="0" to="0.3" dur="0.5s" begin="0s" fill="freeze"/></rect><ellipse cx="320" cy="180" rx="280" ry="120" fill="url(#bgGrad)" stroke="#60a5fa" stroke-width="2" rx="12"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></ellipse><rect x="80" y="120" width="120" height="80" rx="10" fill="url(#greenGrad)" stroke="#34d399" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><rect x="260" y="110" width="120" height="100" rx="10" fill="url(#orangeGrad)" stroke="#f59e0b" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><rect x="440" y="115" width="120" height="90" rx="10" fill="url(#purpleGrad)" stroke="#a78bfa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><circle cx="140" cy="160" r="25" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="2"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1s"/></circle><circle cx="320" cy="160" r="30" fill="rgba(245,158,11,0.3)" stroke="#f59e0b" stroke-width="2"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.2s"/></circle><circle cx="500" cy="160" r="28" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="2"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.4s"/></circle><path d="M 200 160 Q 230 140 260 160" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#arrow-s2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="1.5s"/></path><path d="M 380 160 Q 410 140 440 160" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#arrow-s2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="1.7s"/></path><rect x="100" y="240" width="80" height="40" rx="6" fill="rgba(52,211,153,0.2)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><rect x="280" y="240" width="80" height="40" rx="6" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><rect x="460" y="240" width="80" height="40" rx="6" fill="rgba(167,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><line x1="140" y1="185" x2="140" y2="240" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></line><line x1="320" y1="190" x2="320" y2="240" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></line><line x1="500" y1="188" x2="500" y2="240" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></line><circle cx="140" cy="240" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></circle><circle cx="320" cy="240" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></circle><circle cx="500" cy="240" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></circle><polygon points="120,300 160,300 150,320 130,320" fill="rgba(52,211,153,0.3)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></polygon><polygon points="300,305 340,305 335,325 305,325" fill="rgba(245,158,11,0.3)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></polygon><polygon points="480,302 520,302 515,322 485,322" fill="rgba(167,139,250,0.3)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></polygon><ellipse cx="140" cy="340" rx="15" ry="8" fill="rgba(52,211,153,0.2)" stroke="#34d399" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></ellipse><ellipse cx="320" cy="345" rx="25" ry="12" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></ellipse><ellipse cx="500" cy="342" rx="35" ry="15" fill="rgba(167,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></ellipse><text x="140" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">克(g)<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></text><text x="320" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">千克(kg)<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></text><text x="500" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">吨(t)<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></text><text x="140" y="265" text-anchor="middle" fill="#e2e8f0" font-size="12">轻小物品<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><text x="320" y="265" text-anchor="middle" fill="#e2e8f0" font-size="12">生活用品<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></text><text x="500" y="265" text-anchor="middle" fill="#e2e8f0" font-size="12">重型货物<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><text x="140" y="365" text-anchor="middle" fill="#7dd3fc" font-size="11">硬币、药片<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></text><text x="320" y="370" text-anchor="middle" fill="#7dd3fc" font-size="11">人体、书包<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><text x="500" y="367" text-anchor="middle" fill="#7dd3fc" font-size="11">汽车、集装箱<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></text><path d="M 230 130 Q 250 110 270 130" stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#arrow-s2)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></path><path d="M 410 130 Q 430 110 450 130" stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#arrow-s2)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></path><text x="250" y="105" text-anchor="middle" fill="#7dd3fc" font-size="11">×1000<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><text x="430" y="105" text-anchor="middle" fill="#7dd3fc" font-size="11">×1000<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></text><rect x="480" y="320" width="140" height="80" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></rect><text x="490" y="335" fill="#fbbf24" font-size="12" font-weight="bold">质量单位换算<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></text><rect x="490" y="345" width="8" height="8" fill="#34d399"/><text x="505" y="353" fill="#e2e8f0" font-size="10">1000g = 1kg<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></text><rect x="490" y="360" width="8" height="8" fill="#f59e0b"/><text x="505" y="368" fill="#e2e8f0" font-size="10">1000kg = 1t<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.95s" fill="freeze"/></text><rect x="490" y="375" width="8" height="8" fill="#a78bfa"/><text x="505" y="383" fill="#e2e8f0" font-size="10">选对单位很重要<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></text><text x="320" y="50" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">质量单位体系图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></text></svg></figure>
+
+</div>
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="方法范例" data-slot="35">
+  <section class="section mathelem-depth core-knowledge-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：对照生活经验估重</h2>
+      <p>先估物体大约多重再选单位：一枚一元硬币约6克，一袋盐约500克，一个小学生体重几十千克，一辆卡车几吨。换算时按千进关系移动小数点或添减三个0。计算时先统一单位。</p>
+      <div class="worked-example"><strong>范例：</strong>2千克500克=2500克；3吨=3000千克；一瓶矿泉水约500克=0.5千克。</div>
+      <p id="lesson-pitfall" class="mathelem-pitfall"><strong>常见误区：</strong>常见误区是把质量单位和长度单位混淆，或千克与克按100倍换算。应记住质量单位是克、千克、吨，相邻为千进。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>1千克等于多少克？</p>
+        <button type="button" data-correct="0" onclick="mathelemDepthCheck(this,false,&#x27;mathelem-depth-feedback&#x27;,&quot;1千克=1000克，1吨=1000千克。&quot;)">A. 10</button><button type="button" data-correct="0" onclick="mathelemDepthCheck(this,false,&#x27;mathelem-depth-feedback&#x27;,&quot;1千克=1000克，1吨=1000千克。&quot;)">B. 100</button><button type="button" data-correct="1" onclick="mathelemDepthCheck(this,true,&#x27;mathelem-depth-feedback&#x27;,&quot;1千克=1000克，1吨=1000千克。&quot;)">C. 1000</button><button type="button" data-correct="0" onclick="mathelemDepthCheck(this,false,&#x27;mathelem-depth-feedback&#x27;,&quot;1千克=1000克，1吨=1000千克。&quot;)">D. 10000</button>
+        <div class="mathelem-feedback" id="mathelem-depth-feedback" role="status"></div>
+      </div>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>质量单位换算方法与生活估重对照示意图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0a1520"/><stop offset="100%" stop-color="#0f172a"/></linearGradient><linearGradient id="blue" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="rgba(59,130,246,0.25)"/><stop offset="100%" stop-color="rgba(59,130,246,0.10)"/></linearGradient><linearGradient id="green" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="rgba(52,211,153,0.25)"/><stop offset="100%" stop-color="rgba(52,211,153,0.10)"/></linearGradient><linearGradient id="orange" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="rgba(245,158,11,0.25)"/><stop offset="100%" stop-color="rgba(245,158,11,0.10)"/></linearGradient><linearGradient id="red" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="rgba(239,68,68,0.25)"/><stop offset="100%" stop-color="rgba(239,68,68,0.10)"/></linearGradient><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="arrow2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#7dd3fc"/></marker></defs><rect width="640" height="420" fill="url(#bg)"/><rect x="20" y="20" width="600" height="380" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><g opacity="0.3"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="140" x2="620" y2="140" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="200" x2="620" y2="200" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="260" x2="620" y2="260" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155" stroke-width="0.5"/></g><text x="320" y="50" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">质量单位换算与估重方法</text><rect x="40" y="70" width="120" height="80" rx="10" fill="url(#blue)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><circle cx="100" cy="110" r="15" fill="#fbbf24" stroke="#fcd34d" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></circle><text x="100" y="115" text-anchor="middle" fill="#0a1520" font-size="12" font-weight="bold">1元</text><text x="100" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">硬币</text><text x="100" y="150" text-anchor="middle" fill="#7dd3fc" font-size="12" font-weight="bold">6克</text><rect x="180" y="70" width="120" height="80" rx="10" fill="url(#blue)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><rect x="225" y="95" width="30" height="40" rx="5" fill="#f59e0b" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="240" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">食盐</text><text x="240" y="150" text-anchor="middle" fill="#7dd3fc" font-size="12" font-weight="bold">500克</text><rect x="320" y="70" width="120" height="80" rx="10" fill="url(#blue)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><ellipse cx="380" cy="110" rx="20" ry="30" fill="#34d399" stroke="#6ee7b7" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></ellipse><text x="380" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">小学生</text><text x="380" y="150" text-anchor="middle" fill="#7dd3fc" font-size="12" font-weight="bold">几十千克</text><rect x="460" y="70" width="120" height="80" rx="10" fill="url(#blue)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><rect x="485" y="95" width="70" height="30" rx="8" fill="#ef4444" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><circle cx="475" cy="125" r="8" fill="#64748b" stroke="#94a3b8" stroke-width="1.5"/><circle cx="565" cy="125" r="8" fill="#64748b" stroke="#94a3b8" stroke-width="1.5"/><text x="520" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">卡车</text><text x="520" y="150" text-anchor="middle" fill="#7dd3fc" font-size="12" font-weight="bold">几吨</text><rect x="50" y="180" width="540" height="60" rx="12" fill="url(#green)" stroke="#6ee7b7" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="320" y="200" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">千进关系换算法</text><circle cx="120" cy="220" r="25" fill="url(#orange)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></circle><text x="120" y="225" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="bold">吨</text><path d="M145 220 L195 220" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="7 5" fill="none"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/></path><text x="170" y="210" text-anchor="middle" fill="#7dd3fc" font-size="11">×1000</text><circle cx="220" cy="220" r="25" fill="url(#orange)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></circle><text x="220" y="225" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="bold">千克</text><path d="M245 220 L295 220" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="7 5" fill="none"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/></path><text x="270" y="210" text-anchor="middle" fill="#7dd3fc" font-size="11">×1000</text><circle cx="320" cy="220" r="25" fill="url(#orange)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></circle><text x="320" y="225" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="bold">克</text><path d="M195 240 L145 240" stroke="#7dd3fc" stroke-width="2" marker-end="url(#arrow2)" stroke-dasharray="5 3" fill="none"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/></path><text x="170" y="255" text-anchor="middle" fill="#34d399" font-size="11">÷1000</text><path d="M295 240 L245 240" stroke="#7dd3fc" stroke-width="2" marker-end="url(#arrow2)" stroke-dasharray="5 3" fill="none"><animate attributeName="stroke-dashoffset" from="16" to="0" dur="1.5s" repeatCount="indefinite"/></path><text x="270" y="255" text-anchor="middle" fill="#34d399" font-size="11">÷1000</text><rect x="380" y="190" width="180" height="60" rx="8" fill="url(#blue)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></rect><text x="470" y="210" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">小数点移动法</text><text x="470" y="225" text-anchor="middle" fill="#e2e8f0" font-size="11">大单位→小单位：右移3位</text><text x="470" y="240" text-anchor="middle" fill="#e2e8f0" font-size="11">小单位→大单位：左移3位</text><rect x="60" y="270" width="520" height="80" rx="12" fill="url(#red)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></rect><text x="320" y="290" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">换算范例</text><rect x="80" y="300" width="140" height="40" rx="6" fill="rgba(59,130,246,0.15)" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></rect><text x="150" y="315" text-anchor="middle" fill="#e2e8f0" font-size="11">2千克500克</text><text x="150" y="330" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="bold">= 2500克</text><path d="M220 320 L260 320" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/><rect x="280" y="300" width="120" height="40" rx="6" fill="rgba(59,130,246,0.15)" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></rect><text x="340" y="315" text-anchor="middle" fill="#e2e8f0" font-size="11">3吨</text><text x="340" y="330" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="bold">= 3000千克</text><path d="M400 320 L440 320" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/><rect x="460" y="300" width="120" height="40" rx="6" fill="rgba(59,130,246,0.15)" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></rect><text x="520" y="315" text-anchor="middle" fill="#e2e8f0" font-size="11">500克</text><text x="520" y="330" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="bold">= 0.5千克</text><rect x="80" y="365" width="200" height="30" rx="8" fill="url(#green)" stroke="#6ee7b7" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></rect><text x="180" y="385" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">练习：1千克 = ? 克</text><circle cx="320" cy="380" r="12" fill="#ef4444" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2.7s"/></circle><text x="320" y="385" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="bold">C</text><text x="350" y="385" text-anchor="start" fill="#7dd3fc" font-size="12" font-weight="bold">1000</text><rect x="450" y="320" width="150" height="75" rx="8" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></rect><text x="525" y="340" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">图例说明</text><rect x="460" y="345" width="12" height="8" fill="url(#blue)" stroke="#60a5fa" stroke-width="1"/><text x="480" y="352" text-anchor="start" fill="#e2e8f0" font-size="10">物体重量</text><rect x="460" y="360" width="12" height="8" fill="url(#orange)" stroke="#fbbf24" stroke-width="1"/><text x="480" y="367" text-anchor="start" fill="#e2e8f0" font-size="10">单位换算</text><rect x="460" y="375" width="12" height="8" fill="url(#green)" stroke="#6ee7b7" stroke-width="1"/><text x="480" y="382" text-anchor="start" fill="#e2e8f0" font-size="10">计算方法</text><line x1="40" y1="170" x2="100" y2="180" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></line><circle cx="40" cy="170" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></circle><text x="35" y="165" text-anchor="end" fill="#e2e8f0" font-size="11">生活对照</text></svg></figure>
+
+</div>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 单位换算</h2><div class="tu-q"><p><strong>And：</strong>学生已认识克与千克</p><p><strong>But：</strong>不会灵活转换关系</p><p><strong>Therefore：</strong>掌握进率换算方法</p></div><div class="tu-q"><p>克和千克就像厘米和米的关系，1000克=1千克。换算口诀：大变小乘1000（3kg=3000g），小变大除1000（5000g=5kg）。比如妈妈买了2500克苹果，可以说成2千克500克，就像2元5角钱一样拆分。</p></div><div class="tu-q"><p>🌍 烘焙时配方写'面粉1.5kg'，但秤只有克刻度，需要换算成1500克。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>6千克200克=(  )克？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="漏算零头：200克要加上6000克">A.6200</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="漏算零头：200克要加上6000克">B.6020</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="漏算零头：200克要加上6000克">C.620</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="漏算零头：200克要加上6000克">D.6002</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 实际称量</h2><div class="tu-q"><p><strong>And：</strong>会读写质量单位</p><p><strong>But：</strong>缺乏测量实操经验</p><p><strong>Therefore：</strong>培养估测与测量能力</p></div><div class="tu-q"><p>称重三步走：1.看秤的单位（指针秤先认刻度）；2.物品放稳归零；3.读数要平视。比如称一本课本：电子秤显示'0.3kg'，表示300克。注意：1袋盐通常500克，可以作为估测参照物。</p></div><div class="tu-q"><p>🌍 超市称水果时，电子屏显示'1.27kg'表示1千克270克，要付钱时按1270克计算。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>右图电子秤显示0.85kg，实际是(  )克？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="小数点看错：0.85kg是850克不是85克">A.850</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="小数点看错：0.85kg是850克不是85克">B.85</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="小数点看错：0.85kg是850克不是85克">C.8500</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="小数点看错：0.85kg是850克不是85克">D.8.5</button></div><div class="tu-fb" hidden></div></div></section>
+<!-- 课程导览图（互动画布） -->
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>1千克=1000克，就像1元=10角=100分</p></div><div class="tu-q"><h3>💡解释它</h3><p>克用于较轻物品（如硬币），千克用于较重物品（如书包）</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>1个鸡蛋约50克，4瓶矿泉水约1千克</p></div><div class="tu-q"><h3>👁️看见它</h3><p>电子秤显示数值时，小数点前是千克，后是克</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>超市价签上'g'代表克，'kg'代表千克</p></div></section>
+<section data-bloom-level="apply" class="section" id="interactive-lab" data-slot="77">
+    <div class="section-title">🧪 互动实验台</div>
+    <div class="card">
+      <h3>🔢 质量换算计算器</h3>
+      <div class="slider-row">
+        <label>千克数</label>
+        <input type="range" id="massSlider" min="1" max="100" value="5">
+        <span class="slider-val"><span id="massNum">5</span> kg</span>
+      </div>
+      <div class="visual-scale">
+        <span style="font-size:13px;font-weight:700;color:#999;white-space:nowrap;">0</span>
+        <div class="scale-fill" id="massFill" style="width:5%"></div>
+        <span style="font-size:13px;font-weight:700;color:#999;white-space:nowrap;">100kg</span>
+      </div>
+      <div id="massConvert" style="background:#f9f9f9;border-radius:14px;padding:14px;margin-top:12px;font-size:15px;line-height:2.2;"></div>
+    </div>
+
+    <div class="card">
+      <h3>🎯 拖拽配对：估一估用哪个单位？</h3>
+      <div class="drag-area">
+        <div class="drag-items">
+          <div class="drag-item" draggable="true" data-answer="g">💊 一粒糖果</div>
+          <div class="drag-item" draggable="true" data-answer="kg">📦 一袋大米</div>
+          <div class="drag-item" draggable="true" data-answer="t">🚢 一艘轮船</div>
+          <div class="drag-item" draggable="true" data-answer="g">📄 一张纸</div>
+        </div>
+        <div class="drop-zones">
+          <div class="drop-zone" data-key="g">克 (g)</div>
+          <div class="drop-zone" data-key="kg">千克 (kg)</div>
+          <div class="drop-zone" data-key="t">吨 (t)</div>
+        </div>
+      </div>
+      <button onclick="resetDrag()" style="margin-top:12px;padding:8px 22px;background:var(--secondary);color:#fff;border:none;border-radius:16px;font-weight:700;cursor:pointer;">🔄 重置</button>
+    </div>
+  </section>
+
+  <!-- 知识图谱 -->
+
+
+  <!-- 互动练习 -->
+  <section class="section" id="quiz" data-slot="80">
+    <div class="section-title">✏️ 互动练习</div>
+    <div class="card quiz-wrap">
+      <div class="step-indicator" id="stepInd">第 1 题 / 共 5 题</div>
+      <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+
+      <div class="quiz-step active" id="q1">
+        <div class="quiz-q">1. 一个鸡蛋的质量大约是 60 ______</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 60kg太重了，那是一个大人的体重！')">千克</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！一个鸡蛋大约重60克。')">克</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 60t是轮船的重量，不是鸡蛋。')">吨</button>
+        <div class="quiz-feedback" id="fb1"></div>
+        <button class="quiz-next" onclick="nextStep(1)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q2">
+        <div class="quiz-q">2. 3千克 = _____ 克</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 300g只是0.3kg。1kg=1000g，3kg=3000g。')">300</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！3×1000=3000克。')">3000</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 30000g等于30kg哦。')">30000</button>
+        <div class="quiz-feedback" id="fb2"></div>
+        <button class="quiz-next" onclick="nextStep(2)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q3">
+        <div class="quiz-q">3. 2000千克 = _____ 吨</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 20吨=20000kg哦。')">20</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 0.2吨只有200kg。')">0.2</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！1吨=1000kg，2000÷1000=2吨。')">2</button>
+        <div class="quiz-feedback" id="fb3"></div>
+        <button class="quiz-next" onclick="nextStep(3)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q4">
+        <div class="quiz-q">4. 下面哪个质量最重？</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 5000g=5kg，比5kg还小呢。')">5000克</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 5kg=5000g，都是相等的。')">5千克</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！0.01吨=10kg=10000g，最重！')">0.01吨</button>
+        <div class="quiz-feedback" id="fb4"></div>
+        <button class="quiz-next" onclick="nextStep(4)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q5">
+        <div class="quiz-q">5. 超市买了 500g 苹果和 1.5kg 橙子，共 _____ 克</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 1500g+500g=2000g，不是2克。')">2</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！500+1500=2000克。')">2000</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 注意1.5kg=1500g，加上500g=2000g。')">20000</button>
+        <div class="quiz-feedback" id="fb5"></div>
+        <button class="quiz-next" onclick="showResult()">查看结果 🎉</button>
+      </div>
+
+      <div class="quiz-step" id="result">
+        <div style="text-align:center;padding:20px;">
+          <div style="font-size:64px;margin-bottom:16px;">🏆</div>
+          <div style="font-size:24px;font-weight:900;color:var(--primary);" id="scoreText"></div>
+          <div style="margin-top:12px;color:var(--dim);">你已掌握质量单位的基础知识！</div>
+          <button onclick="restartQuiz()" style="margin-top:20px;padding:12px 32px;background:linear-gradient(135deg,var(--primary),var(--orange));color:#fff;border:none;border-radius:20px;font-size:16px;font-weight:900;cursor:pointer;">🔄 再练一次</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+<script>
+// 质量换算
+const massSlider = document.getElementById('massSlider');
+const massNum = document.getElementById('massNum');
+const massFill = document.getElementById('massFill');
+const massConvert = document.getElementById('massConvert');
+function updateMass() {
+  const kg = parseInt(massSlider.value);
+  massNum.textContent = kg;
+  massFill.style.width = kg + '%';
+  const g = kg * 1000;
+  const t = (kg / 1000).toFixed(3);
+  massConvert.innerHTML = `
+    <strong>${kg} 千克 =</strong><br>
+    📌 <span style="color:var(--primary);font-weight:700">${g.toLocaleString()} 克</span> (×1000)<br>
+    📌 <span style="color:var(--purple);font-weight:700">${t} 吨</span> (÷1000)
+  `;
+}
+massSlider.addEventListener('input', updateMass);
+updateMass();
+
+// 拖拽
+let dragSrc = null;
+document.querySelectorAll('.drag-item').forEach(item => {
+  item.addEventListener('dragstart', () => { dragSrc = item; });
+  item.addEventListener('dragend', () => {});
+});
+document.querySelectorAll('.drop-zone').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('over');
+    if (!dragSrc) return;
+    const correct = dragSrc.dataset.answer === zone.dataset.key;
+    if (correct) {
+      zone.textContent += ' ✅ ' + dragSrc.textContent;
+      zone.classList.add('matched');
+      dragSrc.style.opacity = '0.3'; dragSrc.draggable = false;
+    } else {
+      zone.classList.add('wrong-match');
+      setTimeout(() => zone.classList.remove('wrong-match'), 500);
+    }
+  });
+});
+function resetDrag() {
+  document.querySelectorAll('.drag-item').forEach(i => { i.style.opacity='1'; i.draggable=true; });
+  document.querySelectorAll('.drop-zone').forEach(z => {
+    z.classList.remove('matched','wrong-match');
+    const labels = {g:'克 (g)',kg:'千克 (kg)',t:'吨 (t)'};
+    z.textContent = labels[z.dataset.key];
+  });
+}
+
+// D3 知识图谱
+const kgData = {
+  nodes:[
+    {id:"count",name:"数数比大小",type:"prereq"},
+    {id:"length",name:"长度单位",type:"prereq"},
+    {id:"cur",name:"质量单位",type:"current"},
+    {id:"convert",name:"单位换算",type:"next"},
+    {id:"shopping",name:"购物计算",type:"next"},
+    {id:"density",name:"密度概念",type:"next"}
+  ],
+  links:[
+    {source:"count",target:"cur"},{source:"length",target:"cur"},
+    {source:"cur",target:"convert"},{source:"cur",target:"shopping"},{source:"cur",target:"density"}
+  ]
+};
+const colorMap={current:"#ff6b6b",prereq:"#51cf66",next:"#4ecdc4"};
+const svgEl=document.getElementById('kg-svg');
+const W=(svgEl.parentElement.offsetWidth||600)-48, H=340;
+svgEl.setAttribute('viewBox',`0 0 ${W} ${H}`);
+const kgSvg=d3.select('#kg-svg');
+kgSvg.append('defs').append('marker').attr('id','arrow').attr('viewBox','0 -5 10 10').attr('refX',22).attr('refY',0).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto').append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#aaa');
+const sim=d3.forceSimulation(kgData.nodes).force('link',d3.forceLink(kgData.links).id(d=>d.id).distance(110)).force('charge',d3.forceManyBody().strength(-280)).force('center',d3.forceCenter(W/2,H/2));
+const linkEl=kgSvg.append('g').selectAll('line').data(kgData.links).join('line').attr('stroke','#ccc').attr('stroke-width',2).attr('marker-end','url(#arrow)');
+const nodeEl=kgSvg.append('g').selectAll('g').data(kgData.nodes).join('g').call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
+nodeEl.append('circle').attr('r',28).attr('fill',d=>colorMap[d.type]).attr('stroke','#fff').attr('stroke-width',3).style('filter','drop-shadow(0 2px 6px rgba(0,0,0,.15))');
+nodeEl.append('text').attr('text-anchor','middle').attr('dy','0.35em').attr('font-size','12px').attr('font-weight','700').attr('fill','#fff').text(d=>d.name);
+sim.on('tick',()=>{linkEl.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);nodeEl.attr('transform',d=>`translate(${d.x},${d.y})`);});
+
+// 互动题
+let score=0,answered=[false,false,false,false,false];
+function answer(btn,type,msg){
+  const step=btn.closest('.quiz-step');const fb=step.querySelector('.quiz-feedback');const nxt=step.querySelector('.quiz-next');
+  if(step.querySelector('.correct')||step.querySelector('.wrong'))return;
+  btn.classList.add(type==='correct'?'correct':'wrong');fb.textContent=msg;fb.className='quiz-feedback show '+(type==='correct'?'ok':'err');nxt.style.display='inline-block';
+  const idx=parseInt(step.id.replace('q',''))-1;if(type==='correct'&&!answered[idx]){score++;answered[idx]=true;}
+}
+function nextStep(n){
+  document.getElementById('q'+n).classList.remove('active');
+  const next=document.getElementById('q'+(n+1));
+  if(next){next.classList.add('active');document.getElementById('stepInd').textContent=`第 ${n+1} 题 / 共 5 题`;document.getElementById('progFill').style.width=(n*20)+'%';}
+}
+function showResult(){
+  document.getElementById('q5').classList.remove('active');document.getElementById('result').classList.add('active');document.getElementById('progFill').style.width='100%';
+  const msgs=['继续加油！','还不错哦！','做得好！','非常棒！','满分！太厉害了！'];
+  document.getElementById('scoreText').textContent=`得了 ${score} / 5 分 — ${msgs[score]}`;
+}
+function restartQuiz(){
+  score=0;answered=[false,false,false,false,false];
+  document.querySelectorAll('.quiz-step').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.quiz-option').forEach(o=>o.classList.remove('correct','wrong'));
+  document.querySelectorAll('.quiz-feedback').forEach(f=>f.className='quiz-feedback');
+  document.querySelectorAll('.quiz-next').forEach(b=>b.style.display='none');
+  document.getElementById('q1').classList.add('active');
+  document.getElementById('stepInd').textContent='第 1 题 / 共 5 题';document.getElementById('progFill').style.width='0%';
+}
+</script>
+
+<p style="font-size:15px;font-weight:600;color:#5c3d00;line-height:1.7;margin:0;">学习要用心，理解比死记更重要；多问"为什么"，把知识连成网</p>
+
+
+<ul style="margin:0;padding-left:20px;list-style:none;">
+    <li style="padding:5px 0;font-size:14px;color:#5c1a1a;line-height:1.6;padding-left:0;list-style:none;display:flex;gap:8px;"><span>🔴</span><span><strong>易错：</strong>混淆>和<符号方向，将大于号和小于号用反：注意规范书写和理解概念</span></li><li style="padding:5px 0;font-size:14px;color:#5c1a1a;line-height:1.6;padding-left:0;list-style:none;display:flex;gap:8px;"><span>🔴</span><span><strong>易错：</strong>凑十法拆数错误，如9+6把6拆成1和6：注意规范书写和理解概念</span></li><li style="padding:5px 0;font-size:14px;color:#5c1a1a;line-height:1.6;padding-left:0;list-style:none;display:flex;gap:8px;"><span>🔴</span><span><strong>易错：</strong>破十法时拆错数，如13-5拆成13-3-3=7：注意规范书写和理解概念</span></li>
+  </ul>
+  <p style="margin:10px 0 0;font-size:13px;color:#c92a2a;font-style:italic;">💡 <strong>常见错误</strong>往往就在细节中，仔细检查每一步！</p>
+
+
+<div style="display:grid;gap:12px;">
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #51cf66;">
+      <span style="font-size:11px;color:#1e7e34;font-weight:700;">记忆层</span>
+      <p style="margin-top:6px;font-size:14px;">回忆：今天学了哪些关键词和规则？试着说出来。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #339af0;">
+      <span style="font-size:11px;color:#1971c2;font-weight:700;">理解层</span>
+      <p style="margin-top:6px;font-size:14px;">用自己的话解释今天学的核心概念，不看书能说清楚吗？</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #f59f00;">
+      <span style="font-size:11px;color:#b35900;font-weight:700;">应用层</span>
+      <p style="margin-top:6px;font-size:14px;">用今天的知识解决一个实际问题，或写一个新例子。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #cc5de8;">
+      <span style="font-size:11px;color:#862e9c;font-weight:700;">分析→创造层</span>
+      <p style="margin-top:6px;font-size:14px;">把今天的知识与已有知识联系起来：有什么共同点？有什么区别？能不能自己创造一道新题？</p>
+    </div>
+  </div>
+
+
+<div style="display:grid;gap:10px;">
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🎯 本质：</strong><span style="color:#666;font-size:14px;">这个知识的核心是什么？用一句话概括。</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🔗 联系：</strong><span style="color:#666;font-size:14px;">它和你已知的哪些知识有关联？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🌍 应用：</strong><span style="color:#666;font-size:14px;">在生活中，你在哪里见过这个知识？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>❓ 疑问：</strong><span style="color:#666;font-size:14px;">学完之后，你还有什么不明白的地方？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>💡 洞见：</strong><span style="color:#666;font-size:14px;">学完后，你觉得最有意思或最让你惊讶的是什么？</span></div>
+  </div>
+
+
+<!-- TTS 音频 #TeachAny Edge-TTS -->
+<div class="teachany-audio-intro" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
+  <button onclick="document.getElementById('ta-audio').play()"
+    style="background:linear-gradient(135deg,#ff6b6b,#ee5a24);color:#fff;border:none;
+    width:52px;height:52px;border-radius:50%;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 16px rgba(255,107,107,0.4);display:flex;align-items:center;justify-content:center;"
+    title="播放课程介绍">🔊</button>
+  <audio id="ta-audio" src="audio/intro.mp3" preload="auto"></audio>
+</div>
+
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "质量单位",
+  subject: "math",
+  grade: 3,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴脚本（左下角 FAB · 首次点击引导配置 API） -->
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+
+<!-- v7.20 标准连续音频配置（apply-standard-modules 自动补齐） -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-mass-units/s01.mp3",
+    "label": "讲解 1"
+  },
+  {
+    "id": "s02",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-mass-units/s02.mp3",
+    "label": "讲解 2"
+  },
+  {
+    "id": "s03",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-mass-units/s03.mp3",
+    "label": "讲解 3"
+  },
+  {
+    "id": "s04",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-mass-units/s04.mp3",
+    "label": "讲解 4"
+  },
+  {
+    "id": "s05",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-mass-units/s05.mp3",
+    "label": "讲解 5"
+  },
+  {
+    "id": "s06",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-mass-units/s06.mp3",
+    "label": "讲解 6"
+  }
+]
+  </script>
+</div>
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+
+<!-- teachany-enhanced -->
+
+<!-- teachany-upgrade-v2 -->
+<!-- upgrade topic: 质量单位 - TeachAny 互动课件 -->
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="C">
+<h3>选择题 1</h3><p>下列哪个物品的质量最接近1千克？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="单枚鸡蛋约50g">A. 1枚鸡蛋</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="500ml水质量约500g">B. 1瓶500ml矿泉水</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="标准食盐包装为500g/袋，两袋即1kg">C. 1袋食盐</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="课本约300g">D. 1本数学书</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 2</h3><p>妈妈买了2000克大米，相当于多少千克？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="小数点位置错误">A. 0.2千克</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="1000克=1千克">B. 2千克</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="多算一个零">C. 20千克</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="单位换算错误">D. 200千克</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C">
+<h3>选择题 3</h3><p>一箱橙子净重3kg500g，用克表示是多少？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="漏算千克部分">A. 350g</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="单位换算错误">B. 3050g</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="3kg=3000g，加500g合计3500g">C. 3500g</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="数字位置颠倒">D. 3005g</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>5千克=____克</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>5000</p><p>1千克=1000克</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>2400克=____千克____克</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>2 400</p><p>2000克=2千克，余400克</p></details></div>
+</section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为1千克铁比1千克棉花重</h3><p>✅ 比较质量要看单位是否相同</p><p>💡 混淆质量与体积概念</p></div><div class="tu-q"><h3>❌ 换算时漏写末尾零（如2000克=2千克写成2千克）</h3><p>✅ 换算后要对比位数</p><p>💡 单位换算粗心</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>千克克，要分清，一千克等于一千克</p><p><strong>类比：</strong>就像积木搭高楼，小积木是克，大高楼是千克</p></div></section>
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
+  <div data-teachany-tutor-card></div>
+</section>
+
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "math-e-mass-units", "name": "质量单位", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<script id="mathelem-depth-js">
+function mathelemDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+(function () {
+  function draw(cv) {
+    var kind = cv.getAttribute('data-kind');
+    var ctx = cv.getContext('2d');
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = '#94a3b8'; ctx.fillStyle = '#e5e7eb';
+    ctx.lineWidth = 2; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    if (kind === 'numberline') {
+      var y = H / 2, x0 = 40, x1 = W - 40, n = 10;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+      for (var i = 0; i <= n; i++) {
+        var x = x0 + (x1 - x0) * i / n;
+        ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8); ctx.stroke();
+        ctx.fillText(String(i), x, y + 26);
+      }
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(x0 + (x1 - x0) * 0.7, y, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (kind === 'protractor') {
+      var cx = W / 2, cy = H - 30, r = Math.min(W, H) - 60;
+      ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI); ctx.stroke();
+      for (var a = 0; a <= 180; a += 30) {
+        var rad = Math.PI + a * Math.PI / 180;
+        ctx.beginPath();
+        ctx.moveTo(cx + r * Math.cos(rad), cy + r * Math.sin(rad));
+        ctx.lineTo(cx + (r - 12) * Math.cos(rad), cy + (r - 12) * Math.sin(rad));
+        ctx.stroke();
+        ctx.fillText(String(a), cx + (r + 14) * Math.cos(rad), cy + (r + 14) * Math.sin(rad) + 4);
+      }
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r, cy); ctx.stroke();
+      var ar = Math.PI + 60 * Math.PI / 180;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * Math.cos(ar), cy + r * Math.sin(ar)); ctx.stroke();
+    } else if (kind === 'grid') {
+      var g = 28, cols = Math.floor((W - 40) / g), rows = Math.floor((H - 40) / g);
+      ctx.strokeStyle = 'rgba(148,163,184,.4)';
+      for (var c = 0; c <= cols; c++) { ctx.beginPath(); ctx.moveTo(20 + c * g, 20); ctx.lineTo(20 + c * g, 20 + rows * g); ctx.stroke(); }
+      for (var rr = 0; rr <= rows; rr++) { ctx.beginPath(); ctx.moveTo(20, 20 + rr * g); ctx.lineTo(20 + cols * g, 20 + rr * g); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(56,189,248,.25)'; ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      ctx.fillRect(20, 20, 5 * g, 3 * g); ctx.strokeRect(20, 20, 5 * g, 3 * g);
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText('长5 × 宽3 = 15 个方格', 20 + 2.5 * g, 20 + 3 * g + 20);
+    } else if (kind === 'solid') {
+      // 圆柱
+      var lx = W * 0.28, ry = 18, rx = 44, top = 40, bot = H - 50;
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(lx, top, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(lx - rx, top); ctx.lineTo(lx - rx, bot); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(lx + rx, top); ctx.lineTo(lx + rx, bot); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(lx, bot, rx, ry, 0, 0, Math.PI); ctx.stroke();
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText('圆柱', lx, bot + 26);
+      // 圆锥
+      var cx2 = W * 0.72;
+      ctx.strokeStyle = '#f472b6';
+      ctx.beginPath(); ctx.ellipse(cx2, bot, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx2 - rx, bot); ctx.lineTo(cx2, top); ctx.lineTo(cx2 + rx, bot); ctx.stroke();
+      ctx.fillText('圆锥', cx2, bot + 26);
+    } else if (kind === 'linechart') {
+      var ox = 40, oy = H - 36, ax = W - 24, ay = 24;
+      ctx.beginPath(); ctx.moveTo(ox, ay); ctx.lineTo(ox, oy); ctx.lineTo(ax, oy); ctx.stroke();
+      var data = [3, 5, 4, 7, 9, 8, 11], m = data.length;
+      ctx.strokeStyle = '#38bdf8'; ctx.fillStyle = '#38bdf8'; ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (var k = 0; k < m; k++) {
+        var px = ox + (ax - ox) * k / (m - 1);
+        var py = oy - (oy - ay) * data[k] / 12;
+        if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      for (var k2 = 0; k2 < m; k2++) {
+        var px2 = ox + (ax - ox) * k2 / (m - 1);
+        var py2 = oy - (oy - ay) * data[k2] / 12;
+        ctx.beginPath(); ctx.arc(px2, py2, 4, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (kind === 'pie') {
+      var pcx = W / 2, pcy = H / 2, pr = Math.min(W, H) / 2 - 28;
+      var slices = [0.35, 0.25, 0.20, 0.20], colors = ['#38bdf8', '#f472b6', '#fbbf24', '#34d399'];
+      var start = -Math.PI / 2;
+      for (var si = 0; si < slices.length; si++) {
+        var ang = slices[si] * Math.PI * 2;
+        ctx.beginPath(); ctx.moveTo(pcx, pcy);
+        ctx.arc(pcx, pcy, pr, start, start + ang); ctx.closePath();
+        ctx.fillStyle = colors[si]; ctx.fill();
+        ctx.strokeStyle = '#0b1628'; ctx.lineWidth = 2; ctx.stroke();
+        start += ang;
+      }
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText('部分占总体', pcx, H - 12);
+    } else if (kind === 'bars') {
+      var bdata = [5, 3, 7, 4], labels = ['甲', '乙', '丙', '丁'];
+      var box = 40, boy = H - 36, bax = W - 24, bay = 28, bw = 48, gap = 36;
+      ctx.strokeStyle = '#94a3b8';
+      ctx.beginPath(); ctx.moveTo(box, bay); ctx.lineTo(box, boy); ctx.lineTo(bax, boy); ctx.stroke();
+      for (var bi = 0; bi < bdata.length; bi++) {
+        var bx = box + 30 + bi * (bw + gap);
+        var bh = (boy - bay) * bdata[bi] / 8;
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(bx, boy - bh, bw, bh);
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillText(labels[bi], bx + bw / 2, boy + 18);
+        ctx.fillText(String(bdata[bi]), bx + bw / 2, boy - bh - 8);
+      }
+    } else if (kind === 'circle') {
+      var ccx = W / 2, ccy = H / 2, cr = Math.min(W, H) / 2 - 36;
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ccx, ccy, cr, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ccx, ccy); ctx.lineTo(ccx + cr, ccy); ctx.stroke();
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillText('r', ccx + cr / 2, ccy - 8);
+      ctx.fillText('S = πr²', ccx, ccy + cr + 22);
+      ctx.beginPath(); ctx.arc(ccx, ccy, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (kind === 'shapes') {
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      ctx.strokeRect(30, 50, 100, 70);
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText('长方形', 80, 140);
+      ctx.strokeRect(160, 50, 70, 70);
+      ctx.fillText('正方形', 195, 140);
+      ctx.beginPath(); ctx.moveTo(280, 120); ctx.lineTo(320, 50); ctx.lineTo(360, 120); ctx.closePath(); ctx.stroke();
+      ctx.fillText('三角形', 320, 140);
+      ctx.beginPath(); ctx.arc(450, 85, 40, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillText('圆', 450, 140);
+    }
+  }
+  function init() {
+    document.querySelectorAll('canvas.me-visual-canvas').forEach(draw);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：质量单位</h2><div data-teachany-kg="math-e-mass-units"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+</body>
+</html>

@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多位数除法 · 小学数学 G4 · TeachAny v5.27</title>
+<meta name="teachany-node" content="math-e-multi-digit-division">
+<meta name="teachany-subject" content="math">
+<meta name="teachany-domain" content="numbers-operations">
+<meta name="teachany-grade" content="4">
+<meta name="teachany-difficulty" content="3">
+<meta name="teachany-version" content="7.21.0">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-prerequisites" content="numbers-operations">
+<meta name="teachany-author" content="weponusa">
+<script src="../../assets/vendor/d3.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+:root{--bg:#fffbf0;--primary:#ff6b6b;--secondary:#4ecdc4;--accent:#ffe66d;--success:#51cf66;--card:#fff;--purple:#cc5de8;--blue:#339af0;--orange:#ff922b;--text:#2b2b2b;--dim:#666;--border:rgba(0,0,0,0.06);}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{font-family:'Noto Sans SC',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.85;font-size:16px;padding-bottom:60px;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle at 10% 20%,rgba(255,107,107,.06),transparent 50%),radial-gradient(circle at 90% 80%,rgba(78,205,196,.06),transparent 50%);pointer-events:none;z-index:-1;}
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:3px solid var(--accent);padding:0 20px;display:flex;align-items:center;height:62px;gap:4px;overflow-x:auto;}
+.nav-brand{font-size:20px;font-weight:900;margin-right:16px;white-space:nowrap;background:linear-gradient(135deg,var(--primary),var(--orange),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav a{color:var(--dim);text-decoration:none;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:700;transition:all .25s;white-space:nowrap;}
+.nav a:hover,.nav a.active{color:#fff;background:linear-gradient(135deg,var(--primary),var(--orange));}
+.container{max-width:960px;margin:0 auto;padding:80px 20px 60px;}
+.hero{text-align:center;padding:36px 0 30px;}
+.hero h1{font-size:42px;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--orange),var(--purple),var(--blue));background-size:300% 300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:rainbowShift 6s ease infinite;margin-bottom:10px;}
+@keyframes rainbowShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+.hero .subtitle{font-size:18px;color:var(--dim);margin-bottom:16px;}
+.hero .meta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+.hero .meta span{background:#fff;border:2px solid var(--border);border-radius:24px;padding:6px 18px;font-size:14px;font-weight:700;color:var(--dim);}
+.section{margin:40px 0;}
+.section-title{font-size:26px;font-weight:900;margin-bottom:18px;padding:10px 20px;border-radius:16px;background:linear-gradient(135deg,rgba(255,107,107,.1),rgba(78,205,196,.1));display:inline-block;}
+.card{background:var(--card);border:2px solid var(--border);border-radius:20px;padding:24px 26px;margin-bottom:18px;box-shadow:0 4px 16px rgba(0,0,0,.04);transition:transform .25s,box-shadow .25s;}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(255,107,107,.12);}
+.card h3{font-size:20px;font-weight:900;margin-bottom:10px;}
+.card p,.card li{font-size:16px;line-height:1.9;color:var(--dim);}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;}
+.highlight{color:var(--primary);font-weight:900;}
+
+/* 生活场景 */
+#life-scene{background:linear-gradient(135deg,#fff8e1,#e3f2fd);border-radius:24px;padding:32px;}
+.share-stage{display:flex;justify-content:center;align-items:flex-end;gap:24px;height:200px;position:relative;}
+.candy-pile{position:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:48px;animation:candyBounce 2s ease-in-out infinite;}
+@keyframes candyBounce{0%,100%{transform:translateX(-50%) scale(1);}50%{transform:translateX(-50%) scale(1.1);}}
+.kids{display:flex;gap:24px;align-items:flex-end;}
+.kid-box{text-align:center;width:80px;}
+.kid-emoji{font-size:36px;display:block;animation:kidBounce 1s ease-in-out infinite;}
+.kid-box:nth-child(2) .kid-emoji{animation-delay:.3s;}
+.kid-box:nth-child(3) .kid-emoji{animation-delay:.6s;}
+@keyframes kidBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+.kid-candies{font-size:22px;margin-top:8px;transition:all .5s;}
+.kid-label{font-size:13px;font-weight:700;color:var(--dim);}
+.divide-arrow{font-size:32px;color:var(--primary);font-weight:900;align-self:center;animation:arrowPulse 1.5s ease-in-out infinite;}
+@keyframes arrowPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+
+/* 竖式展示 */
+.long-div{font-family:'Courier New',monospace;font-size:18px;background:#f9f9f9;border-radius:14px;padding:20px;line-height:2.2;overflow-x:auto;}
+.long-div .step{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.step-num{background:var(--primary);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0;}
+.div-highlight{color:var(--primary);font-weight:900;}
+.div-row{padding:2px 0;letter-spacing:4px;}
+.div-line{border-top:2px solid var(--text);margin:4px 0;}
+
+/* 互动实验台 */
+#interactive-lab{padding:28px;border-radius:24px;background:linear-gradient(135deg,#f0fff4,#e8f4ff);}
+.calc-display{font-size:28px;font-weight:900;text-align:center;padding:20px;background:#fff;border-radius:16px;margin-bottom:16px;color:var(--primary);border:2px solid var(--border);min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.slider-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.slider-row label{font-weight:700;min-width:100px;}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--primary);}
+.slider-val{min-width:80px;font-weight:900;color:var(--primary);}
+
+/* 拖拽步骤排序 */
+.step-sorter{display:flex;flex-direction:column;gap:8px;}
+.step-sort-item{padding:12px 16px;background:#fff;border:2.5px dashed var(--secondary);border-radius:12px;cursor:grab;font-weight:700;transition:all .2s;display:flex;align-items:center;gap:10px;}
+.step-sort-item:hover{transform:scale(1.02);background:rgba(78,205,196,.1);}
+.step-sort-item.drag-over{border-color:var(--primary);background:rgba(255,107,107,.08);}
+
+/* 知识图谱 */
+#knowledge-graph{background:#fff;border-radius:24px;padding:24px;}
+#kg-svg{width:100%;height:340px;display:block;}
+.kg-legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;}
+.kg-legend-item{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;}
+.kg-dot{width:14px;height:14px;border-radius:50%;}
+
+/* 互动题 */
+.quiz-step{display:none;}
+.quiz-step.active{display:block;animation:fadeIn .4s;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.quiz-q{font-size:18px;font-weight:900;margin-bottom:18px;}
+.quiz-option{display:block;width:100%;padding:14px 20px;margin:8px 0;border-radius:16px;background:#fff;border:2.5px solid #e8e8e8;cursor:pointer;font-size:16px;font-weight:700;text-align:left;transition:all .25s;}
+.quiz-option:hover{background:rgba(78,205,196,.08);border-color:var(--secondary);}
+.quiz-option.correct{background:rgba(81,207,102,.12);border-color:var(--success);color:#1e7e34;}
+.quiz-option.wrong{background:rgba(255,107,107,.1);border-color:var(--primary);color:#c92a2a;}
+.quiz-feedback{padding:12px 18px;border-radius:14px;margin-top:10px;font-size:15px;font-weight:700;display:none;}
+.quiz-feedback.show{display:block;animation:popIn .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes popIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+.quiz-feedback.ok{background:rgba(81,207,102,.15);color:#1e7e34;}
+.quiz-feedback.err{background:rgba(255,107,107,.12);color:#c92a2a;}
+.quiz-next{margin-top:14px;padding:10px 28px;background:linear-gradient(135deg,var(--primary),var(--orange));color:#fff;border:none;border-radius:20px;font-size:16px;font-weight:900;cursor:pointer;display:none;}
+.progress-bar{height:8px;background:#f0f0f0;border-radius:4px;margin-bottom:18px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--orange));border-radius:4px;transition:width .4s;}
+.step-indicator{font-size:13px;color:var(--dim);margin-bottom:8px;font-weight:700;}
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+</style>
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+
+
+<style id="mathelem-depth-css">
+.mathelem-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.mathelem-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.24)}
+.mathelem-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.mathelem-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.mathelem-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.mathelem-depth .mathelem-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.mathelem-depth .mathelem-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+.mathelem-depth .me-visual-canvas{width:100%;max-width:560px;height:auto;background:#0b1628;border:1px solid rgba(148,163,184,.28);border-radius:12px;display:block;margin:8px auto 0}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+</head>
+<body>
+<!-- teachany-hero-notext -->
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<nav class="nav">
+  <span class="nav-brand">➗ 多位数除法</span>
+  <a href="#life-scene">生活场景</a>
+  <a href="#concepts">除法原理</a>
+  <a href="#interactive-lab">互动实验</a>
+  <a href="#knowledge-graph">知识图谱</a>
+  <a href="#quiz">互动练习</a>
+</nav>
+
+<div class="container">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/math-elem-multi-digit-divide-hero.png" alt="多位数除法 - TeachAny 互动课件知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">多位数除法 - Te</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+
+  <!-- 生活场景 -->
+
+<p>🌍 <strong>And（已知）</strong>：我们已经有了一定的基础知识</p>
+  <p>⚡ <strong>But（问题）</strong>：但还有一个重要概念需要深入理解</p>
+  <p>💡 <strong>Therefore（新知）</strong>：因此通过本节课的学习，我们将掌握新知识并能灵活运用</p>
+</div>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（放在 pretest 之后，课件顶部可见） -->
+
+<script>
+function checkPretest() {
+
+  var sel0 = document.querySelector('input[name="pretest_q0"]:checked');
+  var fb0 = document.querySelector('.pretest-feedback-0');
+  if (sel0) {
+    fb0.style.display = 'block';
+    if (parseInt(sel0.value) === 1) {
+      fb0.style.background = '#d3f9d8'; fb0.style.color = '#2b8a3e';
+      fb0.textContent = '✅ 很好！你已经有了正确的认识，继续加油！';
+    } else {
+      fb0.style.background = '#fff3bf'; fb0.style.color = '#e67700';
+      fb0.textContent = '💡 这是个常见误区，学完本节课你会有新的理解！';
+    }
+  }
+  var sel1 = document.querySelector('input[name="pretest_q1"]:checked');
+  var fb1 = document.querySelector('.pretest-feedback-1');
+  if (sel1) {
+    fb1.style.display = 'block';
+    if (parseInt(sel1.value) === 1) {
+      fb1.style.background = '#d3f9d8'; fb1.style.color = '#2b8a3e';
+      fb1.textContent = '✅ 很好！你已经有了正确的认识，继续加油！';
+    } else {
+      fb1.style.background = '#fff3bf'; fb1.style.color = '#e67700';
+      fb1.textContent = '💡 这是个常见误区，学完本节课你会有新的理解！';
+    }
+  }
+}
+</script>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出多位数除法的计算步骤（商乘减比落）</p></div><div class="tu-q"><p>🎯 能判断除法竖式中余数的合理性</p></div><div class="tu-q"><p>🎯 能计算三位数除以两位数的准确商</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么除法竖式里要‘乘减比落’？</p></div><div class="tu-q"><p>❓ 余数为什么一定要比除数小？</p></div><div class="tu-q"><p>❓ 商中间的0不写会怎样？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section text-module" id="pretest" data-bloom-level="remember" data-scaffold="full" data-tts="pretest" data-slot="20"><div class="panel"><span class="phase-tag">Pretest</span><h2>📝 课前诊断：先暴露一个误区</h2><p>计算除数是两位数的除法时，一般怎样试商？</p><button class="quiz-option" data-q="pre" data-a="A">A. 把除数看作整百数</button><button class="quiz-option" data-q="pre" data-a="B" data-correct="1" data-diag="除数是两位数时，常用四舍五入法把它看成接近的整十数来试商，再根据余数调整商的大小（商大了调小、商小了调大），这是提高试商速度的基本方法。">B. 用四舍五入法看作与它接近的整十数</button><button class="quiz-option" data-q="pre" data-a="C">C. 直接当作一位数来算</button><div class="feedback" id="fb-pre">选择后显示错因诊断。</div></div></section>
+
+  <div class="hero"><h1>➗ 多位数除法</h1>
+    <p class="subtitle">掌握多位数÷一位数与÷两位数的计算方法，理解余数含义</p>
+    <div class="meta">
+      <span>📚 四年级</span><span>🔢 运算</span><span>⏱️ 45分钟</span><span>⭐⭐ 中等</span>
+    </div>
+  </div>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 除法意义</h2><div class="tu-q"><p><strong>And：</strong>学生已掌握表内除法</p><p><strong>But：</strong>不理解多位数除法的实际含义</p><p><strong>Therefore：</strong>建立除法分配的概念</p></div><div class="tu-q"><p>多位数除法就像分糖果！比如把48块糖平均分给4个小朋友，每人分多少？先分整十的：40÷4=10块，剩下8块÷4=2块，加起来每人12块。关键是把大数拆成几十和几，分两次算。</p></div><div class="tu-q"><p>🌍 妈妈买来36个苹果要装进6个礼盒，每个盒子放几个？这就是除法在生活中的应用！</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>63÷3怎么分步计算？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="漏掉拆解整十数步骤会算错">A. 60÷3=20，3÷3=1，20+1=21</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="漏掉拆解整十数步骤会算错">B. 直接算63÷3=21</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="漏掉拆解整十数步骤会算错">C. 30÷3=10，33÷3=11</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="漏掉拆解整十数步骤会算错">D. 6÷3=2，3÷3=1</button></div><div class="tu-fb" hidden></div></div></section>
+<section data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="section" id="life-scene" data-slot="35">
+    <div data-scaffold="full" data-bloom-level="remember" class="section-title">🎬 生活场景：分糖果</div>
+    <div class="share-stage">
+      <div class="candy-pile" title="共96颗糖">🍬×96</div>
+      <div class="kids">
+        <div class="kid-box"><span class="kid-emoji">👧</span><div class="kid-candies">🍬×32</div><div class="kid-label">小红</div></div>
+        <div class="divide-arrow">÷3→</div>
+        <div class="kid-box"><span class="kid-emoji">👦</span><div class="kid-candies">🍬×32</div><div class="kid-label">小明</div></div>
+        <div class="kid-box"><span class="kid-emoji">🧒</span><div class="kid-candies">🍬×32</div><div class="kid-label">小华</div></div>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:16px;color:var(--dim);font-size:15px;">96颗糖平均分给3个人，每人得 96÷3 = <span style="color:var(--primary);font-weight:900;">32</span> 颗</p>
+  </section>
+
+  <!-- 除法原理 -->
+  <section data-scaffold="partial" data-bloom-level="apply" class="section" id="concepts" data-slot="35">
+    <div data-bloom-level="understand" class="section-title">📐 除法竖式步骤</div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>🔢 例：96 ÷ 3</h3>
+        <div class="long-div">
+          <div class="div-row">&nbsp;&nbsp;<span class="div-highlight">3</span> 2</div>
+          <div class="div-row">3 ) 9 6</div>
+          <div class="div-line"></div>
+          <div class="div-row">&nbsp;&nbsp;9&nbsp;↑ 9÷3=3</div>
+          <div class="div-row">&nbsp;&nbsp;──</div>
+          <div class="div-row">&nbsp;&nbsp;&nbsp;6&nbsp;↑ 6÷3=2</div>
+          <div class="div-row">&nbsp;&nbsp;&nbsp;6</div>
+          <div class="div-row">&nbsp;&nbsp;&nbsp;──</div>
+          <div class="div-row">&nbsp;&nbsp;&nbsp;&nbsp;0 ← 余数为0</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>📝 竖式四步口诀</h3>
+        <ul style="list-style:none;padding:0;">
+          <li style="padding:8px 0;border-bottom:1px solid #f0f0f0;"><span class="step-num">1</span> <strong>除</strong>：从最高位开始试商</li>
+          <li style="padding:8px 0;border-bottom:1px solid #f0f0f0;"><span class="step-num">2</span> <strong>乘</strong>：商×除数</li>
+          <li style="padding:8px 0;border-bottom:1px solid #f0f0f0;"><span class="step-num">3</span> <strong>减</strong>：被除数-乘积</li>
+          <li style="padding:8px 0;"><span class="step-num">4</span> <strong>移</strong>：移下下一位，重复</li>
+        </ul>
+        <p style="margin-top:10px;font-size:14px;color:var(--secondary);font-weight:700;">记忆口诀：除乘减移，反复循环！</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>⚡ 关键知识点</h3>
+      <ul style="list-style:none;padding:0;">
+        <li style="padding:6px 0;border-bottom:1px solid #f0f0f0;">📌 余数必须 <span class="highlight">小于除数</span>（否则还能再除）</li>
+        <li style="padding:6px 0;border-bottom:1px solid #f0f0f0;">📌 商的位数：被除数位数 - 除数位数 + 1（粗估）</li>
+        <li style="padding:6px 0;">📌 验证：<span class="highlight">商×除数 + 余数 = 被除数</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 互动实验台 -->
+  <section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 图书分配方案的优化</h2><p>假设班级图书角的图书数量增加到385本，如何分配这些图书才能使每个小组的图书数量尽可能接近？</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="可能需要对余数进行合理分配，使每个小组的图书数量尽可能接近。"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="通过计算385除以8，得到48余1，可以将剩余的1本图书分配给其中一个小组。"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="每个小组分到48本，其中一个小组分到49本，这样分配方案使每个小组的图书数量尽可能接近。"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.88);color:inherit}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#2563eb;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#2563eb}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="可视化" data-slot="35">
+  <section class="section mathelem-depth" id="lesson-visual" data-tts="lesson-visual">
+    <div class="card">
+      <span class="phase-tag" data-variant="success">互动可视</span>
+      <h2>除法与倍分</h2>
+      <p>在数轴上按除数一段段地量，理解“里面有几个”的除法意义。</p>
+      <canvas class="me-visual-canvas" id="me-canvas-math-elem-multi-digit-divide" width="560" height="240"
+        data-kind="numberline" role="img" aria-label="除法与倍分"></canvas>
+    </div>
+  </section>
+</div>
+
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section mathelem-depth core-knowledge-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>多位数除法</h2>
+      <p>多位数除法按“试商→乘→减→落”循环进行：从被除数高位看起，够除就除，不够则多看一位；试商后用商乘除数，写在相应数位下，相减后落下一位再继续。除数是两位数时，可把除数看作整十数来试商，再根据余数调整。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>多位数除法循环流程示意图：试商乘减落四步骤</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1-s2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2-s2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="1" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3-s2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34d399" stop-opacity="0.25"/><stop offset="1" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4-s2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="1" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="bg5-s2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar-s2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect x="0" y="0" width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><path d="M30 30 L610 30 M30 60 L610 60 M30 90 L610 90 M30 120 L610 120" stroke="rgba(100,116,139,0.15)" stroke-width="0.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.1s" fill="freeze"/></path><rect x="60" y="50" width="520" height="80" rx="12" fill="url(#bg1-s2)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.2s" fill="freeze"/></rect><text x="320" y="75" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">多位数除法循环流程</text><text x="320" y="100" text-anchor="middle" fill="#e2e8f0" font-size="13">试商 → 乘 → 减 → 落</text><rect x="80" y="160" width="100" height="60" rx="8" fill="url(#bg2-s2)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="130" y="180" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">试商</text><text x="130" y="200" text-anchor="middle" fill="#e2e8f0" font-size="12">从高位看起</text><text x="130" y="215" text-anchor="middle" fill="#e2e8f0" font-size="12">够除就除</text><rect x="220" y="160" width="100" height="60" rx="8" fill="url(#bg3-s2)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="270" y="180" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">乘</text><text x="270" y="200" text-anchor="middle" fill="#e2e8f0" font-size="12">商×除数</text><text x="270" y="215" text-anchor="middle" fill="#e2e8f0" font-size="12">写在数位下</text><rect x="360" y="160" width="100" height="60" rx="8" fill="url(#bg4-s2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="410" y="180" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">减</text><text x="410" y="200" text-anchor="middle" fill="#e2e8f0" font-size="12">被除数减</text><text x="410" y="215" text-anchor="middle" fill="#e2e8f0" font-size="12">乘积结果</text><rect x="500" y="160" width="100" height="60" rx="8" fill="url(#bg5-s2)" stroke="#c084fc" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="550" y="180" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">落</text><text x="550" y="200" text-anchor="middle" fill="#e2e8f0" font-size="12">落下一位</text><text x="550" y="215" text-anchor="middle" fill="#e2e8f0" font-size="12">继续循环</text><path d="M180 190 Q200 190 220 190" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar-s2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><path d="M320 190 Q340 190 360 190" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar-s2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></path><path d="M460 190 Q480 190 500 190" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar-s2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></path><path d="M550 220 Q580 250 580 300 Q580 350 130 350 Q80 350 80 300 Q80 250 130 220" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar-s2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></path><rect x="80" y="250" width="240" height="80" rx="10" fill="url(#bg1-s2)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></rect><text x="200" y="275" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">具体示例：1248 ÷ 24</text><text x="110" y="295" fill="#7dd3fc" font-size="12">1. 试商：12÷24不够，看124</text><text x="110" y="310" fill="#7dd3fc" font-size="12">2. 124÷24≈5，写商5</text><text x="110" y="325" fill="#7dd3fc" font-size="12">3. 5×24=120，124-120=4</text><rect x="360" y="250" width="220" height="80" rx="10" fill="url(#bg3-s2)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></rect><text x="470" y="275" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">两位数除法技巧</text><text x="375" y="295" fill="#e2e8f0" font-size="12">除数看作整十数试商</text><text x="375" y="310" fill="#e2e8f0" font-size="12">如：24看作20来试商</text><text x="375" y="325" fill="#e2e8f0" font-size="12">根据余数调整商的大小</text><circle cx="130" cy="190" r="4" fill="#7dd3fc" opacity="0.8"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2s"/></circle><circle cx="270" cy="190" r="4" fill="#7dd3fc" opacity="0.8"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2.2s"/></circle><circle cx="410" cy="190" r="4" fill="#7dd3fc" opacity="0.8"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2.4s"/></circle><circle cx="550" cy="190" r="4" fill="#7dd3fc" opacity="0.8"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="2.6s"/></circle><line x1="130" y1="230" x2="130" y2="250" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></line><circle cx="130" cy="250" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></circle><line x1="470" y1="230" x2="470" y2="250" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></line><circle cx="470" cy="250" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></circle><rect x="450" y="355" width="170" height="50" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.8s" fill="freeze"/></rect><text x="460" y="372" fill="#fbbf24" font-size="12" font-weight="bold">核心要点</text><rect x="460" y="378" width="8" height="8" fill="#f59e0b"/><text x="475" y="386" fill="#e2e8f0" font-size="11">循环进行四步骤</text><rect x="460" y="390" width="8" height="8" fill="#34d399"/><text x="475" y="398" fill="#e2e8f0" font-size="11">整十数试商技巧</text></svg></figure>
+
+</div>
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="方法范例" data-slot="35">
+  <section class="section mathelem-depth core-knowledge-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：试商要准，余数要小</h2>
+      <p>先估被除数前几位够不够除，确定商的位数；用整十估商，若余数大于或等于除数就改大商，若不够减就改小商。每一步余数必须小于除数。最后用“商×除数+余数=被除数”验算。</p>
+      <div class="worked-example"><strong>范例：</strong>计算 768÷24：24×3=72，76÷24商3余4，落下8得48，24×2=48，恰好除尽，商是32。验算：32×24=768。</div>
+      <p id="lesson-pitfall" class="mathelem-pitfall"><strong>常见误区：</strong>常见误区是试商偏大或偏小不调整，余数大于除数却继续往下算，或商的数位对错。应坚持估商、调整、验算三步。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>竖式除法中，每一步的余数必须？</p>
+        <button type="button" data-correct="0" onclick="mathelemDepthCheck(this,false,&#x27;mathelem-depth-feedback&#x27;,&quot;余数一定要小于除数，否则还可以再除。&quot;)">A. 大于除数</button><button type="button" data-correct="1" onclick="mathelemDepthCheck(this,true,&#x27;mathelem-depth-feedback&#x27;,&quot;余数一定要小于除数，否则还可以再除。&quot;)">B. 小于除数</button><button type="button" data-correct="0" onclick="mathelemDepthCheck(this,false,&#x27;mathelem-depth-feedback&#x27;,&quot;余数一定要小于除数，否则还可以再除。&quot;)">C. 等于被除数</button><button type="button" data-correct="0" onclick="mathelemDepthCheck(this,false,&#x27;mathelem-depth-feedback&#x27;,&quot;余数一定要小于除数，否则还可以再除。&quot;)">D. 随便</button>
+        <div class="mathelem-feedback" id="mathelem-depth-feedback" role="status"></div>
+      </div>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>多位数除法试商调整与验算机制流程图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.5" opacity="0.3"/></pattern></defs><rect width="640" height="420" fill="#0a1520"/><rect width="640" height="420" fill="url(#grid)"/><rect x="20" y="20" width="600" height="380" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="320" y="50" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">多位数除法机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.2s" fill="freeze"/></text><rect x="40" y="70" width="180" height="280" rx="10" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.4s" fill="freeze"/></rect><text x="130" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">试商估算区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><rect x="60" y="105" width="140" height="60" rx="6" fill="rgba(15,23,42,0.6)" stroke="#475569" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.8s" fill="freeze"/></rect><text x="70" y="125" fill="#e2e8f0" font-size="12">768÷24<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.0s" fill="freeze"/></text><text x="70" y="145" fill="#7dd3fc" font-size="12">76÷24≈3<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="70" y="160" fill="#7dd3fc" font-size="12">48÷24=2<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.4s" fill="freeze"/></text><rect x="60" y="180" width="140" height="45" rx="6" fill="url(#bg2)" stroke="#fbbf24" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.6s" fill="freeze"/></rect><text x="70" y="200" fill="#fbbf24" font-size="12" font-weight="bold">整十估商法<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><text x="70" y="215" fill="#e2e8f0" font-size="11">24≈20, 76÷20≈4<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.0s" fill="freeze"/></text><circle cx="130" cy="250" r="15" fill="url(#bg3)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.2s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="3s"/></circle><text x="130" y="255" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">调整<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><text x="70" y="280" fill="#e2e8f0" font-size="11">24×4=96>76<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.6s" fill="freeze"/></text><text x="70" y="295" fill="#34d399" font-size="11">改商为3: 24×3=72<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.8s" fill="freeze"/></text><text x="70" y="310" fill="#7dd3fc" font-size="11">76-72=4<8✓<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.0s" fill="freeze"/></text><rect x="240" y="70" width="160" height="280" rx="10" fill="url(#bg2)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.5s" fill="freeze"/></rect><text x="320" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">竖式计算区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.7s" fill="freeze"/></text><rect x="260" y="105" width="120" height="180" rx="6" fill="rgba(15,23,42,0.8)" stroke="#475569" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="320" y="125" text-anchor="middle" fill="#7dd3fc" font-size="14" font-weight="bold">32<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.2s" fill="freeze"/></text><line x1="270" y1="130" x2="370" y2="130" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.4s" fill="freeze"/></line><text x="275" y="150" fill="#e2e8f0" font-size="12">24)768<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.1s" fill="freeze"/></text><text x="290" y="170" fill="#7dd3fc" font-size="12">72<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><line x1="290" y1="175" x2="330" y2="175" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.8s" fill="freeze"/></line><text x="290" y="195" fill="#34d399" font-size="12">048<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.0s" fill="freeze"/></text><text x="290" y="215" fill="#7dd3fc" font-size="12">48<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><line x1="290" y1="220" x2="320" y2="220" stroke="#60a5fa" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.4s" fill="freeze"/></line><text x="290" y="240" fill="#34d399" font-size="12">0<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.6s" fill="freeze"/></text><rect x="260" y="300" width="120" height="40" rx="6" fill="url(#bg3)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></rect><text x="270" y="315" fill="#fbbf24" font-size="11" font-weight="bold">余数检查<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.0s" fill="freeze"/></text><text x="270" y="330" fill="#e2e8f0" font-size="11">每步余数<24✓<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.2s" fill="freeze"/></text><rect x="420" y="70" width="180" height="280" rx="10" fill="url(#bg4)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="510" y="90" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">验算检验区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.8s" fill="freeze"/></text><rect x="440" y="105" width="140" height="80" rx="6" fill="rgba(15,23,42,0.6)" stroke="#475569" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></rect><text x="450" y="125" fill="#fbbf24" font-size="12" font-weight="bold">验算公式<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.6s" fill="freeze"/></text><text x="450" y="145" fill="#e2e8f0" font-size="11">商×除数+余数=被除数<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.8s" fill="freeze"/></text><text x="450" y="165" fill="#7dd3fc" font-size="12">32×24+0=768✓<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.0s" fill="freeze"/></text><rect x="440" y="200" width="140" height="100" rx="6" fill="url(#bg5)" stroke="#c4b5fd" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.2s" fill="freeze"/></rect><text x="450" y="220" fill="#fbbf24" font-size="12" font-weight="bold">常见误区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.4s" fill="freeze"/></text><text x="450" y="240" fill="#ef4444" font-size="10">×试商不调整<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.6s" fill="freeze"/></text><text x="450" y="255" fill="#ef4444" font-size="10">×余数≥除数继续算<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.8s" fill="freeze"/></text><text x="450" y="270" fill="#ef4444" font-size="10">×商的位数错位<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.0s" fill="freeze"/></text><text x="450" y="290" fill="#34d399" font-size="10">✓估商→调整→验算<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.2s" fill="freeze"/></text><path d="M 220 180 Q 230 160 240 180" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="3s"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></path><path d="M 400 180 Q 410 160 420 180" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#ar)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="5s"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.0s" fill="freeze"/></path><circle cx="50" cy="180" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.3s" fill="freeze"/></circle><line x1="50" y1="180" x2="60" y2="185" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.3s" fill="freeze"/></line><circle cx="410" cy="140" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.5s" fill="freeze"/></circle><line x1="410" y1="140" x2="420" y2="145" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.5s" fill="freeze"/></line><rect x="480" y="320" width="140" height="70" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.5s" fill="freeze"/></rect><text x="490" y="340" fill="#fbbf24" font-size="12" font-weight="bold">图例说明<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.7s" fill="freeze"/></text><rect x="490" y="350" width="12" height="8" fill="url(#bg1)" stroke="#60a5fa" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.9s" fill="freeze"/></rect><text x="510" y="357" fill="#e2e8f0" font-size="10">试商估算<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.9s" fill="freeze"/></text><rect x="490" y="365" width="12" height="8" fill="url(#bg2)" stroke="#fbbf24" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="8.1s" fill="freeze"/></rect><text x="510" y="372" fill="#e2e8f0" font-size="10">竖式计算<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="8.1s" fill="freeze"/></text><rect x="560" y="350" width="12" height="8" fill="url(#bg4)" stroke="#f87171" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="8.3s" fill="freeze"/></rect><text x="580" y="357" fill="#e2e8f0" font-size="10">验算<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="8.3s" fill="freeze"/></text></svg></figure>
+
+</div>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 试商技巧</h2><div class="tu-q"><p><strong>And：</strong>知道除法是分配</p><p><strong>But：</strong>不会快速找到合适的商</p><p><strong>Therefore：</strong>掌握乘法口诀试商法</p></div><div class="tu-q"><p>试商就像猜谜语！比如76÷4：想4×()最接近76？4×10=40太小，4×20=80超了，所以先试19。4×19=76刚好！秘诀：用乘法口诀倒推，从最大可能开始试。</p></div><div class="tu-q"><p>🌍 体育老师要把95根跳绳分给5个班，快速算出每班19根，这就是试商的实际应用！</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>84÷6的试商过程正确的是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="没按步骤试商会漏算">A. 6×10=60→6×4=24→10+4=14</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="没按步骤试商会漏算">B. 直接写14</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="没按步骤试商会漏算">C. 6×12=72→6×2=12→12+2=14</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="没按步骤试商会漏算">D. 80÷6≈13</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 余数处理</h2><div class="tu-q"><p><strong>And：</strong>能完成整除计算</p><p><strong>But：</strong>遇到有余数就卡住</p><p><strong>Therefore：</strong>理解余数的意义</p></div><div class="tu-q"><p>余数就像分剩下的零钱！比如57÷5：5×11=55，剩下2不够分了，答案就是11余2。重点：余数必须比除数小！用53÷5举例：5×10=50，余3＜5，所以正确。</p></div><div class="tu-q"><p>🌍 57天暑假正好是8个星期零1天，这就是带余除法在日历中的应用！</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>68÷7的余数是多少？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="余数大于除数是常见错误">A. 商9余5</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="余数大于除数是常见错误">B. 商7余19</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="余数大于除数是常见错误">C. 商8余12</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="余数大于除数是常见错误">D. 商10余2</button></div><div class="tu-fb" hidden></div></div></section>
+<!-- 课程导览图（互动画布） -->
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>将除法分解为估商、试乘、验余三步</p></div><div class="tu-q"><h3>💡解释它</h3><p>除法是连续减法的快捷方式</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>对比乘法竖式，理解除法是逆运算</p></div><div class="tu-q"><h3>👁️看见它</h3><p>用分糖果模型理解余数意义</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>解决图书分配中的实际问题</p></div></section>
+<section data-bloom-level="apply" class="section" id="interactive-lab" data-slot="77">
+    <div class="section-title">🧪 互动实验台</div>
+    <div class="card">
+      <h3>🎛️ 除法计算器</h3>
+      <div class="slider-row">
+        <label>被除数</label>
+        <input type="range" id="dividendSlider" min="10" max="999" value="96">
+        <span class="slider-val"><span id="dividendVal">96</span></span>
+      </div>
+      <div class="slider-row">
+        <label>除数</label>
+        <input type="range" id="divisorSlider" min="2" max="99" value="3">
+        <span class="slider-val"><span id="divisorVal">3</span></span>
+      </div>
+      <div class="calc-display" id="divDisplay">
+        <span>96 ÷ 3 = 32 余 0</span>
+        <span style="font-size:14px;color:var(--dim);margin-top:6px;">验证：32 × 3 + 0 = 96 ✅</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🎯 拖拽排序：竖式计算步骤</h3>
+      <p style="color:var(--dim);font-size:14px;margin-bottom:12px;">把计算 84÷4 的步骤按正确顺序拖拽排列：</p>
+      <div class="step-sorter" id="stepSorter">
+        <div class="step-sort-item" draggable="true" data-order="3">➡️ 步骤B：8÷4=2，写商2在十位</div>
+        <div class="step-sort-item" draggable="true" data-order="1">➡️ 步骤A：从十位8开始，8能被4整除</div>
+        <div class="step-sort-item" draggable="true" data-order="4">➡️ 步骤C：移下个位4，4÷4=1，写商1</div>
+        <div class="step-sort-item" draggable="true" data-order="2">➡️ 步骤D：验证：21×4=84 ✅</div>
+      </div>
+      <button onclick="checkOrder()" style="margin-top:12px;padding:8px 22px;background:var(--primary);color:#fff;border:none;border-radius:16px;font-weight:700;cursor:pointer;">✅ 检查顺序</button>
+      <div id="orderResult" style="margin-top:10px;font-weight:700;font-size:15px;display:none;"></div>
+    </div>
+  </section>
+
+  <!-- 知识图谱 -->
+
+
+  <!-- 互动练习 -->
+  <section class="section" id="quiz" data-slot="80">
+    <div class="section-title">✏️ 互动练习</div>
+    <div class="card">
+      <div class="step-indicator" id="stepInd">第 1 题 / 共 5 题</div>
+      <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+
+      <div class="quiz-step active" id="q1">
+        <div class="quiz-q">1. 84 ÷ 4 = ?</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 不对，4×20=80，84-80=4，还有4÷4=1，所以是21。')">20</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！84÷4：8÷4=2，4÷4=1，商21。')">21</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 不对，4×22=88 > 84，所以商不是22。')">22</button>
+        <div class="quiz-feedback" id="fb1"></div>
+        <button class="quiz-next" onclick="nextStep(1)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q2">
+        <div class="quiz-q">2. 75 ÷ 5 的余数是多少？</div>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！75÷5=15，没有余数，余数为0。')">0</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 75÷5=15整除，余数是0。')">5</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 75÷5=15，余数为0。')">2</button>
+        <div class="quiz-feedback" id="fb2"></div>
+        <button class="quiz-next" onclick="nextStep(2)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q3">
+        <div class="quiz-q">3. 下面哪个算式的商最大？</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 96÷8=12，不是最大的。')">96÷8</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 对！128÷4=32，是最大的。')">128÷4</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 63÷9=7，是最小的。')">63÷9</button>
+        <div class="quiz-feedback" id="fb3"></div>
+        <button class="quiz-next" onclick="nextStep(3)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q4">
+        <div class="quiz-q">4. 验证：商13、除数6、余数3，被除数是多少？</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 用公式：被除数=商×除数+余数=13×6+3=81。')">78</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 是13×6+3=78+3=81，不是80。')">80</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！13×6+3=78+3=81。')">81</button>
+        <div class="quiz-feedback" id="fb4"></div>
+        <button class="quiz-next" onclick="nextStep(4)">下一题 →</button>
+      </div>
+
+      <div class="quiz-step" id="q5">
+        <div class="quiz-q">5. 学校有125名学生分乘客车，每辆车坐8人，需要几辆车？</div>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 125÷8=15余5，最后那5个人也需要一辆车。')">15辆</button>
+        <button class="quiz-option" onclick="answer(this,'correct','✅ 正确！125÷8=15余5，还剩5人也需要一辆，共16辆！')">16辆</button>
+        <button class="quiz-option" onclick="answer(this,'wrong','❌ 17辆太多了，15辆能坐120人，再加1辆坐剩余5人即可。')">17辆</button>
+        <div class="quiz-feedback" id="fb5"></div>
+        <button class="quiz-next" onclick="showResult()">查看结果 🎉</button>
+      </div>
+
+      <div class="quiz-step" id="result">
+        <div style="text-align:center;padding:20px;">
+          <div style="font-size:64px;margin-bottom:16px;">🏆</div>
+          <div style="font-size:24px;font-weight:900;color:var(--primary);" id="scoreText"></div>
+          <button onclick="restartQuiz()" style="margin-top:20px;padding:12px 32px;background:linear-gradient(135deg,var(--primary),var(--orange));color:#fff;border:none;border-radius:20px;font-size:16px;font-weight:900;cursor:pointer;">🔄 再练一次</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+<script>
+// 除法计算器
+const divSlider = document.getElementById('dividendSlider');
+const divisorSlider = document.getElementById('divisorSlider');
+const dividendVal = document.getElementById('dividendVal');
+const divisorVal = document.getElementById('divisorVal');
+const divDisplay = document.getElementById('divDisplay');
+function updateDiv() {
+  const a = parseInt(divSlider.value);
+  const b = parseInt(divisorSlider.value);
+  dividendVal.textContent = a; divisorVal.textContent = b;
+  const q = Math.floor(a/b), r = a % b;
+  divDisplay.innerHTML = `<span>${a} ÷ ${b} = ${q} 余 ${r}</span><span style="font-size:14px;color:var(--dim);margin-top:6px;">验证：${q} × ${b} + ${r} = ${q*b+r} ${q*b+r===a?'✅':'❌'}</span>`;
+}
+divSlider.addEventListener('input', updateDiv);
+divisorSlider.addEventListener('input', updateDiv);
+updateDiv();
+
+// 步骤拖拽排序
+let dragItem = null;
+document.querySelectorAll('.step-sort-item').forEach(item => {
+  item.addEventListener('dragstart', () => { dragItem = item; });
+  item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
+  item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+  item.addEventListener('drop', e => {
+    e.preventDefault(); item.classList.remove('drag-over');
+    if (dragItem && dragItem !== item) {
+      const parent = item.parentNode;
+      const items = [...parent.children];
+      const fromIdx = items.indexOf(dragItem);
+      const toIdx = items.indexOf(item);
+      if (fromIdx < toIdx) parent.insertBefore(dragItem, item.nextSibling);
+      else parent.insertBefore(dragItem, item);
+    }
+  });
+});
+function checkOrder() {
+  const items = document.querySelectorAll('#stepSorter .step-sort-item');
+  const orders = [...items].map(i => parseInt(i.dataset.order));
+  const correct = orders[0]===1 && orders[1]===2 && orders[2]===3 && orders[3]===4;
+  // actually the correct order for 84÷4: A(1st)->B(2nd)->C(3rd)->D(4th)
+  const res = document.getElementById('orderResult');
+  res.style.display='block';
+  // check if sorted ascending
+  const isSorted = orders.every((v,i,a)=>i===0||a[i-1]<=v);
+  res.textContent = isSorted ? '✅ 顺序正确！依次是：A→B→C→D' : '❌ 顺序还不对，再拖拽调整一下！';
+  res.style.color = isSorted ? 'var(--success)' : 'var(--primary)';
+}
+
+// D3 知识图谱
+const kgData = {
+  nodes:[
+    {id:"mul",name:"乘法",type:"prereq"},
+    {id:"div-basic",name:"基础除法",type:"prereq"},
+    {id:"cur",name:"多位数除法",type:"current"},
+    {id:"remainder",name:"余数问题",type:"next"},
+    {id:"fraction",name:"分数初步",type:"next"},
+    {id:"word",name:"综合应用题",type:"next"}
+  ],
+  links:[
+    {source:"mul",target:"cur"},{source:"div-basic",target:"cur"},
+    {source:"cur",target:"remainder"},{source:"cur",target:"fraction"},{source:"cur",target:"word"}
+  ]
+};
+const colorMap={current:"#ff6b6b",prereq:"#51cf66",next:"#4ecdc4"};
+const svgEl=document.getElementById('kg-svg');
+const W=(svgEl.parentElement.offsetWidth||600)-48,H=340;
+svgEl.setAttribute('viewBox',`0 0 ${W} ${H}`);
+const kgSvg=d3.select('#kg-svg');
+kgSvg.append('defs').append('marker').attr('id','arrow').attr('viewBox','0 -5 10 10').attr('refX',22).attr('refY',0).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto').append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#aaa');
+const sim=d3.forceSimulation(kgData.nodes).force('link',d3.forceLink(kgData.links).id(d=>d.id).distance(110)).force('charge',d3.forceManyBody().strength(-280)).force('center',d3.forceCenter(W/2,H/2));
+const linkEl=kgSvg.append('g').selectAll('line').data(kgData.links).join('line').attr('stroke','#ccc').attr('stroke-width',2).attr('marker-end','url(#arrow)');
+const nodeEl=kgSvg.append('g').selectAll('g').data(kgData.nodes).join('g').call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
+nodeEl.append('circle').attr('r',28).attr('fill',d=>colorMap[d.type]).attr('stroke','#fff').attr('stroke-width',3).style('filter','drop-shadow(0 2px 6px rgba(0,0,0,.15))');
+nodeEl.append('text').attr('text-anchor','middle').attr('dy','0.35em').attr('font-size','12px').attr('font-weight','700').attr('fill','#fff').text(d=>d.name);
+sim.on('tick',()=>{linkEl.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);nodeEl.attr('transform',d=>`translate(${d.x},${d.y})`);});
+
+// 互动题
+let score=0,answered=[false,false,false,false,false];
+function answer(btn,type,msg){
+  const step=btn.closest('.quiz-step');const fb=step.querySelector('.quiz-feedback');const nxt=step.querySelector('.quiz-next');
+  if(step.querySelector('.correct')||step.querySelector('.wrong'))return;
+  btn.classList.add(type==='correct'?'correct':'wrong');fb.textContent=msg;fb.className='quiz-feedback show '+(type==='correct'?'ok':'err');nxt.style.display='inline-block';
+  const idx=parseInt(step.id.replace('q',''))-1;if(type==='correct'&&!answered[idx]){score++;answered[idx]=true;}
+}
+function nextStep(n){
+  document.getElementById('q'+n).classList.remove('active');
+  const next=document.getElementById('q'+(n+1));
+  if(next){next.classList.add('active');document.getElementById('stepInd').textContent=`第 ${n+1} 题 / 共 5 题`;document.getElementById('progFill').style.width=(n*20)+'%';}
+}
+function showResult(){
+  document.getElementById('q5').classList.remove('active');document.getElementById('result').classList.add('active');document.getElementById('progFill').style.width='100%';
+  const msgs=['继续加油！','还不错哦！','做得好！','非常棒！','满分！太厉害了！'];
+  document.getElementById('scoreText').textContent=`得了 ${score} / 5 分 — ${msgs[score]}`;
+}
+function restartQuiz(){
+  score=0;answered=[false,false,false,false,false];
+  document.querySelectorAll('.quiz-step').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.quiz-option').forEach(o=>o.classList.remove('correct','wrong'));
+  document.querySelectorAll('.quiz-feedback').forEach(f=>f.className='quiz-feedback');
+  document.querySelectorAll('.quiz-next').forEach(b=>b.style.display='none');
+  document.getElementById('q1').classList.add('active');
+  document.getElementById('stepInd').textContent='第 1 题 / 共 5 题';document.getElementById('progFill').style.width='0%';
+}
+</script>
+
+<ul style="margin:0;padding-left:20px;list-style:none;">
+    <li style="padding:5px 0;font-size:14px;color:#5c1a1a;line-height:1.6;padding-left:0;list-style:none;display:flex;gap:8px;"><span>🔴</span><span><strong>易错：</strong>混淆>和<符号方向，将大于号和小于号用反：注意规范书写和理解概念</span></li><li style="padding:5px 0;font-size:14px;color:#5c1a1a;line-height:1.6;padding-left:0;list-style:none;display:flex;gap:8px;"><span>🔴</span><span><strong>易错：</strong>凑十法拆数错误，如9+6把6拆成1和6：注意规范书写和理解概念</span></li><li style="padding:5px 0;font-size:14px;color:#5c1a1a;line-height:1.6;padding-left:0;list-style:none;display:flex;gap:8px;"><span>🔴</span><span><strong>易错：</strong>破十法时拆错数，如13-5拆成13-3-3=7：注意规范书写和理解概念</span></li>
+  </ul>
+  <p style="margin:10px 0 0;font-size:13px;color:#c92a2a;font-style:italic;">💡 <strong>常见错误</strong>往往就在细节中，仔细检查每一步！</p>
+
+
+<div style="display:grid;gap:12px;">
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #51cf66;">
+      <span style="font-size:11px;color:#1e7e34;font-weight:700;">记忆层</span>
+      <p style="margin-top:6px;font-size:14px;">回忆：今天学了哪些关键词和规则？试着说出来。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #339af0;">
+      <span style="font-size:11px;color:#1971c2;font-weight:700;">理解层</span>
+      <p style="margin-top:6px;font-size:14px;">用自己的话解释今天学的核心概念，不看书能说清楚吗？</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #f59f00;">
+      <span style="font-size:11px;color:#b35900;font-weight:700;">应用层</span>
+      <p style="margin-top:6px;font-size:14px;">用今天的知识解决一个实际问题，或写一个新例子。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #cc5de8;">
+      <span style="font-size:11px;color:#862e9c;font-weight:700;">分析→创造层</span>
+      <p style="margin-top:6px;font-size:14px;">把今天的知识与已有知识联系起来：有什么共同点？有什么区别？能不能自己创造一道新题？</p>
+    </div>
+  </div>
+
+
+<div style="display:grid;gap:10px;">
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🎯 本质：</strong><span style="color:#666;font-size:14px;">这个知识的核心是什么？用一句话概括。</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🔗 联系：</strong><span style="color:#666;font-size:14px;">它和你已知的哪些知识有关联？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🌍 应用：</strong><span style="color:#666;font-size:14px;">在生活中，你在哪里见过这个知识？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>❓ 疑问：</strong><span style="color:#666;font-size:14px;">学完之后，你还有什么不明白的地方？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>💡 洞见：</strong><span style="color:#666;font-size:14px;">学完后，你觉得最有意思或最让你惊讶的是什么？</span></div>
+  </div>
+
+
+<!-- TTS 音频 #TeachAny Edge-TTS -->
+<div class="teachany-audio-intro" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
+  <button onclick="document.getElementById('ta-audio').play()"
+    style="background:linear-gradient(135deg,#ff6b6b,#ee5a24);color:#fff;border:none;
+    width:52px;height:52px;border-radius:50%;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 16px rgba(255,107,107,0.4);display:flex;align-items:center;justify-content:center;"
+    title="播放课程介绍">🔊</button>
+  <audio id="ta-audio" src="audio/intro.mp3" preload="auto"></audio>
+</div>
+
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "多位数除法",
+  subject: "math",
+  grade: 4,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴脚本（左下角 FAB · 首次点击引导配置 API） -->
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+
+<!-- v7.20 标准连续音频配置（apply-standard-modules 自动补齐） -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "s01",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-multi-digit-divide/s01.mp3",
+    "label": "讲解 1"
+  },
+  {
+    "id": "s02",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-multi-digit-divide/s02.mp3",
+    "label": "讲解 2"
+  },
+  {
+    "id": "s03",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-multi-digit-divide/s03.mp3",
+    "label": "讲解 3"
+  },
+  {
+    "id": "s04",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-multi-digit-divide/s04.mp3",
+    "label": "讲解 4"
+  },
+  {
+    "id": "s05",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-multi-digit-divide/s05.mp3",
+    "label": "讲解 5"
+  },
+  {
+    "id": "s06",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-multi-digit-divide/s06.mp3",
+    "label": "讲解 6"
+  },
+  {
+    "id": "s07",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-elem-multi-digit-divide/s07.mp3",
+    "label": "讲解 7"
+  }
+]
+  </script>
+</div>
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+
+<!-- teachany-enhanced -->
+
+<!-- teachany-upgrade-v2 -->
+<!-- upgrade topic: 多位数除法 - TeachAny 互动课件 -->
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="B">
+<h3>选择题 1</h3><p>384本图书平均分给8个小组，每个小组分到多少本？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="计算错误，未正确进行除法运算。">A. 46</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="384除以8等于48，因此每个小组分到48本图书。">B. 48</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="计算错误，未正确进行除法运算。">C. 50</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="计算错误，未正确进行除法运算。">D. 52</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 2</h3><p>如果图书数量增加到400本，每个小组分到多少本？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="计算错误，未正确进行除法运算。">A. 48</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="400除以8等于50，因此每个小组分到50本图书。">B. 50</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="计算错误，未正确进行除法运算。">C. 52</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="计算错误，未正确进行除法运算。">D. 54</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 3</h3><p>如果图书数量增加到385本，每个小组分到多少本？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="未考虑余数。">A. 48</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="385除以8等于48余1，因此每个小组分到48本，还剩余1本。">B. 48余1</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="未正确处理余数。">C. 49</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="余数处理错误。">D. 49余1</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>384本图书平均分给8个小组，每个小组分到____本。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>48</p><p>384除以8等于48，因此每个小组分到48本图书。</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>如果图书数量增加到385本，每个小组分到____本，还剩余____本。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>48,1</p><p>385除以8等于48余1，因此每个小组分到48本，还剩余1本。</p></details></div>
+</section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 余数大于除数</h3><p>✅ 重新试商，增大商数</p><p>💡 估商时未考虑乘积上限</p></div><div class="tu-q"><h3>❌ 漏写商中间的0</h3><p>✅ 用占位符标记数位</p><p>💡 未理解数位对齐原则</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>一商二乘三减四比，余数小了再落位</p><p><strong>类比：</strong>像分披萨，先切大块再调整</p></div></section>
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
+  <div data-teachany-tutor-card></div>
+</section>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "basic-divide", "name": "basic-divide"}, {"id": "multi-digit-multiply", "name": "multi-digit-multiply"}], "current": {"id": "math-e-multi-digit-division", "name": "多位数除法", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+
+<script id="mathelem-depth-js">
+function mathelemDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+(function () {
+  function draw(cv) {
+    var kind = cv.getAttribute('data-kind');
+    var ctx = cv.getContext('2d');
+    var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = '#94a3b8'; ctx.fillStyle = '#e5e7eb';
+    ctx.lineWidth = 2; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    if (kind === 'numberline') {
+      var y = H / 2, x0 = 40, x1 = W - 40, n = 10;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+      for (var i = 0; i <= n; i++) {
+        var x = x0 + (x1 - x0) * i / n;
+        ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8); ctx.stroke();
+        ctx.fillText(String(i), x, y + 26);
+      }
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(x0 + (x1 - x0) * 0.7, y, 6, 0, Math.PI * 2); ctx.fill();
+    } else if (kind === 'protractor') {
+      var cx = W / 2, cy = H - 30, r = Math.min(W, H) - 60;
+      ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI); ctx.stroke();
+      for (var a = 0; a <= 180; a += 30) {
+        var rad = Math.PI + a * Math.PI / 180;
+        ctx.beginPath();
+        ctx.moveTo(cx + r * Math.cos(rad), cy + r * Math.sin(rad));
+        ctx.lineTo(cx + (r - 12) * Math.cos(rad), cy + (r - 12) * Math.sin(rad));
+        ctx.stroke();
+        ctx.fillText(String(a), cx + (r + 14) * Math.cos(rad), cy + (r + 14) * Math.sin(rad) + 4);
+      }
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r, cy); ctx.stroke();
+      var ar = Math.PI + 60 * Math.PI / 180;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * Math.cos(ar), cy + r * Math.sin(ar)); ctx.stroke();
+    } else if (kind === 'grid') {
+      var g = 28, cols = Math.floor((W - 40) / g), rows = Math.floor((H - 40) / g);
+      ctx.strokeStyle = 'rgba(148,163,184,.4)';
+      for (var c = 0; c <= cols; c++) { ctx.beginPath(); ctx.moveTo(20 + c * g, 20); ctx.lineTo(20 + c * g, 20 + rows * g); ctx.stroke(); }
+      for (var rr = 0; rr <= rows; rr++) { ctx.beginPath(); ctx.moveTo(20, 20 + rr * g); ctx.lineTo(20 + cols * g, 20 + rr * g); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(56,189,248,.25)'; ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      ctx.fillRect(20, 20, 5 * g, 3 * g); ctx.strokeRect(20, 20, 5 * g, 3 * g);
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText('长5 × 宽3 = 15 个方格', 20 + 2.5 * g, 20 + 3 * g + 20);
+    } else if (kind === 'solid') {
+      // 圆柱
+      var lx = W * 0.28, ry = 18, rx = 44, top = 40, bot = H - 50;
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(lx, top, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(lx - rx, top); ctx.lineTo(lx - rx, bot); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(lx + rx, top); ctx.lineTo(lx + rx, bot); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(lx, bot, rx, ry, 0, 0, Math.PI); ctx.stroke();
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText('圆柱', lx, bot + 26);
+      // 圆锥
+      var cx2 = W * 0.72;
+      ctx.strokeStyle = '#f472b6';
+      ctx.beginPath(); ctx.ellipse(cx2, bot, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx2 - rx, bot); ctx.lineTo(cx2, top); ctx.lineTo(cx2 + rx, bot); ctx.stroke();
+      ctx.fillText('圆锥', cx2, bot + 26);
+    } else if (kind === 'linechart') {
+      var ox = 40, oy = H - 36, ax = W - 24, ay = 24;
+      ctx.beginPath(); ctx.moveTo(ox, ay); ctx.lineTo(ox, oy); ctx.lineTo(ax, oy); ctx.stroke();
+      var data = [3, 5, 4, 7, 9, 8, 11], m = data.length;
+      ctx.strokeStyle = '#38bdf8'; ctx.fillStyle = '#38bdf8'; ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (var k = 0; k < m; k++) {
+        var px = ox + (ax - ox) * k / (m - 1);
+        var py = oy - (oy - ay) * data[k] / 12;
+        if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      for (var k2 = 0; k2 < m; k2++) {
+        var px2 = ox + (ax - ox) * k2 / (m - 1);
+        var py2 = oy - (oy - ay) * data[k2] / 12;
+        ctx.beginPath(); ctx.arc(px2, py2, 4, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (kind === 'pie') {
+      var pcx = W / 2, pcy = H / 2, pr = Math.min(W, H) / 2 - 28;
+      var slices = [0.35, 0.25, 0.20, 0.20], colors = ['#38bdf8', '#f472b6', '#fbbf24', '#34d399'];
+      var start = -Math.PI / 2;
+      for (var si = 0; si < slices.length; si++) {
+        var ang = slices[si] * Math.PI * 2;
+        ctx.beginPath(); ctx.moveTo(pcx, pcy);
+        ctx.arc(pcx, pcy, pr, start, start + ang); ctx.closePath();
+        ctx.fillStyle = colors[si]; ctx.fill();
+        ctx.strokeStyle = '#0b1628'; ctx.lineWidth = 2; ctx.stroke();
+        start += ang;
+      }
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText('部分占总体', pcx, H - 12);
+    } else if (kind === 'bars') {
+      var bdata = [5, 3, 7, 4], labels = ['甲', '乙', '丙', '丁'];
+      var box = 40, boy = H - 36, bax = W - 24, bay = 28, bw = 48, gap = 36;
+      ctx.strokeStyle = '#94a3b8';
+      ctx.beginPath(); ctx.moveTo(box, bay); ctx.lineTo(box, boy); ctx.lineTo(bax, boy); ctx.stroke();
+      for (var bi = 0; bi < bdata.length; bi++) {
+        var bx = box + 30 + bi * (bw + gap);
+        var bh = (boy - bay) * bdata[bi] / 8;
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(bx, boy - bh, bw, bh);
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillText(labels[bi], bx + bw / 2, boy + 18);
+        ctx.fillText(String(bdata[bi]), bx + bw / 2, boy - bh - 8);
+      }
+    } else if (kind === 'circle') {
+      var ccx = W / 2, ccy = H / 2, cr = Math.min(W, H) / 2 - 36;
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ccx, ccy, cr, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ccx, ccy); ctx.lineTo(ccx + cr, ccy); ctx.stroke();
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillText('r', ccx + cr / 2, ccy - 8);
+      ctx.fillText('S = πr²', ccx, ccy + cr + 22);
+      ctx.beginPath(); ctx.arc(ccx, ccy, 3, 0, Math.PI * 2); ctx.fill();
+    } else if (kind === 'shapes') {
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      ctx.strokeRect(30, 50, 100, 70);
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText('长方形', 80, 140);
+      ctx.strokeRect(160, 50, 70, 70);
+      ctx.fillText('正方形', 195, 140);
+      ctx.beginPath(); ctx.moveTo(280, 120); ctx.lineTo(320, 50); ctx.lineTo(360, 120); ctx.closePath(); ctx.stroke();
+      ctx.fillText('三角形', 320, 140);
+      ctx.beginPath(); ctx.arc(450, 85, 40, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillText('圆', 450, 140);
+    }
+  }
+  function init() {
+    document.querySelectorAll('canvas.me-visual-canvas').forEach(draw);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：多位数除法</h2><div data-teachany-kg="math-e-multi-digit-division"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+</body>
+</html>

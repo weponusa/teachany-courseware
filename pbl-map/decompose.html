@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>K12 子 PBL 拆解目录 — PBL Map</title>
+  <link rel="stylesheet" href="./assets/css/pblmap.css">
+  <style>
+    .dec-hero { padding: 28px 24px; border-bottom: 1px solid var(--border); }
+    .dec-hero h2 { font-size: 24px; margin-bottom: 8px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; align-items: center; }
+    .toolbar select, .toolbar input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; }
+    .band-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .band-tab { padding: 6px 14px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); background: transparent; color: var(--dim); cursor: pointer; }
+    .band-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .grade-section { margin-bottom: 28px; }
+    .grade-head { font-size: 15px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .proj-grid { display: grid; gap: 10px; }
+    .proj-card { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: baseline; }
+    .proj-card:hover { border-color: var(--primary); }
+    .proj-card h4 { font-size: 13px; margin: 0; }
+    .proj-meta { font-size: 11px; color: var(--dim); }
+    .proj-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .proj-actions a { font-size: 11px; color: var(--primary); }
+    .badge-rich { font-size: 10px; padding: 2px 6px; border-radius: 999px; background: rgba(16,185,129,0.15); color: #6ee7b7; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 16px; }
+    .summary-cell { padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+    .summary-cell .n { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .summary-cell .l { font-size: 11px; color: var(--dim); }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <h1>PBL Map · 拆解目录</h1>
+    <nav class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="catalog.html">覆盖包</a>
+      <a href="decompose.html" class="active">拆解目录</a>
+      <a href="demo.html?project=g5-spring-p2">样例演示</a>
+    </nav>
+  </header>
+
+  <section class="dec-hero">
+    <h2>K12 全部子 PBL 拆解</h2>
+    <p style="color:var(--dim);font-size:14px;max-width:760px">
+      G1–G12 共 <strong id="totalProjects">104</strong> 个子项目拆解材料。
+      每份含：TeachAny goal · 五步方法 · 节点路径 · 产出蓝图 · 一键跳转拆解。
+    </p>
+    <div class="summary-grid" id="summaryGrid"></div>
+  </section>
+
+  <main class="container">
+    <div class="toolbar">
+      <div class="band-tabs" id="bandTabs">
+        <button type="button" class="band-tab active" data-band="all">全部</button>
+        <button type="button" class="band-tab" data-band="primary">小学</button>
+        <button type="button" class="band-tab" data-band="junior">初中</button>
+        <button type="button" class="band-tab" data-band="senior">高中</button>
+      </div>
+      <select id="gradeFilter">
+        <option value="">全部年级</option>
+      </select>
+      <input type="search" id="searchInput" placeholder="搜索子 PBL…" style="min-width:200px" />
+    </div>
+    <div id="projectSections"></div>
+  </main>
+
+  <script src="./scripts/pbl-decompose-loader.js"></script>
+  <script>
+    let index = null;
+    let activeBand = 'all';
+
+    async function load() {
+      index = await PBLDecomposeLoader.loadIndex();
+      document.getElementById('totalProjects').textContent = index.summary.totalProjects;
+      renderSummary();
+      renderGradeFilter();
+      renderSections();
+      bindEvents();
+    }
+
+    function renderSummary() {
+      const s = index.summary;
+      document.getElementById('summaryGrid').innerHTML = `
+        <div class="summary-cell"><div class="n">${s.totalProjects}</div><div class="l">子 PBL</div></div>
+        <div class="summary-cell"><div class="n">${s.semesterPacks}</div><div class="l">学期包</div></div>
+        <div class="summary-cell"><div class="n">${s.byGradeBand.primary}</div><div class="l">小学</div></div>
+        <div class="summary-cell"><div class="n">${s.byGradeBand.junior}</div><div class="l">初中</div></div>
+        <div class="summary-cell"><div class="n">${s.byGradeBand.senior}</div><div class="l">高中</div></div>
+      `;
+    }
+
+    function renderGradeFilter() {
+      const sel = document.getElementById('gradeFilter');
+      for (let g = 1; g <= 12; g++) {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = `${g} 年级`;
+        sel.appendChild(opt);
+      }
+    }
+
+    function filteredProjects() {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const grade = document.getElementById('gradeFilter').value;
+      return (index.projects || []).filter(p => {
+        if (activeBand !== 'all' && p.gradeBand !== activeBand) return false;
+        if (grade && String(p.grade) !== grade) return false;
+        if (!q) return true;
+        const hay = [p.title, p.themeChain, p.drivingQuestion, p.id].join(' ').toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    function renderSections() {
+      const projects = filteredProjects();
+      const byGrade = {};
+      projects.forEach(p => {
+        if (!byGrade[p.grade]) byGrade[p.grade] = [];
+        byGrade[p.grade].push(p);
+      });
+      const container = document.getElementById('projectSections');
+      if (!projects.length) {
+        container.innerHTML = '<div class="panel">无匹配项目</div>';
+        return;
+      }
+      container.innerHTML = Object.keys(byGrade).sort((a, b) => a - b).map(g => {
+        const items = byGrade[g].map(p => `
+          <div class="proj-card">
+            <div>
+              <h4>${p.title} ${p.richDemo ? '<span class="badge-rich">教研样例</span>' : ''}</h4>
+              <div class="proj-meta">${p.semester === 'autumn' ? '上' : '下'}学期 · ${p.weeks} 周 · M${p.stats?.mandatory || 0} C${p.stats?.certified || 0} · ${p.themeChain}</div>
+              <div class="proj-meta" style="margin-top:2px">${p.drivingQuestion}</div>
+            </div>
+            <div class="proj-actions">
+              <a href="demo.html?project=${p.id}">拆解演示</a>
+              <a href="pack.html?id=${p.packId}">覆盖包</a>
+              ${p.planRef ? `<a href="plan.html?id=${p.planRef}">策划包</a>` : ''}
+            </div>
+          </div>
+        `).join('');
+        return `<div class="grade-section"><div class="grade-head">${g} 年级 · ${byGrade[g].length} 个子 PBL</div><div class="proj-grid">${items}</div></div>`;
+      }).join('');
+    }
+
+    function bindEvents() {
+      document.getElementById('bandTabs').addEventListener('click', e => {
+        const btn = e.target.closest('.band-tab');
+        if (!btn) return;
+        document.querySelectorAll('.band-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeBand = btn.dataset.band;
+        renderSections();
+      });
+      document.getElementById('gradeFilter').addEventListener('change', renderSections);
+      document.getElementById('searchInput').addEventListener('input', renderSections);
+    }
+
+    load().catch(err => {
+      document.getElementById('projectSections').innerHTML =
+        `<div class="panel">加载失败：${err.message}<br>请运行 npm run build:decompose</div>`;
+    });
+  </script>
+</body>
+</html>

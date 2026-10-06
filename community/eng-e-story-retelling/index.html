@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="teachany-node" content="eng-e-story-retelling">
+<meta name="teachany-subject" content="english">
+<meta name="teachany-domain" content="elementary-english">
+<meta name="teachany-grade" content="4">
+<meta name="teachany-difficulty" content="2">
+<meta name="teachany-version" content="7.21.0">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-author" content="weponusa">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>故事复述 · 五年级英语 · Story Retelling Quest · 小学 · 英语 · G4 · TeachAny v6.1</title>
+<style>
+:root{--accent:#60a5fa;--bg:#0b1120;--card:#15233f;--muted:#8aa0c0;--primary:#60a5fa;--secondary:#818cf8;--success:#4ade80;--text:#e6edf7;--radius:12px;--shadow:0 4px 20px rgba(0,0,0,.3)}
+
+  .screen{display:none!important;}
+  .screen.active{display:flex!important;}
+
+:root {
+  --bg: #fffbf0;
+  --primary: #ff6b6b;
+  --secondary: #4ecdc4;
+  --accent: #ffe66d;
+  --card: #fff;
+  --text: #2d3436;
+  --muted: #636e72;
+  --success: #00b894;
+  --radius: 16px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', 'PingFang SC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+#hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #ff6b6b18 0%, #4ecdc418 50%, #ffe66d18 100%); }
+.hero-icon { font-size: 5rem; animation: bear-wave 2s ease-in-out infinite; }
+@keyframes bear-wave { 0%,100%{transform:rotate(-10deg)} 50%{transform:rotate(10deg)} }
+.hero-title { font-size: clamp(2rem,6vw,3rem); font-weight: 900; color: var(--primary); margin: 16px 0 8px; text-align: center; text-shadow: 3px 3px 0 #fff; }
+.hero-sub { color: var(--muted); font-size: 1.1rem; margin-bottom: 24px; text-align: center; }
+.hero-tags { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 28px; }
+.tag { background: var(--card); border-radius: 20px; padding: 6px 14px; font-size: 0.85rem; font-weight: 600; box-shadow: var(--shadow); }
+.tag-p { border: 2px solid var(--primary); color: var(--primary); }
+.tag-s { border: 2px solid var(--secondary); color: var(--secondary); }
+.tag-x { border: 2px solid var(--accent); color: #b7950b; }
+.btn-go { background: linear-gradient(135deg, var(--primary), #ff8e8e); color: #fff; border: none; border-radius: 50px; padding: 14px 44px; font-size: 1.1rem; font-weight: 700; cursor: pointer; box-shadow: 0 6px 20px rgba(255,107,107,0.4); transition: all 0.3s; }
+.btn-go:hover { transform: translateY(-3px) scale(1.05); }
+
+#topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 999; background: var(--card); box-shadow: 0 2px 10px rgba(0,0,0,0.08); padding: 8px 20px; display: none; align-items: center; gap: 12px; }
+#topbar.show { display: flex; }
+.tb-icon { font-size: 1.4rem; }
+.tb-prog { flex: 1; }
+.tb-label { font-size: 0.75rem; color: var(--muted); }
+.tb-bar { background: #eee; border-radius: 8px; height: 8px; margin-top: 3px; overflow: hidden; }
+.tb-fill { background: linear-gradient(90deg, var(--primary), var(--accent)); height: 100%; border-radius: 8px; transition: width 0.4s; }
+.tb-xp { font-weight: 700; color: var(--primary); font-size: 0.85rem; white-space: nowrap; }
+.tb-stars { font-size: 1.1rem; }
+
+.screen { min-height: 100vh; padding: 76px 20px 40px; max-width: 880px; margin: 0 auto; }
+
+.s-title { font-size: 1.7rem; font-weight: 800; color: var(--primary); margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+.s-desc { color: var(--muted); margin-bottom: 28px; }
+
+/* Story display */
+.story-panel { background: var(--card); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); margin-bottom: 24px; border-top: 4px solid var(--secondary); }
+.story-panel h3 { color: var(--secondary); font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.story-panel p { line-height: 1.9; margin-bottom: 10px; font-size: 0.98rem; }
+.highlight { background: linear-gradient(135deg, #ffe66d88, #ffd32a88); border-radius: 4px; padding: 1px 4px; font-weight: 600; cursor: pointer; }
+
+/* Sort drag */
+.sort-area { display: grid; gap: 10px; margin-bottom: 20px; }
+.sort-item { background: var(--card); border: 2px solid #e0e0e0; border-radius: 12px; padding: 14px 18px; cursor: grab; display: flex; align-items: center; gap: 12px; font-size: 0.95rem; transition: all 0.2s; user-select: none; }
+.sort-item:hover { border-color: var(--secondary); box-shadow: 0 4px 12px rgba(78,205,196,0.2); }
+.sort-item.dragging { opacity: 0.5; border-color: var(--primary); }
+.sort-item.drag-over { border-color: var(--primary); background: #ff6b6b11; transform: scale(1.02); }
+.sort-num { background: var(--primary); color: #fff; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+.sort-icon { font-size: 1.2rem; }
+.sort-correct { border-color: var(--success) !important; background: #00b89411 !important; }
+.sort-wrong { border-color: var(--primary) !important; background: #ff6b6b11 !important; animation: wobble 0.4s ease; }
+@keyframes wobble { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+/* Character cards */
+.char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.char-card { background: var(--card); border-radius: var(--radius); padding: 16px; text-align: center; box-shadow: var(--shadow); cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+.char-card:hover { border-color: var(--secondary); transform: translateY(-3px); }
+.char-card.selected { border-color: var(--primary); background: #ff6b6b0f; }
+.char-emoji { font-size: 2.5rem; margin-bottom: 8px; }
+.char-name { font-weight: 700; font-size: 0.9rem; }
+.char-role { font-size: 0.75rem; color: var(--muted); }
+
+/* Retell textarea */
+.retell-area { width: 100%; min-height: 120px; border: 2px solid #e0e0e0; border-radius: 12px; padding: 14px; font-size: 0.95rem; font-family: inherit; resize: vertical; outline: none; color: var(--text); transition: border-color 0.2s; background: var(--card); }
+.retell-area:focus { border-color: var(--secondary); }
+.sentence-starters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.starter-chip { background: linear-gradient(135deg, #4ecdc422, #4ecdc411); border: 1.5px solid var(--secondary); border-radius: 20px; padding: 5px 12px; font-size: 0.82rem; font-weight: 600; color: #0d8a82; cursor: pointer; transition: all 0.2s; }
+.starter-chip:hover { background: var(--secondary); color: #fff; }
+
+/* Q cards */
+.q-card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.q-card h4 { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+.opts { display: grid; gap: 8px; }
+.opt { background: var(--bg); border: 2px solid #e0e0e0; border-radius: 10px; padding: 11px 15px; text-align: left; cursor: pointer; font-size: 0.93rem; transition: all 0.2s; color: var(--text); width: 100%; }
+.opt:hover { border-color: var(--secondary); background: #4ecdc411; }
+.opt.ok { border-color: var(--success); background: #00b89418; color: var(--success); font-weight: 700; }
+.opt.no { border-color: var(--primary); background: #ff6b6b18; color: var(--primary); }
+.opt:disabled { cursor: not-allowed; }
+.q-fb { margin-top: 8px; padding: 9px 12px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; display: none; }
+.q-fb.show { display: block; }
+.q-fb.ok { background: #00b89418; color: var(--success); }
+.q-fb.no { background: #ff6b6b18; color: var(--primary); }
+
+/* Timeline */
+.timeline { position: relative; padding-left: 30px; }
+.timeline::before { content:''; position:absolute; left:10px; top:0; bottom:0; width:3px; background:linear-gradient(180deg,var(--primary),var(--secondary),var(--accent)); border-radius:2px; }
+.tl-item { position: relative; margin-bottom: 20px; }
+.tl-dot { position: absolute; left: -25px; top: 4px; width: 14px; height: 14px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--primary); }
+.tl-content { background: var(--card); border-radius: 12px; padding: 14px 18px; box-shadow: var(--shadow); font-size: 0.92rem; }
+.tl-content strong { color: var(--primary); }
+
+/* Boss */
+.boss-wrap { text-align: center; }
+.boss-face { font-size: 5rem; animation: boss-anim 1.5s ease-in-out infinite; }
+@keyframes boss-anim { 0%,100%{transform:rotate(-5deg) scale(1)} 50%{transform:rotate(5deg) scale(1.1)} }
+.boss-title { font-size: 1.3rem; font-weight: 800; color: var(--primary); margin: 10px 0; }
+.hp-wrap { margin: 10px 0 20px; }
+.hp-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+.hp-bar { background: #eee; border-radius: 20px; height: 16px; overflow: hidden; }
+.hp-fill { background: linear-gradient(90deg,#ff6b6b,#ee5a24); height:100%; border-radius:20px; transition:width 0.5s; }
+
+/* Report */
+.report-hero { background: linear-gradient(135deg, #ff6b6b22, #4ecdc422); border-radius: var(--radius); padding: 30px; text-align: center; margin-bottom: 20px; }
+.rep-score { font-size: 4rem; font-weight: 900; color: var(--primary); }
+.rep-stars { font-size: 2.5rem; margin: 8px 0; }
+.rep-msg { font-size: 1.1rem; color: var(--muted); }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap: 10px; }
+.ach-item { background: var(--card); border-radius: 12px; padding: 14px; text-align: center; box-shadow: var(--shadow); border: 2px solid #eee; }
+.ach-item.got { border-color: var(--accent); }
+.ach-item.got .ai { opacity: 1; }
+.ai { font-size: 1.8rem; opacity: 0.3; }
+.an { font-size: 0.78rem; font-weight: 700; margin-top: 4px; }
+.ad { font-size: 0.7rem; color: var(--muted); }
+
+/* Ext */
+.ext-grid { display: grid; gap: 14px; }
+.ext-item { background: var(--card); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); display: flex; gap: 14px; cursor: pointer; transition: all 0.2s; }
+.ext-item:hover { transform: translateY(-2px); }
+.ext-ei { font-size: 1.8rem; }
+.ext-it h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 3px; }
+.ext-it p { font-size: 0.82rem; color: var(--muted); }
+
+.nav { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 28px; }
+.btn { padding: 12px 26px; border-radius: 50px; border: none; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-p { background: linear-gradient(135deg,var(--primary),#ff8e8e); color:#fff; box-shadow:0 4px 15px rgba(255,107,107,0.35); }
+.btn-s { background: linear-gradient(135deg,var(--secondary),#7be0d8); color:#fff; box-shadow:0 4px 15px rgba(78,205,196,0.35); }
+.btn-a { background: linear-gradient(135deg,var(--accent),#ffd32a); color:#7d6608; box-shadow:0 4px 15px rgba(255,230,109,0.4); }
+.btn:hover { transform: translateY(-2px) scale(1.03); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.toast { position:fixed; top:76px; right:20px; background:var(--card); border-radius:12px; padding:12px 18px; box-shadow:0 8px 25px rgba(0,0,0,0.12); font-weight:700; font-size:0.9rem; z-index:2000; transform:translateX(150px); transition:transform 0.35s; display:flex; align-items:center; gap:8px; border-left:4px solid var(--success); }
+.toast.show { transform:translateX(0); }
+.toast.xp { border-left-color:var(--accent); }
+.toast.ach { border-left-color:var(--primary); }
+.lv-badge { background:linear-gradient(135deg,var(--primary),#ff8e8e); color:#fff; border-radius:50%; width:46px; height:46px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; font-weight:900; box-shadow:0 4px 12px rgba(255,107,107,0.35); }
+.xp-chip { background:linear-gradient(135deg,var(--accent),#ffd32a); border-radius:8px; padding:4px 10px; font-size:0.8rem; font-weight:700; color:#7d6608; }
+.lv-row { display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+
+    /* ═══ PPT 播放模式（v6.1 轻量注入） ═══ */
+    body.play-mode { overflow: hidden; }
+    body.play-mode .slide-wrapper {
+      scroll-snap-type: y mandatory;
+      overflow-y: auto;
+      height: 100dvh;
+      -webkit-overflow-scrolling: touch;
+    }
+    .slide-wrapper { position: relative; }
+    .slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary, #3b82f6), var(--secondary, #06b6d4));
+      z-index: 201; transition: width 0.3s; border-radius: 0 2px 2px 0; pointer-events: none; }
+    .slide-toolbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 20px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border, #e5e7eb);
+      transform: translateY(100%); transition: transform 0.3s ease; }
+    body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+    .toolbar-btn { background: none; border: none; cursor: pointer; padding: 8px;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary, #6b7280); transition: all 0.2s; }
+    .toolbar-btn:hover { background: var(--border, #e5e7eb); color: var(--text, #1f2937); }
+    .toolbar-btn.active { color: var(--primary, #3b82f6); }
+    .toolbar-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2;
+      fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .toolbar-progress { flex: 1; max-width: 200px; height: 4px;
+      background: var(--border, #e5e7eb); border-radius: 2px; cursor: pointer; position: relative; }
+    .toolbar-progress-fill { height: 100%; background: var(--primary, #3b82f6);
+      border-radius: 2px; transition: width 0.3s; }
+    .toolbar-page-info { font-size: 12px; color: var(--text-secondary, #6b7280);
+      min-width: 50px; text-align: center; }
+    .play-mode-fab { position: fixed; bottom: 80px; right: 20px; z-index: 101;
+      width: 48px; height: 48px; border-radius: 50%; border: none;
+      background: var(--primary, #3b82f6); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3); transition: all 0.3s; }
+    .play-mode-fab:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(59,130,246,0.4); }
+    .play-mode-fab svg { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+    .slide-sidenav { position: fixed; right: 12px; top: 50%; transform: translateY(-50%);
+      z-index: 90; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+      opacity: 0; transition: opacity 0.3s; max-height: 70vh; overflow-y: auto;
+      padding: 8px 4px; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(12px);
+      border: 1px solid var(--border, #e5e7eb); }
+    .slide-sidenav::-webkit-scrollbar { display: none; }
+    body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+    .sidenav-dot { width: 24px; height: 4px; border-radius: 2px;
+      background: var(--border, #e5e7eb); border: none; cursor: pointer;
+      transition: all 0.2s; padding: 0; }
+    .sidenav-dot.active { width: 32px; background: var(--primary, #3b82f6); }
+    .sidenav-dot:hover { background: var(--primary, #3b82f6); opacity: 0.7; }
+    .sidenav-counter { font-size: 10px; color: var(--text-secondary, #6b7280);
+      text-align: center; margin-bottom: 4px; }
+    /* 隐藏旧版 tab 导航（播放模式下） */
+    body.play-mode #main-nav, body.play-mode nav[id="nav"], body.play-mode nav.nav { display: none !important; }
+    @media (max-width:768px) {
+      .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+      .sidenav-dot { width: 20px; height: 3px; }
+    }
+
+  </style>
+<meta name="teachany-prerequisites" content="phonics">
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+
+
+<style id="enge-depth-css">
+.enge-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.enge-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.28)}
+.enge-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.enge-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.enge-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.enge-depth .enge-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.enge-depth .enge-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+<style id="ta-tu-opt-css">
+/* TeachAny 标准随堂题样式（主题自适应：中性半透明底 + 继承文字色） */
+.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(127,127,127,.10)}
+.tu-q h3{font-size:1.05rem;margin:0 0 6px}
+.tu-opts{display:grid;gap:10px;margin-top:10px}
+.tu-opt{display:block;width:100%;text-align:left;padding:12px 14px;border-radius:10px;
+  border:1px solid rgba(127,127,127,.40);background:rgba(127,127,127,.10);
+  color:inherit;font:inherit;font-size:15px;line-height:1.6;cursor:pointer;
+  transition:border-color .15s,background .15s}
+.tu-opt:hover{border-color:rgba(96,165,250,.90);background:rgba(96,165,250,.12)}
+.tu-opt.is-right,.tu-opt.correct{border-color:#10b981;background:rgba(16,185,129,.18)}
+.tu-opt.is-wrong,.tu-opt.wrong{border-color:#ef4444;background:rgba(239,68,68,.15)}
+.tu-opt:disabled{cursor:default}
+.tu-fb{margin-top:12px;padding:12px;border-radius:10px;border:1px solid rgba(245,158,11,.40);
+  background:rgba(245,158,11,.12);line-height:1.7}
+.tu-inquiry label{display:block;margin:10px 0}
+.tu-inquiry textarea{width:100%;border-radius:10px;padding:10px;background:rgba(127,127,127,.10);
+  color:inherit;border:1px solid rgba(127,127,127,.35);font:inherit;box-sizing:border-box}
+.tu-save{margin-top:10px;padding:10px 16px;border-radius:10px;border:1px solid rgba(127,127,127,.40);
+  background:rgba(127,127,127,.12);color:inherit;cursor:pointer;font:inherit}
+</style>
+</head>
+<body>
+<nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;;color:#334155""><a href="#nav">📑 知识图谱</a><a href="#hero">🤝 AI 学伴</a><a href="#topbar">📚 课程内容</a></nav>
+
+
+<!-- teachany-hero-notext -->
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<!-- HERO -->
+<div id="hero" class="screen active"><div class="hero-icon">🐻📖</div>
+  <h1 class="hero-title">Story Retelling Quest</h1>
+  <p class="hero-sub">五年级英语故事复述 · 和熊熊讲故事！</p>
+  <div class="hero-tags">
+    <span class="tag tag-p">🎓 Grade 5</span>
+    <span class="tag tag-s">📖 Story Retelling</span>
+    <span class="tag tag-x">⭐ 480 XP</span>
+  </div>
+  <button class="btn-go" onclick="go()">🎬 开始故事！</button>
+  <p style="margin-top:20px;color:var(--muted);font-size:0.88rem">Story sequencing · Characters · Retelling · 5W1H</p>
+</div>
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/eng-e-story-retelling-hero.png" alt="故事复述 · 五年级英语 · Story Retelling Quest知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">故事复述 · 五年级</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出故事中的关键事件顺序</p></div><div class="tu-q"><p>🎯 能判断角色对话中的5W1H要素</p></div><div class="tu-q"><p>🎯 能分析角色行为与故事结果的关联</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么故事里的小狗最后跑掉了？</p></div><div class="tu-q"><p>❓ 怎么记住故事里这么多人的名字？</p></div><div class="tu-q"><p>❓ 老师，我复述时老忘记时间顺序怎么办？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="apply" data-scaffold="full" id="pretest" data-slot="20"><h2>📝 前测</h2><div class="tu-q" data-answer="C"><h3>前测题 1</h3><p>复述故事应该最先说：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="错选B可能因过度关注趣味性">A.故事结局</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="错选B可能因过度关注趣味性">B.最有趣的部分</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="错选B可能因过度关注趣味性">C.故事开头</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="错选B可能因过度关注趣味性">D.角色长相</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>前测题 2</h3><p>5W1H不包括：</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="错选D可能混淆疑问词">A.Who</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="错选D可能混淆疑问词">B.Which</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="错选D可能混淆疑问词">C.How</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="错选D可能混淆疑问词">D.When</button></div><div class="tu-fb" hidden></div></div></section>
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section enge-depth core-knowledge-module text-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>故事复述</h2>
+      <p>故事复述按时间顺序讲：开头（谁/哪）→中间（发生什么）→结尾（结果）。用 First, Then, Finally 连接，尽量用学过的短句。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>故事复述三步法结构图：开头-中间-结尾的时间顺序组织与连接词使用</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar-s2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><pattern id="grid-s2" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(100,116,139,0.1)" stroke-width="0.5"/></pattern></defs><rect width="640" height="420" fill="#0a1520"/><rect width="640" height="420" fill="url(#grid-s2)"/><rect x="20" y="20" width="600" height="380" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><text x="320" y="50" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">故事复述三步法<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></text><rect x="60" y="80" width="140" height="100" rx="12" fill="url(#blueGrad-s2)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="130" y="105" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">开头<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></text><text x="130" y="125" text-anchor="middle" fill="#e2e8f0" font-size="12">Who / Where<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="130" y="145" text-anchor="middle" fill="#e2e8f0" font-size="12">谁 / 哪里<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><circle cx="130" cy="160" r="4" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" begin="1s" repeatCount="indefinite"/></circle><rect x="250" y="80" width="140" height="100" rx="12" fill="url(#orangeGrad-s2)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="320" y="105" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">中间<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="320" y="125" text-anchor="middle" fill="#e2e8f0" font-size="12">What happened<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><text x="320" y="145" text-anchor="middle" fill="#e2e8f0" font-size="12">发生什么<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><circle cx="320" cy="160" r="4" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" begin="1.2s" repeatCount="indefinite"/></circle><rect x="440" y="80" width="140" height="100" rx="12" fill="url(#greenGrad-s2)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="510" y="105" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">结尾<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><text x="510" y="125" text-anchor="middle" fill="#e2e8f0" font-size="12">Result<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></text><text x="510" y="145" text-anchor="middle" fill="#e2e8f0" font-size="12">结果<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><circle cx="510" cy="160" r="4" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" begin="1.4s" repeatCount="indefinite"/></circle><path d="M 200 130 Q 225 110 250 130" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar-s2)" stroke-dasharray="7 5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" begin="1.5s" repeatCount="indefinite"/></path><path d="M 390 130 Q 415 110 440 130" fill="none" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar-s2)" stroke-dasharray="7 5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" begin="1.65s" repeatCount="indefinite"/></path><ellipse cx="130" cy="240" rx="60" ry="30" fill="url(#purpleGrad-s2)" stroke="#c4b5fd" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></ellipse><text x="130" y="235" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">First<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></text><text x="130" y="250" text-anchor="middle" fill="#e2e8f0" font-size="11">首先<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><ellipse cx="320" cy="240" rx="60" ry="30" fill="url(#purpleGrad-s2)" stroke="#c4b5fd" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></ellipse><text x="320" y="235" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">Then<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><text x="320" y="250" text-anchor="middle" fill="#e2e8f0" font-size="11">然后<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></text><ellipse cx="510" cy="240" rx="60" ry="30" fill="url(#purpleGrad-s2)" stroke="#c4b5fd" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></ellipse><text x="510" y="235" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">Finally<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></text><text x="510" y="250" text-anchor="middle" fill="#e2e8f0" font-size="11">最后<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><line x1="130" y1="180" x2="130" y2="210" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></line><line x1="320" y1="180" x2="320" y2="210" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></line><line x1="510" y1="180" x2="510" y2="210" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></line><circle cx="130" cy="210" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></circle><circle cx="320" cy="210" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></circle><circle cx="510" cy="210" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></circle><rect x="60" y="300" width="520" height="80" rx="10" fill="rgba(148,163,184,0.08)" stroke="#475569" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></rect><text x="320" y="325" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">复述要点<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><text x="100" y="345" fill="#e2e8f0" font-size="12">• 按时间顺序组织内容<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></text><text x="100" y="365" fill="#e2e8f0" font-size="12">• 使用连接词串联句子<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></text><text x="350" y="345" fill="#e2e8f0" font-size="12">• 尽量用学过的短句表达<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></text><text x="350" y="365" fill="#e2e8f0" font-size="12">• 突出故事的关键信息<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><rect x="480" y="320" width="140" height="60" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></rect><text x="490" y="335" fill="#e2e8f0" font-size="11">图例说明：<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><rect x="490" y="340" width="12" height="8" fill="url(#blueGrad-s2)" stroke="#60a5fa" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></rect><text x="508" y="347" fill="#e2e8f0" font-size="10">故事结构<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></text><rect x="490" y="352" width="12" height="8" fill="url(#purpleGrad-s2)" stroke="#c4b5fd" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></rect><text x="508" y="359" fill="#e2e8f0" font-size="10">连接词<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></text><line x1="550" y1="340" x2="570" y2="340" stroke="#7dd3fc" stroke-width="2" marker-end="url(#ar-s2)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.95s" fill="freeze"/></line><text x="575" y="344" fill="#e2e8f0" font-size="10">流程<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></text></svg></figure>
+
+</div><div class="slide-page ta-flat" data-page-type="content" data-tsh="方法范例" data-slot="35">
+  <section class="section enge-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：三步时间线</h2>
+      <p>画三格漫画：开始、经过、结果；每格说一句英文，再连起来复述。</p>
+      <div class="worked-example"><strong>范例：</strong>First, Tom saw a dog. Then, he gave it some food. Finally, the dog was happy.</div>
+      <p id="lesson-pitfall" class="enge-pitfall"><strong>常见误区：</strong>常见误区是细节过多抓不住主线，或不会用 First/Then 连接。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>复述故事时，较清晰的顺序是？</p>
+        <button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;时间顺序让听者更清楚。&quot;)">A. 随意跳着讲</button><button type="button" data-correct="1" onclick="engeDepthCheck(this,true,&#x27;enge-depth-feedback&#x27;,&quot;时间顺序让听者更清楚。&quot;)">B. 按开始→经过→结果</button><button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;时间顺序让听者更清楚。&quot;)">C. 只说生词</button><button type="button" data-correct="0" onclick="engeDepthCheck(this,false,&#x27;enge-depth-feedback&#x27;,&quot;时间顺序让听者更清楚。&quot;)">D. 从结尾倒着且无连接</button>
+        <div class="enge-feedback" id="enge-depth-feedback" role="status"></div>
+      </div>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>故事复述三步时间线机制：开始-经过-结果的结构化教学流程图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="arBlue" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#60a5fa"/></marker><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(100,116,139,0.1)" stroke-width="0.5"/></pattern></defs><rect width="640" height="420" fill="#0a1520"/><rect width="640" height="420" fill="url(#grid)"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><text x="320" y="45" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">故事复述三步时间线机制分解图<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></text><rect x="50" y="70" width="540" height="80" rx="12" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="320" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">三步时间线方法<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></text><text x="320" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">画三格漫画：开始 → 经过 → 结果<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></text><text x="320" y="135" text-anchor="middle" fill="#e2e8f0" font-size="12">每格说一句英文，再连起来复述<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></text><rect x="70" y="170" width="140" height="100" rx="8" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="140" y="190" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">第一格：开始<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><circle cx="140" cy="210" r="15" fill="rgba(52,211,153,0.3)" stroke="#4ade80" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></circle><text x="140" y="215" text-anchor="middle" fill="#e2e8f0" font-size="10">1<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><text x="140" y="240" text-anchor="middle" fill="#e2e8f0" font-size="11">First, Tom<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></text><text x="140" y="255" text-anchor="middle" fill="#e2e8f0" font-size="11">saw a dog<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></text><rect x="250" y="170" width="140" height="100" rx="8" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></rect><text x="320" y="190" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">第二格：经过<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></text><circle cx="320" cy="210" r="15" fill="rgba(245,158,11,0.3)" stroke="#fb923c" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></circle><text x="320" y="215" text-anchor="middle" fill="#e2e8f0" font-size="10">2<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></text><text x="320" y="240" text-anchor="middle" fill="#e2e8f0" font-size="11">Then, he gave<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></text><text x="320" y="255" text-anchor="middle" fill="#e2e8f0" font-size="11">it some food<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><rect x="430" y="170" width="140" height="100" rx="8" fill="url(#purpleGrad)" stroke="#c084fc" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></rect><text x="500" y="190" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">第三格：结果<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></text><circle cx="500" cy="210" r="15" fill="rgba(167,139,250,0.3)" stroke="#c084fc" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.85s" fill="freeze"/></circle><text x="500" y="215" text-anchor="middle" fill="#e2e8f0" font-size="10">3<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><text x="500" y="240" text-anchor="middle" fill="#e2e8f0" font-size="11">Finally, the dog<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.15s" fill="freeze"/></text><text x="500" y="255" text-anchor="middle" fill="#e2e8f0" font-size="11">was happy<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.3s" fill="freeze"/></text><path d="M 210 220 Q 230 215 250 220" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#arBlue)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.45s" fill="freeze"/></path><path d="M 390 220 Q 410 215 430 220" stroke="#7dd3fc" stroke-width="2" fill="none" marker-end="url(#arBlue)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></path><rect x="70" y="290" width="220" height="80" rx="8" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.75s" fill="freeze"/></rect><text x="180" y="310" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">常见误区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.9s" fill="freeze"/></text><text x="180" y="330" text-anchor="middle" fill="#e2e8f0" font-size="11">✗ 细节过多抓不住主线<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.05s" fill="freeze"/></text><text x="180" y="345" text-anchor="middle" fill="#e2e8f0" font-size="11">✗ 不会用First/Then连接<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></text><text x="180" y="360" text-anchor="middle" fill="#e2e8f0" font-size="11">✗ 随意跳着讲或倒着讲<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.35s" fill="freeze"/></text><rect x="320" y="290" width="250" height="80" rx="8" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.5s" fill="freeze"/></rect><text x="445" y="310" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">练习检测<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.65s" fill="freeze"/></text><text x="445" y="325" text-anchor="middle" fill="#e2e8f0" font-size="11">复述故事时，较清晰的顺序是？<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></text><text x="445" y="340" text-anchor="middle" fill="#7dd3fc" font-size="11">✓ B. 按开始→经过→结果<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.95s" fill="freeze"/></text><text x="445" y="355" text-anchor="middle" fill="#e2e8f0" font-size="10">A.随意跳着讲 C.只说生词 D.从结尾倒着<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.1s" fill="freeze"/></text><line x1="140" y1="280" x2="140" y2="290" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.25s" fill="freeze"/></line><circle cx="140" cy="280" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></circle><line x1="500" y1="280" x2="500" y2="290" stroke="rgba(100,116,139,0.7)" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.55s" fill="freeze"/></line><circle cx="500" cy="280" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.7s" fill="freeze"/></circle><rect x="480" y="380" width="140" height="30" rx="4" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.85s" fill="freeze"/></rect><rect x="485" y="385" width="12" height="8" fill="url(#greenGrad)"/><text x="502" y="392" fill="#e2e8f0" font-size="10">结构流程</text><rect x="550" y="385" width="12" height="8" fill="url(#orangeGrad)"/><text x="567" y="392" fill="#e2e8f0" font-size="10">连接</text><text x="485" y="405" fill="#7dd3fc" font-size="10">时间线复述法</text><circle cx="140" cy="210" r="18" fill="none" stroke="#4ade80" stroke-width="1" opacity="0.6"><animate attributeName="opacity" values="0.6;0.2;0.6" dur="1.8s" repeatCount="indefinite"/></circle><circle cx="320" cy="210" r="18" fill="none" stroke="#fb923c" stroke-width="1" opacity="0.6"><animate attributeName="opacity" values="0.6;0.2;0.6" dur="1.8s" begin="0.6s" repeatCount="indefinite"/></circle><circle cx="500" cy="210" r="18" fill="none" stroke="#c084fc" stroke-width="1" opacity="0.6"><animate attributeName="opacity" values="0.6;0.2;0.6" dur="1.8s" begin="1.2s" repeatCount="indefinite"/></circle></svg></figure>
+
+
+<section class="section ta-diagram-section" data-tts>
+  <figure class="ta-standard-figure">
+    <img src="./assets/knowledge-map.svg" alt="故事复述 知识结构图：本课模块与要点关系" loading="lazy" style="width:100%;height:auto;border-radius:16px">
+    <figcaption>故事复述 · 知识结构图：把本课各模块与要点放在一张图上对照</figcaption>
+  </figure>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 故事顺序</h2><div class="tu-q"><p><strong>And：</strong>学生知道故事有开头、中间、结尾</p><p><strong>But：</strong>但复述时容易漏掉关键事件</p><p><strong>Therefore：</strong>本模块教用时间词串联故事</p></div><div class="tu-q"><p>故事像积木，要有顺序才能搭好。比如《三只小猪》中：1.第一只小猪用稻草盖房（开头）→2.大灰狼吹倒房子（中间）→3.三只小猪躲进砖房得救（结尾）。用'First...Then...Finally...'这样的时间词，就像给积木涂胶水，能把事件粘牢。</p></div><div class="tu-q"><p>🌍 就像妈妈做菜：先洗菜（First）→再炒菜（Then）→最后装盘（Finally）。少一步味道就不对啦！</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>用哪个词能正确连接这两个事件？___小猪盖草房，___大灰狼来敲门</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B/C/D的同学注意：这里需要时间顺序词，不是因果或转折词哦">A.First...Then...</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B/C/D的同学注意：这里需要时间顺序词，不是因果或转折词哦">B.Because...So...</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B/C/D的同学注意：这里需要时间顺序词，不是因果或转折词哦">C.But...And...</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B/C/D的同学注意：这里需要时间顺序词，不是因果或转折词哦">D.After...When...</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 角色抓重点</h2><div class="tu-q"><p><strong>And：</strong>学生能说出故事里有哪些人物</p><p><strong>But：</strong>但分不清谁重要谁次要</p><p><strong>Therefore：</strong>本模块教用5W1H抓主角</p></div><div class="tu-q"><p>主角就像生日蛋糕上的樱桃，最显眼！找主角要问5W1H：1.Who出现最多？（小红帽出现8次，猎人只出现2次）2.What主角做什么？（小红帽送蛋糕，猎人打狼）3.Why推动故事？（小红帽不听劝导致遇险）。其他角色像蛋糕胚，是辅助。</p></div><div class="tu-q"><p>🌍 就像班级合照：老师站在中间（主角），因为她组织活动最多；举班牌的同学（次要角色）只出现一下下。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>《龟兔赛跑》中谁是主角？为什么？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选B/C/D的同学：兔子中途睡觉，裁判只出现1次，主角要贯穿整个故事哦">A.乌龟（因为它一直爬）</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选B/C/D的同学：兔子中途睡觉，裁判只出现1次，主角要贯穿整个故事哦">B.兔子（因为它跑得快）</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选B/C/D的同学：兔子中途睡觉，裁判只出现1次，主角要贯穿整个故事哦">C.都是（因为它们比赛）</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选B/C/D的同学：兔子中途睡觉，裁判只出现1次，主角要贯穿整个故事哦">D.裁判（因为它喊开始）</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 细节放大镜</h2><div class="tu-q"><p><strong>And：</strong>学生能复述故事大意</p><p><strong>But：</strong>但缺少生动细节</p><p><strong>Therefore：</strong>本模块教用形容词+数字添彩</p></div><div class="tu-q"><p>细节像彩虹糖，让故事更有味道！比如不说'大灰狼敲门'，而说'毛茸茸的大灰狼用爪子咚咚咚敲了3下门'。记住公式：角色+特征（形容词）+动作+数量。就像《金发姑娘》里：'她尝了第1碗烫烫的粥，第2碗冰凉的粥，第3碗刚刚好的粥'。</p></div><div class="tu-q"><p>🌍 就像描述你的书包：'我有1个蓝色书包'不如'我有1个印着航天员的、沉甸甸的蓝色书包，能装下5本课本+3支笔'生动！</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>哪个句子最适合复述《小红帽》的篮子细节？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A/C/D的同学：记住要包含形容词和具体数量呀">A.篮子里有食物</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A/C/D的同学：记住要包含形容词和具体数量呀">B.篮子里有1块香喷喷的蛋糕和1瓶甜滋滋的果酱</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A/C/D的同学：记住要包含形容词和具体数量呀">C.外婆喜欢篮子</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A/C/D的同学：记住要包含形容词和具体数量呀">D.篮子被狼拿走</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4"><h2>📖 变身小主播</h2><div class="tu-q"><p><strong>And：</strong>学生能按顺序讲出故事</p><p><strong>But：</strong>但像背课文不自然</p><p><strong>Therefore：</strong>本模块教用表情+动作演绎</p></div><div class="tu-q"><p>复述不是背课文，要像小主播那样生动！三大法宝：1.表情（说到大灰狼瞪圆眼睛）2.动作（学小猪盖房子擦汗）3.语气（用颤抖声说'谁...谁在敲门？'）。比如演《拔萝卜》：'老爷爷'要弯着腰，'嗨哟嗨哟'喊号子，最后大家一起摔倒要'哎呀'叫出来。</p></div><div class="tu-q"><p>🌍 就像体育委员喊操：'向左——转！'要响亮有力，如果小声嘟囔，全班就乱啦！</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>复述《三只小猪》时，哪种方式最生动？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="选A/C/D的同学：记住要加上声音和动作才像演戏哦">A.快速读完故事</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="选A/C/D的同学：记住要加上声音和动作才像演戏哦">B.边讲边学狼'呼呼'吹房子</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="选A/C/D的同学：记住要加上声音和动作才像演戏哦">C.只画图不说话</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="选A/C/D的同学：记住要加上声音和动作才像演戏哦">D.用英语复述</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="ta-standard-section" id="teachany-audio-player">
+  <div data-teachany-audio>
+    <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "sectionId": "anchor",
+    "title": "课程导入：eng-e-story-retelling",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/eng-e-story-retelling/enhance-1.mp3"
+  },
+  {
+    "sectionId": "objectives",
+    "title": "讲解 1",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/eng-e-story-retelling/enhance-2.mp3"
+  },
+  {
+    "sectionId": "pretest",
+    "title": "讲解 2",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/eng-e-story-retelling/enhance-3.mp3"
+  }
+]
+    </script>
+  </div>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>把故事分成开头-中间-结尾三块积木</p></div><div class="tu-q"><h3>💡解释它</h3><p>用5W1H钥匙打开故事细节宝箱</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>像对照两幅画一样找角色行为差异</p></div><div class="tu-q"><h3>👁️看见它</h3><p>在脑海里放小电影重现场景</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>用相同结构编新故事（如：迷路的小猫变小狗）</p></div></section>
+<section class="section teachany-upgrade-block" data-interactive="conceptest" data-conceptest="true" data-bloom-level="understand" data-scaffold="full"><h2>💡 概念检测（互动）</h2><p>哪个选项正确使用了故事复述要素？</p><div class="tu-opts tu-concept">
+<button type="button" class="tu-opt" data-choice="A" data-correct="true" data-diagnosis="包含核心要素">A. 按时间顺序+角色原话</button>
+<button type="button" class="tu-opt" data-choice="B" data-correct="false" data-diagnosis="缺少细节">B. 只讲大概情节</button>
+<button type="button" class="tu-opt" data-choice="C" data-correct="false" data-diagnosis="改变原文">C. 添加新角色</button>
+<button type="button" class="tu-opt" data-choice="D" data-correct="false" data-diagnosis="时态错误">D. 全部用现在时</button>
+</div><div class="tu-fb" hidden></div></section>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 故事复述策略探究</h2><p>比较直接背诵和用自己的话复述的效果</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="哪种方式更能帮助听众理解？"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="记录听众对两种方式的反馈"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="分析保留原文关键信息的重要性"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把角色名字换成he/she</h3><p>✅ 用姓名标签贴纸辅助记忆</p><p>💡 母语思维干扰</p></div><div class="tu-q"><h3>❌ 颠倒事件顺序</h3><p>✅ 画时间轴箭头图</p><p>💡 未建立时间标记意识</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>Who-What-When-Where记清楚，Why-How最后补</p><p><strong>类比：</strong>像搭公交车要记住站点顺序，故事事件也要排好队</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="B">
+<h3>选择题 1</h3><p>复述故事开头时，最适合用哪个连接词？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="用于后续事件">A. After that</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="B正确，'One day'用于故事开头">B. One day</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="用于结尾">C. Finally</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="表原因">D. Because</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 2</h3><p>复述兔子说'Don't eat me!'时，应该：</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="混淆角色">A. 改成狐狸的台词</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="B正确，需保留角色原话特征">B. 保持原句并说明是兔子说的</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="丢失关键信息">C. 省略具体对话</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="不符合要求">D. 用中文复述</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C">
+<h3>选择题 3</h3><p>复述兔子想出办法的段落时，最好用：</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="用于步骤说明">A. First...then...</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="用于因果">B. But...so...</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="C正确，表突发灵感">C. Suddenly...</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="用于举例">D. For example...</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>复述故事时，当要转换场景可以说：'____ the rabbit ran to the river.'</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>Then</p><p>用Then表时间推进</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>复述结尾时应使用'____'作为结束词。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>Finally</p><p>Finally用于故事收尾</p></details></div>
+</section>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;"><h2 class="section-title">🗺️ 知识图谱：故事复述</h2><div data-teachany-kg="eng-e-story-retelling"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+<section data-scaffold="full" data-bloom-level="apply" class="ta-standard-section" id="teachany-ai-tutor-card">
+  <div data-teachany-tutor-card></div>
+</section>
+
+
+
+
+
+
+
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "eng-e-story-retelling", "name": "故事复述 · 五年级英语 · Story Retelling Quest", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+<!-- ═══ PPT 播放控件（v6.1 轻量注入） ═══ -->
+<div class="slide-progress-bar" id="slide-progress-bar" style="width:0%"></div>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换演示模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+</button>
+
+<div class="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info"></span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav"></nav>
+
+<script>
+/* ═══════ Slide Controller v6.1 (轻量注入) ═══════ */
+(function(){
+'use strict';
+/* 检测页面元素：.section 或 .screen */
+const allSections = Array.from(document.querySelectorAll('.section, .screen'));
+if(!allSections.length) return;
+const totalPages = allSections.length;
+
+let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+const progressBar = document.getElementById('slide-progress-bar');
+const sidenav = document.getElementById('slide-sidenav');
+const fab = document.getElementById('play-mode-fab');
+const fabPlay = document.getElementById('fab-icon-play');
+const fabBrowse = document.getElementById('fab-icon-browse');
+const tbPrev = document.getElementById('tb-prev');
+const tbNext = document.getElementById('tb-next');
+const tbPageInfo = document.getElementById('tb-page-info');
+const tbProgressFill = document.getElementById('tb-progress-fill');
+const tbProgress = document.getElementById('tb-progress');
+const tbAutoplay = document.getElementById('tb-autoplay');
+const tbFullscreen = document.getElementById('tb-fullscreen');
+
+/* 提取标签名 */
+function getPageLabel(el) {
+  const h = el.querySelector('h1,h2,h3,.section-title');
+  if (h) return h.textContent.trim().slice(0, 20);
+  const btn = document.querySelector('.nav-btn.active, .nav-tab.active');
+  if (btn) return btn.textContent.trim().slice(0, 20);
+  return '第' + (allSections.indexOf(el) + 1) + '页';
+}
+
+function buildSidenav() {
+  sidenav.innerHTML = '';
+  const counter = document.createElement('div');
+  counter.className = 'sidenav-counter'; counter.id = 'sidenav-counter';
+  counter.textContent = '1/' + totalPages;
+  sidenav.appendChild(counter);
+  allSections.forEach((p, i) => {
+    const d = document.createElement('button');
+    d.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+    d.setAttribute('aria-label', getPageLabel(p));
+    d.addEventListener('click', () => goToPage(i));
+    sidenav.appendChild(d);
+  });
+}
+
+function updateUI() {
+  const prog = totalPages > 1 ? currentPage / (totalPages - 1) * 100 : 100;
+  if (progressBar) progressBar.style.width = prog + '%';
+  if (tbProgressFill) tbProgressFill.style.width = prog + '%';
+  if (tbPageInfo) tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+  sidenav.querySelectorAll('.sidenav-dot').forEach((d, i) => d.classList.toggle('active', i === currentPage));
+  const ce = document.getElementById('sidenav-counter');
+  if (ce) ce.textContent = (currentPage + 1) + '/' + totalPages;
+  if (tbPrev) tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+  if (tbNext) tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+}
+
+function goToPage(i) {
+  if (i < 0 || i >= totalPages) return;
+  currentPage = i;
+  const target = allSections[currentPage];
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateUI();
+}
+
+function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+/* Scroll-based page tracking */
+let scrollTimeout;
+function onScroll() {
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => {
+    const st = window.scrollY;
+    let closest = 0, minD = Infinity;
+    allSections.forEach((p, i) => {
+      const d = Math.abs(p.offsetTop - st - 100);
+      if (d < minD) { minD = d; closest = i; }
+    });
+    if (closest !== currentPage) { currentPage = closest; updateUI(); }
+  }, 120);
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+
+function togglePlayMode() {
+  isPlayMode = !isPlayMode;
+  document.body.classList.toggle('play-mode', isPlayMode);
+  document.body.classList.toggle('toolbar-visible', isPlayMode);
+  if (fabPlay) fabPlay.style.display = isPlayMode ? 'none' : 'block';
+  if (fabBrowse) fabBrowse.style.display = isPlayMode ? 'block' : 'none';
+  if (isPlayMode) {
+    document.documentElement.style.overflow = 'hidden';
+    goToPage(currentPage);
+  } else {
+    document.documentElement.style.overflow = '';
+  }
+}
+
+if (fab) fab.addEventListener('click', togglePlayMode);
+if (tbPrev) tbPrev.addEventListener('click', prevPage);
+if (tbNext) tbNext.addEventListener('click', nextPage);
+if (tbProgress) tbProgress.addEventListener('click', e => {
+  const r = tbProgress.getBoundingClientRect();
+  goToPage(Math.round((e.clientX - r.left) / r.width * (totalPages - 1)));
+});
+if (tbAutoplay) tbAutoplay.addEventListener('click', () => {
+  isAutoPlay = !isAutoPlay;
+  tbAutoplay.classList.toggle('active', isAutoPlay);
+  if (isAutoPlay) {
+    autoPlayTimer = setInterval(() => {
+      if (currentPage < totalPages - 1) nextPage();
+      else { clearInterval(autoPlayTimer); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+    }, 8000);
+  } else { clearInterval(autoPlayTimer); }
+});
+if (tbFullscreen) tbFullscreen.addEventListener('click', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (!isPlayMode) {
+    if (e.key === 'f' || e.key === 'F') { if (!e.ctrlKey && !e.metaKey) togglePlayMode(); }
+    return;
+  }
+  switch (e.key) {
+    case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+    case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+    case 'Escape': togglePlayMode(); break;
+  }
+});
+
+buildSidenav();
+
+/* ═══ v6.2 自动初始化：连续阅读模式下预加载动态内容 ═══ */
+(function(){
+  try {
+    var inited = new Set();
+    allSections.forEach(function(screen) {
+      var id = screen.id;
+      if (!id || inited.has(id)) return;
+      inited.add(id);
+      /* 根据屏幕 ID 推测并调用对应的 init 函数 */
+      var caps = id.charAt(0).toUpperCase() + id.slice(1);
+      var candidates = [
+        'init' + caps,              /* initWarmup, initL1, initBoss ... */
+        'init_' + id,               /* init_warmup */
+        'load' + caps,              /* loadBoss */
+        'build' + caps,             /* buildQuiz */
+        'render' + caps,            /* renderContent */
+        'setup' + caps,             /* setupLevel */
+      ];
+      for (var i = 0; i < candidates.length; i++) {
+        if (typeof window[candidates[i]] === 'function') {
+          try { window[candidates[i]](); } catch(e) {}
+          break;
+        }
+      }
+    });
+  } catch(e) {}
+})();
+/* ═══ end v6.2 auto-init ═══ */
+
+updateUI();
+document.body.classList.add('toolbar-visible');
+setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+})();
+</script>
+
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+
+<script id="enge-depth-js">
+function engeDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+</script>
+
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseId: 'eng-e-story-retelling',
+  courseTitle: "故事复述 · 五年级英语 · Story Retelling Quest",
+  subject: 'english',
+  grade: '4',
+  nodeId: 'eng-e-story-retelling',
+  getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+  getContext: () => {
+    const current = document.querySelector('.current-section') || (location.hash ? document.querySelector(location.hash) : null);
+    return (current || document.body).innerText.slice(0, 3000);
+  }
+};
+</script>
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+  <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+
+</div>
+</body>
+</html>

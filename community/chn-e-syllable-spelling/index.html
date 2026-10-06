@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="teachany-node" content="chn-e-syllable-spelling">
+<meta name="teachany-subject" content="chinese">
+<meta name="teachany-domain" content="reading">
+<meta name="teachany-grade" content="3">
+<meta name="teachany-difficulty" content="2">
+<meta name="teachany-version" content="7.21.0">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-author" content="weponusa">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎵 音节拼读大挑战 | 一年级语文 · 小学 · 语文 · G3 · TeachAny v6.1</title>
+<style>
+:root{--accent:#60a5fa;--bg:#0b1120;--card:#15233f;--primary:#60a5fa;--secondary:#818cf8;--orange:#fb923c;--purple:#a78bfa}
+
+:root {
+  --bg: #fffbf0;
+  --primary: #ff6b6b;
+  --secondary: #4ecdc4;
+  --accent: #ffe66d;
+  --card: #fff;
+  --purple: #a29bfe;
+  --orange: #fd9644;
+  --green: #55efc4;
+  --pink: #fd79a8;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  background:var(--bg); min-height:100vh; overflow-x:hidden;
+}
+#progress-bar{position:fixed;top:0;left:0;width:100%;height:8px;background:#eee;z-index:1000;}
+#progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--secondary),var(--accent),var(--primary));transition:width 0.5s ease;border-radius:0 4px 4px 0;}
+#hud{position:fixed;top:12px;right:16px;display:flex;gap:12px;align-items:center;z-index:999;}
+#score-display{background:var(--secondary);color:#fff;padding:6px 16px;border-radius:20px;font-weight:bold;font-size:1rem;}
+
+/* Hero */
+#hero{
+  min-height:100vh;
+  background:linear-gradient(135deg,#43e97b 0%,#38f9d7 50%,#4facfe 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:40px 20px;position:relative;overflow:hidden;
+}
+.bubble{position:absolute;border-radius:50%;opacity:0.15;animation:floatUp 6s infinite;}
+.bubble:nth-child(1){width:70px;height:70px;background:#fff;left:8%;animation-delay:0s;}
+.bubble:nth-child(2){width:45px;height:45px;background:#ffe66d;left:25%;animation-delay:1.5s;}
+.bubble:nth-child(3){width:90px;height:90px;background:#ff6b6b;right:12%;animation-delay:3s;}
+.bubble:nth-child(4){width:55px;height:55px;background:#a29bfe;right:30%;animation-delay:0.8s;}
+@keyframes floatUp{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-25px) rotate(180deg);}}
+.hero-icon{font-size:5rem;animation:spin 4s linear infinite;}
+@keyframes spin{0%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}100%{transform:rotate(-5deg);}}
+.hero-title{font-size:3rem;font-weight:900;color:#fff;text-shadow:3px 3px 0 rgba(0,0,0,0.15);margin:16px 0 8px;line-height:1.2;}
+.hero-sub{font-size:1.3rem;color:rgba(255,255,255,0.9);margin-bottom:28px;}
+.hero-tags{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:28px;}
+.hero-tag{background:rgba(255,255,255,0.25);color:#fff;padding:6px 18px;border-radius:20px;font-size:0.9rem;backdrop-filter:blur(4px);}
+.btn-start{background:var(--accent);color:#333;border:none;padding:18px 48px;border-radius:50px;font-size:1.4rem;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.2);transition:all 0.3s;}
+.btn-start:hover{transform:translateY(-4px) scale(1.05);}
+
+/* Section */
+.section{max-width:900px;margin:0 auto;padding:60px 20px;}
+
+.section-badge{display:inline-block;background:var(--secondary);color:#fff;padding:6px 20px;border-radius:20px;font-size:0.9rem;font-weight:bold;margin-bottom:16px;}
+.section-title{font-size:2.2rem;font-weight:900;color:#333;margin-bottom:8px;}
+.section-desc{font-size:1.1rem;color:#666;margin-bottom:40px;}
+.card{background:var(--card);border-radius:20px;padding:32px;margin-bottom:24px;box-shadow:0 4px 20px rgba(0,0,0,0.08);transition:transform 0.2s;}
+
+/* 拼读展示 */
+.spell-demo{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;margin:24px 0;}
+.spell-part{
+  border-radius:16px;padding:20px 28px;
+  font-size:64px;font-weight:900;color:#fff;
+  text-align:center;cursor:pointer;
+  transition:all 0.3s;min-width:100px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.15);
+}
+.spell-part.initial{background:linear-gradient(135deg,var(--primary),#e17055);}
+.spell-part.final{background:linear-gradient(135deg,var(--secondary),#00b894);}
+.spell-part.tone{background:linear-gradient(135deg,var(--purple),#6c5ce7);font-size:48px;padding:20px 20px;}
+.spell-arrow{font-size:2rem;margin:0 12px;color:#ccc;align-self:center;}
+.spell-result{
+  background:linear-gradient(135deg,var(--accent),#fdcb6e);
+  border-radius:20px;padding:24px 40px;
+  font-size:72px;font-weight:900;color:#333;
+  text-align:center;margin-top:16px;
+  box-shadow:0 6px 20px rgba(255,230,109,0.5);
+  animation:resultPop 0.5s ease;
+  display:inline-block;
+}
+@keyframes resultPop{0%{transform:scale(0.5);opacity:0;}100%{transform:scale(1);opacity:1;}}
+
+/* 拼读步骤 */
+.steps-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0;}
+.step-card{
+  border-radius:20px;padding:24px;text-align:center;
+  background:var(--card);box-shadow:0 4px 16px rgba(0,0,0,0.08);
+}
+.step-num{width:40px;height:40px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.1rem;margin:0 auto 12px;}
+.step-title{font-size:1rem;font-weight:800;color:#333;margin-bottom:8px;}
+.step-pinyin{font-size:2.4rem;font-weight:900;color:var(--secondary);}
+.step-desc{font-size:0.85rem;color:#888;margin-top:8px;}
+
+/* 拼读练习区 */
+.practice-box{
+  background:linear-gradient(135deg,#f8f9ff,#fff);
+  border-radius:20px;padding:32px;border:3px solid #e8ecff;
+  text-align:center;margin:24px 0;
+}
+.pb-title{font-size:1.2rem;color:#666;margin-bottom:16px;}
+.pb-target{font-size:80px;font-weight:900;color:var(--primary);margin:12px 0;line-height:1;}
+.pb-hint{font-size:1.1rem;color:#888;margin-bottom:20px;}
+.pb-parts{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;}
+.pb-part{
+  background:#fff;border:3px solid #e0e0e0;
+  border-radius:16px;padding:16px 28px;
+  font-size:2.4rem;font-weight:900;cursor:pointer;
+  transition:all 0.2s;color:#333;
+}
+.pb-part:hover{border-color:var(--secondary);background:#f0fffe;transform:scale(1.08);}
+.pb-part.selected{border-color:var(--primary);background:#fff5f5;}
+.pb-part.initial-color{color:var(--primary);}
+.pb-part.final-color{color:var(--secondary);}
+
+/* 拖拽拼读升级版 */
+.drag-board{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:16px;margin:24px 0;
+}
+.slot-row{display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:16px;padding:16px;margin-bottom:12px;}
+.slot{
+  min-width:80px;min-height:72px;border:3px dashed #ccc;
+  border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:2.4rem;font-weight:900;transition:all 0.2s;
+  background:#fff;cursor:pointer;
+}
+.slot.dragover{border-color:var(--primary);background:#fff0f0;}
+.slot.filled{border-style:solid;border-color:var(--secondary);background:#f0fffe;}
+.slot.correct-slot{border-color:#00b894;background:#d4fce7;animation:correctPop 0.4s;}
+.slot.wrong-slot{border-color:#ff7675;background:#ffe4e4;animation:wrongShake 0.4s;}
+@keyframes correctPop{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+@keyframes wrongShake{0%,100%{transform:translateX(0);}25%,75%{transform:translateX(-6px);}50%{transform:translateX(6px);}}
+.drag-pieces{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0;justify-content:center;}
+.drag-piece{
+  background:var(--card);border:3px solid var(--secondary);
+  border-radius:12px;padding:12px 20px;
+  font-size:2.2rem;font-weight:900;color:var(--secondary);
+  cursor:grab;user-select:none;
+  box-shadow:0 4px 12px rgba(0,0,0,0.1);
+  transition:all 0.2s;
+}
+.drag-piece:hover{transform:scale(1.1) rotate(-3deg);}
+.drag-piece.used{opacity:0.3;cursor:not-allowed;}
+
+/* 音节列表 */
+.syllable-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin:24px 0;}
+.syllable-item{
+  background:var(--card);border-radius:16px;padding:20px;
+  text-align:center;cursor:pointer;transition:all 0.2s;
+  box-shadow:0 4px 12px rgba(0,0,0,0.06);border:2px solid #eee;
+}
+.syllable-item:hover{border-color:var(--secondary);transform:translateY(-3px);}
+.si-pinyin{font-size:48px;font-weight:900;color:var(--primary);display:block;line-height:1.1;}
+.si-word{font-size:1.5rem;font-weight:700;color:#333;margin-top:6px;}
+.si-emoji{font-size:2rem;margin-top:4px;display:block;}
+
+/* 声母表 */
+.initials-table{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:20px 0;}
+.initial-cell{
+  background:var(--card);border-radius:12px;padding:12px 8px;
+  text-align:center;font-size:2rem;font-weight:900;
+  color:var(--primary);cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+  transition:all 0.2s;border:2px solid transparent;
+}
+.initial-cell:hover{border-color:var(--primary);transform:scale(1.1);}
+.initial-cell.active{background:var(--primary);color:#fff;}
+
+/* 韵母表 */
+.finals-table{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0;}
+.final-cell{
+  background:var(--card);border-radius:12px;padding:10px 18px;
+  font-size:1.8rem;font-weight:900;color:var(--secondary);
+  cursor:pointer;transition:all 0.2s;
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid transparent;
+}
+.final-cell:hover{border-color:var(--secondary);transform:scale(1.1);}
+.final-cell.active{background:var(--secondary);color:#fff;}
+
+/* 关卡 */
+.level-header{display:flex;align-items:center;gap:16px;margin-bottom:32px;}
+.level-badge{background:var(--primary);color:#fff;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;flex-shrink:0;}
+.level-title{font-size:1.6rem;font-weight:800;color:#333;}
+.level-desc{font-size:1rem;color:#888;}
+
+/* 选择题 */
+.quiz-q{font-size:1.3rem;font-weight:700;color:#333;margin-bottom:24px;text-align:center;padding:20px;background:var(--bg);border-radius:16px;}
+.quiz-q .qp{font-size:72px;font-weight:900;color:var(--primary);display:block;margin-bottom:8px;}
+.choices-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.choice{background:#fff;border:3px solid #e0e0e0;border-radius:16px;padding:20px;font-size:1.8rem;font-weight:800;cursor:pointer;transition:all 0.2s;text-align:center;color:#333;}
+.choice:hover{border-color:var(--secondary);background:#f0fffe;transform:scale(1.02);}
+.choice.correct{border-color:#00b894;background:#d4fce7;color:#007a5e;}
+.choice.wrong{border-color:#ff7675;background:#ffe4e4;color:#c0392b;}
+
+/* 反馈 */
+.feedback{padding:16px 24px;border-radius:16px;font-size:1.1rem;font-weight:700;text-align:center;margin:16px 0;display:none;}
+.feedback.show{display:block;animation:fadeIn 0.3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.feedback.ok{background:#d4fce7;color:#007a5e;}
+.feedback.err{background:#ffe4e4;color:#c0392b;}
+
+/* Boss */
+.boss-card{background:linear-gradient(135deg,#1e3c72,#2a5298);border-radius:24px;padding:40px;text-align:center;color:#fff;margin-bottom:24px;position:relative;overflow:hidden;}
+.boss-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:300px;height:300px;background:radial-gradient(circle,rgba(78,205,196,0.2),transparent);animation:glow 3s infinite;}
+@keyframes glow{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.3);}}
+.boss-emoji{font-size:4rem;animation:bossBounce 2s infinite;}
+@keyframes bossBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+.boss-title{font-size:1.8rem;font-weight:900;margin:16px 0 8px;}
+
+/* 成绩单 */
+#scoreboard{text-align:center;padding:60px 20px;max-width:600px;margin:0 auto;display:none;}
+.score-ring{width:160px;height:160px;border-radius:50%;background:linear-gradient(135deg,var(--secondary),#00b894);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 32px;color:#fff;box-shadow:0 8px 32px rgba(78,205,196,0.4);}
+.score-num{font-size:3rem;font-weight:900;}
+.score-lbl{font-size:0.9rem;opacity:0.8;}
+.ach-row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:24px 0;}
+.ach{background:var(--accent);border-radius:12px;padding:10px 16px;font-size:0.9rem;font-weight:bold;color:#333;animation:achIn 0.5s ease;}
+@keyframes achIn{0%{transform:scale(0);}100%{transform:scale(1);}}
+
+/* 按钮 */
+.btn{background:var(--primary);color:#fff;border:none;padding:14px 36px;border-radius:50px;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all 0.3s;display:inline-flex;align-items:center;gap:8px;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.2);}
+.btn-g{background:var(--secondary);}
+.btn-y{background:var(--accent);color:#333;}
+.nav-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px;}
+
+/* 小书虫 */
+#worm-container{position:fixed;bottom:24px;right:24px;z-index:2000;}
+#worm-btn{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#fd79a8,#e84393);border:none;font-size:1.8rem;cursor:pointer;box-shadow:0 4px 16px rgba(232,67,147,0.4);transition:all 0.3s;animation:wormBounce 3s infinite;}
+@keyframes wormBounce{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+#worm-panel{display:none;position:absolute;bottom:76px;right:0;width:280px;background:#fff;border-radius:20px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.15);border:2px solid #fd79a8;}
+#worm-panel.open{display:block;animation:slideUp 0.3s ease;}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.worm-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.worm-msg{font-size:0.95rem;color:#555;line-height:1.6;}
+.worm-tip{background:var(--bg);border-radius:10px;padding:8px 12px;font-size:0.85rem;color:#666;margin-bottom:6px;cursor:pointer;transition:background 0.2s;border-left:3px solid var(--primary);}
+.worm-tip:hover{background:#ffe4e4;}
+
+/* 注音动画 */
+.tone-pill{
+  display:inline-flex;flex-direction:column;align-items:center;
+  background:var(--card);border-radius:12px;padding:12px 16px;
+  margin:6px;box-shadow:0 2px 8px rgba(0,0,0,0.08);cursor:pointer;
+  transition:all 0.2s;
+}
+.tone-pill:hover{transform:translateY(-4px);box-shadow:0 6px 16px rgba(0,0,0,0.15);}
+.tp-char{font-size:2rem;font-weight:900;}
+.tp-pinyin{font-size:1rem;color:var(--primary);font-weight:700;}
+.tp-emoji{font-size:1.4rem;}
+
+/* 响应式 */
+@media(max-width:600px){
+  .hero-title{font-size:2rem;}
+  .steps-row{grid-template-columns:1fr;}
+  .choices-grid{grid-template-columns:1fr;}
+  .drag-board{grid-template-columns:1fr;}
+  .initials-table{grid-template-columns:repeat(5,1fr);}
+  .spell-part{font-size:48px;padding:14px 20px;}
+  .spell-result{font-size:56px;}
+}
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+
+    /* ═══ PPT 播放模式（v6.1 轻量注入） ═══ */
+    body.play-mode { overflow: hidden; }
+    body.play-mode .slide-wrapper {
+      scroll-snap-type: y mandatory;
+      overflow-y: auto;
+      height: 100dvh;
+      -webkit-overflow-scrolling: touch;
+    }
+    .slide-wrapper { position: relative; }
+    .slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary, #3b82f6), var(--secondary, #06b6d4));
+      z-index: 201; transition: width 0.3s; border-radius: 0 2px 2px 0; pointer-events: none; }
+    .slide-toolbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 20px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border, #e5e7eb);
+      transform: translateY(100%); transition: transform 0.3s ease; }
+    body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+    .toolbar-btn { background: none; border: none; cursor: pointer; padding: 8px;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary, #6b7280); transition: all 0.2s; }
+    .toolbar-btn:hover { background: var(--border, #e5e7eb); color: var(--text, #1f2937); }
+    .toolbar-btn.active { color: var(--primary, #3b82f6); }
+    .toolbar-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2;
+      fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .toolbar-progress { flex: 1; max-width: 200px; height: 4px;
+      background: var(--border, #e5e7eb); border-radius: 2px; cursor: pointer; position: relative; }
+    .toolbar-progress-fill { height: 100%; background: var(--primary, #3b82f6);
+      border-radius: 2px; transition: width 0.3s; }
+    .toolbar-page-info { font-size: 12px; color: var(--text-secondary, #6b7280);
+      min-width: 50px; text-align: center; }
+    .play-mode-fab { position: fixed; bottom: 80px; right: 20px; z-index: 101;
+      width: 48px; height: 48px; border-radius: 50%; border: none;
+      background: var(--primary, #3b82f6); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3); transition: all 0.3s; }
+    .play-mode-fab:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(59,130,246,0.4); }
+    .play-mode-fab svg { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+    .slide-sidenav { position: fixed; right: 12px; top: 50%; transform: translateY(-50%);
+      z-index: 90; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+      opacity: 0; transition: opacity 0.3s; max-height: 70vh; overflow-y: auto;
+      padding: 8px 4px; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(12px);
+      border: 1px solid var(--border, #e5e7eb); }
+    .slide-sidenav::-webkit-scrollbar { display: none; }
+    body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+    .sidenav-dot { width: 24px; height: 4px; border-radius: 2px;
+      background: var(--border, #e5e7eb); border: none; cursor: pointer;
+      transition: all 0.2s; padding: 0; }
+    .sidenav-dot.active { width: 32px; background: var(--primary, #3b82f6); }
+    .sidenav-dot:hover { background: var(--primary, #3b82f6); opacity: 0.7; }
+    .sidenav-counter { font-size: 10px; color: var(--text-secondary, #6b7280);
+      text-align: center; margin-bottom: 4px; }
+    /* 隐藏旧版 tab 导航（播放模式下） */
+    body.play-mode #main-nav, body.play-mode nav[id="nav"], body.play-mode nav.nav { display: none !important; }
+    @media (max-width:768px) {
+      .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+      .sidenav-dot { width: 20px; height: 3px; }
+    }
+
+  </style>
+<meta name="teachany-prerequisites" content="literacy">
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+
+
+<style id="chne-depth-css">
+.chne-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.chne-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.24)}
+.chne-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.chne-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.chne-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.chne-depth .chne-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.chne-depth .chne-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+.chne-depth .chne-canvas{width:100%;max-width:560px;height:auto;background:#0b1628;border:1px solid rgba(148,163,184,.28);border-radius:12px;display:block;margin:8px auto 0}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+</head>
+<body>
+<nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;;color:#334155""><a href="#nav">📑 知识图谱</a><a href="#progress-bar">🤝 AI 学伴</a><a href="#progress-fill">📚 课程内容</a></nav>
+
+
+<!-- teachany-hero-notext -->
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<div id="progress-bar"><div id="progress-fill"></div></div>
+<div id="hud">
+  <div id="score-display">⭐ 0 分</div>
+</div>
+
+<!-- HERO -->
+
+<p>🌍 <strong>And（已知）</strong>：我们已经有了一定的基础知识</p>
+  <p>⚡ <strong>But（问题）</strong>：但还有一个重要概念需要深入理解</p>
+  <p>💡 <strong>Therefore（新知）</strong>：因此通过本节课的学习，我们将掌握新知识并能灵活运用</p>
+
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（放在 pretest 之后，课件顶部可见） -->
+
+<script>
+function checkPretest() {
+
+  var sel0 = document.querySelector('input[name="pretest_q0"]:checked');
+  var fb0 = document.querySelector('.pretest-feedback-0');
+  if (sel0) {
+    fb0.style.display = 'block';
+    if (parseInt(sel0.value) === 1) {
+      fb0.style.background = '#d3f9d8'; fb0.style.color = '#2b8a3e';
+      fb0.textContent = '✅ 很好！你已经有了正确的认识，继续加油！';
+    } else {
+      fb0.style.background = '#fff3bf'; fb0.style.color = '#e67700';
+      fb0.textContent = '💡 这是个常见误区，学完本节课你会有新的理解！';
+    }
+  }
+  var sel1 = document.querySelector('input[name="pretest_q1"]:checked');
+  var fb1 = document.querySelector('.pretest-feedback-1');
+  if (sel1) {
+    fb1.style.display = 'block';
+    if (parseInt(sel1.value) === 2) {
+      fb1.style.background = '#d3f9d8'; fb1.style.color = '#2b8a3e';
+      fb1.textContent = '✅ 很好！你已经有了正确的认识，继续加油！';
+    } else {
+      fb1.style.background = '#fff3bf'; fb1.style.color = '#e67700';
+      fb1.textContent = '💡 这是个常见误区，学完本节课你会有新的理解！';
+    }
+  }
+}
+</script>
+
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/chn-e-syllable-spelling-hero.png" alt="音节拼读大挑战知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">音节拼读大挑战</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+
+<!-- 学习目标 -->
+<section data-scaffold="full" data-bloom-level="apply" id="sec-goals" class="section" data-slot="35">
+  <div data-scaffold="partial" data-bloom-level="remember" class="section-badge">📋 学习目标</div>
+  <h2 class="section-title">今天学什么？</h2>
+  <div class="card">
+    <div style="display:flex;flex-direction:column;gap:18px;">
+      <div style="display:flex;align-items:center;gap:16px;font-size:1.1rem;"><span style="font-size:2rem;">🎯</span><span>掌握音节的<strong>结构</strong>：声母 + 韵母（+ 声调）</span></div>
+      <div style="display:flex;align-items:center;gap:16px;font-size:1.1rem;"><span style="font-size:2rem;">🎵</span><span>学会<strong>两拼法</strong>和<strong>三拼法</strong>拼读音节</span></div>
+      <div style="display:flex;align-items:center;gap:16px;font-size:1.1rem;"><span style="font-size:2rem;">💡</span><span>认识整体认读音节（不用拼的音节）</span></div>
+      <div style="display:flex;align-items:center;gap:16px;font-size:1.1rem;"><span style="font-size:2rem;">✍️</span><span>能用音节拼出常见汉字的拼音</span></div>
+    </div>
+  </div>
+  <div class="nav-btns"><button class="btn btn-y" onclick="showSection('sec-warmup')">下一步 ➡️</button></div>
+</section>
+
+<!-- 热身 -->
+<section data-bloom-level="understand" id="sec-warmup" class="section" data-slot="35">
+  <div data-bloom-level="apply" class="section-badge">🔥 热身时间</div>
+  <h2 class="section-title">什么是音节？</h2>
+  <p class="section-desc">一个汉字的读音就是一个音节！👇</p>
+  <div class="card" style="text-align:center;">
+    <div style="font-size:1.2rem;color:#666;margin-bottom:20px;">一个音节由这几部分组成：</div>
+    <div class="spell-demo">
+      <div class="spell-part initial" onclick="playNote(261)">b</div>
+      <div class="spell-arrow">+</div>
+      <div class="spell-part final" onclick="playNote(329)">a</div>
+      <div class="spell-arrow">+</div>
+      <div class="spell-part tone" onclick="playNote(392)">ˉ</div>
+      <div class="spell-arrow">=</div>
+    </div>
+    <div class="spell-result" onclick="playSyllable('bā')">bā 巴 🍌</div>
+  </div>
+  <div class="steps-row">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-title">声母</div>
+      <div class="step-pinyin" style="color:var(--primary);">b p m f</div>
+      <div class="step-desc">辅音，开头的音</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-title">韵母</div>
+      <div class="step-pinyin" style="color:var(--secondary);">a o e i</div>
+      <div class="step-desc">元音，中间/结尾</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-title">声调</div>
+      <div class="step-pinyin" style="color:var(--purple);">ˉ ˊ ˇ ˋ</div>
+      <div class="step-desc">音调，高低起伏</div>
+    </div>
+  </div>
+  <div class="nav-btns"><button class="btn btn-g" onclick="showSection('sec-learn')">开始学习 ➡️</button></div>
+</section>
+
+<!-- 学习 -->
+<section id="sec-learn" class="section" data-slot="35">
+  <div class="section-badge">📖 学习拼读方法</div>
+  <h2 class="section-title">两拼法和三拼法</h2>
+  <p class="section-desc">两种不同的拼法，学会就能读任何音节！</p>
+  <div class="card">
+    <h3 style="font-size:1.5rem;color:var(--primary);margin-bottom:16px;">🔵 两拼法：声母 + 韵母</h3>
+    <p style="color:#666;margin-bottom:20px;font-size:1.05rem;">只有声母和韵母，一下子拼起来！</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
+      <div onclick="demonstrateSpell('b','a','bā','🍌')" class="practice-box" style="cursor:pointer;padding:20px;">
+        <div style="font-size:1rem;color:#888;margin-bottom:8px;">声母 b + 韵母 a</div>
+        <div style="font-size:56px;font-weight:900;color:var(--primary);line-height:1;">bā</div>
+        <div style="font-size:2rem;margin-top:8px;">🍌</div>
+      </div>
+      <div onclick="demonstrateSpell('d','e','dé','⭐')" class="practice-box" style="cursor:pointer;padding:20px;">
+        <div style="font-size:1rem;color:#888;margin-bottom:8px;">声母 d + 韵母 e</div>
+        <div style="font-size:56px;font-weight:900;color:var(--primary);line-height:1;">dé</div>
+        <div style="font-size:2rem;margin-top:8px;">⭐</div>
+      </div>
+      <div onclick="demonstrateSpell('m','ā','māo','🐱')" class="practice-box" style="cursor:pointer;padding:20px;">
+        <div style="font-size:1rem;color:#888;margin-bottom:8px;">声母 m + 韵母 ao</div>
+        <div style="font-size:56px;font-weight:900;color:var(--primary);line-height:1;">māo</div>
+        <div style="font-size:2rem;margin-top:8px;">🐱</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="font-size:1.5rem;color:var(--secondary);margin-bottom:16px;">🟢 三拼法：声母 + 介母 + 韵母</h3>
+    <p style="color:#666;margin-bottom:20px;font-size:1.05rem;">有介母 i/u/ü 在中间，分三步拼！</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">
+      <div onclick="demonstrateSpell3('g','u','a','guā','🍉')" class="practice-box" style="cursor:pointer;padding:20px;">
+        <div style="font-size:1rem;color:#888;margin-bottom:8px;">g + u + a</div>
+        <div style="display:flex;gap:4px;align-items:center;justify-content:center;">
+          <span style="font-size:40px;font-weight:900;color:var(--primary);">g</span>
+          <span style="font-size:2rem;color:#ccc;">+</span>
+          <span style="font-size:40px;font-weight:900;color:var(--orange);">u</span>
+          <span style="font-size:2rem;color:#ccc;">+</span>
+          <span style="font-size:40px;font-weight:900;color:var(--secondary);">a</span>
+        </div>
+        <div style="font-size:48px;font-weight:900;color:var(--accent);margin-top:8px;">guā</div>
+        <div style="font-size:2rem;">🍉</div>
+      </div>
+      <div onclick="demonstrateSpell3('x','i','a','xiā','🦐')" class="practice-box" style="cursor:pointer;padding:20px;">
+        <div style="font-size:1rem;color:#888;margin-bottom:8px;">x + i + a</div>
+        <div style="display:flex;gap:4px;align-items:center;justify-content:center;">
+          <span style="font-size:40px;font-weight:900;color:var(--primary);">x</span>
+          <span style="font-size:2rem;color:#ccc;">+</span>
+          <span style="font-size:40px;font-weight:900;color:var(--orange);">i</span>
+          <span style="font-size:2rem;color:#ccc;">+</span>
+          <span style="font-size:40px;font-weight:900;color:var(--secondary);">a</span>
+        </div>
+        <div style="font-size:48px;font-weight:900;color:var(--accent);margin-top:8px;">xiā</div>
+        <div style="font-size:2rem;">🦐</div>
+      </div>
+    </div>
+  </div>
+  <!-- 整体认读音节 -->
+  <div class="card" style="background:linear-gradient(135deg,#f8f0ff,#fff);">
+    <h3 style="font-size:1.3rem;color:var(--purple);margin-bottom:12px;">🌟 整体认读音节（背下来！）</h3>
+    <p style="color:#666;margin-bottom:16px;font-size:0.95rem;">这些音节不用拼，直接读出来！</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--purple);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">zhi</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--purple);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">chi</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--purple);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">shi</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--purple);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">ri</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--purple);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">zi</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--purple);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">ci</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--purple);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">si</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--orange);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">yi</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--orange);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">wu</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--orange);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">yu</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--orange);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">ye</span>
+      <span onclick="playSyllable(this.textContent)" style="font-size:2rem;font-weight:900;color:var(--orange);cursor:pointer;padding:8px 16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">yue</span>
+    </div>
+  </div>
+  <div class="nav-btns"><button class="btn btn-g" onclick="showSection('sec-level1')">进入关卡 🎮</button></div>
+</section>
+
+<!-- 关卡1：认读音节 -->
+<section id="sec-level1" class="section" data-slot="35">
+  <div class="level-header">
+    <div class="level-badge">1</div>
+    <div><div class="level-title">🎯 关卡一：认读音节</div><div class="level-desc">看图片，选择正确的拼音！</div></div>
+  </div>
+  <div class="card" id="lv1-card">
+    <div class="quiz-q"><span class="qp" id="lv1-emoji">🐱</span><span id="lv1-question">这是什么？</span></div>
+    <div class="choices-grid" id="lv1-choices"></div>
+    <div class="feedback" id="lv1-fb"></div>
+  </div>
+  <div id="lv1-prog" style="text-align:center;color:#888;font-size:0.9rem;margin-bottom:16px;"></div>
+  <div class="nav-btns" id="lv1-nav" style="display:none;"><button class="btn btn-g" onclick="showSection('sec-level2')">关卡2 ➡️</button></div>
+</section>
+
+<!-- 关卡2：声母韵母分拆 -->
+<section id="sec-level2" class="section" data-slot="35">
+  <div class="level-header">
+    <div class="level-badge" style="background:var(--secondary);">2</div>
+    <div><div class="level-title">🔤 关卡二：拆一拆</div><div class="level-desc">这个音节的声母/韵母是什么？</div></div>
+  </div>
+  <div class="card">
+    <div class="quiz-q"><span class="qp" id="lv2-pinyin">-</span><span id="lv2-question"></span></div>
+    <div class="choices-grid" id="lv2-choices"></div>
+    <div class="feedback" id="lv2-fb"></div>
+  </div>
+  <div id="lv2-prog" style="text-align:center;color:#888;font-size:0.9rem;margin-bottom:16px;"></div>
+  <div class="nav-btns" id="lv2-nav" style="display:none;"><button class="btn btn-g" onclick="showSection('sec-level3')">关卡3 ➡️</button></div>
+</section>
+
+<!-- 关卡3：拖拽拼读 -->
+<section id="sec-level3" class="section" data-slot="35">
+  <div class="level-header">
+    <div class="level-badge" style="background:var(--purple);">3</div>
+    <div><div class="level-title">🎯 关卡三：拼一拼</div><div class="level-desc">拖拽声母和韵母，拼出目标音节！</div></div>
+  </div>
+  <div class="card">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:1.1rem;color:#666;margin-bottom:8px;">🎯 拼出：</div>
+      <div id="lv3-target" style="font-size:72px;font-weight:900;color:var(--primary);line-height:1;"></div>
+      <div id="lv3-word" style="font-size:1.6rem;color:#888;margin-top:6px;"></div>
+    </div>
+    <div class="slot-row" id="lv3-slots">
+      <div class="slot" id="slot-s" ondragover="event.preventDefault()" ondrop="dropToSlot(event,'slot-s')">声</div>
+      <div style="font-size:2rem;font-weight:900;color:#ccc;">+</div>
+      <div class="slot" id="slot-y" ondragover="event.preventDefault()" ondrop="dropToSlot(event,'slot-y')">韵</div>
+      <div style="font-size:2rem;font-weight:900;color:#ccc;">=</div>
+      <div id="slot-result" style="font-size:56px;font-weight:900;color:var(--accent);min-width:80px;text-align:center;">?</div>
+    </div>
+    <div class="drag-pieces" id="lv3-pieces"></div>
+    <div class="feedback" id="lv3-fb"></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:16px;">
+      <button class="btn btn-y" onclick="checkLv3()">✅ 检查</button>
+      <button class="btn" style="background:#eee;color:#333;" onclick="resetLv3()">🔄 重置</button>
+    </div>
+  </div>
+  <div id="lv3-prog" style="text-align:center;color:#888;font-size:0.9rem;margin-bottom:16px;"></div>
+  <div class="nav-btns" id="lv3-nav" style="display:none;"><button class="btn" style="background:linear-gradient(135deg,#1e3c72,#2a5298);" onclick="showSection('sec-boss')">挑战Boss关 👾</button></div>
+</section>
+
+<!-- Boss关 -->
+<section id="sec-boss" class="section" data-slot="35">
+  <div class="boss-card">
+    <div class="boss-glow"></div>
+    <div class="boss-emoji">👾</div>
+    <div class="boss-title">Boss关：极速挑战！</div>
+    <p style="opacity:0.8;">快速判断音节结构，考验真功夫！</p>
+  </div>
+  <div class="card">
+    <div class="quiz-q"><span class="qp" id="boss-pinyin">-</span><span id="boss-question"></span></div>
+    <div class="choices-grid" id="boss-choices"></div>
+    <div class="feedback" id="boss-fb"></div>
+  </div>
+  <div id="boss-prog" style="text-align:center;color:#888;font-size:0.9rem;margin-bottom:16px;"></div>
+  <div class="nav-btns" id="boss-nav" style="display:none;"><button class="btn btn-y" onclick="showScoreboard()">查看成绩 🏆</button></div>
+</section>
+
+<!-- 成绩单 -->
+<div id="scoreboard" style="display:none;text-align:center;padding:60px 20px;max-width:600px;margin:0 auto;">
+  <h2 style="font-size:2rem;font-weight:900;margin-bottom:32px;">🎉 拼读高手！</h2>
+  <div class="score-ring"><div class="score-num" id="final-score">0</div><div class="score-lbl">总分</div></div>
+  <div class="ach-row" id="ach-row"></div>
+  <div style="margin-top:24px;">
+    <button class="btn btn-g" onclick="showSection('sec-extend')">拓展练习 📚</button>
+    <button class="btn" onclick="location.reload()" style="margin-left:12px;">🔄 再来一次</button>
+  </div>
+</div>
+
+<!-- 拓展 -->
+<div id="sec-extend" class="section ta-flat" data-slot="35">
+  <div class="section-badge">🌟 拓展练习</div>
+  <h2 class="section-title">读词语，认汉字！</h2>
+  <div class="syllable-list" id="extendList"></div>
+  <div class="card" style="background:linear-gradient(135deg,#43e97b,#38f9d7);color:#fff;margin-top:16px;">
+    <h3 style="font-size:1.3rem;margin-bottom:12px;">🎓 小结</h3>
+    </div>
+
+<div style="display:grid;gap:12px;">
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #51cf66;">
+      <span style="font-size:11px;color:#1e7e34;font-weight:700;">记忆层</span>
+      <p style="margin-top:6px;font-size:14px;">回忆：今天学了哪些关键词和规则？试着说出来。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #339af0;">
+      <span style="font-size:11px;color:#1971c2;font-weight:700;">理解层</span>
+      <p style="margin-top:6px;font-size:14px;">用自己的话解释今天学的核心概念，不看书能说清楚吗？</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #f59f00;">
+      <span style="font-size:11px;color:#b35900;font-weight:700;">应用层</span>
+      <p style="margin-top:6px;font-size:14px;">用今天的知识解决一个实际问题，或写一个新例子。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #cc5de8;">
+      <span style="font-size:11px;color:#862e9c;font-weight:700;">分析→创造层</span>
+      <p style="margin-top:6px;font-size:14px;">把今天的知识与已有知识联系起来：有什么共同点？有什么区别？能不能自己创造一道新题？</p>
+    </div>
+  </div>
+
+
+<div style="display:grid;gap:10px;">
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🎯 本质：</strong><span style="color:#666;font-size:14px;">这个知识的核心是什么？用一句话概括。</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🔗 联系：</strong><span style="color:#666;font-size:14px;">它和你已知的哪些知识有关联？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>🌍 应用：</strong><span style="color:#666;font-size:14px;">在生活中，你在哪里见过这个知识？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>❓ 疑问：</strong><span style="color:#666;font-size:14px;">学完之后，你还有什么不明白的地方？</span></div>
+    <div style="background:#fff;border-radius:10px;padding:12px 16px;"><strong>💡 洞见：</strong><span style="color:#666;font-size:14px;">学完后，你觉得最有意思或最让你惊讶的是什么？</span></div>
+  </div>
+
+
+<!-- TTS 音频 #TeachAny Edge-TTS -->
+<div class="teachany-audio-intro" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
+  <button onclick="document.getElementById('ta-audio').play()"
+    style="background:linear-gradient(135deg,#ff6b6b,#ee5a24);color:#fff;border:none;
+    width:52px;height:52px;border-radius:50%;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 16px rgba(255,107,107,0.4);display:flex;align-items:center;justify-content:center;"
+    title="播放课程介绍">🔊</button>
+  <audio id="ta-audio" src="audio/intro.mp3" preload="auto"></audio>
+</div>
+
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "🎵 音节拼读大挑战",
+  subject: "chinese",
+  grade: 3,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴脚本（左下角 FAB · 首次点击引导配置 API） -->
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+
+<!-- teachany-enhanced -->
+
+<!-- teachany-upgrade-v2 -->
+<!-- upgrade topic: 音节拼读大挑战 -->
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="A">
+<h3>选择题 1</h3><p>下面哪个词语的拼音是'huā duǒ'？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="'huā duǒ'对应的正确词语是'花朵'。">A. 花朵</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="'滑动'的拼音是'huá dòng'。">B. 滑动</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="'华多'不是正确的词语。">C. 华多</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="'花多'的拼音是'huā duō'。">D. 花多</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A">
+<h3>选择题 2</h3><p>下面哪个词语的拼音是'xiǎo niǎo'？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="'xiǎo niǎo'对应的正确词语是'小鸟'。">A. 小鸟</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="'小闹'的拼音是'xiǎo nào'。">B. 小闹</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="'笑鸟'不是正确的词语。">C. 笑鸟</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="'小脑'的拼音是'xiǎo nǎo'。">D. 小脑</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="A">
+<h3>选择题 3</h3><p>下面哪个词语的拼音是'yuè liang'？</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="'yuè liang'对应的正确词语是'月亮'。">A. 月亮</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="'越亮'的拼音是'yuè liàng'。">B. 越亮</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="'月凉'不是正确的词语。">C. 月凉</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="'月量'的拼音是'yuè liàng'。">D. 月量</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>请根据拼音'qīng wā'填写正确的词语：____。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>青蛙</p><p>'qīng wā'对应的正确词语是'青蛙'。</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>请根据拼音'bái yún'填写正确的词语：____。</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>白云</p><p>'bái yún'对应的正确词语是'白云'。</p></details></div>
+</section>
+<section class="section teachany-upgrade-block" data-interactive="conceptest" data-conceptest="true" data-bloom-level="understand" data-scaffold="full"><h2>💡 概念检测（互动）</h2><p>下面哪个词语的拼音声调是正确的？</p><div class="tu-opts tu-concept">
+<button type="button" class="tu-opt" data-choice="A" data-correct="true" data-diagnosis="'苹果'的正确拼音是'píng guǒ'，声调正确。">A. 苹果 (píng guǒ)</button>
+<button type="button" class="tu-opt" data-choice="B" data-correct="false" data-diagnosis="'pīng guǒ'的声调错误，'苹'应为第二声。">B. 苹果 (pīng guǒ)</button>
+<button type="button" class="tu-opt" data-choice="C" data-correct="false" data-diagnosis="'pǐng guǒ'的声调错误，'苹'应为第二声。">C. 苹果 (pǐng guǒ)</button>
+<button type="button" class="tu-opt" data-choice="D" data-correct="false" data-diagnosis="'pìng guǒ'的声调错误，'苹'应为第二声。">D. 苹果 (pìng guǒ)</button>
+</div><div class="tu-fb" hidden></div></section>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial"><h2>🔬 拼音拼读探究</h2><p>请选择一组多音节词语，尝试拼读并记录下每个音节的声调。</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="多音节词语的声调组合会影响词语的发音和意义。"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="记录下每个音节的声调，并比较不同声调组合下的发音差异。"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="通过探究，我们发现多音节词语的声调组合确实对词语的发音和意义有重要影响。"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#2563eb;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#2563eb}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么‘苹果’要拼成‘píng guǒ’而不是‘pín guǒ’？</p></div><div class="tu-q"><p>❓ 遇到‘xiong’这样的音节该怎么拆开读？</p></div><div class="tu-q"><p>❓ 三拼法里‘u’和‘i’同时出现时谁先读？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出汉语音节的声母、韵母和声调组成</p></div><div class="tu-q"><p>🎯 能判断两拼法与三拼法的适用条件</p></div><div class="tu-q"><p>🎯 能分析易混淆音节（如iu/ui）的拼读规律</p></div></section>
+<section class="section text-module" id="pretest" data-bloom-level="remember" data-scaffold="full" data-tts="pretest"><div class="panel"><span class="phase-tag">Pretest</span><h2>📝 课前诊断：先暴露一个误区</h2><p>一个汉语音节一般由哪几部分组成？</p><button class="quiz-option" data-q="pre" data-a="A">A. 声母、韵母、字母</button><button class="quiz-option" data-q="pre" data-a="B">B. 元音、辅音、声调</button><button class="quiz-option" data-q="pre" data-a="C" data-correct="1" data-diag="音节由声母、韵母和声调三部分组成。字母是书写单位，元音辅音是语音学的说法，小学阶段按声母、韵母、声调来记最清楚。">C. 声母、韵母、声调</button><div class="feedback" id="fb-pre">选择后显示错因诊断。</div></div></section>
+
+
+
+
+
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>像拆积木一样分离声母、介母、韵母（如‘q-i-áng→qiáng’）</p></div><div class="tu-q"><h3>💡解释它</h3><p>声母是音节开头，韵母是核心，声调是帽子</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>两拼法像直梯（声母+韵母），三拼法像转弯滑梯（声母+介母+韵母）</p></div><div class="tu-q"><h3>👁️看见它</h3><p>用颜色标记音节部件（红色声母/蓝色介母/绿色韵母）</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>用姓名拼读验证规则（如‘李雷→L-i Léi’）</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 把‘jú’读成‘jǘ’</h3><p>✅ ü见jqx，两点定要擦（→ju/qu/xu）</p><p>💡 混淆拼音规则与字母书写</p></div><div class="tu-q"><h3>❌ 三拼时漏读介母（如‘huā’读成‘hā’）</h3><p>✅ 做‘音节拉伸操’（h-u-ā→huā）</p><p>💡 介母发音短促易忽略</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>声母在前韵母后，介母中间不要漏，声调帽子戴对头</p><p><strong>类比：</strong>拼音节就像做汉堡：声母是面包底，韵母是肉饼，声调是酱料</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1"><h2>📖 音节初探</h2><div class="tu-q"><p><strong>And：</strong>学生已掌握拼音字母发音</p><p><strong>But：</strong>不清楚如何将字母组合成音节</p><p><strong>Therefore：</strong>建立音节是拼音基础单位的认知</p></div><div class="tu-q"><p>音节就像拼音小火车，由声母和韵母车厢组成。比如'bā'这个音节，车头是声母'b'，车厢是韵母'ā'，合起来就能发出'巴'的音。特别注意：一个汉字对应一个音节，像'妈妈'就是'mā'和'mā'两个音节组成的。</p></div><div class="tu-q"><p>🌍 找找身边单音节词：门（mén）、灯（dēng）、书（shū）；多音节词：西瓜（xī guā）有2节，巧克力（qiǎo kè lì）有3节。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>下面哪个是完整音节？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="B缺声母，C缺韵母，D缺声母">A.bà</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="B缺声母，C缺韵母，D缺声母">B.ā</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="B缺声母，C缺韵母，D缺声母">C.zh</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="B缺声母，C缺韵母，D缺声母">D.ōng</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2"><h2>📖 两拼秘诀</h2><div class="tu-q"><p><strong>And：</strong>能分辨声母韵母</p><p><strong>But：</strong>拼读时容易断开读</p><p><strong>Therefore：</strong>掌握声韵快速滑动技巧</p></div><div class="tu-q"><p>两拼法就像滑滑梯：声母当起点（如d），韵母当滑道（如à），快速滑下去变成'dà'。秘诀是'前音轻短后音重'！练习'd+ǎ→dǎ打'时，想象'd'轻轻碰一下舌头就马上滑向'ǎ'。错误示范：把'd-à'读成'的-啊'就断开了。</p></div><div class="tu-q"><p>🌍 玩拼音闪电战：看到路牌'学校（xué xiào）'，用两拼法快速读——x+ié→xié，x+iào→xiào。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>正确拼读't+ú'的结果是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="A分开读了，C漏声母，D停顿太长">A.特-无</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="A分开读了，C漏声母，D停顿太长">B.tú</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="A分开读了，C漏声母，D停顿太长">C.ú</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="A分开读了，C漏声母，D停顿太长">D.t--ú</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3"><h2>📖 三拼绝招</h2><div class="tu-q"><p><strong>And：</strong>掌握两拼音节</p><p><strong>But：</strong>遇到介母就卡壳</p><p><strong>Therefore：</strong>理解介母的桥梁作用</p></div><div class="tu-q"><p>三拼法多了介母这个'小桥'，记住口诀'声轻介快韵母响'。比如'火huǒ'：先读声母'h'（轻），马上接介母'u'（快），最后滑向韵母'ǒ'（响）。注意：介母只有i/u/ü三个，像'家jiā'里的'i'就是介母。错误例子：把'q+i+án→qián'读成'qī-án'就丢掉了介母。</p></div><div class="tu-q"><p>🌍 超市大发现：三拼词超多！'酸奶suān nǎi'（s+u+ān）、'巧克力qiǎo kè lì'（q+i+ǎo）。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>'小xiǎo'的正确拆分是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="B把介母和声母捆一起了，C/D拆分错误">A.x+i+ǎo</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="B把介母和声母捆一起了，C/D拆分错误">B.xi+ǎo</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="B把介母和声母捆一起了，C/D拆分错误">C.x+iǎ+o</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="B把介母和声母捆一起了，C/D拆分错误">D.xi+ǎ+o</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4"><h2>📖 特殊挑战</h2><div class="tu-q"><p><strong>And：</strong>能拼普通音节</p><p><strong>But：</strong>遇到特殊规则易错</p><p><strong>Therefore：</strong>攻克ü上两点省略规则</p></div><div class="tu-q"><p>小ü见到j/q/x/y要脱帽行礼！记住：'jú子'写作'jú'但读作'ǘ'，因为ü遇到j要去两点。但ü遇到n/l要保持两点，比如'nǚ女孩'。数字记忆法：j/q/x/y这4个字母会让ü去掉两点。例子：'x+ǜ→xù'（序），但'l+ǜ→lǜ'（绿）。</p></div><div class="tu-q"><p>🌍 动物名称练一练：'鲸jīng'（普通拼）、'鱼yú'（ü去两点）、'驴lǘ'（ü保留两点）。</p></div><div class="tu-q" data-answer="C"><h3>🏋️ 即练</h3><p>下面哪个写法正确？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="A/B/D的ü遇到j/q/x应去两点">A.qǜ</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="A/B/D的ü遇到j/q/x应去两点">B.jú</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="A/B/D的ü遇到j/q/x应去两点">C.lǚ</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="A/B/D的ü遇到j/q/x应去两点">D.xǖ</button></div><div class="tu-fb" hidden></div></div></section>
+
+<!-- ⭐ v7.7 标准独立连续音频模块 -->
+
+<!-- 课程导览图（互动画布） -->
+<section class="ta-standard-section" id="teachany-audio-player">
+  <div data-teachany-audio>
+    <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "sectionId": "anchor",
+    "title": "课程导入：chn-e-syllable-spelling",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/chn-e-syllable-spelling/enhance-1.mp3"
+  },
+  {
+    "sectionId": "objectives",
+    "title": "讲解 1",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/chn-e-syllable-spelling/enhance-2.mp3"
+  },
+  {
+    "sectionId": "module-1",
+    "title": "讲解 2",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/chn-e-syllable-spelling/enhance-3.mp3"
+  }
+]
+    </script>
+  </div>
+</section>
+
+
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card">
+  <div data-teachany-tutor-card></div>
+</section>
+
+
+<script>const knowledgeGraphData={"prerequisites": [], "current": {"id": "chn-e-syllable-spelling", "name": "音节拼读大挑战", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+<!-- ═══ PPT 播放控件（v6.1 轻量注入） ═══ -->
+<div class="slide-progress-bar" id="slide-progress-bar" style="width:0%"></div>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换演示模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+</button>
+
+<div class="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info"></span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav"></nav>
+
+<script>
+/* ═══════ Slide Controller v6.1 (轻量注入) ═══════ */
+(function(){
+'use strict';
+/* 检测页面元素：.section 或 .screen */
+const allSections = Array.from(document.querySelectorAll('.section, .screen'));
+if(!allSections.length) return;
+const totalPages = allSections.length;
+
+let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+const progressBar = document.getElementById('slide-progress-bar');
+const sidenav = document.getElementById('slide-sidenav');
+const fab = document.getElementById('play-mode-fab');
+const fabPlay = document.getElementById('fab-icon-play');
+const fabBrowse = document.getElementById('fab-icon-browse');
+const tbPrev = document.getElementById('tb-prev');
+const tbNext = document.getElementById('tb-next');
+const tbPageInfo = document.getElementById('tb-page-info');
+const tbProgressFill = document.getElementById('tb-progress-fill');
+const tbProgress = document.getElementById('tb-progress');
+const tbAutoplay = document.getElementById('tb-autoplay');
+const tbFullscreen = document.getElementById('tb-fullscreen');
+
+/* 提取标签名 */
+function getPageLabel(el) {
+  const h = el.querySelector('h1,h2,h3,.section-title');
+  if (h) return h.textContent.trim().slice(0, 20);
+  const btn = document.querySelector('.nav-btn.active, .nav-tab.active');
+  if (btn) return btn.textContent.trim().slice(0, 20);
+  return '第' + (allSections.indexOf(el) + 1) + '页';
+}
+
+function buildSidenav() {
+  sidenav.innerHTML = '';
+  const counter = document.createElement('div');
+  counter.className = 'sidenav-counter'; counter.id = 'sidenav-counter';
+  counter.textContent = '1/' + totalPages;
+  sidenav.appendChild(counter);
+  allSections.forEach((p, i) => {
+    const d = document.createElement('button');
+    d.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+    d.setAttribute('aria-label', getPageLabel(p));
+    d.addEventListener('click', () => goToPage(i));
+    sidenav.appendChild(d);
+  });
+}
+
+function updateUI() {
+  const prog = totalPages > 1 ? currentPage / (totalPages - 1) * 100 : 100;
+  if (progressBar) progressBar.style.width = prog + '%';
+  if (tbProgressFill) tbProgressFill.style.width = prog + '%';
+  if (tbPageInfo) tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+  sidenav.querySelectorAll('.sidenav-dot').forEach((d, i) => d.classList.toggle('active', i === currentPage));
+  const ce = document.getElementById('sidenav-counter');
+  if (ce) ce.textContent = (currentPage + 1) + '/' + totalPages;
+  if (tbPrev) tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+  if (tbNext) tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+}
+
+function goToPage(i) {
+  if (i < 0 || i >= totalPages) return;
+  currentPage = i;
+  const target = allSections[currentPage];
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateUI();
+}
+
+function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+/* Scroll-based page tracking */
+let scrollTimeout;
+function onScroll() {
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => {
+    const st = window.scrollY;
+    let closest = 0, minD = Infinity;
+    allSections.forEach((p, i) => {
+      const d = Math.abs(p.offsetTop - st - 100);
+      if (d < minD) { minD = d; closest = i; }
+    });
+    if (closest !== currentPage) { currentPage = closest; updateUI(); }
+  }, 120);
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+
+function togglePlayMode() {
+  isPlayMode = !isPlayMode;
+  document.body.classList.toggle('play-mode', isPlayMode);
+  document.body.classList.toggle('toolbar-visible', isPlayMode);
+  if (fabPlay) fabPlay.style.display = isPlayMode ? 'none' : 'block';
+  if (fabBrowse) fabBrowse.style.display = isPlayMode ? 'block' : 'none';
+  if (isPlayMode) {
+    document.documentElement.style.overflow = 'hidden';
+    goToPage(currentPage);
+  } else {
+    document.documentElement.style.overflow = '';
+  }
+}
+
+if (fab) fab.addEventListener('click', togglePlayMode);
+if (tbPrev) tbPrev.addEventListener('click', prevPage);
+if (tbNext) tbNext.addEventListener('click', nextPage);
+if (tbProgress) tbProgress.addEventListener('click', e => {
+  const r = tbProgress.getBoundingClientRect();
+  goToPage(Math.round((e.clientX - r.left) / r.width * (totalPages - 1)));
+});
+if (tbAutoplay) tbAutoplay.addEventListener('click', () => {
+  isAutoPlay = !isAutoPlay;
+  tbAutoplay.classList.toggle('active', isAutoPlay);
+  if (isAutoPlay) {
+    autoPlayTimer = setInterval(() => {
+      if (currentPage < totalPages - 1) nextPage();
+      else { clearInterval(autoPlayTimer); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+    }, 8000);
+  } else { clearInterval(autoPlayTimer); }
+});
+if (tbFullscreen) tbFullscreen.addEventListener('click', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (!isPlayMode) {
+    if (e.key === 'f' || e.key === 'F') { if (!e.ctrlKey && !e.metaKey) togglePlayMode(); }
+    return;
+  }
+  switch (e.key) {
+    case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+    case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+    case 'Escape': togglePlayMode(); break;
+  }
+});
+
+buildSidenav();
+
+/* ═══ v6.2 自动初始化：连续阅读模式下预加载动态内容 ═══ */
+(function(){
+  try {
+    var inited = new Set();
+    allSections.forEach(function(screen) {
+      var id = screen.id;
+      if (!id || inited.has(id)) return;
+      inited.add(id);
+      /* 根据屏幕 ID 推测并调用对应的 init 函数 */
+      var caps = id.charAt(0).toUpperCase() + id.slice(1);
+      var candidates = [
+        'init' + caps,              /* initWarmup, initL1, initBoss ... */
+        'init_' + id,               /* init_warmup */
+        'load' + caps,              /* loadBoss */
+        'build' + caps,             /* buildQuiz */
+        'render' + caps,            /* renderContent */
+        'setup' + caps,             /* setupLevel */
+      ];
+      for (var i = 0; i < candidates.length; i++) {
+        if (typeof window[candidates[i]] === 'function') {
+          try { window[candidates[i]](); } catch(e) {}
+          break;
+        }
+      }
+    });
+  } catch(e) {}
+})();
+/* ═══ end v6.2 auto-init ═══ */
+
+updateUI();
+document.body.classList.add('toolbar-visible');
+setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+})();
+</script>
+
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+</div>
+
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section chne-depth core-knowledge-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>音节拼读：声母韵母快速合成</h2>
+      <p>音节拼读是把声母和韵母连读成一个音，并加上声调。拼读要连贯，不能断开成两个音。熟练拼读后，看到拼音就能读出汉字音，为自主识字铺路。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>音节拼读核心机制：声母韵母快速合成为完整音节的教学流程图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar-s2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="arBlue-s2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#60a5fa"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.3"><line x1="60" y1="20" x2="60" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="580" y1="20" x2="580" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="160" x2="620" y2="160" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="240" x2="620" y2="240" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155" stroke-width="0.5"/></g><text x="320" y="50" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">音节拼读核心机制图</text><rect x="50" y="100" width="120" height="80" rx="10" fill="url(#blueGrad-s2)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="110" y="125" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">声母</text><text x="110" y="145" text-anchor="middle" fill="#e2e8f0" font-size="12">b p m f</text><text x="110" y="160" text-anchor="middle" fill="#e2e8f0" font-size="12">d t n l</text><text x="110" y="175" text-anchor="middle" fill="#e2e8f0" font-size="12">g k h...</text><rect x="50" y="220" width="120" height="80" rx="10" fill="url(#blueGrad-s2)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="110" y="245" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">韵母</text><text x="110" y="265" text-anchor="middle" fill="#e2e8f0" font-size="12">a o e i u ü</text><text x="110" y="280" text-anchor="middle" fill="#e2e8f0" font-size="12">ai ei ao ou</text><text x="110" y="295" text-anchor="middle" fill="#e2e8f0" font-size="12">an en ang...</text><ellipse cx="320" cy="200" rx="80" ry="60" fill="url(#orangeGrad-s2)" stroke="#fb923c" stroke-width="2.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></ellipse><text x="320" y="190" text-anchor="middle" fill="#fbbf24" font-size="15" font-weight="bold">快速合成</text><text x="320" y="210" text-anchor="middle" fill="#e2e8f0" font-size="13">连贯拼读</text><text x="320" y="225" text-anchor="middle" fill="#e2e8f0" font-size="12">不能断开</text><rect x="470" y="160" width="120" height="80" rx="10" fill="url(#greenGrad-s2)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="530" y="185" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">完整音节</text><text x="530" y="205" text-anchor="middle" fill="#e2e8f0" font-size="12">+ 声调</text><text x="530" y="220" text-anchor="middle" fill="#7dd3fc" font-size="13">mā má mǎ mà</text><path d="M 170 140 Q 240 140 250 180" stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#ar-s2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></path><path d="M 170 260 Q 240 260 250 220" stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#ar-s2)" stroke-dasharray="7 5"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><path d="M 400 200 Q 435 200 470 200" stroke="#60a5fa" stroke-width="2.5" fill="none" marker-end="url(#arBlue-s2)" stroke-dasharray="8 6"><animate attributeName="stroke-dashoffset" from="28" to="0" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></path><circle cx="320" cy="200" r="6" fill="#7dd3fc" stroke="#0ea5e9" stroke-width="1.5"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></circle><rect x="50" y="330" width="200" height="50" rx="8" fill="url(#purpleGrad-s2)" stroke="#c4b5fd" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></rect><text x="150" y="350" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">拼读示例</text><text x="150" y="370" text-anchor="middle" fill="#e2e8f0" font-size="12">b + a = ba (爸)</text><rect x="300" y="330" width="200" height="50" rx="8" fill="url(#purpleGrad-s2)" stroke="#c4b5fd" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></rect><text x="400" y="350" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="bold">学习目标</text><text x="400" y="370" text-anchor="middle" fill="#e2e8f0" font-size="12">看拼音读汉字音</text><line x1="110" y1="100" x2="80" y2="70" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></line><circle cx="80" cy="70" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></circle><text x="75" y="65" text-anchor="end" fill="#e2e8f0" font-size="12">辅音</text><line x1="110" y1="300" x2="80" y2="330" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></line><circle cx="80" cy="330" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></circle><text x="75" y="345" text-anchor="end" fill="#e2e8f0" font-size="12">元音</text><line x1="530" y1="160" x2="560" y2="130" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></line><circle cx="560" cy="130" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></circle><text x="565" y="125" text-anchor="start" fill="#e2e8f0" font-size="12">四声调值</text><rect x="520" y="320" width="100" height="80" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></rect><text x="570" y="340" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="bold">图例说明</text><rect x="530" y="350" width="12" height="8" fill="url(#blueGrad-s2)" stroke="#60a5fa" stroke-width="1"/><text x="548" y="358" fill="#e2e8f0" font-size="10">基础音素</text><rect x="530" y="365" width="12" height="8" fill="url(#orangeGrad-s2)" stroke="#fb923c" stroke-width="1"/><text x="548" y="373" fill="#e2e8f0" font-size="10">合成过程</text><rect x="530" y="380" width="12" height="8" fill="url(#greenGrad-s2)" stroke="#4ade80" stroke-width="1"/><text x="548" y="388" fill="#e2e8f0" font-size="10">输出结果</text></svg></figure>
+
+</div>
+
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="方法范例" data-slot="35">
+  <section class="section chne-depth core-knowledge-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：慢拼—快拼—定调—词语中练</h2>
+      <p>起初可慢慢连读声母韵母，再加快成一个音节，最后加上声调。把音节放进词语、句子中反复读，比孤立拼更实用。注意整体认读音节要整体记。</p>
+      <div class="worked-example"><strong>范例：</strong>拼“b-ā→bā”：先慢连，再快读成“巴”，在“爸爸”一词中巩固。</div>
+      <p id="lesson-pitfall" class="chne-pitfall"><strong>常见误区：</strong>常见误区是拼读拖沓成两截，或调值不准。应多练快拼和带调读。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练：辨析要点</h3>
+        <p>拼读时应力求？</p>
+        <button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;拼读要连贯成音节，并读准声调。&quot;)">A. 声母韵母断开很长</button><button type="button" data-correct="1" onclick="chneDepthCheck(this,true,&#x27;chne-depth-feedback&#x27;,&quot;拼读要连贯成音节，并读准声调。&quot;)">B. 连贯成一个音节并读准声调</button><button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;拼读要连贯成音节，并读准声调。&quot;)">C. 只读声母</button><button type="button" data-correct="0" onclick="chneDepthCheck(this,false,&#x27;chne-depth-feedback&#x27;,&quot;拼读要连贯成音节，并读准声调。&quot;)">D. 不读韵母</button>
+        <div class="chne-feedback" id="chne-depth-feedback" role="status"></div>
+      </div>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>音节拼读四步法机制分解图：慢拼-快拼-定调-词语练习全流程</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="orangeGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="purpleGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker><marker id="arBlue" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#60a5fa"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"/><g opacity="0.3"><line x1="80" y1="20" x2="80" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="20" x2="160" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="20" x2="240" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="20" x2="320" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="400" y1="20" x2="400" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="20" x2="480" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="560" y1="20" x2="560" y2="400" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="80" x2="620" y2="80" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="160" x2="620" y2="160" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="240" x2="620" y2="240" stroke="#334155" stroke-width="0.5"/><line x1="20" y1="320" x2="620" y2="320" stroke="#334155" stroke-width="0.5"/></g><rect x="50" y="50" width="540" height="80" rx="12" fill="url(#blueGrad)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="320" y="75" text-anchor="middle" font-size="16" font-weight="bold" fill="#fbbf24">音节拼读四步法<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.2s" fill="freeze"/></text><text x="320" y="100" text-anchor="middle" font-size="13" fill="#e2e8f0">慢拼 → 快拼 → 定调 → 词语中练<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.4s" fill="freeze"/></text><rect x="40" y="150" width="120" height="60" rx="8" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="100" y="170" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">第一步<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.8s" fill="freeze"/></text><text x="100" y="190" text-anchor="middle" font-size="13" fill="#e2e8f0">慢拼<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1s" fill="freeze"/></text><ellipse cx="80" cy="240" rx="25" ry="18" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></ellipse><text x="80" y="248" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">b<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.4s" fill="freeze"/></text><text x="80" y="270" text-anchor="middle" font-size="12" fill="#e2e8f0">声母<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.6s" fill="freeze"/></text><path d="M 105 240 Q 130 220 155 240" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arBlue)"><animate attributeName="stroke-dashoffset" from="20" to="0" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></path><ellipse cx="180" cy="240" rx="25" ry="18" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2s" fill="freeze"/></ellipse><text x="180" y="248" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">ā<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.2s" fill="freeze"/></text><text x="180" y="270" text-anchor="middle" font-size="12" fill="#e2e8f0">韵母<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></text><rect x="200" y="150" width="120" height="60" rx="8" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.7s" fill="freeze"/></rect><text x="260" y="170" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">第二步<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></text><text x="260" y="190" text-anchor="middle" font-size="13" fill="#e2e8f0">快拼<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.1s" fill="freeze"/></text><path d="M 205 240 Q 230 220 255 240" fill="none" stroke="#fbbf24" stroke-width="3" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.6s" fill="freeze"/></path><ellipse cx="280" cy="240" rx="30" ry="20" fill="url(#purpleGrad)" stroke="#c084fc" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.8s" fill="freeze"/><animate attributeName="opacity" values="1;0.6;1" dur="2s" repeatCount="indefinite" begin="3s"/></ellipse><text x="280" y="248" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">bā<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></text><text x="280" y="270" text-anchor="middle" font-size="12" fill="#e2e8f0">连读<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.2s" fill="freeze"/></text><rect x="360" y="150" width="120" height="60" rx="8" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.8s" fill="freeze"/></rect><text x="420" y="170" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">第三步<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1s" fill="freeze"/></text><text x="420" y="190" text-anchor="middle" font-size="13" fill="#e2e8f0">定调<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></text><path d="M 310 240 Q 335 220 360 240" fill="none" stroke="#fbbf24" stroke-width="3" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.4s" fill="freeze"/></path><ellipse cx="390" cy="240" rx="30" ry="20" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.6s" fill="freeze"/></ellipse><text x="390" y="248" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">巴<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.8s" fill="freeze"/></text><text x="390" y="270" text-anchor="middle" font-size="12" fill="#e2e8f0">带调<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4s" fill="freeze"/></text><rect x="520" y="150" width="120" height="60" rx="8" fill="url(#orangeGrad)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="580" y="170" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">第四步<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.1s" fill="freeze"/></text><text x="580" y="190" text-anchor="middle" font-size="13" fill="#e2e8f0">词语练<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.3s" fill="freeze"/></text><path d="M 420 240 Q 445 220 470 240" fill="none" stroke="#fbbf24" stroke-width="3" marker-end="url(#ar)"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.2s" fill="freeze"/></path><rect x="500" y="225" width="80" height="30" rx="6" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.4s" fill="freeze"/></rect><text x="540" y="245" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">爸爸<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.6s" fill="freeze"/></text><text x="540" y="270" text-anchor="middle" font-size="12" fill="#e2e8f0">词语<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4.8s" fill="freeze"/></text><rect x="80" y="300" width="200" height="80" rx="10" fill="url(#redGrad)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5s" fill="freeze"/></rect><text x="180" y="325" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">常见误区<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.2s" fill="freeze"/></text><text x="90" y="345" font-size="12" fill="#e2e8f0">× 拖沓成两截<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.4s" fill="freeze"/></text><text x="90" y="365" font-size="12" fill="#e2e8f0">× 调值不准<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.6s" fill="freeze"/></text><rect x="320" y="300" width="220" height="80" rx="10" fill="url(#greenGrad)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5.8s" fill="freeze"/></rect><text x="430" y="325" text-anchor="middle" font-size="14" font-weight="bold" fill="#fbbf24">练习要点<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6s" fill="freeze"/></text><text x="330" y="345" font-size="12" fill="#e2e8f0">√ 连贯成一个音节<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.2s" fill="freeze"/></text><text x="330" y="365" font-size="12" fill="#e2e8f0">√ 读准声调<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.4s" fill="freeze"/></text><line x1="100" y1="210" x2="100" y2="225" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></line><circle cx="100" cy="225" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2s" fill="freeze"/></circle><line x1="260" y1="210" x2="260" y2="225" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.2s" fill="freeze"/></line><circle cx="260" cy="225" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></circle><line x1="420" y1="210" x2="420" y2="225" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.6s" fill="freeze"/></line><circle cx="420" cy="225" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.8s" fill="freeze"/></circle><line x1="580" y1="210" x2="580" y2="225" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></line><circle cx="580" cy="225" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.2s" fill="freeze"/></circle><rect x="560" y="350" width="65" height="55" rx="4" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.6s" fill="freeze"/></rect><text x="592" y="365" text-anchor="middle" font-size="12" font-weight="bold" fill="#fbbf24">图例<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="6.8s" fill="freeze"/></text><rect x="565" y="370" width="8" height="6" fill="#f59e0b" opacity="0.25"><animate attributeName="opacity" from="0" to="0.25" dur="0.5s" begin="7s" fill="freeze"/></rect><text x="578" y="377" font-size="10" fill="#e2e8f0">步骤<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.2s" fill="freeze"/></text><circle cx="569" cy="385" r="3" fill="#34d399" opacity="0.25"><animate attributeName="opacity" from="0" to="0.25" dur="0.5s" begin="7.4s" fill="freeze"/></circle><text x="578" y="390" font-size="10" fill="#e2e8f0">音节<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.6s" fill="freeze"/></text><path d="M 565 395 L 575 395" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="4 2"><animate attributeName="stroke-dashoffset" from="12" to="0" dur="1s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="7.8s" fill="freeze"/></path><text x="578" y="400" font-size="10" fill="#e2e8f0">流程<animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="8s" fill="freeze"/></text></svg></figure>
+
+</div>
+
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="拓展应用" data-slot="100">
+  <section class="section chne-depth core-knowledge-module" id="lesson-extend"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-extend">
+    <div class="card">
+      <span class="phase-tag" data-variant="success">拓展应用</span>
+      <h2>拓展应用：拼读闯关卡</h2>
+      <p>设计十张音节关卡，过关才能得到下一张。同学互相当关主，专练易错音节。</p>
+      <canvas class="chne-canvas" id="chne-canvas-chn-e-syllable-spelling" width="560" height="220"
+        role="img" aria-label="朗读节奏示意"></canvas>
+    </div>
+  </section>
+</div>
+
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：🎵 音节拼读大挑战</h2><div data-teachany-kg="chn-e-syllable-spelling"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<script id="chne-depth-js">
+function chneDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+(function () {
+  function draw(cv) {
+    var ctx = cv.getContext('2d'); var W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
+    // 节奏/停顿示意：把诗句音节画成带停顿的方块
+    var tokens = ['床前', '·', '明月', '·', '光'];
+    var x = 30, y = H / 2;
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillText('朗读节奏示意：床前 / 明月 / 光', W / 2, 30);
+    tokens.forEach(function (t) {
+      if (t === '·') { ctx.fillStyle = '#f472b6'; ctx.fillText('/', x + 12, y + 6); x += 26; return; }
+      ctx.fillStyle = 'rgba(56,189,248,.22)'; ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+      var w = 64; ctx.fillRect(x, y - 22, w, 44); ctx.strokeRect(x, y - 22, w, 44);
+      ctx.fillStyle = '#e5e7eb'; ctx.fillText(t, x + w / 2, y + 6); x += w + 8;
+    });
+    ctx.fillStyle = '#94a3b8'; ctx.fillText('“光/霜/乡”押 ang 韵，读来和谐上口', W / 2, H - 20);
+  }
+  function init() { document.querySelectorAll('canvas.chne-canvas').forEach(draw); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+<script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
+</body>
+</html>

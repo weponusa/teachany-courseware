@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TeachAny PBL 调用日志</title>
+  <style>
+    :root{--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e2e8f0;--blue:#2563eb;--green:#16a34a;--red:#dc2626;--shadow:0 18px 45px rgba(15,23,42,.10)}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6}header{padding:34px 20px 18px;max-width:1280px;margin:0 auto}main{max-width:1280px;margin:0 auto;padding:0 20px 48px}h1{margin:0 0 8px;font-size:32px}.muted{color:var(--muted)}.panel{background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:20px;padding:18px;margin-bottom:18px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}label{font-weight:700;font-size:14px;display:block;margin-bottom:6px}input,select{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit}button,.btn{border:0;border-radius:999px;background:var(--blue);color:#fff;font-weight:800;padding:11px 18px;cursor:pointer;text-decoration:none;display:inline-block}.btn.secondary{background:#0f172a}.log-item{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;background:#fff}.log-item h3{margin:0 0 6px;font-size:16px}.log-meta{font-size:13px;color:var(--muted);margin-bottom:10px}.pre{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:12px;overflow:auto;font-size:12px;max-height:280px;white-space:pre-wrap;word-break:break-word}.err{color:var(--red)}.ok{color:var(--green)}.status{font-size:14px}
+  </style>
+</head>
+<body>
+<header>
+  <h1>PBL LLM 调用日志</h1>
+  <p class="muted">查看每次 PBL 拆解的完整提示词与模型返回。需配置 <code>PBL_LOG_TOKEN</code> 环境变量后使用访问令牌。</p>
+</header>
+<main>
+  <section class="panel">
+    <div class="toolbar">
+      <div>
+        <label for="token">访问令牌</label>
+        <input id="token" type="password" placeholder="PBL_LOG_TOKEN" style="min-width:220px">
+      </div>
+      <div>
+        <label for="stage">阶段</label>
+        <select id="stage">
+          <option value="">全部</option>
+          <option value="decompose">decompose</option>
+          <option value="filter">filter</option>
+          <option value="match">match</option>
+        </select>
+      </div>
+      <div>
+        <label for="goal">目标关键词</label>
+        <input id="goal" placeholder="如 食堂">
+      </div>
+      <div>
+        <label for="limit">条数</label>
+        <input id="limit" type="number" value="30" min="1" max="500" style="width:90px">
+      </div>
+      <button id="loadBtn">加载日志</button>
+      <a id="exportBtn" class="btn secondary" href="#">导出 NDJSON</a>
+      <a class="btn secondary" href="/pbl.html">返回 PBL</a>
+      <span id="status" class="status"></span>
+    </div>
+  </section>
+  <section id="list"></section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const statusEl = $('status');
+const listEl = $('list');
+const tokenEl = $('token');
+const savedToken = localStorage.getItem('teachany_pbl_log_token');
+if (savedToken) tokenEl.value = savedToken;
+
+function esc(v){return String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
+function apiBase(){ return location.origin.includes('localhost') ? 'https://www.teachany.cn' : location.origin; }
+
+function buildUrl(fmt){
+  const p = new URLSearchParams();
+  const token = tokenEl.value.trim();
+  if (token) p.set('token', token);
+  const stage = $('stage').value.trim();
+  const goal = $('goal').value.trim();
+  const limit = $('limit').value.trim() || '30';
+  if (stage) p.set('stage', stage);
+  if (goal) p.set('goal', goal);
+  p.set('limit', limit);
+  if (fmt) p.set('format', fmt);
+  return `${apiBase()}/api/pbl/logs?${p.toString()}`;
+}
+
+function renderRows(rows){
+  if (!rows.length) {
+    listEl.innerHTML = '<p class="muted">暂无日志。请确认 D1 已建表且 PBL 已有调用记录。</p>';
+    return;
+  }
+  listEl.innerHTML = rows.map(r => {
+    let messages = r.messages_json;
+    try { messages = JSON.stringify(JSON.parse(r.messages_json), null, 2); } catch(e) {}
+    const err = r.error ? `<p class="err">错误：${esc(r.error)}</p>` : '';
+    return `<article class="log-item">
+      <h3>#${esc(r.id)} · ${esc(r.stage)} · ${esc(r.goal)}</h3>
+      <div class="log-meta">${esc(r.created_at)} · ${esc(r.backend || '-')} / ${esc(r.model || '-')} · ${r.latency_ms != null ? r.latency_ms + 'ms' : '-'} · complex=${r.complex ? '是' : '否'}</div>
+      ${err}
+      <p><b>提示词 messages</b></p>
+      <pre class="pre">${esc(messages)}</pre>
+      <p><b>模型返回</b></p>
+      <pre class="pre">${esc(r.response_text || '')}</pre>
+    </article>`;
+  }).join('');
+}
+
+async function loadData(){
+  const token = tokenEl.value.trim();
+  if (token) localStorage.setItem('teachany_pbl_log_token', token);
+  statusEl.textContent = '加载中…';
+  statusEl.className = 'status';
+  $('exportBtn').href = buildUrl('ndjson');
+  try {
+    const res = await fetch(buildUrl('json'));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.error || res.status);
+    renderRows(data.rows || []);
+    statusEl.textContent = `已加载 ${data.count || 0} 条`;
+    statusEl.className = 'status ok';
+  } catch (e) {
+    statusEl.textContent = e.message;
+    statusEl.className = 'status err';
+    listEl.innerHTML = '';
+  }
+}
+
+$('loadBtn').addEventListener('click', loadData);
+if (savedToken) loadData();
+</script>
+</body>
+</html>

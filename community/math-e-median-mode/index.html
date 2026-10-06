@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta name="teachany-node" content="math-e-median-mode">
+<meta name="teachany-subject" content="math">
+<meta name="teachany-domain" content="statistics-probability-primary">
+<meta name="teachany-grade" content="5">
+<meta name="teachany-difficulty" content="3">
+<meta name="teachany-version" content="7.21.0">
+<meta name="teachany-stage" content="elementary">
+<meta name="teachany-author" content="weponusa">
+<meta name="teachany-prerequisites" content="average-concept,data-ordering">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中位数与众数 | 五年级数学 · 小学 · 数学 · G5 · TeachAny v6.1</title>
+<style>
+:root{--accent:#60a5fa;--bg:#0b1120;--card:#15233f;--primary:#60a5fa;--secondary:#818cf8;--green:#4ade80;--orange:#fb923c;--pink:#f472b6;--purple:#a78bfa;--teal:#2dd4bf}
+
+:root {
+  --bg: #fffbf0;
+  --primary: #ff6b6b;
+  --secondary: #4ecdc4;
+  --accent: #ffe66d;
+  --card: #fff;
+  --purple: #a29bfe;
+  --orange: #fd9644;
+  --green: #26de81;
+  --pink: #fd79a8;
+  --teal: #00cec9;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: var(--bg); min-height: 100vh; overflow-x: hidden; }
+
+.hero {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 30%, #fd79a8 60%, #feca57 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 2rem; position: relative; overflow: hidden;
+}
+.hero-title {
+  font-size: clamp(2rem, 7vw, 4.5rem);
+  font-weight: 900;
+  background: linear-gradient(90deg, #fff 0%, #ffe66d 50%, #fff 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+  animation: bounceIn 0.8s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes bounceIn { from{transform:scale(0.3);opacity:0} to{transform:scale(1);opacity:1} }
+@keyframes bounce { from{transform:translateY(0)} to{transform:translateY(-10px)} }
+@keyframes float { 0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-15px) rotate(5deg)} }
+.hero-emoji { font-size: 4rem; animation: float 3s ease-in-out infinite; }
+.start-btn {
+  background: white; color: #6c5ce7; border: none; border-radius: 50px;
+  padding: 1rem 3rem; font-size: 1.3rem; font-weight: 800; cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15); margin-top: 1.5rem;
+  animation: pulse 2s ease infinite; transition: transform 0.2s;
+}
+.start-btn:hover { transform: scale(1.08); }
+@keyframes pulse { 0%,100%{box-shadow:0 8px 20px rgba(0,0,0,0.15)} 50%{box-shadow:0 8px 30px rgba(108,92,231,0.4)} }
+
+.section { min-height: 100vh; padding: 2rem 1.5rem 6rem; background: var(--bg); }
+
+.section-header {
+  text-align: center; margin-bottom: 2rem; border-radius: 20px;
+  padding: 1.5rem; color: white;
+}
+.section-header h2 { font-size: 1.8rem; font-weight: 800; }
+.section-header p { font-size: 1rem; margin-top: 0.4rem; opacity: 0.9; }
+
+.card { background: var(--card); border-radius: 20px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+
+.btn { background: linear-gradient(135deg,var(--primary),var(--orange)); color:white; border:none; border-radius:50px; padding:0.8rem 2rem; font-size:1rem; font-weight:700; cursor:pointer; transition:transform 0.2s; margin:0.3rem; }
+.btn:hover { transform:scale(1.05); }
+.btn-purple { background: linear-gradient(135deg,var(--purple),#6c5ce7); }
+.btn-teal { background: linear-gradient(135deg,var(--teal),var(--secondary)); }
+.btn-accent { background: linear-gradient(135deg,var(--accent),var(--orange)); color:#333; }
+
+.stars-display { position:fixed; top:1rem; right:1rem; z-index:1000; background:white; border-radius:50px; padding:0.5rem 1rem; box-shadow:0 4px 15px rgba(0,0,0,0.15); font-size:1.1rem; font-weight:700; }
+
+.achievement-popup { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(0); background:linear-gradient(135deg,var(--purple),#6c5ce7); border-radius:20px; padding:2rem; text-align:center; z-index:2000; box-shadow:0 20px 60px rgba(0,0,0,0.3); transition:transform 0.3s cubic-bezier(0.175,0.885,0.32,1.275); min-width:280px; color:white; }
+.achievement-popup.show { transform:translate(-50%,-50%) scale(1); }
+
+.feedback { border-radius:15px; padding:1rem; margin:0.5rem 0; font-weight:600; font-size:1rem; text-align:center; }
+.feedback.correct { background:#e8fff4; color:#00b894; }
+.feedback.wrong { background:#fff5f5; color:var(--primary); }
+
+.answer-input { border:3px solid var(--secondary); border-radius:12px; padding:0.7rem 1rem; font-size:1.2rem; font-weight:700; width:120px; text-align:center; outline:none; }
+.answer-input:focus { border-color:var(--primary); }
+
+/* Number cards for sorting */
+.num-card { display:inline-flex; align-items:center; justify-content:center; width:56px; height:56px; border-radius:15px; font-size:1.3rem; font-weight:800; cursor:grab; margin:0.3rem; user-select:none; transition:all 0.2s; box-shadow:0 3px 10px rgba(0,0,0,0.1); }
+.num-card:active { cursor:grabbing; transform:scale(1.15); }
+.num-card.selected { outline:3px solid var(--primary); transform:scale(1.1); }
+.num-card.median-hl { background:linear-gradient(135deg,#ffe66d,#feca57) !important; animation:bounce 0.5s ease; }
+.num-card.mode-hl { background:linear-gradient(135deg,var(--green),#20bf6b) !important; color:white; animation:bounce 0.5s ease 0.1s; }
+
+/* Sort track */
+.sort-track { min-height: 80px; border: 3px dashed var(--secondary); border-radius: 15px; padding: 0.8rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.3rem; transition:background 0.2s; }
+.sort-track.over { background:rgba(78,205,196,0.1); }
+
+/* Options */
+.opt-btn { background:white; border:3px solid #eee; border-radius:15px; padding:0.8rem; font-size:1.05rem; font-weight:600; cursor:pointer; transition:all 0.2s; text-align:center; margin:0.3rem; flex:1; min-width:140px; }
+.opt-btn:hover { border-color:var(--purple); transform:translateY(-2px); }
+.opt-btn.correct { border-color:var(--green); background:#e8fff4; color:#00b894; }
+.opt-btn.wrong { border-color:var(--primary); background:#fff5f5; color:var(--primary); }
+
+/* Progress */
+.progress-bar-container { background:#eee; border-radius:50px; height:12px; margin:1rem 0; overflow:hidden; }
+.progress-bar { height:100%; background:linear-gradient(90deg,var(--purple),var(--pink)); border-radius:50px; transition:width 0.5s ease; }
+
+/* Canvas */
+canvas { border-radius:15px; max-width:100%; }
+
+/* Badges */
+.badge { background:linear-gradient(135deg,var(--accent),var(--orange)); border-radius:15px; padding:0.8rem 1.2rem; text-align:center; font-size:0.85rem; font-weight:700; color:#333; min-width:90px; box-shadow:0 3px 10px rgba(0,0,0,0.1); opacity:0.3; transition:opacity 0.5s; }
+.badge.earned { opacity:1; animation:badgePop 0.4s ease; }
+@keyframes badgePop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+.badges-grid { display:flex; flex-wrap:wrap; gap:1rem; justify-content:center; margin:1rem 0; }
+
+/* Score */
+.score-circle { width:150px; height:150px; border-radius:50%; background:linear-gradient(135deg,var(--purple),var(--pink)); display:flex; flex-direction:column; align-items:center; justify-content:center; margin:1.5rem auto; color:white; font-weight:800; box-shadow:0 8px 30px rgba(108,92,231,0.4); animation:scaleIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275); }
+@keyframes scaleIn { from{transform:scale(0)} to{transform:scale(1)} }
+.score-circle .score-num { font-size:3rem; }
+
+/* Dot plot */
+.dot-plot { display:flex; flex-direction:column; gap:0.2rem; margin:1rem 0; }
+.dot-row { display:flex; align-items:center; gap:0.3rem; }
+.dot-label { width:30px; font-size:0.85rem; font-weight:700; text-align:right; color:#555; }
+.dot { width:22px; height:22px; border-radius:50%; background:var(--purple); margin:0.1rem; }
+
+/* AI */
+.ai-companion { position:fixed; bottom:1.5rem; right:1.5rem; z-index:999; width:70px; height:70px; border-radius:50%; background:linear-gradient(135deg,var(--purple),#6c5ce7); display:flex; align-items:center; justify-content:center; font-size:2rem; cursor:pointer; box-shadow:0 4px 20px rgba(0,0,0,0.2); animation:companionBounce 2s ease infinite; }
+@keyframes companionBounce { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-8px) scale(1.05)} }
+.ai-speech { position:fixed; bottom:5.5rem; right:1.5rem; z-index:999; background:white; border-radius:15px 15px 5px 15px; padding:1rem; max-width:220px; font-size:0.9rem; box-shadow:0 4px 15px rgba(0,0,0,0.1); display:none; font-weight:500; }
+.ai-speech.show { display:block; animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+nav.bottom-nav { position:fixed; bottom:0; left:0; right:0; background:white; border-top:2px solid #eee; display:flex; justify-content:center; gap:0.5rem; padding:0.5rem; z-index:500; flex-wrap:wrap; }
+nav.bottom-nav button { background:none; border:2px solid #eee; border-radius:50px; padding:0.3rem 0.8rem; font-size:0.8rem; cursor:pointer; font-weight:600; transition:all 0.2s; }
+nav.bottom-nav button.active, nav.bottom-nav button:hover { background:var(--purple); color:white; border-color:var(--purple); }
+
+.compare-table { width:100%; border-collapse:collapse; margin:1rem 0; }
+.compare-table th { background:linear-gradient(135deg,var(--purple),#6c5ce7); color:white; padding:0.7rem; text-align:center; font-weight:700; }
+.compare-table td { padding:0.7rem; text-align:center; border-bottom:1px solid #eee; }
+.compare-table tr:nth-child(even) { background:#f8f4ff; }
+
+@media(max-width:600px){.opt-btn{min-width:100px}}
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+
+    /* ═══ PPT 播放模式（v6.1 轻量注入） ═══ */
+    body.play-mode { overflow: hidden; }
+    body.play-mode .slide-wrapper {
+      scroll-snap-type: y mandatory;
+      overflow-y: auto;
+      height: 100dvh;
+      -webkit-overflow-scrolling: touch;
+    }
+    .slide-wrapper { position: relative; }
+    .slide-progress-bar { position: fixed; top: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary, #3b82f6), var(--secondary, #06b6d4));
+      z-index: 201; transition: width 0.3s; border-radius: 0 2px 2px 0; pointer-events: none; }
+    .slide-toolbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 20px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border, #e5e7eb);
+      transform: translateY(100%); transition: transform 0.3s ease; }
+    body.play-mode .slide-toolbar, body.toolbar-visible .slide-toolbar { transform: translateY(0); }
+    .toolbar-btn { background: none; border: none; cursor: pointer; padding: 8px;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary, #6b7280); transition: all 0.2s; }
+    .toolbar-btn:hover { background: var(--border, #e5e7eb); color: var(--text, #1f2937); }
+    .toolbar-btn.active { color: var(--primary, #3b82f6); }
+    .toolbar-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2;
+      fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .toolbar-progress { flex: 1; max-width: 200px; height: 4px;
+      background: var(--border, #e5e7eb); border-radius: 2px; cursor: pointer; position: relative; }
+    .toolbar-progress-fill { height: 100%; background: var(--primary, #3b82f6);
+      border-radius: 2px; transition: width 0.3s; }
+    .toolbar-page-info { font-size: 12px; color: var(--text-secondary, #6b7280);
+      min-width: 50px; text-align: center; }
+    .play-mode-fab { position: fixed; bottom: 80px; right: 20px; z-index: 101;
+      width: 48px; height: 48px; border-radius: 50%; border: none;
+      background: var(--primary, #3b82f6); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3); transition: all 0.3s; }
+    .play-mode-fab:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(59,130,246,0.4); }
+    .play-mode-fab svg { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+    .slide-sidenav { position: fixed; right: 12px; top: 50%; transform: translateY(-50%);
+      z-index: 90; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+      opacity: 0; transition: opacity 0.3s; max-height: 70vh; overflow-y: auto;
+      padding: 8px 4px; border-radius: 12px;
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(12px);
+      border: 1px solid var(--border, #e5e7eb); }
+    .slide-sidenav::-webkit-scrollbar { display: none; }
+    body.play-mode .slide-sidenav, body.toolbar-visible .slide-sidenav { opacity: 1; }
+    .sidenav-dot { width: 24px; height: 4px; border-radius: 2px;
+      background: var(--border, #e5e7eb); border: none; cursor: pointer;
+      transition: all 0.2s; padding: 0; }
+    .sidenav-dot.active { width: 32px; background: var(--primary, #3b82f6); }
+    .sidenav-dot:hover { background: var(--primary, #3b82f6); opacity: 0.7; }
+    .sidenav-counter { font-size: 10px; color: var(--text-secondary, #6b7280);
+      text-align: center; margin-bottom: 4px; }
+    /* 隐藏旧版 tab 导航（播放模式下） */
+    body.play-mode #main-nav, body.play-mode nav[id="nav"], body.play-mode nav.nav { display: none !important; }
+    @media (max-width:768px) {
+      .slide-sidenav { right: 6px; gap: 2px; padding: 6px 3px; }
+      .sidenav-dot { width: 20px; height: 3px; }
+    }
+
+  </style>
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+
+
+<style id="mathe-depth-css">
+.mathe-depth .worked-example{margin:16px 0;padding:16px;border-left:4px solid var(--brand,#38bdf8);background:rgba(56,189,248,.08);border-radius:0 12px 12px 0}
+.mathe-depth .module-check{margin-top:18px;padding:16px;border-radius:14px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.28)}
+.mathe-depth .module-check button{display:block;width:100%;margin:8px 0;text-align:left;border:1px solid var(--line,#233);border-radius:10px;background:#0b1628;color:var(--text,#e5e7eb);padding:11px 13px;cursor:pointer}
+.mathe-depth .module-check button.correct{border-color:var(--ok,#22c55e);background:rgba(34,197,94,.14)}
+.mathe-depth .module-check button.wrong{border-color:#f87171;background:rgba(248,113,113,.12)}
+.mathe-depth .mathe-feedback{display:none;margin-top:10px;padding:12px;border-radius:10px;background:rgba(56,189,248,.1)}
+.mathe-depth .mathe-pitfall{margin:14px 0 0;padding:12px;border-radius:10px;background:rgba(248,180,0,.08);border:1px solid rgba(248,180,0,.24)}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+</head>
+<body>
+<nav class="teachany-page-nav" style="margin:12px auto;max-width:1080px;padding:8px 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:14px;background:#f5f7fa;border-radius:10px;;color:#334155""><a href="#nav">📑 知识图谱</a><a href="#starCount">🤝 AI 学伴</a><a href="#aiCompanion">📚 课程内容</a></nav>
+
+
+<!-- teachany-hero-notext -->
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<div class="stars-display">⭐ <span id="starCount">0</span></div>
+<div class="ai-companion" id="aiCompanion" onclick="toggleAISpeech()">🦊</div>
+<div class="ai-speech" id="aiSpeech">我是小狐狸老师！今天学中位数和众数！🎯</div>
+
+<div class="achievement-popup" id="achievePopup">
+  <div style="font-size:3rem" id="achieveEmoji">🏆</div>
+  <div style="font-size:1.3rem;font-weight:800;margin:0.5rem 0" id="achieveTitle">成就解锁！</div>
+  <div style="font-size:1rem" id="achieveDesc">太棒了！</div>
+</div>
+
+<!-- HERO -->
+
+<!-- ===== ABT 情境引入 ===== -->
+<div class="abt-card" style="background:linear-gradient(135deg,#e8f5e9,#e3f2fd);border-radius:20px;padding:24px;margin:20px auto;max-width:800px;">
+  <h3 style="color:#1565c0;margin-bottom:16px;">🌍 为什么要学这个？</h3>
+  <p>🌍 <strong>And</strong>（已知）：我们已经学过平均数，知道它代表数据的整体水平</p>
+  <p>⚡ <strong>But</strong>（问题）：但是，当数据中有极端值时，平均数会被"拉偏"，不能代表多数人的情况！</p>
+  <p>💡 <strong>Therefore</strong>（新知）：因此，我们引入中位数（排序后中间那个）和众数（出现最多的那个）——它们更抗干扰</p>
+</div>
+
+<!-- ===== 前测 ===== -->
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出中位数和众数的定义</p></div><div class="tu-q"><p>🎯 能计算奇数/偶数个数据的中位数</p></div><div class="tu-q"><p>🎯 能分析何时使用中位数或众数描述数据</p></div></section>
+<section data-scaffold="full" data-bloom-level="apply" class="section" id="sec-goals" data-slot="10">
+  <div data-scaffold="partial" data-bloom-level="remember" class="section-header" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)">
+    <h2>🎯 学习目标</h2>
+    <p>三个技能全解锁，你就是数据侦探！</p>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:start;gap:1rem;margin:0.8rem 0">
+      <span style="font-size:1.8rem">📍</span>
+      <div><strong>中位数</strong>：把数据从小到大排列，最中间的那个数！</div>
+    </div>
+    <div style="display:flex;align-items:start;gap:1rem;margin:0.8rem 0">
+      <span style="font-size:1.8rem">👑</span>
+      <div><strong>众数</strong>：出现次数最多的那个数！（可以有多个）</div>
+    </div>
+    <div style="display:flex;align-items:start;gap:1rem;margin:0.8rem 0">
+      <span style="font-size:1.8rem">🔍</span>
+      <div><strong>区别</strong>：中位数关心"位置"，众数关心"频率"</div>
+    </div>
+    <div style="display:flex;align-items:start;gap:1rem;margin:0.8rem 0">
+      <span style="font-size:1.8rem">🏆</span>
+      <div>闯过5关，收集 <strong>8个成就</strong>！</div>
+    </div>
+  </div>
+  <div style="text-align:center;margin:1.5rem 0">
+    <button class="btn btn-purple" onclick="goSection('sec-warmup')">开始热身 🔥</button>
+  </div>
+</section>
+
+<!-- WARMUP -->
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么有时候算出来的中位数是半个数字？</p></div><div class="tu-q"><p>❓ 老师说众数可以不止一个，那什么时候没有众数呢？</p></div><div class="tu-q"><p>❓ 篮球比赛算平均分和中位数，哪个更公平？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" id="pretest" data-slot="20">
+  <div class="card">
+    <h2 class="section-title">📋 前测：你已经知道什么？</h2>
+    <p style="color:#666;margin-bottom:16px;">先来测一测你已经掌握了哪些前置知识，帮助你更好地学习新内容！</p>
+
+    <div class="pretest-item" id="pretest-q0">
+      <p><strong>第1题：</strong>数据：3,5,7,9,11，中间位置的数是？</p>
+      <button class="quiz-option" onclick="checkPretest(this,'q0',0,1,'5个数排序后，第3个（正中间）是7')">
+        A. 5
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q0',1,1,'5个数排序后，第3个（正中间）是7')">
+        B. 7
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q0',2,1,'5个数排序后，第3个（正中间）是7')">
+        C. 9
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q0',3,1,'5个数排序后，第3个（正中间）是7')">
+        D. 3
+      </button>
+      <div class="quiz-feedback" id="pretest-fb0"></div>
+    </div>
+
+    <div class="pretest-item" id="pretest-q1">
+      <p><strong>第2题：</strong>数据：2,3,3,4,5,3，哪个数出现最多？</p>
+      <button class="quiz-option" onclick="checkPretest(this,'q1',0,3,'3出现了3次，其他各出现1次，所以众数是3')">
+        A. 2
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q1',1,3,'3出现了3次，其他各出现1次，所以众数是3')">
+        B. 4
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q1',2,3,'3出现了3次，其他各出现1次，所以众数是3')">
+        C. 5
+      </button>
+<button class="quiz-option" onclick="checkPretest(this,'q1',3,3,'3出现了3次，其他各出现1次，所以众数是3')">
+        D. 3
+      </button>
+      <div class="quiz-feedback" id="pretest-fb1"></div>
+    </div>
+    <div id="pretest-result" style="display:none;margin-top:16px;padding:12px;background:#e8f5e9;border-radius:12px;font-weight:bold;"></div>
+  </div>
+  <script>
+  (function(){
+    var pretestAnswered = {};
+    window.checkPretest = function(btn, qid, chosen, ans, hint) {
+      if (pretestAnswered[qid]) return;
+      pretestAnswered[qid] = true;
+      var fb = document.getElementById('pretest-fb'+qid.replace('q',''));
+      if (chosen === ans) {
+        btn.classList.add('correct');
+        fb.className = 'quiz-feedback show';
+        fb.style.background = '#d4edda'; fb.style.color = '#155724';
+        fb.innerHTML = '✅ 正确！' + hint;
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'quiz-feedback show';
+        fb.style.background = '#f8d7da'; fb.style.color = '#721c24';
+        fb.innerHTML = '❌ 再想想。' + hint;
+      }
+    };
+  })();
+  </script>
+</section>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（放在 pretest 之后，课件顶部可见） -->
+
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 找中间数</h2><div class="tu-q"><p><strong>And：</strong>学生已会按大小排列数字</p><p><strong>But：</strong>不知道如何从排列中快速定位中间值</p><p><strong>Therefore：</strong>掌握中位数能代表一组数据的典型水平</p></div><div class="tu-q"><p>中位数就像队伍里最中间的那个人！把一组数从小到大排队，正中间的数就是中位数。如果人数是偶数，就取中间两个数的平均值。比如：3,5,1,4,2 排队后是1,2,3,4,5，中位数是3；而1,3,5,7 的中位数是(3+5)/2=4。</p></div><div class="tu-q"><p>🌍 体育课上测量5个同学的跳绳次数：87,92,85,90,88次。把数据排队后85,87,88,90,92，中位数88能代表大多数同学的水平，不会被特别高或低的成绩影响。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>找这组数据的中位数：6,2,9,1,5</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="要先排队：1,2,5,6,9哦！">A.5</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="要先排队：1,2,5,6,9哦！">B.6</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="要先排队：1,2,5,6,9哦！">C.4.5</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="要先排队：1,2,5,6,9哦！">D.9</button></div><div class="tu-fb" hidden></div></div></section>
+<div data-conceptest="true" data-scaffold="partial" data-bloom-level="understand" class="section active ta-flat" id="sec-hero" data-slot="35">
+  <div class="hero"><div class="hero-emoji">🔢</div>
+    <h1 class="hero-title">中位数 & 众数</h1>
+    <p style="color:rgba(255,255,255,0.9);font-size:1.2rem;margin:0.8rem 0;font-weight:600">五年级数学 · 数据侦探时间！🕵️</p>
+    <p style="color:rgba(255,255,255,0.85);font-size:1rem;max-width:380px;line-height:1.6">
+      中间那个是谁？出现最多的又是谁？<br>学会这两招，数据分析难不倒你！
+    </p>
+    <button class="start-btn" onclick="goSection('sec-goals')">🚀 开始侦探之旅！</button>
+    <div style="position:absolute;top:15%;left:5%;font-size:2rem;opacity:0.2;animation:float 4s ease-in-out infinite">1,2,3,4,5</div>
+    <div style="position:absolute;bottom:20%;right:8%;font-size:2rem;opacity:0.15;animation:float 3.5s ease-in-out infinite 1s">📊</div>
+  </div>
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/math-e-median-mode-hero.png" alt="中位数与众数 | 五年级数学 | TeachAny知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">中位数与众数 | 五</span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+
+</div>
+
+<!-- GOALS -->
+<section data-bloom-level="understand" class="section" id="sec-warmup" data-slot="35">
+  <div data-bloom-level="apply" class="section-header" style="background:linear-gradient(135deg,#fd79a8,#e84393)">
+    <h2>⚡ 热身：排排站找中间</h2>
+    <p>先把数字排好队，中间的就是中位数！</p>
+  </div>
+  <div class="card">
+    <p style="font-size:1.1rem;font-weight:700;margin-bottom:1rem">
+      🎪 把下面的数字<strong>拖拽到正确顺序</strong>（从小到大排列）！
+    </p>
+    <p style="font-size:0.9rem;color:#888;margin-bottom:0.5rem">数字牌（可以拖拽）：</p>
+    <div id="warmupNumbers" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:1rem"></div>
+    <p style="font-size:0.9rem;color:#888;margin-bottom:0.5rem">⬇️ 从小到大排到这里：</p>
+    <div id="warmupSorted" class="sort-track" ondrop="warmupDrop(event)" ondragover="allowDrop(event)" ondragleave="removeDragOver(event)">拖到这里排序</div>
+    <div id="warmupResult" style="margin-top:1rem;min-height:2rem"></div>
+    <div style="text-align:center;margin-top:1rem">
+      <button class="btn btn-teal" onclick="checkWarmupSort()">✅ 检查排序</button>
+      <button class="btn btn-accent" onclick="initWarmup()">🔄 重置</button>
+      <button class="btn btn-purple" onclick="autoSortWarmup()">✨ 自动排序看效果</button>
+    </div>
+  </div>
+  <div style="text-align:center;margin:1.5rem 0">
+    <button class="btn btn-purple" onclick="goSection('sec-level1')">去关卡1！🌟</button>
+  </div>
+</section>
+
+<!-- LEVEL 1: Find Median -->
+<section class="section" id="sec-level1" data-slot="35">
+  <div class="section-header" style="background:linear-gradient(135deg,#a29bfe,#6c5ce7)">
+    <h2>🌟 关卡1：找中位数</h2>
+    <p>奇数个 vs 偶数个，方法不一样哦！</p>
+  </div>
+  <div class="progress-bar-container"><div class="progress-bar" id="l1prog" style="width:0%"></div></div>
+
+  <div class="card" style="background:linear-gradient(135deg,#f8f4ff,#e8e0ff);border-radius:20px">
+    <h3 style="font-weight:800;margin-bottom:0.5rem">📖 方法卡片</h3>
+    <p style="line-height:1.8;font-size:1rem">
+      ➡️ <strong>奇数个数字</strong>：排好序，取最中间一个<br>
+      例：1,3,<span style="color:var(--primary);font-weight:800">5</span>,7,9 → 中位数=<strong>5</strong><br><br>
+      ➡️ <strong>偶数个数字</strong>：排好序，取中间两个的平均数<br>
+      例：2,4,<span style="color:var(--primary);font-weight:800">6,8</span>,10,12 → 中位数=(6+8)÷2=<strong>7</strong>
+    </p>
+  </div>
+
+  <div id="l1-content"></div>
+  <div id="l1-feedback" class="feedback" style="display:none"></div>
+  <div style="text-align:center;margin:1rem 0">
+    <button class="btn btn-purple" onclick="checkL1Median()">✅ 提交答案</button>
+    <button class="btn btn-teal" onclick="nextL1Median()">下一题 ➡️</button>
+  </div>
+</section>
+
+<!-- LEVEL 2: Find Mode -->
+<section class="section" id="sec-level2" data-slot="35">
+  <div class="section-header" style="background:linear-gradient(135deg,var(--teal),var(--secondary))">
+    <h2>🌟🌟 关卡2：找众数</h2>
+    <p>数一数，谁出现最多？</p>
+  </div>
+  <div id="l2-content" class="card"></div>
+  <div class="card">
+    <p style="font-weight:700;margin-bottom:0.5rem">点击图中出现最多的那个数字！</p>
+    <canvas id="dotCanvas" width="480" height="220"></canvas>
+    <div id="l2-feedback" class="feedback" style="display:none"></div>
+    <div style="text-align:center;margin-top:1rem">
+      <button class="btn btn-teal" onclick="newModeQ()">换一道题 🔄</button>
+      <button class="btn btn-purple" onclick="goSection('sec-level3')">下一关 ➡️</button>
+    </div>
+  </div>
+</section>
+
+<!-- LEVEL 3: Compare -->
+<section class="section" id="sec-level3" data-slot="35">
+  <div class="section-header" style="background:linear-gradient(135deg,#fd9644,#e17055)">
+    <h2>🌟🌟🌟 关卡3：中位数 vs 众数</h2>
+    <p>分清楚，各自有什么用！</p>
+  </div>
+  <div class="card">
+    <table class="compare-table">
+      <tr><th>比较项</th><th>中位数</th><th>众数</th></tr>
+      <tr><td>定义</td><td>最中间的数</td><td>出现最多的数</td></tr>
+      <tr><td>需要排序？</td><td>✅ 需要</td><td>❌ 不需要</td></tr>
+      <tr><td>可以有几个？</td><td>一个</td><td>可以多个</td></tr>
+      <tr><td>受极端值影响？</td><td>较小</td><td>较小</td></tr>
+    </table>
+  </div>
+  <div id="l3-quiz" class="card"></div>
+  <div id="l3-feedback" class="feedback" style="display:none"></div>
+</section>
+
+<!-- LEVEL BOSS -->
+<section class="section" id="sec-boss" data-slot="35">
+  <div class="section-header" style="background:linear-gradient(135deg,#2d3436,#636e72)">
+    <h2>👾 Boss关：综合挑战</h2>
+    <p>中位数+众数，一起来！</p>
+  </div>
+  <div id="boss-content" class="card"></div>
+  <div id="boss-feedback" class="feedback" style="display:none"></div>
+  <div style="text-align:center;margin:1rem 0">
+    <button class="btn" style="background:linear-gradient(135deg,#2d3436,#636e72)" onclick="checkBoss()">⚔️ 提交！</button>
+  </div>
+</section>
+
+<!-- SCORE -->
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 超市顾客年龄调查</h2><p>记录20位顾客年龄(岁)：12,15,18,20,22,25,25,28,30,30,30,35,35,40,45,50,55,60,65,70</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="猜测哪个年龄段顾客最多"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="计算众数、中位数并与平均数对比"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="分析哪种代表值最能反映顾客年龄特征"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+<style id="teachany-upgrade-v2-css">.teachany-upgrade-block{margin:28px 0;padding:22px;border-radius:16px;border:1px solid rgba(148,163,184,.25);background:rgba(15,23,42,.35);color:#e2e8f0}.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(30,41,59,.45)}.tu-opts{display:grid;gap:10px;margin-top:10px}.tu-opt{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid rgba(148,163,184,.35);background:rgba(51,65,85,.55);color:inherit;cursor:pointer;font-size:15px;line-height:1.5}.tu-opt:hover{border-color:#60a5fa}.tu-opt.is-right{border-color:#34d399;background:rgba(16,185,129,.18)}.tu-opt.is-wrong{border-color:#f87171;background:rgba(239,68,68,.15)}.tu-fb{margin-top:12px;padding:12px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);line-height:1.7}.tu-inquiry{display:grid;gap:12px;margin:14px 0}.tu-inquiry textarea{width:100%;min-height:72px;margin-top:6px;border-radius:8px;padding:10px;border:1px solid rgba(148,163,184,.3);background:rgba(15,23,42,.5);color:inherit}.tu-save{margin-top:8px;padding:10px 16px;border-radius:10px;border:0;background:#2563eb;color:#fff;cursor:pointer;font-weight:600}details{margin-top:8px} summary{cursor:pointer;color:#2563eb}</style>
+<script id="teachany-upgrade-v2-js">(function(){function bind(root){root.querySelectorAll('.tu-q,.teachany-upgrade-block[data-interactive="conceptest"]').forEach(function(box){var ans=box.getAttribute('data-answer');var fb=box.querySelector('.tu-fb');box.querySelectorAll('.tu-opt').forEach(function(btn){btn.addEventListener('click',function(){var ch=btn.getAttribute('data-choice');var correct=btn.getAttribute('data-correct');var ok=(correct==='true')||(ans&&ch===ans);box.querySelectorAll('.tu-opt').forEach(function(b){b.classList.remove('is-right','is-wrong');});btn.classList.add(ok?'is-right':'is-wrong');if(fb){fb.hidden=false;fb.textContent=(ok?'✅ ':'❌ ')+(btn.getAttribute('data-diagnosis')||'');}});});});root.querySelectorAll('.tu-save').forEach(function(btn){btn.addEventListener('click',function(){var sec=btn.closest('section');var payload={};sec.querySelectorAll('[data-inq]').forEach(function(t){payload[t.getAttribute('data-inq')]=t.value;});try{localStorage.setItem('teachany_inq_'+location.pathname,JSON.stringify(payload));}catch(e){}var fb=sec.querySelector('[data-inq-fb]');if(fb){fb.hidden=false;fb.textContent='已保存到本机。继续完善证据会让结论更扎实。';}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){bind(document);});else bind(document);})();</script>
+<!-- v7.7.4 标准知识图谱模块 -->
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="精讲" data-slot="35">
+  <section class="section mathe-depth core-knowledge-module text-module" id="lesson-focus"
+    data-bloom-level="understand" data-scaffold="full" data-tts="lesson-focus">
+    <div class="card">
+      <span class="phase-tag">知识精讲</span>
+      <h2>中位数与众数</h2>
+      <p>中位数是把一组数据按大小排列后，最中间的那个数（个数为偶数时取中间两个数的平均数），它不易受极端值影响。众数是出现次数最多的数，一组数据可以有一个众数、多个众数，也可能没有众数。平均数、中位数、众数从不同角度描述数据特征。</p>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>平均数、中位数、众数三种代表值的概念特点与计算方法对比图</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4-s2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#34d399" stop-opacity="0.25"/><stop offset="100%" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><marker id="ar-s2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="15" y="15" width="610" height="390" rx="8" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><g opacity="0.3"><line x1="60" y1="40" x2="60" y2="380" stroke="#334155" stroke-width="0.5"/><line x1="120" y1="40" x2="120" y2="380" stroke="#334155" stroke-width="0.5"/><line x1="180" y1="40" x2="180" y2="380" stroke="#334155" stroke-width="0.5"/><line x1="240" y1="40" x2="240" y2="380" stroke="#334155" stroke-width="0.5"/><line x1="300" y1="40" x2="300" y2="380" stroke="#334155" stroke-width="0.5"/><line x1="360" y1="40" x2="360" y2="380" stroke="#334155" stroke-width="0.5"/><line x1="420" y1="40" x2="420" y2="380" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="40" x2="480" y2="380" stroke="#334155" stroke-width="0.5"/><line x1="540" y1="40" x2="540" y2="380" stroke="#334155" stroke-width="0.5"/></g><rect x="50" y="60" width="540" height="50" rx="10" fill="url(#bg1-s2)" stroke="#60a5fa" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="320" y="85" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">数据集合的三种代表值</text><rect x="60" y="140" width="150" height="220" rx="8" fill="url(#bg2-s2)" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="135" y="165" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">平均数</text><circle cx="135" cy="185" r="8" fill="#f59e0b" stroke="#fb923c" stroke-width="2"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1s"/></circle><text x="135" y="210" text-anchor="middle" fill="#e2e8f0" font-size="12">总和÷个数</text><text x="135" y="230" text-anchor="middle" fill="#7dd3fc" font-size="12">反映平均水平</text><text x="135" y="250" text-anchor="middle" fill="#e2e8f0" font-size="11">易受极端值</text><text x="135" y="270" text-anchor="middle" fill="#e2e8f0" font-size="11">影响</text><rect x="80" y="285" width="110" height="60" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"/><text x="135" y="305" text-anchor="middle" fill="#7dd3fc" font-size="11">例：2,3,5,8,12</text><text x="135" y="320" text-anchor="middle" fill="#fbbf24" font-size="11">平均数=6</text><text x="135" y="335" text-anchor="middle" fill="#e2e8f0" font-size="10">(2+3+5+8+12)÷5</text><rect x="245" y="140" width="150" height="220" rx="8" fill="url(#bg4-s2)" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="320" y="165" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">中位数</text><circle cx="320" cy="185" r="8" fill="#34d399" stroke="#4ade80" stroke-width="2"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.2s"/></circle><text x="320" y="210" text-anchor="middle" fill="#e2e8f0" font-size="12">排序后中间值</text><text x="320" y="230" text-anchor="middle" fill="#7dd3fc" font-size="12">不易受极端值</text><text x="320" y="250" text-anchor="middle" fill="#e2e8f0" font-size="11">影响</text><rect x="265" y="265" width="110" height="80" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"/><text x="320" y="285" text-anchor="middle" fill="#7dd3fc" font-size="11">排序：2,3,5,8,12</text><text x="320" y="300" text-anchor="middle" fill="#fbbf24" font-size="11">中位数=5</text><text x="320" y="315" text-anchor="middle" fill="#e2e8f0" font-size="10">奇数个：取中间</text><text x="320" y="330" text-anchor="middle" fill="#e2e8f0" font-size="10">偶数个：中间两数</text><text x="320" y="340" text-anchor="middle" fill="#e2e8f0" font-size="10">的平均数</text><rect x="430" y="140" width="150" height="220" rx="8" fill="url(#bg3-s2)" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="505" y="165" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">众数</text><circle cx="505" cy="185" r="8" fill="#ef4444" stroke="#f87171" stroke-width="2"><animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite" begin="1.4s"/></circle><text x="505" y="210" text-anchor="middle" fill="#e2e8f0" font-size="12">出现次数最多</text><text x="505" y="230" text-anchor="middle" fill="#7dd3fc" font-size="12">的数</text><text x="505" y="250" text-anchor="middle" fill="#e2e8f0" font-size="11">可能有多个</text><text x="505" y="270" text-anchor="middle" fill="#e2e8f0" font-size="11">或没有</text><rect x="450" y="285" width="110" height="60" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"/><text x="505" y="305" text-anchor="middle" fill="#7dd3fc" font-size="11">例：3,5,5,7,5,9</text><text x="505" y="320" text-anchor="middle" fill="#fbbf24" font-size="11">众数=5</text><text x="505" y="335" text-anchor="middle" fill="#e2e8f0" font-size="10">5出现3次最多</text><path d="M 135 120 Q 220 100 320 120" stroke="#7dd3fc" stroke-width="2" fill="none" stroke-dasharray="7 5" marker-end="url(#ar-s2)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="1.5s"/></path><path d="M 320 120 Q 420 100 505 120" stroke="#7dd3fc" stroke-width="2" fill="none" stroke-dasharray="7 5" marker-end="url(#ar-s2)"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.2s" repeatCount="indefinite" begin="1.7s"/></path><line x1="135" y1="130" x2="135" y2="140" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"/><circle cx="135" cy="130" r="3" fill="#7dd3fc"/><line x1="320" y1="130" x2="320" y2="140" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"/><circle cx="320" cy="130" r="3" fill="#7dd3fc"/><line x1="505" y1="130" x2="505" y2="140" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"/><circle cx="505" cy="130" r="3" fill="#7dd3fc"/><rect x="480" y="370" width="140" height="35" rx="6" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2s" fill="freeze"/></rect><rect x="485" y="375" width="12" height="8" fill="url(#bg2-s2)"/><text x="502" y="382" fill="#e2e8f0" font-size="10">平均数</text><rect x="545" y="375" width="12" height="8" fill="url(#bg4-s2)"/><text x="562" y="382" fill="#e2e8f0" font-size="10">中位数</text><rect x="485" y="390" width="12" height="8" fill="url(#bg3-s2)"/><text x="502" y="397" fill="#e2e8f0" font-size="10">众数</text><text x="575" y="397" fill="#fbbf24" font-size="10">描述数据特征</text></svg></figure>
+
+</div>
+<div class="slide-page ta-flat" data-page-type="content" data-tsh="方法范例" data-slot="35">
+  <section class="section mathe-depth core-knowledge-module text-module" id="lesson-method"
+    data-bloom-level="apply" data-scaffold="partial" data-tts="lesson-method">
+    <div class="card">
+      <span class="phase-tag">方法与范例</span>
+      <h2>方法：先排序找中位，再数次数找众数</h2>
+      <p>求中位数：从小到大（或从大到小）排好，找正中间。求众数：统计每个数出现几次，次数最多的就是众数。分析“谁更能代表”时，看是否有极端值、是否关心出现最多的情况。</p>
+      <div class="worked-example"><strong>范例：</strong>数据 2、5、5、7、9：中位数是 5；众数也是 5（出现两次）。</div>
+      <p id="lesson-pitfall" class="mathe-pitfall"><strong>常见误区：</strong>常见误区是不排序就取中间位置的数，或把平均数误当成众数。</p>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 1：概念辨析</h3>
+        <p>求中位数时，首先要做的是？</p>
+        <button type="button" data-correct="0" onclick="matheDepthCheck(this,false,&#x27;mathe-depth-feedback-1&#x27;,&quot;必须先按大小排序，再找最中间的数。&quot;)">A. 直接取第一个数</button><button type="button" data-correct="1" onclick="matheDepthCheck(this,true,&#x27;mathe-depth-feedback-1&#x27;,&quot;必须先按大小排序，再找最中间的数。&quot;)">B. 把数据按大小排序</button><button type="button" data-correct="0" onclick="matheDepthCheck(this,false,&#x27;mathe-depth-feedback-1&#x27;,&quot;必须先按大小排序，再找最中间的数。&quot;)">C. 只看最大数</button><button type="button" data-correct="0" onclick="matheDepthCheck(this,false,&#x27;mathe-depth-feedback-1&#x27;,&quot;必须先按大小排序，再找最中间的数。&quot;)">D. 把所有数相加</button>
+        <div class="mathe-feedback" id="mathe-depth-feedback-1" role="status"></div>
+      </div>
+      <div class="module-check" data-conceptest="true">
+        <h3>马上练 2：计算应用</h3>
+        <p>数据 3、4、4、6、8 的众数是？</p>
+        <button type="button" data-correct="0" onclick="matheDepthCheck(this,false,&#x27;mathe-depth-feedback-2&#x27;,&quot;4 出现了两次，次数最多，是众数。&quot;)">A. 3</button><button type="button" data-correct="1" onclick="matheDepthCheck(this,true,&#x27;mathe-depth-feedback-2&#x27;,&quot;4 出现了两次，次数最多，是众数。&quot;)">B. 4</button><button type="button" data-correct="0" onclick="matheDepthCheck(this,false,&#x27;mathe-depth-feedback-2&#x27;,&quot;4 出现了两次，次数最多，是众数。&quot;)">C. 6</button><button type="button" data-correct="0" onclick="matheDepthCheck(this,false,&#x27;mathe-depth-feedback-2&#x27;,&quot;4 出现了两次，次数最多，是众数。&quot;)">D. 8</button>
+        <div class="mathe-feedback" id="mathe-depth-feedback-2" role="status"></div>
+      </div>
+    </div>
+  </section>
+<figure class="ta-standard-figure"><figcaption>中位数与众数求解机制分解图：排序找中位，计数找众数</figcaption><svg class="math-fig" viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0.10"/></linearGradient><linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34d399" stop-opacity="0.25"/><stop offset="1" stop-color="#34d399" stop-opacity="0.10"/></linearGradient><linearGradient id="bg3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f59e0b" stop-opacity="0.25"/><stop offset="1" stop-color="#f59e0b" stop-opacity="0.10"/></linearGradient><linearGradient id="bg4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ef4444" stop-opacity="0.25"/><stop offset="1" stop-color="#ef4444" stop-opacity="0.10"/></linearGradient><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#fbbf24"/></marker></defs><rect width="640" height="420" fill="#0a1520"/><rect x="0" y="0" width="640" height="420" fill="rgba(148,163,184,0.07)" stroke="#334155" stroke-width="1" rx="8"/><g opacity="0.3"><line x1="0" y1="140" x2="640" y2="140" stroke="#334155" stroke-width="0.5"/><line x1="0" y1="280" x2="640" y2="280" stroke="#334155" stroke-width="0.5"/><line x1="160" y1="0" x2="160" y2="420" stroke="#334155" stroke-width="0.5"/><line x1="320" y1="0" x2="320" y2="420" stroke="#334155" stroke-width="0.5"/><line x1="480" y1="0" x2="480" y2="420" stroke="#334155" stroke-width="0.5"/></g><text x="320" y="35" text-anchor="middle" fill="#fbbf24" font-size="16" font-weight="bold">中位数与众数求解机制图</text><rect x="40" y="60" width="280" height="140" fill="url(#bg1)" stroke="#60a5fa" stroke-width="2" rx="10"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0s" fill="freeze"/></rect><text x="180" y="80" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">中位数求解流程</text><rect x="60" y="95" width="40" height="25" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.15s" fill="freeze"/></rect><text x="80" y="112" text-anchor="middle" fill="#7dd3fc" font-size="12">2</text><rect x="110" y="95" width="40" height="25" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="130" y="112" text-anchor="middle" fill="#7dd3fc" font-size="12">9</text><rect x="160" y="95" width="40" height="25" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.45s" fill="freeze"/></rect><text x="180" y="112" text-anchor="middle" fill="#7dd3fc" font-size="12">5</text><rect x="210" y="95" width="40" height="25" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="230" y="112" text-anchor="middle" fill="#7dd3fc" font-size="12">7</text><rect x="260" y="95" width="40" height="25" fill="rgba(239,68,68,0.2)" stroke="#f87171" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/></rect><text x="280" y="112" text-anchor="middle" fill="#7dd3fc" font-size="12">5</text><path d="M 80 130 Q 180 145 280 130" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-dasharray="8 4"><animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></path><text x="180" y="155" text-anchor="middle" fill="#e2e8f0" font-size="11">排序处理</text><rect x="60" y="165" width="40" height="25" fill="rgba(52,211,153,0.2)" stroke="#4ade80" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></rect><text x="80" y="182" text-anchor="middle" fill="#7dd3fc" font-size="12">2</text><rect x="110" y="165" width="40" height="25" fill="rgba(52,211,153,0.2)" stroke="#4ade80" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.35s" fill="freeze"/></rect><text x="130" y="182" text-anchor="middle" fill="#7dd3fc" font-size="12">5</text><rect x="160" y="165" width="40" height="25" fill="rgba(52,211,153,0.3)" stroke="#22d3ee" stroke-width="2.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/><animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite"/></rect><text x="180" y="182" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">5</text><rect x="210" y="165" width="40" height="25" fill="rgba(52,211,153,0.2)" stroke="#4ade80" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.65s" fill="freeze"/></rect><text x="230" y="182" text-anchor="middle" fill="#7dd3fc" font-size="12">7</text><rect x="260" y="165" width="40" height="25" fill="rgba(52,211,153,0.2)" stroke="#4ade80" stroke-width="1.5" rx="4"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></rect><text x="280" y="182" text-anchor="middle" fill="#7dd3fc" font-size="12">9</text><circle cx="180" cy="140" r="3" fill="#7dd3fc"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></circle><line x1="180" y1="140" x2="180" y2="165" stroke="rgba(100,116,139,0.7)" stroke-width="1.5"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.95s" fill="freeze"/></line><text x="190" y="145" fill="#e2e8f0" font-size="11">中位数</text><rect x="360" y="60" width="240" height="140" fill="url(#bg2)" stroke="#4ade80" stroke-width="2" rx="10"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.3s" fill="freeze"/></rect><text x="480" y="80" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">众数求解流程</text><rect x="380" y="95" width="30" height="20" fill="rgba(167,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5" rx="3"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.6s" fill="freeze"/></rect><text x="395" y="108" text-anchor="middle" fill="#7dd3fc" font-size="10">2</text><text x="420" y="108" fill="#e2e8f0" font-size="10">×1</text><rect x="380" y="120" width="30" height="20" fill="rgba(167,139,250,0.3)" stroke="#c084fc" stroke-width="2" rx="3"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.75s" fill="freeze"/><animate attributeName="opacity" values="0.8;1;0.8" dur="2.2s" repeatCount="indefinite"/></rect><text x="395" y="133" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="bold">5</text><text x="420" y="133" fill="#fbbf24" font-size="10" font-weight="bold">×2</text><rect x="380" y="145" width="30" height="20" fill="rgba(167,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5" rx="3"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.9s" fill="freeze"/></rect><text x="395" y="158" text-anchor="middle" fill="#7dd3fc" font-size="10">7</text><text x="420" y="158" fill="#e2e8f0" font-size="10">×1</text><rect x="380" y="170" width="30" height="20" fill="rgba(167,139,250,0.2)" stroke="#a78bfa" stroke-width="1.5" rx="3"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.05s" fill="freeze"/></rect><text x="395" y="183" text-anchor="middle" fill="#7dd3fc" font-size="10">9</text><text x="420" y="183" fill="#e2e8f0" font-size="10">×1</text><path d="M 450 130 Q 520 115 570 130" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-dasharray="6 3"><animate attributeName="stroke-dashoffset" from="18" to="0" dur="1.3s" repeatCount="indefinite"/><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.2s" fill="freeze"/></path><text x="510" y="110" text-anchor="middle" fill="#e2e8f0" font-size="11">频次统计</text><ellipse cx="570" cy="130" rx="25" ry="15" fill="rgba(245,158,11,0.25)" stroke="#fbbf24" stroke-width="2"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/></ellipse><text x="570" y="135" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">众数=5</text><rect x="40" y="230" width="560" height="80" fill="url(#bg3)" stroke="#fbbf24" stroke-width="2" rx="10"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.8s" fill="freeze"/></rect><text x="320" y="250" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">关键步骤对比</text><rect x="60" y="260" width="120" height="40" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1.5" rx="6"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.1s" fill="freeze"/></rect><text x="120" y="275" text-anchor="middle" fill="#e2e8f0" font-size="11">中位数步骤</text><text x="120" y="290" text-anchor="middle" fill="#7dd3fc" font-size="10">1.排序 2.找中间</text><rect x="200" y="260" width="120" height="40" fill="rgba(52,211,153,0.15)" stroke="#34d399" stroke-width="1.5" rx="6"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.25s" fill="freeze"/></rect><text x="260" y="275" text-anchor="middle" fill="#e2e8f0" font-size="11">众数步骤</text><text x="260" y="290" text-anchor="middle" fill="#7dd3fc" font-size="10">1.计数 2.找最多</text><rect x="340" y="260" width="120" height="40" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="1.5" rx="6"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.4s" fill="freeze"/></rect><text x="400" y="275" text-anchor="middle" fill="#e2e8f0" font-size="11">常见误区</text><text x="400" y="290" text-anchor="middle" fill="#f87171" font-size="10">不排序取中间</text><rect x="480" y="260" width="100" height="40" fill="rgba(167,139,250,0.15)" stroke="#a78bfa" stroke-width="1.5" rx="6"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.55s" fill="freeze"/></rect><text x="530" y="275" text-anchor="middle" fill="#e2e8f0" font-size="11">结果验证</text><text x="530" y="290" text-anchor="middle" fill="#c084fc" font-size="10">中位数=众数=5</text><rect x="50" y="330" width="540" height="60" fill="url(#bg4)" stroke="#f87171" stroke-width="2" rx="8"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.7s" fill="freeze"/></rect><text x="320" y="350" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="bold">练习验证区</text><text x="80" y="370" fill="#e2e8f0" font-size="12">数据: 3, 4, 4, 6, 8</text><text x="250" y="370" fill="#7dd3fc" font-size="12">排序后: 3, 4, 4, 6, 8</text><text x="420" y="370" fill="#fbbf24" font-size="12">中位数=4, 众数=4</text><rect x="480" y="320" width="140" height="80" fill="rgba(15,23,42,0.7)" stroke="#334155" stroke-width="1" rx="6"><animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/></rect><text x="550" y="335" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">图例说明</text><rect x="490" y="345" width="12" height="8" fill="url(#bg1)" stroke="#60a5fa" stroke-width="1"/><text x="510" y="352" fill="#e2e8f0" font-size="10">排序流程</text><rect x="490" y="360" width="12" height="8" fill="url(#bg2)" stroke="#4ade80" stroke-width="1"/><text x="510" y="367" fill="#e2e8f0" font-size="10">计数统计</text><rect x="490" y="375" width="12" height="8" fill="url(#bg3)" stroke="#fbbf24" stroke-width="1"/><text x="510" y="382" fill="#e2e8f0" font-size="10">对比分析</text><rect x="490" y="390" width="12" height="8" fill="url(#bg4)" stroke="#f87171" stroke-width="1"/><text x="510" y="397" fill="#e2e8f0" font-size="10">练习应用</text></svg></figure>
+
+</div>
+
+<div class="insight-box" id="deep-understanding">
+  <h4>🔍 深层理解</h4>
+  <p>三种平均数各有用途：平均数受极端值影响大（适合均匀分布数据），中位数稳定（适合含极端值的数据），众数反映最常见情况（适合找"热门"）。</p>
+  <p style="color:#888;font-size:0.9em;margin-top:8px;">💡 <em>用"迁移它"的视角：想想这个知识在哪些生活场景中还会用到？</em></p>
+</div>
+
+<!-- ===== 易错点覆盖 ===== -->
+<div class="error-coverage" style="background:#fff8f0;border-left:4px solid #ff6b35;border-radius:0 16px 16px 0;padding:18px 22px;margin:16px 0;">
+  <h4 style="color:#d84315;margin-bottom:12px;">⚠️ 常见易错点提醒</h4>
+  <ul style="list-style:none;padding:0;line-height:2;">
+
+    <li>
+      <strong>❌ 易错：</strong>偶数个数据时中位数求法错误，忘记取中间两数的平均值<br>
+      <span style="color:#e65100;">⚡ 易错提醒：偶数个数据（如6个）时，中位数=中间两个数的平均值！如1,2,3,4,5,6中位数=(3+4)÷2=3.5，不是3也不是4</span>
+    </li>
+
+    <li>
+      <strong>❌ 易错：</strong>认为中位数一定是数据中间位置的数而忽略排序<br>
+      <span style="color:#e65100;">⚡ 注意：求中位数必须先从小到大排序！数据3,1,4,1,5，不排序中间是4，但排序后1,1,3,4,5，中位数是3</span>
+    </li>
+  </ul>
+  <p style="color:#999;font-size:0.85em;margin-top:8px;">注意：以上是同学们容易犯的典型错误，做题时要格外小心！</p>
+</div>
+
+<!-- ===== 记忆锚点 ===== -->
+<div class="memory-anchor" style="background:linear-gradient(135deg,#fff9e6,#fffbf0);border:2px solid #ffe66d;border-radius:16px;padding:18px 22px;margin:16px 0;">
+  <span class="anchor-icon">🧠</span>
+  <strong>记忆口诀：</strong>统计三兄弟口诀：平均数用加除，中位数看中间，众数找最多现；极端值来搞破坏，中位数和众数更稳健！
+</div>
+
+<!-- ===== 后测 ===== -->
+<section class="section" id="sec-score" data-slot="35">
+  <div style="text-align:center;padding:2rem">
+    <div style="font-size:3rem">🎊</div>
+    <h2 style="font-size:2rem;font-weight:800;background:linear-gradient(90deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0.5rem 0">
+      侦探任务完成！
+    </h2>
+    <div class="score-circle">
+      <div class="score-num" id="finalScore">0</div>
+      <div style="font-size:0.9rem;opacity:0.9">颗星星</div>
+    </div>
+    <p style="font-size:1.1rem;font-weight:600;margin:1rem 0" id="scoreMotto"></p>
+    <h3 style="font-size:1.2rem;font-weight:800;margin:1rem 0">🏆 成就徽章</h3>
+    <div class="badges-grid" id="badgesGrid"></div>
+    <button class="btn btn-purple" onclick="goSection('sec-extend')">🌈 拓展学习</button>
+    <button class="btn btn-teal" onclick="location.reload()">🔄 再来一次</button>
+  </div>
+</section>
+
+<!-- EXTEND -->
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 数数谁最多</h2><div class="tu-q"><p><strong>And：</strong>学生已能统计数字出现次数</p><p><strong>But：</strong>不理解众数在数据分析中的作用</p><p><strong>Therefore：</strong>认识众数能发现数据中的集中趋势</p></div><div class="tu-q"><p>众数是出现次数最多的'人气王'！可能有多个众数，也可能没有（所有数出现次数相同）。比如：1,3,3,5的众数是3；1,1,3,3有两个众数；而1,2,3,4没有众数。注意：众数不一定是中间的数，它只关心谁出现得多！</p></div><div class="tu-q"><p>🌍 调查小组同学最爱的水果：苹果、香蕉、苹果、橙子、苹果。'苹果'出现3次最多，它就是众数，说明这是最受欢迎的水果。</p></div><div class="tu-q" data-answer="D"><h3>🏋️ 即练</h3><p>哪组数据的众数是8？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="A有2个8，B全是8，C没有众数，D是陷阱选项！">A.5,8,8,9</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="A有2个8，B全是8，C没有众数，D是陷阱选项！">B.8,8,8,8</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="A有2个8，B全是8，C没有众数，D是陷阱选项！">C.7,7,8,9</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="A有2个8，B全是8，C没有众数，D是陷阱选项！">D.都是</button></div><div class="tu-fb" hidden></div></div></section>
+
+<!-- ⭐ v7.7 标准独立连续音频模块 -->
+
+<!-- 课程导览图（互动画布） -->
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="B">
+<h3>选择题 1</h3><p>这组跳绳成绩的众数是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="98只出现一次">A. 95和98</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="95和105都出现两次，其他数只出现一次">B. 95和105</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="漏了同样出现两次的105">C. 只有95</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="漏了同样出现两次的95">D. 只有105</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 2</h3><p>要反映大多数同学的水平，应该选用</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="平均数受极端值影响">A. 平均数99</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="中位数不受极端值影响，能更好反映中间水平">B. 中位数99</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="众数不能反映整体集中趋势">C. 众数95和105</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="最高分只代表个别同学">D. 最高分110</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 3</h3><p>如果增加一个成绩50分，中位数会</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="奇数个数据的中位数位置会变">A. 保持不变</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="11个数据的中位数是第6个数95">B. 变为95</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="未正确找到中间位置">C. 变为96.5</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="未重新排序计算">D. 变为98</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>这组数据的中位数是____（偶数个数据取中间两数平均值）</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>99</p><p>(98+100)÷2=99</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>当所有数据都不同时，众数____</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>不存在</p><p>众数要求至少有两个相同数据</p></details></div>
+</section>
+
+<section id="posttest" data-slot="90">
+  <div class="card">
+    <h2 class="section-title">🎯 后测：学会了吗？</h2>
+    <p style="color:#666;margin-bottom:16px;">完成学习后，用这两道题检验你对"中位数与众数"的掌握程度！</p>
+
+    <div class="posttest-item" id="posttest-pq0">
+      <p><strong>第1题：</strong>数据：1,2,3,4,100，中位数是？平均数是？哪个更能代表多数人水平？</p>
+      <button class="quiz-option" onclick="checkPost(this,'pq0',0,0,'100是极端值，把平均数拉到22，但多数数据在1-4范围，中位数3更能代表')">
+        A. 中位数3，平均数22，中位数更合适
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq0',1,0,'100是极端值，把平均数拉到22，但多数数据在1-4范围，中位数3更能代表')">
+        B. 中位数3，平均数22，平均数更合适
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq0',2,0,'100是极端值，把平均数拉到22，但多数数据在1-4范围，中位数3更能代表')">
+        C. 中位数22，平均数3，平均数更合适
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq0',3,0,'100是极端值，把平均数拉到22，但多数数据在1-4范围，中位数3更能代表')">
+        D. 中位数50，平均数50，都合适
+      </button>
+      <div class="quiz-feedback" id="post-fb0"></div>
+    </div>
+
+    <div class="posttest-item" id="posttest-pq1">
+      <p><strong>第2题：</strong>数据：5,5,5,8,8，众数是？中位数是？</p>
+      <button class="quiz-option" onclick="checkPost(this,'pq1',0,0,'5出现3次最多，众数=5；共5个数，第3个是5，中位数=5')">
+        A. 众数5，中位数5
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq1',1,0,'5出现3次最多，众数=5；共5个数，第3个是5，中位数=5')">
+        B. 众数5，中位数8
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq1',2,0,'5出现3次最多，众数=5；共5个数，第3个是5，中位数=5')">
+        C. 众数8，中位数5
+      </button>
+<button class="quiz-option" onclick="checkPost(this,'pq1',3,0,'5出现3次最多，众数=5；共5个数，第3个是5，中位数=5')">
+        D. 众数5，中位数6
+      </button>
+      <div class="quiz-feedback" id="post-fb1"></div>
+    </div>
+    <div id="posttest-summary" style="display:none;margin-top:16px;padding:16px;border-radius:12px;text-align:center;font-weight:bold;font-size:1.1rem;"></div>
+  </div>
+  <script>
+  (function(){
+    var postAnswered = {};
+    var postCount = 0;
+    var postTotal = 2;
+    window.checkPost = function(btn, qid, chosen, ans, hint) {
+      if (postAnswered[qid]) return;
+      postAnswered[qid] = true;
+      var idx = qid.replace('pq','');
+      var fb = document.getElementById('post-fb'+idx);
+      if (chosen === ans) {
+        postCount++;
+        btn.classList.add('correct');
+        fb.className = 'quiz-feedback show';
+        fb.style.background = '#d4edda'; fb.style.color = '#155724';
+        fb.innerHTML = '✅ 正确！' + hint;
+      } else {
+        btn.classList.add('wrong');
+        fb.className = 'quiz-feedback show';
+        fb.style.background = '#f8d7da'; fb.style.color = '#721c24';
+        fb.innerHTML = '❌ 错误。' + hint;
+      }
+      if (Object.keys(postAnswered).length === postTotal) {
+        var summary = document.getElementById('posttest-summary');
+        summary.style.display = 'block';
+        if (postCount === postTotal) {
+          summary.style.background = '#d4edda'; summary.style.color = '#155724';
+          summary.innerHTML = '🎉 全部正确！你已经掌握了本课内容！';
+        } else {
+          summary.style.background = '#fff3cd'; summary.style.color = '#856404';
+          summary.innerHTML = '💪 答对 ' + postCount + '/' + postTotal + ' 题。建议回顾一下未掌握的内容！';
+        }
+      }
+    };
+  })();
+  </script>
+</section>
+
+<div style="display:grid;gap:12px;">
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #51cf66;">
+      <span style="font-size:11px;color:#1e7e34;font-weight:700;">记忆层</span>
+      <p style="margin-top:6px;font-size:14px;">回忆：今天学了哪些关键词和规则？试着说出来。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #339af0;">
+      <span style="font-size:11px;color:#1971c2;font-weight:700;">理解层</span>
+      <p style="margin-top:6px;font-size:14px;">用自己的话解释今天学的核心概念，不看书能说清楚吗？</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #f59f00;">
+      <span style="font-size:11px;color:#b35900;font-weight:700;">应用层</span>
+      <p style="margin-top:6px;font-size:14px;">用今天的知识解决一个实际问题，或写一个新例子。</p>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:14px;border-left:3px solid #cc5de8;">
+      <span style="font-size:11px;color:#862e9c;font-weight:700;">分析→创造层</span>
+      <p style="margin-top:6px;font-size:14px;">把今天的知识与已有知识联系起来：有什么共同点？有什么区别？能不能自己创造一道新题？</p>
+    </div>
+  </div>
+
+
+<!-- TTS 音频 #TeachAny Edge-TTS -->
+<div class="teachany-audio-intro" style="position:fixed;bottom:20px;right:20px;z-index:9999;">
+  <button onclick="document.getElementById('ta-audio').play()"
+    style="background:linear-gradient(135deg,#ff6b6b,#ee5a24);color:#fff;border:none;
+    width:52px;height:52px;border-radius:50%;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 16px rgba(255,107,107,0.4);display:flex;align-items:center;justify-content:center;"
+    title="播放课程介绍">🔊</button>
+  <audio id="ta-audio" src="audio/intro.mp3" preload="auto"></audio>
+</div>
+
+<!-- ⭐ v6.11 AI 学伴配置（必须在 ai-tutor.js 加载前定义） -->
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseTitle: "中位数与众数",
+  subject: "math",
+  grade: 5,
+  learningObjectives: []
+};
+</script>
+<!-- ⭐ v6.11 AI 学伴脚本（左下角 FAB · 首次点击引导配置 API） -->
+<script src="../../assets/scripts/ai-tutor.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
+
+<script src="../../assets/scripts/teachany-tts-narrator.js" defer></script>
+<script src="../../assets/scripts/teachany-section-hints.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+
+<!-- ⭐ v7.7 标准 AI 学伴入口卡片（必须显式存在，不能仅依赖 FAB） -->
+
+<!-- teachany-enhanced -->
+
+<!-- teachany-upgrade-v2 -->
+<!-- upgrade topic: 中位数与众数 | 五年级数学 | TeachAny -->
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 偶数个数据时漏算中间两数的平均值</h3><p>✅ 画线标记中间两数后必须求平均</p><p>💡 未理解中位数代表的是虚拟中间值</p></div><div class="tu-q"><h3>❌ 把众数当作出现次数而不是具体数值</h3><p>✅ 强调众数是'哪个数'而非'几次'</p><p>💡 混淆了频数与数值的概念</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>奇数偶数要分清，中间两数平均算；出现最多叫众数，没有重复就为零</p><p><strong>类比：</strong>中位数像教室中间排的座位，众数像最受欢迎的零食</p></div></section>
+<section class="section" id="sec-extend" data-slot="100">
+  <div class="section-header" style="background:linear-gradient(135deg,var(--purple),#6c5ce7)">
+    <h2>🌈 拓展：什么时候用哪个？</h2>
+    <p>平均数、中位数、众数各有用处！</p>
+  </div>
+  <div class="card" style="background:linear-gradient(135deg,#ffe66d33,#feca5733);border:2px solid var(--accent)">
+    <h3 style="font-weight:800;margin-bottom:0.8rem">🏠 房价用中位数</h3>
+    <p style="line-height:1.8">一个城市大多数房子100万，少数豪宅1000万。<br>
+    用<strong>平均数</strong>会偏高，用<strong>中位数</strong>更能反映普通人的情况！</p>
+  </div>
+  <div class="card" style="background:linear-gradient(135deg,#a29bfe33,#6c5ce733);border:2px solid var(--purple)">
+    <h3 style="font-weight:800;margin-bottom:0.8rem">👕 服装用众数</h3>
+    <p style="line-height:1.8">服装厂生产T恤，要知道<strong>哪个尺码卖得最多</strong>，<br>这就要用众数！多生产M码还是L码？</p>
+  </div>
+  <div class="card" style="background:linear-gradient(135deg,#26de8133,#20bf6b33);border:2px solid var(--green)">
+    <h3 style="font-weight:800;margin-bottom:0.8rem">📊 成绩用平均数</h3>
+    <p style="line-height:1.8">班级整体成绩情况用<strong>平均分</strong>，<br>个人成绩排在哪里用<strong>中位数</strong>！</p>
+  </div>
+  <div class="card">
+    <h3 style="font-weight:800;margin-bottom:0.8rem">🧩 思考题</h3>
+    <p style="line-height:1.8">数据：1, 1, 1, 2, 3, 4, 5, 100<br>
+    平均数 ≈ 14.6，中位数 = 2.5，众数 = 1<br>
+    如果要了解"大多数人"的情况，用哪个最合适？</p>
+    <button class="btn btn-accent" onclick="toggleAnswer('extAns')">🔓 揭晓答案</button>
+    <div id="extAns" style="display:none;margin-top:1rem;padding:1rem;background:#e8fff4;border-radius:12px;color:#00b894;font-weight:600">
+      ✅ 用<strong>中位数 = 2.5</strong>或<strong>众数 = 1</strong>更合适！<br>
+      因为100这个极端值把平均数拉高了很多，不能代表"大多数人"。
+    </div>
+  </div>
+  <div style="text-align:center;margin:1.5rem 0">
+    <button class="btn btn-purple" onclick="goSection('sec-score')">📊 查看成绩单</button>
+  </div>
+</section>
+
+<nav class="bottom-nav">
+  <button onclick="goSection('sec-hero')">🏠首页</button>
+  <button onclick="goSection('sec-warmup')">⚡热身</button>
+  <button onclick="goSection('sec-level1')">🌟中位数</button>
+  <button onclick="goSection('sec-level2')">🌟众数</button>
+  <button onclick="goSection('sec-level3')">🌟比较</button>
+  <button onclick="goSection('sec-boss')">👾Boss</button>
+  <button onclick="goSection('sec-score')">🏆成绩</button>
+</nav>
+
+<script>
+// ===== State =====
+const state = {
+  stars: 0, achievements: [],
+  l1Idx: 0, l1Correct: 0,
+  modeData: [], modeAns: null,
+  bossIdx: 0, bossCorrect: 0,
+};
+
+const ACHIEVEMENTS = [
+  { id:'start', emoji:'🚀', title:'出发啦', desc:'开始学习！' },
+  { id:'warmup', emoji:'🔥', title:'热身完成', desc:'掌握排序！' },
+  { id:'median_first', emoji:'📍', title:'中位初学', desc:'第一次找到中位数！' },
+  { id:'median_even', emoji:'📐', title:'偶数达人', desc:'算出了偶数中位数！' },
+  { id:'mode_found', emoji:'👑', title:'众数侦探', desc:'找到了众数！' },
+  { id:'compare_ace', emoji:'🔍', title:'比较大师', desc:'区分了中位数和众数！' },
+  { id:'boss_done', emoji:'👾', title:'Boss终结者', desc:'击败了Boss！' },
+  { id:'all_stars', emoji:'💫', title:'全明星', desc:'收集满20颗星！' },
+];
+
+const audioCtx = (() => { try { return new (window.AudioContext || window.webkitAudioContext)(); } catch(e){return null;} })();
+function playSound(type) {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  if (type === 'correct') { o.frequency.setValueAtTime(523,audioCtx.currentTime); o.frequency.setValueAtTime(784,audioCtx.currentTime+0.15); }
+  else if (type === 'wrong') { o.frequency.setValueAtTime(300,audioCtx.currentTime); o.frequency.setValueAtTime(250,audioCtx.currentTime+0.15); }
+  else if (type === 'achieve') { [659,784,1047].forEach((f,i)=>o.frequency.setValueAtTime(f,audioCtx.currentTime+i*0.1)); }
+  g.gain.setValueAtTime(0.3,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.5);
+  o.start(); o.stop(audioCtx.currentTime+0.5);
+}
+
+function addStars(n) {
+  state.stars += n;
+  document.getElementById('starCount').textContent = state.stars;
+  playSound('star');
+  if (state.stars >= 20) unlockAchievement('all_stars');
+}
+function unlockAchievement(id) {
+  if (state.achievements.includes(id)) return;
+  state.achievements.push(id);
+  const a = ACHIEVEMENTS.find(x=>x.id===id); if (!a) return;
+  const p = document.getElementById('achievePopup');
+  document.getElementById('achieveEmoji').textContent = a.emoji;
+  document.getElementById('achieveTitle').textContent = '🏆 '+a.title;
+  document.getElementById('achieveDesc').textContent = a.desc;
+  p.classList.add('show'); playSound('achieve');
+  setTimeout(()=>p.classList.remove('show'),2500);
+  updateBadges();
+}
+function updateBadges() {
+  const g = document.getElementById('badgesGrid');
+  if (!g) return;
+  g.innerHTML = ACHIEVEMENTS.map(a=>`<div class="badge ${state.achievements.includes(a.id)?'earned':''}"><div style="font-size:1.5rem">${a.emoji}</div><div>${a.title}</div></div>`).join('');
+}
+function goSection(id) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if (id==='sec-warmup') initWarmup();
+  if (id==='sec-level1') initL1Median();
+  if (id==='sec-level2') initModeSection();
+  if (id==='sec-level3') initCompare();
+  if (id==='sec-boss') initBoss();
+  if (id==='sec-score') showScore();
+  unlockAchievement('start');
+}
+function toggleAnswer(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display==='none'?'block':'none';
+}
+
+// ===== Warmup =====
+const warmupNums = [7,3,9,1,5];
+let warmupDropped = [];
+function initWarmup() {
+  warmupDropped = [];
+  document.getElementById('warmupNumbers').innerHTML = warmupNums.map((n,i)=>`
+    <div class="num-card" draggable="true" id="wn${i}"
+      style="background:linear-gradient(135deg,${['#ff6b6b','#4ecdc4','#ffe66d','#a29bfe','#fd9644'][i]},${['#e17055','#45b7d1','#feca57','#6c5ce7','#e67e22'][i]});color:white"
+      ondragstart="warmupDragStart(event,'${n}','wn${i}')">
+      ${n}
+    </div>`).join('');
+  document.getElementById('warmupSorted').innerHTML = '拖到这里排序';
+  document.getElementById('warmupResult').innerHTML = '';
+}
+let dragW = null;
+function warmupDragStart(e,v,id) { e.dataTransfer.setData('v',v); e.dataTransfer.setData('id',id); dragW={v:parseInt(v),id}; }
+function allowDrop(e) { e.preventDefault(); e.currentTarget.classList.add('over'); }
+function removeDragOver(e) { e.currentTarget.classList.remove('over'); }
+function warmupDrop(e) {
+  e.preventDefault(); e.currentTarget.classList.remove('over');
+  if (!dragW) return;
+  warmupDropped.push(dragW.v);
+  const el = document.getElementById(dragW.id);
+  if (el) { el.style.opacity='0.3'; el.setAttribute('draggable','false'); }
+  e.currentTarget.innerHTML = warmupDropped.map((v,i)=>`<div class="num-card" style="background:linear-gradient(135deg,#a29bfe,#6c5ce7);color:white">${v}</div>`).join('');
+}
+function checkWarmupSort() {
+  const sorted = [...warmupNums].sort((a,b)=>a-b);
+  const correct = JSON.stringify(warmupDropped) === JSON.stringify(sorted);
+  const r = document.getElementById('warmupResult');
+  if (warmupDropped.length < warmupNums.length) {
+    r.innerHTML = '<span style="color:var(--orange);font-weight:700">还没拖完哦！把所有数字都拖过来！</span>';
+    return;
+  }
+  if (correct) {
+    const mid = warmupDropped[Math.floor(warmupDropped.length/2)];
+    r.innerHTML = `<span style="color:var(--green);font-weight:700">🎉 排序正确！中位数是 <strong style="font-size:1.3rem;color:var(--purple)">${mid}</strong>！+3⭐</span>`;
+    addStars(3); unlockAchievement('warmup'); playSound('correct');
+  } else {
+    r.innerHTML = `<span style="color:var(--primary);font-weight:700">💪 顺序不对，正确顺序是 ${sorted.join(' < ')}，再试试！</span>`;
+    playSound('wrong');
+  }
+}
+function autoSortWarmup() {
+  const sorted = [...warmupNums].sort((a,b)=>a-b);
+  warmupDropped = sorted;
+  document.getElementById('warmupNumbers').querySelectorAll('.num-card').forEach(el=>{ el.style.opacity='0.3'; el.setAttribute('draggable','false'); });
+  const mid = sorted[Math.floor(sorted.length/2)];
+  document.getElementById('warmupSorted').innerHTML = sorted.map((v,i)=>`<div class="num-card" style="background:linear-gradient(135deg,${i===Math.floor(sorted.length/2)?'#ffe66d,#feca57':'#a29bfe,#6c5ce7'});color:${i===Math.floor(sorted.length/2)?'#333':'white'}">${v}</div>`).join('');
+  document.getElementById('warmupResult').innerHTML = `<span style="color:var(--purple);font-weight:700">✨ 看！最中间那个 <strong>${mid}</strong> 就是中位数！黄色高亮！</span>`;
+  addStars(1); unlockAchievement('warmup');
+}
+
+// ===== Level 1: Median =====
+const medianQs = [
+  { nums:[3,7,1,9,5], q:'小组5人身高(cm)：3,7,1,9,5，中位数是多少？(先排序)', ans:5, even:false },
+  { nums:[4,8,2,6], q:'4位同学的零花钱(元)：4,8,2,6，中位数是多少？', ans:5, even:true },
+  { nums:[10,30,20,50,40], q:'5次测试成绩：10,30,20,50,40，中位数是多少？', ans:30, even:false },
+  { nums:[1,3,5,7,9,11], q:'6个奇数排列，中位数是多少？', ans:6, even:true },
+];
+function initL1Median() {
+  state.l1Idx = 0; state.l1Correct = 0; showL1Q();
+}
+function showL1Q() {
+  const q = medianQs[state.l1Idx];
+  const sorted = [...q.nums].sort((a,b)=>a-b);
+  let hint = `排序后：${sorted.join(', ')}`;
+  if (q.even) hint += `<br>偶数个，取中间两个 (${sorted[sorted.length/2-1]}, ${sorted[sorted.length/2]}) 的平均数`;
+  else hint += `<br>奇数个，最中间是第${Math.ceil(sorted.length/2)}个`;
+  document.getElementById('l1-content').innerHTML = `
+    <div class="card">
+      <p style="font-weight:800;font-size:1rem;margin-bottom:0.5rem">第${state.l1Idx+1}题（共${medianQs.length}题）</p>
+      <p style="font-size:1.1rem;line-height:1.8;margin-bottom:0.8rem">${q.q}</p>
+      <div style="background:#f8f4ff;border-radius:12px;padding:0.8rem;margin-bottom:0.8rem;font-size:0.9rem;color:#6c5ce7;font-weight:600">${hint}</div>
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <label style="font-weight:700">中位数 = </label>
+        <input class="answer-input" id="l1input" type="number" step="0.5" placeholder="?">
+      </div>
+    </div>`;
+  document.getElementById('l1-feedback').style.display='none';
+  document.getElementById('l1prog').style.width=(state.l1Idx/medianQs.length*100)+'%';
+}
+function checkL1Median() {
+  const val = parseFloat(document.getElementById('l1input')?.value);
+  const q = medianQs[state.l1Idx];
+  const fb = document.getElementById('l1-feedback');
+  fb.style.display='block';
+  if (val === q.ans) {
+    fb.className='feedback correct';
+    fb.textContent=`🎉 正确！中位数 = ${q.ans}，+3⭐`;
+    addStars(3); state.l1Correct++;
+    if (state.l1Correct===1) unlockAchievement('median_first');
+    if (q.even) unlockAchievement('median_even');
+    playSound('correct');
+  } else {
+    fb.className='feedback wrong';
+    fb.textContent=`💪 再想想！正确答案是 ${q.ans}`;
+    playSound('wrong');
+  }
+}
+function nextL1Median() {
+  state.l1Idx++;
+  if (state.l1Idx >= medianQs.length) { addStars(5); goSection('sec-level2'); }
+  else showL1Q();
+}
+
+// ===== Level 2: Mode =====
+let modeQData = null;
+function initModeSection() {
+  newModeQ();
+}
+function newModeQ() {
+  const pools = [
+    [3,5,3,7,3,5,9],
+    [2,4,2,4,2,6,8,4],
+    [1,1,2,3,4,5,5,5],
+    [6,7,6,8,6,9,7],
+  ];
+  const d = pools[Math.floor(Math.random()*pools.length)];
+  const freq = {};
+  d.forEach(v=>freq[v]=(freq[v]||0)+1);
+  const maxFreq = Math.max(...Object.values(freq));
+  const modes = Object.keys(freq).filter(k=>freq[k]===maxFreq).map(Number);
+  state.modeData = d; state.modeAns = modes;
+  modeQData = {data:d,freq,modes,maxFreq};
+  document.getElementById('l2-content').innerHTML = `
+    <p style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem">数据：${d.join(', ')}</p>
+    <p style="font-size:1rem;color:#888">每个数字出现几次？点击出现次数最多的那个数字（在图中点击）</p>`;
+  drawDotPlot(d,freq);
+  document.getElementById('l2-feedback').style.display='none';
+}
+function drawDotPlot(data,freq) {
+  const canvas = document.getElementById('dotCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,480,220);
+  const vals = [...new Set(data)].sort((a,b)=>a-b);
+  const maxF = Math.max(...Object.values(freq));
+  const step = 480/(vals.length+1);
+  const colors = ['#ff6b6b','#4ecdc4','#ffe66d','#a29bfe','#fd9644','#fd79a8','#26de81'];
+  // axis
+  ctx.strokeStyle='#ddd'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(30,200); ctx.lineTo(460,200); ctx.stroke();
+  vals.forEach((v,i) => {
+    const x = (i+1)*step;
+    const cnt = freq[v] || 0;
+    ctx.fillStyle = colors[i%colors.length];
+    for (let j=0;j<cnt;j++) {
+      ctx.beginPath(); ctx.arc(x,195-(j+1)*22,9,0,Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle='#333'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(v, x, 218);
+    ctx.fillText('×'+cnt, x, 175-cnt*22);
+  });
+  // click handler
+  canvas.onclick = function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX-rect.left)*(480/rect.width);
+    let clicked = null;
+    vals.forEach((v,i) => {
+      const cx = (i+1)*step;
+      if (Math.abs(mx-cx)<step/2) clicked=v;
+    });
+    if (clicked!==null) checkModeClick(clicked);
+  };
+}
+function checkModeClick(v) {
+  const fb = document.getElementById('l2-feedback');
+  fb.style.display='block';
+  if (state.modeAns.includes(v)) {
+    fb.className='feedback correct';
+    fb.textContent=`👑 正确！众数是 ${state.modeAns.join(' 和 ')}，出现了 ${modeQData.maxFreq} 次！+3⭐`;
+    addStars(3); unlockAchievement('mode_found'); playSound('correct');
+  } else {
+    fb.className='feedback wrong';
+    fb.textContent=`💪 ${v} 出现了 ${modeQData.freq[v]||0} 次，不是最多的，再找找！`;
+    playSound('wrong');
+  }
+}
+
+// ===== Level 3: Compare =====
+const compareQs = [
+  { q:'购买鞋子时，商家想知道哪个尺码最受欢迎，应该用什么？', opts:['平均数','中位数','众数'], ans:2, reason:'众数告诉我们出现最多的尺码！' },
+  { q:'了解一个班同学体重的"中间水平"，用什么最好？', opts:['平均数','中位数','众数'], ans:1, reason:'中位数不受极端体重影响，更能代表"中间水平"！' },
+  { q:'计算全班平均成绩，用什么？', opts:['平均数','中位数','众数'], ans:0, reason:'求整体平均情况用平均数！' },
+];
+let compareIdx = 0;
+function initCompare() {
+  compareIdx = 0; showCompareQ();
+}
+function showCompareQ() {
+  if (compareIdx >= compareQs.length) {
+    document.getElementById('l3-quiz').innerHTML = '<p style="font-size:1.2rem;font-weight:700;text-align:center;color:var(--green)">🎉 全部答完！真是比较大师！</p>';
+    unlockAchievement('compare_ace'); addStars(5);
+    setTimeout(()=>goSection('sec-boss'),2000);
+    return;
+  }
+  const q = compareQs[compareIdx];
+  document.getElementById('l3-quiz').innerHTML = `
+    <p style="font-weight:800;font-size:1.1rem;margin-bottom:1rem">第${compareIdx+1}题：${q.q}</p>
+    <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+      ${q.opts.map((o,i)=>`<button class="opt-btn" onclick="checkCompare(${i})">${o}</button>`).join('')}
+    </div>`;
+  document.getElementById('l3-feedback').style.display='none';
+}
+function checkCompare(idx) {
+  const q = compareQs[compareIdx];
+  const fb = document.getElementById('l3-feedback');
+  fb.style.display='block';
+  document.querySelectorAll('#l3-quiz .opt-btn').forEach((b,i)=>{
+    if (i===q.ans) b.classList.add('correct');
+    else if (i===idx && i!==q.ans) b.classList.add('wrong');
+  });
+  if (idx === q.ans) {
+    fb.className='feedback correct';
+    fb.textContent=`✅ 正确！${q.reason} +3⭐`;
+    addStars(3); playSound('correct');
+    setTimeout(()=>{ compareIdx++; showCompareQ(); }, 2000);
+  } else {
+    fb.className='feedback wrong';
+    fb.textContent=`💪 不对哦！${q.reason}`;
+    playSound('wrong');
+  }
+}
+
+// ===== Boss =====
+const bossQs = [
+  { q:'数据：5,8,3,8,6,8,2。求：(1)中位数 (2)众数', type:'text', ans:'中位数=6，众数=8',
+    check: v => { const vl = v.replace(/\s/g,''); return vl.includes('6')&&vl.includes('8'); } },
+  { q:'8人考试成绩：70,80,90,70,85,75,70,95。众数是多少？', type:'number', ans:70, check: v=>parseInt(v)===70 },
+  { q:'6位同学零花钱(元)：10,20,15,25,20,30。中位数是多少？', type:'number', ans:20, check: v=>parseInt(v)===20 },
+];
+let bossIdx2 = 0;
+function initBoss() {
+  bossIdx2 = 0; state.bossCorrect = 0; showBossQ2();
+}
+function showBossQ2() {
+  if (bossIdx2 >= bossQs.length) {
+    unlockAchievement('boss_done'); addStars(15);
+    document.getElementById('boss-content').innerHTML = '<p style="font-size:1.3rem;font-weight:800;text-align:center;color:var(--green)">🎉 Boss被打败了！你太厉害了！</p>';
+    document.querySelector('[onclick="checkBoss()"]').style.display='none';
+    setTimeout(()=>goSection('sec-score'),2000);
+    return;
+  }
+  const q = bossQs[bossIdx2];
+  document.getElementById('boss-content').innerHTML = `
+    <p style="font-weight:800;font-size:1.1rem;margin-bottom:1rem">👾 Boss问题 ${bossIdx2+1}/${bossQs.length}</p>
+    <p style="font-size:1.1rem;line-height:1.8;margin-bottom:1rem">${q.q}</p>
+    ${q.type==='text'
+      ? `<textarea style="width:100%;border:3px solid var(--secondary);border-radius:12px;padding:0.7rem;font-size:1rem;font-weight:600;min-height:80px;outline:none" id="bossInput" placeholder="在这里输入你的答案..."></textarea>`
+      : `<div style="display:flex;align-items:center;gap:1rem"><label style="font-weight:700">答案：</label><input class="answer-input" id="bossInput" type="number" placeholder="?"></div>`}`;
+  document.getElementById('boss-feedback').style.display='none';
+}
+function checkBoss() {
+  const q = bossQs[bossIdx2];
+  const val = document.getElementById('bossInput')?.value;
+  const fb = document.getElementById('boss-feedback');
+  fb.style.display='block';
+  if (q.check(val)) {
+    fb.className='feedback correct';
+    fb.textContent=`⚔️ 命中！+5⭐`;
+    addStars(5); state.bossCorrect++; playSound('correct');
+    setTimeout(()=>{ bossIdx2++; showBossQ2(); }, 1500);
+  } else {
+    fb.className='feedback wrong';
+    fb.textContent=`💪 正确答案是：${q.ans}`;
+    playSound('wrong');
+    setTimeout(()=>{ bossIdx2++; showBossQ2(); }, 2500);
+  }
+}
+
+// ===== Score =====
+function showScore() {
+  document.getElementById('finalScore').textContent=state.stars;
+  const pct=Math.min(100,(state.stars/50)*100);
+  const mottos=['继续努力！💪','不错哦！🌟','太棒了！🏆','完美！👑'];
+  document.getElementById('scoreMotto').textContent=mottos[pct<40?0:pct<70?1:pct<95?2:3];
+  updateBadges();
+}
+
+// AI
+const aiMsgs=['中位数一定要先排序！🔢','众数可以有多个哦！👑','遇到偶数个数字，取中间两个的平均！📐','生活中很多地方用中位数哦！🏠','你做得很棒！⭐'];
+let aiIdx=0;
+function toggleAISpeech(){const sp=document.getElementById('aiSpeech');if(sp.classList.contains('show'))sp.classList.remove('show');else{sp.textContent=aiMsgs[aiIdx++%aiMsgs.length];sp.classList.add('show');}}
+setInterval(()=>{const sp=document.getElementById('aiSpeech');sp.textContent=aiMsgs[aiIdx++%aiMsgs.length];sp.classList.add('show');setTimeout(()=>sp.classList.remove('show'),4000);},35000);
+
+window.onload=()=>{ updateBadges(); };
+</script>
+
+<!-- ===== 五镜头深层理解 ===== -->
+
+<section class="ta-standard-section" id="teachany-audio-player" data-slot="120">
+  <div data-teachany-audio>
+    <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "sectionId": "anchor",
+    "title": "课程导入：math-e-median-mode",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-e-median-mode/enhance-1.mp3"
+  },
+  {
+    "sectionId": "objectives",
+    "title": "讲解 1",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-e-median-mode/enhance-2.mp3"
+  },
+  {
+    "sectionId": "pretest",
+    "title": "讲解 2",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/math-e-median-mode/enhance-3.mp3"
+  }
+]
+    </script>
+  </div>
+</section>
+
+<section class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
+  <div data-teachany-tutor-card></div>
+</section>
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "average-concept", "name": "average-concept"}, {"id": "data-ordering", "name": "data-ordering"}], "current": {"id": "math-e-median-mode", "name": "中位数与众数 | 五年级数学 | TeachAny", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+<!-- ═══ PPT 播放控件（v6.1 轻量注入） ═══ -->
+<div class="slide-progress-bar" id="slide-progress-bar" style="width:0%"></div>
+
+<button class="play-mode-fab" id="play-mode-fab" aria-label="切换演示模式">
+  <svg id="fab-icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+  <svg id="fab-icon-browse" viewBox="0 0 24 24" style="display:none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+</button>
+
+<div class="slide-toolbar">
+  <button class="toolbar-btn" id="tb-prev" aria-label="上一页"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+  <div class="toolbar-progress" id="tb-progress"><div class="toolbar-progress-fill" id="tb-progress-fill"></div></div>
+  <span class="toolbar-page-info" id="tb-page-info"></span>
+  <button class="toolbar-btn" id="tb-next" aria-label="下一页"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+  <button class="toolbar-btn" id="tb-autoplay" aria-label="自动播放"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></button>
+  <button class="toolbar-btn" id="tb-fullscreen" aria-label="全屏"><svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg></button>
+</div>
+
+<nav class="slide-sidenav" id="slide-sidenav"></nav>
+
+<script>
+/* ═══════ Slide Controller v6.1 (轻量注入) ═══════ */
+(function(){
+'use strict';
+/* 检测页面元素：.section 或 .screen */
+const allSections = Array.from(document.querySelectorAll('.section, .screen'));
+if(!allSections.length) return;
+const totalPages = allSections.length;
+
+let currentPage = 0, isPlayMode = false, isAutoPlay = false, autoPlayTimer = null;
+const progressBar = document.getElementById('slide-progress-bar');
+const sidenav = document.getElementById('slide-sidenav');
+const fab = document.getElementById('play-mode-fab');
+const fabPlay = document.getElementById('fab-icon-play');
+const fabBrowse = document.getElementById('fab-icon-browse');
+const tbPrev = document.getElementById('tb-prev');
+const tbNext = document.getElementById('tb-next');
+const tbPageInfo = document.getElementById('tb-page-info');
+const tbProgressFill = document.getElementById('tb-progress-fill');
+const tbProgress = document.getElementById('tb-progress');
+const tbAutoplay = document.getElementById('tb-autoplay');
+const tbFullscreen = document.getElementById('tb-fullscreen');
+
+/* 提取标签名 */
+function getPageLabel(el) {
+  const h = el.querySelector('h1,h2,h3,.section-title');
+  if (h) return h.textContent.trim().slice(0, 20);
+  const btn = document.querySelector('.nav-btn.active, .nav-tab.active');
+  if (btn) return btn.textContent.trim().slice(0, 20);
+  return '第' + (allSections.indexOf(el) + 1) + '页';
+}
+
+function buildSidenav() {
+  sidenav.innerHTML = '';
+  const counter = document.createElement('div');
+  counter.className = 'sidenav-counter'; counter.id = 'sidenav-counter';
+  counter.textContent = '1/' + totalPages;
+  sidenav.appendChild(counter);
+  allSections.forEach((p, i) => {
+    const d = document.createElement('button');
+    d.className = 'sidenav-dot' + (i === 0 ? ' active' : '');
+    d.setAttribute('aria-label', getPageLabel(p));
+    d.addEventListener('click', () => goToPage(i));
+    sidenav.appendChild(d);
+  });
+}
+
+function updateUI() {
+  const prog = totalPages > 1 ? currentPage / (totalPages - 1) * 100 : 100;
+  if (progressBar) progressBar.style.width = prog + '%';
+  if (tbProgressFill) tbProgressFill.style.width = prog + '%';
+  if (tbPageInfo) tbPageInfo.textContent = (currentPage + 1) + ' / ' + totalPages;
+  sidenav.querySelectorAll('.sidenav-dot').forEach((d, i) => d.classList.toggle('active', i === currentPage));
+  const ce = document.getElementById('sidenav-counter');
+  if (ce) ce.textContent = (currentPage + 1) + '/' + totalPages;
+  if (tbPrev) tbPrev.style.opacity = currentPage === 0 ? '0.3' : '1';
+  if (tbNext) tbNext.style.opacity = currentPage === totalPages - 1 ? '0.3' : '1';
+}
+
+function goToPage(i) {
+  if (i < 0 || i >= totalPages) return;
+  currentPage = i;
+  const target = allSections[currentPage];
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateUI();
+}
+
+function nextPage() { if (currentPage < totalPages - 1) goToPage(currentPage + 1); }
+function prevPage() { if (currentPage > 0) goToPage(currentPage - 1); }
+
+/* Scroll-based page tracking */
+let scrollTimeout;
+function onScroll() {
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => {
+    const st = window.scrollY;
+    let closest = 0, minD = Infinity;
+    allSections.forEach((p, i) => {
+      const d = Math.abs(p.offsetTop - st - 100);
+      if (d < minD) { minD = d; closest = i; }
+    });
+    if (closest !== currentPage) { currentPage = closest; updateUI(); }
+  }, 120);
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+
+function togglePlayMode() {
+  isPlayMode = !isPlayMode;
+  document.body.classList.toggle('play-mode', isPlayMode);
+  document.body.classList.toggle('toolbar-visible', isPlayMode);
+  if (fabPlay) fabPlay.style.display = isPlayMode ? 'none' : 'block';
+  if (fabBrowse) fabBrowse.style.display = isPlayMode ? 'block' : 'none';
+  if (isPlayMode) {
+    document.documentElement.style.overflow = 'hidden';
+    goToPage(currentPage);
+  } else {
+    document.documentElement.style.overflow = '';
+  }
+}
+
+if (fab) fab.addEventListener('click', togglePlayMode);
+if (tbPrev) tbPrev.addEventListener('click', prevPage);
+if (tbNext) tbNext.addEventListener('click', nextPage);
+if (tbProgress) tbProgress.addEventListener('click', e => {
+  const r = tbProgress.getBoundingClientRect();
+  goToPage(Math.round((e.clientX - r.left) / r.width * (totalPages - 1)));
+});
+if (tbAutoplay) tbAutoplay.addEventListener('click', () => {
+  isAutoPlay = !isAutoPlay;
+  tbAutoplay.classList.toggle('active', isAutoPlay);
+  if (isAutoPlay) {
+    autoPlayTimer = setInterval(() => {
+      if (currentPage < totalPages - 1) nextPage();
+      else { clearInterval(autoPlayTimer); isAutoPlay = false; tbAutoplay.classList.remove('active'); }
+    }, 8000);
+  } else { clearInterval(autoPlayTimer); }
+});
+if (tbFullscreen) tbFullscreen.addEventListener('click', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (!isPlayMode) {
+    if (e.key === 'f' || e.key === 'F') { if (!e.ctrlKey && !e.metaKey) togglePlayMode(); }
+    return;
+  }
+  switch (e.key) {
+    case 'ArrowRight': case 'ArrowDown': case ' ': e.preventDefault(); nextPage(); break;
+    case 'ArrowLeft': case 'ArrowUp': e.preventDefault(); prevPage(); break;
+    case 'Escape': togglePlayMode(); break;
+  }
+});
+
+buildSidenav();
+
+/* ═══ v6.2 自动初始化：连续阅读模式下预加载动态内容 ═══ */
+(function(){
+  try {
+    var inited = new Set();
+    allSections.forEach(function(screen) {
+      var id = screen.id;
+      if (!id || inited.has(id)) return;
+      inited.add(id);
+      /* 根据屏幕 ID 推测并调用对应的 init 函数 */
+      var caps = id.charAt(0).toUpperCase() + id.slice(1);
+      var candidates = [
+        'init' + caps,              /* initWarmup, initL1, initBoss ... */
+        'init_' + id,               /* init_warmup */
+        'load' + caps,              /* loadBoss */
+        'build' + caps,             /* buildQuiz */
+        'render' + caps,            /* renderContent */
+        'setup' + caps,             /* setupLevel */
+      ];
+      for (var i = 0; i < candidates.length; i++) {
+        if (typeof window[candidates[i]] === 'function') {
+          try { window[candidates[i]](); } catch(e) {}
+          break;
+        }
+      }
+    });
+  } catch(e) {}
+})();
+/* ═══ end v6.2 auto-init ═══ */
+
+updateUI();
+document.body.classList.add('toolbar-visible');
+setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visible'); }, 3000);
+})();
+</script>
+
+<script src="../../assets/scripts/feedback-widget.js" defer></script>
+
+<script src="../../assets/scripts/teachany-audio-player.js" defer></script>
+
+<script id="mathe-depth-js">
+function matheDepthCheck(button, isCorrect, feedbackId, explanation) {
+  var box = button.closest('.module-check');
+  if (!box || box.dataset.answered) return;
+  box.dataset.answered = '1';
+  box.querySelectorAll('button').forEach(function (item) {
+    item.disabled = true;
+    if (item.dataset.correct === '1') item.classList.add('correct');
+  });
+  if (!isCorrect) button.classList.add('wrong');
+  var feedback = document.getElementById(feedbackId);
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.textContent = (isCorrect ? '正确。' : '再想想。') + explanation;
+  }
+}
+</script>
+
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：中位数与众数</h2><div data-teachany-kg="math-e-median-mode"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+</body>
+</html>

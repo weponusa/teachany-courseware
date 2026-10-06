@@ -1,0 +1,992 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+课件挂载一致性校验器 (v5.27 新增，v5.29 增强)
+
+在发布任何课件前（rebuild-index 之前）必须运行，确保：
+  1. manifest.grade 的学段 与 manifest.node_id 的前缀（chem-h-/chem-m-/chem-e-）一致
+  2. manifest.subject 与 node_id 的学科前缀一致
+  3. HTML title/course-id 中的学段指示（高中/初中/小学/必修X/xxx年级）与 manifest.grade 一致
+  4. <title> 规范：含 TeachAny v{ver} + 学段 + 年级
+  5. manifest.teachany_version 字段存在
+  6. (v5.29) 同一 node_id 不挂多份不同 id 的课件（冲突挂载检测）
+
+命名约定（节点 id 前缀）：
+  *-e-*  → elementary (G1-6)
+  *-m-*  → middle (G7-9)
+  *-h-*  → high (G10-12)
+
+用法：
+  python3 scripts/validate-courseware.py             # 扫描全部
+  python3 scripts/validate-courseware.py <course_id> # 扫描单个
+"""
+import json
+import re
+import shutil
+import subprocess
+import sys
+from collections import defaultdict
+from html import unescape
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+LEVEL_RANGE = {'elementary': (1,6), 'middle': (7,9), 'high': (10,12)}
+
+SUBJECT_PREFIXES = {
+    'chn': 'chinese', 'math': 'math', 'eng': 'english',
+    'phy': 'physics', 'chem': 'chemistry', 'bio': 'biology',
+    'hist': 'history', 'geo': 'geography', 'it': 'info-tech',
+    'sci': 'science',  # v5.34.6 新增：小学科学
+    'pol': 'politics',
+    'psych': 'psychology',
+}
+
+LEVEL_INFIX = {
+    '-e-': 'elementary', '-m-': 'middle', '-h-': 'high',
+}
+
+# 国际课标 infix 识别（v5.30 新增）——命中任一表示该课件使用非 cn-national 体系
+INTERNATIONAL_INFIXES = ['-ib-dp-', '-ib-myp-', '-cam-igcse-', '-cam-as-', '-cam-al-', '-ap-']
+
+# PBL 课标外补充节点（挂 data/trees/other/user-generated.json）
+EXT_NODE_RE = re.compile(r'^ext-[a-f0-9]{6,12}$', re.I)
+
+
+def is_ext_node(node_id):
+    return bool(node_id and EXT_NODE_RE.match(str(node_id)))
+
+
+def is_pbl_supplement(manifest):
+    if not isinstance(manifest, dict):
+        return False
+    return manifest.get('lesson_type') == 'pbl-supplement' or is_ext_node(manifest.get('node_id'))
+
+# HTML 线索关键词
+# v2026-07 精确化（修误报）：①移除"高中"——初三生涯/心理健康课件讲"高中升学"是合理
+# 语境（psych-m-g9-* 误报）；②"高一/高二/高三"需排除"升高一/升高二"等物理/化学语境
+# （phy-m-ideal-gas-equation 的"温度升高一定使体积减小"误报）。
+HTML_LEVEL_KEYWORDS = {
+    'high':       ['高一', '高二', '高三', '必修一', '必修二', '必修三', '必修四', '必修五',
+                   '选择性必修', '高考', '普高'],
+    'middle':     ['初中', '初一', '初二', '初三', '七年级', '八年级', '九年级', '中考'],
+    'elementary': ['小学', '一年级', '二年级', '三年级', '四年级', '五年级', '六年级'],
+}
+
+
+def parse_node_id(node_id):
+    """返回 (subject, level) 根据 id 前缀"""
+    if not node_id:
+        return None, None
+    subject = None
+    for prefix, subj in SUBJECT_PREFIXES.items():
+        if node_id.startswith(prefix + '-'):
+            subject = subj
+            break
+    level = None
+    for infix, lv in LEVEL_INFIX.items():
+        if infix in node_id:
+            level = lv
+            break
+    return subject, level
+
+
+def grade_to_level(grade):
+    if not isinstance(grade, int):
+        return None
+    for lv, (low, high) in LEVEL_RANGE.items():
+        if low <= grade <= high:
+            return lv
+    return None
+
+
+def detect_html_level(html_head):
+    """从 HTML 前面几百行检测学段线索"""
+    for lv, keywords in HTML_LEVEL_KEYWORDS.items():
+        for k in keywords:
+            # "高一/高二/高三"排除"升高一"（物理语境）、"乐高一样"（撞"高一"子串）、"提高一个"等
+            if k in ('高一', '高二', '高三'):
+                if re.search(r'(?<![升提乐])' + k + r'(?!样)', html_head):
+                    return lv, k
+            # "X年级"排除"至X年级"（"四至九年级"是适用范围表达，非学段标注）
+            elif re.fullmatch(r'[一二三四五六七八九]年级', k):
+                if re.search(r'(?<!至)' + k, html_head):
+                    return lv, k
+            elif k in html_head:
+                return lv, k
+    # course-id 隐含
+    m = re.search(r'course-id"\s*content="([^"]+)"', html_head)
+    if m:
+        cid = m.group(1)
+        if re.search(r'-hs-|-high[_-]', cid): return 'high', cid
+        if re.search(r'-ms-|-mi-|-middle[_-]', cid): return 'middle', cid
+        if re.search(r'-es-|-el-|-elem-|-primary[_-]', cid): return 'elementary', cid
+    return None, None
+
+
+LOCAL_ASSET_REF_RE = re.compile(
+    r'''(?:\b(?:src|href|poster)\s*=\s*['"]([^'"]+)['"]|url\(\s*['"]?([^'")]+)['"]?\s*\))''',
+    re.IGNORECASE,
+)
+
+
+def should_skip_asset_ref(ref):
+    ref = (ref or '').strip()
+    if not ref or ref.startswith(('#', '{{')):
+        return True
+    lowered = ref.lower()
+    if lowered.startswith((
+        'http://', 'https://', 'data:', 'blob:', 'mailto:', 'tel:',
+        'javascript:', 'about:', 'chrome:', 'edge:',
+    )):
+        return True
+    # CSS url(text/none/…) 或 SVG fragment，非文件路径
+    if lowered in ('text', 'none', 'inherit', 'initial', 'unset', 'currentcolor', 'auto'):
+        return True
+    if ref.startswith('#'):
+        return True
+    if '${' in ref or '{{' in ref or 'input.files' in ref:
+        return True
+    if '/' not in ref and '.' not in ref and re.fullmatch(r'[a-z][a-z0-9_-]*', lowered):
+        return True
+    return False
+
+
+def find_missing_local_asset_refs(course_dir, html_text):
+    """检测 HTML 中会在本地/Pages 部署时产生 404 的相对静态资源引用。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    missing = []
+    seen = set()
+
+    for match in LOCAL_ASSET_REF_RE.finditer(html_text):
+        raw_ref = match.group(1) or match.group(2) or ''
+        ref = unescape(raw_ref).strip()
+        if should_skip_asset_ref(ref):
+            continue
+
+        parsed = urlparse(ref)
+        if parsed.scheme or parsed.netloc:
+            continue
+        clean_ref = unquote(parsed.path)
+        if not clean_ref or clean_ref.startswith('#'):
+            continue
+
+        if clean_ref.startswith('/'):
+            target = (repo_root / clean_ref.lstrip('/')).resolve()
+        else:
+            target = (course_dir / clean_ref).resolve()
+
+        key = (ref, str(target))
+        if key in seen:
+            continue
+        seen.add(key)
+
+        if not target.exists():
+            try:
+                target_display = target.relative_to(repo_root)
+            except ValueError:
+                target_display = target
+            missing.append((ref, str(target_display)))
+
+    return missing
+
+
+def count_visualization_units(html_text):
+    """v2026-08 口径统一：可视化丰富度 = 去重本地内容图 + 互动可视模块。
+
+    - 内容图：<img src> 指向本地文件、按路径去重，排除外链与站点图标；
+      同一张 hero 在封面/主图区重复展示只计 1。
+    - 互动可视模块（每个计 1，教学价值优于静态 AI 插图，且避免
+      "为凑图数嵌入无关素材图/重复展示 hero" 的逆向激励）：
+      原生 <canvas>（排除 tkg-fallback）、PhET/GeoGebra 嵌入、
+      data-teachany-map 声明式地图、data-teachany-kg 标准知识图谱
+      （与硬规则 #33 豁免口径一致：图谱为 SVG/DOM 交互探索）。
+    返回 (imgs, units)：imgs 为去重后的本地图片路径集合，units 为互动模块数。
+    """
+    imgs = set()
+    for src in re.findall(r"<img[^>]+src=['\"]([^'\"]+)['\"]", html_text):
+        if re.match(r'^https?://', src, re.IGNORECASE):
+            continue
+        if 'teachany-icon' in src:
+            continue
+        imgs.add(src.lstrip('./'))
+    canvas_tags = [c for c in re.findall(r'<canvas\b[^>]*>', html_text, re.IGNORECASE)
+                   if 'tkg-fallback-canvas' not in c]
+    units = len(canvas_tags)
+    if re.search(r'data-teachany-kg\b', html_text):
+        units += 1
+    if re.search(r'data-teachany-map\b', html_text):
+        units += 1
+    if re.search(r'phet|geogebra|ggbBase64', html_text, re.IGNORECASE):
+        units += 1
+    return imgs, units
+
+
+def check_baseline_quality(course_dir, html_text):
+    """v6.6 新增：内容质量硬门槛（防止劣质课件混入 community）
+
+    检查：
+    - tts/*.mp3 ≥ 5（B-2 完整版要 10，server 端宽松要 5）
+    - <img src=...> ≥ 3 张（B-3a）
+    - 标准 section 至少覆盖 5/8（hero/objectives/intro/concept/example/practice/summary/kg）
+    - 末尾必须有 知识图谱/相关知识点 章节（B-5）
+    - 课件文件总数 ≥ 8（防止只交一个 HTML 蒙混）
+
+    返回 (errors, warns) 列表
+    """
+    import re
+    errors = []
+    warns = []
+
+    # 1. TTS 文件数（支持 tts/ 与 assets/tts/ 两种标准目录）
+    mp3_count = len(list(course_dir.glob('tts/*.mp3'))) + len(list(course_dir.glob('assets/tts/*.mp3')))
+    if mp3_count < 3:
+        errors.append(('error',
+            f'{course_dir.name}: TTS 不足（{mp3_count} 个 mp3，至少需 3）— 课件应覆盖导入/核心模块/小结等关键讲解'))
+
+    # 2. 可视化丰富度（v2026-08 口径：去重内容图 + 互动可视模块，替代原 <img> 出现次数）
+    vis_imgs, vis_units = count_visualization_units(html_text)
+    visual_total = len(vis_imgs) + vis_units
+    img_files = sum(1 for ext in ('png', 'jpg', 'jpeg', 'webp', 'svg')
+                    for _ in course_dir.rglob(f'*.{ext}'))
+    if visual_total < 3 or len(vis_imgs) < 1:
+        errors.append(('error',
+            f'{course_dir.name}: 可视化单元不足（去重内容图 {len(vis_imgs)} 张 + 互动可视模块 {vis_units} 个 = {visual_total}，B-3a 要求合计 ≥3 且至少 1 张嵌入内容图）'))
+    if img_files < 3:
+        errors.append(('error',
+            f'{course_dir.name}: 课件目录仅有 {img_files} 张图文件（assets/ 至少 3 张）'))
+
+    # 3. 标准 section 覆盖（弱化的 B-6）
+    section_keywords = {
+        'hero': r'(hero|英雄|首屏)',
+        'objectives': r'(objectives|学习目标|目标)',
+        'introduction': r'(introduction|引入|导入)',
+        'core-concept': r'(核心概念|core[- ]concept|principle)',
+        'example': r'(example|例题|案例|示例)',
+        'practice': r'(practice|练习|测试|quiz|pretest|posttest)',
+        'summary': r'(summary|总结|小结)',
+        'knowledge-map': r'(知识图谱|相关知识|knowledge[- ]map|前置|后续|延伸)',
+    }
+    h_lower = html_text.lower()
+    found = [k for k, pat in section_keywords.items() if re.search(pat, h_lower)]
+    if len(found) < 5:
+        errors.append(('error',
+            f'{course_dir.name}: 标准结构覆盖 {len(found)}/8（缺 {set(section_keywords)-set(found)}），至少需 5 个'))
+
+    # 4. 知识图谱/相关章节（B-5）：允许标准模块在脚本前出现，不再只看尾部 3KB
+    if not re.search(r'id=[\'\"]knowledge-graph[\'\"]|data-teachany-kg|知识图谱|相关知识|前置知识|后续知识|knowledge[- ]map|延伸', html_text, re.IGNORECASE):
+        errors.append(('error',
+            f'{course_dir.name}: 缺知识图谱章节（B-5），需挂载标准 data-teachany-kg 模块或相关知识卡片'))
+
+    # 5. 课件文件总数（防止 1-2 文件蒙混）
+    file_count = sum(1 for f in course_dir.rglob('*') if f.is_file())
+    if file_count < 8:
+        errors.append(('error',
+            f'{course_dir.name}: 课件文件总数 {file_count}（至少 8 个）— 完整课件应含 HTML + manifest + tts/*.mp3 + assets/*'))
+
+    # 6. 必须有锚点跳转（导航）
+    anchors = len(re.findall(r"href=['\"]#[a-zA-Z][^'\"# ]+['\"]", html_text))
+    if anchors < 3:
+        warns.append(('warn',
+            f'{course_dir.name}: HTML 内锚点跳转 {anchors} 个（B-6 推荐 ≥3 段间跳转），课件应可前后翻页'))
+
+    # 7. Hero 图基线（v6.3 新增 - 硬规则 #57）
+    hero_file_pattern = re.compile(r'.*hero.*\.(png|jpg|jpeg|webp|svg)$', re.IGNORECASE)
+    hero_ref_pattern = re.compile(
+        r'''(?:src\s*=\s*['"]|url\(\s*['"]?)([^'")\s]*hero[^'")\s]*\.(?:png|jpg|jpeg|webp|svg))''',
+        re.IGNORECASE
+    )
+    hero_files = [f for f in course_dir.rglob('*') if f.is_file() and hero_file_pattern.match(f.name)]
+    hero_refs = hero_ref_pattern.findall(html_text)
+    if not hero_files:
+        errors.append(('error',
+            f'{course_dir.name}: 缺 hero 封面图（assets/ 下无任何 *hero*.png/jpg/webp）— 硬规则 #57 / SKILL_CN Section 0.5'))
+    if not hero_refs:
+        errors.append(('error',
+            f'{course_dir.name}: HTML 未引用 hero 图（Hero section 必须有 <img class="hero-cover-img" src="./assets/...-hero.png">）— 硬规则 #57'))
+    if hero_refs and hero_files:
+        hero_filenames = {f.name for f in hero_files}
+        broken = []
+        for ref in hero_refs:
+            if re.match(r'^https?://', ref, re.IGNORECASE):
+                continue
+            if Path(ref).name not in hero_filenames:
+                broken.append(ref)
+        if broken:
+            errors.append(('error',
+                f'{course_dir.name}: HTML 引用了 {len(broken)} 个不存在的 hero 路径 → broken image 404 — 硬规则 #57'))
+
+    return errors + warns
+
+
+def run_teaching_quality_gate(course_dir):
+    """v7.3：调用反空壳教学质量闸门。"""
+    script = Path(__file__).with_name('validate-teaching-quality.py')
+    if not script.exists():
+        return [('error', f'{course_dir.name}: 缺少 validate-teaching-quality.py，无法执行 v7.3 教学质量闸门')]
+    result = subprocess.run(
+        [sys.executable, str(script), str(course_dir), '--json'],
+        capture_output=True,
+        text=True,
+    )
+    try:
+        payload = json.loads(result.stdout or '{}')
+    except json.JSONDecodeError:
+        return [('error', f'{course_dir.name}: v7.3 教学质量闸门输出无法解析：{result.stdout[:200]} {result.stderr[:200]}')]
+    issues = []
+    for item in payload.get('issues', []):
+        level = item.get('level', 'error')
+        msg = item.get('message', '')
+        if level in ('error', 'warn') and msg:
+            issues.append((level, msg))
+    if result.returncode != 0 and not any(i[0] == 'error' for i in issues):
+        issues.append(('error', f'{course_dir.name}: v7.3 教学质量闸门失败，但未返回明确错误'))
+    return issues
+
+
+def has_audio_stream(mp4_path):
+    """用 ffprobe 检查 mp4 是否有音频流；ffprobe 不存在时返回 None。"""
+    if not shutil.which('ffprobe'):
+        return None
+    result = subprocess.run(
+        ['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', str(mp4_path)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return False
+    return any(line.strip() == 'audio' for line in result.stdout.splitlines())
+
+
+
+SUBJECT_AS_TITLE = {
+    '数学','物理','化学','生物','语文','英语','历史','地理','科学','道法','政治','信息技术',
+    '初中数学','初中物理','初中化学','初中生物','初中语文','初中英语','初中历史','初中地理','初中科学',
+    '高中数学','高中物理','高中化学','高中生物','高中语文','高中英语','高中历史','高中地理',
+    '小学数学','小学科学','小学语文','小学英语','课件','互动课件','未命名',
+}
+SUBJECT_AS_TITLE_RE = __import__('re').compile(
+    r'^《?(?:初中|高中|小学)?(?:数学|物理|化学|生物|语文|英语|历史|地理|科学|道法|道德与法治|政治|信息技术|心理健康)》?$'
+)
+
+
+def check_subject_as_title(m, course_name):
+    """课件标题不能是纯科目/学段名（Gallery 会把 manifest.name 当卡片大标题）。"""
+    issues = []
+    name = str((m or {}).get('name') or (m or {}).get('title') or '').strip()
+    is_ext = str((m or {}).get('node_id') or course_name).startswith('ext-') or 'ext-' in course_name
+    is_pbl = (m or {}).get('lesson_type') == 'pbl-supplement'
+    if not name:
+        if is_ext or is_pbl:
+            issues.append(('warn', f'{course_name}: manifest.name 为空（PBL/ext 建议补课题名）'))
+        else:
+            issues.append(('error', f'{course_name}: manifest.name 为空，Gallery 无法显示课题名'))
+    elif name in SUBJECT_AS_TITLE or SUBJECT_AS_TITLE_RE.match(name):
+        issues.append(('error',
+            f'{course_name}: manifest.name 写成了科目/学段「{name}」而非课题名（科目当标题）'))
+    return issues
+
+
+def check_feedback_manifest(m, course_name, strict=False):
+    """Phase 3.5a：学生反馈密码。单课校验 strict=True 时缺失为 error；全量扫描为 warn。"""
+    level = 'error' if strict else 'warn'
+    issues = []
+    fb = m.get('feedback')
+    if not isinstance(fb, dict):
+        issues.append((level,
+            f'{course_name}: manifest 缺少 feedback（Phase 3.5a · 须询问教师并用 set-feedback-password.py 写入）'))
+        return issues
+    if fb.get('teacher_declined') is True:
+        if fb.get('require_password') not in (False, None):
+            issues.append(('warn',
+                f'{course_name}: teacher_declined 时建议 feedback.require_password: false'))
+        return issues
+    sha = str(fb.get('password_sha256', '')).strip().lower()
+    if not re.fullmatch(r'[a-f0-9]{64}', sha or ''):
+        issues.append((level,
+            f'{course_name}: feedback.password_sha256 无效或未设置（用 scripts/set-feedback-password.py）'))
+    elif not fb.get('require_password'):
+        issues.append(('error',
+            f'{course_name}: 已设密码哈希但 feedback.require_password 应为 true'))
+    if not str(fb.get('password_hint', '')).strip():
+        issues.append(('warn', f'{course_name}: 建议设置 feedback.password_hint 便于学生回忆'))
+    return issues
+
+
+def validate_one(course_dir, strict_feedback=False):
+    mf = course_dir / 'manifest.json'
+    html = course_dir / 'index.html'
+    errors = []
+
+    # ⭐ v5.34.9.2: 无 manifest.json 直接 error（发布阻断）
+    # 根因：2026-04-20 发现 science-genetics-variation-intro 课件没 manifest，
+    # 老逻辑只给个 warn 然后 return，导致后续 47 条硬规则全部跳过，形成"裸 HTML
+    # 绕过质检"漏洞。
+    if not mf.exists():
+        errors.append(('error', f'{course_dir.name}: 缺少 manifest.json '
+                               f'（硬规则 #18 强制 · 发布阻断 · 须含 name/subject/grade/node_id/teachany_version）'))
+        # 即便缺 manifest，也继续检查 HTML 是否存在，给用户一次性反馈
+    if not html.exists():
+        errors.append(('error', f'{course_dir.name}: 缺少 index.html（硬规则 #21 强制）'))
+    # manifest 和 html 都缺就直接返回
+    if not mf.exists():
+        return errors
+
+    m = json.load(open(mf, encoding='utf-8'))
+    mg = m.get('grade')
+    ms = m.get('subject')
+    mn = m.get('node_id')
+    mv = m.get('teachany_version')
+    # v5.30：curriculum 字段决定校验规则集；默认 cn-national（向下兼容）
+    mc = m.get('curriculum', 'cn-national')
+
+    issues = list(errors)  # v5.34.9.2: 把早期错误（如 html 缺失）合并进主返回列表
+
+    if 'community' in str(course_dir):
+        issues.extend(check_subject_as_title(m, course_dir.name))
+        issues.extend(check_feedback_manifest(m, course_dir.name, strict=strict_feedback))
+
+    # 13a-d. 地图专项硬伤检测（v2026-07 加固，RULES #21/#21a 质检化）
+    # ⚠ 必须放在国际路径 return 之前：curriculum 非 cn-national 的课件（cn/中文课标名/
+    # 人教版等约190个）走最小校验会提前 return，若放在 13 节（needs_map 块内）将永远
+    # 漏检——hist-m-renaissance 手写 L.map、hist-h-cold-war-h 缺 leaflet 正是这样逃逸的。
+    _map_html = ''
+    if html.exists():
+        try:
+            _map_html = html.read_text(encoding='utf-8', errors='ignore')
+        except Exception:
+            _map_html = ''
+    if _map_html:
+        _declarative = ('data-teachany-map' in _map_html and 'teachany-historical-map.js' in _map_html)
+        # 13a. 手写 Leaflet 铺底（硬规则 #21 严禁，须用声明式标准模块）
+        _handwritten = bool(re.search(r'\bL\.map\s*\(', _map_html))
+        if _handwritten and not _declarative:
+            issues.append(('error',
+                f'{course_dir.name}: 课件内手写 L.map 铺底（硬规则 #21 严禁 · '
+                f'须改用 data-teachany-map 声明式标准模块 + teachany-historical-map.js）'))
+        # 13b. baseImage 必须配 crs EPSG4326（等距圆柱 JPG 在 Web Mercator 下南北错位）
+        if re.search(r'"baseImage"\s*:', _map_html) and not re.search(r'"crs"\s*:\s*"EPSG:?4326"', _map_html):
+            issues.append(('error',
+                f'{course_dir.name}: data-teachany-map-config 用 baseImage 全球渲染图但未配 '
+                f'"crs":"EPSG4326"（等距圆柱 JPG 与 Web Mercator 错位 · RULES #21a）'))
+        # 13c. 声明式地图缺依赖：data-teachany-map 必须引入 leaflet.js + teachany-historical-map.js
+        if 'data-teachany-map' in _map_html:
+            if not re.search(r'leaflet[@/.][^"\']*leaflet[^"\']*\.js|leaflet\.js', _map_html):
+                issues.append(('error',
+                    f'{course_dir.name}: 声明式地图缺 leaflet.js（data-teachany-map 依赖 Leaflet，'
+                    f'不引入则地图不渲染）'))
+            if 'teachany-historical-map.js' not in _map_html:
+                issues.append(('error',
+                    f'{course_dir.name}: 声明式地图缺 teachany-historical-map.js 引用'))
+        # 13d. 手写在线瓦片底图（OSM/CARTO/Esri）建议改用自带资源（RULES #21a）
+        if _handwritten and re.search(
+                r'tile\.openstreetmap\.org|basemaps\.cartocdn\.com|server\.arcgisonline\.com', _map_html):
+            issues.append(('warn',
+                f'{course_dir.name}: 手写在线瓦片底图（OSM/CARTO/Esri）· 建议改用自带资源 '
+                f'baseImage=assets/maps/physical/hillshade/ + crs EPSG4326（RULES #21a）'))
+
+    # v5.30：国际课标体系走独立校验路径（ID 前缀、年级范围、HTML 线索关键词都不同）
+    # v2026-07 加固：归一化 curriculum 判定——只有明确的国际体系才走最小校验路径。
+    # 历史漏洞：约190个课件 curriculum 写的是 'cn'、'义务教育课程标准（2022年版）·××'、
+    # '人教版××' 等变体，旧逻辑 `mc != 'cn-national'` 把它们全判成"国际体系"提前 return，
+    # 导致完整校验（地图/前后测/图谱/资源等）全部漏检。现改为：只有 curriculum 是国际
+    # 体系值，或 node_id 含国际 infix，才走国际路径；其余一律按中国课标完整校验。
+    INTL_CURRICULUM_VALUES = {
+        'ib', 'ib-dp', 'ib-myp', 'ib-pyp', 'ap', 'alevel', 'a-level',
+        'cambridge', 'cam-igcse', 'cam-as', 'cam-al', 'igcse', 'intl', 'international'
+    }
+    is_intl_curriculum = (
+        mc in INTL_CURRICULUM_VALUES
+        or any(ix in (mn or '') for ix in INTERNATIONAL_INFIXES)
+    )
+    if is_intl_curriculum:
+        # 仅做最小校验：subject 与 node_id 学科前缀一致 + teachany_version 必填 + title 含 TeachAny
+        node_subject, _ = parse_node_id(mn)
+        # 检查是否真的用了国际 infix
+        uses_intl_infix = any(ix in (mn or '') for ix in INTERNATIONAL_INFIXES)
+        if mn and not uses_intl_infix:
+            issues.append(('warn',
+                f'{course_dir.name}: curriculum={mc} 但 node_id={mn} 未使用国际课标 infix（如 -ib-dp- / -cam-al- / -ap-）'))
+        if ms and node_subject and ms != node_subject:
+            issues.append(('error',
+                f'{course_dir.name}: manifest.subject={ms} 但 node_id={mn} 指向 {node_subject}'))
+        if not mv:
+            issues.append(('error',
+                f'{course_dir.name}: manifest 缺 teachany_version 字段（示例: "5.27"）'))
+        # title 只要求含 TeachAny v（学段/年级校验跳过，因为国际体系命名规范不同）
+        if html.exists():
+            html_head = ''
+            with open(html, encoding='utf-8', errors='ignore') as f:
+                for i, line in enumerate(f):
+                    if i > 150: break
+                    html_head += line
+            title_m = re.search(r'<title>([^<]+)</title>', html_head)
+            if title_m and 'TeachAny v' not in title_m.group(1):
+                issues.append(('error',
+                    f'{course_dir.name}: <title> 不含 "TeachAny v{{version}}" 标识'))
+        return issues
+
+    # ── 以下为 cn-national（中国课标）原有校验逻辑 ──────────────
+    manifest_level = grade_to_level(mg)
+    node_subject, node_level = parse_node_id(mn)
+    ext_node = is_ext_node(mn)
+
+    if ext_node:
+        if m.get('free_mode') is True:
+            issues.append(('error',
+                f'{course_dir.name}: ext-* 课件不得 free_mode=true（无法挂入「其他知识」树）'))
+        if ms and ms not in ('cross', 'general', 'science', 'tech', 'pbl'):
+            issues.append(('warn',
+                f'{course_dir.name}: ext-* 建议 subject=cross（展示用），当前 {ms}'))
+        issues.append(('warn',
+            f'{course_dir.name}: ext-* 将挂入 other/user-generated.json，跳过课标前缀/学段一致性校验'))
+
+    # 1. manifest.grade 学段 vs node_id 学段前缀（ext-* 豁免）
+    if not ext_node and manifest_level and node_level and manifest_level != node_level:
+        issues.append(('error',
+            f'{course_dir.name}: manifest.grade={mg}({manifest_level}) 但 node_id={mn}({node_level}) 学段不一致'))
+
+    # 2. manifest.subject vs node_id 学科前缀（ext-* 豁免）
+    if not ext_node and ms and node_subject and ms != node_subject:
+        issues.append(('error',
+            f'{course_dir.name}: manifest.subject={ms} 但 node_id={mn} 指向 {node_subject}'))
+
+    # 3. HTML 线索 vs manifest.grade
+    html_head = ''
+    if html.exists():
+        with open(html, encoding='utf-8', errors='ignore') as f:
+            for i, line in enumerate(f):
+                if i > 150: break
+                html_head += line
+        html_level, clue = detect_html_level(html_head)
+        if html_level and manifest_level and html_level != manifest_level:
+            issues.append(('error',
+                f'{course_dir.name}: HTML 线索指示"{html_level}"(发现 "{clue}") 但 manifest.grade={mg}({manifest_level})'))
+
+    # 4. title 规范（v5.27 新增）
+    # 标准格式：《课件名》 · 《学段》《学科》 G{grade} · TeachAny v{version}
+    if html.exists():
+        title_m = re.search(r'<title>([^<]+)</title>', html_head)
+        if title_m:
+            title = title_m.group(1)
+            # 检查是否包含 TeachAny 版本
+            if 'TeachAny v' not in title:
+                issues.append(('error',
+                    f'{course_dir.name}: <title> 不含 "TeachAny v{{version}}" 标识 (当前: "{title}")'))
+            # 检查是否包含学段标签（小学/初中/高中）
+            if manifest_level:
+                level_cn = {'elementary':'小学', 'middle':'初中', 'high':'高中'}[manifest_level]
+                if level_cn not in title:
+                    issues.append(('error',
+                        f'{course_dir.name}: <title> 不含学段 "{level_cn}" (当前: "{title}")'))
+            # 检查是否包含年级标识
+            if isinstance(mg, int) and f'G{mg}' not in title and f'{mg}年级' not in title:
+                issues.append(('error',
+                    f'{course_dir.name}: <title> 不含年级 "G{mg}" (当前: "{title}")'))
+        else:
+            issues.append(('warn', f'{course_dir.name}: 无 <title> 标签'))
+
+    # 5. manifest.teachany_version（v5.27 新增）
+    if not mv:
+        issues.append(('error',
+            f'{course_dir.name}: manifest 缺 teachany_version 字段（示例: "5.27"）'))
+
+    # 6. AI 学伴基线校验（v5.34 新增，硬规则 #45）
+    if html.exists():
+        try:
+            full_html = html.read_text(encoding='utf-8', errors='ignore')
+        except Exception:
+            full_html = ''
+        if full_html:
+            # ① 必须引入 ai-tutor.css
+            if 'ai-tutor.css' not in full_html:
+                issues.append(('error',
+                    f'{course_dir.name}: HTML 缺少 <link rel="stylesheet" href="./ai-tutor.css"> （v5.34 强制 · 硬规则 #45）'))
+            # ② 必须引入 ai-tutor.js
+            if 'ai-tutor.js' not in full_html:
+                issues.append(('error',
+                    f'{course_dir.name}: HTML 缺少 <script src="./ai-tutor.js"> （v5.34 强制 · 硬规则 #45）'))
+            # ③ 必须注入 TUTOR_CONFIG
+            if '__TEACHANY_TUTOR_CONFIG__' not in full_html:
+                issues.append(('error',
+                    f'{course_dir.name}: HTML 缺少 window.__TEACHANY_TUTOR_CONFIG__ 配置注入（v5.34 强制 · 硬规则 #45）'))
+            # ④ 严禁硬编码 API Key（明文 sk-xxx）
+            key_leak = re.search(r'[\'"]sk-[A-Za-z0-9]{16,}[\'"]', full_html)
+            if key_leak:
+                issues.append(('error',
+                    f'{course_dir.name}: HTML 疑似硬编码 OpenAI API Key（{key_leak.group(0)[:20]}…）— 严禁任何形式把 Key 写入代码（v5.34 强制 · 硬规则 #45）'))
+
+    # 6b. 共享脚本幽灵引用由通用本地资源死链检测统一处理，支持 ../../scripts/*.js/css。
+
+    # 7. L3 TTS 语音基线（v5.34.6 新增，硬规则 #16/#31）
+    #    每个课件必须有 tts/*.mp3 或 assets/tts/*.mp3 语音文件 + 可见音频播放器 UI
+    mp3_files = list(course_dir.glob('tts/*.mp3')) + list(course_dir.glob('assets/tts/*.mp3'))
+    if not mp3_files:
+        issues.append(('error',
+            f'{course_dir.name}: 缺少 tts/*.mp3 或 assets/tts/*.mp3 语音文件（硬规则 #16/#31 强制）'))
+    else:
+        if len(mp3_files) < 3:
+            issues.append(('error',
+                f'{course_dir.name}: 仅 {len(mp3_files)} 个 mp3 文件 < 3（至少覆盖三个核心讲解段）'))
+        for mp3 in mp3_files:
+            if mp3.stat().st_size < 20 * 1024:
+                issues.append(('error',
+                    f'{course_dir.name}: {mp3.relative_to(course_dir)} 仅 {mp3.stat().st_size} 字节，疑似静音/占位/低质量音频'))
+        # 必须有播放器 UI（标准 audio player 或旧 audioPlaylist 任一标志）
+        if html.exists():
+            has_audio_ui = any(marker in full_html for marker in (
+                'data-teachany-audio-playlist', 'teachany-audio-player.js', 'audioPlaylist', 'audioBadge', 'audioPanel'
+            ))
+            if not has_audio_ui:
+                issues.append(('error',
+                    f'{course_dir.name}: 已有 mp3 但 HTML 缺标准连续音频播放器 UI（需 data-teachany-audio-playlist + teachany-audio-player.js）'))
+
+    # 7b. TTS 幽灵引用检测已由通用本地资源死链检测覆盖，支持 tts/ 与 assets/tts/。
+
+    # 8. AI 生图基线（v5.34.6 新增，硬规则 #34）
+    #    文/理/工/社科课件必须有 ≥2 张 assets/*.png/jpg 插图，并在 HTML <img> 引用
+    assets_dir = course_dir / 'assets'
+    img_files = []
+    if assets_dir.exists():
+        img_files = [f for f in assets_dir.rglob('*') if f.is_file() and f.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp', '.svg')]
+    if html.exists() and full_html:
+        # 仅纯计算题课可豁免（subject=math 且 node_id 含 "calculation"/"operation"）
+        is_pure_calc = (ms == 'math' and any(kw in (mn or '') for kw in ('calculation', 'operation', 'arithmetic')))
+        if not is_pure_calc:
+            if len(img_files) < 2:
+                issues.append(('error',
+                    f'{course_dir.name}: assets/ 仅 {len(img_files)} 张图 < 2（硬规则 #34 强制 · 需调用 image_gen 生成≥2 张情境/过程/意境插图，仅纯计算课可豁免）'))
+            # v2026-08 口径：嵌入 assets 图按路径去重 + 互动可视模块合计 ≥2
+            # （同一张 hero 重复展示、或为凑数嵌入无关素材图，不再计入）
+            vis_imgs34, vis_units34 = count_visualization_units(full_html)
+            embedded_assets = {s for s in vis_imgs34 if s.startswith('assets/')}
+            if len(embedded_assets) + vis_units34 < 2:
+                issues.append(('error',
+                    f'{course_dir.name}: 嵌入可视化不足（assets 去重图 {len(embedded_assets)} 张 + 互动可视模块 {vis_units34} 个 < 2，硬规则 #34 · 生成的图必须嵌入 HTML 对应 section，或以 canvas/图谱等互动可视承载）'))
+
+    # 8b. 本地资源幽灵引用检测（v7.9.16 增强）——HTML 引用的本地文件不存在会导致 404
+    if html.exists() and full_html:
+        missing_refs = find_missing_local_asset_refs(course_dir, full_html)
+        if missing_refs:
+            preview = '；'.join(f'{ref} → {target}' for ref, target in missing_refs[:8])
+            more = f'；另有 {len(missing_refs) - 8} 个' if len(missing_refs) > 8 else ''
+            issues.append(('error',
+                f'{course_dir.name}: HTML 有 {len(missing_refs)} 个本地资源引用不存在（会导致 404）：{preview}{more}'))
+
+    # 8b2. GitHub Pages 项目站点 404 硬校验（v2026-07 经验）——/assets/ 绝对路径在本地
+    # 解析为 repo/assets（文件存在，本地不报错），但线上解析为域名根 weponusa.github.io/assets/
+    # → 全部 404，导致知识图谱/AI学伴/音频/TTS/section-hints 等标准模块静默失效。
+    # 必须改用 ../../assets/ 相对路径（community/<id>/ → 仓库根 assets/）。
+    if html.exists() and full_html:
+        abs_refs = re.findall(r'(?:src|href)\s*=\s*["\'](/assets/[^"\']+)["\']', full_html)
+        if abs_refs:
+            uniq = sorted(set(abs_refs))
+            preview2 = '；'.join(uniq[:6])
+            more2 = f'；另有 {len(uniq) - 6} 个' if len(uniq) > 6 else ''
+            issues.append(('error',
+                f'{course_dir.name}: HTML 有 {len(abs_refs)} 处 /assets/ 绝对路径引用'
+                f'（GitHub Pages 项目站点下解析为域名根会 404，必须用 ../../assets/ 相对路径）：{preview2}{more2}'))
+
+    # 8c. Hero 图硬校验（v7.3）——不能只有 hero 文案而无知识结构主图
+    if html.exists() and full_html:
+        hero_refs = re.findall(r'<img[^>]+class=[\'"][^\'"]*(?:hero-img|hero-cover-img)[^\'"]*[\'"][^>]+src=[\'"]([^\'"]+)[\'"]', full_html, re.IGNORECASE)
+        hero_refs += re.findall(r'<img[^>]+src=[\'"]([^\'"]*hero[^\'"]*)[\'"][^>]+class=[\'"][^\'"]*(?:hero-img|hero-cover-img)[^\'"]*[\'"]', full_html, re.IGNORECASE)
+        if not hero_refs:
+            hero_refs = re.findall(r'<img[^>]+src=[\'"]([^\'"]*hero[^\'"]*)[\'"]', full_html, re.IGNORECASE)
+        if not hero_refs and re.search(r'data-page-type=[\'"]cover[\'"]|data-tts=[\'"]hero[\'"]', full_html, re.I):
+            hero_refs = re.findall(r'data-page-type=[\'"]cover[\'"][\s\S]{0,1200}?<img[^>]+src=[\'"]([^\'"]+)[\'"]', full_html, re.I)
+        if not hero_refs:
+            issues.append(('error',
+                f'{course_dir.name}: 缺少 hero 主图引用（hero-img/hero-cover-img 或 cover 区 *hero* 图 · v7.3 阻断）'))
+        for ref in set(hero_refs):
+            clean_ref = ref.lstrip('./')
+            if clean_ref.startswith('assets/') and not (course_dir / clean_ref).exists():
+                issues.append(('error',
+                    f'{course_dir.name}: Hero 图引用 {ref} 但文件不存在'))
+
+    # 9. PPTX 基线（v5.34.6 新增，硬规则 #47）
+    #    若课件存在 *.pptx，则 PPTX 必须包含图（否则是简陋 PPTX，直接 Gate 不通过）
+    pptx_files = list(course_dir.glob('*.pptx'))
+    if pptx_files:
+        pptx_path = pptx_files[0]
+        try:
+            from zipfile import ZipFile
+            with ZipFile(pptx_path) as z:
+                all_files = z.namelist()
+                pptx_slides = [f for f in all_files if 'slides/slide' in f and f.endswith('.xml')]
+                pptx_media = [f for f in all_files if '/media/' in f]
+            size_kb = pptx_path.stat().st_size / 1024
+            # 硬规则 #47：PPTX 大小 < 100KB 或含图数 = 0 视为简陋
+            if size_kb < 100:
+                issues.append(('error',
+                    f'{course_dir.name}: PPTX {pptx_path.name} 仅 {size_kb:.1f}KB < 100KB（过于简陋 · 硬规则 #47）— 需先确保 HTML 有 ≥2 张 assets 图再重跑 export-pptx.py'))
+            if len(pptx_media) == 0 and len(pptx_slides) > 2:
+                issues.append(('error',
+                    f'{course_dir.name}: PPTX {pptx_path.name} 含 {len(pptx_slides)} 页幻灯片但 0 张图（硬规则 #47）— HTML 的 assets/*.png 可能未被 export-pptx.py 抓取，检查 <img src=> 路径'))
+            # 建议：图数应至少覆盖 30% 的 slide
+            if len(pptx_slides) > 0 and len(pptx_media) / len(pptx_slides) < 0.3:
+                issues.append(('warn',
+                    f'{course_dir.name}: PPTX 图片密度偏低 {len(pptx_media)}/{len(pptx_slides)} 张（建议 ≥30% · 硬规则 #47）'))
+        except Exception as e:
+            issues.append(('warn', f'{course_dir.name}: PPTX 解析失败: {e}'))
+
+    # 10. Canvas 互动基线（v5.34.11 新增，硬规则 #33）
+    #     每个课件必须有 ≥1 个原生 <canvas> 交互组件（纯文言字词类可豁免）
+    if html.exists() and full_html:
+        canvas_tags = re.findall(r'<canvas\b[^>]*>', full_html, re.IGNORECASE)
+        # 排除标准知识图谱模块的装饰性 fallback canvas（图谱本身为 SVG 交互，非 canvas 绘制）
+        canvas_tags = [c for c in canvas_tags if 'tkg-fallback-canvas' not in c]
+        # 纯文言字词豁免：语文 + node_id 含 classical/character/stroke
+        is_pure_chn_char = (ms == 'chinese' and any(kw in (mn or '') for kw in
+                            ('classical', 'character', 'stroke', 'pinyin')))
+        # 标准知识图谱模块（data-teachany-kg）提供等价的 SVG/DOM 交互探索，豁免 #33
+        has_kg_module = 'data-teachany-kg' in full_html
+        if not canvas_tags and not is_pure_chn_char and not has_kg_module:
+            issues.append(('error',
+                f'{course_dir.name}: HTML 无原生 <canvas> 交互组件（硬规则 #33 强制 · 拖拽/画板/参数滑块/实时绘图任一；纯文言字词可用 SVG 替代但需在 manifest 声明）'))
+        elif canvas_tags:
+            has_canvas_logic = bool(re.search(r'getContext\s*\(|draw\w*\s*\(', full_html))
+            # v2026-07 修误报：onclick/oninput 等 HTML 属性也是真实交互事件
+            # （chem-m-atom-structure 的元素选择按钮 onclick="showAtom(...)" 被误判缺交互）
+            has_canvas_event = bool(
+                re.search(r'addEventListener\s*\(\s*[\'\"](?:pointer|mouse|touch|click|input|change)', full_html)
+                or re.search(r'\son(?:click|pointerdown|pointermove|mousedown|mousemove|input|change)\s*=', full_html, re.IGNORECASE))
+            # v2026-07：JS 动态创建的按钮/输入控件也是真实学生控件
+            # （hist-m-russian-revolution 时间轴按钮组 document.createElement('button') 被误判）
+            has_student_control = bool(
+                re.search(r'<(?:input|select|button)\b', full_html, re.IGNORECASE)
+                or re.search(r"createElement\s*\(\s*['\"](?:button|input|select)['\"]", full_html))
+            # v2026-10 修误报：canvas 的绘制/交互逻辑放在仓库共享引擎里也算真实闭环。
+            #   判定口径：① 页面 mount 了共享引擎（TeachAnyModelLab.mount / <script src=…/assets/engines/…>）
+            #             ② 引擎文件在仓库内确实存在（不是 404 外链）
+            #             ③ 页面里有控件容器（.controls / modelLabControls / 原生控件）
+            #   背景：51 个 bio/geo/hist/… 课件的「🎛️ 互动实验」由 assets/engines/model-lab/v1/engine.js
+            #   统一绘制并绑定滑块（浏览器实测：画布已绘制 + 控件齐全 + 读数实时更新，0 报错）。
+            has_shared_engine = False
+            if re.search(r'TeachAnyModelLab\s*\.\s*mount\s*\(', full_html) or \
+               re.search(r'<script[^>]+src=["\'][^"\']*/assets/engines/[^"\']+', full_html):
+                ent = re.search(r'<script[^>]+src=["\']([^"\']*/assets/engines/[^"\']+)', full_html)
+                engine_ok = False
+                repo_root = Path(course_dir).resolve().parent.parent
+                if ent:
+                    rel = ent.group(1)
+                    rel = re.sub(r'^(\.\./)+', '', rel)          # 去掉 ../../ 前缀
+                    rel = rel if rel.startswith('assets/') else 'assets/' + rel.split('assets/', 1)[-1]
+                    engine_ok = (repo_root / rel).is_file()
+                else:
+                    ent2 = re.search(r'TeachAnyModelLab\s*\.\s*mount\s*\(', full_html)
+                    engine_ok = ent2 is not None and (repo_root / 'assets/engines/model-lab/v1/engine.js').is_file()
+                has_shared_engine = engine_ok and bool(
+                    re.search(r'modelLabControls|class=["\'][^"\']*\bcontrols\b', full_html, re.IGNORECASE)
+                    or re.search(r'<(?:input|select|button)\b', full_html, re.IGNORECASE))
+            if not (has_canvas_logic and has_canvas_event and has_student_control) and not has_shared_engine:
+                issues.append(('error',
+                    f'{course_dir.name}: Canvas 存在但缺少真实互动闭环（需 getContext/draw + pointer/click/input/change 事件 + 学生可操作控件，或挂载仓库共享引擎 assets/engines/**）'))
+
+    # 11. 教学动画建议（v7.3 原硬规则 #32，v7.4 降级为 warn）
+    #     建议课件包含 ≥1 段真实教学动画 mp4 且带 audio 流，但不阻断推送。
+    #     原因：798/939 课件无 mp4，多数课件以 Canvas/SVG/CSS/PhET 互动替代，
+    #     硬性阻断推送导致大量有效课件无法上线，弊大于利。
+    mp4_files = list(course_dir.glob('assets/*.mp4')) + list(course_dir.glob('assets/video/*.mp4')) + list(course_dir.glob('videos/*.mp4'))
+    video_refs = []
+    if html.exists() and full_html:
+        video_refs = re.findall(r'<(?:source|video)[^>]+src=[\'"]([^\'\"]+\.mp4)[\'"]', full_html, re.IGNORECASE)
+    # v7.23：mp4 为可选资源，不再强制嵌入。
+    # 互动以 Canvas / PhET / 模块讲解为主；磁盘上残留未引用 mp4 仅提示，不阻断推送。
+    if mp4_files and not video_refs:
+        issues.append(('warn',
+            f'{course_dir.name}: 有未嵌入的 mp4（{len(mp4_files)} 个），可保留或清理；升级路径不再要求 <video> 嵌入'))
+    for ref in set(video_refs):
+        clean_ref = ref.lstrip('./')
+        if not (course_dir / clean_ref).exists():
+            issues.append(('error',
+                f'{course_dir.name}: HTML 引用了 {ref} 但文件不存在（视频死链）'))
+    # 仅当页面实际嵌入了视频时，才检查 audio 流质量
+    if video_refs:
+        for mp4 in mp4_files:
+            audio_state = has_audio_stream(mp4)
+            if audio_state is False:
+                issues.append(('warn',
+                    f'{course_dir.name}: {mp4.relative_to(course_dir)} 无 audio 流（建议补录音频）'))
+            elif audio_state is None:
+                issues.append(('warn',
+                    f'{course_dir.name}: 未找到 ffprobe，无法验证 {mp4.relative_to(course_dir)} 是否含 audio 流'))
+
+    # 12. 知识图谱基线（v5.34.11 新增，硬规则 #24）
+    #     课件必须含交互式 #knowledge-graph section 或相应 SVG 图
+    if html.exists() and full_html:
+        has_kg_section = bool(re.search(r'id=[\'"]knowledge-graph[\'"]', full_html))
+        has_kg_data = 'knowledgeGraphData' in full_html or '_graph.json' in full_html
+        has_kg_module = 'data-teachany-kg' in full_html and 'teachany-knowledge-graph' in full_html
+        if not has_kg_section and not has_kg_data and not has_kg_module:
+            issues.append(('error',
+                f'{course_dir.name}: HTML 缺知识图谱（#knowledge-graph / knowledgeGraphData / data-teachany-kg）'
+                f'（硬规则 #24 · 每个课件必须含交互式知识图谱）'))
+
+    # 13. 地图基线（v5.34.11 新增，硬规则 #35/#36）
+    #     历史/地理课件必须有 XYZ 瓦片底图 + fitBounds/setView 聚焦
+    needs_map = ms in ('history', 'geography')
+    if needs_map and html.exists() and full_html:
+        has_tile_layer = bool(re.search(r'L\.tileLayer\s*\(', full_html))
+        has_fit_bounds = bool(re.search(r'\.fitBounds\s*\(|\.setView\s*\(', full_html))
+        # v7.15: 允许自包含 Canvas + 本地 GeoJSON 地图。它不依赖在线瓦片，
+        # 但必须有 canvas、明确的本地 geojson 加载和中心/缩放控制。
+        has_canvas_geojson_map = (
+            'id="map-canvas"' in full_html
+            and 'mGeoFiles' in full_html
+            and 'assets/maps/' in full_html
+            and 'mLoadGeoBoundaries' in full_html
+            and re.search(r'let\s+mCx\s*=|const\s+mGeoFiles\s*=', full_html)
+        )
+        # v7.11: 声明式标准历史地图模块（data-teachany-map + teachany-historical-map.js）
+        # 视为合规：底图(L.tileLayer)与 fitBounds 均在外部标准模块内实现，HTML 只声明配置，
+        # 不应再要求课件 HTML 内出现 L.tileLayer / fitBounds 字面量。
+        has_declarative_map = (
+            'data-teachany-map' in full_html
+            and 'teachany-historical-map.js' in full_html
+        )
+        # 注意：L.imageOverlay 仅检测课件 HTML 自身手写的旧底图方案。
+        has_image_overlay = bool(re.search(r'L\.imageOverlay\s*\(', full_html))
+        if has_declarative_map and re.search(r'"hillshade"\s*:', full_html):
+            issues.append(('error',
+                f'{course_dir.name}: data-teachany-map-config 含已废弃 hillshade'
+                f'（等距圆柱 JPG 与 Web Mercator 错位 · 见 historical-maps-projection.md）'))
+        has_echarts_graphic_image = bool(re.search(
+            r'graphic\s*:\s*\[[^\]]*?type\s*:\s*[\'"]image[\'"]', full_html))
+        if has_image_overlay and not has_declarative_map:
+            issues.append(('error',
+                f'{course_dir.name}: 检测到 L.imageOverlay 旧底图方案'
+                f'（硬规则 #35 严禁 · v7.3 起统一改用 L.tileLayer XYZ 瓦片或声明式标准模块）'))
+        if has_echarts_graphic_image:
+            issues.append(('error',
+                f'{course_dir.name}: 检测到 ECharts graphic type:"image" 铺底图'
+                f'（硬规则 #35 严禁 · DOM 绝对定位不跟随 geo 变换，必定错位）'))
+        if not has_tile_layer and not has_canvas_geojson_map and not has_declarative_map:
+            issues.append(('error',
+                f'{course_dir.name}: 历史/地理课件 HTML 缺底图：需 data-teachany-map 声明式标准模块、'
+                f'L.tileLayer XYZ 瓦片、或自包含 Canvas GeoJSON 地图（硬规则 #35）'))
+        if not has_fit_bounds and not has_canvas_geojson_map and not has_declarative_map:
+            issues.append(('error',
+                f'{course_dir.name}: 地图未聚焦核心区域：需 fitBounds/setView、Canvas 地图中心控制、'
+                f'或 data-teachany-map 声明式模块（其 config 含 fitBounds/center）（硬规则 #36）'))
+    # 14. 视频嵌入规范（v5.34.11 新增，硬规则 #25）
+    if html.exists() and full_html:
+        # 若使用了视频，必须用 <video> 标签 + controls + preload + playsinline
+        video_with_attrs = re.findall(
+            r'<video\b[^>]*>', full_html, re.IGNORECASE)
+        if video_with_attrs:
+            for v in video_with_attrs:
+                low = v.lower()
+                if 'controls' not in low:
+                    issues.append(('warn',
+                        f'{course_dir.name}: <video> 标签缺 `controls` 属性'
+                        f'（硬规则 #25 · 必须允许用户手动播放）'))
+                    break
+        # 严禁纯 JS 动态 createElement('video')（v5.34.11 放宽为 warn）
+        if re.search(r'createElement\s*\(\s*[\'"]video[\'"]', full_html):
+            issues.append(('warn',
+                f'{course_dir.name}: 检测到 createElement("video") 动态视频注入'
+                f'（硬规则 #25 · 推荐直接写 <video> 标签，便于无 JS 环境与打印）'))
+
+    # v6.6/v7.3: 内容质量硬门槛（防止劣质课件混入 community）
+    # 仅对 community/ 课件强制（examples/ 是历史保留，包含老格式课件）
+    if html.exists() and full_html and 'community' in str(course_dir):
+        quality_issues = check_baseline_quality(course_dir, full_html)
+        issues.extend(quality_issues)
+        issues.extend(run_teaching_quality_gate(course_dir))
+
+    return issues
+
+
+def main():
+    # v2026-08：支持传入多个课件 id。pre-push 钩子会一次性传入全部变更课件，
+    # 此前仅取 argv[1]，同批其余课件静默漏检。
+    only_ids = set(sys.argv[1:])
+    only = only_ids or None
+    examples = Path('examples')
+    community = Path('community')  # v6.6: server 端必须扫 community/
+    all_issues = []
+    scanned = 0
+    # v5.29：收集 (course_id, node_id, status) 做跨课件冲突检测
+    node_to_courses = defaultdict(list)
+
+    # v6.6: 同时扫 examples/ 和 community/（不含 drafts/pending）
+    scan_dirs = []
+    if examples.exists():
+        scan_dirs.extend(sorted(examples.iterdir()))
+    if community.exists():
+        for d in sorted(community.iterdir()):
+            if d.name in ('drafts', 'pending', 'README.md', 'archive'):
+                continue
+            scan_dirs.append(d)
+
+    for d in scan_dirs:
+        if not d.is_dir() or d.name.startswith('_') or d.name.startswith('course-'):
+            continue
+        if only and d.name not in only:
+            continue
+        # 轻量跳转桩（重定向页）跳过内容质检，与 pre-push 钩子一致
+        idx = d / 'index.html'
+        if idx.exists():
+            head = idx.read_text(encoding='utf-8', errors='ignore')[:4000]
+            if re.search(r'http-equiv="refresh"|location\.replace', head):
+                continue
+        issues = validate_one(d, strict_feedback=bool(only))
+        all_issues.extend(issues)
+        scanned += 1
+
+        # 收集 node_id（用于后续冲突检测，仅全量扫描时生效）
+        if not only:
+            mf = d / 'manifest.json'
+            if mf.exists():
+                try:
+                    m = json.load(open(mf, encoding='utf-8'))
+                    nid = m.get('node_id')
+                    if nid:
+                        node_to_courses[nid].append({
+                            'course_id': d.name,
+                            'status': m.get('status', 'unknown'),
+                            'grade': m.get('grade'),
+                            'name': m.get('name', ''),
+                        })
+                except Exception:
+                    pass
+
+    # v5.29：跨课件检测——同 node_id 最多 1 份 official（community 允许多份并按 likes 排序）
+    if not only:
+        for nid, items in sorted(node_to_courses.items()):
+            officials = [it for it in items if it.get('status') == 'official']
+            if len(officials) > 1:
+                ids_str = ', '.join(it['course_id'] for it in officials)
+                all_issues.append(('error',
+                    f'节点 {nid} 被 {len(officials)} 份 official 课件同时挂载: {ids_str}；'
+                    f'同一知识点的官方课件必须唯一，请合并内容或将其中一份降级为 community'))
+            # 同时提供信息性警告，帮助观察哪些节点已存在多份课件（不阻断）
+            elif len(items) > 1:
+                ids_str = ', '.join(f"{it['course_id']}({it.get('status','?')})" for it in items)
+                all_issues.append(('info',
+                    f'节点 {nid} 挂载了 {len(items)} 份课件（{ids_str}）— Gallery 会按 likes 排序展示'))
+
+    errors = [i for i in all_issues if i[0] == 'error']
+    warns = [i for i in all_issues if i[0] == 'warn']
+    infos = [i for i in all_issues if i[0] == 'info']
+
+    print(f"扫描 {scanned} 个课件")
+    print(f"❌ 错误: {len(errors)}")
+    for _, msg in errors:
+        print(f"   {msg}")
+    if warns:
+        print(f"⚠ 警告: {len(warns)}")
+        for _, msg in warns:
+            print(f"   {msg}")
+    if infos:
+        print(f"ℹ️  信息: {len(infos)} 个节点挂载多份课件（非错误，仅提示）")
+        for _, msg in infos:
+            print(f"   {msg}")
+
+    if errors:
+        sys.exit(1)
+    print("\n✅ 所有课件挂载一致性校验通过")
+
+
+if __name__ == '__main__':
+    main()

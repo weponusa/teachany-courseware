@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="teachany-node" content="phy-m-fluid-flow">
+<meta name="teachany-subject" content="physics">
+<meta name="teachany-domain" content="mechanics">
+<meta name="teachany-grade" content="8">
+<meta name="teachany-difficulty" content="3">
+<meta name="teachany-version" content="7.21.0">
+<meta name="teachany-stage" content="middle">
+<meta name="teachany-author" content="weponusa">
+  <meta name="teachany-prerequisites" content="atmospheric-pressure">
+<title>流体压强与流速 · 初中物理 G8 · TeachAny v5.27</title>
+<script src="../../assets/vendor/d3.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--primary:#3b82f6;--secondary:#06b6d4;--accent:#f59e0b;--success:#10b981;--card:#fff;--danger:#ef4444;--text:#1e293b;--dim:#64748b;--border:rgba(0,0,0,0.08);}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);line-height:1.8;padding-bottom:80px;}
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(255,255,255,0.93);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:58px;gap:4px;overflow-x:auto;}
+.nav-brand{font-size:17px;font-weight:800;margin-right:16px;white-space:nowrap;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav a{color:var(--dim);text-decoration:none;padding:6px 13px;border-radius:10px;font-size:13px;font-weight:600;transition:all .2s;white-space:nowrap;}
+.nav a:hover,.nav a.active{color:var(--primary);background:rgba(59,130,246,.08);}
+.container{max-width:1060px;margin:0 auto;padding:76px 24px 60px;}
+.hero{text-align:center;padding:36px 0 28px;}
+.hero h1{font-size:38px;font-weight:800;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;}
+.hero .subtitle{font-size:16px;color:var(--dim);margin-bottom:14px;}
+.hero .meta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+.hero .meta span{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:5px 14px;font-size:13px;font-weight:600;color:var(--dim);}
+.section{margin:40px 0;}
+.section-title{font-size:22px;font-weight:800;margin-bottom:16px;padding-left:14px;border-left:4px solid var(--primary);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px 24px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
+.card h3{font-size:17px;font-weight:700;margin-bottom:8px;}
+.card p,.card li{font-size:15px;line-height:1.85;color:var(--dim);}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;}
+.highlight{color:var(--primary);font-weight:700;}
+.formula-box{background:rgba(59,130,246,.06);border-left:4px solid var(--primary);padding:14px 18px;border-radius:0 10px 10px 0;margin:12px 0;font-size:16px;font-weight:700;}
+.note{background:rgba(245,158,11,.07);border-left:4px solid var(--accent);padding:12px 16px;border-radius:0 10px 10px 0;margin:12px 0;font-size:14px;color:#92400e;}
+/* Life scene - airplane wing */
+#life-scene{background:linear-gradient(160deg,#0c1445,#1a3a6b);border-radius:18px;padding:28px;min-height:340px;position:relative;overflow:hidden;margin-bottom:20px;}
+#life-scene h3{color:#fff;font-size:18px;position:relative;z-index:2;margin-bottom:8px;}
+#life-scene p{color:rgba(255,255,255,.6);font-size:13px;margin-bottom:12px;position:relative;z-index:2;}
+.airstream{animation:streamMove 1.8s linear infinite;}
+@keyframes streamMove{0%{transform:translateX(0);}100%{transform:translateX(-300px);}}
+.airstream-top{animation:streamMoveTop 1.2s linear infinite;}
+@keyframes streamMoveTop{0%{transform:translateX(0);}100%{transform:translateX(-300px);}}
+.plane-body{animation:planeLift 4s ease-in-out infinite;}
+@keyframes planeLift{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+/* Lab */
+#interactive-lab{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:28px;margin-bottom:20px;}
+#interactive-lab h3{font-size:18px;font-weight:800;margin-bottom:18px;}
+.lab-controls{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+@media(max-width:640px){.lab-controls{grid-template-columns:1fr;}}
+.control-group{background:var(--bg);border-radius:12px;padding:16px;}
+.control-group label{font-size:13px;font-weight:700;color:var(--dim);display:block;margin-bottom:8px;}
+.control-group input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer;}
+.control-group .value{font-size:22px;font-weight:800;color:var(--primary);margin-top:6px;}
+.lab-result{background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(6,182,212,.08));border-radius:14px;padding:20px;text-align:center;}
+.lab-result .formula{font-size:18px;font-weight:700;color:var(--primary);margin-bottom:8px;}
+.lab-result .detail{font-size:14px;color:var(--dim);}
+/* Graph */
+#knowledge-graph{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:28px;margin-bottom:20px;}
+#knowledge-graph h3{font-size:18px;font-weight:800;margin-bottom:6px;}
+#kg-svg{width:100%;height:380px;border-radius:12px;background:#f8fafc;}
+.kg-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;}
+.kg-legend-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--dim);}
+.kg-legend-dot{width:12px;height:12px;border-radius:50%;}
+.quiz-option{display:block;padding:12px 16px;margin:7px 0;border-radius:11px;background:var(--bg);border:2px solid var(--border);cursor:pointer;transition:all .25s;font-size:14.5px;font-weight:600;color:var(--text);}
+.quiz-option:hover{background:rgba(59,130,246,.05);border-color:var(--primary);}
+.quiz-option.correct{background:rgba(16,185,129,.1);border-color:var(--success);color:#065f46;}
+.quiz-option.wrong{background:rgba(239,68,68,.08);border-color:var(--danger);color:#991b1b;}
+.quiz-feedback{padding:12px 16px;border-radius:10px;margin-top:8px;font-size:14px;display:none;background:rgba(59,130,246,.07);color:var(--primary);}
+.quiz-feedback.show{display:block;}
+.tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;margin-right:4px;}
+.tag-blue{background:rgba(59,130,246,.1);color:var(--primary);}
+table{width:100%;border-collapse:collapse;font-size:14.5px;}
+th{background:rgba(59,130,246,.07);padding:10px 14px;text-align:left;font-weight:700;border-bottom:2px solid var(--border);}
+td{padding:10px 14px;border-bottom:1px solid var(--border);}
+
+/* hero-cover */
+.hero-cover-img {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  margin: 16px auto 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  object-fit: contain;
+}
+</style>
+
+  <link rel="stylesheet" href="../../assets/scripts/ai-tutor.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tutor-card.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-tts-narrator.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-section-hints.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-knowledge-graph.css">
+
+  <link rel="stylesheet" href="../../assets/scripts/teachany-audio-player.css">
+  <link rel="stylesheet" href="../../assets/scripts/teachany-floating-dock.css">
+
+<style id="ta-labeled-figure-css">
+.ta-figure-labeled{position:relative}.ta-figure-wrap{position:relative}
+.ta-figure-labeled img{width:100%;border-radius:12px;display:block}
+.ta-figure-tags{position:absolute;inset:0;pointer-events:none}
+.ta-fig-tag{position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,.88);color:#fff;font-size:13px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.35)}
+</style>
+<link rel="stylesheet" href="../../assets/scripts/courseware-shell.css">
+
+<style id="ta-tu-opt-css">
+/* TeachAny 标准随堂题样式（主题自适应：中性半透明底 + 继承文字色） */
+.tu-q,.tu-fill{margin:16px 0;padding:14px;border-radius:12px;background:rgba(127,127,127,.10)}
+.tu-q h3{font-size:1.05rem;margin:0 0 6px}
+.tu-opts{display:grid;gap:10px;margin-top:10px}
+.tu-opt{display:block;width:100%;text-align:left;padding:12px 14px;border-radius:10px;
+  border:1px solid rgba(127,127,127,.40);background:rgba(127,127,127,.10);
+  color:inherit;font:inherit;font-size:15px;line-height:1.6;cursor:pointer;
+  transition:border-color .15s,background .15s}
+.tu-opt:hover{border-color:rgba(96,165,250,.90);background:rgba(96,165,250,.12)}
+.tu-opt.is-right,.tu-opt.correct{border-color:#10b981;background:rgba(16,185,129,.18)}
+.tu-opt.is-wrong,.tu-opt.wrong{border-color:#ef4444;background:rgba(239,68,68,.15)}
+.tu-opt:disabled{cursor:default}
+.tu-fb{margin-top:12px;padding:12px;border-radius:10px;border:1px solid rgba(245,158,11,.40);
+  background:rgba(245,158,11,.12);line-height:1.7}
+.tu-inquiry label{display:block;margin:10px 0}
+.tu-inquiry textarea{width:100%;border-radius:10px;padding:10px;background:rgba(127,127,127,.10);
+  color:inherit;border:1px solid rgba(127,127,127,.35);font:inherit;box-sizing:border-box}
+.tu-save{margin-top:10px;padding:10px 16px;border-radius:10px;border:1px solid rgba(127,127,127,.40);
+  background:rgba(127,127,127,.12);color:inherit;cursor:pointer;font:inherit}
+</style>
+</head>
+<body>
+<!-- teachany-hero-notext -->
+
+<!-- teachany-back-to-gallery -->
+<style>body{padding-top:36px!important;}</style>
+<div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px;padding:0 16px;height:36px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;">
+  <a href="https://www.teachany.cn/" target="_top" style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.75);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Gallery
+  </a>
+  <span style="color:rgba(255,255,255,0.2);font-size:14px;">|</span>
+  <a href="https://www.teachany.cn/tree.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🗺️ 知识地图
+  </a>
+  <a href="https://www.teachany.cn/path.html" target="_top" style="display:flex;align-items:center;gap:5px;color:rgba(255,255,255,0.55);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.85)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.55)'">
+    🛤️ 学习路径
+  </a>
+  <div style="flex:1;"></div>
+  <span style="color:rgba(255,255,255,0.3);font-size:11px;">TeachAny</span>
+</div>
+<!-- /teachany-back-to-gallery -->
+
+<nav class="nav">
+  <div class="nav-brand">💨 流体压强与流速</div>
+  <a href="#life-scene" class="active">生活场景</a>
+  <a href="#content">核心内容</a>
+  <a href="#interactive-lab">互动实验</a>
+  <a href="#knowledge-graph">知识图谱</a>
+  <a href="#quiz">练习</a>
+</nav>
+
+<div class="container">
+<section class="section" id="hero-infographic" data-bloom-level="understand" data-scaffold="full" data-tsh="知识结构主图" data-slot="0">
+<figure class="ta-standard-figure ta-figure-labeled">
+  <div class="ta-figure-wrap">
+    <img class="hero-cover-img" src="./assets/phy-mid-fluid-flow-hero.png" alt="流体压强与流速 - TeachAny 互动课件知识结构（无字）" loading="eager">
+    <div class="ta-figure-tags" aria-hidden="true"><span class="ta-fig-tag" style="top:48%;left:50%">流体压强与流速 - </span><span class="ta-fig-tag" style="top:18%;left:18%">概念</span><span class="ta-fig-tag" style="top:18%;left:82%">方法</span><span class="ta-fig-tag" style="top:82%;left:22%">易错</span><span class="ta-fig-tag" style="top:82%;left:78%">迁移</span></div>
+  </div>
+  <figcaption>无字生图 + HTML 中文叠标</figcaption>
+</figure>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="objectives" data-slot="10"><h2>🎯 学习目标</h2><div class="tu-q"><p>🎯 能说出流体压强与流速的关系</p></div><div class="tu-q"><p>🎯 能分析生活中常见的流体压强现象</p></div><div class="tu-q"><p>🎯 能计算简单情境下的流体压强差</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="full" id="anchor" data-slot="15"><h2>🧭 带着问题学</h2><div class="tu-q"><p>❓ 为什么飞机机翼上面是弯的？</p></div><div class="tu-q"><p>❓ 为什么两张纸往中间吹气会贴在一起？</p></div><div class="tu-q"><p>❓ 为什么火车进站时要站在黄线外？</p></div><p style="opacity:.85">学完这一课，这些问题你都能自信地回答。</p></section>
+<section class="section teachany-upgrade-block" data-bloom-level="apply" data-scaffold="full" id="pretest" data-slot="20"><h2>📝 前测</h2><div class="tu-q" data-answer="C"><h3>前测题 1</h3><p>向两张纸中间吹气会怎样？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="未建立流速与压强反比关系">向两边分开</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="未建立流速与压强反比关系">保持不动</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="未建立流速与压强反比关系">相互靠拢</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="未建立流速与压强反比关系">随机摆动</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>前测题 2</h3><p>水管变细时水流速度如何变化？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="不理解连续性方程">变慢</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="不理解连续性方程">不变</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="不理解连续性方程">变快</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="不理解连续性方程">先快后慢</button></div><div class="tu-fb" hidden></div></div></section>
+
+<section class="section ta-diagram-section" data-tts>
+  <figure class="ta-standard-figure">
+    <img src="./assets/knowledge-map.svg" alt="流体压强与流速 知识结构图：本课模块与要点关系" loading="lazy" style="width:100%;height:auto;border-radius:16px">
+    <figcaption>流体压强与流速 · 知识结构图：把本课各模块与要点放在一张图上对照</figcaption>
+  </figure>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-1" data-slot="30"><h2>📖 流体压强</h2><div class="tu-q"><p><strong>And：</strong>学生知道固体压强的计算</p><p><strong>But：</strong>流体压强会随流速变化难以理解</p><p><strong>Therefore：</strong>建立流体压强与流速的定性关系</p></div><div class="tu-q"><p>流体压强指流体内部单位面积受到的压力。当流体静止时，各点压强相等（如游泳池底部）；但当流动时，流速越大压强越小。例如用吸管吹纸片：吹气时纸片上方的空气流速加快，压强减小，下方大气压就把纸片托起来了。</p></div><div class="tu-q"><p>🌍 火车站台安全线：列车进站时带动空气快速流动，人若站得太近，身后大气压可能把人推向列车。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>两艘并排行驶的船容易相撞是因为？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="易错选C，本质是伯努利效应">A. 船间水流速大压强小</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="易错选C，本质是伯努利效应">B. 船体材料导电</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="易错选C，本质是伯努利效应">C. 船长操作失误</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="易错选C，本质是伯努利效应">D. 海水温度变化</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-interactive="inquiry" data-bloom-level="create" data-scaffold="partial" data-slot="35"><h2>🔬 自制机翼升力演示器</h2><p>用A4纸折成机翼截面形状，用吹风机从不同角度吹气</p><div class="tu-inquiry"><label>💡 我的假设<textarea data-inq="h" placeholder="机翼上方空气流速更快时会产生什么力？"></textarea></label><label>📊 我的证据<textarea data-inq="e" placeholder="观察纸翼运动方向与气流角度的关系"></textarea></label><label>✅ 我的结论<textarea data-inq="c" placeholder="分析升力产生条件与流体压强的关系"></textarea></label></div><button type="button" class="tu-save">保存探究记录（本机）</button><div class="tu-fb" data-inq-fb hidden></div></section>
+
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-2" data-slot="40"><h2>📖 伯努利原理</h2><div class="tu-q"><p><strong>And：</strong>已了解流体压强特点</p><p><strong>But：</strong>不理解能量守恒在流体中的应用</p><p><strong>Therefore：</strong>用机械能守恒推导定量关系</p></div><div class="tu-q"><p>伯努利原理本质是能量守恒：流速v大的地方动能(1/2ρv²)大，势能(压强p)就小。具体计算时：p+1/2ρv²=常数。例如水管变细处：横截面积减半时，流速变为2倍（连续性方程），此处压强降为原来的1/4（假设ρ=1000kg/m³，v从1m/s→2m/s时，p减少1500Pa）。</p></div><div class="tu-q"><p>🌍 喷雾器：推动活塞时细管处气流速加快，药液被低压吸上来与空气混合喷出。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>飞机机翼获得升力的直接原因是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="易受B选项干扰，需区分升力与推力">A. 上表面流速快压强小</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="易受B选项干扰，需区分升力与推力">B. 发动机推力向上</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="易受B选项干扰，需区分升力与推力">C. 空气密度突变</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="易受B选项干扰，需区分升力与推力">D. 机翼材料发热</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-3" data-slot="50"><h2>📖 流量守恒</h2><div class="tu-q"><p><strong>And：</strong>会计算管道截面积</p><p><strong>But：</strong>忽略流量是三维问题</p><p><strong>Therefore：</strong>建立连续性方程思维</p></div><div class="tu-q"><p>流量(Q)=截面积(A)×流速(v)，单位是m³/s。由于流体不可压缩，同一管道中Q处处相等。例如花园水管：捏扁出水口使A从2cm²减到0.5cm²时，v会增到4倍（假设原流速1m/s→4m/s），这就是水枪射程变远的原因。注意：A变化超过5倍时湍流会使计算不准。</p></div><div class="tu-q"><p>🌍 河流变窄处：河道宽度从10m缩到2m时，水深不变情况下流速会提高5倍，形成急流。</p></div><div class="tu-q" data-answer="A"><h3>🏋️ 即练</h3><p>输液时抬高吊瓶主要改变？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="易混淆高度差与截面积的影响">A. 液体压强差</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="易混淆高度差与截面积的影响">B. 针头截面积</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="易混淆高度差与截面积的影响">C. 药液密度</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="易混淆高度差与截面积的影响">D. 空气流速</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="understand" data-scaffold="partial" id="module-4" data-slot="55"><h2>📖 粘滞阻力</h2><div class="tu-q"><p><strong>And：</strong>知道理想流体模型</p><p><strong>But：</strong>现实流体存在摩擦损耗</p><p><strong>Therefore：</strong>引入雷诺数解释流动状态</p></div><div class="tu-q"><p>粘滞阻力与流体粘度η、流速v、物体尺寸L有关。当雷诺数Re=ρvL/η＞2000时出现湍流。例如蜂蜜(η=10Pa·s)中下落的小球：直径1cm的铁球在蜂蜜里速度超过0.2m/s就会产生涡旋（计算得Re=2100），此时阻力突然增大3-5倍。</p></div><div class="tu-q"><p>🌍 汽车高速行驶：当时速超过80km/h，空气阻力占总阻力的60%以上，这就是SUV比跑车耗油的原因。</p></div><div class="tu-q" data-answer="B"><h3>🏋️ 即练</h3><p>下列哪种情况阻力突变最明显？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="需区分不同因素的临界值">A. 潜艇下潜到50米</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="需区分不同因素的临界值">B. 高铁时速突破300km/h</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="需区分不同因素的临界值">C. 水管直径增加1cm</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="需区分不同因素的临界值">D. 水温下降5℃</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="deep-understanding" data-slot="70"><h2>🔍 深层理解：五镜头</h2><div class="tu-q"><h3>🔧拆开它</h3><p>将流体压强分解为静压和动压两部分理解</p></div><div class="tu-q"><h3>💡解释它</h3><p>流速越大压强越小是伯努利原理的核心</p></div><div class="tu-q"><h3>⚖️比较它</h3><p>对比水管粗细变化与血压变化的相似性</p></div><div class="tu-q"><h3>👁️看见它</h3><p>用彩色烟雾可视化机翼周围的气流变化</p></div><div class="tu-q"><h3>🚀迁移它</h3><p>解释喷雾器、吸尘器的工作原理</p></div></section>
+
+
+
+
+
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" data-slot="85"><h2>📝 真题练习</h2><p style="opacity:.85;margin-bottom:12px">先独立作答，再点选项查看对错与错因。</p>
+<div class="tu-q" data-answer="B">
+<h3>选择题 1</h3><p>当高铁快速通过站台时，站台与列车之间的空气压强变化是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="站台侧空气相对静止压强应较大">A. 站台侧压强增大</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="流速越大压强越小，列车侧空气流速更快">B. 列车侧压强减小</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="不会同时增大">C. 两侧压强都增大</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="明显存在压强差">D. 两侧压强不变</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="D">
+<h3>选择题 2</h3><p>下列现象与流体压强无关的是</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="机翼上下表面流速不同">A. 飞机机翼产生升力</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="高速气流产生低压区">B. 喷雾器喷出雾状液体</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="吸管内气压降低">C. 吸管吸饮料</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="热气球利用空气受热膨胀密度减小">D. 热气球上升</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B">
+<h3>选择题 3</h3><p>两艘船平行航行时应保持距离是因为</p><div class="tu-opts">
+<button type="button" class="tu-opt" data-choice="A" data-diagnosis="非流体力学主因">A. 避免船体碰撞</button>
+<button type="button" class="tu-opt" data-choice="B" data-diagnosis="两船间水流速大于外侧易导致相吸">B. 中间水流速快压强小</button>
+<button type="button" class="tu-opt" data-choice="C" data-diagnosis="非直接原因">C. 船尾涡流影响</button>
+<button type="button" class="tu-opt" data-choice="D" data-diagnosis="与压强无关">D. 船首波浪叠加</button>
+</div><div class="tu-fb" hidden></div></div>
+<div class="tu-fill"><h3>填空题 1</h3><p>当电风扇转动时，叶片____（前/后）方空气流速大压强小</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>前</p><p>叶片推动前方空气加速流动</p></details></div>
+<div class="tu-fill"><h3>填空题 2</h3><p>火车站安全线距离轨道____（大于/等于/小于）1米是根据流体压强计算得出</p><details><summary>查看答案与解析</summary><p><strong>答案：</strong>大于</p><p>需考虑不同车型的流速影响范围</p></details></div>
+</section>
+<section class="section teachany-upgrade-block" data-bloom-level="evaluate" data-scaffold="partial" id="posttest" data-slot="90"><h2>✅ 后测</h2><div class="tu-q" data-answer="A"><h3>后测题 1</h3><p>飞机获得升力的主要原因是？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="升学考试高频考点">机翼上方流速快压强小</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="升学考试高频考点">机翼下方空气密度大</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="升学考试高频考点">发动机推力直接作用</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="升学考试高频考点">空气浮力作用</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="B"><h3>后测题 2</h3><p>喷雾器工作时，哪个部位压强最小？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="迁移应用能力检测">储液罐</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="迁移应用能力检测">细管口</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="迁移应用能力检测">手柄处</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="迁移应用能力检测">吸管底部</button></div><div class="tu-fb" hidden></div></div>
+<div class="tu-q" data-answer="C"><h3>后测题 3</h3><p>火车站台安全线应设置在？</p><div class="tu-opts"><button type="button" class="tu-opt" data-choice="A" data-diagnosis="安全规范应用题">距轨道0.5米</button><button type="button" class="tu-opt" data-choice="B" data-diagnosis="安全规范应用题">距轨道1米</button><button type="button" class="tu-opt" data-choice="C" data-diagnosis="安全规范应用题">距轨道1.5米</button><button type="button" class="tu-opt" data-choice="D" data-diagnosis="安全规范应用题">根据车型动态调整</button></div><div class="tu-fb" hidden></div></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="analyze" data-scaffold="partial" id="error-clinic" data-slot="95"><h2>⚠️ 易错点诊所</h2><div class="tu-q"><h3>❌ 认为流速大压强也大</h3><p>✅ 强调伯努利原理中反比关系</p><p>💡 受'速度越大力量越大'生活经验干扰</p></div><div class="tu-q"><h3>❌ 混淆流体方向与压强方向</h3><p>✅ 用箭头明确压强是垂直作用力</p><p>💡 对压强矢量的方向性理解不足</p></div></section>
+<section class="section teachany-upgrade-block" data-bloom-level="remember" data-scaffold="full" id="memory-anchor" data-slot="98"><h2>🧠 记忆锚点</h2><div class="tu-q"><p><strong>口诀：</strong>流速快，压强小；流速慢，压强大</p><p><strong>类比：</strong>像人群跑步时，密集处走得慢（压强大），疏散处跑得快（压强小）</p></div></section>
+<section data-conceptest="true" data-scaffold="full" data-bloom-level="remember" class="ta-standard-section" id="teachany-ai-tutor-card" data-slot="130">
+  <div data-teachany-tutor-card></div>
+</section>
+<section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><h2 class="section-title">🗺️ 知识图谱：流体压强与流速</h2><div data-teachany-kg="phy-mid-fluid-flow"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+
+
+<script>const knowledgeGraphData={"prerequisites": [{"id": "atmospheric-pressure", "name": "atmospheric-pressure"}], "current": {"id": "phy-m-fluid-flow", "name": "流体压强与流速", "status": "active"}, "extends": []};
+// auto-injected standard graph data</script>
+<script>
+window.__TEACHANY_TUTOR_CONFIG__ = {
+  courseId: 'phy-mid-fluid-flow',
+  courseTitle: "流体压强与流速 - TeachAny 互动课件",
+  subject: 'physics',
+  grade: '8',
+  nodeId: 'phy-m-fluid-flow',
+  getLearnerQuestion: () => window.__TEACHANY_LEARNER_QUESTION__ || '',
+  getContext: () => {
+    const current = document.querySelector('.current-section') || (location.hash ? document.querySelector(location.hash) : null);
+    return (current || document.body).innerText.slice(0, 3000);
+  }
+};
+</script>
+<script src="../../assets/scripts/ai-tutor.js"></script>
+<script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
+<script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
+</div>
+
+<!-- v7.20 标准连续音频配置（apply-standard-modules 自动补齐） -->
+<div id="audio-config" data-teachany-audio hidden>
+  <script type="application/json" data-teachany-audio-playlist>
+[
+  {
+    "id": "enhance-1",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/phy-mid-fluid-flow/enhance-1.mp3",
+    "label": "讲解 1"
+  },
+  {
+    "id": "enhance-2",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/phy-mid-fluid-flow/enhance-2.mp3",
+    "label": "讲解 2"
+  },
+  {
+    "id": "enhance-3",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/phy-mid-fluid-flow/enhance-3.mp3",
+    "label": "讲解 3"
+  },
+  {
+    "id": "s01",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/phy-mid-fluid-flow/s01.mp3",
+    "label": "讲解 4"
+  },
+  {
+    "id": "s02",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/phy-mid-fluid-flow/s02.mp3",
+    "label": "讲解 5"
+  },
+  {
+    "id": "s03",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/phy-mid-fluid-flow/s03.mp3",
+    "label": "讲解 6"
+  },
+  {
+    "id": "s04",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/phy-mid-fluid-flow/s04.mp3",
+    "label": "讲解 7"
+  },
+  {
+    "id": "s05",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/phy-mid-fluid-flow/s05.mp3",
+    "label": "讲解 8"
+  },
+  {
+    "id": "s06",
+    "section": "",
+    "src": "https://cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/phy-mid-fluid-flow/s06.mp3",
+    "label": "讲解 9"
+  }
+]
+  </script>
+</div>
+</body>
+</html>

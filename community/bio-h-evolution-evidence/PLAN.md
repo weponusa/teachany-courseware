@@ -1,0 +1,9 @@
+# 生物进化的证据 课件计划
+
+- node_id: `bio-h-evolution-evidence`
+- 学段：高中生物 G10
+- 课标领域：变异与进化
+- 问题锚点：个体差异怎样在环境选择下变成种群层面的改变？
+- 外部资源：PhET/3Dmol（按知识点类别自动选型） + Canvas 变量模型。
+- 标准模块：AI 学伴、Tutor card、TTS narrator、section hints、知识图谱、audio player。
+- 评估：前测、ConcepTest、后测、迁移任务。
