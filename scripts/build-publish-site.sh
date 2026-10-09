@@ -28,9 +28,13 @@ COMMUNITY_EXCLUDES=(
   --exclude='*.pre-strip-upgrade.html'
   --exclude='*.legacy-messy.html'
   --exclude='test-*.html'
-  # TTS 音频已迁到独立仓库 weponusa/teachany-audio（jsdelivr CDN 分发）：
-  #   课件里 ./tts/xxx.mp3 引用已改为 cdn.jsdelivr.net/gh/weponusa/teachany-audio@main/<course>/xxx.mp3，
-  #   所以 **/tts/** 不再进 _site。这是把全站文件数砍掉 ~42% 的关键一步（mp3 占全站 42%）。
+  # TTS 音频由自建 CDN 分发（2026-10-09 起）：
+  #   课件里 ./tts/xxx.mp3 引用已改为 https://audio.teachany.cn/<course>/tts/xxx.mp3，
+  #   源站是 Cloudflare Pages 项目 teachany-audio（内容镜像 community/<course>/tts/）。
+  #   所以 **/tts/** 不再进 _site —— 这是把全站文件数砍掉 ~42% 的关键一步（mp3 占全站 42%）。
+  #   ⚠️ 历史：曾走 jsdelivr 的 gh/weponusa/teachany-audio，因该仓库 947MB 超
+  #      jsdelivr 单包 50MB 上限而全站 403，已废弃，勿再改回。
+  #   音频更新后需重新同步：见 audio/ 部署脚本（build-audio-dist.py + wrangler pages deploy）。
   --exclude='*/tts/'
   --exclude-from="$ROOT/.publish-excludes"
 )
