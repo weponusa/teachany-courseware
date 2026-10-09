@@ -1,3 +1,21 @@
+# ⛔ 已停用（2026-10-09）：重命名为 .yml.disabled，GitHub Actions 不再识别它。
+#
+# 停用原因有两个，都是实测出来的：
+#
+# 1) 链路已废弃。课件提交已改为「只提交资料库地址」，不再走 .teachany 包 + PR
+#    的 pending/ 目录流程（见 community/index.html 的提交入口）。这个 workflow
+#    的触发条件 paths: community/pending/** 实际上永远匹配不到东西。
+#
+# 2) 文件里的 YAML 是坏的，而且坏得很难发现。job 脚本里内嵌的 heredoc 正文写在了
+#    第 0 列（见下方 python3 - "$course_id" ... <<'PY' 那段），YAML 解析直接失败。
+#    解析失败时 GitHub 读不到 on: 条件，会退化成「任何 push 都触发」，然后在 job
+#    创建之前就挂掉 —— 表现为每次 push 都白刷一条 0 秒的 failure（total_count: 0），
+#    成为纯噪音。
+#
+# 若要恢复：先按上面第 1 条确认链路是否需要，再把 heredoc 正文整体缩进、
+# 或把那段 python 抽成独立脚本文件由 workflow 调用（推荐后者）。然后是
+# permissions —— 原文件写 contents: read 却要 push commit，修好 YAML 后会 403。
+#
 name: Publish Community Submission
 
 on:
