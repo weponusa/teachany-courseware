@@ -36,9 +36,19 @@ jobs:
       # 2026-10-02：该步骤观察到偶发 exit 2（clone/rsync/push 任一处瞬时失败即整步挂掉，
       # gh-pages 不动、站点静默停在旧版本），因此整步重试最多 3 次。
       - name: Deploy to gh-pages (incremental, 最多重试 3 次)
+        # 提交信息走 env 传入：绝不内联进 shell 字符串。
+        # 历史坑：原写法 `git commit -m "deploy: ${{ github.event.head_commit.message }}"`
+        # 会把提交信息拼进双引号内，信息里只要出现英文双引号就会闭合引号，
+        # 导致余下文字被当成 git 的参数（表现为 pathspec '走' did not match any file(s)），
+        # 三次重试全挂、gh-pages 静默停在旧版本。
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           set -uo pipefail
           REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          # 取首行做部署信息，避免多行信息塞进 commit subject
+          DEPLOY_MSG=$(printf '%s' "${COMMIT_MSG:-manual deploy}" | head -n 1)
+          [ -n "$DEPLOY_MSG" ] || DEPLOY_MSG="manual deploy"
 
           deploy_once() {
             rm -rf _deploy
@@ -74,7 +84,7 @@ jobs:
 
             # 显示摘要（用 diff --stat 避免 SIGPIPE）
             git diff --cached --stat | tail -5 || true
-            git commit -q -m "deploy: ${{ github.event.head_commit.message || 'manual deploy' }}" || return 1
+            git commit -q -m "deploy: $DEPLOY_MSG" || return 1
             git push origin HEAD:gh-pages || return 1
             cd .. || true
             echo "✅ Deployed successfully ($CHANGES files changed)"

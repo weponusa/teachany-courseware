@@ -28,9 +28,16 @@ jobs:
         run: bash scripts/build-reading-site.sh _reading_site
 
       - name: Deploy to gh-pages-reading (incremental)
+        # 提交信息走 env 传入，不内联进 shell 字符串。
+        # 同 deploy-pages.yml 的坑：提交信息里出现英文双引号会闭合引号，
+        # 余下文字被当成 git 参数，部署静默失败。
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           set -euo pipefail
           REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          DEPLOY_MSG=$(printf '%s' "${COMMIT_MSG:-manual deploy}" | head -n 1)
+          [ -n "$DEPLOY_MSG" ] || DEPLOY_MSG="manual deploy"
 
           if git clone --depth 1 --branch gh-pages-reading "$REPO_URL" _deploy 2>/dev/null; then
             echo "✅ Cloned existing gh-pages-reading branch"
@@ -56,7 +63,7 @@ jobs:
           fi
 
           git diff --cached --stat | tail -5 || true
-          git commit -m "deploy-reading: ${{ github.event.head_commit.message || 'manual deploy' }}"
+          git commit -m "deploy-reading: $DEPLOY_MSG"
           git push origin HEAD:gh-pages-reading
           echo "✅ Reading academy deployed ($CHANGES files changed)"
 
