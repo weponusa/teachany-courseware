@@ -37,7 +37,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from tts_engine import synthesize  # noqa: E402
 
 PLAYLIST_RE = re.compile(
-    r'(<script type="application/json" data-teachany-audio-playlist>)([\s\S]*?)(</script>)')
+    r'(<script\b[^>]*data-teachany-audio-playlist[^>]*>)([\s\S]*?)(</script>)')
 TTS_MARK_RE = re.compile(r'data-tts="([^"]+)"')
 
 PRIORITY = ["objectives", "lesson-focus", "lesson-method", "deep-understanding",
@@ -57,8 +57,10 @@ TAG = re.compile(r"<[^>]+>")
 WS = re.compile(r"\s+")
 
 
-def section_text(html: str, sid: str) -> tuple[str, str]:
-    """找 data-tts=sid 所在元素（兜底按 id 找 section），取标题与正文（截 450 字）。"""
+def section_text(html: str, sid: str, start: int = 0, full: bool = False) -> tuple[str, str]:
+    """找 data-tts=sid 所在元素（兜底按 id 找 section），取标题与正文。
+
+    start>0 时为「续读段」：跳过前 start 字后取 450 字（长 section 拆多段语音用）。"""
     m = re.search(r'<(section|div)[^>]*data-tts="%s"[^>]*>' % re.escape(sid), html)
     if not m:
         # 二级来源的小节没有 data-tts 标记，按 id 找
@@ -70,7 +72,11 @@ def section_text(html: str, sid: str) -> tuple[str, str]:
     title_m = re.search(r"<h([1-3])[^>]*>([\s\S]*?)</h\1>", seg)
     title = WS.sub(" ", TAG.sub("", title_m.group(2))).strip() if title_m else sid
     body = WS.sub(" ", TAG.sub("", seg)).strip()
-    # 太长的只取前 450 字（一段语音约 1~2 分钟）
+    # 一段语音约 1~2 分钟，450 字截断；start>0 时取续读段
+    if full:
+        return title[:40], body
+    if start:
+        return title[:40], body[start:start + 450]
     return title[:40], body[:450]
 
 
@@ -93,7 +99,7 @@ def process(cid: str, apply: bool, voice: str) -> tuple[str, str]:
     have_sections = {e.get("section") or e.get("sectionId") for e in playlist}
     marks = TTS_MARK_RE.findall(h)
     todo = [s for s in marks if s not in have_sections]
-    todo.sort(key=prio)
+    todo.sort(key=lambda x: prio(x if isinstance(x, str) else x[0]))
     todo = todo[: TARGET - len(playlist)]
 
     # 二级来源：data-tts 段用尽仍不足 8 段时，降级用「任意有实质文本的小节」。
@@ -117,8 +123,20 @@ def process(cid: str, apply: bool, voice: str) -> tuple[str, str]:
                 continue
             seen_txt.add(key)
             fallback.append(sid)
-        fallback.sort(key=prio)
+        fallback.sort(key=lambda x: prio(x if isinstance(x, str) else x[0]))
     todo = (todo + fallback)[: TARGET - len(playlist)]
+
+    # 三级来源：已覆盖但全文超 450 字的长 section，续读后半段（拆段朗读）。
+    # todo 条目支持 (sid, start) 元组，生成循环按 offset 取续读文本。
+    if len(todo) < TARGET - len(playlist):
+        for e in playlist:
+            sec = e.get("section") or e.get("sectionId")
+            if not sec:
+                continue
+            _, full = section_text(h, sec, 0, full=True)
+            if len(full) > 500 and len(todo) < TARGET - len(playlist):
+                todo.append((sec, 450))
+
     if not todo:
         return cid, "NO-SEGMENT"
 
@@ -128,13 +146,17 @@ def process(cid: str, apply: bool, voice: str) -> tuple[str, str]:
     n = max(nums) if nums else len(playlist)
 
     made = []
+    covered0 = {e.get("section") or e.get("sectionId") for e in playlist}
     if not tts_dir.exists():       # macOS 偶发 exist_ok=True 仍报 EEXIST，显式判断更稳
         tts_dir.mkdir(parents=True)
-    for sid in todo:
-        n += 1
-        title, text = section_text(h, sid)
+
+    def gen(sid: str, start: int = 0):
+        """生成一段；文本过短或 TTS 失败返回 None（不中断整门，换下一段补足）。"""
+        nonlocal n
+        title, text = section_text(h, sid, start)
         if len(text) < 40:
-            continue
+            return None
+        n += 1
         fname = f"s{n:02d}-{sid[:24].replace('_', '-')}.mp3"
         out = tts_dir / fname
         if apply and (not out.exists() or out.stat().st_size < 200):
@@ -144,9 +166,57 @@ def process(cid: str, apply: bool, voice: str) -> tuple[str, str]:
             if not ok or not out.exists() or out.stat().st_size < 200:
                 if out.exists() and out.stat().st_size < 200:
                     out.unlink()
-                return cid, f"TTS-FAIL({sid})"
-        made.append({"id": f"s{n:02d}", "src": f"{CDN}/{cid}/tts/{fname}",
-                     "title": title or sid, "section": sid})
+                return None
+        return {"id": f"s{n:02d}", "src": f"{CDN}/{cid}/tts/{fname}",
+                "title": title or sid, "section": sid}
+
+    def need() -> int:
+        return TARGET - len(playlist) - len(made)
+
+    # 一级：data-tts 未覆盖段
+    for item in todo:
+        sid, start = item if isinstance(item, tuple) else (item, 0)
+        e = gen(sid, start)
+        if e:
+            made.append(e)
+        if need() <= 0:
+            break
+
+    # 二级：一级候选提取失败（todo 数量够但质量不行）时，逐门补任意 ≥80 字小节
+    if 0 < need():
+        covered_now = covered0 | {e["section"] for e in made}
+        secs = []
+        for sm in re.finditer(r"<section\b([^>]*)>([\s\S]*?)</section>", h, re.I):
+            idm = re.search(r'id="([^"]+)"', sm.group(1))
+            if not idm or idm.group(1) in covered_now:
+                continue
+            body = sm.group(2)
+            if re.search(r"knowledge-graph|tutor-card|audio-player|teachany-kg", body):
+                continue
+            txt = WS.sub(" ", TAG.sub("", body)).strip()
+            if len(txt) >= 80:
+                secs.append((prio(idm.group(1)), idm.group(1)))
+        secs.sort()
+        for _, sid in secs:
+            e = gen(sid)
+            if e:
+                made.append(e)
+            if need() <= 0:
+                break
+
+    # 三级：仍不足时，长 section 续读后半段
+    if 0 < need():
+        for e in playlist + made:
+            sec = e.get("section")
+            if not sec:
+                continue
+            _, full = section_text(h, sec, 0, full=True)
+            if len(full) > 500 and need() > 0:
+                e2 = gen(sec, 450)
+                if e2:
+                    made.append(e2)
+            if need() <= 0:
+                break
 
     if not made:
         return cid, "NO-TEXT"

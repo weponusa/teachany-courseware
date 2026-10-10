@@ -69,6 +69,7 @@ def scan_static():
         cn = len(re.findall(r'[\u4e00-\u9fff]', text))
         pages = len(re.findall(r'class="slide-page', h))
         ad, td = c / 'assets', c / 'tts'
+        td2 = c / 'assets' / 'tts'
         ext_lib, ext_app = {}, {}
         for u in re.findall(r'(?:src|href)="(https?://[^"]+)"', h):
             host = re.match(r'https?://([^/]+)', u).group(1)
@@ -102,7 +103,8 @@ def scan_static():
             'png': len(list(ad.glob('*.png'))) if ad.is_dir() else 0,
             'svg': len(list(ad.glob('*.svg'))) if ad.is_dir() else 0,
             'mp4': len(list(ad.glob('*.mp4'))) if ad.is_dir() else 0,
-            'tts_mp3': len(list(td.glob('*.mp3'))) if td.is_dir() else 0,
+            'tts_mp3': (len(list(td.glob('*.mp3'))) if td.is_dir() else 0)
+                       + (len(list(td2.glob('*.mp3'))) if td2.is_dir() else 0),
         }
         rows.append(row)
     return rows
