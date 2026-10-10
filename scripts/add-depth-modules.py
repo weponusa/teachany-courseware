@@ -276,7 +276,15 @@ def work(cid: str, kind: str, apply: bool) -> tuple[str, str]:
     if pos < 0:
         return cid, "NO-POS"
     if apply:
-        f.write_text(h[:pos] + "\n" + block + "\n" + h[pos:], encoding="utf-8")
+        out = h[:pos] + "\n" + block + "\n" + h[pos:]
+        # quiz 的判分按钮依赖 ta-interactions.js 的 checkAnswer。
+        # 2026-10-10 教训：quiz 注入发生在 fix-dead-buttons 之后时，未引共享库的
+        # 课件按钮点下去就是死按钮（bio-h-*/chem-* 21 门曾中招）。注入时同步兜底。
+        if kind == "quiz" and "ta-interactions.js" not in out:
+            tag = '<script src="../../assets/scripts/ta-interactions.js"></script>'
+            i = out.rfind("</body>")
+            out = out[:i] + tag + "\n" + out[i:] if i >= 0 else out + tag
+        f.write_text(out, encoding="utf-8")
     return cid, "OK"
 
 
