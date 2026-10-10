@@ -56,6 +56,21 @@ def is_ext_node(node_id):
     return bool(node_id and EXT_NODE_RE.match(str(node_id)))
 
 
+_KG_NODES = None
+
+
+def kg_nodes():
+    """teachany-kg-manifest.json 的节点集合（惰性加载缓存）。"""
+    global _KG_NODES
+    if _KG_NODES is None:
+        p = Path(__file__).resolve().parents[1] / 'assets' / 'scripts' / 'teachany-kg-manifest.json'
+        try:
+            _KG_NODES = set(json.load(open(p, encoding='utf-8')).get('nodes', {}))
+        except Exception:
+            _KG_NODES = set()
+    return _KG_NODES
+
+
 def is_pbl_supplement(manifest):
     if not isinstance(manifest, dict):
         return False
@@ -616,6 +631,28 @@ def validate_one(course_dir, strict_feedback=False):
                     f'{course_dir.name}: HTML 疑似硬编码 OpenAI API Key（{key_leak.group(0)[:20]}…）— 严禁任何形式把 Key 写入代码（v5.34 强制 · 硬规则 #45）'))
 
     # 6b. 共享脚本幽灵引用由通用本地资源死链检测统一处理，支持 ../../scripts/*.js/css。
+
+    # 6c. 知识图谱断链检查（2026-10-10 新增，用户报修后防再发）
+    #     a) data-teachany-kg 指向的 id 必须存在于 teachany-kg-manifest.json 的
+    #        nodes，否则图谱渲染空白（chem-ext/info-u/phy-mid/science 等 5 门曾中招）
+    #     b) 声明了 data-teachany-kg 却没引 teachany-knowledge-graph.js，
+    #        图谱永远停在兜底画布（bio-cell-division 曾中招）
+    if html.exists():
+        try:
+            _kg_html = html.read_text(encoding='utf-8', errors='ignore')
+        except Exception:
+            _kg_html = ''
+        _kg_m = re.search(r'data-teachany-kg=["\']([^"\']+)["\']', _kg_html)
+        if _kg_m:
+            _kg_id = _kg_m.group(1)
+            if _kg_id not in kg_nodes():
+                issues.append(('error',
+                    f'{course_dir.name}: data-teachany-kg="{_kg_id}" 不在 '
+                    f'teachany-kg-manifest.json 的 nodes 中（图谱将渲染空白 · 须改指已有节点）'))
+            if 'teachany-knowledge-graph.js' not in _kg_html:
+                issues.append(('error',
+                    f'{course_dir.name}: 声明了 data-teachany-kg 但未引入 '
+                    f'teachany-knowledge-graph.js（图谱永远停在兜底画布）'))
 
     # 7. L3 TTS 语音基线（v5.34.6 新增，硬规则 #16/#31）
     #    每个课件必须有 tts/*.mp3 或 assets/tts/*.mp3 语音文件 + 可见音频播放器 UI
