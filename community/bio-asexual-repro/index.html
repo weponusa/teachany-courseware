@@ -798,5 +798,126 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+    if (typeof showReproInfo !== 'function') {
+        window.showReproInfo = function(type) {
+            const infoMap = {
+                'cutting': {title: '✂️ 扦插', text: '将植物的枝条插入土壤中，使其生根后独立生长。如月季、葡萄等。优点：操作简单，繁殖速度快。缺点：后代性状单一，抗病性可能下降。'},
+                'grafting': {title: '🔗 嫁接', text: '将优良品种的枝条（接穗）接到另一植株（砧木）上。如苹果、梨等。优点：结合砧木抗性和接穗优良性状。缺点：技术要求高，成活率受环境影响。'},
+                'layering': {title: '🌿 压条', text: '将枝条压入土中生根后再与母株分离。如桂花、龙眼等。优点：成活率高，保持母株特性。缺点：繁殖周期长，操作较繁琐。'},
+                'spore': {title: '🍄 孢子繁殖', text: '低等植物（蕨类、苔藓、真菌）通过孢子繁殖。优点：繁殖量大，适应性强。缺点：环境要求高，生长周期长。'}
+            };
+            document.getElementById('reproInfoTitle').textContent = infoMap[type].title;
+            document.getElementById('reproInfoText').textContent = infoMap[type].text;
+        };
+    }
+
+    if (typeof drawMethod !== 'function') {
+        window.drawMethod = function(method) {
+            const canvas = document.getElementById('cvs');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制基础植物
+            ctx.fillStyle = '#6b8c42';
+            ctx.fillRect(100, 150, 20, 100); // 茎
+            ctx.beginPath();
+            ctx.arc(110, 120, 40, 0, Math.PI * 2);
+            ctx.fill(); // 叶冠
+            
+            if (method === 'cutting') {
+                // 扦插图示
+                ctx.fillStyle = '#8b5a2b';
+                ctx.fillRect(300, 180, 15, 70); // 扦插枝条
+                ctx.beginPath();
+                ctx.arc(307, 250, 20, 0, Math.PI * 2);
+                ctx.fill(); // 根系
+            } else if (method === 'grafting') {
+                // 嫁接图示
+                ctx.fillStyle = '#8b5a2b';
+                ctx.fillRect(300, 150, 15, 100); // 砧木
+                ctx.fillStyle = '#6b8c42';
+                ctx.fillRect(300, 130, 15, 20); // 接穗
+                ctx.strokeStyle = '#ff6347';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(300, 130, 15, 20); // 接合标记
+            } else if (method === 'layering') {
+                // 压条图示
+                ctx.fillStyle = '#6b8c42';
+                ctx.beginPath();
+                ctx.moveTo(110, 150);
+                ctx.lineTo(300, 180);
+                ctx.lineTo(350, 150);
+                ctx.stroke(); // 压条枝条
+                ctx.fillRect(320, 180, 10, 30); // 新生根
+            }
+        };
+    }
+
+    if (typeof animGrowth !== 'function') {
+        window.animGrowth = function() {
+            const canvas = document.getElementById('cvs');
+            const ctx = canvas.getContext('2d');
+            let growth = 0;
+            
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#6b8c42';
+                ctx.fillRect(100, 150, 20, 100 + growth); // 生长茎
+                ctx.beginPath();
+                ctx.arc(110, 120 - growth/2, 40 + growth/3, 0, Math.PI * 2);
+                ctx.fill(); // 生长叶冠
+                
+                growth += 2;
+                if (growth < 50) requestAnimationFrame(animate);
+            }
+            animate();
+        };
+    }
+
+    if (typeof checkDrop !== 'function') {
+        window.checkDrop = function() {
+            const feedback = document.getElementById('ddFeedback');
+            const sexualItems = document.querySelectorAll('#zone-sexual .dd-item');
+            const asexualItems = document.querySelectorAll('#zone-asexual .dd-item');
+            let correct = true;
+
+            sexualItems.forEach(item => {
+                if (item.dataset.cat !== 'sexual') correct = false;
+            });
+            asexualItems.forEach(item => {
+                if (item.dataset.cat !== 'asexual') correct = false;
+            });
+
+            feedback.textContent = correct ? '✅ 全部正确！' : '❌ 有些分类不正确，请检查';
+            feedback.style.color = correct ? 'green' : 'red';
+        };
+    }
+
+    if (typeof resetDrop !== 'function') {
+        window.resetDrop = function() {
+            document.getElementById('ddItems').append(...document.querySelectorAll('.dd-zone .dd-item'));
+            document.getElementById('ddFeedback').textContent = '';
+        };
+    }
+
+    // 拖拽辅助函数
+    function dragStart(e) {
+        e.dataTransfer.setData('text/plain', e.target.id || e.target.dataset.id);
+    }
+    function dragOver(e) {
+        e.preventDefault();
+    }
+    function drop(e, cat) {
+        e.preventDefault();
+        const id = e.dataTransfer.getData('text/plain');
+        const item = document.querySelector(`[data-id="${id}"]`) || document.getElementById(id);
+        if (item) e.target.appendChild(item);
+    }
+})();
+</script>
+</body>
 </html>

@@ -788,5 +788,151 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "cvs", "readout": "labReadout-cvs", "bg": [{"t": "ellipse", "x": 360, "y": 180, "rx": 320, "ry": 150, "fill": "rgba(96,165,250,.18)", "stroke": "#60a5fa", "w": 3}, {"t": "text", "x": 360, "y": 180, "t2": "生物圈（约 20 km 厚的薄层）", "size": 15, "align": "center"}, {"t": "line", "x1": 60, "y1": 60, "x2": 660, "y2": 60, "w": 1.6, "color": "#94a3b8", "dash": [6, 5]}, {"t": "line", "x1": 60, "y1": 300, "x2": 660, "y2": 300, "w": 1.6, "color": "#94a3b8", "dash": [6, 5]}, {"t": "text", "x": 360, "y": 70, "t2": "大气圈的底部（约 10 km 以内有生物）", "size": 12.5, "align": "center"}, {"t": "text", "x": 360, "y": 312, "t2": "岩石圈的表面（约地下几百米）", "size": 12.5, "align": "center"}], "parts": [{"x": 360, "y": 66, "name": "大气圈底部", "info": "主要是生活在这里的细菌等微小生物和鸟类——它们需要空气。", "r": 130, "lx": 360, "ly": 40}, {"x": 200, "y": 180, "name": "水圈的大部", "info": "包括海洋、湖泊、河流，几乎所有生物都在水面下 150 米以内的水层中。", "r": 100, "lx": 170, "ly": 180}, {"x": 360, "y": 306, "name": "岩石圈表面", "info": "是一切陆生生物的“立足点”，土壤里有细菌、真菌、植物的根和穴居动物。", "r": 130, "lx": 360, "ly": 330}], "tip": "👆 点击生物圈的各层，看生物分布在哪里"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 能量流动动画相关变量
+  let flowInterval = null;
+  let flowStep = 0;
+  const flowColors = {
+    producer: '#4CAF50',
+    consumer: '#FF9800',
+    decomposer: '#9C27B0'
+  };
+
+  // 能量流动函数
+  if (typeof startFlow !== 'function') {
+    window.startFlow = function() {
+      if (flowInterval) clearInterval(flowInterval);
+      const canvas = document.getElementById('cvs');
+      const ctx = canvas.getContext('2d');
+      
+      flowStep = 0;
+      flowInterval = setInterval(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawFlow(ctx, flowStep);
+        flowStep = (flowStep + 1) % 360;
+      }, 50);
+    };
+  }
+
+  if (typeof stopFlow !== 'function') {
+    window.stopFlow = function() {
+      if (flowInterval) {
+        clearInterval(flowInterval);
+        flowInterval = null;
+      }
+    };
+  }
+
+  if (typeof resetFlow !== 'function') {
+    window.resetFlow = function() {
+      stopFlow();
+      const canvas = document.getElementById('cvs');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+  }
+
+  function drawFlow(ctx, step) {
+    const centerX = 360, centerY = 180;
+    const radius = 120;
+    
+    // 绘制生产者
+    ctx.fillStyle = flowColors.producer;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY - 80, 30, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 绘制消费者
+    ctx.fillStyle = flowColors.consumer;
+    ctx.beginPath();
+    ctx.arc(centerX + 80, centerY + 40, 30, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 绘制分解者
+    ctx.fillStyle = flowColors.decomposer;
+    ctx.beginPath();
+    ctx.arc(centerX - 80, centerY + 40, 30, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 绘制能量流动
+    const angle = step * Math.PI / 180;
+    const arrowSize = 10;
+    
+    // 生产者→消费者
+    drawArrow(ctx, centerX, centerY - 50, centerX + 50, centerY + 20, flowColors.producer);
+    
+    // 消费者→分解者
+    drawArrow(ctx, centerX + 50, centerY + 70, centerX - 50, centerY + 70, flowColors.consumer);
+    
+    // 分解者→生产者
+    drawArrow(ctx, centerX - 50, centerY + 20, centerX, centerY - 50, flowColors.decomposer);
+  }
+
+  function drawArrow(ctx, fromX, fromY, toX, toY, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+    
+    // 箭头
+    const angle = Math.atan2(toY - fromY, toX - fromX);
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - 10 * Math.cos(angle - Math.PI/6), toY - 10 * Math.sin(angle - Math.PI/6));
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - 10 * Math.cos(angle + Math.PI/6), toY - 10 * Math.sin(angle + Math.PI/6));
+    ctx.stroke();
+  }
+
+  // 拖拽检查函数
+  if (typeof checkDrop !== 'function') {
+    window.checkDrop = function() {
+      const feedback = document.getElementById('ddFeedback');
+      const zones = ['producer', 'consumer', 'decomposer', 'abiotic'];
+      let correct = true;
+      
+      zones.forEach(zone => {
+        const zoneEl = document.getElementById(`zone-${zone}`);
+        const items = zoneEl.querySelectorAll('.dd-item');
+        
+        items.forEach(item => {
+          if (item.dataset.cat !== zone) {
+            correct = false;
+          }
+        });
+      });
+      
+      feedback.innerHTML = correct ? 
+        '<div class="correct">✅ 正确！所有成分都放到了正确的位置</div>' :
+        '<div class="incorrect">❌ 还有错误，请检查各成分是否放到了正确的位置</div>';
+    };
+  }
+
+  if (typeof resetDrop !== 'function') {
+    window.resetDrop = function() {
+      const feedback = document.getElementById('ddFeedback');
+      feedback.innerHTML = '';
+      
+      const zones = ['producer', 'consumer', 'decomposer', 'abiotic'];
+      const source = document.querySelector('.dd-source');
+      
+      zones.forEach(zone => {
+        const zoneEl = document.getElementById(`zone-${zone}`);
+        const items = zoneEl.querySelectorAll('.dd-item');
+        
+        items.forEach(item => {
+          zoneEl.removeChild(item);
+          source.appendChild(item);
+        });
+      });
+    };
+  }
+})();
+</script>
+</body>
 </html>
