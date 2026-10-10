@@ -739,5 +739,481 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.startGame !== 'undefined') return;
+
+  let currentStage = 0;
+  const stages = ['main-idea', 'details', 'inference', 'vocabulary'];
+  let score = 0;
+  let totalQuestions = 0;
+
+  window.startGame = function() {
+    const hero = document.getElementById('hero');
+    if (hero) hero.classList.remove('active');
+
+    // 查找或创建游戏容器
+    let gameContainer = document.getElementById('game-container');
+    if (!gameContainer) {
+      gameContainer = document.createElement('div');
+      gameContainer.id = 'game-container';
+      gameContainer.className = 'screen';
+      gameContainer.style.cssText = 'padding:40px 20px;max-width:900px;margin:0 auto;';
+      if (hero && hero.parentNode) {
+        hero.parentNode.insertBefore(gameContainer, hero.nextSibling);
+      } else {
+        document.body.appendChild(gameContainer);
+      }
+    }
+    gameContainer.classList.add('active');
+    gameContainer.innerHTML = '';
+
+    currentStage = 0;
+    score = 0;
+    totalQuestions = 0;
+
+    renderStage();
+  };
+
+  function renderStage() {
+    const gameContainer = document.getElementById('game-container');
+    if (!gameContainer) return;
+
+    const stageName = stages[currentStage];
+    gameContainer.innerHTML = '';
+
+    // 进度条
+    const progressBar = document.createElement('div');
+    progressBar.style.cssText = 'display:flex;gap:10px;margin-bottom:30px;';
+    stages.forEach((s, i) => {
+      const dot = document.createElement('div');
+      dot.style.cssText = `flex:1;height:8px;border-radius:4px;background:${i <= currentStage ? 'linear-gradient(135deg,#4caf50,#2f7d32)' : '#e0e0e0'};transition:all 0.3s;`;
+      progressBar.appendChild(dot);
+    });
+    gameContainer.appendChild(progressBar);
+
+    // 标题
+    const title = document.createElement('h2');
+    title.style.cssText = 'font-size:28px;color:#2f7d32;margin-bottom:20px;display:flex;align-items:center;gap:10px;';
+    const icons = ['🎯', '🔍', '💡', '📚'];
+    const titles = ['Main Idea 主旨大意', 'Details 细节理解', 'Inference 推理判断', 'Vocabulary 词汇理解'];
+    title.innerHTML = `${icons[currentStage]} ${titles[currentStage]}`;
+    gameContainer.appendChild(title);
+
+    // 画布
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 400;
+    canvas.style.cssText = 'width:100%;max-width:800px;height:auto;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);margin-bottom:30px;background:#fff;';
+    gameContainer.appendChild(canvas);
+
+    drawStageIllustration(canvas, stageName);
+
+    // 题目区
+    const questionBox = document.createElement('div');
+    questionBox.style.cssText = 'background:linear-gradient(135deg,#f5f5f5,#e8f5e9);padding:25px;border-radius:12px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05);';
+    
+    const passage = document.createElement('div');
+    passage.style.cssText = 'background:#fff;padding:20px;border-radius:8px;margin-bottom:20px;line-height:1.8;color:#333;font-size:15px;';
+    passage.innerHTML = getPassage(stageName);
+    questionBox.appendChild(passage);
+
+    const question = document.createElement('div');
+    question.style.cssText = 'font-size:16px;font-weight:600;color:#2f7d32;margin-bottom:15px;';
+    question.textContent = getQuestion(stageName);
+    questionBox.appendChild(question);
+
+    const options = getOptions(stageName);
+    options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.style.cssText = 'display:block;width:100%;text-align:left;padding:15px 20px;margin:10px 0;background:#fff;border:2px solid #e0e0e0;border-radius:8px;cursor:pointer;transition:all 0.3s;font-size:15px;color:#333;';
+      btn.textContent = opt.text;
+      btn.onmouseover = () => btn.style.cssText += 'border-color:#4caf50;transform:translateX(5px);';
+      btn.onmouseout = () => btn.style.cssText = btn.style.cssText.replace('border-color:#4caf50;transform:translateX(5px);', '');
+      btn.onclick = () => checkAnswer(btn, opt.correct, questionBox);
+      questionBox.appendChild(btn);
+    });
+
+    gameContainer.appendChild(questionBox);
+
+    // 反馈区
+    const feedback = document.createElement('div');
+    feedback.id = 'feedback-' + stageName;
+    feedback.style.cssText = 'min-height:60px;padding:15px;border-radius:8px;font-size:15px;text-align:center;';
+    gameContainer.appendChild(feedback);
+  }
+
+  function drawStageIllustration(canvas, stage) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 底层背景
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#e3f2fd');
+    gradient.addColorStop(1, '#fff9c4');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    let frame = 0;
+    const animate = () => {
+      if (frame > 150) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const progress = Math.min(frame / 150, 1);
+
+      if (stage === 'main-idea') {
+        drawMainIdeaScene(ctx, progress);
+      } else if (stage === 'details') {
+        drawDetailsScene(ctx, progress);
+      } else if (stage === 'inference') {
+        drawInferenceScene(ctx, progress);
+      } else if (stage === 'vocabulary') {
+        drawVocabularyScene(ctx, progress);
+      }
+
+      frame++;
+      if (frame <= 150) requestAnimationFrame(animate);
+    };
+    animate();
+  }
+
+  function drawMainIdeaScene(ctx, progress) {
+    // 树干（主旨）
+    const trunkHeight = 200 * progress;
+    ctx.fillStyle = '#6d4c41';
+    ctx.fillRect(380, 300 - trunkHeight, 40, trunkHeight);
+
+    // 树枝（支撑细节）
+    if (progress > 0.4) {
+      const branchProgress = (progress - 0.4) / 0.6;
+      ctx.strokeStyle = '#8d6e63';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(400, 150);
+      ctx.lineTo(400 - 80 * branchProgress, 120);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(400, 150);
+      ctx.lineTo(400 + 80 * branchProgress, 120);
+      ctx.stroke();
+    }
+
+    // 树冠（整体概念）
+    if (progress > 0.6) {
+      const crownProgress = (progress - 0.6) / 0.4;
+      ctx.fillStyle = 'rgba(76,175,80,' + crownProgress + ')';
+      ctx.beginPath();
+      ctx.arc(400, 100, 100 * crownProgress, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(330, 120, 70 * crownProgress, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(470, 120, 70 * crownProgress, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 标注
+    if (progress >= 1) {
+      ctx.fillStyle = '#2f7d32';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('主旨（树冠）', 350, 50);
+      ctx.fillText('支撑细节（树枝）', 250, 130);
+      ctx.fillText('核心论点（树干）', 420, 200);
+      
+      // 引线
+      ctx.strokeStyle = '#2f7d32';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(400, 60);
+      ctx.lineTo(400, 90);
+      ctx.stroke();
+    }
+  }
+
+  function drawDetailsScene(ctx, progress) {
+    // 放大镜
+    const handleY = 250 + 50 * Math.sin(progress * Math.PI);
+    ctx.strokeStyle = '#795548';
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.moveTo(500, handleY);
+    ctx.lineTo(550, handleY + 80);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(450, 200, 80 * progress, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 被放大的文字细节
+    if (progress > 0.5) {
+      const textProgress = (progress - 0.5) / 0.5;
+      ctx.fillStyle = 'rgba(51,51,51,' + textProgress + ')';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('When', 420, 180);
+      ctx.fillText('Where', 410, 200);
+      ctx.fillText('Who', 425, 220);
+      
+      // 高亮框
+      ctx.strokeStyle = '#ff9800';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(405, 185, 70, 25);
+    }
+
+    // 标注
+    if (progress >= 1) {
+      ctx.fillStyle = '#1976d2';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('细节信息', 300, 150);
+      ctx.fillText('关键词定位', 480, 320);
+      ctx.fillText('5W1H', 350, 250);
+    }
+  }
+
+  function drawInferenceScene(ctx, progress) {
+    // 拼图块（推理过程）
+    const pieces = [
+      {x: 250, y: 150, color: '#e91e63'},
+      {x: 350, y: 150, color: '#9c27b0'},
+      {x: 450, y: 150, color: '#3f51b5'},
+      {x: 300, y: 230, color: '#00bcd4'},
+      {x: 400, y: 230, color: '#4caf50'}
+    ];
+
+    pieces.forEach((piece, i) => {
+      const delay = i * 0.15;
+      if (progress > delay) {
+        const pieceProgress = Math.min((progress - delay) / 0.2, 1);
+        const offsetY = (1 - pieceProgress) * 100;
+        
+        ctx.fillStyle = piece.color;
+        ctx.fillRect(piece.x, piece.y + offsetY, 70, 60);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(piece.x, piece.y + offsetY, 70, 60);
+        
+        // 拼图凸起
+        ctx.fillStyle = piece.color;
+        ctx.beginPath();
+        ctx.arc(piece.x + 35, piece.y + offsetY, 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    // 箭头指向结论
+    if (progress > 0.8) {
+      ctx.strokeStyle = '#ff5722';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(400, 300);
+      ctx.lineTo(400, 340);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(400, 340);
+      ctx.lineTo(385, 325);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(400, 340);
+      ctx.lineTo(415, 325);
+      ctx.stroke();
+    }
+
+    // 标注
+    if (progress >= 1) {
+      ctx.fillStyle = '#3f51b5';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('已知信息', 200, 130);
+      ctx.fillText('逻辑推理', 300, 320);
+      ctx.fillText('得出结论', 350, 370);
+    }
+  }
+
+  function drawVocabularyScene(ctx, progress) {
+    // 书本
+    ctx.fillStyle = '#8d6e63';
+    ctx.fillRect(250, 200, 300 * progress, 150);
+    ctx.fillStyle = '#6d4c41';
+    ctx.fillRect(250, 200, 10, 150 * progress);
+
+    // 书页
+    if (progress > 0.3) {
+      const pageProgress = (progress - 0.3) / 0.7;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(270, 220, 130 * pageProgress, 110);
+      ctx.fillRect(420, 220, 110 * pageProgress, 110);
+    }
+
+    // 文字和上下文线索
+    if (progress > 0.6) {
+      const textProgress = (progress - 0.6) / 0.4;
+      ctx.fillStyle = 'rgba(51,51,51,' + textProgress + ')';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('The ancient', 280, 250);
+      ctx.fillText('building was', 280, 270);
+      
+      // 生词高亮
+      ctx.fillStyle = 'rgba(255,152,0,' + textProgress + ')';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('magnificent', 280, 290);
+      
+      ctx.fillStyle = 'rgba(51,51,51,' + textProgress + ')';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('with tall', 280, 310);
+      
+      // 右页：词义
+      ctx.fillStyle = 'rgba(76,175,80,' + textProgress + ')';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('= 壮丽的', 430, 270);
+      ctx.fillStyle = 'rgba(51,51,51,' + textProgress + ')';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('根据上下文', 430, 290);
+      ctx.fillText('"ancient"', 430, 305);
+      ctx.fillText('"tall" 推测', 430, 320);
+    }
+
+    // 标注
+    if (progress >= 1) {
+      ctx.fillStyle = '#ff9800';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('生词', 250, 190);
+      ctx.fillText('上下文线索', 280, 350);
+      ctx.fillText('词义推测', 480, 240);
+    }
+  }
+
+  function getPassage(stage) {
+    const passages = {
+      'main-idea': '<strong>Passage:</strong> Pandas are one of the most beloved animals in the world. They live in the bamboo forests of China and spend most of their day eating. An adult panda can eat up to 38 kilograms of bamboo daily. Despite their large size, pandas are excellent climbers and swimmers.',
+      'details': '<strong>Passage:</strong> Last Saturday, Emma visited the Science Museum with her class. They arrived at 9:00 AM and first watched a documentary about space exploration. After lunch in the museum café, they participated in a robot-building workshop that lasted two hours.',
+      'inference': '<strong>Passage:</strong> Tom looked at his watch nervously. The train was supposed to arrive ten minutes ago. He checked his ticket again and glanced at the empty platform. Dark clouds were gathering in the sky, and he could hear thunder in the distance.',
+      'vocabulary': '<strong>Passage:</strong> The expedition team encountered numerous obstacles during their journey through the dense jungle. The terrain was treacherous, with steep cliffs and rapid rivers blocking their path at every turn.'
+    };
+    return passages[stage] || '';
+  }
+
+  function getQuestion(stage) {
+    const questions = {
+      'main-idea': 'What is the main idea of this passage?',
+      'details': 'What time did Emma\'s class arrive at the museum?',
+      'inference': 'How is Tom probably feeling?',
+      'vocabulary': 'What does "treacherous" most likely mean in this context?'
+    };
+    return questions[stage] || '';
+  }
+
+  function getOptions(stage) {
+    const options = {
+      'main-idea': [
+        {text: 'A. Pandas eat a lot of bamboo every day', correct: false},
+        {text: 'B. Pandas are popular animals that live in China and have unique habits', correct: true},
+        {text: 'C. Pandas can climb trees and swim', correct: false},
+        {text: 'D. Pandas live in bamboo forests', correct: false}
+      ],
+      'details': [
+        {text: 'A. 8:00 AM', correct: false},
+        {text: 'B. 9:00 AM', correct: true},
+        {text: 'C. 10:00 AM', correct: false},
+        {text: 'D. After lunch', correct: false}
+      ],
+      'inference': [
+        {text: 'A. Excited and happy', correct: false},
+        {text: 'B. Worried and anxious', correct: true},
+        {text: 'C. Angry and frustrated', correct: false},
+        {text: 'D. Relaxed and calm', correct: false}
+      ],
+      'vocabulary': [
+        {text: 'A. Beautiful and scenic', correct: false},
+        {text: 'B. Dangerous and difficult', correct: true},
+        {text: 'C. Flat and easy', correct: false},
+        {text: 'D. Short and simple', correct: false}
+      ]
+    };
+    return options[stage] || [];
+  }
+
+  function checkAnswer(btn, correct, container) {
+    totalQuestions++;
+    const allBtns = container.querySelectorAll('button');
+    allBtns.forEach(b => {
+      b.disabled = true;
+      b.style.cursor = 'not-allowed';
+      b.style.opacity = '0.6';
+    });
+
+    const feedback = document.getElementById('feedback-' + stages[currentStage]);
+    if (correct) {
+      score++;
+      btn.style.background = 'linear-gradient(135deg,#4caf50,#66bb6a)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#4caf50';
+      if (feedback) {
+        feedback.style.background = 'linear-gradient(135deg,#e8f5e9,#c8e6c9)';
+        feedback.style.color = '#2f7d32';
+        feedback.innerHTML = '✅ <strong>正确！</strong> 做得很好！';
+      }
+    } else {
+      btn.style.background = 'linear-gradient(135deg,#f44336,#e57373)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#f44336';
+      if (feedback) {
+        feedback.style.background = 'linear-gradient(135deg,#ffebee,#ffcdd2)';
+        feedback.style.color = '#c62828';
+        feedback.innerHTML = '❌ <strong>不正确</strong>，再想想看！';
+      }
+    }
+
+    setTimeout(() => {
+      if (currentStage < stages.length - 1) {
+        currentStage++;
+        renderStage();
+      } else {
+        showFinalScore();
+      }
+    }, 2000);
+  }
+
+  function showFinalScore() {
+    const gameContainer = document.getElementById('game-container');
+    if (!gameContainer) return;
+
+    gameContainer.innerHTML = '';
+    const finalScreen = document.createElement('div');
+    finalScreen.style.cssText = 'text-align:center;padding:60px 20px;';
+    
+    const bear = document.createElement('div');
+    bear.style.cssText = 'font-size:80px;margin-bottom:20px;';
+    bear.textContent = score === totalQuestions ? '🎉' : score >= totalQuestions * 0.75 ? '🐻' : '📚';
+    finalScreen.appendChild(bear);
+
+    const title = document.createElement('h2');
+    title.style.cssText = 'font-size:32px;color:#2f7d32;margin-bottom:20px;';
+    title.textContent = '冒险完成！';
+    finalScreen.appendChild(title);
+
+    const scoreText = document.createElement('p');
+    scoreText.style.cssText = 'font-size:24px;color:#333;margin-bottom:30px;';
+    scoreText.innerHTML = `你的得分：<strong style="color:#4caf50;font-size:36px;">${score}/${totalQuestions}</strong>`;
+    finalScreen.appendChild(scoreText);
+
+    const restartBtn = document.createElement('button');
+    restartBtn.textContent = '🔄 再来一次';
+    restartBtn.className = 'btn-start';
+    restartBtn.onclick = () => window.startGame();
+    finalScreen.appendChild(restartBtn);
+
+    gameContainer.appendChild(finalScreen);
+  }
+
+})();
+</script>
 </body>
 </html>

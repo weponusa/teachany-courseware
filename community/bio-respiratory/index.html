@@ -1068,5 +1068,295 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "breathCanvas", "readout": "animInfo", "bg": [{"t": "ellipse", "x": 190, "y": 90, "rx": 26, "ry": 30, "fill": "rgba(251,191,36,.35)", "stroke": "#f59e0b"}, {"t": "text", "x": 190, "y": 90, "t2": "鼻", "size": 11.5, "align": "center"}, {"t": "line", "x1": 200, "y1": 118, "x2": 200, "y2": 180, "w": 10, "color": "#f59e0b"}, {"t": "text", "x": 214, "y": 150, "t2": "咽/喉", "size": 11, "align": "center"}, {"t": "line", "x1": 200, "y1": 180, "x2": 160, "y2": 230, "w": 9, "color": "#60a5fa"}, {"t": "line", "x1": 200, "y1": 180, "x2": 240, "y2": 230, "w": 9, "color": "#60a5fa"}, {"t": "poly", "pts": [[160, 230], [240, 230], [240, 300], [160, 300]], "fill": "rgba(96,165,250,.15)", "stroke": "#60a5fa", "w": 2}, {"t": "poly", "pts": [[240, 230], [330, 230], [330, 300], [240, 300]], "fill": "rgba(96,165,250,.15)", "stroke": "#60a5fa", "w": 2}, {"t": "line", "x1": 200, "y1": 300, "x2": 200, "y2": 350, "w": 8, "color": "#f59e0b"}, {"t": "text", "x": 200, "y": 360, "t2": "气管→支气管→肺", "size": 11, "align": "center"}, {"t": "ellipse", "x": 430, "y": 200, "rx": 70, "ry": 60, "fill": "rgba(148,163,184,.25)", "stroke": "#94a3b8", "dash": [5, 4]}], "parts": [{"x": 190, "y": 90, "name": "鼻", "info": "鼻腔内有鼻毛和黏膜，能过滤、温暖、湿润吸入的空气。", "r": 30, "lx": 130, "ly": 56}, {"x": 200, "y": 150, "name": "咽 / 喉", "info": "空气的通道；喉部有声带，是发声的器官。", "r": 30, "lx": 90, "ly": 150}, {"x": 200, "y": 350, "name": "气管与支气管", "info": "管壁有软骨环支撑（不塌陷），内表面有纤毛和黏液，能粘住灰尘。", "r": 42, "lx": 200, "ly": 396}, {"x": 285, "y": 265, "name": "肺（肺泡）", "info": "肺泡壁很薄、外面缠绕毛细血管——气体交换的场所：氧气进入血液，二氧化碳排出。", "r": 80, "lx": 560, "ly": 258}, {"x": 430, "y": 200, "name": "膈肌与肋间肌", "info": "吸气时膈肌下降、肋骨上提，胸腔容积变大，肺内气压变小，空气就被“吸”进来。", "r": 70, "lx": 640, "ly": 340}], "tip": "👆 点击呼吸系统各部位，看气体交换在哪里发生"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.checkOrder !== 'undefined') return;
+
+  // ========== 拖拽排序相关 ==========
+  let orderState = {};
+
+  window.checkOrder = function() {
+    const slots = document.querySelectorAll('.order-slot');
+    const feedback = document.getElementById('dndFeedback');
+    if (!feedback) return;
+
+    let correct = 0;
+    let total = 0;
+
+    slots.forEach(slot => {
+      const pos = slot.dataset.pos;
+      const correctVal = slot.dataset.correct;
+      const content = slot.querySelector('.slot-content');
+      if (!content) return;
+
+      const item = content.querySelector('.order-item');
+      if (!item) return;
+
+      total++;
+      const actualVal = item.dataset.organ;
+
+      if (actualVal === correctVal) {
+        correct++;
+        slot.style.borderColor = '#4caf50';
+        slot.style.background = '#e8f5e9';
+      } else {
+        slot.style.borderColor = '#f44336';
+        slot.style.background = '#ffebee';
+      }
+    });
+
+    feedback.innerHTML = `<div style="padding:12px;margin-top:12px;border-radius:8px;background:${correct === total ? '#e8f5e9' : '#fff3e0'};border:2px solid ${correct === total ? '#4caf50' : '#ff9800'};font-weight:600;color:#333;">
+      ${correct === total ? '🎉 完全正确！' : `📊 正确 ${correct}/${total} 项，请调整后重试`}
+    </div>`;
+  };
+
+  window.resetOrder = function() {
+    const slots = document.querySelectorAll('.order-slot');
+    const bank = document.querySelector('.order-bank');
+    const feedback = document.getElementById('dndFeedback');
+
+    slots.forEach(slot => {
+      const content = slot.querySelector('.slot-content');
+      if (!content) return;
+      const item = content.querySelector('.order-item');
+      if (item && bank) {
+        bank.appendChild(item);
+      }
+      slot.style.borderColor = '';
+      slot.style.background = '';
+    });
+
+    if (feedback) feedback.innerHTML = '';
+    orderState = {};
+  };
+
+  // ========== 动画模式切换 ==========
+  let currentMode = 'breathing';
+  let animRunning = true;
+  let animFrame = 0;
+  let animReqId = null;
+
+  window.switchMode = function(mode) {
+    if (currentMode === mode) return;
+    currentMode = mode;
+    animFrame = 0;
+
+    const tabs = document.querySelectorAll('.canvas-tab');
+    tabs.forEach(tab => {
+      if (tab.textContent.includes('呼吸运动') && mode === 'breathing') {
+        tab.classList.add('active');
+      } else if (tab.textContent.includes('肺泡') && mode === 'exchange') {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    const info = document.getElementById('animInfo');
+    if (info) {
+      if (mode === 'breathing') {
+        info.innerHTML = '<strong style="color:var(--primary-dark)">呼吸运动模式：</strong>观察膈肌上下运动如何改变胸腔容积，驱动气体进出肺部。';
+      } else {
+        info.innerHTML = '<strong style="color:var(--primary-dark)">肺泡气体交换模式：</strong>观察O₂从肺泡进入血液，CO₂从血液进入肺泡的扩散过程。';
+      }
+    }
+
+    animRunning = true;
+    if (animReqId) cancelAnimationFrame(animReqId);
+    animate();
+  };
+
+  window.toggleAnim = function() {
+    animRunning = !animRunning;
+    if (animRunning && !animReqId) {
+      animate();
+    }
+  };
+
+  window.resetAnim = function() {
+    animFrame = 0;
+    animRunning = true;
+    if (animReqId) cancelAnimationFrame(animReqId);
+    animate();
+  };
+
+  function animate() {
+    const canvas = document.getElementById('breathCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (currentMode === 'breathing') {
+      drawBreathingAnim(ctx, w, h);
+    } else {
+      drawExchangeAnim(ctx, w, h);
+    }
+
+    if (animRunning) {
+      animFrame++;
+      animReqId = requestAnimationFrame(animate);
+    }
+  }
+
+  function drawBreathingAnim(ctx, w, h) {
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // 背景渐变
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#e3f2fd');
+    grad.addColorStop(1, '#f5f5f5');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    const cycle = 180; // 3秒周期
+    const phase = (animFrame % cycle) / cycle;
+    const isInhale = phase < 0.5;
+    const t = isInhale ? (phase * 2) : ((phase - 0.5) * 2);
+
+    // 胸腔轮廓
+    const chestX = w / 2;
+    const chestY = h / 2 - 20;
+    const chestW = 200;
+    const chestH = isInhale ? 180 + t * 40 : 220 - t * 40;
+
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(chestX, chestY, chestW / 2, chestH / 2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 肺部（两个椭圆）
+    ctx.fillStyle = '#ffcdd2';
+    ctx.strokeStyle = '#c62828';
+    ctx.lineWidth = 2;
+    const lungW = 60;
+    const lungH = chestH * 0.6;
+    ctx.beginPath();
+    ctx.ellipse(chestX - 50, chestY, lungW / 2, lungH / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(chestX + 50, chestY, lungW / 2, lungH / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 膈肌
+    const diaphragmY = isInhale ? chestY + chestH / 2 + 10 + t * 20 : chestY + chestH / 2 + 30 - t * 20;
+    ctx.strokeStyle = '#6d4c41';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(chestX - chestW / 2, diaphragmY);
+    ctx.quadraticCurveTo(chestX, diaphragmY + 15, chestX + chestW / 2, diaphragmY);
+    ctx.stroke();
+
+    // 气流箭头
+    ctx.fillStyle = '#1976d2';
+    ctx.font = '20px sans-serif';
+    if (isInhale) {
+      ctx.fillText('↓ 吸气', chestX - 30, chestY - chestH / 2 - 20);
+    } else {
+      ctx.fillText('↑ 呼气', chestX - 30, chestY - chestH / 2 - 20);
+    }
+
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('肺', chestX - 60, chestY - 10);
+    ctx.fillText('膈肌', chestX + chestW / 2 + 10, diaphragmY + 5);
+    ctx.fillText(isInhale ? '膈肌收缩下降' : '膈肌舒张上升', chestX - 70, h - 30);
+  }
+
+  function drawExchangeAnim(ctx, w, h) {
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#fff8e1');
+    grad.addColorStop(1, '#f5f5f5');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    const cycle = 200;
+    const phase = (animFrame % cycle) / cycle;
+
+    // 肺泡
+    const alveolX = w / 2 - 150;
+    const alveolY = h / 2;
+    ctx.fillStyle = '#ffebee';
+    ctx.strokeStyle = '#c62828';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(alveolX, alveolY, 80, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 毛细血管
+    const capX = w / 2 + 150;
+    const capY = h / 2;
+    ctx.strokeStyle = '#d32f2f';
+    ctx.lineWidth = 20;
+    ctx.beginPath();
+    ctx.arc(capX, capY, 60, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // O2 分子（红色）从肺泡到血管
+    const o2Progress = Math.min(phase * 1.5, 1);
+    const o2X = alveolX + (capX - alveolX) * o2Progress;
+    const o2Y = alveolY - 30 + Math.sin(o2Progress * Math.PI) * 20;
+    ctx.fillStyle = '#f44336';
+    ctx.beginPath();
+    ctx.arc(o2X, o2Y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText('O₂', o2X - 8, o2Y + 4);
+
+    // CO2 分子（蓝色）从血管到肺泡
+    const co2Progress = Math.min(Math.max(phase - 0.3, 0) * 1.5, 1);
+    const co2X = capX - (capX - alveolX) * co2Progress;
+    const co2Y = capY + 30 - Math.sin(co2Progress * Math.PI) * 20;
+    ctx.fillStyle = '#2196f3';
+    ctx.beginPath();
+    ctx.arc(co2X, co2Y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillText('CO₂', co2X - 10, co2Y + 4);
+
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('肺泡', alveolX - 20, alveolY - 100);
+    ctx.fillText('毛细血管', capX - 35, capY - 90);
+    ctx.fillText('O₂扩散→', alveolX + 50, alveolY - 50);
+    ctx.fillText('←CO₂扩散', capX - 100, capY + 70);
+
+    // 引线
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(alveolX, alveolY - 80);
+    ctx.lineTo(alveolX, alveolY - 95);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(capX, capY - 80);
+    ctx.lineTo(capX, capY - 85);
+    ctx.stroke();
+  }
+
+  // 初始化动画
+  const canvas = document.getElementById('breathCanvas');
+  if (canvas) {
+    animate();
+  }
+})();
+</script>
+</body>
 </html>

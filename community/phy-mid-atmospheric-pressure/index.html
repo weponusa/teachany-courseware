@@ -664,5 +664,324 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 </section>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><span class="ta-phase" data-tone="aux">知识图谱</span><h2 class="section-title">🗺️ 知识图谱：大气压强</h2><div data-teachany-kg="phy-m-atmospheric-pressure"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 检查函数是否已存在
+  if (typeof window.updateTorricelli === 'undefined') {
+    window.updateTorricelli = function(value) {
+      const atmVal = document.getElementById('atmVal');
+      const mercuryColumn = document.getElementById('mercuryColumn');
+      const heightText = document.getElementById('heightText');
+      
+      if (!atmVal) return;
+      
+      // 更新显示的大气压值
+      atmVal.textContent = parseFloat(value).toFixed(3);
+      
+      // 计算水银柱高度（标准大气压1.013对应760mm）
+      const height = (parseFloat(value) / 1.013) * 760;
+      const pixelHeight = (height / 760) * 70; // 最大70像素高度
+      
+      // 更新水银柱高度
+      if (mercuryColumn) {
+        mercuryColumn.setAttribute('y', 90 - pixelHeight);
+        mercuryColumn.setAttribute('height', pixelHeight);
+      }
+      
+      // 更新高度标注
+      if (heightText) {
+        heightText.textContent = height.toFixed(0) + 'mm';
+      }
+    };
+  }
+
+  if (typeof window.updatePiston === 'undefined') {
+    window.updatePiston = function(value) {
+      const forceVal = document.getElementById('forceVal');
+      const pistonRect = document.getElementById('pistonRect');
+      const pressureText = document.getElementById('pressureText');
+      const arrowGroup = document.getElementById('arrowGroup');
+      
+      if (!forceVal) return;
+      
+      // 更新显示的力值
+      forceVal.textContent = value;
+      
+      // 计算活塞位置（力越大，活塞越往下）
+      const force = parseFloat(value);
+      const pistonY = 20 + (force / 500) * 40; // 20-60像素范围
+      
+      // 更新活塞位置
+      if (pistonRect) {
+        pistonRect.setAttribute('y', pistonY);
+      }
+      
+      // 更新箭头位置
+      if (arrowGroup) {
+        arrowGroup.setAttribute('transform', `translate(0, ${pistonY - 20})`);
+      }
+      
+      // 计算并显示压强（假设活塞面积0.01m²）
+      const area = 0.01; // m²
+      const pressure = force / area;
+      
+      if (pressureText) {
+        pressureText.textContent = `压强: ${pressure.toFixed(0)} Pa`;
+      }
+    };
+  }
+
+  // 初始化托里拆利实验可视化
+  function initTorricelliViz() {
+    const viz = document.getElementById('torricelliViz');
+    if (!viz) return;
+    
+    const svg = viz.querySelector('svg');
+    if (!svg) return;
+    
+    // 清除现有内容并重建
+    svg.innerHTML = '';
+    svg.setAttribute('viewBox', '0 0 200 120');
+    
+    // 背景
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('width', '200');
+    bg.setAttribute('height', '120');
+    bg.setAttribute('fill', '#e3f2fd');
+    bg.setAttribute('rx', '8');
+    svg.appendChild(bg);
+    
+    // 水银槽
+    const trough = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    trough.setAttribute('x', '60');
+    trough.setAttribute('y', '90');
+    trough.setAttribute('width', '80');
+    trough.setAttribute('height', '22');
+    trough.setAttribute('fill', '#78909c');
+    trough.setAttribute('rx', '3');
+    svg.appendChild(trough);
+    
+    const mercury = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    mercury.setAttribute('x', '63');
+    mercury.setAttribute('y', '93');
+    mercury.setAttribute('width', '74');
+    mercury.setAttribute('height', '16');
+    mercury.setAttribute('fill', '#c0c0c0');
+    mercury.setAttribute('rx', '2');
+    svg.appendChild(mercury);
+    
+    // 玻璃管
+    const tube = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    tube.setAttribute('x', '92');
+    tube.setAttribute('y', '10');
+    tube.setAttribute('width', '16');
+    tube.setAttribute('height', '83');
+    tube.setAttribute('fill', 'none');
+    tube.setAttribute('stroke', '#546e7a');
+    tube.setAttribute('stroke-width', '2.5');
+    tube.setAttribute('rx', '2');
+    svg.appendChild(tube);
+    
+    // 管内水银柱
+    const column = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    column.setAttribute('id', 'mercuryColumn');
+    column.setAttribute('x', '94');
+    column.setAttribute('y', '20');
+    column.setAttribute('width', '12');
+    column.setAttribute('height', '70');
+    column.setAttribute('fill', '#9e9e9e');
+    svg.appendChild(column);
+    
+    // 真空区域标注
+    const vacuumText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    vacuumText.setAttribute('x', '115');
+    vacuumText.setAttribute('y', '18');
+    vacuumText.setAttribute('font-size', '11');
+    vacuumText.setAttribute('fill', '#d32f2f');
+    vacuumText.textContent = '真空';
+    svg.appendChild(vacuumText);
+    
+    // 高度标注线
+    const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line1.setAttribute('x1', '110');
+    line1.setAttribute('y1', '93');
+    line1.setAttribute('x2', '130');
+    line1.setAttribute('y2', '93');
+    line1.setAttribute('stroke', '#1976d2');
+    line1.setAttribute('stroke-width', '1.5');
+    svg.appendChild(line1);
+    
+    const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line2.setAttribute('x1', '110');
+    line2.setAttribute('y1', '20');
+    line2.setAttribute('x2', '130');
+    line2.setAttribute('y2', '20');
+    line2.setAttribute('stroke', '#1976d2');
+    line2.setAttribute('stroke-width', '1.5');
+    svg.appendChild(line2);
+    
+    const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    vLine.setAttribute('x1', '120');
+    vLine.setAttribute('y1', '20');
+    vLine.setAttribute('x2', '120');
+    vLine.setAttribute('y2', '93');
+    vLine.setAttribute('stroke', '#1976d2');
+    vLine.setAttribute('stroke-width', '1.5');
+    vLine.setAttribute('stroke-dasharray', '2,2');
+    svg.appendChild(vLine);
+    
+    // 高度文字
+    const heightText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    heightText.setAttribute('id', 'heightText');
+    heightText.setAttribute('x', '135');
+    heightText.setAttribute('y', '60');
+    heightText.setAttribute('font-size', '13');
+    heightText.setAttribute('fill', '#1976d2');
+    heightText.setAttribute('font-weight', 'bold');
+    heightText.textContent = '760mm';
+    svg.appendChild(heightText);
+    
+    // 大气压箭头
+    for (let i = 0; i < 3; i++) {
+      const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const x = 30 + i * 15;
+      arrow.setAttribute('d', `M${x},95 L${x},105 M${x-3},102 L${x},105 L${x+3},102`);
+      arrow.setAttribute('stroke', '#ff6f00');
+      arrow.setAttribute('stroke-width', '2');
+      arrow.setAttribute('fill', 'none');
+      arrow.setAttribute('stroke-linecap', 'round');
+      arrow.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(arrow);
+    }
+    
+    // 大气压标注
+    const atmText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    atmText.setAttribute('x', '20');
+    atmText.setAttribute('y', '115');
+    atmText.setAttribute('font-size', '11');
+    atmText.setAttribute('fill', '#ff6f00');
+    atmText.textContent = '大气压';
+    svg.appendChild(atmText);
+  }
+
+  // 初始化活塞实验可视化
+  function initPistonViz() {
+    const viz = document.getElementById('pistonViz');
+    if (!viz) return;
+    
+    const svg = viz.querySelector('svg');
+    if (!svg) return;
+    
+    svg.innerHTML = '';
+    svg.setAttribute('viewBox', '0 0 200 120');
+    
+    // 背景
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('width', '200');
+    bg.setAttribute('height', '120');
+    bg.setAttribute('fill', '#fafafa');
+    bg.setAttribute('rx', '8');
+    svg.appendChild(bg);
+    
+    // 气缸
+    const cylinder = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    cylinder.setAttribute('x', '70');
+    cylinder.setAttribute('y', '30');
+    cylinder.setAttribute('width', '60');
+    cylinder.setAttribute('height', '70');
+    cylinder.setAttribute('fill', 'none');
+    cylinder.setAttribute('stroke', '#455a64');
+    cylinder.setAttribute('stroke-width', '3');
+    svg.appendChild(cylinder);
+    
+    // 气体区域
+    const gas = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    gas.setAttribute('x', '72');
+    gas.setAttribute('y', '50');
+    gas.setAttribute('width', '56');
+    gas.setAttribute('height', '48');
+    gas.setAttribute('fill', '#bbdefb');
+    gas.setAttribute('opacity', '0.5');
+    svg.appendChild(gas);
+    
+    // 活塞
+    const piston = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    piston.setAttribute('id', 'pistonRect');
+    piston.setAttribute('x', '70');
+    piston.setAttribute('y', '40');
+    piston.setAttribute('width', '60');
+    piston.setAttribute('height', '10');
+    piston.setAttribute('fill', '#616161');
+    piston.setAttribute('stroke', '#424242');
+    piston.setAttribute('stroke-width', '1.5');
+    svg.appendChild(piston);
+    
+    // 活塞杆
+    const rod = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rod.setAttribute('x', '97');
+    rod.setAttribute('y', '10');
+    rod.setAttribute('width', '6');
+    rod.setAttribute('height', '30');
+    rod.setAttribute('fill', '#757575');
+    svg.appendChild(rod);
+    
+    // 力箭头组
+    const arrowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    arrowGroup.setAttribute('id', 'arrowGroup');
+    
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    arrow.setAttribute('d', 'M100,5 L100,15 M95,10 L100,15 L105,10');
+    arrow.setAttribute('stroke', '#d32f2f');
+    arrow.setAttribute('stroke-width', '2.5');
+    arrow.setAttribute('fill', 'none');
+    arrow.setAttribute('stroke-linecap', 'round');
+    arrow.setAttribute('stroke-linejoin', 'round');
+    arrowGroup.appendChild(arrow);
+    
+    const forceLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    forceLabel.setAttribute('x', '110');
+    forceLabel.setAttribute('y', '12');
+    forceLabel.setAttribute('font-size', '12');
+    forceLabel.setAttribute('fill', '#d32f2f');
+    forceLabel.textContent = '压力F';
+    arrowGroup.appendChild(forceLabel);
+    
+    svg.appendChild(arrowGroup);
+    
+    // 压强标注
+    const pressureText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    pressureText.setAttribute('id', 'pressureText');
+    pressureText.setAttribute('x', '140');
+    pressureText.setAttribute('y', '70');
+    pressureText.setAttribute('font-size', '13');
+    pressureText.setAttribute('fill', '#1976d2');
+    pressureText.setAttribute('font-weight', 'bold');
+    pressureText.textContent = '压强: 10000 Pa';
+    svg.appendChild(pressureText);
+    
+    // 面积标注
+    const areaText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    areaText.setAttribute('x', '75');
+    areaText.setAttribute('y', '110');
+    areaText.setAttribute('font-size', '11');
+    areaText.setAttribute('fill', '#424242');
+    areaText.textContent = '面积S=0.01m²';
+    svg.appendChild(areaText);
+  }
+
+  // 页面加载完成后初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      initTorricelliViz();
+      initPistonViz();
+    });
+  } else {
+    initTorricelliViz();
+    initPistonViz();
+  }
+})();
+</script>
+</body>
 </html>

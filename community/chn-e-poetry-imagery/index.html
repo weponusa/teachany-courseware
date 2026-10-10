@@ -743,5 +743,284 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.toggleBuddy !== 'undefined') return;
+
+  // ===== toggleBuddy =====
+  window.toggleBuddy = function() {
+    const bubble = document.getElementById('buddyBubble');
+    if (!bubble) return;
+    
+    if (bubble.style.display === 'none' || !bubble.style.display) {
+      bubble.style.display = 'block';
+      bubble.style.animation = 'fadeIn 0.3s ease';
+    } else {
+      bubble.style.display = 'none';
+    }
+  };
+
+  // ===== goScreen =====
+  window.goScreen = function(screenId) {
+    const allScreens = document.querySelectorAll('.screen');
+    allScreens.forEach(s => s.classList.remove('active'));
+    
+    const target = document.getElementById(screenId);
+    if (target) {
+      target.classList.add('active');
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // ===== 画布绘图辅助函数 =====
+  function drawImageryScene(canvas, type) {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (type === 'moon') {
+      // 底层：夜空渐变
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#0d1b2a');
+      skyGrad.addColorStop(1, '#1b263b');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // 星星
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      for (let i = 0; i < 30; i++) {
+        const x = Math.random() * w;
+        const y = Math.random() * h * 0.6;
+        ctx.beginPath();
+        ctx.arc(x, y, Math.random() * 1.5 + 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 中层：月亮
+      const moonX = w * 0.7;
+      const moonY = h * 0.25;
+      const moonR = 50;
+      
+      ctx.fillStyle = '#f4e8c1';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 月亮阴影（环形山）
+      ctx.fillStyle = 'rgba(200,180,140,0.3)';
+      ctx.beginPath();
+      ctx.arc(moonX - 15, moonY - 10, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(moonX + 10, moonY + 15, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 山峦剪影
+      ctx.fillStyle = '#0a1128';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.7);
+      ctx.lineTo(w * 0.2, h * 0.5);
+      ctx.lineTo(w * 0.4, h * 0.6);
+      ctx.lineTo(w * 0.6, h * 0.45);
+      ctx.lineTo(w * 0.8, h * 0.55);
+      ctx.lineTo(w, h * 0.65);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // 标注
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('明月', moonX + 60, moonY - 20);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(moonX + 50, moonY);
+      ctx.lineTo(moonX + 58, moonY - 18);
+      ctx.stroke();
+
+      ctx.fillText('远山剪影', w * 0.5, h * 0.5 - 10);
+      ctx.fillText('（营造意境）', w * 0.48, h * 0.5 + 8);
+
+    } else if (type === 'willow') {
+      // 底层：春日天空
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.6);
+      skyGrad.addColorStop(0, '#87ceeb');
+      skyGrad.addColorStop(1, '#b0e0e6');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // 地面
+      ctx.fillStyle = '#8d6e63';
+      ctx.fillRect(0, h * 0.75, w, h * 0.25);
+
+      // 中层：柳树主干
+      const trunkX = w * 0.3;
+      const trunkY = h * 0.75;
+      
+      ctx.strokeStyle = '#6d4c41';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(trunkX, trunkY);
+      ctx.lineTo(trunkX, trunkY - 120);
+      ctx.stroke();
+
+      // 柳枝（5条）
+      ctx.strokeStyle = '#4caf50';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 5; i++) {
+        const startY = trunkY - 100 + i * 15;
+        const startX = trunkX + (i % 2 === 0 ? 5 : -5);
+        
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.quadraticCurveTo(
+          startX + 40 + i * 10,
+          startY + 60,
+          startX + 30 + i * 8,
+          startY + 120
+        );
+        ctx.stroke();
+
+        // 柳叶（每枝3-4片）
+        for (let j = 0; j < 4; j++) {
+          const t = j / 3;
+          const leafX = startX + (40 + i * 10) * t * 0.7 + (30 + i * 8) * t * 0.3;
+          const leafY = startY + 60 * t * 0.7 + 120 * t * 0.3;
+          
+          ctx.fillStyle = '#66bb6a';
+          ctx.beginPath();
+          ctx.ellipse(leafX, leafY, 8, 3, Math.PI / 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // 标注
+      ctx.fillStyle = '#2f7d32';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('柳枝', trunkX + 80, trunkY - 60);
+      ctx.strokeStyle = '#2f7d32';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(trunkX + 40, trunkY - 50);
+      ctx.lineTo(trunkX + 78, trunkY - 58);
+      ctx.stroke();
+
+      ctx.fillText('依依垂柳', trunkX + 50, trunkY - 20);
+      ctx.fillText('（表达离别）', trunkX + 45, trunkY - 2);
+
+    } else if (type === 'plum') {
+      // 底层：冬日背景
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#e8eaf6');
+      skyGrad.addColorStop(1, '#c5cae9');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // 雪地
+      ctx.fillStyle = '#f5f5f5';
+      ctx.fillRect(0, h * 0.7, w, h * 0.3);
+
+      // 中层：梅花枝干
+      const branchX = w * 0.2;
+      const branchY = h * 0.7;
+
+      ctx.strokeStyle = '#5d4037';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(branchX, branchY);
+      ctx.lineTo(branchX + 80, branchY - 100);
+      ctx.stroke();
+
+      // 分支
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(branchX + 40, branchY - 50);
+      ctx.lineTo(branchX + 100, branchY - 80);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(branchX + 60, branchY - 75);
+      ctx.lineTo(branchX + 130, branchY - 60);
+      ctx.stroke();
+
+      // 梅花（8朵）
+      const flowers = [
+        [branchX + 80, branchY - 100],
+        [branchX + 100, branchY - 80],
+        [branchX + 130, branchY - 60],
+        [branchX + 50, branchY - 60],
+        [branchX + 70, branchY - 85],
+        [branchX + 110, branchY - 70],
+        [branchX + 90, branchY - 95],
+        [branchX + 120, branchY - 75]
+      ];
+
+      flowers.forEach(([fx, fy]) => {
+        // 花瓣（5瓣）
+        ctx.fillStyle = '#ffcdd2';
+        for (let i = 0; i < 5; i++) {
+          const angle = (i * Math.PI * 2) / 5 - Math.PI / 2;
+          const px = fx + Math.cos(angle) * 8;
+          const py = fy + Math.sin(angle) * 8;
+          ctx.beginPath();
+          ctx.arc(px, py, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // 花蕊
+        ctx.fillStyle = '#ffeb3b';
+        ctx.beginPath();
+        ctx.arc(fx, fy, 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 标注
+      ctx.fillStyle = '#c62828';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('梅花', branchX + 140, branchY - 55);
+      ctx.strokeStyle = '#c62828';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(branchX + 130, branchY - 60);
+      ctx.lineTo(branchX + 138, branchY - 53);
+      ctx.stroke();
+
+      ctx.fillText('傲雪枝头', branchX + 90, branchY - 110);
+      ctx.fillText('（象征坚韧）', branchX + 85, branchY - 92);
+    }
+  }
+
+  // ===== 自动初始化画布 =====
+  function initCanvases() {
+    const canvases = document.querySelectorAll('canvas[data-imagery]');
+    canvases.forEach(canvas => {
+      const type = canvas.getAttribute('data-imagery');
+      if (type && canvas.width > 0) {
+        drawImageryScene(canvas, type);
+      }
+    });
+  }
+
+  // 页面加载后初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCanvases);
+  } else {
+    initCanvases();
+  }
+
+  // 暴露绘图函数供外部调用
+  window.drawImageryScene = drawImageryScene;
+
+})();
+</script>
 </body>
 </html>

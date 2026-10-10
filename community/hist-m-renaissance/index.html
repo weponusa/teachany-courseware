@@ -863,5 +863,184 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script>
 TeachAnyScenes.mount('diffusion', {"slider": "pressCount", "sliderOut": "pressVal", "slider2": "dailyOut", "slider2Out": "dailyVal", "canvas": "printingCanvas", "readout": "reachStat"});
 </script>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.showMasterDetail !== 'undefined') return;
+
+  // ========== showMasterDetail ==========
+  window.showMasterDetail = function(masterId) {
+    const details = {
+      davinci: {
+        name: '列奥纳多·达·芬奇',
+        life: '1452 – 1519',
+        works: ['《蒙娜丽莎》- 神秘微笑体现人的内心世界', '《最后的晚餐》- 透视法与人物心理刻画', '《维特鲁威人》- 人体比例研究'],
+        desc: '全才典范：画家、解剖学家、工程师、发明家。他的笔记涵盖飞行器、武器、水利，体现人文主义"人无所不能"的信念。'
+      },
+      michelangelo: {
+        name: '米开朗基罗',
+        life: '1475 – 1564',
+        works: ['《大卫》- 5.17米高，展现人体力量与尊严', '《西斯廷教堂天顶画》- 创世纪场景，人物肌肉饱满', '《圣母哀悼基督》- 将神圣题材人性化'],
+        desc: '雕塑与绘画大师。他笔下的人物充满力量感，即使是宗教题材也强调人的身体之美，将神性与人性融合。'
+      },
+      raphael: {
+        name: '拉斐尔',
+        life: '1483 – 1520',
+        works: ['《雅典学院》- 集古希腊哲学家于一堂，象征理性', '《西斯廷圣母》- 圣母形象温柔亲切，接近真实母亲', '《美惠三女神》- 古典美与和谐'],
+        desc: '以和谐、优雅著称。《雅典学院》将柏拉图、亚里士多德等哲学家画在教堂，体现人文主义对古典理性的推崇。'
+      }
+    };
+    
+    const data = details[masterId];
+    if (!data) return;
+    
+    let modal = document.getElementById('master-detail-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'master-detail-modal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+      modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+      document.body.appendChild(modal);
+    }
+    
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:12px;max-width:600px;width:100%;padding:30px;max-height:90vh;overflow-y:auto;position:relative;">
+        <button onclick="document.getElementById('master-detail-modal').style.display='none'" style="position:absolute;top:15px;right:15px;background:none;border:none;font-size:24px;cursor:pointer;color:#666;">×</button>
+        <h2 style="color:var(--renaissance);margin-top:0;">${data.name}</h2>
+        <p style="color:#666;font-size:0.9em;margin-bottom:20px;">${data.life}</p>
+        <h3 style="font-size:1.1em;margin-bottom:10px;">代表作品</h3>
+        <ul style="line-height:1.8;margin-bottom:20px;">
+          ${data.works.map(w => `<li>${w}</li>`).join('')}
+        </ul>
+        <h3 style="font-size:1.1em;margin-bottom:10px;">人文主义体现</h3>
+        <p style="line-height:1.7;color:#333;">${data.desc}</p>
+      </div>
+    `;
+    modal.style.display = 'flex';
+  };
+
+  // ========== playTrack ==========
+  window.playTrack = function(trackId) {
+    const tracksScript = document.querySelector('script[type="application/json"]');
+    if (!tracksScript) return;
+    
+    let tracks;
+    try {
+      tracks = JSON.parse(tracksScript.textContent);
+    } catch(e) { return; }
+    
+    const track = tracks.find(t => t.id === trackId);
+    if (!track) return;
+    
+    let player = document.getElementById('global-audio-player');
+    if (!player) {
+      player = document.createElement('audio');
+      player.id = 'global-audio-player';
+      player.controls = true;
+      player.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9998;box-shadow:0 4px 12px rgba(0,0,0,0.3);border-radius:8px;';
+      document.body.appendChild(player);
+    }
+    
+    if (player.src === track.src && !player.paused) {
+      player.pause();
+      player.currentTime = 0;
+    } else {
+      player.src = track.src;
+      player.play().catch(() => {});
+    }
+    
+    const buttons = document.querySelectorAll('.audio-track-list button');
+    buttons.forEach(btn => {
+      btn.style.background = 'none';
+      btn.style.color = 'inherit';
+    });
+    
+    const activeBtn = Array.from(buttons).find(btn => btn.onclick && btn.onclick.toString().includes(trackId));
+    if (activeBtn) {
+      activeBtn.style.background = 'var(--renaissance)';
+      activeBtn.style.color = '#fff';
+    }
+  };
+
+  // ========== switchBranch ==========
+  window.switchBranch = function(branchName) {
+    const sections = document.querySelectorAll('.branch-section');
+    sections.forEach(sec => sec.style.display = 'none');
+    
+    const target = document.querySelector(`.branch-section[data-branch="${branchName}"]`);
+    if (target) target.style.display = 'block';
+    
+    const buttons = document.querySelectorAll('.branch-btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    const activeBtn = document.querySelector(`.branch-btn[data-branch-btn="${branchName}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+  };
+
+  // ========== answerCT ==========
+  window.answerCT = function(element, choice) {
+    const isCorrect = element.getAttribute('data-correct') === 'true';
+    const feedback = document.getElementById('ct-feedback');
+    
+    const options = document.querySelectorAll('.option');
+    options.forEach(opt => {
+      opt.style.pointerEvents = 'none';
+      opt.style.opacity = '0.6';
+      if (opt.getAttribute('data-correct') === 'true') {
+        opt.style.background = '#d4edda';
+        opt.style.borderColor = '#28a745';
+      }
+    });
+    
+    element.style.opacity = '1';
+    if (isCorrect) {
+      element.style.background = '#d4edda';
+      element.style.borderColor = '#28a745';
+      feedback.innerHTML = `
+        <div style="background:#d4edda;border:1px solid #28a745;padding:15px;border-radius:8px;margin-top:15px;">
+          <strong style="color:#155724;">✅ 正确！</strong><br>
+          <span style="color:#155724;line-height:1.6;">德国政治分裂（神圣罗马帝国名存实亡，300多个诸侯国各自为政）给了路德"保护伞"。萨克森选帝侯腓特烈保护路德，教皇鞭长莫及。而意大利就在罗马教廷眼皮底下，改革者很难生存。<br><br>
+          <em>这道题考查的是"结构性条件"思维：重大历史事件的发生地往往不是偶然，而是该地区的政治、经济、文化结构提供了可能性。</em></span>
+        </div>
+      `;
+    } else {
+      element.style.background = '#f8d7da';
+      element.style.borderColor = '#dc3545';
+      const hints = {
+        A: '虔诚度不是关键。意大利也有虔诚的人，但改革需要的是政治空间，不是情感强度。',
+        B: '这是对文艺复兴的误解。人文主义不等于不信教，达芬奇、米开朗基罗都画宗教题材。',
+        D: '印刷术是在德国美因茨发明（古腾堡，1450年代），但很快传遍欧洲，意大利也有印刷厂。'
+      };
+      feedback.innerHTML = `
+        <div style="background:#f8d7da;border:1px solid #dc3545;padding:15px;border-radius:8px;margin-top:15px;">
+          <strong style="color:#721c24;">❌ 再想想</strong><br>
+          <span style="color:#721c24;line-height:1.6;">${hints[choice] || '提示：关注政治结构，而非文化或技术单一因素。'}<br><br>
+          正确答案已用绿色标出，看看 C 选项的解释。</span>
+        </div>
+      `;
+    }
+    
+    setTimeout(() => {
+      options.forEach(opt => {
+        opt.style.pointerEvents = 'auto';
+        opt.style.opacity = '1';
+        if (opt !== element && opt.getAttribute('data-correct') !== 'true') {
+          opt.style.background = '';
+          opt.style.borderColor = '';
+        }
+      });
+    }, 5000);
+  };
+
+  // 初始化：默认显示 normal 分支
+  const normalSection = document.querySelector('.branch-section[data-branch="normal"]');
+  if (normalSection) {
+    document.querySelectorAll('.branch-section').forEach(s => s.style.display = 'none');
+    normalSection.style.display = 'block';
+  }
+})();
+</script>
 </body>
 </html>

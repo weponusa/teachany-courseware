@@ -1143,7 +1143,174 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 </section>
 
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.resetObjTest !== 'undefined' && 
+      typeof window.askTutor !== 'undefined' && 
+      typeof window.playAudio !== 'undefined') return;
+
+  // ========== resetObjTest ==========
+  if (typeof window.resetObjTest === 'undefined') {
+    window.resetObjTest = function() {
+      const grid = document.getElementById('objectGrid');
+      const scoreEl = document.getElementById('objScore');
+      if (!grid) return;
+
+      const objects = [
+        { name: '铁钉', icon: '🔩', magnetic: true },
+        { name: '铜币', icon: '🪙', magnetic: false },
+        { name: '铝罐', icon: '🥫', magnetic: false },
+        { name: '钢勺', icon: '🥄', magnetic: true },
+        { name: '塑料尺', icon: '📏', magnetic: false },
+        { name: '铁夹', icon: '📎', magnetic: true },
+        { name: '木块', icon: '🧱', magnetic: false },
+        { name: '镍币', icon: '🪙', magnetic: true },
+        { name: '玻璃杯', icon: '🥃', magnetic: false },
+        { name: '钢钉', icon: '🔨', magnetic: true }
+      ];
+
+      grid.innerHTML = '';
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))';
+      grid.style.gap = '12px';
+      grid.style.marginTop = '1rem';
+
+      objects.forEach(obj => {
+        const item = document.createElement('div');
+        item.className = 'object-item';
+        item.style.cssText = 'background:rgba(139,92,246,.08);border:2px solid rgba(139,92,246,.3);border-radius:12px;padding:1rem;text-align:center;cursor:pointer;transition:all .3s;';
+        item.innerHTML = `
+          <div style="font-size:2.5rem;margin-bottom:.5rem;">${obj.icon}</div>
+          <div style="font-size:.9rem;color:#e2e8f0;">${obj.name}</div>
+        `;
+        
+        item.onclick = function() {
+          if (this.classList.contains('tested')) return;
+          this.classList.add('tested');
+          
+          if (obj.magnetic) {
+            this.style.background = 'rgba(52,211,153,.2)';
+            this.style.borderColor = 'rgba(52,211,153,.6)';
+            this.innerHTML += '<div style="margin-top:.5rem;color:#34d399;font-weight:bold;">✓ 能吸引</div>';
+          } else {
+            this.style.background = 'rgba(239,68,68,.15)';
+            this.style.borderColor = 'rgba(239,68,68,.5)';
+            this.innerHTML += '<div style="margin-top:.5rem;color:#ef4444;font-weight:bold;">✗ 不能吸引</div>';
+          }
+          
+          updateScore();
+        };
+        
+        grid.appendChild(item);
+      });
+
+      if (scoreEl) scoreEl.innerHTML = '';
+
+      function updateScore() {
+        const tested = grid.querySelectorAll('.tested').length;
+        const total = objects.length;
+        if (scoreEl) {
+          scoreEl.innerHTML = `<div style="text-align:center;margin-top:1rem;font-size:1.1rem;color:var(--accent);">已测试：${tested} / ${total}</div>`;
+        }
+      }
+    };
+
+    // 初始化
+    if (document.getElementById('objectGrid')) {
+      window.resetObjTest();
+    }
+  }
+
+  // ========== askTutor ==========
+  if (typeof window.askTutor === 'undefined') {
+    window.askTutor = function(btn) {
+      const chatDiv = document.getElementById('tutorChat');
+      const contentDiv = document.getElementById('tutorChatContent');
+      if (!chatDiv || !contentDiv) return;
+
+      const question = btn.textContent.trim();
+      
+      const answers = {
+        '🔍 磁铁掰断会怎样？': '磁铁掰断后，每一小段都会变成新的磁铁，仍然有N极和S极！这是因为磁性来自内部微观磁畴的排列，无论怎么分割，每一段都保持完整的磁极结构。',
+        '🌡️ 加热磁铁会失磁吗？': '会的！当磁铁被加热到"居里温度"（铁磁体约770℃）以上时，内部磁畴会因热运动而变得混乱，磁性就会消失。冷却后也不会自动恢复磁性。',
+        '🚂 磁悬浮列车原理？': '磁悬浮列车利用强大的电磁铁产生的磁场，使列车悬浮在轨道上方，消除了摩擦力。通过控制磁场变化推动列车前进，速度可达400km/h以上！',
+        '🔋 磁铁和电有什么关系？': '磁和电密切相关！电流通过导线会产生磁场（电磁铁原理），而磁铁在线圈中运动又能产生电流（发电机原理）。这就是"电磁感应"现象，是现代电力技术的基础。'
+      };
+
+      const answer = answers[question] || '这是个好问题！磁铁的世界充满奥秘，建议你通过实验和观察来探索更多磁现象的规律。';
+
+      chatDiv.style.display = 'block';
+      contentDiv.innerHTML = `
+        <div style="margin-bottom:.8rem;color:#a78bfa;font-weight:bold;">❓ ${question}</div>
+        <div style="color:#e2e8f0;line-height:1.8;">${answer}</div>
+      `;
+      
+      chatDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+  }
+
+  // ========== playAudio ==========
+  if (typeof window.playAudio === 'undefined') {
+    let currentAudio = null;
+    let currentItem = null;
+
+    window.playAudio = function(url, itemEl) {
+      if (!url || !itemEl) return;
+
+      // 停止当前播放
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        if (currentItem) {
+          const btn = currentItem.querySelector('.audio-play-btn');
+          if (btn) btn.textContent = '▶';
+          currentItem.style.background = '';
+        }
+      }
+
+      // 如果点击的是同一个，则停止
+      if (currentItem === itemEl && currentAudio && !currentAudio.paused) {
+        currentAudio = null;
+        currentItem = null;
+        return;
+      }
+
+      // 播放新音频
+      currentAudio = new Audio(url);
+      currentItem = itemEl;
+
+      const btn = itemEl.querySelector('.audio-play-btn');
+      if (btn) btn.textContent = '⏸';
+      itemEl.style.background = 'rgba(139,92,246,.15)';
+
+      currentAudio.play().catch(err => {
+        console.warn('Audio play failed:', err);
+        if (btn) btn.textContent = '▶';
+        itemEl.style.background = '';
+      });
+
+      currentAudio.onended = function() {
+        if (btn) btn.textContent = '▶';
+        itemEl.style.background = '';
+        currentAudio = null;
+        currentItem = null;
+      };
+
+      currentAudio.onerror = function() {
+        if (btn) btn.textContent = '▶';
+        itemEl.style.background = '';
+        currentAudio = null;
+        currentItem = null;
+      };
+    };
+  }
+
+})();
+</script>
+</body>
 <script src="../../assets/engines/canvas-lab/v1/lab.js"></script>
 <script src="../../assets/engines/canvas-lab/v1/scenes.js"></script>
 <script>

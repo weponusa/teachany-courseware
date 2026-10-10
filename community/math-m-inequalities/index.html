@@ -676,5 +676,69 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   </div>
 </section>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.answerModule !== 'undefined') return;
+
+  window.answerModule = function(moduleId, selectedAnswer, correctAnswer) {
+    const feedbackId = 'mod-fb' + moduleId;
+    const feedbackEl = document.getElementById(feedbackId);
+    if (!feedbackEl) return;
+
+    // 移除之前的反馈样式
+    feedbackEl.style.marginTop = '12px';
+    feedbackEl.style.padding = '12px';
+    feedbackEl.style.borderRadius = '8px';
+    feedbackEl.style.fontSize = '0.95rem';
+    feedbackEl.style.fontWeight = '500';
+
+    if (selectedAnswer === correctAnswer) {
+      feedbackEl.style.background = '#d4edda';
+      feedbackEl.style.color = '#155724';
+      feedbackEl.style.border = '1px solid #c3e6cb';
+      feedbackEl.innerHTML = '✅ 正确！x > 2 表示 x 大于 2，不包含 2 本身，所以端点 2 用<strong>空心圆</strong>表示。';
+    } else {
+      feedbackEl.style.background = '#f8d7da';
+      feedbackEl.style.color = '#721c24';
+      feedbackEl.style.border = '1px solid #f5c6cb';
+      
+      let explanation = '';
+      if (selectedAnswer === 'A') {
+        explanation = '❌ 不对哦！实心圆表示"包含"该点，但 x > 2 不包含 2。';
+      } else if (selectedAnswer === 'C') {
+        explanation = '❌ 不对哦！端点必须标记出来，用空心圆表示"不包含 2"。';
+      }
+      
+      feedbackEl.innerHTML = explanation + '<br><small>提示：> 和 < 用空心圆，≥ 和 ≤ 用实心圆。</small>';
+    }
+
+    // 高亮正确答案按钮
+    const container = feedbackEl.previousElementSibling;
+    if (container && container.classList.contains('options')) {
+      const buttons = container.querySelectorAll('.option-btn');
+      buttons.forEach(btn => {
+        btn.style.transition = 'all 0.3s';
+        const btnAnswer = btn.textContent.trim().charAt(0);
+        
+        if (btnAnswer === correctAnswer) {
+          btn.style.background = '#d4edda';
+          btn.style.borderColor = '#28a745';
+          btn.style.color = '#155724';
+        } else if (btnAnswer === selectedAnswer && selectedAnswer !== correctAnswer) {
+          btn.style.background = '#f8d7da';
+          btn.style.borderColor = '#dc3545';
+          btn.style.color = '#721c24';
+        } else {
+          btn.style.background = '#f8f9fa';
+          btn.style.borderColor = '#ddd';
+          btn.style.color = '#666';
+        }
+      });
+    }
+  };
+})();
+</script>
+</body>
 </html>

@@ -1739,5 +1739,317 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.goSection !== 'undefined') return;
+
+  // 导航函数
+  window.goSection = function(sectionIndex) {
+    const sections = document.querySelectorAll('.section[id^="sec-"], section[id="anchor"], section[id="pretest"]');
+    sections.forEach(s => s.style.display = 'none');
+    
+    const targetMap = {
+      0: 'anchor',
+      1: 'sec-structure',
+      2: 'sec-isare',
+      3: 'sec-scene',
+      4: 'sec-convert',
+      5: 'sec-summary',
+      6: 'sec-summary'
+    };
+    
+    const targetId = targetMap[sectionIndex];
+    const target = document.getElementById(targetId);
+    if (target) {
+      target.style.display = 'block';
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // is/are 填空检查
+  window.checkIsAre = function() {
+    const answers = ['is', 'are', 'is'];
+    const containers = document.querySelectorAll('#isareQuiz .fill-blank-container');
+    let correct = 0;
+    
+    containers.forEach((container, idx) => {
+      const input = container.querySelector('.blank-input');
+      const feedback = container.querySelector('.fb-feedback');
+      const userAnswer = input.value.trim().toLowerCase();
+      
+      if (userAnswer === answers[idx]) {
+        feedback.textContent = '✓';
+        feedback.style.color = '#4caf50';
+        input.style.borderColor = '#4caf50';
+        correct++;
+      } else {
+        feedback.textContent = '✗ 应该是 ' + answers[idx];
+        feedback.style.color = '#f44336';
+        input.style.borderColor = '#f44336';
+      }
+    });
+    
+    if (correct === answers.length) {
+      setTimeout(() => alert('全对！你已经掌握了 is/are 的用法！🎉'), 100);
+    }
+  };
+
+  // 清除拖拽区内容
+  window.clearDrop = function(dropZone) {
+    if (dropZone.classList.contains('drop-zone')) {
+      dropZone.textContent = '?';
+      dropZone.style.background = '';
+      dropZone.style.color = '';
+    }
+  };
+
+  // 场景造句检查
+  window.checkScene = function() {
+    const dropZones = document.querySelectorAll('#sceneQuiz .drop-zone');
+    let correct = 0;
+    
+    dropZones.forEach(zone => {
+      const expected = zone.getAttribute('data-ans');
+      const actual = zone.textContent.trim().toLowerCase();
+      
+      if (actual === expected) {
+        zone.style.background = '#c8e6c9';
+        zone.style.color = '#2e7d32';
+        correct++;
+      } else if (actual !== '?') {
+        zone.style.background = '#ffcdd2';
+        zone.style.color = '#c62828';
+      }
+    });
+    
+    const feedback = document.getElementById('sceneFb');
+    if (feedback) {
+      feedback.textContent = `${correct}/${dropZones.length} 正确`;
+      feedback.style.color = correct === dropZones.length ? '#4caf50' : '#ff9800';
+      feedback.style.display = 'block';
+    }
+  };
+
+  // 句型转换检查
+  window.checkConvert = function() {
+    const input1 = document.getElementById('conv1Input');
+    const input2 = document.getElementById('conv2Input');
+    
+    if (!input1 || !input2) return;
+    
+    const fb1 = input1.nextElementSibling;
+    const fb2 = input2.nextElementSibling;
+    
+    // 答案1: There is not/isn't a dog under the tree.
+    const ans1 = input1.value.trim().toLowerCase();
+    const correct1 = ans1.includes('there') && ans1.includes('is') && 
+                     (ans1.includes('not') || ans1.includes("n't")) && 
+                     ans1.includes('dog');
+    
+    if (correct1) {
+      fb1.textContent = '✓ 正确！';
+      fb1.style.color = '#4caf50';
+      input1.style.borderColor = '#4caf50';
+    } else {
+      fb1.textContent = '✗ 参考答案：There is not a dog under the tree.';
+      fb1.style.color = '#f44336';
+      input1.style.borderColor = '#f44336';
+    }
+    
+    // 答案2: Are there three birds in the sky?
+    const ans2 = input2.value.trim().toLowerCase();
+    const correct2 = ans2.startsWith('are') && ans2.includes('there') && 
+                     ans2.includes('bird') && ans2.includes('?');
+    
+    if (correct2) {
+      fb2.textContent = '✓ 正确！';
+      fb2.style.color = '#4caf50';
+      input2.style.borderColor = '#4caf50';
+    } else {
+      fb2.textContent = '✗ 参考答案：Are there three birds in the sky?';
+      fb2.style.color = '#f44336';
+      input2.style.borderColor = '#f44336';
+    }
+  };
+
+  // 创意任务检查
+  window.checkCreative = function() {
+    const textarea = document.getElementById('creativeTask');
+    const feedback = document.getElementById('creativeFb');
+    
+    if (!textarea || !feedback) return;
+    
+    const text = textarea.value.trim();
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const thereBeCount = sentences.filter(s => 
+      s.toLowerCase().includes('there') && (s.toLowerCase().includes(' is ') || s.toLowerCase().includes(' are '))
+    ).length;
+    
+    feedback.style.display = 'block';
+    feedback.style.marginTop = '14px';
+    feedback.style.padding = '14px';
+    feedback.style.borderRadius = '12px';
+    
+    if (thereBeCount >= 3) {
+      feedback.style.background = '#c8e6c9';
+      feedback.style.color = '#2e7d32';
+      feedback.innerHTML = `
+        <strong>🎉 太棒了！</strong><br>
+        你写了 ${thereBeCount} 个 There be 句子！继续保持这样的练习，你会越来越熟练！
+      `;
+    } else if (thereBeCount > 0) {
+      feedback.style.background = '#fff9c4';
+      feedback.style.color = '#f57f17';
+      feedback.innerHTML = `
+        <strong>💪 不错的开始！</strong><br>
+        你写了 ${thereBeCount} 个 There be 句子，再加 ${3 - thereBeCount} 个就完美了！
+      `;
+    } else {
+      feedback.style.background = '#ffcdd2';
+      feedback.style.color = '#c62828';
+      feedback.innerHTML = `
+        <strong>💡 提示：</strong><br>
+        记得用 "There is..." 或 "There are..." 开头哦！试着描述房间里的物品。
+      `;
+    }
+  };
+
+  // AI 生成句子
+  window.generateAISentence = function() {
+    const input = document.getElementById('aiInput');
+    const output = document.getElementById('aiOutput');
+    const sentenceText = document.getElementById('aiSentenceText');
+    
+    if (!input || !output || !sentenceText) return;
+    
+    const scene = input.value.trim();
+    if (!scene) {
+      alert('请先输入一个场景！');
+      return;
+    }
+    
+    // 简单的模板生成
+    const templates = [
+      { pattern: /classroom/i, sentences: [
+        'There is a big blackboard on the wall.',
+        'There are thirty desks in the classroom.',
+        'There is a computer on the teacher\'s desk.'
+      ]},
+      { pattern: /park/i, sentences: [
+        'There are many trees in the park.',
+        'There is a beautiful lake in the center.',
+        'There are some children playing on the grass.'
+      ]},
+      { pattern: /bedroom/i, sentences: [
+        'There is a comfortable bed near the window.',
+        'There are some books on the shelf.',
+        'There is a lamp on the bedside table.'
+      ]}
+    ];
+    
+    let result = 'There is something interesting in ' + scene + '.';
+    for (let t of templates) {
+      if (t.pattern.test(scene)) {
+        result = t.sentences[Math.floor(Math.random() * t.sentences.length)];
+        break;
+      }
+    }
+    
+    sentenceText.textContent = result;
+    output.style.display = 'block';
+    output.style.animation = 'fadeIn 0.5s';
+  };
+
+  // 完成庆祝
+  window.showCelebration = function() {
+    const section = document.getElementById('sec-summary');
+    if (!section) return;
+    
+    const celebration = document.createElement('div');
+    celebration.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      text-align: center;
+      z-index: 10000;
+      animation: bounceIn 0.6s;
+    `;
+    
+    celebration.innerHTML = `
+      <div style="font-size: 64px; margin-bottom: 20px;">🎉</div>
+      <h2 style="color: #4caf50; margin-bottom: 16px;">恭喜你完成课程！</h2>
+      <p style="font-size: 18px; color: #666; margin-bottom: 24px;">
+        你已经掌握了 There be 句型的核心用法！<br>
+        继续练习，你会越来越棒！
+      </p>
+      <button onclick="this.parentElement.remove()" 
+              style="padding: 12px 32px; background: #4caf50; color: white; 
+                     border: none; border-radius: 24px; font-size: 16px; 
+                     cursor: pointer; font-weight: bold;">
+        太好了！ ✨
+      </button>
+    `;
+    
+    document.body.appendChild(celebration);
+    
+    // 添加动画样式
+    if (!document.getElementById('celebrationStyle')) {
+      const style = document.createElement('style');
+      style.id = 'celebrationStyle';
+      style.textContent = `
+        @keyframes bounceIn {
+          0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+          50% { transform: translate(-50%, -50%) scale(1.05); }
+          100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  };
+
+  // 初始化拖拽功能（如果页面有拖拽词汇）
+  const wordOptions = document.querySelectorAll('.word-option');
+  if (wordOptions.length > 0) {
+    wordOptions.forEach(word => {
+      word.draggable = true;
+      word.addEventListener('dragstart', function(e) {
+        e.dataTransfer.setData('text', this.textContent.trim());
+      });
+    });
+    
+    const dropZones = document.querySelectorAll('.drop-zone');
+    dropZones.forEach(zone => {
+      zone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.style.background = '#e3f2fd';
+      });
+      
+      zone.addEventListener('dragleave', function() {
+        this.style.background = '';
+      });
+      
+      zone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        const text = e.dataTransfer.getData('text');
+        this.textContent = text;
+        this.style.background = '#fff9c4';
+        this.style.color = '#333';
+      });
+    });
+  }
+})();
+</script>
 </body>
 </html>

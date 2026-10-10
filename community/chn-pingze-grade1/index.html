@@ -823,5 +823,129 @@ TeachAnyScenes.mount('tone', {"line": [{"c": "白", "t": "仄"}, {"c": "日", "t
 var cv=document.getElementById('pingze-canvas'); if(cv) cv.style.display='block';
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.toggleTTS !== 'undefined') return;
+
+  let ttsEnabled = false;
+  let ttsUtterance = null;
+  let currentSectionIndex = 0;
+
+  // TTS 文本内容映射（根据课件主题：古诗节奏）
+  const ttsContents = [
+    "欢迎来到古诗里的秘密节奏课堂。今天我们将学习《小池》和《池上》两首古诗的平仄节奏。",
+    "《小池》是宋代诗人杨万里的作品。泉眼无声惜细流，树阴照水爱晴柔。小荷才露尖尖角，早有蜻蜓立上头。",
+    "让我们来感受这首诗的节奏。泉眼、无声、惜细流，每个词组都有自己的音律起伏。",
+    "《池上》是唐代诗人白居易的作品。小娃撑小艇，偷采白莲回。不解藏踪迹，浮萍一道开。",
+    "古诗的节奏美来自平仄的交替。平声字读音平缓，仄声字读音短促，就像音乐的高低音符。",
+    "试着用手打拍子，跟随诗句的节奏：平平、仄仄、平平仄。感受古诗的韵律之美。",
+    "通过今天的学习，你已经掌握了古诗节奏的秘密。继续探索更多古诗，发现更多美妙的节奏吧！"
+  ];
+
+  window.toggleTTS = function() {
+    const button = event.target;
+    const statusSpan = document.getElementById('tts-status');
+    
+    if (!statusSpan) return;
+
+    if (!ttsEnabled) {
+      // 启动 TTS
+      ttsEnabled = true;
+      button.textContent = '🔇 停止讲解';
+      statusSpan.textContent = '正在播放...';
+      statusSpan.style.color = '#4caf50';
+      
+      startTTS();
+    } else {
+      // 停止 TTS
+      ttsEnabled = false;
+      button.textContent = '🔊 语音讲解';
+      statusSpan.textContent = '已停止';
+      statusSpan.style.color = '#666';
+      
+      stopTTS();
+    }
+  };
+
+  function startTTS() {
+    if (!('speechSynthesis' in window)) {
+      const statusSpan = document.getElementById('tts-status');
+      if (statusSpan) {
+        statusSpan.textContent = '浏览器不支持语音';
+        statusSpan.style.color = '#f44336';
+      }
+      return;
+    }
+
+    currentSectionIndex = 0;
+    speakNextSection();
+  }
+
+  function speakNextSection() {
+    if (!ttsEnabled || currentSectionIndex >= ttsContents.length) {
+      if (ttsEnabled) {
+        const statusSpan = document.getElementById('tts-status');
+        if (statusSpan) {
+          statusSpan.textContent = '播放完成';
+          statusSpan.style.color = '#2196f3';
+        }
+        ttsEnabled = false;
+        const button = document.querySelector('#tts-controller button');
+        if (button) button.textContent = '🔊 语音讲解';
+      }
+      return;
+    }
+
+    const text = ttsContents[currentSectionIndex];
+    ttsUtterance = new SpeechSynthesisUtterance(text);
+    ttsUtterance.lang = 'zh-CN';
+    ttsUtterance.rate = 0.9;
+    ttsUtterance.pitch = 1.0;
+    ttsUtterance.volume = 1.0;
+
+    ttsUtterance.onend = function() {
+      currentSectionIndex++;
+      setTimeout(() => {
+        if (ttsEnabled) {
+          speakNextSection();
+        }
+      }, 800);
+    };
+
+    ttsUtterance.onerror = function(event) {
+      console.error('TTS error:', event);
+      const statusSpan = document.getElementById('tts-status');
+      if (statusSpan) {
+        statusSpan.textContent = '播放出错';
+        statusSpan.style.color = '#f44336';
+      }
+      stopTTS();
+    };
+
+    const statusSpan = document.getElementById('tts-status');
+    if (statusSpan) {
+      statusSpan.textContent = `播放中 (${currentSectionIndex + 1}/${ttsContents.length})`;
+    }
+
+    window.speechSynthesis.speak(ttsUtterance);
+  }
+
+  function stopTTS() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    ttsUtterance = null;
+    currentSectionIndex = 0;
+  }
+
+  // 页面卸载时清理
+  window.addEventListener('beforeunload', function() {
+    stopTTS();
+  });
+
+})();
+</script>
+</body>
 </html>

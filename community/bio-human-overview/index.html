@@ -1056,5 +1056,256 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "pyramidCanvas", "readout": "pyramidInfo", "bg": [{"t": "poly", "pts": [[120, 300], [660, 300], [600, 240], [180, 240]], "fill": "rgba(251,191,36,.35)", "stroke": "#f59e0b", "w": 2}, {"t": "poly", "pts": [[180, 240], [600, 240], [540, 180], [240, 180]], "fill": "rgba(52,211,153,.35)", "stroke": "#10b981", "w": 2}, {"t": "poly", "pts": [[240, 180], [540, 180], [480, 120], [300, 120]], "fill": "rgba(96,165,250,.35)", "stroke": "#60a5fa", "w": 2}, {"t": "poly", "pts": [[300, 120], [480, 120], [420, 60], [360, 60]], "fill": "rgba(244,114,182,.4)", "stroke": "#ec4899", "w": 2}], "parts": [{"x": 390, "y": 270, "name": "谷薯类（底层）", "info": "米饭、面条、馒头、红薯……提供主要能量，每天吃最多。", "r": 120, "lx": 390, "ly": 324}, {"x": 390, "y": 210, "name": "蔬菜水果类", "info": "提供维生素、无机盐和膳食纤维，每天要多吃。", "r": 110, "lx": 130, "ly": 208}, {"x": 390, "y": 150, "name": "肉蛋奶类", "info": "提供蛋白质和钙，长身体必需，但要适量。", "r": 100, "lx": 660, "ly": 152}, {"x": 390, "y": 90, "name": "油盐糖（塔尖）", "info": "提供能量但容易过量，要少吃；盐每天不超过 5 克。", "r": 90, "lx": 640, "ly": 76}], "tip": "👆 点击金字塔各层，看对应的食物与建议"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 音频播放器
+  if (typeof window.toggleAudioPlayer === 'undefined') {
+    let audioPlayerVisible = false;
+    let currentSegmentIndex = 0;
+    let audioElements = [];
+    let isPlaying = false;
+
+    window.toggleAudioPlayer = function() {
+      const player = document.getElementById('audioPlayer');
+      const badge = document.getElementById('audioBadge');
+      if (!player) return;
+
+      audioPlayerVisible = !audioPlayerVisible;
+      player.style.display = audioPlayerVisible ? 'block' : 'none';
+      
+      if (audioPlayerVisible && audioElements.length === 0) {
+        initAudioPlayer();
+      }
+    };
+
+    function initAudioPlayer() {
+      audioElements = Array.from(document.querySelectorAll('audio[id^="ta-audio-"]'));
+      if (audioElements.length === 0) return;
+
+      const segmentsContainer = document.getElementById('audioSegments');
+      const playBtn = document.getElementById('audioPlay');
+      const prevBtn = document.getElementById('audioPrev');
+      const nextBtn = document.getElementById('audioNext');
+
+      segmentsContainer.innerHTML = '';
+      audioElements.forEach((audio, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'segment-btn';
+        btn.textContent = `${idx + 1}`;
+        btn.onclick = () => playSegment(idx);
+        segmentsContainer.appendChild(btn);
+      });
+
+      playBtn.onclick = togglePlay;
+      prevBtn.onclick = () => playSegment(Math.max(0, currentSegmentIndex - 1));
+      nextBtn.onclick = () => playSegment(Math.min(audioElements.length - 1, currentSegmentIndex + 1));
+
+      audioElements.forEach((audio, idx) => {
+        audio.ontimeupdate = () => updateProgress(idx);
+        audio.onended = () => {
+          if (idx < audioElements.length - 1) {
+            playSegment(idx + 1);
+          } else {
+            isPlaying = false;
+            playBtn.textContent = '▶';
+          }
+        };
+      });
+
+      updateSegmentButtons();
+    }
+
+    function playSegment(index) {
+      if (index < 0 || index >= audioElements.length) return;
+      
+      audioElements.forEach(a => a.pause());
+      currentSegmentIndex = index;
+      audioElements[index].currentTime = 0;
+      audioElements[index].play();
+      isPlaying = true;
+      
+      const playBtn = document.getElementById('audioPlay');
+      if (playBtn) playBtn.textContent = '⏸';
+      
+      updateSegmentButtons();
+    }
+
+    function togglePlay() {
+      const current = audioElements[currentSegmentIndex];
+      if (!current) return;
+
+      if (isPlaying) {
+        current.pause();
+        isPlaying = false;
+        document.getElementById('audioPlay').textContent = '▶';
+      } else {
+        current.play();
+        isPlaying = true;
+        document.getElementById('audioPlay').textContent = '⏸';
+      }
+    }
+
+    function updateProgress(index) {
+      if (index !== currentSegmentIndex) return;
+      
+      const audio = audioElements[index];
+      const progressFill = document.getElementById('audioProgressFill');
+      const timeDisplay = document.getElementById('audioTime');
+      
+      if (progressFill && audio.duration) {
+        const percent = (audio.currentTime / audio.duration) * 100;
+        progressFill.style.width = percent + '%';
+      }
+      
+      if (timeDisplay) {
+        const current = formatTime(audio.currentTime);
+        const total = formatTime(audio.duration || 0);
+        timeDisplay.textContent = `${current} / ${total}`;
+      }
+    }
+
+    function updateSegmentButtons() {
+      const buttons = document.querySelectorAll('.segment-btn');
+      buttons.forEach((btn, idx) => {
+        btn.classList.toggle('active', idx === currentSegmentIndex);
+      });
+    }
+
+    function formatTime(seconds) {
+      if (!isFinite(seconds)) return '0:00';
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+  }
+
+  // 拖拽分类游戏
+  if (typeof window.checkDragDrop === 'undefined') {
+    let dragState = {};
+
+    window.checkDragDrop = function() {
+      const feedback = document.getElementById('dragFeedback');
+      if (!feedback) return;
+
+      const dropBoxes = document.querySelectorAll('.drop-box');
+      let correct = 0;
+      let total = 0;
+
+      const correctMapping = {
+        'di-rice': 'carb',
+        'di-bread': 'carb',
+        'di-meat': 'protein',
+        'di-egg': 'protein',
+        'di-bean': 'protein',
+        'di-oil': 'fat',
+        'di-nut': 'fat',
+        'di-water': 'water',
+        'di-salt': 'mineral',
+        'di-veg': 'vitamin'
+      };
+
+      dropBoxes.forEach(box => {
+        const items = box.querySelectorAll('.drag-item');
+        const category = box.dataset.category;
+        
+        items.forEach(item => {
+          total++;
+          const itemId = item.id;
+          const expectedCategory = correctMapping[itemId];
+          
+          if (expectedCategory === category) {
+            item.style.backgroundColor = '#c8e6c9';
+            item.style.borderColor = '#4caf50';
+            correct++;
+          } else {
+            item.style.backgroundColor = '#ffcdd2';
+            item.style.borderColor = '#f44336';
+          }
+        });
+      });
+
+      feedback.innerHTML = `<strong>${correct}/${total} 正确</strong>` + 
+        (correct === total ? ' 🎉 全部正确！' : ' 请调整红色标记的项目');
+      feedback.style.display = 'block';
+      feedback.style.padding = '12px';
+      feedback.style.marginTop = '12px';
+      feedback.style.backgroundColor = correct === total ? '#e8f5e9' : '#fff3e0';
+      feedback.style.borderRadius = '8px';
+      feedback.style.border = `2px solid ${correct === total ? '#4caf50' : '#ff9800'}`;
+    };
+
+    window.resetDragDrop = function() {
+      const itemsContainer = document.getElementById('dragItems');
+      const dropBoxes = document.querySelectorAll('.drop-box');
+      const feedback = document.getElementById('dragFeedback');
+
+      if (feedback) {
+        feedback.style.display = 'none';
+        feedback.innerHTML = '';
+      }
+
+      const allItems = document.querySelectorAll('.drag-item');
+      allItems.forEach(item => {
+        item.style.backgroundColor = '';
+        item.style.borderColor = '';
+        if (itemsContainer && item.parentElement !== itemsContainer) {
+          itemsContainer.appendChild(item);
+        }
+      });
+
+      dragState = {};
+      setupDragDrop();
+    };
+
+    function setupDragDrop() {
+      const items = document.querySelectorAll('.drag-item');
+      const dropBoxes = document.querySelectorAll('.drop-box');
+
+      items.forEach(item => {
+        item.ondragstart = function(e) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/html', this.id);
+          this.style.opacity = '0.5';
+        };
+        item.ondragend = function() {
+          this.style.opacity = '1';
+        };
+      });
+
+      dropBoxes.forEach(box => {
+        box.ondragover = function(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          this.style.backgroundColor = '#e3f2fd';
+          return false;
+        };
+        box.ondragleave = function() {
+          this.style.backgroundColor = '';
+        };
+        box.ondrop = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.style.backgroundColor = '';
+          
+          const itemId = e.dataTransfer.getData('text/html');
+          const item = document.getElementById(itemId);
+          if (item) {
+            this.appendChild(item);
+          }
+          return false;
+        };
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupDragDrop);
+    } else {
+      setupDragDrop();
+    }
+  }
+})();
+</script>
+</body>
 </html>

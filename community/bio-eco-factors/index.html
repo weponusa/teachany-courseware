@@ -795,5 +795,327 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "cvs", "readout": "labReadout-cvs", "bg": [{"t": "ellipse", "x": 360, "y": 160, "rx": 120, "ry": 80, "fill": "rgba(34,197,94,.25)", "stroke": "#16a34a", "w": 2.5}, {"t": "text", "x": 360, "y": 160, "t2": "生物（小麦）", "size": 14, "align": "center"}, {"t": "line", "x1": 180, "y1": 80, "x2": 250, "y2": 120, "w": 2, "color": "rgba(251,191,36,.6)"}, {"t": "text", "x": 180, "y": 70, "t2": "阳光", "size": 12.5, "align": "center"}, {"t": "line", "x1": 180, "y1": 250, "x2": 250, "y2": 200, "w": 2, "color": "rgba(96,165,250,.6)"}, {"t": "text", "x": 180, "y": 262, "t2": "水", "size": 12.5, "align": "center"}, {"t": "line", "x1": 540, "y1": 80, "x2": 470, "y2": 120, "w": 2, "color": "rgba(148,163,184,.7)"}, {"t": "text", "x": 540, "y": 70, "t2": "空气", "size": 12.5, "align": "center"}, {"t": "line", "x1": 540, "y1": 250, "x2": 470, "y2": 200, "w": 2, "color": "rgba(239,68,68,.5)"}, {"t": "text", "x": 540, "y": 262, "t2": "蚜虫", "size": 12.5, "align": "center"}], "parts": [{"x": 180, "y": 70, "name": "阳光（非生物因素）", "info": "光是光合作用的条件；没有阳光，绿色植物无法制造有机物。", "r": 44, "lx": 176, "ly": 46}, {"x": 180, "y": 262, "name": "水（非生物因素）", "info": "水是细胞的主要成分，也是光合作用的原料，缺水小麦会萎蔫。", "r": 44, "lx": 176, "ly": 284}, {"x": 540, "y": 70, "name": "空气（非生物因素）", "info": "二氧化碳是光合作用原料，氧气是呼吸作用原料，都在空气里。", "r": 44, "lx": 544, "ly": 46}, {"x": 360, "y": 160, "name": "小麦（生产者）", "info": "生产者：能进行光合作用把无机物合成有机物，是生态系统的基础。", "r": 120, "lx": 360, "ly": 90}, {"x": 540, "y": 262, "name": "蚜虫（生物因素）", "info": "生物因素：影响小麦的其他生物——捕食、竞争、寄生关系。", "r": 44, "lx": 544, "ly": 284}], "tip": "👆 点击各生态因素，看它怎样影响小麦"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.setLight !== 'undefined') return;
+
+  // ========== 光照强度与植物生长模拟 ==========
+  let currentLight = 2; // 0黑暗 1弱光 2适光 3强光
+  let animRunning = false;
+  let animFrame = 0;
+  let animId = null;
+
+  window.setLight = function(level) {
+    currentLight = level;
+    animFrame = 0;
+    drawPlantScene();
+  };
+
+  window.startAnim = function() {
+    if (animRunning) return;
+    animRunning = true;
+    animFrame = 0;
+    animate();
+  };
+
+  window.stopAnim = function() {
+    animRunning = false;
+    if (animId) cancelAnimationFrame(animId);
+  };
+
+  function animate() {
+    if (!animRunning) return;
+    animFrame++;
+    drawPlantScene();
+    if (animFrame < 150) {
+      animId = requestAnimationFrame(animate);
+    } else {
+      animRunning = false;
+    }
+  }
+
+  function drawPlantScene() {
+    const cvs = document.getElementById('cvs');
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    const w = cvs.width, h = cvs.height;
+
+    // 清空画布
+    ctx.clearRect(0, 0, w, h);
+
+    // 背景 - 天空渐变（根据光照强度）
+    const skyColors = [
+      ['#1a1a2e', '#16213e'], // 黑暗
+      ['#4a5568', '#718096'], // 弱光
+      ['#63b3ed', '#90cdf4'], // 适光
+      ['#fbbf24', '#fcd34d']  // 强光
+    ];
+    const grad = ctx.createLinearGradient(0, 0, 0, h * 0.6);
+    grad.addColorStop(0, skyColors[currentLight][0]);
+    grad.addColorStop(1, skyColors[currentLight][1]);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h * 0.6);
+
+    // 土壤层
+    ctx.fillStyle = '#795548';
+    ctx.fillRect(0, h * 0.6, w, h * 0.4);
+    ctx.fillStyle = '#8d6e63';
+    ctx.fillRect(0, h * 0.65, w, h * 0.35);
+
+    // 动画进度
+    const progress = animRunning ? Math.min(animFrame / 150, 1) : 1;
+
+    // 左侧：阴生植物（蕨类）
+    drawShadePlant(ctx, 180, h * 0.6, currentLight, progress);
+
+    // 右侧：阳生植物（向日葵）
+    drawSunPlant(ctx, 540, h * 0.6, currentLight, progress);
+
+    // 光照指示器
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 16px sans-serif';
+    const lightLabels = ['🌑 黑暗环境', '🌤 弱光环境', '☀️ 适光环境', '🔥 强光环境'];
+    ctx.fillText(lightLabels[currentLight], 20, 30);
+
+    // 状态更新
+    const readout = document.getElementById('labReadout-cvs');
+    if (readout) {
+      readout.textContent = `当前光照：${lightLabels[currentLight]} | 生长进度：${Math.round(progress * 100)}%`;
+    }
+  }
+
+  function drawShadePlant(ctx, x, y, light, progress) {
+    // 阴生植物健康度：黑暗0.3 弱光0.9 适光0.7 强光0.4
+    const health = [0.3, 0.9, 0.7, 0.4][light];
+    const scale = progress * health;
+    
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // 主茎
+    ctx.strokeStyle = '#6d4c41';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y - 80 * scale);
+    ctx.stroke();
+
+    // 叶片（蕨类羽状）
+    const leafColor = health > 0.6 ? '#2f7d32' : (health > 0.4 ? '#558b2f' : '#827717');
+    ctx.fillStyle = leafColor;
+    
+    for (let i = 0; i < 5; i++) {
+      const ly = y - 20 - i * 12 * scale;
+      const lw = 30 * scale * (1 - i * 0.1);
+      // 左侧羽片
+      ctx.beginPath();
+      ctx.ellipse(x - lw/2, ly, lw, 8 * scale, -Math.PI/6, 0, Math.PI * 2);
+      ctx.fill();
+      // 右侧羽片
+      ctx.beginPath();
+      ctx.ellipse(x + lw/2, ly, lw, 8 * scale, Math.PI/6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('阴生植物', x - 35, y + 25);
+    ctx.fillText('(蕨类)', x - 25, y + 40);
+    
+    // 健康状态
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = health > 0.7 ? '#2f7d32' : (health > 0.5 ? '#f57c00' : '#c62828');
+    ctx.fillText(`健康度: ${Math.round(health * 100)}%`, x - 40, y + 55);
+
+    ctx.restore();
+  }
+
+  function drawSunPlant(ctx, x, y, light, progress) {
+    // 阳生植物健康度：黑暗0.2 弱光0.5 适光0.95 强光0.85
+    const health = [0.2, 0.5, 0.95, 0.85][light];
+    const scale = progress * health;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // 主茎
+    ctx.strokeStyle = '#6d4c41';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y - 100 * scale);
+    ctx.stroke();
+
+    // 叶片（3片大叶）
+    const leafColor = health > 0.7 ? '#4caf50' : (health > 0.4 ? '#689f38' : '#9e9d24');
+    ctx.fillStyle = leafColor;
+    ctx.strokeStyle = '#2f7d32';
+    ctx.lineWidth = 2;
+
+    // 左叶
+    ctx.beginPath();
+    ctx.ellipse(x - 25, y - 40 * scale, 20 * scale, 35 * scale, -Math.PI/4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 右叶
+    ctx.beginPath();
+    ctx.ellipse(x + 25, y - 40 * scale, 20 * scale, 35 * scale, Math.PI/4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 顶叶
+    ctx.beginPath();
+    ctx.ellipse(x, y - 70 * scale, 18 * scale, 30 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 花盘（向日葵）
+    if (scale > 0.7) {
+      const flowerSize = 25 * scale;
+      // 花瓣
+      ctx.fillStyle = '#fbbf24';
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.ellipse(
+          x + Math.cos(angle) * flowerSize * 0.6,
+          y - 100 * scale + Math.sin(angle) * flowerSize * 0.6,
+          flowerSize * 0.4, flowerSize * 0.2, angle, 0, Math.PI * 2
+        );
+        ctx.fill();
+      }
+      // 花心
+      ctx.fillStyle = '#92400e';
+      ctx.beginPath();
+      ctx.arc(x, y - 100 * scale, flowerSize * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('阳生植物', x - 35, y + 25);
+    ctx.fillText('(向日葵)', x - 35, y + 40);
+
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = health > 0.7 ? '#2f7d32' : (health > 0.5 ? '#f57c00' : '#c62828');
+    ctx.fillText(`健康度: ${Math.round(health * 100)}%`, x - 40, y + 55);
+
+    ctx.restore();
+  }
+
+  // 初始绘制
+  if (document.getElementById('cvs')) {
+    drawPlantScene();
+  }
+
+  // ========== 拖拽分类练习 ==========
+  let draggedElement = null;
+
+  window.dragStart = function(event) {
+    draggedElement = event.target;
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  window.dragOver = function(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  };
+
+  window.drop = function(event, zoneCat) {
+    event.preventDefault();
+    if (!draggedElement) return;
+
+    const zone = event.currentTarget;
+    const item = draggedElement.cloneNode(true);
+    item.draggable = false;
+    item.style.cursor = 'default';
+    item.setAttribute('data-dropped-in', zoneCat);
+    
+    zone.appendChild(item);
+    draggedElement.style.opacity = '0.3';
+    draggedElement.draggable = false;
+    draggedElement = null;
+  };
+
+  window.checkDrop = function() {
+    const feedback = document.getElementById('ddFeedback');
+    if (!feedback) return;
+
+    const zones = document.querySelectorAll('.dd-zone');
+    let correct = 0, total = 0;
+
+    zones.forEach(zone => {
+      const items = zone.querySelectorAll('.dd-item[data-dropped-in]');
+      items.forEach(item => {
+        total++;
+        const correctCat = item.getAttribute('data-cat');
+        const droppedCat = item.getAttribute('data-dropped-in');
+        
+        if (correctCat === droppedCat) {
+          item.style.backgroundColor = '#d4edda';
+          item.style.borderColor = '#28a745';
+          correct++;
+        } else {
+          item.style.backgroundColor = '#f8d7da';
+          item.style.borderColor = '#dc3545';
+        }
+      });
+    });
+
+    if (total === 0) {
+      feedback.innerHTML = '<span style="color:#856404;">⚠️ 请先拖动因素到对应区域</span>';
+      feedback.style.display = 'block';
+      return;
+    }
+
+    if (correct === total && total === 6) {
+      feedback.innerHTML = `<span style="color:#155724;">✅ 完全正确！${correct}/${total} 个因素分类正确</span>`;
+      feedback.style.backgroundColor = '#d4edda';
+    } else {
+      feedback.innerHTML = `<span style="color:#721c24;">❌ ${correct}/${total} 个正确，请检查红色标记的项</span>`;
+      feedback.style.backgroundColor = '#f8d7da';
+    }
+    feedback.style.display = 'block';
+    feedback.style.padding = '12px';
+    feedback.style.borderRadius = '4px';
+    feedback.style.marginTop = '12px';
+  };
+
+  window.resetDrop = function() {
+    // 清空投放区
+    const zones = document.querySelectorAll('.dd-zone');
+    zones.forEach(zone => {
+      const items = zone.querySelectorAll('.dd-item');
+      items.forEach(item => item.remove());
+    });
+
+    // 恢复原始项
+    const sourceItems = document.querySelectorAll('#ddItems .dd-item');
+    sourceItems.forEach(item => {
+      item.style.opacity = '1';
+      item.draggable = true;
+      item.style.cursor = 'move';
+      item.style.backgroundColor = '';
+      item.style.borderColor = '';
+    });
+
+    // 清空反馈
+    const feedback = document.getElementById('ddFeedback');
+    if (feedback) {
+      feedback.style.display = 'none';
+      feedback.innerHTML = '';
+    }
+  };
+
+})();
+</script>
+</body>
 </html>

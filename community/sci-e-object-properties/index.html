@@ -1032,5 +1032,273 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"bg": [{"t": "rect", "x": 60, "y": 90, "w2": 170, "h2": 110, "r": 12, "fill": "rgba(180,140,90,.5)", "stroke": "#a16207", "w": 2.5}, {"t": "rect", "x": 260, "y": 90, "w2": 170, "h2": 110, "r": 12, "fill": "rgba(148,163,184,.55)", "stroke": "#64748b", "w": 2.5}, {"t": "rect", "x": 460, "y": 90, "w2": 170, "h2": 110, "r": 12, "fill": "rgba(96,165,250,.35)", "stroke": "#60a5fa", "w": 2.5}, {"t": "rect", "x": 660, "y": 90, "w2": 170, "h2": 110, "r": 12, "fill": "rgba(226,232,240,.5)", "stroke": "#94a3b8", "w": 2.5}, {"t": "text", "x": 145, "y": 145, "t2": "木头", "size": 17}, {"t": "text", "x": 345, "y": 145, "t2": "金属", "size": 17}, {"t": "text", "x": 545, "y": 145, "t2": "塑料", "size": 17}, {"t": "text", "x": 745, "y": 145, "t2": "玻璃", "size": 17}, {"t": "text", "x": 450, "y": 40, "t2": "👆 点击一种材料，看它的性质", "size": 13.5}], "parts": [{"x": 145, "y": 145, "r": 95, "name": "木头", "info": "能浮在水上、导热慢、不导电、不透明——做桌椅、铅笔、筷子（因为轻、保温、易加工）。", "lx": 145, "ly": 236}, {"x": 345, "y": 145, "r": 95, "name": "金属", "info": "硬度大、能导电导热、有金属光泽——做锅（导热快）、电线（导电好）、铁钉（结实）。", "lx": 345, "ly": 236}, {"x": 545, "y": 145, "r": 95, "name": "塑料", "info": "轻、不导电、不易碎、可塑性强——做水盆、外壳、包装（但不易降解，要注意回收）。", "lx": 545, "ly": 236}, {"x": 745, "y": 145, "r": 95, "name": "玻璃", "info": "透明、硬度大、易碎、不导电——做窗户、杯子、镜片（透明是关键）。", "lx": 745, "ly": 236}], "tip": "👆 点材料卡片，比较它们的性质", "canvas": "texture-canvas", "readout": "canvas-feedback"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 拖拽活动数据
+  const dragData = {
+    items: [
+      { id: 'item1', name: '玻璃球', feature: '光滑', emoji: '🔮' },
+      { id: 'item2', name: '砖块', feature: '粗糙', emoji: '🧱' },
+      { id: 'item3', name: '棉花', feature: '软', emoji: '☁️' },
+      { id: 'item4', name: '石头', feature: '硬', emoji: '🪨' },
+      { id: 'item5', name: '镜子', feature: '光滑', emoji: '🪞' },
+      { id: 'item6', name: '树皮', feature: '粗糙', emoji: '🌳' },
+      { id: 'item7', name: '海绵', feature: '软', emoji: '🧽' },
+      { id: 'item8', name: '铁块', feature: '硬', emoji: '⚙️' }
+    ],
+    placements: {}
+  };
+
+  // 初始化拖拽活动
+  function initDragActivity() {
+    const pool = document.getElementById('items-pool');
+    if (!pool) return;
+    
+    const existingItems = pool.querySelectorAll('.drag-item');
+    if (existingItems.length > 0) return; // 已初始化
+    
+    dragData.items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'drag-item';
+      div.draggable = true;
+      div.dataset.itemId = item.id;
+      div.dataset.feature = item.feature;
+      div.innerHTML = `<span style="font-size:24px;">${item.emoji}</span><br>${item.name}`;
+      div.style.cssText = 'padding:12px;margin:8px;background:#fff;border:2px solid #ddd;border-radius:8px;cursor:move;display:inline-block;text-align:center;min-width:80px;';
+      
+      div.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', item.id);
+        div.style.opacity = '0.5';
+      });
+      
+      div.addEventListener('dragend', e => {
+        div.style.opacity = '1';
+      });
+      
+      pool.appendChild(div);
+    });
+    
+    // 设置投放区
+    const dropZones = document.querySelectorAll('.drop-zone');
+    dropZones.forEach(zone => {
+      zone.style.cssText = 'min-height:120px;padding:16px;margin:8px;border:3px dashed #ccc;border-radius:12px;background:#f9f9f9;';
+      
+      zone.addEventListener('dragover', e => {
+        e.preventDefault();
+        zone.style.background = '#e3f2fd';
+        zone.style.borderColor = '#2196f3';
+      });
+      
+      zone.addEventListener('dragleave', e => {
+        zone.style.background = '#f9f9f9';
+        zone.style.borderColor = '#ccc';
+      });
+      
+      zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.style.background = '#f9f9f9';
+        zone.style.borderColor = '#ccc';
+        
+        const itemId = e.dataTransfer.getData('text/plain');
+        const dragItem = document.querySelector(`[data-item-id="${itemId}"]`);
+        if (dragItem) {
+          zone.appendChild(dragItem);
+          dragData.placements[itemId] = zone.dataset.feature;
+        }
+      });
+    });
+  }
+
+  // 检查拖拽答案
+  if (typeof window.checkDragActivity === 'undefined') {
+    window.checkDragActivity = function() {
+      initDragActivity();
+      
+      const feedback = document.getElementById('activity-feedback');
+      if (!feedback) return;
+      
+      let correct = 0;
+      let total = 0;
+      
+      document.querySelectorAll('.drag-item').forEach(item => {
+        const itemId = item.dataset.itemId;
+        const correctFeature = item.dataset.feature;
+        const placedFeature = dragData.placements[itemId];
+        
+        if (placedFeature) {
+          total++;
+          if (placedFeature === correctFeature) {
+            correct++;
+            item.style.border = '3px solid #4caf50';
+            item.style.background = '#e8f5e9';
+          } else {
+            item.style.border = '3px solid #f44336';
+            item.style.background = '#ffebee';
+          }
+        }
+      });
+      
+      feedback.style.cssText = 'margin-top:16px;padding:16px;border-radius:8px;font-size:18px;font-weight:bold;text-align:center;';
+      
+      if (total === 0) {
+        feedback.style.background = '#fff3e0';
+        feedback.style.color = '#e65100';
+        feedback.innerHTML = '⚠️ 请先拖动物体到分类框中！';
+      } else if (correct === dragData.items.length) {
+        feedback.style.background = '#e8f5e9';
+        feedback.style.color = '#2e7d32';
+        feedback.innerHTML = `🎉 太棒了！全部正确！(${correct}/${dragData.items.length})`;
+      } else {
+        feedback.style.background = '#fff3e0';
+        feedback.style.color = '#f57c00';
+        feedback.innerHTML = `📊 完成 ${correct}/${dragData.items.length} 个正确，继续加油！`;
+      }
+    };
+  }
+
+  // 重置拖拽活动
+  if (typeof window.resetDragActivity === 'undefined') {
+    window.resetDragActivity = function() {
+      const pool = document.getElementById('items-pool');
+      const feedback = document.getElementById('activity-feedback');
+      
+      if (pool) {
+        document.querySelectorAll('.drag-item').forEach(item => {
+          item.style.border = '2px solid #ddd';
+          item.style.background = '#fff';
+          pool.appendChild(item);
+        });
+      }
+      
+      if (feedback) {
+        feedback.innerHTML = '';
+        feedback.style.cssText = '';
+      }
+      
+      dragData.placements = {};
+    };
+  }
+
+  // 猜测游戏数据
+  const guessData = {
+    objects: [
+      { name: '苹果', features: ['圆形', '光滑', '红色'], emoji: '🍎' },
+      { name: '足球', features: ['圆形', '硬', '黑白色'], emoji: '⚽' },
+      { name: '毛巾', features: ['长方形', '软', '吸水'], emoji: '🧻' },
+      { name: '积木', features: ['方形', '硬', '彩色'], emoji: '🧱' },
+      { name: '橙子', features: ['圆形', '粗糙', '橙色'], emoji: '🍊' }
+    ],
+    currentIndex: 0,
+    revealed: 0
+  };
+
+  // 初始化猜测游戏
+  function initGuessGame() {
+    const container = document.getElementById('guess-game') || document.querySelector('[id*="guess"]');
+    if (!container) return;
+    
+    if (container.querySelector('.guess-display')) return; // 已初始化
+    
+    const display = document.createElement('div');
+    display.className = 'guess-display';
+    display.style.cssText = 'text-align:center;padding:32px;background:#f5f5f5;border-radius:12px;margin:20px 0;';
+    
+    display.innerHTML = `
+      <div style="font-size:80px;margin-bottom:20px;" id="guess-emoji">❓</div>
+      <div style="font-size:24px;font-weight:bold;margin-bottom:16px;" id="guess-title">猜猜我是谁？</div>
+      <div style="font-size:18px;color:#666;min-height:60px;" id="guess-hints">点击"下一个提示"按钮开始</div>
+      <div style="margin-top:24px;">
+        <input type="text" id="guess-input" placeholder="输入你的答案" style="padding:12px;font-size:16px;border:2px solid #ddd;border-radius:8px;width:200px;margin-right:12px;">
+        <button onclick="submitGuess()" style="padding:12px 24px;font-size:16px;background:#4caf50;color:#fff;border:none;border-radius:8px;cursor:pointer;">提交答案</button>
+      </div>
+      <div id="guess-feedback" style="margin-top:16px;font-size:18px;font-weight:bold;"></div>
+    `;
+    
+    const firstChild = container.firstElementChild;
+    if (firstChild) {
+      container.insertBefore(display, firstChild.nextSibling);
+    } else {
+      container.appendChild(display);
+    }
+  }
+
+  // 下一个提示
+  if (typeof window.nextGuess === 'undefined') {
+    window.nextGuess = function() {
+      initGuessGame();
+      
+      const obj = guessData.objects[guessData.currentIndex];
+      const hints = document.getElementById('guess-hints');
+      const feedback = document.getElementById('guess-feedback');
+      
+      if (!hints) return;
+      
+      if (feedback) feedback.innerHTML = '';
+      
+      if (guessData.revealed < obj.features.length) {
+        guessData.revealed++;
+        const revealedHints = obj.features.slice(0, guessData.revealed);
+        hints.innerHTML = '🔍 提示：' + revealedHints.map((h, i) => `<span style="display:inline-block;margin:8px;padding:8px 16px;background:#fff;border-radius:20px;border:2px solid #2196f3;">${i + 1}. ${h}</span>`).join('');
+      } else {
+        hints.innerHTML = '💡 所有提示已显示！快猜猜看吧！';
+      }
+    };
+  }
+
+  // 提交猜测（辅助函数）
+  window.submitGuess = function() {
+    const input = document.getElementById('guess-input');
+    const feedback = document.getElementById('guess-feedback');
+    const emoji = document.getElementById('guess-emoji');
+    
+    if (!input || !feedback) return;
+    
+    const answer = input.value.trim();
+    const obj = guessData.objects[guessData.currentIndex];
+    
+    if (!answer) {
+      feedback.style.color = '#f57c00';
+      feedback.innerHTML = '⚠️ 请输入答案！';
+      return;
+    }
+    
+    if (answer === obj.name || answer.includes(obj.name.slice(0, 2))) {
+      feedback.style.color = '#4caf50';
+      feedback.innerHTML = `✅ 正确！就是${obj.name}！`;
+      if (emoji) emoji.innerHTML = obj.emoji;
+    } else {
+      feedback.style.color = '#f44336';
+      feedback.innerHTML = '❌ 不对哦，再想想！';
+    }
+  };
+
+  // 重置猜测游戏
+  if (typeof window.resetGuess === 'undefined') {
+    window.resetGuess = function() {
+      guessData.currentIndex = (guessData.currentIndex + 1) % guessData.objects.length;
+      guessData.revealed = 0;
+      
+      const hints = document.getElementById('guess-hints');
+      const feedback = document.getElementById('guess-feedback');
+      const input = document.getElementById('guess-input');
+      const emoji = document.getElementById('guess-emoji');
+      
+      if (hints) hints.innerHTML = '点击"下一个提示"按钮开始';
+      if (feedback) feedback.innerHTML = '';
+      if (input) input.value = '';
+      if (emoji) emoji.innerHTML = '❓';
+    };
+  }
+
+  // 页面加载时初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDragActivity);
+  } else {
+    initDragActivity();
+  }
+})();
+</script>
+</body>
 </html>

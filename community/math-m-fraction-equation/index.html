@@ -664,5 +664,100 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   </div>
 </section>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 检查函数是否已存在
+  if (typeof window.answerModule !== 'undefined') return;
+
+  /**
+   * 模块练习答题函数
+   * @param {number} questionId - 题目编号
+   * @param {string} selected - 用户选择的选项
+   * @param {string} correct - 正确答案
+   */
+  window.answerModule = function(questionId, selected, correct) {
+    const feedbackId = 'mod-fb' + questionId;
+    const feedbackEl = document.getElementById(feedbackId);
+    
+    if (!feedbackEl) return;
+
+    // 清除之前的反馈
+    feedbackEl.innerHTML = '';
+    feedbackEl.style.marginTop = '12px';
+    feedbackEl.style.padding = '10px';
+    feedbackEl.style.borderRadius = '6px';
+    feedbackEl.style.fontSize = '0.9rem';
+    feedbackEl.style.fontWeight = 'bold';
+
+    // 禁用所有选项按钮
+    const parentOptions = feedbackEl.previousElementSibling;
+    if (parentOptions && parentOptions.classList.contains('options')) {
+      const buttons = parentOptions.querySelectorAll('.option-btn');
+      buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+      });
+    }
+
+    if (selected === correct) {
+      feedbackEl.style.background = '#d1fae5';
+      feedbackEl.style.color = '#065f46';
+      feedbackEl.style.border = '2px solid #10b981';
+      feedbackEl.innerHTML = '✓ 正确！分式方程的关键特征是<strong>分母中含有未知数</strong>。选项C中的 1/(x-1) = 2，分母 (x-1) 含有未知数 x，因此是分式方程。';
+    } else {
+      feedbackEl.style.background = '#fee2e2';
+      feedbackEl.style.color = '#991b1b';
+      feedbackEl.style.border = '2px solid #ef4444';
+      
+      let hint = '';
+      if (selected === 'A') {
+        hint = '选项A中 x/3 的分母是常数3，不含未知数，所以是整式方程。';
+      } else if (selected === 'B') {
+        hint = '选项B是标准的一次方程，分母不含未知数。';
+      } else if (selected === 'D') {
+        hint = '选项D是一元二次方程，分母不含未知数。';
+      }
+      
+      feedbackEl.innerHTML = `✗ 不正确。${hint}<br>正确答案是 <strong>${correct}</strong>：分式方程必须满足<strong>分母中含有未知数</strong>这一条件。`;
+    }
+
+    // 添加重置按钮
+    setTimeout(() => {
+      const resetBtn = document.createElement('button');
+      resetBtn.textContent = '重新作答';
+      resetBtn.style.marginTop = '10px';
+      resetBtn.style.padding = '6px 12px';
+      resetBtn.style.background = '#0891b2';
+      resetBtn.style.color = 'white';
+      resetBtn.style.border = 'none';
+      resetBtn.style.borderRadius = '4px';
+      resetBtn.style.cursor = 'pointer';
+      resetBtn.style.fontSize = '0.85rem';
+      
+      resetBtn.onclick = function() {
+        feedbackEl.innerHTML = '';
+        feedbackEl.style.background = 'transparent';
+        feedbackEl.style.border = 'none';
+        feedbackEl.style.padding = '0';
+        
+        if (parentOptions && parentOptions.classList.contains('options')) {
+          const buttons = parentOptions.querySelectorAll('.option-btn');
+          buttons.forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+          });
+        }
+      };
+      
+      feedbackEl.appendChild(resetBtn);
+    }, 100);
+  };
+
+})();
+</script>
+</body>
 </html>

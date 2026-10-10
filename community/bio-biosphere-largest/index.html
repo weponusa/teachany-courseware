@@ -781,5 +781,325 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "cvs", "readout": "labReadout-cvs", "bg": [{"t": "ellipse", "x": 180, "y": 140, "rx": 70, "ry": 62, "fill": "rgba(34,197,94,.25)", "stroke": "#16a34a", "w": 2.5}, {"t": "text", "x": 180, "y": 140, "t2": "森林生态系统", "size": 12.5, "align": "center"}, {"t": "ellipse", "x": 430, "y": 140, "rx": 62, "ry": 54, "fill": "rgba(96,165,250,.25)", "stroke": "#60a5fa", "w": 2.5}, {"t": "text", "x": 430, "y": 140, "t2": "海洋生态系统", "size": 12.5, "align": "center"}, {"t": "ellipse", "x": 180, "y": 300, "rx": 60, "ry": 46, "fill": "rgba(251,191,36,.25)", "stroke": "#f59e0b", "w": 2.5}, {"t": "text", "x": 180, "y": 300, "t2": "草原生态系统", "size": 12.5, "align": "center"}, {"t": "ellipse", "x": 430, "y": 300, "rx": 60, "ry": 46, "fill": "rgba(148,163,184,.25)", "stroke": "#94a3b8", "w": 2.5}, {"t": "text", "x": 430, "y": 300, "t2": "湿地生态系统", "size": 12.5, "align": "center"}, {"t": "text", "x": 600, "y": 200, "t2": "占陆地面积约 1/3\n生物种类最丰富\n“绿色水库”“地球之肺”", "size": 12.5, "align": "center"}], "parts": [{"x": 180, "y": 140, "name": "森林生态系统", "info": "分布在湿润地区，动植物种类最多、结构最复杂、稳定性最强——“绿色水库”“地球之肺”。", "r": 80, "lx": 180, "ly": 62}, {"x": 430, "y": 140, "name": "海洋生态系统", "info": "地球上最大的生态系统（占地球表面积约 71%），生产者主要是浮游植物。", "r": 76, "lx": 430, "ly": 62}, {"x": 180, "y": 300, "name": "草原生态系统", "info": "年降水量少，以草本植物为主，动物多为善于奔跑的植食动物。", "r": 66, "lx": 180, "ly": 360}, {"x": 430, "y": 300, "name": "湿地生态系统", "info": "被称为“地球之肾”，能蓄水、净化水质、保护生物多样性。", "r": 66, "lx": 430, "ly": 360}], "tip": "👆 点击各生态系统，比较它们的特征"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 生态系统信息数据
+  const ecoData = {
+    forest: {
+      name: '森林生态系统',
+      icon: '🌲',
+      features: ['生物种类最丰富', '动植物种类繁多', '分解者活跃', '涵养水源、保持水土'],
+      examples: '热带雨林、温带落叶林、针叶林',
+      color: '#2f7d32'
+    },
+    ocean: {
+      name: '海洋生态系统',
+      icon: '🌊',
+      features: ['地球上最大的生态系统', '调节全球气候', '提供丰富的生物资源', '占地球表面71%'],
+      examples: '珊瑚礁、深海、近海',
+      color: '#1976d2'
+    },
+    grassland: {
+      name: '草原生态系统',
+      icon: '🌾',
+      features: ['以草本植物为主', '水分条件介于森林和荒漠之间', '适合放牧', '土壤肥沃'],
+      examples: '温带草原、热带草原、高寒草甸',
+      color: '#7cb342'
+    },
+    desert: {
+      name: '荒漠生态系统',
+      icon: '🏜️',
+      features: ['极端干旱', '生物种类少', '植物耐旱适应性强', '昼夜温差大'],
+      examples: '沙漠、戈壁、干旱荒原',
+      color: '#d4a574'
+    },
+    freshwater: {
+      name: '淡水生态系统',
+      icon: '🏞️',
+      features: ['包括河流、湖泊、池塘、湿地', '生物多样性丰富', '水循环重要环节', '人类重要水源'],
+      examples: '长江、洞庭湖、沼泽湿地',
+      color: '#0288d1'
+    },
+    farmland: {
+      name: '农田生态系统',
+      icon: '🌾',
+      features: ['人工生态系统', '需要人类管理维护', '以农作物为主', '生物多样性较低'],
+      examples: '稻田、麦田、菜地',
+      color: '#f9a825'
+    },
+    city: {
+      name: '城市生态系统',
+      icon: '🏙️',
+      features: ['人工生态系统', '人类活动密集', '能量物质主要靠外界输入', '环境问题突出'],
+      examples: '居民区、工业区、公园绿地',
+      color: '#616161'
+    }
+  };
+
+  // 显示生态系统信息
+  if (typeof window.showEcoInfo === 'undefined') {
+    window.showEcoInfo = function(type) {
+      const data = ecoData[type];
+      if (!data) return;
+
+      let infoBox = document.getElementById('ecoInfoBox');
+      if (!infoBox) {
+        infoBox = document.createElement('div');
+        infoBox.id = 'ecoInfoBox';
+        infoBox.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:24px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.2);max-width:500px;z-index:1000;';
+        document.body.appendChild(infoBox);
+
+        const overlay = document.createElement('div');
+        overlay.id = 'ecoOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:999;';
+        overlay.onclick = function() {
+          infoBox.style.display = 'none';
+          overlay.style.display = 'none';
+        };
+        document.body.appendChild(overlay);
+      }
+
+      const overlay = document.getElementById('ecoOverlay');
+      
+      infoBox.innerHTML = `
+        <div style="text-align:center;font-size:48px;margin-bottom:12px;">${data.icon}</div>
+        <h3 style="color:${data.color};margin:0 0 16px 0;text-align:center;">${data.name}</h3>
+        <div style="background:#f5f5f5;padding:12px;border-radius:8px;margin-bottom:12px;">
+          <strong>主要特征：</strong>
+          <ul style="margin:8px 0 0 0;padding-left:20px;line-height:1.8;">
+            ${data.features.map(f => `<li>${f}</li>`).join('')}
+          </ul>
+        </div>
+        <div style="background:#e3f2fd;padding:12px;border-radius:8px;margin-bottom:16px;">
+          <strong>典型实例：</strong> ${data.examples}
+        </div>
+        <button onclick="document.getElementById('ecoInfoBox').style.display='none';document.getElementById('ecoOverlay').style.display='none';" 
+                style="width:100%;padding:10px;background:${data.color};color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px;">
+          关闭
+        </button>
+      `;
+      
+      infoBox.style.display = 'block';
+      overlay.style.display = 'block';
+    };
+  }
+
+  // 显示生物圈层次
+  if (typeof window.showLayer === 'undefined') {
+    window.showLayer = function(layer) {
+      const canvas = document.getElementById('biosphereCanvas');
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      
+      ctx.clearRect(0, 0, w, h);
+      
+      // 绘制地球剖面图
+      const centerY = h / 2;
+      
+      // 大气圈（顶部）
+      const atmoGrad = ctx.createLinearGradient(0, 0, 0, h * 0.3);
+      atmoGrad.addColorStop(0, '#e3f2fd');
+      atmoGrad.addColorStop(1, '#90caf9');
+      ctx.fillStyle = atmoGrad;
+      ctx.fillRect(0, 0, w, h * 0.3);
+      
+      // 水圈（中部）
+      const waterGrad = ctx.createLinearGradient(0, h * 0.3, 0, h * 0.65);
+      waterGrad.addColorStop(0, '#4fc3f7');
+      waterGrad.addColorStop(1, '#0277bd');
+      ctx.fillStyle = waterGrad;
+      ctx.fillRect(0, h * 0.3, w, h * 0.35);
+      
+      // 岩石圈（底部）
+      const rockGrad = ctx.createLinearGradient(0, h * 0.65, 0, h);
+      rockGrad.addColorStop(0, '#8d6e63');
+      rockGrad.addColorStop(1, '#4e342e');
+      ctx.fillStyle = rockGrad;
+      ctx.fillRect(0, h * 0.65, w, h * 0.35);
+      
+      // 绘制标注
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      // 大气圈标注
+      const atmoHighlight = layer === 'atmosphere' || layer === 'all';
+      ctx.fillStyle = atmoHighlight ? '#01579b' : '#666';
+      ctx.strokeStyle = atmoHighlight ? '#01579b' : '#999';
+      ctx.lineWidth = atmoHighlight ? 3 : 2;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.15, h * 0.15);
+      ctx.lineTo(w * 0.25, h * 0.15);
+      ctx.stroke();
+      ctx.fillText('🌫️ 大气圈底部（约10km）', w * 0.27, h * 0.15 + 5);
+      if (atmoHighlight) {
+        ctx.fillStyle = 'rgba(1,87,155,0.2)';
+        ctx.fillRect(0, 0, w, h * 0.3);
+      }
+      
+      // 水圈标注
+      const waterHighlight = layer === 'hydrosphere' || layer === 'all';
+      ctx.fillStyle = waterHighlight ? '#01579b' : '#666';
+      ctx.strokeStyle = waterHighlight ? '#01579b' : '#999';
+      ctx.lineWidth = waterHighlight ? 3 : 2;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.15, centerY);
+      ctx.lineTo(w * 0.25, centerY);
+      ctx.stroke();
+      ctx.fillText('🌊 水圈大部（约11km深）', w * 0.27, centerY + 5);
+      if (waterHighlight) {
+        ctx.fillStyle = 'rgba(1,87,155,0.2)';
+        ctx.fillRect(0, h * 0.3, w, h * 0.35);
+      }
+      
+      // 岩石圈标注
+      const rockHighlight = layer === 'lithosphere' || layer === 'all';
+      ctx.fillStyle = rockHighlight ? '#01579b' : '#666';
+      ctx.strokeStyle = rockHighlight ? '#01579b' : '#999';
+      ctx.lineWidth = rockHighlight ? 3 : 2;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.15, h * 0.82);
+      ctx.lineTo(w * 0.25, h * 0.82);
+      ctx.stroke();
+      ctx.fillText('🌱 岩石圈表面（约3km深）', w * 0.27, h * 0.82 + 5);
+      if (rockHighlight) {
+        ctx.fillStyle = 'rgba(1,87,155,0.2)';
+        ctx.fillRect(0, h * 0.65, w, h * 0.35);
+      }
+      
+      // 绘制生物分布密集区
+      if (layer === 'all') {
+        ctx.fillStyle = 'rgba(76,175,80,0.4)';
+        ctx.fillRect(0, h * 0.28, w, h * 0.1);
+        ctx.fillStyle = '#2e7d32';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('生物分布最密集区（水面上下100m）', w / 2, h * 0.33 + 5);
+      }
+    };
+  }
+
+  // 拖拽相关全局变量
+  let draggedElement = null;
+  
+  if (typeof window.dragStart === 'undefined') {
+    window.dragStart = function(e) {
+      draggedElement = e.target;
+      e.dataTransfer.effectAllowed = 'move';
+    };
+  }
+  
+  if (typeof window.dragOver === 'undefined') {
+    window.dragOver = function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    };
+  }
+  
+  if (typeof window.drop === 'undefined') {
+    window.drop = function(e, category) {
+      e.preventDefault();
+      if (!draggedElement) return;
+      
+      const zone = e.currentTarget;
+      const item = draggedElement.cloneNode(true);
+      item.draggable = false;
+      item.style.cursor = 'default';
+      item.ondragstart = null;
+      item.dataset.droppedCat = category;
+      
+      zone.appendChild(item);
+      draggedElement.style.opacity = '0.3';
+      draggedElement.draggable = false;
+      draggedElement = null;
+    };
+  }
+
+  // 检查拖拽答案
+  if (typeof window.checkDrop === 'undefined') {
+    window.checkDrop = function() {
+      const feedback = document.getElementById('ddFeedback');
+      if (!feedback) return;
+      
+      const zones = document.querySelectorAll('.dd-zone');
+      let correct = 0;
+      let total = 0;
+      let results = [];
+      
+      zones.forEach(zone => {
+        const zoneId = zone.id.replace('zone-', '');
+        const items = zone.querySelectorAll('.dd-item');
+        
+        items.forEach(item => {
+          total++;
+          const itemCat = item.dataset.cat;
+          const isCorrect = itemCat === zoneId;
+          
+          if (isCorrect) {
+            correct++;
+            item.style.background = 'linear-gradient(135deg, #c8e6c9 0%, #81c784 100%)';
+            item.style.border = '2px solid #2e7d32';
+          } else {
+            item.style.background = 'linear-gradient(135deg, #ffcdd2 0%, #ef5350 100%)';
+            item.style.border = '2px solid #c62828';
+          }
+        });
+      });
+      
+      const score = total > 0 ? Math.round((correct / total) * 100) : 0;
+      let message = '';
+      
+      if (score === 100) {
+        message = `<div style="color:#2e7d32;font-weight:bold;">🎉 完全正确！${correct}/${total} 正确</div>
+                   <div style="margin-top:8px;color:#555;">你已掌握生态系统的分类！</div>`;
+      } else if (score >= 60) {
+        message = `<div style="color:#f57c00;font-weight:bold;">👍 不错！${correct}/${total} 正确</div>
+                   <div style="margin-top:8px;color:#555;">再检查一下红色标记的项目</div>`;
+      } else {
+        message = `<div style="color:#c62828;font-weight:bold;">💪 继续努力！${correct}/${total} 正确</div>
+                   <div style="margin-top:8px;color:#555;">提示：陆地（森林、荒漠）、水域（海洋、湖泊）、人工（城市、农田）</div>`;
+      }
+      
+      feedback.innerHTML = message;
+      feedback.style.display = 'block';
+      feedback.style.padding = '16px';
+      feedback.style.marginTop = '12px';
+      feedback.style.background = '#f5f5f5';
+      feedback.style.borderRadius = '8px';
+    };
+  }
+
+  // 重置拖拽
+  if (typeof window.resetDrop === 'undefined') {
+    window.resetDrop = function() {
+      const zones = document.querySelectorAll('.dd-zone');
+      zones.forEach(zone => {
+        const items = zone.querySelectorAll('.dd-item');
+        items.forEach(item => item.remove());
+      });
+      
+      const sourceItems = document.querySelectorAll('.dd-items .dd-item');
+      sourceItems.forEach(item => {
+        item.style.opacity = '1';
+        item.draggable = true;
+        item.style.cursor = 'move';
+      });
+      
+      const feedback = document.getElementById('ddFeedback');
+      if (feedback) {
+        feedback.innerHTML = '';
+        feedback.style.display = 'none';
+      }
+    };
+  }
+
+})();
+</script>
+</body>
 </html>

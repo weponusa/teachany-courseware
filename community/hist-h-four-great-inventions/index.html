@@ -742,5 +742,151 @@ function histhDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><span class="ta-phase" data-tone="aux">知识图谱</span><h2 class="section-title">🗺️ 知识图谱：四大发明与中国古代科技</h2><div data-teachany-kg="hist-h-science-technology-h"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.handlePretest !== 'undefined') return;
+
+  // ===== 前测函数 =====
+  window.handlePretest = function(btn, isCorrect) {
+    const container = btn.closest('.quiz-box');
+    const feedback = container.querySelector('#pretest-fb');
+    const allBtns = container.querySelectorAll('.opt-btn');
+    
+    // 禁用所有按钮
+    allBtns.forEach(b => b.disabled = true);
+    
+    if (isCorrect) {
+      btn.style.backgroundColor = '#10b981';
+      btn.style.color = '#fff';
+      feedback.innerHTML = '<div style="background:#d1fae5;border-left:4px solid #10b981;padding:12px;margin-top:12px;border-radius:4px;"><strong>✅ 正确！</strong> 造纸术和印刷术都是信息传播工具，前者提供载体，后者实现复制，共同推动了知识的大规模传播。</div>';
+    } else {
+      btn.style.backgroundColor = '#ef4444';
+      btn.style.color = '#fff';
+      feedback.innerHTML = '<div style="background:#fee2e2;border-left:4px solid #ef4444;padding:12px;margin-top:12px;border-radius:4px;"><strong>❌ 不正确。</strong> 请重新思考：四大发明中哪些与"信息"直接相关？造纸术提供载体，印刷术实现复制，它们共同构成了信息传播革命的基础。</div>';
+      // 3秒后重置
+      setTimeout(() => {
+        allBtns.forEach(b => {
+          b.disabled = false;
+          b.style.backgroundColor = '';
+          b.style.color = '';
+        });
+        feedback.innerHTML = '';
+      }, 3000);
+    }
+  };
+
+  // ===== 模块导航函数 =====
+  window.goToMod = function(modNum) {
+    const allSections = document.querySelectorAll('[id^="sec-mod"]');
+    const targetSection = document.getElementById('sec-mod' + modNum);
+    
+    if (!targetSection) return;
+    
+    // 隐藏所有模块
+    allSections.forEach(sec => {
+      sec.classList.remove('active');
+      sec.style.display = 'none';
+    });
+    
+    // 显示目标模块
+    targetSection.classList.add('active');
+    targetSection.style.display = 'block';
+    
+    // 更新标签栏状态
+    const allTabs = document.querySelectorAll('.tab');
+    allTabs.forEach((tab, idx) => {
+      tab.classList.remove('active');
+      if (idx + 1 === modNum) {
+        tab.classList.add('active');
+      }
+    });
+    
+    // 滚动到顶部
+    targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // ===== 测验函数 =====
+  window.handleQuiz = function(btn, isCorrect, feedbackId, message) {
+    const container = btn.closest('.quiz-box') || btn.closest('.options').parentElement;
+    const feedback = document.getElementById(feedbackId);
+    const allBtns = container.querySelectorAll('.opt-btn');
+    
+    // 检查是否已经答过
+    if (btn.disabled) return;
+    
+    // 禁用所有按钮
+    allBtns.forEach(b => b.disabled = true);
+    
+    if (isCorrect) {
+      btn.style.backgroundColor = '#10b981';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#10b981';
+      feedback.innerHTML = `<div style="background:#d1fae5;border-left:4px solid #10b981;padding:12px;margin-top:12px;border-radius:4px;color:#065f46;"><strong>✅正确！</strong> ${message}</div>`;
+    } else {
+      btn.style.backgroundColor = '#ef4444';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#ef4444';
+      feedback.innerHTML = `<div style="background:#fee2e2;border-left:4px solid #ef4444;padding:12px;margin-top:12px;border-radius:4px;color:#991b1b;"><strong>❌ 不正确。</strong> ${message}</div>`;
+      
+      // 3秒后重置以便重试
+      setTimeout(() => {
+        allBtns.forEach(b => {
+          b.disabled = false;
+          b.style.backgroundColor = '';
+          b.style.color = '';
+          b.style.borderColor = '';
+        });
+        feedback.innerHTML = '';
+      }, 3000);
+    }
+  };
+
+  // ===== 开放题提交函数 =====
+  window.submitOpen = function(textareaId, feedbackId) {
+    const textarea = document.getElementById(textareaId);
+    const feedback = document.getElementById(feedbackId);
+    const submitBtn = textarea.nextElementSibling;
+    
+    if (!textarea || !feedback) return;
+    
+    const answer = textarea.value.trim();
+    
+    if (answer.length < 20) {
+      feedback.innerHTML = '<div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px;margin-top:12px;border-radius:4px;color:#92400e;"><strong>💭 提示：</strong>请至少写20字以上的思考，可以从以下角度展开：<br>• 海上贸易会带来哪些新技术和思想？<br>• 与欧洲的交流会如何影响科学方法论的发展？<br>• 经济开放对科技创新环境有何影响？</div>';
+      return;
+    }
+    
+    // 禁用提交按钮和文本框
+    submitBtn.disabled = true;
+    textarea.disabled = true;
+    submitBtn.textContent = '已提交 ✓';
+    submitBtn.style.backgroundColor = '#10b981';
+    
+    // 生成反馈
+    let feedbackHTML = '<div style="background:#dbeafe;border-left:4px solid #3b82f6;padding:12px;margin-top:12px;border-radius:4px;color:#1e40af;">';
+    feedbackHTML += '<strong>🎓 教师点评：</strong><br>';
+    feedbackHTML += '你的思考很有深度！历史没有假设，但我们可以推测：<br><br>';
+    feedbackHTML += '<strong>可能的积极影响：</strong><br>';
+    feedbackHTML += '• 通过海上贸易，中国可能更早接触到欧洲的实验科学方法和数学工具（如解析几何、微积分）<br>';
+    feedbackHTML += '• 经济开放会催生更多民间科技创新，打破官方垄断的知识传播体系<br>';
+    feedbackHTML += '• 与欧洲学者的直接交流可能促进"格物致知"向实验科学转化<br><br>';
+    feedbackHTML += '<strong>但也要注意：</strong><br>';
+    feedbackHTML += '• 科学革命不仅需要交流，更需要社会结构支撑（如独立的大学体系、学术共同体）<br>';
+    feedbackHTML += '• 中国传统的科举制度和儒家思想体系是否会接纳实验科学，仍是未知数<br>';
+    feedbackHTML += '• 技术引进容易，但科学方法论的转变需要整个知识体系的重构<br><br>';
+    feedbackHTML += '💡 <strong>延伸思考：</strong>明末清初，徐光启、李之藻等人已经开始翻译西方科学著作（如《几何原本》），但为什么没能引发科学革命？这或许能帮助我们更深入理解"李约瑟之问"。';
+    feedbackHTML += '</div>';
+    
+    feedback.innerHTML = feedbackHTML;
+    
+    // 滚动到反馈区域
+    feedback.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+})();
+</script>
 </body>
 </html>

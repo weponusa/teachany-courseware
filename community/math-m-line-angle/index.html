@@ -648,5 +648,261 @@ TeachAnyScenes.mount('lineAngle', {"mode": "intersect", "canvas": "intersect-can
 TeachAnyScenes.mount('lineAngle', {"mode": "transversal", "canvas": "transversal-canvas", "readout": "pair-desc"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.checkOpt !== 'undefined') return;
+
+  // 题目答案配置
+  const answers = {
+    'pre-q1': 'C',
+    'pre-q2': 'B',
+    'pre-q3': 'B',
+    'm1-q1': 'C',
+    'm1-q2': 'C',
+    'post-q1': 'B'
+  };
+
+  // checkOpt: 选择题检查函数
+  window.checkOpt = function(btn, qId, opt) {
+    const fbEl = document.getElementById('fb-' + qId);
+    if (!fbEl) return;
+    
+    const allBtns = btn.parentElement.querySelectorAll('.option-btn');
+    allBtns.forEach(b => {
+      b.disabled = true;
+      b.style.opacity = '0.6';
+    });
+
+    const correct = answers[qId] === opt;
+    btn.style.background = correct ? '#4caf50' : '#f44336';
+    btn.style.color = '#fff';
+
+    fbEl.innerHTML = correct 
+      ? '<span style="color:#2e7d32;">✅ 正确！</span>' 
+      : '<span style="color:#c62828;">❌ 错误，正确答案是 ' + answers[qId] + '</span>';
+    fbEl.style.marginTop = '8px';
+    fbEl.style.fontWeight = 'bold';
+
+    // 成就解锁
+    if (qId.startsWith('pre-')) {
+      const ach = document.getElementById('ach-pretest');
+      if (ach) ach.style.opacity = '1';
+    }
+  };
+
+  // highlightAngles: 相交线角度高亮
+  window.highlightAngles = function(type) {
+    const canvas = document.getElementById('intersect-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+
+    // 清空重绘
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景
+    ctx.fillStyle = '#eef2ff';
+    ctx.fillRect(0, 0, w, h);
+
+    // 绘制相交线
+    const cx = w / 2, cy = h / 2;
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(50, cy);
+    ctx.lineTo(w - 50, cy);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(cx - 120, 50);
+    ctx.lineTo(cx + 120, h - 50);
+    ctx.stroke();
+
+    // 标注角
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#1e293b';
+    ctx.fillText('∠1', cx + 40, cy - 30);
+    ctx.fillText('∠2', cx + 40, cy + 45);
+    ctx.fillText('∠3', cx - 60, cy + 45);
+    ctx.fillText('∠4', cx - 60, cy - 30);
+
+    // 高亮
+    if (type === 'vertical') {
+      // 对顶角：∠1和∠3，∠2和∠4
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + 100, cy);
+      ctx.lineTo(cx + 80, cy - 60);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx - 100, cy);
+      ctx.lineTo(cx - 80, cy + 60);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.3)';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + 100, cy);
+      ctx.lineTo(cx + 80, cy + 60);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx - 100, cy);
+      ctx.lineTo(cx - 80, cy - 60);
+      ctx.closePath();
+      ctx.fill();
+
+      document.getElementById('labReadout-intersect-canvas').textContent = '红色：∠1=∠3（对顶角），蓝色：∠2=∠4（对顶角）';
+    } else if (type === 'adjacent') {
+      // 邻补角
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.3)';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + 100, cy);
+      ctx.lineTo(cx + 80, cy - 60);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + 100, cy);
+      ctx.lineTo(cx + 80, cy + 60);
+      ctx.closePath();
+      ctx.fill();
+
+      document.getElementById('labReadout-intersect-canvas').textContent = '黄色：∠1+∠2=180°（邻补角互补）';
+    } else {
+      document.getElementById('labReadout-intersect-canvas').textContent = '两直线相交形成4个角：∠1、∠2、∠3、∠4';
+    }
+  };
+
+  // showAnglePair: 截线角对展示
+  window.showAnglePair = function(type) {
+    const canvas = document.getElementById('transversal-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#ecfeff';
+    ctx.fillRect(0, 0, w, h);
+
+    // 绘制两条平行线
+    ctx.strokeStyle = '#0e7490';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+
+    const y1 = 80, y2 = 220;
+    ctx.beginPath();
+    ctx.moveTo(50, y1);
+    ctx.lineTo(w - 50, y1);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(50, y2);
+    ctx.lineTo(w - 50, y2);
+    ctx.stroke();
+
+    // 截线
+    ctx.strokeStyle = '#be185d';
+    ctx.beginPath();
+    ctx.moveTo(150, 30);
+    ctx.lineTo(350, h - 30);
+    ctx.stroke();
+
+    // 标注角（简化标注8个角的位置）
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = '#0f172a';
+    const x1 = 200, x2 = 300;
+    ctx.fillText('∠1', x1 + 10, y1 - 10);
+    ctx.fillText('∠2', x1 + 10, y1 + 20);
+    ctx.fillText('∠3', x2 + 10, y2 - 10);
+    ctx.fillText('∠4', x2 + 10, y2 + 20);
+
+    const descEl = document.getElementById('pair-desc');
+    if (!descEl) return;
+
+    if (type === 'co-interior') {
+      // 同位角
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+      ctx.fillRect(x1, y1 - 30, 50, 30);
+      ctx.fillRect(x2, y2 - 30, 50, 30);
+      descEl.innerHTML = '<strong style="color:#dc2626;">同位角：</strong>在截线同侧，在两平行线同方向（都在上方或都在下方）。<br><strong>性质：</strong>两直线平行 ⇔ 同位角相等（∠1=∠3）';
+    } else if (type === 'alternate') {
+      // 内错角
+      ctx.fillStyle = 'rgba(14, 165, 233, 0.4)';
+      ctx.fillRect(x1, y1, 50, 30);
+      ctx.fillRect(x2, y2 - 30, 50, 30);
+      descEl.innerHTML = '<strong style="color:#0284c7;">内错角：</strong>在截线两侧，在两平行线之间，呈"Z"字形。<br><strong>性质：</strong>两直线平行 ⇔ 内错角相等（∠2=∠3）';
+    } else if (type === 'co-interior-sum') {
+      // 同旁内角
+      ctx.fillStyle = 'rgba(251, 146, 60, 0.4)';
+      ctx.fillRect(x1, y1, 50, 30);
+      ctx.fillRect(x2, y2, 50, 30);
+      descEl.innerHTML = '<strong style="color:#ea580c;">同旁内角：</strong>在截线同侧，在两平行线之间，呈"U"字形。<br><strong>性质：</strong>两直线平行 ⇔ 同旁内角互补（∠2+∠4=180°）';
+    } else {
+      descEl.innerHTML = '点击按钮查看不同角对的定义与性质';
+    }
+  };
+
+  // checkTask: 综合任务检查
+  window.checkTask = function() {
+    const input = document.getElementById('task-answer');
+    const fbEl = document.getElementById('fb-task');
+    if (!input || !fbEl) return;
+
+    const text = input.value.toLowerCase();
+    const checks = [
+      { key: '对顶角', expect: '50', reason: '对顶角相等' },
+      { key: '同位角', expect: '50', reason: '两直线平行，同位角相等' },
+      { key: '同旁内角', expect: '130', reason: '两直线平行，同旁内角互补，180°-50°=130°' },
+      { key: '内错角', expect: '50', reason: '两直线平行，内错角相等' }
+    ];
+
+    let correct = 0;
+    let feedback = '<div style="margin-top:12px;">';
+    checks.forEach(c => {
+      const found = text.includes(c.key) && text.includes(c.expect);
+      if (found) correct++;
+      feedback += `<div style="margin:6px 0;color:${found ? '#2e7d32' : '#c62828'};">
+        ${found ? '✅' : '❌'} <strong>${c.key}：</strong>${c.expect}°（${c.reason}）
+      </div>`;
+    });
+    feedback += `</div><div style="margin-top:12px;font-weight:bold;color:${correct === 4 ? '#2e7d32' : '#f57c00'};">
+      得分：${correct}/4
+    </div>`;
+
+    fbEl.innerHTML = feedback;
+
+    if (correct === 4) {
+      const ach = document.getElementById('ach-master');
+      if (ach) ach.style.opacity = '1';
+    }
+  };
+
+  // 初始化画布
+  setTimeout(() => {
+    if (document.getElementById('intersect-canvas')) {
+      highlightAngles('none');
+    }
+    if (document.getElementById('transversal-canvas')) {
+      showAnglePair('none');
+    }
+  }, 100);
+
+})();
+</script>
+</body>
 </html>

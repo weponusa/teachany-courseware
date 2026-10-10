@@ -967,5 +967,269 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"bg": [{"t": "poly", "pts": [[120, 260], [200, 150], [300, 260]], "fill": "rgba(239,68,68,.35)", "stroke": "#b91c1c", "w": 2.5}, {"t": "poly", "pts": [[330, 260], [410, 165], [500, 260]], "fill": "rgba(251,191,36,.35)", "stroke": "#b45309", "w": 2.5}, {"t": "poly", "pts": [[540, 260], [620, 150], [710, 260]], "fill": "rgba(226,232,240,.55)", "stroke": "#94a3b8", "w": 2.5}, {"t": "rect", "x": 60, "y": 290, "w2": 740, "h2": 60, "r": 8, "fill": "rgba(120,90,60,.35)", "stroke": "#a16207", "w": 2}, {"t": "text", "x": 210, "y": 232, "t2": "花岗岩", "size": 14}, {"t": "text", "x": 415, "y": 232, "t2": "砂岩", "size": 14}, {"t": "text", "x": 625, "y": 232, "t2": "大理岩", "size": 14}, {"t": "text", "x": 430, "y": 322, "t2": "土壤剖面（自上而下：表土→心土→母质层）", "size": 12.5}], "parts": [{"x": 210, "y": 210, "r": 90, "name": "花岗岩", "info": "岩浆岩：花斑状、坚硬、由石英/长石/云母组成——常用于建筑和铺路。", "lx": 210, "ly": 90}, {"x": 415, "y": 212, "r": 90, "name": "砂岩", "info": "沉积岩：有明显的砂粒感，常有层理——颗粒被胶结在一起形成。", "lx": 415, "ly": 90}, {"x": 625, "y": 205, "r": 90, "name": "大理岩", "info": "变质岩：由石灰岩变质形成，有漂亮的纹理，遇盐酸会冒气泡（含碳酸钙）。", "lx": 625, "ly": 90}, {"x": 430, "y": 320, "r": 120, "name": "土壤", "info": "由矿物质、有机质、水和空气组成；分表土、心土、母质层——是植物生长的“家园”。", "lx": 430, "ly": 372}], "tip": "👆 点击岩石/土壤，看它的特征", "canvas": "rock-canvas", "readout": "rock-status"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 岩石特征鉴定仪
+  if (typeof window.selectRock === 'undefined') {
+    window.selectRock = function(rockType) {
+      const canvas = document.getElementById('rock-canvas');
+      const status = document.getElementById('rock-status');
+      if (!canvas || !status) return;
+      
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      
+      const rockData = {
+        granite: {
+          name: '花岗岩',
+          color: ['#d4d4d8', '#a1a1aa', '#fef3c7'],
+          type: '岩浆岩',
+          hardness: '6~7',
+          texture: '粗粒结晶',
+          use: '建筑石材、雕塑',
+          minerals: '石英、长石、云母'
+        },
+        sandstone: {
+          name: '砂岩',
+          color: ['#fef3c7', '#fde68a', '#fcd34d'],
+          type: '沉积岩',
+          hardness: '4~6',
+          texture: '颗粒状',
+          use: '建筑材料、铺路',
+          minerals: '石英砂粒'
+        },
+        limestone: {
+          name: '石灰岩',
+          color: ['#e5e5e5', '#d4d4d4', '#a3a3a3'],
+          type: '沉积岩',
+          hardness: '3~4',
+          texture: '细腻致密',
+          use: '水泥原料、建材',
+          minerals: '方解石'
+        },
+        marble: {
+          name: '大理石',
+          color: ['#fafafa', '#f5f5f5', '#e5e5e5'],
+          type: '变质岩',
+          hardness: '3~5',
+          texture: '结晶纹理',
+          use: '装饰石材、雕刻',
+          minerals: '重结晶方解石'
+        },
+        obsidian: {
+          name: '黑曜石',
+          color: ['#18181b', '#27272a', '#3f3f46'],
+          type: '岩浆岩',
+          hardness: '5~6',
+          texture: '玻璃质',
+          use: '工艺品、刀具',
+          minerals: '火山玻璃'
+        },
+        shale: {
+          name: '页岩',
+          color: ['#71717a', '#52525b', '#3f3f46'],
+          type: '沉积岩',
+          hardness: '2~3',
+          texture: '薄层状',
+          use: '制砖、陶瓷',
+          minerals: '黏土矿物'
+        }
+      };
+      
+      const rock = rockData[rockType];
+      if (!rock) return;
+      
+      // 清空画布
+      ctx.clearRect(0, 0, w, h);
+      
+      // 背景渐变
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+      bgGrad.addColorStop(0, '#f8fafc');
+      bgGrad.addColorStop(1, '#e2e8f0');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, w, h);
+      
+      // 绘制岩石样本（左侧）
+      const rockX = 150;
+      const rockY = h / 2;
+      const rockSize = 120;
+      
+      ctx.save();
+      ctx.translate(rockX, rockY);
+      
+      // 岩石主体 - 不规则多边形
+      ctx.beginPath();
+      const angles = [0, 0.5, 1.2, 2, 2.8, 3.5, 4.5, 5.3];
+      angles.forEach((angle, i) => {
+        const r = rockSize * (0.8 + Math.random() * 0.3);
+        const x = Math.cos(angle) * r;
+        const y = Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      
+      // 岩石颜色渐变
+      const rockGrad = ctx.createRadialGradient(-20, -20, 0, 0, 0, rockSize);
+      rock.color.forEach((c, i) => {
+        rockGrad.addColorStop(i / (rock.color.length - 1), c);
+      });
+      ctx.fillStyle = rockGrad;
+      ctx.fill();
+      
+      ctx.strokeStyle = '#52525b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // 纹理细节
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        const angle = Math.random() * Math.PI * 2;
+        const len = rockSize * 0.6;
+        const x1 = Math.cos(angle) * 20;
+        const y1 = Math.sin(angle) * 20;
+        const x2 = x1 + Math.cos(angle) * len;
+        const y2 = y1 + Math.sin(angle) * len;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+      
+      ctx.restore();
+      
+      // 标注岩石名称
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(rock.name, rockX, rockY + rockSize + 30);
+      
+      // 特征卡片（右侧）
+      const cardX = 380;
+      const cardY = 40;
+      const cardW = 450;
+      const cardH = 300;
+      
+      // 卡片背景
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(0,0,0,0.1)';
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetY = 5;
+      ctx.fillRect(cardX, cardY, cardW, cardH);
+      ctx.shadowColor = 'transparent';
+      
+      // 卡片边框
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cardX, cardY, cardW, cardH);
+      
+      // 卡片标题
+      ctx.fillStyle = '#1e40af';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('🔬 岩石特征卡片', cardX + 20, cardY + 35);
+      
+      // 特征列表
+      const features = [
+        { label: '岩石类型', value: rock.type, icon: '🏔' },
+        { label: '主要矿物', value: rock.minerals, icon: '💎' },
+        { label: '硬度等级', value: rock.hardness, icon: '🔨' },
+        { label: '纹理特征', value: rock.texture, icon: '🔍' },
+        { label: '主要用途', value: rock.use, icon: '🏗' }
+      ];
+      
+      ctx.font = '15px sans-serif';
+      let yPos = cardY + 70;
+      
+      features.forEach(feat => {
+        // 图标
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(feat.icon, cardX + 25, yPos);
+        
+        // 标签
+        ctx.fillStyle = '#475569';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText(feat.label + ':', cardX + 60, yPos);
+        
+        // 值
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '15px sans-serif';
+        ctx.fillText(feat.value, cardX + 170, yPos);
+        
+        yPos += 45;
+      });
+      
+      // 底部提示
+      ctx.fillStyle = '#64748b';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('💡 提示：不同岩石的形成过程和矿物组成决定了它们的特征', w / 2, h - 15);
+      
+      status.textContent = `✅ 已选择：${rock.name}（${rock.type}）`;
+      status.style.color = '#16a34a';
+    };
+  }
+  
+  // 土壤层拖拽检查
+  if (typeof window.checkSoilLayers === 'undefined') {
+    window.checkSoilLayers = function() {
+      const result = document.getElementById('soil-layer-result');
+      if (!result) return;
+      
+      const correctOrder = [
+        { zone: 0, name: '枯枝落叶层', key: 'litter' },
+        { zone: 1, name: '腐殖质层', key: 'humus' },
+        { zone: 2, name: '淋溶层', key: 'leaching' },
+        { zone: 3, name: '淀积层', key: 'accumulation' },
+        { zone: 4, name: '母质层', key: 'bedrock' }
+      ];
+      
+      let correct = 0;
+      let total = correctOrder.length;
+      let feedback = [];
+      
+      correctOrder.forEach(item => {
+        const zoneContent = document.getElementById(`zone-${item.zone}-content`);
+        if (!zoneContent) return;
+        
+        const draggedItem = zoneContent.querySelector('.drag-item');
+        if (draggedItem) {
+          const itemKey = draggedItem.getAttribute('data-layer');
+          if (itemKey === item.key) {
+            correct++;
+            draggedItem.style.background = 'linear-gradient(135deg, #86efac 0%, #4ade80 100%)';
+            draggedItem.style.borderColor = '#22c55e';
+            feedback.push(`✅ ${item.name}`);
+          } else {
+            draggedItem.style.background = 'linear-gradient(135deg, #fca5a5 0%, #f87171 100%)';
+            draggedItem.style.borderColor = '#ef4444';
+            const actualName = correctOrder.find(o => o.key === itemKey)?.name || '未知';
+            feedback.push(`❌ 应为 ${item.name}，实际为 ${actualName}`);
+          }
+        } else {
+          feedback.push(`⚠️ ${item.name} 未放置`);
+        }
+      });
+      
+      result.style.display = 'block';
+      result.innerHTML = `
+        <div style="padding:12px;border-radius:8px;background:${correct === total ? '#d1fae5' : '#fef3c7'};">
+          <div style="font-weight:700;font-size:.95rem;margin-bottom:.5rem;color:#0a1a0f;">
+            ${correct === total ? '🎉 完全正确！' : `📊 得分：${correct}/${total}`}
+          </div>
+          <div style="font-size:.82rem;color:#374151;line-height:1.6;">
+            ${feedback.join('<br>')}
+          </div>
+          ${correct === total ? '<div style="margin-top:.5rem;font-size:.8rem;color:#059669;">💡 土壤从上到下依次为：枯枝落叶层 → 腐殖质层 → 淋溶层 → 淀积层 → 母质层</div>' : ''}
+        </div>
+      `;
+    };
+  }
+})();
+</script>
+</body>
 </html>

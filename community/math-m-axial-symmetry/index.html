@@ -611,5 +611,384 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 </div>
   <script src="../../assets/scripts/teachany-external-embed.js" defer></script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.drawShortestPath !== 'undefined') return;
+
+  // ========== 最短路径问题 ==========
+  window.drawShortestPath = function() {
+    const canvas = document.getElementById('pathCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    // 底层：背景
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(0, 0, w, h);
+    
+    // 直线 l (竖直线)
+    const lineX = w / 2;
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(lineX, 20);
+    ctx.lineTo(lineX, h - 20);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    ctx.fillStyle = '#1976d2';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('直线 l', lineX + 10, 30);
+    
+    // 点 A 和 B
+    const A = { x: 120, y: 80 };
+    const B = { x: 150, y: 200 };
+    
+    ctx.fillStyle = '#d32f2f';
+    ctx.beginPath();
+    ctx.arc(A.x, A.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText('A', A.x - 20, A.y);
+    
+    ctx.beginPath();
+    ctx.arc(B.x, B.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText('B', B.x - 20, B.y);
+    
+    // A 关于直线 l 的对称点 A'
+    const Ap = { x: 2 * lineX - A.x, y: A.y };
+    
+    ctx.fillStyle = '#7c3aed';
+    ctx.beginPath();
+    ctx.arc(Ap.x, Ap.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText("A'", Ap.x + 10, Ap.y);
+    
+    // 连接 A 和 A' 的虚线
+    ctx.strokeStyle = '#9e9e9e';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y);
+    ctx.lineTo(Ap.x, Ap.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // 连接 A'B
+    ctx.strokeStyle = '#2f7d32';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(Ap.x, Ap.y);
+    ctx.lineTo(B.x, B.y);
+    ctx.stroke();
+    
+    // 交点 P
+    const P = { x: lineX, y: Ap.y + (B.y - Ap.y) * (lineX - Ap.x) / (B.x - Ap.x) };
+    ctx.fillStyle = '#ff6f00';
+    ctx.beginPath();
+    ctx.arc(P.x, P.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.fillText('P', P.x + 10, P.y - 10);
+    
+    // 连接 PA 和 PB
+    ctx.strokeStyle = '#ff6f00';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(P.x, P.y);
+    ctx.lineTo(A.x, A.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(P.x, P.y);
+    ctx.lineTo(B.x, B.y);
+    ctx.stroke();
+    
+    // 标注
+    ctx.fillStyle = '#000';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('最短路径 = A\'B', 300, 50);
+    
+    document.getElementById('path-solution').style.display = 'block';
+  };
+
+  window.resetPath = function() {
+    const canvas = document.getElementById('pathCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(0, 0, w, h);
+    
+    const lineX = w / 2;
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(lineX, 20);
+    ctx.lineTo(lineX, h - 20);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    ctx.fillStyle = '#1976d2';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('直线 l', lineX + 10, 30);
+    
+    const A = { x: 120, y: 80 };
+    const B = { x: 150, y: 200 };
+    
+    ctx.fillStyle = '#d32f2f';
+    ctx.beginPath();
+    ctx.arc(A.x, A.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText('A', A.x - 20, A.y);
+    
+    ctx.beginPath();
+    ctx.arc(B.x, B.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText('B', B.x - 20, B.y);
+    
+    document.getElementById('path-solution').style.display = 'none';
+  };
+
+  // ========== 后测成绩计算 ==========
+  window.calcPostScore = function() {
+    let correct = 0;
+    const total = 5;
+    
+    for (let i = 1; i <= total; i++) {
+      const item = document.getElementById('post' + i);
+      if (item && item.dataset.correct === 'true') {
+        correct++;
+      }
+    }
+    
+    const scoreDiv = document.getElementById('post-score');
+    const scoreNum = document.getElementById('final-score-num');
+    const scoreMsg = document.getElementById('final-score-msg');
+    
+    if (scoreNum) scoreNum.textContent = correct + '/' + total;
+    
+    if (scoreMsg) {
+      if (correct === total) {
+        scoreMsg.textContent = '🎉 全部正确！你已完全掌握轴对称知识！';
+        scoreMsg.style.color = '#2f7d32';
+      } else if (correct >= 4) {
+        scoreMsg.textContent = '👍 很好！再复习一下错题就完美了！';
+        scoreMsg.style.color = '#1976d2';
+      } else if (correct >= 3) {
+        scoreMsg.textContent = '💪 还不错，建议重新学习相关知识点。';
+        scoreMsg.style.color = '#f57c00';
+      } else {
+        scoreMsg.textContent = '📚 需要加强练习，回顾课程内容吧！';
+        scoreMsg.style.color = '#d32f2f';
+      }
+    }
+    
+    if (scoreDiv) scoreDiv.style.display = 'block';
+  };
+
+  // ========== 分形蝴蝶图案 ==========
+  let fractalAnimFrame = null;
+  
+  window.drawFractal = function() {
+    const canvas = document.getElementById('fractalCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    
+    if (fractalAnimFrame) cancelAnimationFrame(fractalAnimFrame);
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景渐变
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#e3f2fd');
+    grad.addColorStop(1, '#fff3e0');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    
+    const cx = w / 2, cy = h / 2;
+    let progress = 0;
+    
+    function animate() {
+      progress += 0.015;
+      if (progress > 1) progress = 1;
+      
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+      
+      // 蝴蝶身体
+      ctx.fillStyle = '#6d4c41';
+      ctx.fillRect(cx - 4, cy - 40 * progress, 8, 80 * progress);
+      
+      // 触角
+      ctx.strokeStyle = '#6d4c41';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 40 * progress);
+      ctx.lineTo(cx - 15 * progress, cy - 55 * progress);
+      ctx.moveTo(cx, cy - 40 * progress);
+      ctx.lineTo(cx + 15 * progress, cy - 55 * progress);
+      ctx.stroke();
+      
+      // 左上翅膀
+      ctx.fillStyle = 'rgba(156, 39, 176, ' + (0.7 * progress) + ')';
+      ctx.beginPath();
+      ctx.ellipse(cx - 50 * progress, cy - 20 * progress, 40 * progress, 50 * progress, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#7c3aed';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // 右上翅膀（对称）
+      ctx.beginPath();
+      ctx.ellipse(cx + 50 * progress, cy - 20 * progress, 40 * progress, 50 * progress, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      // 左下翅膀
+      ctx.fillStyle = 'rgba(233, 30, 99, ' + (0.6 * progress) + ')';
+      ctx.beginPath();
+      ctx.ellipse(cx - 40 * progress, cy + 30 * progress, 35 * progress, 40 * progress, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#e91e63';
+      ctx.stroke();
+      
+      // 右下翅膀（对称）
+      ctx.beginPath();
+      ctx.ellipse(cx + 40 * progress, cy + 30 * progress, 35 * progress, 40 * progress, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      // 装饰斑点
+      if (progress > 0.6) {
+        const spotProg = (progress - 0.6) / 0.4;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(cx - 50 * progress, cy - 20 * progress, 8 * spotProg, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + 50 * progress, cy - 20 * progress, 8 * spotProg, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // 标注
+      if (progress === 1) {
+        ctx.fillStyle = '#000';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('对称轴', cx - 20, cy - 80);
+        ctx.strokeStyle = '#1976d2';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 70);
+        ctx.lineTo(cx, cy + 70);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        ctx.fillText('左翅', cx - 80, cy - 20);
+        ctx.fillText('右翅', cx + 60, cy - 20);
+        ctx.fillText('轴对称图形', cx - 40, h - 20);
+      }
+      
+      if (progress < 1) {
+        fractalAnimFrame = requestAnimationFrame(animate);
+      }
+    }
+    
+    animate();
+  };
+
+  // ========== 雪花分形 ==========
+  let snowflakeAnimFrame = null;
+  
+  window.drawSnowflake = function() {
+    const canvas = document.getElementById('fractalCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    
+    if (snowflakeAnimFrame) cancelAnimationFrame(snowflakeAnimFrame);
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+    grad.addColorStop(0, '#e1f5fe');
+    grad.addColorStop(1, '#b3e5fc');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    
+    const cx = w / 2, cy = h / 2;
+    let progress = 0;
+    
+    function drawBranch(x, y, len, angle, depth) {
+      if (depth === 0 || len < 2) return;
+      
+      const x2 = x + len * Math.cos(angle);
+      const y2 = y + len * Math.sin(angle);
+      
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      
+      drawBranch(x2, y2, len * 0.7, angle - Math.PI / 6, depth - 1);
+      drawBranch(x2, y2, len * 0.7, angle + Math.PI / 6, depth - 1);
+    }
+    
+    function animate() {
+      progress += 0.012;
+      if (progress > 1) progress = 1;
+      
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+      
+      ctx.strokeStyle = '#0277bd';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      const maxDepth = Math.floor(3 * progress);
+      const baseLen = 60 * progress;
+      
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        drawBranch(cx, cy, baseLen, angle, maxDepth);
+      }
+      
+      if (progress === 1) {
+        ctx.fillStyle = '#000';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('六重对称', cx - 30, cy - 80);
+        ctx.fillText('中心', cx - 15, cy + 5);
+        ctx.fillText('科赫雪花', cx - 30, h - 20);
+      }
+      
+      if (progress < 1) {
+        snowflakeAnimFrame = requestAnimationFrame(animate);
+      }
+    }
+    
+    animate();
+  };
+
+  // 初始化路径画布
+  if (document.getElementById('pathCanvas')) {
+    window.resetPath();
+  }
+
+})();
+</script>
+</body>
 </html>

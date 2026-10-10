@@ -1041,7 +1041,361 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 
 
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.resetMoonSim !== 'undefined') return;
+
+  // ========== 月球模拟器相关 ==========
+  let moonAngle = 0; // 月球在轨道上的角度（弧度）
+  let autoPlaying = false;
+  let animationId = null;
+
+  const MOON_PHASES = [
+    { name: '新月', lunarDay: '初一', desc: '月亮几乎不可见', angle: 0 },
+    { name: '娥眉月', lunarDay: '初三~初七', desc: '右侧一弯细月牙', angle: Math.PI / 4 },
+    { name: '上弦月', lunarDay: '初八', desc: '右半边圆形', angle: Math.PI / 2 },
+    { name: '盈凸月', lunarDay: '初十~十三', desc: '大半个圆，右侧更亮', angle: 3 * Math.PI / 4 },
+    { name: '满月', lunarDay: '十五', desc: '整个圆盘明亮', angle: Math.PI },
+    { name: '亏凸月', lunarDay: '十六~二十', desc: '大半个圆，左侧更亮', angle: 5 * Math.PI / 4 },
+    { name: '下弦月', lunarDay: '二十三', desc: '左半边圆形', angle: 3 * Math.PI / 2 },
+    { name: '残月', lunarDay: '二十五~二十八', desc: '左侧一弯细月牙', angle: 7 * Math.PI / 4 }
+  ];
+
+  function drawMoonSimulator() {
+    const canvas = document.getElementById('moonSimCanvas');
+    const viewCanvas = document.getElementById('moonViewCanvas');
+    if (!canvas || !viewCanvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const vCtx = viewCanvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const cx = w / 2, cy = h / 2;
+    const orbitRadius = 160;
+    const earthRadius = 30;
+    const moonRadius = 18;
+
+    // 清空画布
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+
+    // 绘制星空背景
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    for (let i = 0; i < 80; i++) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      ctx.fillRect(x, y, 1, 1);
+    }
+
+    // 绘制轨道
+    ctx.strokeStyle = 'rgba(253,230,138,0.3)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, orbitRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 绘制太阳光线方向指示（从右侧照射）
+    ctx.strokeStyle = 'rgba(253,230,138,0.5)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const y = cy - 100 + i * 50;
+      ctx.beginPath();
+      ctx.moveTo(w - 60, y);
+      ctx.lineTo(w - 20, y);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(253,230,138,0.7)';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('☀ 太阳光', w - 55, cy + 130);
+
+    // 绘制地球
+    const earthGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, earthRadius);
+    earthGrad.addColorStop(0, '#4fc3f7');
+    earthGrad.addColorStop(0.7, '#0288d1');
+    earthGrad.addColorStop(1, '#01579b');
+    ctx.fillStyle = earthGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, earthRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🌍', cx, cy + 5);
+
+    // 计算月球位置
+    const moonX = cx + Math.cos(moonAngle) * orbitRadius;
+    const moonY = cy + Math.sin(moonAngle) * orbitRadius;
+
+    // 绘制月球（俯视图，显示明暗面）
+    ctx.save();
+    ctx.translate(moonX, moonY);
+    
+    // 月球暗面（左侧）
+    ctx.fillStyle = '#424242';
+    ctx.beginPath();
+    ctx.arc(0, 0, moonRadius, Math.PI / 2, -Math.PI / 2);
+    ctx.fill();
+    
+    // 月球亮面（右侧，面向太阳）
+    ctx.fillStyle = '#e0e0e0';
+    ctx.beginPath();
+    ctx.arc(0, 0, moonRadius, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+    
+    ctx.restore();
+
+    // 绘制观察视角（从地球看月球的月相）
+    drawMoonPhaseView(vCtx, moonAngle);
+    updatePhaseInfo(moonAngle);
+  }
+
+  function drawMoonPhaseView(ctx, angle) {
+    const w = 180, h = 180;
+    const cx = w / 2, cy = h / 2;
+    const r = 70;
+
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+
+    // 计算光照角度（太阳从右侧照射，angle=0时为新月）
+    const phase = (angle + Math.PI) % (Math.PI * 2);
+    
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // 绘制月球暗面
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 绘制亮面（根据相位）
+    ctx.fillStyle = '#e8e8e8';
+    ctx.beginPath();
+    
+    if (phase < Math.PI) {
+      // 上半月周期：从新月到满月
+      const terminator = Math.cos(phase) * r;
+      ctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false);
+      ctx.ellipse(0, 0, Math.abs(terminator), r, 0, Math.PI / 2, -Math.PI / 2, terminator > 0);
+    } else {
+      // 下半月周期：从满月到新月
+      const terminator = Math.cos(phase) * r;
+      ctx.arc(0, 0, r, Math.PI / 2, -Math.PI / 2, false);
+      ctx.ellipse(0, 0, Math.abs(terminator), r, 0, -Math.PI / 2, Math.PI / 2, terminator < 0);
+    }
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function updatePhaseInfo(angle) {
+    const normalizedAngle = ((angle + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    let closestPhase = MOON_PHASES[0];
+    let minDiff = Math.PI * 2;
+
+    MOON_PHASES.forEach(phase => {
+      const diff = Math.abs(normalizedAngle - phase.angle);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestPhase = phase;
+      }
+    });
+
+    const nameEl = document.getElementById('moonPhaseName');
+    const dayEl = document.getElementById('moonLunarDay');
+    const descEl = document.getElementById('moonPhaseDesc');
+
+    if (nameEl) nameEl.textContent = closestPhase.name;
+    if (dayEl) dayEl.textContent = closestPhase.lunarDay;
+    if (descEl) descEl.textContent = closestPhase.desc;
+  }
+
+  function setupMoonDrag() {
+    const canvas = document.getElementById('moonSimCanvas');
+    if (!canvas) return;
+
+    let isDragging = false;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      canvas.style.cursor = 'grabbing';
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const cx = canvas.width / 2, cy = canvas.height / 2;
+      
+      moonAngle = Math.atan2(y - cy, x - cx);
+      drawMoonSimulator();
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isDragging = false;
+      canvas.style.cursor = 'grab';
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      isDragging = false;
+      canvas.style.cursor = 'grab';
+    });
+  }
+
+  function animateAutoPlay() {
+    if (!autoPlaying) return;
+    
+    moonAngle += 0.02;
+    drawMoonSimulator();
+    animationId = requestAnimationFrame(animateAutoPlay);
+  }
+
+  window.resetMoonSim = function() {
+    if (typeof window.resetMoonSim._initialized === 'undefined') {
+      setupMoonDrag();
+      window.resetMoonSim._initialized = true;
+    }
+    
+    moonAngle = 0;
+    autoPlaying = false;
+    if (animationId) cancelAnimationFrame(animationId);
+    
+    const btn = document.getElementById('autoPlayBtn');
+    if (btn) btn.textContent = '▶ 自动公转';
+    
+    drawMoonSimulator();
+  };
+
+  window.toggleAutoPlay = function() {
+    autoPlaying = !autoPlaying;
+    const btn = document.getElementById('autoPlayBtn');
+    
+    if (autoPlaying) {
+      if (btn) btn.textContent = '⏸ 暂停';
+      animateAutoPlay();
+    } else {
+      if (btn) btn.textContent = '▶ 自动公转';
+      if (animationId) cancelAnimationFrame(animationId);
+    }
+  };
+
+  // ========== 月相排序游戏 ==========
+  const PHASE_ORDER = ['新月', '娥眉月', '上弦月', '盈凸月', '满月', '亏凸月', '下弦月', '残月'];
+  let draggedElement = null;
+
+  function setupSortGame() {
+    const dropZone = document.getElementById('sortDropZone');
+    const cards = document.querySelectorAll('.phase-card');
+    
+    if (!dropZone) return;
+
+    cards.forEach(card => {
+      card.setAttribute('draggable', 'true');
+      
+      card.addEventListener('dragstart', (e) => {
+        draggedElement = card;
+        card.style.opacity = '0.5';
+      });
+
+      card.addEventListener('dragend', () => {
+        card.style.opacity = '1';
+        draggedElement = null;
+      });
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (draggedElement && draggedElement.parentElement !== dropZone) {
+        dropZone.appendChild(draggedElement);
+      }
+    });
+  }
+
+  window.checkSortOrder = function() {
+    const dropZone = document.getElementById('sortDropZone');
+    if (!dropZone) return;
+
+    const cards = Array.from(dropZone.querySelectorAll('.phase-card'));
+    let correct = 0;
+
+    cards.forEach((card, index) => {
+      const phaseName = card.dataset.phase || card.textContent.trim();
+      const isCorrect = PHASE_ORDER[index] === phaseName;
+      
+      if (isCorrect) {
+        card.style.borderColor = '#4caf50';
+        card.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
+        correct++;
+      } else {
+        card.style.borderColor = '#f44336';
+        card.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
+      }
+    });
+
+    const feedback = document.querySelector('.sort-feedback') || createFeedback();
+    feedback.textContent = `✓ ${correct}/${PHASE_ORDER.length} 正确`;
+    feedback.style.color = correct === PHASE_ORDER.length ? '#4caf50' : '#ffd54f';
+  };
+
+  function createFeedback() {
+    const dropZone = document.getElementById('sortDropZone');
+    if (!dropZone) return document.createElement('div');
+    
+    const feedback = document.createElement('div');
+    feedback.className = 'sort-feedback';
+    feedback.style.cssText = 'margin-top:1rem;font-size:1.1rem;font-weight:bold;text-align:center;';
+    dropZone.parentElement.appendChild(feedback);
+    return feedback;
+  }
+
+  window.resetSortGame = function() {
+    if (typeof window.resetSortGame._initialized === 'undefined') {
+      setupSortGame();
+      window.resetSortGame._initialized = true;
+    }
+
+    const dropZone = document.getElementById('sortDropZone');
+    const sourceZone = document.querySelector('.phase-cards');
+    
+    if (!dropZone || !sourceZone) return;
+
+    const cards = Array.from(dropZone.querySelectorAll('.phase-card'));
+    cards.forEach(card => {
+      card.style.borderColor = '';
+      card.style.backgroundColor = '';
+      sourceZone.appendChild(card);
+    });
+
+    const feedback = document.querySelector('.sort-feedback');
+    if (feedback) feedback.textContent = '';
+  };
+
+  // 初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (document.getElementById('moonSimCanvas')) {
+        window.resetMoonSim();
+      }
+    });
+  } else {
+    if (document.getElementById('moonSimCanvas')) {
+      window.resetMoonSim();
+    }
+  }
+})();
+</script>
+</body>
 <script src="../../assets/engines/canvas-lab/v1/lab.js"></script>
 <script src="../../assets/engines/canvas-lab/v1/scenes.js"></script>
 <script>

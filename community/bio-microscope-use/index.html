@@ -979,5 +979,310 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "microscopeCanvas", "readout": "labReadout-microscopeCanvas", "bg": [{"t": "rect", "x": 300, "y": 330, "w2": 240, "h2": 22, "fill": "rgba(148,163,184,.4)", "stroke": "#94a3b8", "r": 10}, {"t": "rect", "x": 390, "y": 120, "w2": 20, "h2": 210, "fill": "#94a3b8", "stroke": 8}, {"t": "rect", "x": 360, "y": 96, "w2": 90, "h2": 30, "fill": "rgba(96,165,250,.35)", "stroke": "#60a5fa", "r": 8}, {"t": "ellipse", "x": 300, "y": 70, "rx": 46, "ry": 16, "fill": "rgba(96,165,250,.5)", "stroke": "#60a5fa"}, {"t": "rect", "x": 250, "y": 150, "w2": 120, "h2": 16, "fill": "rgba(251,191,36,.4)", "stroke": "#f59e0b", "r": 8}, {"t": "ellipse", "x": 390, "y": 178, "rx": 16, "ry": 12, "fill": "rgba(148,163,184,.8)", "stroke": "#64748b"}, {"t": "ellipse", "x": 430, "y": 150, "rx": 44, "ry": 12, "fill": "rgba(16,185,129,.35)", "stroke": "#059669", "w": 8}, {"t": "line", "x1": 430, "y1": 150, "x2": 470, "y2": 176, "w": 2.5, "color": "#94a3b8"}], "parts": [{"x": 300, "y": 66, "name": "目镜", "info": "靠近眼睛的镜头，一般放大 10 倍（×10）。", "r": 40, "lx": 236, "ly": 60}, {"x": 390, "y": 96, "name": "镜筒", "info": "连接目镜和物镜，光线从这里通过。", "r": 34, "lx": 500, "ly": 92}, {"x": 390, "y": 178, "name": "物镜", "info": "靠近被观察物体的镜头，有 4×、10×、40× 等，放大倍数越大镜头越长。", "r": 34, "lx": 552, "ly": 186}, {"x": 310, "y": 150, "name": "载物台", "info": "放玻片标本的台面，中间有通光孔让光线通过。", "r": 60, "lx": 250, "ly": 128}, {"x": 430, "y": 150, "name": "反光镜/光源", "info": "把光反射上来照亮标本——显微镜靠“透射光”观察。", "r": 44, "lx": 470, "ly": 128}, {"x": 420, "y": 342, "name": "镜座", "info": "支撑整个显微镜，保证稳定。", "r": 60, "lx": 560, "ly": 330}], "tip": "👆 点击显微镜各部件，了解它的作用"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 音频播放器切换
+  if (typeof window.toggleAudioPlayer === 'undefined') {
+    window.toggleAudioPlayer = function() {
+      const badge = document.getElementById('audioBadge');
+      const audios = document.querySelectorAll('audio[id^="ta-audio-"]');
+      
+      if (!badge || audios.length === 0) return;
+      
+      let isPlaying = badge.classList.contains('playing');
+      
+      if (isPlaying) {
+        audios.forEach(a => {
+          a.pause();
+          a.currentTime = 0;
+        });
+        badge.classList.remove('playing');
+        badge.textContent = '🎧 听讲解';
+      } else {
+        let currentIndex = 0;
+        badge.classList.add('playing');
+        badge.textContent = '⏸ 暂停讲解';
+        
+        const playNext = () => {
+          if (currentIndex >= audios.length) {
+            badge.classList.remove('playing');
+            badge.textContent = '🎧 听讲解';
+            return;
+          }
+          
+          const audio = audios[currentIndex];
+          audio.play().catch(() => {});
+          
+          audio.onended = () => {
+            currentIndex++;
+            playNext();
+          };
+        };
+        
+        playNext();
+      }
+    };
+  }
+
+  // 拖拽标签检查
+  if (typeof window.checkDragLabels === 'undefined') {
+    // 初始化拖拽功能
+    const initDrag = () => {
+      const chips = document.querySelectorAll('.draggable-chip');
+      const zones = document.querySelectorAll('.drop-zone');
+      
+      chips.forEach(chip => {
+        chip.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', chip.dataset.name);
+          chip.style.opacity = '0.5';
+        });
+        
+        chip.addEventListener('dragend', (e) => {
+          chip.style.opacity = '1';
+        });
+      });
+      
+      zones.forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          zone.style.background = '#e3f2fd';
+        });
+        
+        zone.addEventListener('dragleave', () => {
+          zone.style.background = '';
+        });
+        
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          zone.style.background = '';
+          const name = e.dataTransfer.getData('text/plain');
+          
+          // 清除该区域已有的标签
+          const existing = zone.querySelector('.draggable-chip');
+          if (existing) {
+            document.getElementById('chipPool').appendChild(existing);
+          }
+          
+          // 找到被拖拽的元素并移动
+          const chip = Array.from(document.querySelectorAll('.draggable-chip'))
+            .find(c => c.dataset.name === name);
+          if (chip) {
+            zone.appendChild(chip);
+          }
+        });
+      });
+    };
+    
+    initDrag();
+    
+    window.checkDragLabels = function() {
+      const zones = document.querySelectorAll('.drop-zone');
+      const feedback = document.getElementById('dragFeedback');
+      
+      if (!feedback) return;
+      
+      let correct = 0;
+      let total = zones.length;
+      
+      zones.forEach(zone => {
+        const answer = zone.dataset.answer;
+        const chip = zone.querySelector('.draggable-chip');
+        
+        zone.style.border = '';
+        zone.style.background = '';
+        
+        if (chip && chip.dataset.name === answer) {
+          zone.style.border = '2px solid #4caf50';
+          zone.style.background = '#e8f5e9';
+          correct++;
+        } else if (chip) {
+          zone.style.border = '2px solid #f44336';
+          zone.style.background = '#ffebee';
+        }
+      });
+      
+      if (correct === total) {
+        feedback.innerHTML = `<div style="color:#2e7d32;font-weight:600;">🎉 全部正确！你已掌握显微镜各部件功能！</div>`;
+        feedback.style.display = 'block';
+      } else {
+        feedback.innerHTML = `<div style="color:#d32f2f;">答对 ${correct}/${total} 个，请检查标红的部分</div>`;
+        feedback.style.display = 'block';
+      }
+    };
+  }
+
+  // 放大倍数视野模拟
+  if (typeof window.setMagnify === 'undefined') {
+    let currentMag = 100;
+    
+    window.setMagnify = function(mag) {
+      currentMag = mag;
+      
+      const canvas = document.getElementById('viewCanvas');
+      const btn100 = document.getElementById('btn100x');
+      const btn400 = document.getElementById('btn400x');
+      
+      if (!canvas) return;
+      
+      // 更新按钮状态
+      if (btn100 && btn400) {
+        btn100.classList.toggle('active', mag === 100);
+        btn400.classList.toggle('active', mag === 400);
+      }
+      
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      
+      // 清空画布
+      ctx.clearRect(0, 0, w, h);
+      
+      // 绘制视野圆形背景
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const radius = 140;
+      
+      // 视野渐变（低倍亮，高倍暗）
+      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+      if (mag === 100) {
+        gradient.addColorStop(0, '#fffef7');
+        gradient.addColorStop(1, '#f5f5dc');
+      } else {
+        gradient.addColorStop(0, '#e8e8d0');
+        gradient.addColorStop(1, '#d0d0b8');
+      }
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 绘制视野边缘
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      
+      // 绘制细胞
+      const cellSize = mag === 100 ? 25 : 60;
+      const cellCount = mag === 100 ? 24 : 6;
+      const cellsPerRow = mag === 100 ? 6 : 2;
+      
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 5, 0, Math.PI * 2);
+      ctx.clip();
+      
+      for (let i = 0; i < cellCount; i++) {
+        const row = Math.floor(i / cellsPerRow);
+        const col = i % cellsPerRow;
+        
+        const offsetX = mag === 100 ? -70 : -40;
+        const offsetY = mag === 100 ? -70 : -40;
+        const spacingX = mag === 100 ? 50 : 80;
+        const spacingY = mag === 100 ? 50 : 80;
+        
+        const x = centerX + offsetX + col * spacingX;
+        const y = centerY + offsetY + row * spacingY;
+        
+        // 细胞壁
+        ctx.strokeStyle = '#2f7d32';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize / 2, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // 细胞膜
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize / 2 - 2, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // 细胞核
+        ctx.fillStyle = '#1976d2';
+        ctx.beginPath();
+        ctx.arc(x, y, cellSize / 6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 高倍镜下显示细胞质颗粒
+        if (mag === 400) {
+          ctx.fillStyle = '#81c784';
+          for (let j = 0; j < 5; j++) {
+            const angle = (j / 5) * Math.PI * 2;
+            const dist = cellSize / 4;
+            ctx.beginPath();
+            ctx.arc(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      
+      ctx.restore();
+      
+      // 添加标注
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 13px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      
+      if (mag === 100) {
+        ctx.fillText('细胞壁', centerX - 80, centerY - 90);
+        ctx.fillText('细胞核', centerX + 70, centerY - 80);
+        ctx.fillText('视野明亮，细胞数量多', centerX, h - 20);
+        
+        // 引线
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 80, centerY - 85);
+        ctx.lineTo(centerX - 50, centerY - 60);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(centerX + 70, centerY - 75);
+        ctx.lineTo(centerX + 50, centerY - 50);
+        ctx.stroke();
+      } else {
+        ctx.fillText('细胞壁', centerX - 90, centerY - 100);
+        ctx.fillText('细胞核', centerX, centerY - 10);
+        ctx.fillText('细胞质', centerX + 85, centerY + 30);
+        ctx.fillText('视野较暗，细胞数量少但结构清晰', centerX, h - 20);
+        
+        // 引线
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 90, centerY - 95);
+        ctx.lineTo(centerX - 60, centerY - 70);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY - 5);
+        ctx.lineTo(centerX, centerY + 20);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(centerX + 85, centerY + 35);
+        ctx.lineTo(centerX + 50, centerY + 50);
+        ctx.stroke();
+      }
+      
+      // 放大倍数标识
+      ctx.fillStyle = '#1976d2';
+      ctx.font = 'bold 16px Arial, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${mag}×`, 20, 30);
+    };
+    
+    // 初始化绘制
+    if (document.getElementById('viewCanvas')) {
+      setMagnify(100);
+    }
+  }
+})();
+</script>
+</body>
 </html>

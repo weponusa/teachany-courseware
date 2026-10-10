@@ -543,5 +543,160 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 </div>
   <script src="../../assets/scripts/teachany-external-embed.js" defer></script>
 <script src="../../assets/scripts/teachany-page-nav.js" defer></script>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.taStdQuiz !== 'undefined' && typeof window.chk !== 'undefined') return;
+
+  /**
+   * taStdQuiz - 标准课件测验函数
+   * @param {HTMLElement} btn - 被点击的按钮
+   * @param {boolean} isCorrect - 是否正确答案
+   * @param {string} feedbackType - 反馈类型（未使用，保留参数）
+   */
+  window.taStdQuiz = function(btn, isCorrect, feedbackType) {
+    if (!btn) return;
+    
+    // 找到所属的测验卡片
+    const quizCard = btn.closest('.ta-standard-quiz');
+    if (!quizCard) return;
+    
+    // 找到反馈容器
+    const feedbackDiv = quizCard.querySelector('.ta-standard-feedback');
+    if (!feedbackDiv) return;
+    
+    // 找到该题所有按钮
+    const allButtons = quizCard.querySelectorAll('button[onclick*="taStdQuiz"]');
+    
+    // 重置状态（支持重复点击）
+    allButtons.forEach(b => {
+      b.style.backgroundColor = '';
+      b.style.color = '';
+      b.style.border = '';
+      b.disabled = false;
+    });
+    feedbackDiv.innerHTML = '';
+    feedbackDiv.style.display = 'none';
+    
+    // 设置当前按钮状态
+    if (isCorrect) {
+      btn.style.backgroundColor = '#4caf50';
+      btn.style.color = 'white';
+      btn.style.border = '2px solid #2e7d32';
+      feedbackDiv.innerHTML = '<div style="color:#2e7d32;padding:12px;background:#e8f5e9;border-radius:8px;margin-top:12px;"><strong>✅ 正确！</strong> 很好，你理解了这个概念。</div>';
+    } else {
+      btn.style.backgroundColor = '#f44336';
+      btn.style.color = 'white';
+      btn.style.border = '2px solid #c62828';
+      feedbackDiv.innerHTML = '<div style="color:#c62828;padding:12px;background:#ffebee;border-radius:8px;margin-top:12px;"><strong>❌ 不正确。</strong> 再想想，或者查看课程内容。</div>';
+    }
+    
+    feedbackDiv.style.display = 'block';
+    
+    // 禁用所有按钮防止重复提交
+    allButtons.forEach(b => {
+      if (b !== btn) {
+        b.disabled = true;
+        b.style.opacity = '0.5';
+      }
+    });
+    
+    // 3秒后允许重新作答
+    setTimeout(() => {
+      allButtons.forEach(b => {
+        b.disabled = false;
+        b.style.opacity = '1';
+      });
+    }, 3000);
+  };
+
+  /**
+   * chk - 即时练习检查函数
+   * @param {HTMLElement} btn - 被点击的按钮
+   * @param {string} correctAnswer - 正确答案标识
+   * @param {string} groupId - 题目组ID
+   */
+  window.chk = function(btn, correctAnswer, groupId) {
+    if (!btn || !groupId) return;
+    
+    // 找到反馈容器
+    const feedbackDiv = document.getElementById(groupId + '-fb');
+    if (!feedbackDiv) return;
+    
+    // 找到所属卡片
+    const card = btn.closest('.card');
+    if (!card) return;
+    
+    // 找到该题所有选项按钮
+    const allOptions = card.querySelectorAll('.quiz-option');
+    
+    // 获取当前按钮的答案（从文本中提取选项字母）
+    const btnText = btn.textContent.trim();
+    const userAnswer = btnText.charAt(0); // 获取 A/B/C/D
+    
+    // 重置所有按钮状态（支持重复点击）
+    allOptions.forEach(opt => {
+      opt.style.backgroundColor = '';
+      opt.style.color = '';
+      opt.style.border = '';
+      opt.style.fontWeight = '';
+      opt.disabled = false;
+    });
+    feedbackDiv.innerHTML = '';
+    feedbackDiv.style.display = 'none';
+    
+    // 判断答案
+    const isCorrect = (userAnswer === correctAnswer);
+    
+    if (isCorrect) {
+      btn.style.backgroundColor = '#4caf50';
+      btn.style.color = 'white';
+      btn.style.border = '2px solid #2e7d32';
+      btn.style.fontWeight = 'bold';
+      
+      feedbackDiv.innerHTML = '<div style="color:#2e7d32;padding:10px;background:#e8f5e9;border-radius:6px;margin-top:10px;font-size:14px;"><strong>✅ 回答正确！</strong><br>F 和 Cl 同属ⅦA族（卤族），最外层电子数相同（7个），化学性质最相似。</div>';
+    } else {
+      btn.style.backgroundColor = '#f44336';
+      btn.style.color = 'white';
+      btn.style.border = '2px solid #c62828';
+      btn.style.fontWeight = 'bold';
+      
+      // 高亮正确答案
+      allOptions.forEach(opt => {
+        const optText = opt.textContent.trim();
+        const optAnswer = optText.charAt(0);
+        if (optAnswer === correctAnswer) {
+          opt.style.backgroundColor = '#e8f5e9';
+          opt.style.border = '2px solid #4caf50';
+          opt.style.color = '#2e7d32';
+        }
+      });
+      
+      feedbackDiv.innerHTML = '<div style="color:#c62828;padding:10px;background:#ffebee;border-radius:6px;margin-top:10px;font-size:14px;"><strong>❌ 答案不正确。</strong><br>提示：同族元素最外层电子数相同，化学性质相似。F 和 Cl 都属于ⅦA族（卤族）。</div>';
+    }
+    
+    feedbackDiv.style.display = 'block';
+    
+    // 禁用所有按钮
+    allOptions.forEach(opt => {
+      opt.disabled = true;
+      if (opt !== btn) {
+        opt.style.opacity = '0.6';
+      }
+    });
+    
+    // 2.5秒后允许重新作答
+    setTimeout(() => {
+      allOptions.forEach(opt => {
+        opt.disabled = false;
+        opt.style.opacity = '1';
+      });
+    }, 2500);
+  };
+
+})();
+</script>
 </body>
 </html>

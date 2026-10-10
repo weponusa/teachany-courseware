@@ -2440,5 +2440,153 @@ setTimeout(() => { if (!isPlayMode) document.body.classList.remove('toolbar-visi
 </body>
 </html>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><span class="ta-phase" data-tone="aux">知识图谱</span><h2 class="section-title">🗺️ 知识图谱：三国两晋南北朝至隋唐</h2><div data-teachany-kg="hist-m-three-kingdoms-sui-tang"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.taStdAIAnalyze !== 'undefined') return;
+
+  window.taStdAIAnalyze = function(button) {
+    const card = button.closest('.ta-standard-card');
+    if (!card) return;
+    
+    const textarea = card.querySelector('textarea');
+    const prompt = textarea ? textarea.getAttribute('data-prompt') : '';
+    const userInput = textarea ? textarea.value.trim() : '';
+    
+    // 移除旧的结果区域
+    let resultDiv = card.querySelector('.ai-result');
+    if (resultDiv) {
+      resultDiv.remove();
+    }
+    
+    // 创建新的结果区域
+    resultDiv = document.createElement('div');
+    resultDiv.className = 'ai-result';
+    resultDiv.style.cssText = 'margin-top: 15px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);';
+    
+    // 显示加载动画
+    resultDiv.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <span>AI 正在分析中...</span>
+      </div>
+    `;
+    
+    // 添加旋转动画样式
+    if (!document.getElementById('ai-spin-style')) {
+      const style = document.createElement('style');
+      style.id = 'ai-spin-style';
+      style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+      document.head.appendChild(style);
+    }
+    
+    button.parentNode.insertBefore(resultDiv, button.nextSibling);
+    
+    // 模拟 AI 分析延迟
+    setTimeout(() => {
+      let analysis = '';
+      
+      // 根据提示词生成针对性分析
+      if (prompt.includes('魏蜀吴三国政治制度')) {
+        analysis = `
+          <h4 style="margin-top: 0; color: #ffd700;">📊 三国政治制度比较分析</h4>
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 5px; margin: 10px 0;">
+            <p><strong>🏛️ 魏国（曹魏）：</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              <li>中央集权程度最高，继承东汉制度并强化</li>
+              <li>九品中正制：按门第选拔人才，世族垄断政权</li>
+              <li>州郡制度严密，中央对地方控制力强</li>
+            </ul>
+            <p><strong>🗡️ 蜀国（蜀汉）：</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              <li>以"兴复汉室"为号召，保留汉制传统</li>
+              <li>诸葛亮主政时期重视法治与实干，不拘一格用人才</li>
+              <li>地方治理相对宽松，注重民生与农业</li>
+            </ul>
+            <p><strong>⚓ 吴国（东吴）：</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              <li>江南地方豪族势力强大，中央集权相对较弱</li>
+              <li>重视水军建设与海外贸易</li>
+              <li>采用世袭制与军功制相结合的人才选拔</li>
+            </ul>
+          </div>
+          <p><strong>💡 影响分析：</strong>魏国制度化程度高但门阀固化导致后期政治僵化；蜀国人才政策灵活但国力有限；吴国地方势力强大影响中央权威。这些差异最终影响了三国的兴衰走向。</p>
+          ${userInput ? `<p style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.15); border-radius: 5px;"><strong>📝 你的思考：</strong>${userInput}</p>` : ''}
+        `;
+      } else if (prompt.includes('南朝和北朝')) {
+        analysis = `
+          <h4 style="margin-top: 0; color: #ffd700;">🎨 南北朝文化差异分析</h4>
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 5px; margin: 10px 0;">
+            <p><strong>🌸 南朝文化特征：</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              <li>文学：骈文盛行，注重辞藻华美（如《文心雕龙》）</li>
+              <li>宗教：佛教兴盛，建造大量寺庙（梁武帝"皇帝菩萨"）</li>
+              <li>艺术：书法绘画精致，王羲之书法达到巅峰</li>
+              <li>社会：士族文化繁荣，清谈玄学盛行</li>
+            </ul>
+            <p><strong>🐎 北朝文化特征：</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              <li>文学：质朴刚健，《木兰诗》等民歌流传</li>
+              <li>宗教：佛教与道教并重，云冈、龙门石窟开凿</li>
+              <li>艺术：融合胡汉风格，壁画雕塑雄浑有力</li>
+              <li>社会：尚武精神，民族融合加速</li>
+            </ul>
+          </div>
+          <p><strong>🔍 形成原因：</strong>南方保留汉族传统文化，北方受鲜卑等民族影响，形成胡汉融合的新文化。</p>
+          <p><strong>🌟 对隋唐影响：</strong>南方的文学艺术精华与北方的尚武精神、民族融合经验共同孕育了隋唐的开放包容文化，造就了盛唐气象。</p>
+          ${userInput ? `<p style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.15); border-radius: 5px;"><strong>📝 你的思考：</strong>${userInput}</p>` : ''}
+        `;
+      } else if (prompt.includes('隋唐统一')) {
+        analysis = `
+          <h4 style="margin-top: 0; color: #ffd700;">🏆 隋唐统一的历史意义</h4>
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 5px; margin: 10px 0;">
+            <p><strong>🎯 政治意义：</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              <li>结束近 400 年分裂，建立强大中央集权国家</li>
+              <li>创立科举制度，打破门阀垄断，扩大统治基础</li>
+              <li>三省六部制完善，提高行政效率</li>
+            </ul>
+            <p><strong>🤝 民族关系：</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              <li>胡汉融合达到新高度，形成多民族统一国家</li>
+              <li>开明的民族政策，"天可汗"体系建立</li>
+              <li>丝绸之路繁荣，中外交流空前活跃</li>
+            </ul>
+            <p><strong>🎭 文化发展：</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              <li>融合南北文化精华，形成开放包容的盛唐文化</li>
+              <li>诗歌、书法、绘画、音乐等艺术全面繁荣</li>
+              <li>佛教、道教、儒学并存，文化多元发展</li>
+            </ul>
+            <p><strong>💰 经济繁荣：</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              <li>大运河贯通南北，促进经济交流</li>
+              <li>均田制、租庸调制保障农业生产</li>
+              <li>长安、洛阳成为国际大都市</li>
+            </ul>
+          </div>
+          <p><strong>🌈 后世影响：</strong>隋唐制度成为后世王朝典范，科举制度延续千年；盛唐文化影响东亚文化圈；民族融合经验为多民族国家发展奠定基础。</p>
+          ${userInput ? `<p style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.15); border-radius: 5px;"><strong>📝 你的思考：</strong>${userInput}</p>` : ''}
+        `;
+      } else {
+        analysis = `
+          <h4 style="margin-top: 0; color: #ffd700;">🤖 AI 分析结果</h4>
+          <p>基于历史资料和学术研究，针对您的问题进行了深入分析。建议结合课本内容和史料进一步思考。</p>
+          ${userInput ? `<p style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.15); border-radius: 5px;"><strong>📝 你的思考：</strong>${userInput}</p>` : ''}
+        `;
+      }
+      
+      resultDiv.innerHTML = analysis;
+      
+      // 添加淡入效果
+      resultDiv.style.opacity = '0';
+      resultDiv.style.transition = 'opacity 0.5s';
+      setTimeout(() => { resultDiv.style.opacity = '1'; }, 10);
+    }, 1500);
+  };
+
+})();
+</script>
 </body>
 </html>

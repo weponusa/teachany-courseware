@@ -818,5 +818,376 @@ function chneDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><span class="ta-phase" data-tone="aux">知识图谱</span><h2 class="section-title">🗺️ 知识图谱：部首识别</h2><div data-teachany-kg="chn-e-radical-recognition"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  'use strict';
+
+  // 部首数据
+  const radicals = {
+    water: { char: '氵', name: '三点水', meaning: '与水有关', emoji: '💧', examples: ['河', '湖', '海', '江', '洗', '泳'] },
+    fire: { char: '火', name: '火字旁', meaning: '与火有关', emoji: '🔥', examples: ['烧', '烤', '炒', '灯', '炎', '烟'] },
+    wood: { char: '木', name: '木字旁', meaning: '与树木有关', emoji: '🌳', examples: ['树', '林', '森', '桌', '椅', '板'] },
+    person: { char: '亻', name: '单人旁', meaning: '与人有关', emoji: '👤', examples: ['你', '他', '们', '住', '作', '休'] },
+    heart: { char: '忄', name: '竖心旁', meaning: '与心情有关', emoji: '❤️', examples: ['快', '慢', '怕', '情', '怀', '悔'] },
+    mouth: { char: '口', name: '口字旁', meaning: '与嘴巴有关', emoji: '👄', examples: ['吃', '喝', '叫', '吗', '呢', '吧'] },
+    sun: { char: '日', name: '日字旁', meaning: '与太阳有关', emoji: '☀️', examples: ['明', '晴', '时', '早', '晚', '星'] },
+    earth: { char: '土', name: '土字旁', meaning: '与土地有关', emoji: '🌍', examples: ['地', '场', '坐', '块', '城', '墙'] }
+  };
+
+  const radicalKeys = Object.keys(radicals);
+  
+  // 闪卡状态
+  let currentCardIndex = 0;
+  let isFlipped = false;
+  
+  // 配对游戏状态
+  let selectedLeft = null;
+  let matchedPairs = 0;
+  const matchPairs = [
+    { radical: 'water', meaning: '💧 流动的水' },
+    { radical: 'fire', meaning: '🔥 燃烧的火' },
+    { radical: 'wood', meaning: '🌳 高大的树' },
+    { radical: 'person', meaning: '👤 站立的人' },
+    { radical: 'heart', meaning: '❤️ 跳动的心' },
+    { radical: 'mouth', meaning: '👄 张开的嘴' }
+  ];
+  
+  // 找部首游戏状态
+  let currentFindQ = 0;
+  const findQuestions = [
+    { char: '河', radical: 'water', options: ['氵', '火', '木', '口'] },
+    { char: '烧', radical: 'fire', options: ['氵', '火', '亻', '日'] },
+    { char: '树', radical: 'wood', options: ['木', '土', '忄', '火'] },
+    { char: '你', radical: 'person', options: ['亻', '口', '氵', '木'] },
+    { char: '快', radical: 'heart', options: ['忄', '亻', '口', '火'] },
+    { char: '吃', radical: 'mouth', options: ['口', '日', '土', '氵'] }
+  ];
+  
+  // Boss关状态
+  let bossTimer = null;
+  let bossTimeLeft = 50;
+  let bossCorrect = 0;
+  let bossWrong = 0;
+  let bossCurrentQ = null;
+  const bossQuestions = [
+    { char: '江', radical: 'water' }, { char: '湖', radical: 'water' },
+    { char: '炒', radical: 'fire' }, { char: '灯', radical: 'fire' },
+    { char: '林', radical: 'wood' }, { char: '桌', radical: 'wood' },
+    { char: '他', radical: 'person' }, { char: '住', radical: 'person' },
+    { char: '怕', radical: 'heart' }, { char: '情', radical: 'heart' },
+    { char: '喝', radical: 'mouth' }, { char: '叫', radical: 'mouth' },
+    { char: '明', radical: 'sun' }, { char: '晴', radical: 'sun' },
+    { char: '地', radical: 'earth' }, { char: '场', radical: 'earth' }
+  ];
+
+  // 导航函数
+  if (typeof window.goSection === 'undefined') {
+    window.goSection = function(sectionId) {
+      document.querySelectorAll('section[id]').forEach(s => s.style.display = 'none');
+      const target = document.getElementById(sectionId);
+      if (target) target.style.display = 'block';
+      window.scrollTo(0, 0);
+    };
+  }
+
+  // 显示部首详情
+  if (typeof window.showRadicalDetail === 'undefined') {
+    window.showRadicalDetail = function(radicalKey) {
+      const r = radicals[radicalKey];
+      if (!r) return;
+      const msg = `${r.emoji} ${r.name}\n\n${r.char} - ${r.meaning}\n\n常见字：${r.examples.join('、')}`;
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
+      modal.innerHTML = `<div style="background:#fff;border-radius:20px;padding:2rem;max-width:400px;text-align:center;"><div style="font-size:3rem;margin-bottom:1rem;">${r.emoji}</div><h2 style="color:var(--primary);margin-bottom:.5rem;">${r.name}</h2><div style="font-size:2.5rem;margin:1rem 0;">${r.char}</div><p style="color:#666;margin-bottom:1rem;">${r.meaning}</p><div style="background:#f5f5f5;border-radius:12px;padding:1rem;margin-bottom:1.5rem;"><strong>常见字：</strong><br>${r.examples.join('、')}</div><button onclick="this.parentElement.parentElement.remove()" style="background:var(--primary);color:#fff;border:none;padding:.8rem 2rem;border-radius:8px;cursor:pointer;font-size:1rem;">关闭</button></div>`;
+      document.body.appendChild(modal);
+      modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    };
+  }
+
+  // 闪卡翻转
+  if (typeof window.flipCard === 'undefined') {
+    window.flipCard = function() {
+      const card = document.getElementById('flashcard');
+      if (!card) return;
+      isFlipped = !isFlipped;
+      card.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+    };
+  }
+
+  // 闪卡导航
+  if (typeof window.prevCard === 'undefined') {
+    window.prevCard = function() {
+      if (currentCardIndex > 0) {
+        currentCardIndex--;
+        updateFlashcard();
+      }
+    };
+  }
+
+  if (typeof window.nextCard === 'undefined') {
+    window.nextCard = function() {
+      if (currentCardIndex < radicalKeys.length - 1) {
+        currentCardIndex++;
+        updateFlashcard();
+      }
+    };
+  }
+
+  function updateFlashcard() {
+    const key = radicalKeys[currentCardIndex];
+    const r = radicals[key];
+    const card = document.getElementById('flashcard');
+    if (card) card.style.transform = 'rotateY(0deg)';
+    isFlipped = false;
+    const front = document.getElementById('fc-front-char');
+    const backChar = document.getElementById('fc-back-char');
+    const backMeaning = document.getElementById('fc-back-meaning');
+    const counter = document.getElementById('fc-counter');
+    if (front) front.textContent = r.char;
+    if (backChar) backChar.textContent = r.emoji;
+    if (backMeaning) backMeaning.textContent = `${r.name} = ${r.meaning}`;
+    if (counter) counter.textContent = `第 ${currentCardIndex + 1} / ${radicalKeys.length} 张`;
+  }
+
+  // 完成第一关
+  if (typeof window.completeLevel1 === 'undefined') {
+    window.completeLevel1 = function() {
+      alert('🎉 恭喜完成第一关！获得 25 星星');
+      goSection('level2');
+    };
+  }
+
+  // 配对游戏重置
+  if (typeof window.resetMatch === 'undefined') {
+    window.resetMatch = function() {
+      selectedLeft = null;
+      matchedPairs = 0;
+      initMatchGame();
+    };
+  }
+
+  function initMatchGame() {
+    const leftItems = document.getElementById('left-items');
+    const rightItems = document.getElementById('right-items');
+    const matchCount = document.getElementById('match-count');
+    if (!leftItems || !rightItems) return;
+    
+    leftItems.innerHTML = '';
+    rightItems.innerHTML = '';
+    if (matchCount) matchCount.textContent = '0';
+    
+    const shuffledRight = [...matchPairs].sort(() => Math.random() - 0.5);
+    
+    matchPairs.forEach((pair, i) => {
+      const r = radicals[pair.radical];
+      const leftItem = document.createElement('div');
+      leftItem.className = 'match-item';
+      leftItem.dataset.radical = pair.radical;
+      leftItem.innerHTML = `<div style="font-size:2rem;">${r.char}</div><div style="font-size:.85rem;">${r.name}</div>`;
+      leftItem.onclick = () => selectLeft(leftItem);
+      leftItems.appendChild(leftItem);
+    });
+    
+    shuffledRight.forEach((pair, i) => {
+      const rightItem = document.createElement('div');
+      rightItem.className = 'match-item';
+      rightItem.dataset.radical = pair.radical;
+      rightItem.textContent = pair.meaning;
+      rightItem.onclick = () => selectRight(rightItem);
+      rightItems.appendChild(rightItem);
+    });
+  }
+
+  function selectLeft(item) {
+    document.querySelectorAll('#left-items .match-item').forEach(i => i.classList.remove('selected'));
+    item.classList.add('selected');
+    selectedLeft = item.dataset.radical;
+  }
+
+  function selectRight(item) {
+    if (!selectedLeft) return;
+    if (item.classList.contains('matched')) return;
+    
+    if (selectedLeft === item.dataset.radical) {
+      item.classList.add('matched', 'correct');
+      document.querySelector(`#left-items .match-item[data-radical="${selectedLeft}"]`).classList.add('matched', 'correct');
+      matchedPairs++;
+      const matchCount = document.getElementById('match-count');
+      if (matchCount) matchCount.textContent = matchedPairs;
+      selectedLeft = null;
+      document.querySelectorAll('#left-items .match-item').forEach(i => i.classList.remove('selected'));
+    } else {
+      item.classList.add('wrong');
+      setTimeout(() => item.classList.remove('wrong'), 500);
+    }
+  }
+
+  // 完成第二关
+  if (typeof window.completeLevel2 === 'undefined') {
+    window.completeLevel2 = function() {
+      if (matchedPairs < 6) {
+        alert('请完成所有配对！');
+        return;
+      }
+      alert('🎉 恭喜完成第二关！获得 30 星星');
+      goSection('level3');
+    };
+  }
+
+  // 找部首游戏
+  if (typeof window.nextFindQ === 'undefined') {
+    window.nextFindQ = function(answer) {
+      const q = findQuestions[currentFindQ];
+      const feedback = document.getElementById('find-feedback');
+      const r = radicals[q.radical];
+      
+      if (answer === r.char) {
+        if (feedback) {
+          feedback.innerHTML = `<div style="color:#4caf50;font-size:1.2rem;">✓ 正确！${q.char} 的部首是 ${r.char}（${r.name}）</div>`;
+          feedback.hidden = false;
+        }
+        setTimeout(() => {
+          currentFindQ++;
+          if (currentFindQ >= findQuestions.length) {
+            completeLevel3();
+          } else {
+            updateFindQuestion();
+          }
+        }, 1500);
+      } else {
+        if (feedback) {
+          feedback.innerHTML = `<div style="color:#f44336;font-size:1.2rem;">✗ 再想想，${q.char} 的部首应该是 ${r.char}（${r.name}）</div>`;
+          feedback.hidden = false;
+        }
+      }
+    };
+  }
+
+  function updateFindQuestion() {
+    const q = findQuestions[currentFindQ];
+    const charEl = document.getElementById('find-char');
+    const optsEl = document.getElementById('find-opts');
+    const progressEl = document.getElementById('find-progress');
+    const feedback = document.getElementById('find-feedback');
+    
+    if (charEl) charEl.textContent = q.char;
+    if (progressEl) progressEl.textContent = `${currentFindQ + 1} / ${findQuestions.length}`;
+    if (feedback) feedback.hidden = true;
+    
+    if (optsEl) {
+      optsEl.innerHTML = '';
+      q.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'find-opt';
+        btn.textContent = opt;
+        btn.onclick = () => nextFindQ(opt);
+        optsEl.appendChild(btn);
+      });
+    }
+  }
+
+  // 完成第三关
+  if (typeof window.completeLevel3 === 'undefined') {
+    window.completeLevel3 = function() {
+      alert('🎉 恭喜完成第三关！获得 35 星星');
+      goSection('boss-section');
+    };
+  }
+
+  // Boss关
+  if (typeof window.startBoss === 'undefined') {
+    window.startBoss = function() {
+      bossTimeLeft = 50;
+      bossCorrect = 0;
+      bossWrong = 0;
+      updateBossScore();
+      nextBossQuestion();
+      
+      if (bossTimer) clearInterval(bossTimer);
+      bossTimer = setInterval(() => {
+        bossTimeLeft--;
+        updateBossTimer();
+        if (bossTimeLeft <= 0) {
+          clearInterval(bossTimer);
+          endBoss();
+        }
+      }, 1000);
+    };
+  }
+
+  function nextBossQuestion() {
+    bossCurrentQ = bossQuestions[Math.floor(Math.random() * bossQuestions.length)];
+    const charEl = document.getElementById('boss-q-char');
+    const optsEl = document.getElementById('boss-opts-grid');
+    
+    if (charEl) charEl.textContent = bossCurrentQ.char;
+    if (optsEl) {
+      optsEl.innerHTML = '';
+      const opts = [...new Set([radicals[bossCurrentQ.radical].char, ...radicalKeys.slice(0, 3).map(k => radicals[k].char)])].slice(0, 4).sort(() => Math.random() - 0.5);
+      opts.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'boss-opt';
+        btn.textContent = opt;
+        btn.onclick = () => checkBossAnswer(opt);
+        optsEl.appendChild(btn);
+      });
+    }
+  }
+
+  function checkBossAnswer(answer) {
+    if (radicals[bossCurrentQ.radical].char === answer) {
+      bossCorrect++;
+    } else {
+      bossWrong++;
+    }
+    updateBossScore();
+    nextBossQuestion();
+  }
+
+  function updateBossScore() {
+    const okEl = document.getElementById('boss-ok');
+    const noEl = document.getElementById('boss-no');
+    if (okEl) okEl.textContent = bossCorrect;
+    if (noEl) noEl.textContent = bossWrong;
+  }
+
+  function updateBossTimer() {
+    const timeEl = document.getElementById('boss-time-d');
+    const fillEl = document.getElementById('boss-tf');
+    if (timeEl) timeEl.textContent = `${bossTimeLeft}秒`;
+    if (fillEl) fillEl.style.width = `${(bossTimeLeft / 50) * 100}%`;
+  }
+
+  function endBoss() {
+    alert(`时间到！正确 ${bossCorrect} 题，错误 ${bossWrong} 题`);
+    const score = bossCorrect * 10;
+    const finalScoreEl = document.getElementById('final-score');
+    const finalStarsEl = document.getElementById('final-stars');
+    if (finalScoreEl) finalScoreEl.textContent = score;
+    if (finalStarsEl) {
+      const stars = score >= 80 ? '⭐⭐⭐' : score >= 50 ? '⭐⭐' : '⭐';
+      finalStarsEl.textContent = stars;
+    }
+  }
+
+  // 拓展内容
+  if (typeof window.showExtR === 'undefined') {
+    window.showExtR = function(type) {
+      const content = type === 'more' ? '更多部首：女、马、鸟、虫、雨、风...' : '部首演变：从甲骨文象形到现代简化...';
+      alert(content);
+    };
+  }
+
+  // 初始化
+  if (document.getElementById('level2')) {
+    initMatchGame();
+  }
+  if (document.getElementById('level3')) {
+    updateFindQuestion();
+  }
+})();
+</script>
 </body>
 </html>

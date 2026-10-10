@@ -1287,5 +1287,564 @@ document.addEventListener('DOMContentLoaded', () => {
   <script src="../../assets/scripts/teachany-external-embed.js" defer></script>
 <script src="../../assets/scripts/teachany-page-nav.js" defer></script>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><span class="ta-phase" data-tone="aux">知识图谱</span><h2 class="section-title">🗺️ 知识图谱：化学与生产生活</h2><div data-teachany-kg="chem-m-chemistry-society-practice"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.checkAdvanced === 'function') return;
+  if (typeof window.checkExtended === 'function') return;
+
+  // 进阶练习检查函数
+  window.checkAdvanced = function() {
+    const textarea = document.getElementById('advanced-q1');
+    const feedback = document.getElementById('advanced-feedback');
+    
+    if (!textarea || !feedback) return;
+    
+    const answer = textarea.value.trim();
+    feedback.innerHTML = '';
+    
+    if (answer.length < 20) {
+      feedback.innerHTML = '<div style="margin-top:12px;padding:12px;background:rgba(239,68,68,.1);border-left:3px solid #ef4444;border-radius:6px;color:#dc2626;"><strong>提示：</strong>请详细分析合成氨工业的环境影响（至少20字）</div>';
+      return;
+    }
+    
+    const keywords = ['氮氧化物', '温室气体', 'CO2', '二氧化碳', '能耗', '污染', '排放', '废水', '废气'];
+    const foundKeywords = keywords.filter(kw => answer.includes(kw));
+    
+    let score = 0;
+    let tips = [];
+    
+    if (foundKeywords.length >= 2) {
+      score = 85 + foundKeywords.length * 3;
+      if (score > 100) score = 100;
+      tips.push('✓ 很好地识别了环境影响因素');
+    } else if (foundKeywords.length === 1) {
+      score = 70;
+      tips.push('✓ 识别了部分环境影响');
+      tips.push('→ 可以进一步分析：废气排放、能源消耗、温室效应等方面');
+    } else {
+      score = 60;
+      tips.push('→ 建议从以下角度分析：');
+      tips.push('  • 氮氧化物等废气排放');
+      tips.push('  • 高能耗导致的碳排放');
+      tips.push('  • 废水处理问题');
+    }
+    
+    const color = score >= 85 ? '#22c55e' : score >= 70 ? '#f59e0b' : '#ef4444';
+    const bgColor = score >= 85 ? 'rgba(34,197,94,.1)' : score >= 70 ? 'rgba(245,158,11,.1)' : 'rgba(239,68,68,.1)';
+    
+    feedback.innerHTML = `
+      <div style="margin-top:12px;padding:12px;background:${bgColor};border-left:3px solid ${color};border-radius:6px;color:${color};">
+        <div style="font-weight:600;margin-bottom:8px;">评分：${score}分</div>
+        ${tips.map(tip => `<div style="margin:4px 0;font-size:14px;">${tip}</div>`).join('')}
+      </div>
+    `;
+    
+    // 绘制合成氨工业示意图
+    drawAmmoniaIndustry(feedback, foundKeywords.length);
+  };
+
+  // 拓展练习检查函数
+  window.checkExtended = function() {
+    const textarea = document.getElementById('extended-q1');
+    const button = event.target;
+    const container = button.parentElement;
+    
+    if (!textarea) return;
+    
+    const answer = textarea.value.trim();
+    
+    // 移除旧的反馈
+    const oldFeedback = container.querySelector('.extended-feedback');
+    if (oldFeedback) oldFeedback.remove();
+    
+    if (answer.length < 30) {
+      const feedback = document.createElement('div');
+      feedback.className = 'extended-feedback';
+      feedback.innerHTML = '<div style="margin-top:12px;padding:12px;background:rgba(239,68,68,.1);border-left:3px solid #ef4444;border-radius:6px;color:#dc2626;"><strong>提示：</strong>请详细设计污水处理方案（至少30字），包括处理步骤和原理</div>';
+      button.after(feedback);
+      return;
+    }
+    
+    const keywords = {
+      physical: ['沉淀', '过滤', '吸附', '活性炭'],
+      chemical: ['消毒', '氯气', '臭氧', '中和', '絮凝'],
+      biological: ['微生物', '生物', '曝气', '好氧', '厌氧']
+    };
+    
+    let foundTypes = [];
+    let foundKeywords = [];
+    
+    for (let type in keywords) {
+      const found = keywords[type].filter(kw => answer.includes(kw));
+      if (found.length > 0) {
+        foundTypes.push(type);
+        foundKeywords.push(...found);
+      }
+    }
+    
+    let score = 60;
+    let tips = [];
+    
+    if (foundTypes.length >= 3) {
+      score = 95;
+      tips.push('✓ 优秀！方案涵盖了物理、化学、生物多种处理方法');
+    } else if (foundTypes.length === 2) {
+      score = 80;
+      tips.push('✓ 良好！方案包含了多种处理方法');
+      tips.push('→ 可以补充：' + (foundTypes.includes('biological') ? '' : '生物处理法'));
+    } else if (foundTypes.length === 1) {
+      score = 70;
+      tips.push('✓ 识别了处理方法');
+      tips.push('→ 建议补充其他处理方式：');
+      if (!foundTypes.includes('physical')) tips.push('  • 物理法：沉淀、过滤、吸附');
+      if (!foundTypes.includes('chemical')) tips.push('  • 化学法：消毒、絮凝');
+      if (!foundTypes.includes('biological')) tips.push('  • 生物法：微生物降解');
+    } else {
+      score = 65;
+      tips.push('→ 完整的污水处理方案应包括：');
+      tips.push('  • 物理处理：沉淀、过滤去除大颗粒');
+      tips.push('  • 化学处理：消毒杀菌、絮凝沉淀');
+      tips.push('  • 生物处理：微生物降解有机物');
+    }
+    
+    const color = score >= 90 ? '#a78bfa' : score >= 75 ? '#22c55e' : '#f59e0b';
+    const bgColor = score >= 90 ? 'rgba(167,139,250,.1)' : score >= 75 ? 'rgba(34,197,94,.1)' : 'rgba(245,158,11,.1)';
+    
+    const feedback = document.createElement('div');
+    feedback.className = 'extended-feedback';
+    feedback.innerHTML = `
+      <div style="margin-top:12px;padding:12px;background:${bgColor};border-left:3px solid ${color};border-radius:6px;color:${color};">
+        <div style="font-weight:600;margin-bottom:8px;">评分：${score}分</div>
+        ${tips.map(tip => `<div style="margin:4px 0;font-size:14px;">${tip}</div>`).join('')}
+        <div style="margin-top:12px;font-size:13px;opacity:0.8;">识别到的关键词：${foundKeywords.join('、') || '无'}</div>
+      </div>
+      <canvas id="water-treatment-canvas" width="600" height="320" style="margin-top:16px;border-radius:8px;background:#f8fafc;display:block;"></canvas>
+    `;
+    button.after(feedback);
+    
+    // 绘制污水处理流程图
+    setTimeout(() => drawWaterTreatment(foundTypes), 50);
+  };
+
+  // 绘制合成氨工业示意图
+  function drawAmmoniaIndustry(container, keywordCount) {
+    const oldCanvas = container.querySelector('#ammonia-canvas');
+    if (oldCanvas) oldCanvas.remove();
+    
+    const canvas = document.createElement('canvas');
+    canvas.id = 'ammonia-canvas';
+    canvas.width = 600;
+    canvas.height = 280;
+    canvas.style.cssText = 'margin-top:16px;border-radius:8px;background:#f8fafc;display:block;';
+    container.appendChild(canvas);
+    
+    const ctx = canvas.getContext('2d');
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    let frame = 0;
+    const totalFrames = 90;
+    
+    function animate() {
+      frame++;
+      const progress = frame / totalFrames;
+      
+      ctx.clearRect(0, 0, 600, 280);
+      
+      // 背景渐变
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, 280);
+      bgGrad.addColorStop(0, '#e3f2fd');
+      bgGrad.addColorStop(1, '#f5f5f5');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, 600, 280);
+      
+      // 工厂建筑
+      ctx.fillStyle = '#78909c';
+      ctx.fillRect(50, 120, 100, 100);
+      ctx.fillStyle = '#546e7a';
+      ctx.fillRect(50, 100, 100, 20);
+      
+      // 反应塔
+      ctx.fillStyle = '#607d8b';
+      ctx.fillRect(90, 60, 30, 60);
+      ctx.fillStyle = '#455a64';
+      ctx.fillRect(85, 50, 40, 15);
+      
+      // 烟囱和废气（阶段1）
+      if (progress > 0.2) {
+        ctx.fillStyle = '#546e7a';
+        ctx.fillRect(160, 80, 15, 80);
+        
+        const smokeProgress = Math.min((progress - 0.2) / 0.3, 1);
+        for (let i = 0; i < 4; i++) {
+          const y = 80 - i * 20 * smokeProgress;
+          const alpha = (1 - i * 0.2) * smokeProgress;
+          ctx.fillStyle = `rgba(120,120,120,${alpha * 0.5})`;
+          ctx.beginPath();
+          ctx.arc(167 + Math.sin(frame * 0.1 + i) * 8, y, 12 + i * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        // 标注：废气排放
+        if (progress > 0.3) {
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(200, 50);
+          ctx.lineTo(240, 30);
+          ctx.stroke();
+          
+          ctx.fillStyle = '#ef4444';
+          ctx.font = 'bold 13px sans-serif';
+          ctx.fillText('氮氧化物排放', 245, 33);
+        }
+      }
+      
+      // 能源消耗（阶段2）
+      if (progress > 0.4) {
+        const energyProgress = Math.min((progress - 0.4) / 0.25, 1);
+        
+        // 能源符号
+        ctx.strokeStyle = '#ff9800';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(105, 180, 15 * energyProgress, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2 + frame * 0.05;
+          const x = 105 + Math.cos(angle) * 25 * energyProgress;
+          const y = 180 + Math.sin(angle) * 25 * energyProgress;
+          ctx.beginPath();
+          ctx.moveTo(105 + Math.cos(angle) * 18, 180 + Math.sin(angle) * 18);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+        
+        // 标注：高能耗
+        if (progress > 0.5) {
+          ctx.strokeStyle = '#ff9800';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(130, 180);
+          ctx.lineTo(170, 160);
+          ctx.stroke();
+          
+          ctx.fillStyle = '#ff9800';
+          ctx.font = 'bold 13px sans-serif';
+          ctx.fillText('高能耗过程', 175, 163);
+        }
+      }
+      
+      // 产物和环境影响（阶段3）
+      if (progress > 0.6) {
+        const productProgress = Math.min((progress - 0.6) / 0.3, 1);
+        
+        // 氨气产物
+        ctx.fillStyle = `rgba(100,181,246,${productProgress * 0.8})`;
+        ctx.beginPath();
+        ctx.arc(400, 140, 40, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#1976d2';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillText('NH₃', 385, 148);
+        
+        // 温室气体
+        ctx.fillStyle = `rgba(239,68,68,${productProgress * 0.6})`;
+        for (let i = 0; i < 5; i++) {
+          const x = 350 + i * 25;
+          const y = 60 + Math.sin(frame * 0.08 + i) * 8;
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        // 标注：温室气体
+        if (progress > 0.75) {
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(400, 40);
+          ctx.lineTo(440, 20);
+          ctx.stroke();
+          
+          ctx.fillStyle = '#ef4444';
+          ctx.font = 'bold 13px sans-serif';
+          ctx.fillText('CO₂等温室气体', 445, 23);
+        }
+      }
+      
+      // 底部说明
+      if (progress > 0.85) {
+        ctx.fillStyle = '#546e7a';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('合成氨工业（哈伯法）：N₂ + 3H₂ ⇌ 2NH₃', 50, 260);
+      }
+      
+      if (frame < totalFrames) {
+        requestAnimationFrame(animate);
+      }
+    }
+    
+    animate();
+  }
+
+  // 绘制污水处理流程图
+  function drawWaterTreatment(foundTypes) {
+    const canvas = document.getElementById('water-treatment-canvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    let frame = 0;
+    const totalFrames = 100;
+    
+    function animate() {
+      frame++;
+      const progress = frame / totalFrames;
+      
+      ctx.clearRect(0, 0, 600, 320);
+      
+      // 背景
+      ctx.fillStyle = '#f0f9ff';
+      ctx.fillRect(0, 0, 600, 320);
+      
+      // 阶段1：物理处理（沉淀池）
+      if (progress > 0.1) {
+        const stage1Progress = Math.min((progress - 0.1) / 0.25, 1);
+        
+        // 沉淀池
+        ctx.fillStyle = '#90caf9';
+        ctx.fillRect(50, 100, 120, 80);
+        ctx.strokeStyle = '#1976d2';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(50, 100, 120, 80);
+        
+        // 污水
+        ctx.fillStyle = `rgba(121,85,72,${0.6 * stage1Progress})`;
+        ctx.fillRect(55, 105, 110, 30 * stage1Progress);
+        
+        // 沉淀物
+        if (stage1Progress > 0.5) {
+          ctx.fillStyle = '#795548';
+          ctx.fillRect(55, 160, 110, 15 * (stage1Progress - 0.5) * 2);
+        }
+        
+        // 标注
+        if (progress > 0.2) {
+          ctx.fillStyle = '#1976d2';
+          ctx.font = 'bold 14px sans-serif';
+          ctx.fillText('物理沉淀', 75, 90);
+          
+          ctx.strokeStyle = '#1976d2';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(110, 185);
+          ctx.lineTo(110, 210);
+          ctx.stroke();
+          ctx.fillStyle = '#546e7a';
+          ctx.font = '12px sans-serif';
+          ctx.fillText('沉淀物', 85, 225);
+        }
+      }
+      
+      // 阶段2：化学处理（絮凝）
+      if (progress > 0.35) {
+        const stage2Progress = Math.min((progress - 0.35) / 0.25, 1);
+        
+        // 絮凝池
+        ctx.fillStyle = '#81c784';
+        ctx.fillRect(230, 100, 120, 80);
+        ctx.strokeStyle = '#388e3c';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(230, 100, 120, 80);
+        
+        // 絮凝剂加入
+        if (stage2Progress > 0.3) {
+          ctx.fillStyle = '#ffa726';
+          ctx.beginPath();
+          ctx.arc(290, 95, 8, 0, Math.PI * 2);
+          ctx.fill();
+          
+          for (let i = 0; i < 3; i++) {
+            const y = 100 + i * 15 * (stage2Progress - 0.3) * 2;
+            ctx.fillStyle = `rgba(255,167,38,${1 - i * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(290, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        
+        // 絮凝物
+        if (stage2Progress > 0.6) {
+          for (let i = 0; i < 8; i++) {
+            const x = 240 + (i % 4) * 25;
+            const y = 150 + Math.floor(i / 4) * 20;
+            ctx.fillStyle = '#8d6e63';
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        
+        // 标注
+        if (progress > 0.45) {
+          ctx.fillStyle = '#388e3c';
+          ctx.font = 'bold 14px sans-serif';
+          ctx.fillText('化学絮凝', 250, 90);
+          
+          ctx.strokeStyle = '#388e3c';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(290, 185);
+          ctx.lineTo(290, 210);
+          ctx.stroke();
+          ctx.fillStyle = '#546e7a';
+          ctx.font = '12px sans-serif';
+          ctx.fillText('絮凝物', 265, 225);
+        }
+      }
+      
+      // 阶段3：生物处理（曝气）
+      if (progress > 0.6) {
+        const stage3Progress = Math.min((progress - 0.6) / 0.3, 1);
+        
+        // 曝气池
+        ctx.fillStyle = '#64b5f6';
+        ctx.fillRect(410, 100, 120, 80);
+        ctx.strokeStyle = '#1976d2';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(410, 100, 120, 80);
+        
+        // 气泡
+        if (stage3Progress > 0.2) {
+          for (let i = 0; i < 12; i++) {
+            const x = 420 + (i % 4) * 30;
+            const baseY = 170;
+            const y = baseY - (frame % 40) * 2 - (i % 3) * 15;
+            if (y > 100 && y < 180) {
+              ctx.fillStyle = `rgba(255,255,255,${0.7 - (baseY - y) / 100})`;
+              ctx.beginPath();
+              ctx.arc(x, y, 4, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+        
+        // 微生物
+        if (stage3Progress > 0.5) {
+          for (let i = 0; i < 6; i++) {
+            const x = 425 + (i % 3) * 35;
+            const y = 120 + Math.floor(i / 3) * 30;
+            ctx.fillStyle = '#4caf50';
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#2e7d32';
+            ctx.beginPath();
+            ctx.arc(x - 2, y - 1, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        
+        // 标注
+        if (progress > 0.7) {
+          ctx.fillStyle = '#1976d2';
+          ctx.font = 'bold 14px sans-serif';
+          ctx.fillText('生物曝气', 435, 90);
+          
+          ctx.strokeStyle = '#4caf50';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(470, 185);
+          ctx.lineTo(470, 210);
+          ctx.stroke();
+          ctx.fillStyle = '#546e7a';
+          ctx.font = '12px sans-serif';
+          ctx.fillText('微生物降解', 440, 225);
+        }
+      }
+      
+      // 流程箭头
+      if (progress > 0.3) {
+        ctx.strokeStyle = '#546e7a';
+        ctx.fillStyle = '#546e7a';
+        ctx.lineWidth = 2;
+        
+        // 箭头1
+        ctx.beginPath();
+        ctx.moveTo(175, 140);
+        ctx.lineTo(225, 140);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(225, 140);
+        ctx.lineTo(215, 135);
+        ctx.lineTo(215, 145);
+        ctx.closePath();
+        ctx.fill();
+      }
+      
+      if (progress > 0.55) {
+        // 箭头2
+        ctx.beginPath();
+        ctx.moveTo(355, 140);
+        ctx.lineTo(405, 140);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(405, 140);
+        ctx.lineTo(395, 135);
+        ctx.lineTo(395, 145);
+        ctx.closePath();
+        ctx.fill();
+      }
+      
+      // 最终净水
+      if (progress > 0.85) {
+        ctx.fillStyle = '#e3f2fd';
+        ctx.fillRect(470, 250, 80, 50);
+        ctx.strokeStyle = '#1976d2';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(470, 250, 80, 50);
+        
+        ctx.fillStyle = '#1976d2';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText('净化水', 488, 280);
+        
+        // 箭头指向净水
+        ctx.strokeStyle = '#1976d2';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(510, 185);
+        ctx.lineTo(510, 245);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(510, 245);
+        ctx.lineTo(505, 235);
+        ctx.lineTo(515, 235);
+        ctx.closePath();
+        ctx.fill();
+      }
+      
+      // 标题
+      if (progress > 0.05) {
+        ctx.fillStyle = '#1e293b';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText('家庭污水处理流程示意图', 180, 30);
+      }
+      
+      if (frame < totalFrames) {
+        requestAnimationFrame(animate);
+      }
+    }
+    
+    animate();
+  }
+})();
+</script>
 </body>
 </html>

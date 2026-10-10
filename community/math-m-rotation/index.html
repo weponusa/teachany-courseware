@@ -715,5 +715,513 @@ TeachAnyScenes.mount('rotation', {"mode": "construct", "slider": "targetAngle", 
 TeachAnyScenes.mount('rotation', {"mode": "symmetry", "slider": "symmetryN", "sliderOut": "symmetryNVal", "canvas": "symmetryCanvas", "readout": "labReadout-symmetryCanvas"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 全局状态
+  let rotationState = {
+    angle: 0,
+    direction: 1, // 1=逆时针, -1=顺时针
+    animating: false
+  };
+  
+  let constructState = {
+    step: 0,
+    targetAngle: 90
+  };
+  
+  let symmetryState = {
+    n: 4,
+    pattern: 'star'
+  };
+
+  // ========== 模块一：旋转演示 ==========
+  
+  if (typeof setDir === 'undefined') {
+    window.setDir = function(dir) {
+      rotationState.direction = dir;
+      drawRotation();
+    };
+  }
+
+  if (typeof animateRotation === 'undefined') {
+    window.animateRotation = function() {
+      if (rotationState.animating) return;
+      rotationState.animating = true;
+      rotationState.angle = 0;
+      const slider = document.getElementById('angleSlider');
+      const target = parseInt(slider.value) || 90;
+      const startTime = Date.now();
+      const duration = 2500;
+      
+      function animate() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        rotationState.angle = progress * target * rotationState.direction;
+        drawRotation();
+        document.getElementById('angleVal').textContent = Math.abs(Math.round(rotationState.angle)) + '°';
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          rotationState.animating = false;
+        }
+      }
+      animate();
+    };
+  }
+
+  if (typeof resetRotation === 'undefined') {
+    window.resetRotation = function() {
+      rotationState.angle = 0;
+      rotationState.direction = 1;
+      document.getElementById('angleSlider').value = 0;
+      document.getElementById('angleVal').textContent = '0°';
+      drawRotation();
+    };
+  }
+
+  function drawRotation() {
+    const canvas = document.getElementById('rotationCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景渐变
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#e3f2fd');
+    grad.addColorStop(1, '#fff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    
+    const cx = w / 2, cy = h / 2;
+    
+    // 旋转中心O
+    ctx.fillStyle = '#d32f2f';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.font = '14px Arial';
+    ctx.fillText('O (旋转中心)', cx + 10, cy - 10);
+    
+    // 原始三角形ABC
+    const pts = [
+      {x: cx + 80, y: cy - 40, label: 'A'},
+      {x: cx + 120, y: cy + 30, label: 'B'},
+      {x: cx + 50, y: cy + 30, label: 'C'}
+    ];
+    
+    ctx.strokeStyle = '#1976d2';
+    ctx.fillStyle = 'rgba(25, 118, 210, 0.2)';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    ctx.lineTo(pts[1].x, pts[1].y);
+    ctx.lineTo(pts[2].x, pts[2].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    pts.forEach(p => {
+      ctx.fillStyle = '#1976d2';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.fillText(p.label, p.x + 8, p.y - 8);
+    });
+    
+    // 旋转后的三角形A'B'C'
+    const rad = rotationState.angle * Math.PI / 180;
+    const rotated = pts.map(p => {
+      const dx = p.x - cx, dy = p.y - cy;
+      return {
+        x: cx + dx * Math.cos(rad) - dy * Math.sin(rad),
+        y: cy + dx * Math.sin(rad) + dy * Math.cos(rad),
+        label: p.label + "'"
+      };
+    });
+    
+    ctx.strokeStyle = '#f57c00';
+    ctx.fillStyle = 'rgba(245, 124, 0, 0.2)';
+    ctx.beginPath();
+    ctx.moveTo(rotated[0].x, rotated[0].y);
+    ctx.lineTo(rotated[1].x, rotated[1].y);
+    ctx.lineTo(rotated[2].x, rotated[2].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    rotated.forEach(p => {
+      ctx.fillStyle = '#f57c00';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.fillText(p.label, p.x + 8, p.y + 15);
+    });
+    
+    // 绘制旋转角弧线
+    if (Math.abs(rotationState.angle) > 5) {
+      ctx.strokeStyle = '#4caf50';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      const r = 60;
+      const startAngle = 0;
+      const endAngle = rad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, startAngle, endAngle, rotationState.angle < 0);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      ctx.fillStyle = '#4caf50';
+      ctx.font = '12px Arial';
+      const midAngle = rad / 2;
+      ctx.fillText(Math.abs(Math.round(rotationState.angle)) + '°', 
+        cx + r * Math.cos(midAngle) + 5, 
+        cy + r * Math.sin(midAngle) - 5);
+    }
+    
+    // 连接对应点
+    ctx.strokeStyle = '#9e9e9e';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(pts[i].x, pts[i].y);
+      ctx.lineTo(rotated[i].x, rotated[i].y);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
+  // ========== 模块二：作图演示 ==========
+  
+  if (typeof showConstruction === 'undefined') {
+    window.showConstruction = function() {
+      constructState.step = 0;
+      drawConstruction();
+      nextStep();
+    };
+  }
+
+  if (typeof nextStep === 'undefined') {
+    window.nextStep = function() {
+      if (constructState.step < 4) {
+        constructState.step++;
+        drawConstruction();
+      }
+    };
+  }
+
+  if (typeof resetConstruct === 'undefined') {
+    window.resetConstruct = function() {
+      constructState.step = 0;
+      drawConstruction();
+      const hint = document.getElementById('constructHint');
+      if (hint) hint.textContent = '';
+    };
+  }
+
+  function drawConstruction() {
+    const canvas = document.getElementById('constructCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const target = constructState.targetAngle;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#fafafa');
+    grad.addColorStop(1, '#fff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    
+    const cx = 150, cy = h / 2;
+    const rad = target * Math.PI / 180;
+    
+    // 原始点A
+    const ax = cx + 100, ay = cy;
+    
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    const hints = [
+      '准备：已知点A和旋转中心O',
+      '步骤1：连接OA，测量距离',
+      '步骤2：以O为圆心作旋转角∠AOA\'',
+      '步骤3：在OA\'方向取OA\'=OA',
+      '完成：得到旋转后的点A\''
+    ];
+    
+    const hint = document.getElementById('constructHint');
+    if (hint && constructState.step > 0) {
+      hint.textContent = '📍 ' + hints[constructState.step];
+    }
+    
+    // 旋转中心
+    ctx.fillStyle = '#d32f2f';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.font = '14px Arial';
+    ctx.fillText('O', cx - 20, cy);
+    
+    // 原始点A
+    ctx.fillStyle = '#1976d2';
+    ctx.beginPath();
+    ctx.arc(ax, ay, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.fillText('A', ax + 10, ay - 10);
+    
+    if (constructState.step >= 1) {
+      // 连接OA
+      ctx.strokeStyle = '#1976d2';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(ax, ay);
+      ctx.stroke();
+      
+      ctx.fillStyle = '#1976d2';
+      ctx.font = '12px Arial';
+      ctx.fillText('r', (cx + ax) / 2, (cy + ay) / 2 - 5);
+    }
+    
+    if (constructState.step >= 2) {
+      // 绘制旋转角
+      ctx.strokeStyle = '#4caf50';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, 50, 0, rad, false);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      ctx.fillStyle = '#4caf50';
+      ctx.fillText(target + '°', cx + 55, cy - 20);
+    }
+    
+    if (constructState.step >= 3) {
+      // 旋转后的方向线
+      const ax2 = cx + 100 * Math.cos(rad);
+      const ay2 = cy + 100 * Math.sin(rad);
+      
+      ctx.strokeStyle = '#f57c00';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(ax2, ay2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    
+    if (constructState.step >= 4) {
+      // 旋转后的点A'
+      const ax2 = cx + 100 * Math.cos(rad);
+      const ay2 = cy + 100 * Math.sin(rad);
+      
+      ctx.fillStyle = '#f57c00';
+      ctx.beginPath();
+      ctx.arc(ax2, ay2, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#000';
+      ctx.fillText("A'", ax2 + 10, ay2 - 10);
+      
+      // 标注距离相等
+      ctx.strokeStyle = '#f57c00';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(ax2, ay2);
+      ctx.stroke();
+      
+      ctx.fillStyle = '#f57c00';
+      ctx.font = '12px Arial';
+      ctx.fillText('r', (cx + ax2) / 2 + 10, (cy + ay2) / 2);
+    }
+  }
+
+  // ========== 模块三：旋转对称 ==========
+  
+  if (typeof setPattern === 'undefined') {
+    window.setPattern = function(pattern) {
+      symmetryState.pattern = pattern;
+      drawSymmetry();
+    };
+  }
+
+  if (typeof buildPattern === 'undefined') {
+    window.buildPattern = function() {
+      drawSymmetry();
+    };
+  }
+
+  if (typeof showFullPattern === 'undefined') {
+    window.showFullPattern = function() {
+      drawSymmetry();
+    };
+  }
+
+  function drawSymmetry() {
+    const canvas = document.getElementById('symmetryCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const n = symmetryState.n;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+    grad.addColorStop(0, '#fff');
+    grad.addColorStop(1, '#f5f5f5');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    
+    const cx = w / 2, cy = h / 2;
+    
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    for (let i = 0; i < n; i++) {
+      const angle = (i * 2 * Math.PI) / n;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      
+      if (symmetryState.pattern === 'star') {
+        ctx.fillStyle = '#ffd700';
+        ctx.strokeStyle = '#f57c00';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -60);
+        ctx.lineTo(15, -20);
+        ctx.lineTo(50, -15);
+        ctx.lineTo(25, 10);
+        ctx.lineTo(30, 45);
+        ctx.lineTo(0, 25);
+        ctx.lineTo(-30, 45);
+        ctx.lineTo(-25, 10);
+        ctx.lineTo(-50, -15);
+        ctx.lineTo(-15, -20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (symmetryState.pattern === 'flower') {
+        ctx.fillStyle = '#e91e63';
+        ctx.strokeStyle = '#c2185b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, -40, 20, 35, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#2196f3';
+        ctx.strokeStyle = '#1976d2';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(60, -30);
+        ctx.lineTo(60, 30);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      
+      ctx.restore();
+    }
+    
+    // 中心点
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#000';
+    ctx.font = '12px Arial';
+    ctx.fillText('对称中心', cx + 10, cy - 10);
+    ctx.fillText(n + '阶旋转对称', cx - 50, h - 20);
+    ctx.fillText('最小旋转角: ' + (360/n) + '°', cx - 50, h - 5);
+  }
+
+  // ========== 答题检查 ==========
+  
+  if (typeof moduleCheck === 'undefined') {
+    window.moduleCheck = function(qid, choice, correct) {
+      const fb = document.getElementById(qid + '-fb');
+      const err = document.getElementById(qid + '-err');
+      if (!fb) return;
+      
+      const isCorrect = choice === correct;
+      fb.className = 'feedback ' + (isCorrect ? 'correct' : 'incorrect');
+      fb.textContent = isCorrect ? '✓ 正确！' : '✗ 错误，请查看解析';
+      fb.style.display = 'block';
+      
+      if (err && !isCorrect) {
+        err.style.display = 'block';
+      }
+    };
+  }
+
+  if (typeof postCheck === 'undefined') {
+    window.postCheck = function(qnum, choice) {
+      const answers = {1: 'C', 2: 'A'};
+      const fb = document.getElementById('post' + qnum + '-fb');
+      if (!fb) return;
+      
+      const isCorrect = choice === answers[qnum];
+      fb.className = 'feedback ' + (isCorrect ? 'correct' : 'incorrect');
+      fb.textContent = isCorrect ? '✓ 正确！' : '✗ 错误';
+      fb.style.display = 'block';
+    };
+  }
+
+  // ========== 初始化 ==========
+  
+  setTimeout(() => {
+    const angleSlider = document.getElementById('angleSlider');
+    if (angleSlider) {
+      angleSlider.addEventListener('input', function() {
+        rotationState.angle = parseInt(this.value) * rotationState.direction;
+        document.getElementById('angleVal').textContent = this.value + '°';
+        drawRotation();
+      });
+    }
+    
+    const targetAngle = document.getElementById('targetAngle');
+    if (targetAngle) {
+      targetAngle.addEventListener('input', function() {
+        constructState.targetAngle = parseInt(this.value);
+        document.getElementById('targetAngleVal').textContent = this.value + '°';
+      });
+    }
+    
+    const symmetryN = document.getElementById('symmetryN');
+    if (symmetryN) {
+      symmetryN.addEventListener('input', function() {
+        symmetryState.n = parseInt(this.value);
+        document.getElementById('symmetryNVal').textContent = this.value + '阶';
+        drawSymmetry();
+      });
+    }
+    
+    drawRotation();
+    drawConstruction();
+    drawSymmetry();
+  }, 100);
+
+})();
+</script>
+</body>
 </html>

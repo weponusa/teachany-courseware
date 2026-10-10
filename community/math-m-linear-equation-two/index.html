@@ -701,5 +701,53 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   </div>
 </section>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.answerModule !== 'undefined') return;
+
+  window.answerModule = function(moduleId, selectedOption, correctOption) {
+    const feedbackDiv = document.getElementById('mod-fb' + moduleId);
+    if (!feedbackDiv) return;
+
+    const allButtons = document.querySelectorAll('.option-btn');
+    allButtons.forEach(btn => {
+      btn.style.pointerEvents = 'none';
+      btn.style.opacity = '0.6';
+    });
+
+    const isCorrect = selectedOption === correctOption;
+    
+    feedbackDiv.innerHTML = '';
+    feedbackDiv.style.marginTop = '12px';
+    feedbackDiv.style.padding = '12px';
+    feedbackDiv.style.borderRadius = '8px';
+    feedbackDiv.style.fontSize = '15px';
+    feedbackDiv.style.fontWeight = '500';
+    
+    if (isCorrect) {
+      feedbackDiv.style.background = '#e8f5e9';
+      feedbackDiv.style.color = '#2e7d32';
+      feedbackDiv.style.border = '2px solid #4caf50';
+      feedbackDiv.innerHTML = '✓ 正确！在一元二次方程 ax² + bx + c = 0 中，a 是二次项系数，b 是一次项系数，c 是常数项。';
+    } else {
+      feedbackDiv.style.background = '#ffebee';
+      feedbackDiv.style.color = '#c62828';
+      feedbackDiv.style.border = '2px solid #ef5350';
+      feedbackDiv.innerHTML = '✗ 不正确。请仔细观察方程 3x² - 2x + 1 = 0，注意系数的符号。正确答案是 B：a=3, b=-2, c=1。';
+    }
+
+    setTimeout(() => {
+      allButtons.forEach(btn => {
+        btn.style.pointerEvents = 'auto';
+        btn.style.opacity = '1';
+      });
+      feedbackDiv.innerHTML = '';
+    }, 4000);
+  };
+
+})();
+</script>
+</body>
 </html>

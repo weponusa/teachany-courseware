@@ -945,5 +945,274 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.filterDomain !== 'undefined') return;
+
+  // ==================== filterDomain ====================
+  window.filterDomain = function(domain) {
+    const grid = document.getElementById('conceptGrid');
+    if (!grid) return;
+    
+    const cards = grid.querySelectorAll('.concept-card');
+    const tabs = document.querySelectorAll('.domain-tab');
+    
+    // 更新标签状态
+    tabs.forEach(tab => {
+      tab.classList.remove('active');
+      if ((domain === 'all' && tab.textContent.includes('全部')) ||
+          tab.getAttribute('onclick')?.includes(`'${domain}'`)) {
+        tab.classList.add('active');
+      }
+    });
+    
+    // 过滤卡片
+    cards.forEach(card => {
+      const cardDomain = card.getAttribute('data-domain');
+      if (domain === 'all' || cardDomain === domain) {
+        card.style.display = 'block';
+        card.style.animation = 'fadeIn 0.3s ease';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  };
+
+  // ==================== highlightDomain ====================
+  window.highlightDomain = function(domain) {
+    const canvas = document.getElementById('mindCanvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    // 清空画布
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景渐变
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#f0f4f8');
+    bgGrad.addColorStop(1, '#e8f5e9');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+    
+    // 知识节点定义
+    const nodes = {
+      cell: { x: w * 0.2, y: h * 0.3, label: '细胞结构', color: '#2196f3', links: ['eco', 'repro'] },
+      eco: { x: w * 0.5, y: h * 0.5, label: '生态系统', color: '#4caf50', links: ['repro', 'cell'] },
+      repro: { x: w * 0.8, y: h * 0.3, label: '生殖发育', color: '#e91e63', links: ['cell'] },
+      human: { x: w * 0.5, y: h * 0.75, label: '人体生理', color: '#ff9800', links: ['cell', 'eco'] }
+    };
+    
+    // 绘制连接线
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    Object.keys(nodes).forEach(key => {
+      const node = nodes[key];
+      const isHighlight = domain === 'all' || domain === key;
+      
+      node.links.forEach(linkKey => {
+        if (nodes[linkKey]) {
+          const target = nodes[linkKey];
+          ctx.strokeStyle = isHighlight ? node.color + '80' : '#ccc';
+          ctx.lineWidth = isHighlight ? 3 : 1;
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(target.x, target.y);
+          ctx.stroke();
+        }
+      });
+    });
+    
+    // 绘制节点
+    Object.keys(nodes).forEach(key => {
+      const node = nodes[key];
+      const isHighlight = domain === 'all' || domain === key;
+      const radius = isHighlight ? 35 : 25;
+      
+      // 节点圆圈
+      ctx.fillStyle = isHighlight ? node.color : '#ddd';
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 节点边框
+      ctx.strokeStyle = isHighlight ? node.color : '#999';
+      ctx.lineWidth = isHighlight ? 3 : 2;
+      ctx.stroke();
+      
+      // 节点标签
+      ctx.fillStyle = isHighlight ? '#fff' : '#666';
+      ctx.font = isHighlight ? 'bold 13px sans-serif' : '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.label, node.x, node.y);
+      
+      // 详细标注（仅高亮时）
+      if (isHighlight && domain !== 'all') {
+        ctx.fillStyle = node.color;
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        const details = {
+          cell: '显微结构·化学组成',
+          eco: '物质循环·能量流动',
+          repro: '无性·有性生殖',
+          human: '消化·呼吸·循环'
+        };
+        ctx.fillText(details[key] || '', node.x, node.y + radius + 15);
+      }
+    });
+    
+    // 跨学科标注
+    if (domain === 'all') {
+      const disciplines = [
+        { x: w * 0.1, y: h * 0.15, text: '📐 数学统计', color: '#ff5722' },
+        { x: w * 0.9, y: h * 0.15, text: '⚗️ 化学反应', color: '#9c27b0' },
+        { x: w * 0.1, y: h * 0.9, text: '🌍 地理环境', color: '#00bcd4' },
+        { x: w * 0.9, y: h * 0.9, text: '💻 数据分析', color: '#607d8b' }
+      ];
+      
+      ctx.font = '12px sans-serif';
+      disciplines.forEach(d => {
+        ctx.fillStyle = d.color;
+        ctx.textAlign = 'center';
+        ctx.fillText(d.text, d.x, d.y);
+      });
+    }
+  };
+
+  // ==================== resetDrop ====================
+  window.resetDrop = function() {
+    // 重置所有拖拽项到原始容器
+    const dragItems = document.querySelectorAll('.drag-item');
+    const dragContainer = document.querySelector('.drag-items');
+    
+    if (!dragContainer) return;
+    
+    dragItems.forEach(item => {
+      // 移除所有状态类
+      item.classList.remove('correct', 'incorrect', 'dropped');
+      item.style.backgroundColor = '';
+      item.style.color = '';
+      
+      // 如果不在原始容器中，移回去
+      if (item.parentElement !== dragContainer) {
+        dragContainer.appendChild(item);
+      }
+    });
+    
+    // 清空所有投放区
+    const dropZones = document.querySelectorAll('.drop-zone .dropped');
+    dropZones.forEach(zone => {
+      zone.innerHTML = '';
+    });
+    
+    // 清空反馈
+    const feedback = document.querySelector('.drop-zones + .ctrl-row + .quiz-feedback');
+    if (feedback) {
+      feedback.innerHTML = '';
+      feedback.style.display = 'none';
+    }
+  };
+
+  // ==================== 辅助：拖拽功能 ====================
+  if (typeof window.dragStart === 'undefined') {
+    window.dragStart = function(event) {
+      event.dataTransfer.setData('text/plain', event.target.getAttribute('data-type'));
+      event.dataTransfer.effectAllowed = 'move';
+      event.target.style.opacity = '0.5';
+    };
+  }
+
+  if (typeof window.dragOver === 'undefined') {
+    window.dragOver = function(event) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      event.currentTarget.style.backgroundColor = '#e3f2fd';
+    };
+  }
+
+  if (typeof window.drop === 'undefined') {
+    window.drop = function(event, targetType) {
+      event.preventDefault();
+      event.currentTarget.style.backgroundColor = '';
+      
+      const draggedType = event.dataTransfer.getData('text/plain');
+      const draggedItem = document.querySelector(`.drag-item[data-type="${draggedType}"]`);
+      
+      if (!draggedItem) return;
+      
+      draggedItem.style.opacity = '1';
+      
+      // 判断是否正确
+      const isCorrect = draggedType === targetType;
+      
+      // 移动到投放区
+      const droppedContainer = event.currentTarget.querySelector('.dropped');
+      if (droppedContainer) {
+        droppedContainer.appendChild(draggedItem);
+        
+        // 设置样式反馈
+        draggedItem.classList.add('dropped');
+        if (isCorrect) {
+          draggedItem.classList.add('correct');
+          draggedItem.style.backgroundColor = '#c8e6c9';
+          draggedItem.style.color = '#2e7d32';
+        } else {
+          draggedItem.classList.add('incorrect');
+          draggedItem.style.backgroundColor = '#ffcdd2';
+          draggedItem.style.color = '#c62828';
+        }
+      }
+      
+      // 统计结果
+      setTimeout(checkDropResults, 100);
+    };
+    
+    function checkDropResults() {
+      const allItems = document.querySelectorAll('.drag-item.dropped');
+      if (allItems.length === 0) return;
+      
+      const correct = document.querySelectorAll('.drag-item.correct').length;
+      const total = allItems.length;
+      
+      let feedbackDiv = document.querySelector('.drop-feedback');
+      if (!feedbackDiv) {
+        feedbackDiv = document.createElement('div');
+        feedbackDiv.className = 'drop-feedback';
+        feedbackDiv.style.cssText = 'margin-top:15px;padding:12px;border-radius:8px;font-size:14px;text-align:center;';
+        const ctrlRow = document.querySelector('.drop-zones + .ctrl-row');
+        if (ctrlRow) {
+          ctrlRow.parentElement.insertBefore(feedbackDiv, ctrlRow);
+        }
+      }
+      
+      if (correct === total) {
+        feedbackDiv.style.backgroundColor = '#c8e6c9';
+        feedbackDiv.style.color = '#2e7d32';
+        feedbackDiv.innerHTML = `🎉 全部正确！${correct}/${total} 个项目匹配成功`;
+      } else {
+        feedbackDiv.style.backgroundColor = '#fff3cd';
+        feedbackDiv.style.color = '#856404';
+        feedbackDiv.innerHTML = `📊 当前进度：${correct}/${total} 正确，继续调整`;
+      }
+    }
+  }
+
+  // 初始化：默认显示全部
+  if (document.getElementById('conceptGrid')) {
+    filterDomain('all');
+  }
+  
+  // 初始化：绘制思维导图
+  if (document.getElementById('mindCanvas')) {
+    highlightDomain('all');
+  }
+})();
+</script>
+</body>
 </html>

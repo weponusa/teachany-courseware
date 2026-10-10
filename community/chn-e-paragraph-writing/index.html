@@ -936,5 +936,192 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div></div></div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.toggleBuddy !== 'undefined') return;
+
+  // ========== toggleBuddy ==========
+  window.toggleBuddy = function() {
+    const bubble = document.getElementById('buddyBubble');
+    if (!bubble) return;
+    
+    if (bubble.style.display === 'none') {
+      bubble.style.display = 'block';
+      bubble.style.animation = 'fadeIn 0.3s ease';
+    } else {
+      bubble.style.display = 'none';
+    }
+  };
+
+  // ========== checkPretest ==========
+  window.checkPretest = function(elem, userChoice, correctAnswer, questionId) {
+    const container = document.getElementById(questionId);
+    const feedback = document.getElementById(questionId + '-fb');
+    if (!container || !feedback) return;
+
+    // 重置所有选项样式
+    const options = container.querySelectorAll('.quiz-option');
+    options.forEach(opt => {
+      opt.style.background = '';
+      opt.style.borderColor = '';
+      opt.style.pointerEvents = 'auto';
+      opt.style.opacity = '1';
+    });
+
+    // 标记用户选择
+    const isCorrect = userChoice === correctAnswer;
+    
+    if (isCorrect) {
+      elem.style.background = '#d4edda';
+      elem.style.borderColor = '#28a745';
+      feedback.style.display = 'block';
+      feedback.style.background = '#d4edda';
+      feedback.style.color = '#155724';
+      feedback.innerHTML = '✅ <strong>正确！</strong>时间顺序用「先…然后…接着…最后…」这样的词语连接。';
+    } else {
+      elem.style.background = '#f8d7da';
+      elem.style.borderColor = '#dc3545';
+      
+      // 显示正确答案
+      options.forEach(opt => {
+        if (opt.getAttribute('data-val') === correctAnswer) {
+          opt.style.background = '#d4edda';
+          opt.style.borderColor = '#28a745';
+        }
+      });
+      
+      feedback.style.display = 'block';
+      feedback.style.background = '#fff3cd';
+      feedback.style.color = '#856404';
+      feedback.innerHTML = '💡 <strong>提示：</strong>「先…然后…接着…最后…」表示事情发生的先后顺序，这是<strong>时间顺序</strong>。';
+    }
+
+    // 禁用所有选项
+    options.forEach(opt => {
+      opt.style.pointerEvents = 'none';
+      if (opt !== elem && opt.getAttribute('data-val') !== correctAnswer) {
+        opt.style.opacity = '0.5';
+      }
+    });
+  };
+
+  // ========== checkPosttest ==========
+  window.checkPosttest = function(elem, userChoice, correctAnswer, questionId) {
+    const container = document.getElementById(questionId);
+    const feedback = document.getElementById(questionId + '-fb');
+    if (!container || !feedback) return;
+
+    // 重置所有选项样式
+    const options = container.querySelectorAll('.quiz-option');
+    options.forEach(opt => {
+      opt.style.background = '';
+      opt.style.borderColor = '';
+      opt.style.pointerEvents = 'auto';
+      opt.style.opacity = '1';
+    });
+
+    const isCorrect = userChoice === correctAnswer;
+    
+    // 根据题目ID提供不同反馈
+    const feedbackMap = {
+      'post1': {
+        correct: '✅ <strong>太棒了！</strong>选项B按照「放学→整理书包→回家→做作业→玩」的时间顺序，条理清晰！',
+        wrong: '💡 <strong>再想想：</strong>写事情要按照发生的先后顺序，用「先…然后…接着…最后…」这样的词语连接，才有条理。'
+      },
+      'post2': {
+        correct: '✅ <strong>完全正确！</strong>总起句点明主题，支撑句展开说明，总结句收尾，这就是完整的段落结构！',
+        wrong: '💡 <strong>提示：</strong>完整的段落需要：总起句（开头点题）+ 支撑句（具体说明）+ 总结句（收尾）。'
+      },
+      'post3': {
+        correct: '✅ <strong>你真棒！</strong>支撑句要围绕总起句展开，用具体事例或细节来说明。',
+        wrong: '💡 <strong>记住：</strong>支撑句不能偏离主题，要紧扣总起句的中心意思，用具体内容来支撑。'
+      }
+    };
+
+    const fb = feedbackMap[questionId] || {
+      correct: '✅ <strong>正确！</strong>',
+      wrong: '💡 <strong>再想想</strong>'
+    };
+
+    if (isCorrect) {
+      elem.style.background = '#d4edda';
+      elem.style.borderColor = '#28a745';
+      feedback.style.display = 'block';
+      feedback.style.background = '#d4edda';
+      feedback.style.color = '#155724';
+      feedback.innerHTML = fb.correct;
+      
+      // 显示成就提示
+      showAchievement('答对了！继续加油！');
+    } else {
+      elem.style.background = '#f8d7da';
+      elem.style.borderColor = '#dc3545';
+      
+      // 显示正确答案
+      options.forEach(opt => {
+        if (opt.getAttribute('data-val') === correctAnswer) {
+          opt.style.background = '#d4edda';
+          opt.style.borderColor = '#28a745';
+        }
+      });
+      
+      feedback.style.display = 'block';
+      feedback.style.background = '#fff3cd';
+      feedback.style.color = '#856404';
+      feedback.innerHTML = fb.wrong;
+    }
+
+    // 禁用所有选项
+    options.forEach(opt => {
+      opt.style.pointerEvents = 'none';
+      if (opt !== elem && opt.getAttribute('data-val') !== correctAnswer) {
+        opt.style.opacity = '0.5';
+      }
+    });
+  };
+
+  // ========== 辅助函数：显示成就提示 ==========
+  function showAchievement(text) {
+    const toast = document.getElementById('achieveToast');
+    const textElem = document.getElementById('achieveText');
+    if (!toast || !textElem) return;
+    
+    textElem.textContent = text;
+    toast.style.display = 'flex';
+    toast.style.animation = 'slideInDown 0.5s ease';
+    
+    setTimeout(() => {
+      toast.style.animation = 'slideOutUp 0.5s ease';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 500);
+    }, 2000);
+  }
+
+  // 添加必要的CSS动画（如果不存在）
+  if (!document.getElementById('buddy-animations')) {
+    const style = document.createElement('style');
+    style.id = 'buddy-animations';
+    style.textContent = `
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes slideInDown {
+        from { transform: translateY(-100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      @keyframes slideOutUp {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(-100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+})();
+</script>
 </body>
 </html>

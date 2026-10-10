@@ -871,5 +871,457 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "evoCanvas", "readout": "labReadout-evoCanvas", "bg": [{"t": "line", "x1": 90, "y1": 250, "x2": 660, "y2": 250, "w": 2.5, "color": "#94a3b8"}, {"t": "ellipse", "x": 150, "y": 220, "rx": 22, "ry": 18, "fill": "rgba(34,197,94,.6)", "stroke": "#16a34a"}, {"t": "ellipse", "x": 250, "y": 200, "rx": 20, "ry": 26, "fill": "rgba(34,197,94,.6)", "stroke": "#16a34a"}, {"t": "ellipse", "x": 350, "y": 180, "rx": 18, "ry": 34, "fill": "rgba(34,197,94,.6)", "stroke": "#16a34a"}, {"t": "ellipse", "x": 450, "y": 160, "rx": 20, "ry": 40, "fill": "rgba(34,197,94,.6)", "stroke": "#16a34a"}, {"t": "ellipse", "x": 560, "y": 140, "rx": 26, "ry": 48, "fill": "rgba(34,197,94,.6)", "stroke": "#16a34a"}, {"t": "text", "x": 150, "y": 285, "t2": "藻类", "size": 13, "align": "center"}, {"t": "text", "x": 250, "y": 285, "t2": "苔藓", "size": 13, "align": "center"}, {"t": "text", "x": 350, "y": 285, "t2": "蕨类", "size": 13, "align": "center"}, {"t": "text", "x": 450, "y": 285, "t2": "裸子植物", "size": 13, "align": "center"}, {"t": "text", "x": 560, "y": 285, "t2": "被子植物", "size": 13, "align": "center"}, {"t": "text", "x": 390, "y": 40, "t2": "植 物 的 进 化 历 程（从水生到陆生、从简单到复杂）", "size": 13.5, "align": "center"}], "parts": [{"x": 150, "y": 220, "name": "藻类植物", "info": "生活在水中，没有根、茎、叶的分化——最低等的植物。", "r": 26, "lx": 150, "ly": 178}, {"x": 250, "y": 200, "name": "苔藓植物", "info": "有茎和叶，但没有真正的根，用孢子繁殖，长得矮小，需要潮湿环境。", "r": 26, "lx": 250, "ly": 150}, {"x": 350, "y": 180, "name": "蕨类植物", "info": "有根、茎、叶，还有输导组织，长得比苔藓高大，仍用孢子繁殖。", "r": 26, "lx": 350, "ly": 128}, {"x": 450, "y": 160, "name": "裸子植物", "info": "种子外面没有果皮包被（如松、杉、柏），用种子繁殖，更适应陆地。", "r": 26, "lx": 450, "ly": 106}, {"x": 560, "y": 140, "name": "被子植物", "info": "种子外有果皮包被，有花、果实，是最高等、种类最多的植物。", "r": 26, "lx": 560, "ly": 84}], "tip": "👆 点击各植物类群，看它们的进化特征"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+'use strict';
+
+// ========== showGroup & autoPlay for 进化历程动画 ==========
+if (typeof window.showGroup === 'undefined') {
+  const canvas = document.getElementById('evoCanvas');
+  const desc = document.getElementById('evoDesc');
+  let currentGroup = null;
+  let animFrame = null;
+  let animProgress = 0;
+
+  const groupData = {
+    algae: {
+      name: '藻类植物',
+      desc: '最原始的植物，生活在水中，无根茎叶分化，通过孢子繁殖',
+      color: '#1976d2',
+      features: ['无根茎叶', '水生', '孢子繁殖']
+    },
+    moss: {
+      name: '苔藓植物',
+      desc: '开始有茎叶分化，但无真正的根（假根），需要水环境完成受精',
+      color: '#388e3c',
+      features: ['假根', '茎叶分化', '矮小']
+    },
+    fern: {
+      name: '蕨类植物',
+      desc: '出现真正的根茎叶，有输导组织，但仍用孢子繁殖',
+      color: '#689f38',
+      features: ['真根', '输导组织', '孢子囊']
+    },
+    gymnosperm: {
+      name: '裸子植物',
+      desc: '种子植物，种子裸露无果皮包被，多为木本，适应陆地生活',
+      color: '#7b5e3b',
+      features: ['裸露种子', '球果', '木本']
+    },
+    angiosperm: {
+      name: '被子植物',
+      desc: '最高等植物，种子有果皮包被，有花和果实，适应性最强',
+      color: '#c2185b',
+      features: ['花', '果实', '种子有果皮']
+    }
+  };
+
+  function drawGroup(group, progress) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    // 底层：环境背景
+    const isAquatic = group === 'algae';
+    if (isAquatic) {
+      // 水环境
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#e3f2fd');
+      grad.addColorStop(1, '#90caf9');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+      // 水波纹
+      ctx.strokeStyle = '#64b5f6';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 40 + i * 15);
+        for (let x = 0; x < w; x += 20) {
+          ctx.lineTo(x, 40 + i * 15 + Math.sin(x * 0.1 + progress * 0.05) * 3);
+        }
+        ctx.stroke();
+      }
+    } else {
+      // 陆地环境
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.6);
+      skyGrad.addColorStop(0, '#e1f5fe');
+      skyGrad.addColorStop(1, '#fff9c4');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h * 0.6);
+      
+      // 土壤
+      ctx.fillStyle = '#8d6e63';
+      ctx.fillRect(0, h * 0.75, w, h * 0.25);
+      ctx.fillStyle = '#795548';
+      ctx.fillRect(0, h * 0.8, w, h * 0.2);
+    }
+
+    const data = groupData[group];
+    const centerX = w / 2;
+    const baseY = isAquatic ? h * 0.7 : h * 0.75;
+    const scale = Math.min(progress / 100, 1);
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // 中层：植物主体
+    if (group === 'algae') {
+      // 藻类：丝状体
+      ctx.strokeStyle = data.color;
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        const startX = centerX - 40 + i * 20;
+        ctx.moveTo(startX, baseY);
+        for (let j = 0; j < 8; j++) {
+          const y = baseY - j * 12 * scale;
+          const x = startX + Math.sin(j * 0.5 + progress * 0.03) * 8;
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        // 孢子囊
+        if (scale > 0.7) {
+          ctx.fillStyle = '#4fc3f7';
+          ctx.beginPath();
+          ctx.arc(startX + Math.sin(4 * 0.5) * 8, baseY - 4 * 12 * scale, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      // 标注
+      if (scale > 0.8) {
+        ctx.fillStyle = '#01579b';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('丝状体', centerX - 60, baseY - 80);
+        ctx.fillText('孢子囊', centerX + 30, baseY - 50);
+        ctx.strokeStyle = '#01579b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 45, baseY - 78);
+        ctx.lineTo(centerX - 30, baseY - 40);
+        ctx.stroke();
+      }
+    } else if (group === 'moss') {
+      // 苔藓：假根+茎+叶
+      // 假根
+      ctx.strokeStyle = '#6d4c41';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(centerX - 10 + i * 7, baseY);
+        ctx.lineTo(centerX - 10 + i * 7 + (Math.random() - 0.5) * 5, baseY + 15 * scale);
+        ctx.stroke();
+      }
+      // 茎
+      ctx.strokeStyle = data.color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(centerX, baseY);
+      ctx.lineTo(centerX, baseY - 60 * scale);
+      ctx.stroke();
+      // 叶片
+      ctx.fillStyle = '#66bb6a';
+      for (let i = 0; i < 7; i++) {
+        const y = baseY - 10 - i * 8 * scale;
+        const size = 8 - i * 0.5;
+        ctx.beginPath();
+        ctx.ellipse(centerX - size, y, size, size * 0.6, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(centerX + size, y, size, size * 0.6, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // 标注
+      if (scale > 0.8) {
+        ctx.fillStyle = '#1b5e20';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('假根', centerX - 50, baseY + 20);
+        ctx.fillText('茎', centerX + 15, baseY - 30);
+        ctx.fillText('叶', centerX + 20, baseY - 55);
+        ctx.strokeStyle = '#1b5e20';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 35, baseY + 18);
+        ctx.lineTo(centerX - 5, baseY + 5);
+        ctx.stroke();
+      }
+    } else if (group === 'fern') {
+      // 蕨类：真根+根状茎+复叶
+      // 真根
+      ctx.strokeStyle = '#5d4037';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(centerX - 15 + i * 8, baseY);
+        const len = 20 + Math.random() * 10;
+        ctx.lineTo(centerX - 15 + i * 8 + (Math.random() - 0.5) * 8, baseY + len * scale);
+        ctx.stroke();
+      }
+      // 根状茎
+      ctx.strokeStyle = '#6d4c41';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(centerX - 30, baseY);
+      ctx.lineTo(centerX + 30, baseY);
+      ctx.stroke();
+      // 叶柄
+      ctx.strokeStyle = data.color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(centerX, baseY);
+      ctx.lineTo(centerX, baseY - 80 * scale);
+      ctx.stroke();
+      // 羽状复叶
+      ctx.fillStyle = '#7cb342';
+      for (let i = 0; i < 6; i++) {
+        const y = baseY - 20 - i * 10 * scale;
+        const leafLen = 25 - i * 2;
+        for (let side = -1; side <= 1; side += 2) {
+          ctx.beginPath();
+          ctx.moveTo(centerX, y);
+          ctx.lineTo(centerX + side * leafLen, y - 5);
+          ctx.lineTo(centerX + side * leafLen, y + 5);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+      // 孢子囊群
+      if (scale > 0.7) {
+        ctx.fillStyle = '#8d6e63';
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.arc(centerX - 18 + i * 12, baseY - 40, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      // 标注
+      if (scale > 0.8) {
+        ctx.fillStyle = '#33691e';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('真根', centerX - 55, baseY + 25);
+        ctx.fillText('根状茎', centerX + 35, baseY + 5);
+        ctx.fillText('孢子囊群', centerX - 70, baseY - 35);
+        ctx.strokeStyle = '#33691e';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 50, baseY - 37);
+        ctx.lineTo(centerX - 20, baseY - 40);
+        ctx.stroke();
+      }
+    } else if (group === 'gymnosperm') {
+      // 裸子植物：树干+针叶+球果
+      // 树干
+      ctx.fillStyle = '#6d4c41';
+      ctx.fillRect(centerX - 8, baseY - 100 * scale, 16, 100 * scale);
+      ctx.fillStyle = '#5d4037';
+      ctx.fillRect(centerX - 6, baseY - 100 * scale, 3, 100 * scale);
+      // 枝条
+      ctx.strokeStyle = '#8d6e63';
+      ctx.lineWidth = 3;
+      const branches = [
+        { x: -35, y: -70, angle: -0.5 },
+        { x: 30, y: -65, angle: 0.4 },
+        { x: -25, y: -50, angle: -0.3 },
+        { x: 25, y: -45, angle: 0.3 },
+        { x: 0, y: -85, angle: 0 }
+      ];
+      branches.forEach(b => {
+        ctx.beginPath();
+        ctx.moveTo(centerX, baseY + b.y * scale);
+        ctx.lineTo(centerX + b.x * scale, baseY + (b.y - 15) * scale);
+        ctx.stroke();
+        // 针叶
+        ctx.strokeStyle = '#2e7d32';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 8; i++) {
+          const nx = centerX + b.x * scale * (i / 8);
+          const ny = baseY + (b.y - 15 * i / 8) * scale;
+          for (let j = -2; j <= 2; j++) {
+            ctx.beginPath();
+            ctx.moveTo(nx, ny);
+            ctx.lineTo(nx + Math.cos(b.angle + j * 0.3) * 8, ny + Math.sin(b.angle + j * 0.3) * 8);
+            ctx.stroke();
+          }
+        }
+      });
+      // 球果
+      if (scale > 0.7) {
+        ctx.fillStyle = '#8d6e63';
+        ctx.beginPath();
+        ctx.ellipse(centerX + 25, baseY - 55 * scale, 6, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#6d4c41';
+        for (let i = 0; i < 5; i++) {
+          ctx.fillRect(centerX + 22, baseY - 60 * scale + i * 4, 6, 2);
+        }
+      }
+      // 标注
+      if (scale > 0.8) {
+        ctx.fillStyle = '#1b5e20';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('针叶', centerX - 70, baseY - 75);
+        ctx.fillText('球果', centerX + 40, baseY - 50);
+        ctx.fillText('裸露种子', centerX + 40, baseY - 35);
+        ctx.strokeStyle = '#1b5e20';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(centerX + 38, baseY - 52);
+        ctx.lineTo(centerX + 30, baseY - 55);
+        ctx.stroke();
+      }
+    } else if (group === 'angiosperm') {
+      // 被子植物：茎+叶+花+果实
+      // 茎
+      ctx.strokeStyle = '#558b2f';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(centerX, baseY);
+      ctx.lineTo(centerX, baseY - 90 * scale);
+      ctx.stroke();
+      // 叶片
+      ctx.fillStyle = '#66bb6a';
+      const leaves = [
+        { x: -30, y: -30 },
+        { x: 35, y: -40 },
+        { x: -35, y: -55 },
+        { x: 30, y: -65 }
+      ];
+      leaves.forEach(l => {
+        ctx.beginPath();
+        ctx.ellipse(centerX + l.x * scale, baseY + l.y * scale, 18, 12, l.x > 0 ? 0.3 : -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#2e7d32';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(centerX, baseY + l.y * scale);
+        ctx.lineTo(centerX + l.x * scale, baseY + l.y * scale);
+        ctx.stroke();
+      });
+      // 花
+      if (scale > 0.6) {
+        const flowerY = baseY - 85 * scale;
+        ctx.fillStyle = '#ec407a';
+        for (let i = 0; i < 5; i++) {
+          const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
+          ctx.beginPath();
+          ctx.ellipse(
+            centerX + Math.cos(angle) * 12,
+            flowerY + Math.sin(angle) * 12,
+            8, 6, angle, 0, Math.PI * 2
+          );
+          ctx.fill();
+        }
+        ctx.fillStyle = '#fdd835';
+        ctx.beginPath();
+        ctx.arc(centerX, flowerY, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // 果实
+      if (scale > 0.8) {
+        ctx.fillStyle = '#f44336';
+        ctx.beginPath();
+        ctx.arc(centerX + 40, baseY - 45, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#c62828';
+        ctx.beginPath();
+        ctx.arc(centerX + 40, baseY - 48, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // 标注
+      if (scale > 0.8) {
+        ctx.fillStyle = '#1b5e20';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('花', centerX - 30, baseY - 90);
+        ctx.fillText('叶片', centerX - 65, baseY - 55);
+        ctx.fillText('果实', centerX + 55, baseY - 45);
+        ctx.fillText('(种子有果皮)', centerX + 50, baseY - 30);
+      }
+    }
+
+    // 顶层：进化阶段标题
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(data.name, w / 2, 25);
+  }
+
+  window.showGroup = function(group) {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    currentGroup = group;
+    animProgress = 0;
+    
+    // 更新按钮状态
+    document.querySelectorAll('.ctrl-row .btn').forEach(btn => {
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-outline');
+    });
+    event.target.classList.remove('btn-outline');
+    event.target.classList.add('btn-primary');
+
+    function animate() {
+      animProgress += 2;
+      if (animProgress <= 100) {
+        drawGroup(currentGroup, animProgress);
+        animFrame = requestAnimationFrame(animate);
+      } else {
+        drawGroup(currentGroup, 100);
+        if (desc) desc.textContent = groupData[currentGroup].desc;
+      }
+    }
+    animate();
+  };
+
+  window.autoPlay = function() {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    const groups = ['algae', 'moss', 'fern', 'gymnosperm', 'angiosperm'];
+    let idx = 0;
+    
+    function playNext() {
+      if (idx < groups.length) {
+        currentGroup = groups[idx];
+        animProgress = 0;
+        
+        function animate() {
+          animProgress += 3;
+          if (animProgress <= 100) {
+            drawGroup(currentGroup, animProgress);
+            animFrame = requestAnimationFrame(animate);
+          } else {
+            drawGroup(currentGroup, 100);
+            if (desc) desc.textContent = groupData[currentGroup].desc;
+            idx++;
+            setTimeout(playNext, 1500);
+          }
+        }
+        animate();
+      }
+    }
+    playNext();
+  };
+}
+
+// ========== resetDrop for 拖拽分类 ==========
+if (typeof window.resetDrop === 'undefined') {
+  window.resetDrop = function() {
+    document.querySelectorAll('.drop-zone .dropped').forEach(zone => {
+      zone.innerHTML = '';
+    });
+    document.querySelectorAll('.drag-item').forEach(item => {
+      item.style.opacity = '1';
+      item.draggable = true;
+    });
+    const fb = document.querySelector('.drag-classify + .ctrl-row').nextElementSibling;
+    if (fb && fb.classList.contains('tu-fb')) {
+      fb.hidden = true;
+      fb.innerHTML = '';
+    }
+  };
+}
+
+})();
+</script>
+</body>
 </html>

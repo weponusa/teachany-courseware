@@ -911,5 +911,310 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
     <button onclick="goSection('boss')">挑战Boss关 →</button>
   </nav>
 </section>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.goSection !== 'undefined') return;
+
+  // ========== 导航与章节切换 ==========
+  window.goSection = function(sectionId) {
+    const allSections = document.querySelectorAll('section[id]');
+    allSections.forEach(s => s.style.display = 'none');
+    const target = document.getElementById(sectionId);
+    if (target) {
+      target.style.display = 'block';
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // ========== 测试题检查 ==========
+  window.taCheckQ = function(qId, optIdx, correctAnswer) {
+    const fb = document.getElementById(qId + '-fb');
+    const opt = document.getElementById(qId + '-opt' + optIdx);
+    if (!fb || !opt) return;
+    
+    const userAnswer = opt.textContent.trim().charAt(0);
+    const isCorrect = userAnswer === correctAnswer;
+    
+    document.querySelectorAll(`[id^="${qId}-opt"]`).forEach(o => {
+      o.disabled = true;
+      o.style.opacity = '0.6';
+    });
+    
+    opt.style.backgroundColor = isCorrect ? '#4caf50' : '#f44336';
+    opt.style.color = '#fff';
+    opt.style.opacity = '1';
+    
+    fb.innerHTML = isCorrect 
+      ? '<div style="color:#2e7d32;padding:0.8rem;background:#e8f5e9;border-radius:6px;margin-top:0.5rem;">✓ 回答正确！</div>'
+      : `<div style="color:#c62828;padding:0.8rem;background:#ffebee;border-radius:6px;margin-top:0.5rem;">✗ 正确答案是 ${correctAnswer}</div>`;
+    fb.style.display = 'block';
+  };
+
+  // ========== 工具信息展示 ==========
+  window.showToolInfo = function(tool) {
+    const infoBox = document.getElementById('tool-info-box') || createToolInfoBox();
+    const info = {
+      brush: { title: '毛笔', desc: '笔锋柔软，能写出粗细变化的笔画。使用时保持笔杆垂直。' },
+      ink: { title: '墨汁', desc: '书法专用墨汁，浓淡适中。蘸墨后在砚台边缘舔笔。' },
+      paper: { title: '宣纸', desc: '吸墨性好的传统纸张，分生宣和熟宣。初学者用熟宣。' },
+      stone: { title: '砚台', desc: '研磨墨块和调整笔锋的工具。使用后要清洗干净。' }
+    };
+    const data = info[tool] || { title: '工具', desc: '书法必备工具' };
+    infoBox.innerHTML = `<h3 style="margin:0 0 0.5rem 0;color:#d32f2f;">${data.title}</h3><p style="margin:0;line-height:1.6;">${data.desc}</p>`;
+    infoBox.style.display = 'block';
+  };
+
+  function createToolInfoBox() {
+    const box = document.createElement('div');
+    box.id = 'tool-info-box';
+    box.style.cssText = 'background:#fff3e0;padding:1rem;border-radius:8px;margin-top:1rem;border-left:4px solid #ff6f00;';
+    document.querySelector('.warmup-demo')?.appendChild(box);
+    return box;
+  }
+
+  // ========== 画布绘图核心 ==========
+  let isDrawing = false;
+  let currentCanvas = null;
+  let brushSize = 4;
+  let strokes = {};
+
+  window.startDraw = function(e, canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    isDrawing = true;
+    currentCanvas = canvasId;
+    if (!strokes[canvasId]) strokes[canvasId] = [];
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    strokes[canvasId].push({ points: [{ x, y }], size: brushSize });
+  };
+
+  window.draw = function(e, canvasId) {
+    if (!isDrawing || currentCanvas !== canvasId) return;
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const currentStroke = strokes[canvasId][strokes[canvasId].length - 1];
+    const lastPoint = currentStroke.points[currentStroke.points.length - 1];
+    
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = brushSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(lastPoint.x, lastPoint.y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    
+    currentStroke.points.push({ x, y });
+  };
+
+  window.stopDraw = function() {
+    isDrawing = false;
+    currentCanvas = null;
+  };
+
+  window.startDrawTouch = function(e, canvasId) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    window.startDraw({ clientX: touch.clientX, clientY: touch.clientY }, canvasId);
+  };
+
+  window.drawTouch = function(e, canvasId) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    window.draw({ clientX: touch.clientX, clientY: touch.clientY }, canvasId);
+  };
+
+  window.clearCanvas = function(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    strokes[canvasId] = [];
+  };
+
+  window.undoCanvas = function(canvasId) {
+    if (!strokes[canvasId] || strokes[canvasId].length === 0) return;
+    strokes[canvasId].pop();
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    strokes[canvasId].forEach(stroke => {
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = stroke.size;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      stroke.points.forEach((pt, i) => {
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      });
+      ctx.stroke();
+    });
+  };
+
+  window.changeBrushSize = function(delta) {
+    brushSize = Math.max(2, Math.min(12, brushSize + delta));
+  };
+
+  // ========== 笔画动画 ==========
+  let animationFrame = null;
+  window.selectChar = function(btn, char) {
+    document.querySelectorAll('.char-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    window.playStrokeAnimation(char);
+  };
+
+  window.playStrokeAnimation = function(char) {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    const svg = document.getElementById('char-svg');
+    if (!svg) return;
+    
+    const paths = {
+      '永': [
+        'M100,40 Q90,60 100,80',
+        'M100,80 L100,160',
+        'M60,100 Q80,95 100,100',
+        'M100,100 Q120,95 140,100'
+      ],
+      '山': ['M60,80 L100,40 L140,80', 'M70,100 L130,100', 'M60,120 L140,120'],
+      '日': ['M70,50 L130,50 L130,150 L70,150 Z', 'M70,100 L130,100'],
+      '人': ['M80,60 L100,120', 'M100,80 L130,140'],
+      '木': ['M100,40 L100,140', 'M60,80 L140,80', 'M80,120 L100,160', 'M120,120 L100,160']
+    };
+    
+    const charPaths = paths[char] || paths['永'];
+    let pathIndex = 0;
+    let progress = 0;
+    
+    function animate() {
+      progress += 0.02;
+      if (progress >= 1) {
+        progress = 0;
+        pathIndex++;
+        if (pathIndex >= charPaths.length) {
+          pathIndex = 0;
+        }
+      }
+      
+      svg.innerHTML = '<rect width="200" height="200" fill="#fffef5"/><line x1="100" y1="0" x2="100" y2="200" stroke="#ffd0a0" stroke-width="1"/><line x1="0" y1="100" x2="200" y2="100" stroke="#ffd0a0" stroke-width="1"/>';
+      
+      for (let i = 0; i <= pathIndex; i++) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', charPaths[i]);
+        path.setAttribute('stroke', '#d32f2f');
+        path.setAttribute('stroke-width', '6');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        if (i === pathIndex) {
+          path.setAttribute('stroke-dasharray', '1000');
+          path.setAttribute('stroke-dashoffset', 1000 * (1 - progress));
+        }
+        svg.appendChild(path);
+      }
+      
+      animationFrame = requestAnimationFrame(animate);
+    }
+    animate();
+  };
+
+  window.resetAnimation = function() {
+    if (animationFrame) {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    }
+  };
+
+  // ========== 关卡完成 ==========
+  window.completeLevel1 = function() {
+    alert('第一关完成！获得 20 星星 ⭐');
+    window.goSection('level2');
+  };
+
+  window.submitPractice = function(level) {
+    const ratingArea = document.getElementById('rating-area-' + level);
+    if (ratingArea) {
+      ratingArea.style.display = 'block';
+    }
+    alert('作品已提交！请为自己打分 ⭐');
+  };
+
+  window.rate = function(level, stars) {
+    const ratingArea = document.getElementById('rating-area-' + level);
+    if (!ratingArea) return;
+    const starSpans = ratingArea.querySelectorAll('.rating-star');
+    starSpans.forEach((span, i) => {
+      span.style.opacity = i < stars ? '1' : '0.3';
+    });
+  };
+
+  // ========== Boss 关 ==========
+  let bossTimer = null;
+  let bossTimeLeft = 60;
+  let bossCharIndex = 0;
+  const bossChars = ['永', '山', '日', '人'];
+
+  window.startBoss = function() {
+    if (bossTimer) clearInterval(bossTimer);
+    bossTimeLeft = 60;
+    bossCharIndex = 0;
+    document.getElementById('boss-char').textContent = bossChars[0];
+    window.clearCanvas('boss-canvas');
+    
+    bossTimer = setInterval(() => {
+      bossTimeLeft--;
+      document.getElementById('boss-time-display').textContent = bossTimeLeft + '秒';
+      const timerFill = document.getElementById('boss-timer');
+      if (timerFill) timerFill.style.width = (bossTimeLeft / 60 * 100) + '%';
+      
+      if (bossTimeLeft <= 0) {
+        clearInterval(bossTimer);
+        alert('时间到！完成 ' + bossCharIndex + ' 个字');
+        document.getElementById('final-score').textContent = bossCharIndex * 25;
+      }
+    }, 1000);
+  };
+
+  window.nextBossChar = function() {
+    bossCharIndex++;
+    if (bossCharIndex < bossChars.length) {
+      document.getElementById('boss-char').textContent = bossChars[bossCharIndex];
+      window.clearCanvas('boss-canvas');
+    } else {
+      clearInterval(bossTimer);
+      alert('全部完成！得分：' + bossCharIndex * 25);
+      document.getElementById('final-score').textContent = bossCharIndex * 25;
+    }
+  };
+
+  // ========== 拓展内容 ==========
+  window.showExtension = function(type) {
+    const content = {
+      history: '中国书法起源于甲骨文，历经篆书、隶书、楷书、行书、草书的演变，至今已有5000多年历史。',
+      styles: '五大书体各有特色：篆书古朴，隶书端庄，楷书规范，行书流畅，草书奔放。',
+      masters: '王羲之被誉为"书圣"，其《兰亭序》被称为"天下第一行书"。颜真卿、柳公权的楷书影响深远。',
+      practice: '建议每天练习一个汉字，从基本笔画开始，循序渐进提高书法水平。'
+    };
+    alert(content[type] || '更多内容敬请期待');
+  };
+
+  // 初始化第一个笔画动画
+  setTimeout(() => {
+    const firstBtn = document.querySelector('.char-btn.active');
+    if (firstBtn) window.playStrokeAnimation('永');
+  }, 500);
+
+})();
+</script>
 </body>
 </html>

@@ -604,5 +604,192 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.showSection !== 'undefined') return;
+
+  window.showSection = function(sectionName) {
+    // 隐藏所有主要内容区域
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(sec => {
+      sec.style.display = 'none';
+    });
+
+    // 更新导航按钮状态
+    const navBtns = document.querySelectorAll('.nav-btn');
+    navBtns.forEach(btn => {
+      btn.classList.remove('active');
+    });
+
+    // 激活当前按钮
+    event.target.classList.add('active');
+
+    // 显示对应区域
+    switch(sectionName) {
+      case 'themes':
+        showThemesSection();
+        break;
+      case 'quiz':
+        showQuizSection();
+        break;
+      case 'random':
+        showRandomSection();
+        break;
+      case 'errors':
+        showErrorsSection();
+        break;
+    }
+
+    // 更新进度条
+    updateProgressBar();
+  };
+
+  function showThemesSection() {
+    // 显示主题词群相关的 section
+    const heroSection = document.getElementById('hero-infographic');
+    if (heroSection) heroSection.style.display = 'block';
+
+    // 查找所有主题相关的 section
+    const allSections = document.querySelectorAll('.section');
+    allSections.forEach(sec => {
+      const tsh = sec.getAttribute('data-tsh');
+      if (tsh && (tsh.includes('主题') || tsh.includes('词群') || tsh.includes('知识结构'))) {
+        sec.style.display = 'block';
+      }
+    });
+  }
+
+  function showQuizSection() {
+    // 显示测验相关的 section
+    const allSections = document.querySelectorAll('.section');
+    allSections.forEach(sec => {
+      const tsh = sec.getAttribute('data-tsh');
+      if (tsh && (tsh.includes('测') || tsh.includes('练习') || tsh.includes('quiz'))) {
+        sec.style.display = 'block';
+      }
+    });
+
+    // 如果没有找到测验区域，创建一个简单的测验界面
+    let quizSection = document.getElementById('quiz-section');
+    if (!quizSection) {
+      quizSection = document.createElement('section');
+      quizSection.id = 'quiz-section';
+      quizSection.className = 'section';
+      quizSection.innerHTML = `
+        <div style="padding:40px 20px;max-width:800px;margin:0 auto;">
+          <h2 style="color:#1976d2;margin-bottom:30px;">📝 主题词汇小测</h2>
+          <div id="quiz-content" style="background:#f5f5f5;padding:30px;border-radius:12px;">
+            <p style="font-size:16px;color:#666;">正在加载测验内容...</p>
+          </div>
+        </div>
+      `;
+      const container = document.querySelector('.container');
+      if (container) container.appendChild(quizSection);
+    }
+    quizSection.style.display = 'block';
+  }
+
+  function showRandomSection() {
+    // 显示随机抽测区域
+    let randomSection = document.getElementById('random-section');
+    if (!randomSection) {
+      randomSection = document.createElement('section');
+      randomSection.id = 'random-section';
+      randomSection.className = 'section';
+      randomSection.innerHTML = `
+        <div style="padding:40px 20px;max-width:800px;margin:0 auto;">
+          <h2 style="color:#2f7d32;margin-bottom:30px;">🎲 随机词汇抽测</h2>
+          <div id="random-content" style="background:#fff;padding:40px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);text-align:center;">
+            <div style="font-size:48px;color:#1976d2;margin-bottom:20px;" id="random-word">点击开始</div>
+            <button onclick="drawRandomWord()" style="background:#4caf50;color:#fff;border:none;padding:12px 30px;border-radius:8px;font-size:16px;cursor:pointer;margin-top:20px;">抽取单词</button>
+            <div id="random-result" style="margin-top:30px;font-size:18px;color:#666;"></div>
+          </div>
+        </div>
+      `;
+      const container = document.querySelector('.container');
+      if (container) container.appendChild(randomSection);
+    }
+    randomSection.style.display = 'block';
+  }
+
+  function showErrorsSection() {
+    // 显示易错攻克区域
+    let errorsSection = document.getElementById('errors-section');
+    if (!errorsSection) {
+      errorsSection = document.createElement('section');
+      errorsSection.id = 'errors-section';
+      errorsSection.className = 'section';
+      errorsSection.innerHTML = `
+        <div style="padding:40px 20px;max-width:800px;margin:0 auto;">
+          <h2 style="color:#d32f2f;margin-bottom:30px;">⚠️ 易错词汇攻克</h2>
+          <div id="errors-content" style="background:#fff;padding:30px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;">
+              <div style="padding:20px;background:#ffebee;border-radius:8px;border-left:4px solid #d32f2f;">
+                <div style="font-weight:bold;color:#d32f2f;margin-bottom:8px;">易混淆词组</div>
+                <div style="font-size:14px;color:#666;">accept / except<br>affect / effect</div>
+              </div>
+              <div style="padding:20px;background:#fff3e0;border-radius:8px;border-left:4px solid #f57c00;">
+                <div style="font-weight:bold;color:#f57c00;margin-bottom:8px;">拼写易错</div>
+                <div style="font-size:14px;color:#666;">necessary<br>separate</div>
+              </div>
+              <div style="padding:20px;background:#e8f5e9;border-radius:8px;border-left:4px solid #2f7d32;">
+                <div style="font-weight:bold;color:#2f7d32;margin-bottom:8px;">用法易错</div>
+                <div style="font-size:14px;color:#666;">look forward to doing<br>be used to doing</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      const container = document.querySelector('.container');
+      if (container) container.appendChild(errorsSection);
+    }
+    errorsSection.style.display = 'block';
+  }
+
+  function updateProgressBar() {
+    const progressBar = document.getElementById('progressBar');
+    if (!progressBar) return;
+
+    // 计算当前进度（基于显示的section数量）
+    const allSections = document.querySelectorAll('.section');
+    const visibleSections = Array.from(allSections).filter(sec => sec.style.display !== 'none');
+    const progress = visibleSections.length > 0 ? 25 : 0;
+
+    progressBar.style.width = progress + '%';
+  }
+
+  // 辅助函数：随机抽词
+  window.drawRandomWord = function() {
+    const words = ['apple', 'book', 'cat', 'dog', 'elephant', 'friend', 'good', 'happy', 'important', 'jump'];
+    const randomWord = words[Math.floor(Math.random() * words.length)];
+    const wordEl = document.getElementById('random-word');
+    const resultEl = document.getElementById('random-result');
+    
+    if (wordEl) {
+      wordEl.textContent = randomWord;
+      wordEl.style.animation = 'none';
+      setTimeout(() => {
+        wordEl.style.animation = 'fadeIn 0.5s ease-in';
+      }, 10);
+    }
+    
+    if (resultEl) {
+      resultEl.innerHTML = `<div style="color:#2f7d32;font-weight:bold;">请写出该单词的中文意思</div>`;
+    }
+  };
+
+  // 初始化：默认显示主题词群
+  setTimeout(() => {
+    const firstBtn = document.querySelector('.nav-btn');
+    if (firstBtn) {
+      showThemesSection();
+      updateProgressBar();
+    }
+  }, 100);
+
+})();
+</script>
 </body>
 </html>

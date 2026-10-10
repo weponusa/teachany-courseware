@@ -1045,5 +1045,194 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "flowerCanvas", "readout": "labReadout-flowerCanvas", "bg": [{"t": "line", "x1": 390, "y1": 330, "x2": 390, "y2": 190, "w": 6, "color": "#16a34a"}, {"t": "ellipse", "x": 390, "y": 190, "rx": 52, "ry": 40, "fill": "rgba(34,197,94,.35)", "stroke": "#16a34a"}, {"t": "ellipse", "x": 390, "y": 152, "rx": 46, "ry": 34, "fill": "rgba(251,191,36,.55)", "stroke": "#f59e0b"}, {"t": "ellipse", "x": 390, "y": 340, "rx": 46, "ry": 18, "fill": "rgba(34,197,94,.35)", "stroke": "#16a34a"}, {"t": "ellipse", "x": 300, "y": 160, "rx": 62, "ry": 40, "fill": "rgba(244,114,182,.55)", "stroke": "#ec4899", "rot": -0.35}, {"t": "ellipse", "x": 480, "y": 160, "rx": 62, "ry": 40, "fill": "rgba(244,114,182,.55)", "stroke": "#ec4899", "rot": 0.35}, {"t": "ellipse", "x": 330, "y": 220, "rx": 54, "ry": 34, "fill": "rgba(244,114,182,.4)", "stroke": "#ec4899", "rot": -0.2}, {"t": "ellipse", "x": 450, "y": 220, "rx": 54, "ry": 34, "fill": "rgba(244,114,182,.4)", "stroke": "#ec4899", "rot": 0.2}, {"t": "line", "x1": 360, "y1": 190, "x2": 360, "y2": 120, "w": 3, "color": "#f59e0b"}, {"t": "ellipse", "x": 360, "y": 112, "rx": 12, "ry": 9, "fill": "rgba(251,191,36,.9)", "stroke": "#d97706"}, {"t": "line", "x1": 420, "y1": 190, "x2": 420, "y2": 120, "w": 3, "color": "#f59e0b"}, {"t": "ellipse", "x": 420, "y": 112, "rx": 12, "ry": 9, "fill": "rgba(251,191,36,.9)", "stroke": "#d97706"}, {"t": "line", "x1": 390, "y1": 190, "x2": 390, "y2": 128, "w": 4, "color": "#10b981"}, {"t": "ellipse", "x": 390, "y": 122, "rx": 16, "ry": 10, "fill": "rgba(16,185,129,.85)", "stroke": "#059669"}], "parts": [{"x": 390, "y": 110, "name": "雄蕊（花药+花丝）", "info": "花药里产生花粉（精子在其中）。花粉落到柱头上就叫传粉。", "r": 44, "lx": 300, "ly": 92}, {"x": 390, "y": 128, "name": "雌蕊（柱头+花柱+子房）", "info": "柱头接收花粉 → 精子经花柱进入子房 → 与胚珠里的卵细胞结合（受精）。", "r": 32, "lx": 470, "ly": 108}, {"x": 390, "y": 190, "name": "子房 / 胚珠", "info": "受精后子房发育成果实，胚珠发育成种子。", "r": 50, "lx": 560, "ly": 190}, {"x": 300, "y": 160, "name": "花瓣", "info": "鲜艳的颜色和气味吸引昆虫来传粉。", "r": 50, "lx": 240, "ly": 116}, {"x": 390, "y": 340, "name": "花托 / 花柄", "info": "花托承托各部分，花柄把花连在茎上。", "r": 44, "lx": 300, "ly": 344}], "tip": "👆 点击花的各部分，看它在生殖中的作用"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.toggleAudioPlayer !== 'undefined') return;
+
+  let currentAudio = null;
+  let audioPlayerVisible = false;
+
+  // 音频播放器切换
+  window.toggleAudioPlayer = function() {
+    const badge = document.getElementById('audioBadge');
+    const audios = document.querySelectorAll('audio[id^="ta-audio-"]');
+    
+    if (!audioPlayerVisible) {
+      // 创建播放器面板
+      let panel = document.getElementById('audioPlayerPanel');
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'audioPlayerPanel';
+        panel.style.cssText = 'position:fixed;top:80px;right:20px;background:#fff;border:2px solid #4caf50;border-radius:12px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:9999;min-width:280px;max-height:70vh;overflow-y:auto;';
+        
+        let title = document.createElement('div');
+        title.style.cssText = 'font-weight:bold;margin-bottom:12px;color:#2f7d32;font-size:16px;';
+        title.textContent = '🎧 课件讲解音频';
+        panel.appendChild(title);
+
+        audios.forEach((audio, idx) => {
+          let btn = document.createElement('button');
+          btn.style.cssText = 'display:block;width:100%;padding:10px;margin:6px 0;background:#f1f8f4;border:1px solid #4caf50;border-radius:6px;cursor:pointer;text-align:left;font-size:14px;transition:all 0.2s;';
+          btn.textContent = `第 ${idx + 1} 段讲解`;
+          btn.onmouseover = () => btn.style.background = '#e8f5e9';
+          btn.onmouseout = () => btn.style.background = '#f1f8f4';
+          btn.onclick = () => playAudioSegment(audio, btn);
+          panel.appendChild(btn);
+        });
+
+        let closeBtn = document.createElement('button');
+        closeBtn.style.cssText = 'margin-top:12px;width:100%;padding:8px;background:#fff;border:1px solid #ccc;border-radius:6px;cursor:pointer;';
+        closeBtn.textContent = '关闭';
+        closeBtn.onclick = () => window.toggleAudioPlayer();
+        panel.appendChild(closeBtn);
+
+        document.body.appendChild(panel);
+      }
+      panel.style.display = 'block';
+      badge.textContent = '🎧 关闭讲解';
+      audioPlayerVisible = true;
+    } else {
+      const panel = document.getElementById('audioPlayerPanel');
+      if (panel) panel.style.display = 'none';
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      }
+      badge.textContent = '🎧 听讲解';
+      audioPlayerVisible = false;
+    }
+  };
+
+  function playAudioSegment(audio, btn) {
+    if (currentAudio && currentAudio !== audio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+    }
+    
+    if (currentAudio === audio && !audio.paused) {
+      audio.pause();
+      btn.textContent = btn.textContent.replace('⏸', '');
+      currentAudio = null;
+    } else {
+      audio.currentTime = 0;
+      audio.play();
+      btn.textContent = btn.textContent.replace('⏸', '') + ' ⏸';
+      currentAudio = audio;
+      
+      audio.onended = () => {
+        btn.textContent = btn.textContent.replace(' ⏸', '');
+        currentAudio = null;
+      };
+    }
+  }
+
+  // 拖拽功能初始化
+  let draggedElement = null;
+  const dragState = {};
+
+  function initDragDrop() {
+    const labels = document.querySelectorAll('.drag-label');
+    const targets = document.querySelectorAll('.drop-target');
+
+    labels.forEach(label => {
+      label.addEventListener('dragstart', function(e) {
+        draggedElement = this;
+        this.style.opacity = '0.5';
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+      });
+
+      label.addEventListener('dragend', function() {
+        this.style.opacity = '1';
+      });
+    });
+
+    targets.forEach(target => {
+      target.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this.style.background = '#e8f5e9';
+        return false;
+      });
+
+      target.addEventListener('dragleave', function() {
+        this.style.background = '';
+      });
+
+      target.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.style.background = '';
+        
+        if (draggedElement) {
+          const name = draggedElement.getAttribute('data-name');
+          this.textContent = name;
+          this.style.cssText += 'background:#fff3cd;padding:2px 8px;border-radius:4px;font-weight:bold;';
+          dragState[this.id] = name;
+        }
+        return false;
+      });
+    });
+  }
+
+  // 核对拖拽答案
+  window.checkDrag = function() {
+    const targets = document.querySelectorAll('.drop-target');
+    const feedback = document.getElementById('dragFeedback');
+    let correct = 0;
+    let total = targets.length;
+
+    targets.forEach(target => {
+      const answer = target.getAttribute('data-answer');
+      const userAnswer = dragState[target.id] || target.textContent.trim();
+      
+      if (userAnswer === answer) {
+        target.style.cssText += 'background:#c8e6c9;color:#2e7d32;padding:2px 8px;border-radius:4px;font-weight:bold;border:2px solid #4caf50;';
+        correct++;
+      } else {
+        target.style.cssText += 'background:#ffcdd2;color:#c62828;padding:2px 8px;border-radius:4px;font-weight:bold;border:2px solid #f44336;';
+      }
+    });
+
+    if (feedback) {
+      if (correct === total) {
+        feedback.innerHTML = `<div style="background:#c8e6c9;color:#2e7d32;padding:12px;border-radius:8px;margin-top:12px;border:2px solid #4caf50;"><strong>✓ 完全正确！</strong> 你已掌握花的各部分结构名称（${correct}/${total}）</div>`;
+      } else {
+        feedback.innerHTML = `<div style="background:#fff3cd;color:#f57c00;padding:12px;border-radius:8px;margin-top:12px;border:2px solid #ffa726;"><strong>答对 ${correct}/${total} 个</strong><br>红色标注的需要重新拖拽，请参考花的结构图再试一次。</div>`;
+      }
+    }
+  };
+
+  // 重置拖拽
+  window.resetDrag = function() {
+    const targets = document.querySelectorAll('.drop-target');
+    const feedback = document.getElementById('dragFeedback');
+    
+    targets.forEach(target => {
+      target.textContent = '';
+      target.style.cssText = '';
+      delete dragState[target.id];
+    });
+
+    if (feedback) {
+      feedback.innerHTML = '';
+    }
+
+    // 重新初始化拖拽
+    initDragDrop();
+  };
+
+  // 页面加载时初始化拖拽
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDragDrop);
+  } else {
+    initDragDrop();
+  }
+
+})();
+</script>
+</body>
 </html>

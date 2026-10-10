@@ -669,5 +669,340 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   </div>
 </section>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.checkOpt !== 'undefined') return;
+
+  // 题目答案配置
+  const answers = {
+    'pre-q1': 'B',
+    'pre-q2': 'A',
+    'm2-q1': 'B',
+    'm3-q1': 'C',
+    'post-q1': 'C',
+    'post-q2': 'B',
+    'post-q3': 'C'
+  };
+
+  // 成就解锁状态
+  const achievements = {
+    start: false,
+    pretest: false,
+    classify: false,
+    '3d': false,
+    master: false
+  };
+
+  function unlockAchievement(id) {
+    const key = id.replace('ach-', '');
+    if (!achievements[key]) {
+      achievements[key] = true;
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('unlocked');
+        el.style.animation = 'bounce 0.6s ease';
+      }
+    }
+  }
+
+  // 1. checkOpt - 选择题判分
+  window.checkOpt = function(btn, qid, opt) {
+    const feedback = document.getElementById('fb-' + qid);
+    if (!feedback) return;
+
+    const correct = answers[qid];
+    const allBtns = btn.parentElement.querySelectorAll('.option-btn');
+    
+    allBtns.forEach(b => {
+      b.disabled = true;
+      b.style.opacity = '0.6';
+    });
+
+    if (opt === correct) {
+      btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+      btn.style.color = '#fff';
+      feedback.innerHTML = '✅ <strong>正确！</strong>';
+      feedback.style.color = '#10b981';
+      
+      if (qid.startsWith('pre-')) unlockAchievement('ach-pretest');
+      if (qid.startsWith('post-')) {
+        const allPost = ['post-q1', 'post-q2', 'post-q3'];
+        const allCorrect = allPost.every(id => {
+          const fb = document.getElementById('fb-' + id);
+          return fb && fb.textContent.includes('正确');
+        });
+        if (allCorrect) unlockAchievement('ach-master');
+      }
+    } else {
+      btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+      btn.style.color = '#fff';
+      feedback.innerHTML = `❌ <strong>错误。</strong>正确答案是 ${correct}`;
+      feedback.style.color = '#ef4444';
+    }
+    feedback.style.display = 'block';
+    feedback.style.marginTop = '8px';
+    feedback.style.padding = '8px 12px';
+    feedback.style.borderRadius = '8px';
+    feedback.style.background = '#f8fafc';
+  };
+
+  // 2. classifyGeo - 几何图形分类
+  let classifyCount = 0;
+  window.classifyGeo = function(card, type, name) {
+    if (card.classList.contains('classified')) {
+      card.classList.remove('classified', 'correct');
+      card.querySelector('.geo-desc').textContent = '点击分类';
+      card.style.transform = '';
+      classifyCount--;
+      return;
+    }
+
+    const color = type === '立体' ? '#8b5cf6' : '#f59e0b';
+    card.classList.add('classified', 'correct');
+    card.style.background = `linear-gradient(135deg, ${color}22, ${color}11)`;
+    card.style.border = `2px solid ${color}`;
+    card.style.transform = 'scale(1.05)';
+    card.querySelector('.geo-desc').innerHTML = `<strong style="color:${color}">${type}图形</strong>`;
+    
+    classifyCount++;
+    if (classifyCount >= 4) {
+      unlockAchievement('ach-classify');
+    }
+  };
+
+  // 3. drawUnfold - 绘制立体图形展开图
+  let currentUnfold = null;
+  window.drawUnfold = function(shape) {
+    const canvas = document.getElementById('unfold-canvas');
+    const desc = document.getElementById('unfold-desc');
+    if (!canvas || !desc) return;
+
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    if (currentUnfold === shape) {
+      ctx.clearRect(0, 0, w, h);
+      desc.innerHTML = '';
+      currentUnfold = null;
+      return;
+    }
+
+    currentUnfold = shape;
+    ctx.clearRect(0, 0, w, h);
+
+    // 背景渐变
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#faf5ff');
+    grad.addColorStop(1, '#f3e8ff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (shape === 'cube') {
+      // 正方体展开图（十字形）
+      const size = 60;
+      const cx = w / 2;
+      const cy = h / 2;
+
+      const faces = [
+        { x: cx - size, y: cy - size * 2, label: '顶面' },
+        { x: cx - size * 2, y: cy - size, label: '左' },
+        { x: cx - size, y: cy - size, label: '前面', main: true },
+        { x: cx, y: cy - size, label: '右' },
+        { x: cx + size, y: cy - size, label: '后' },
+        { x: cx - size, y: cy, label: '底面' }
+      ];
+
+      faces.forEach((face, i) => {
+        ctx.fillStyle = face.main ? '#8b5cf6' : '#a78bfa';
+        ctx.fillRect(face.x, face.y, size, size);
+        ctx.strokeStyle = '#6d28d9';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(face.x, face.y, size, size);
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(face.label, face.x + size / 2, face.y + size / 2 + 4);
+      });
+
+      // 标注
+      ctx.fillStyle = '#6d28d9';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('← 6个正方形面', cx + size * 2 + 10, cy - size + 30);
+      
+      ctx.beginPath();
+      ctx.moveTo(cx + size * 1.5, cy - size + 25);
+      ctx.lineTo(cx + size * 2, cy - size + 25);
+      ctx.strokeStyle = '#6d28d9';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      desc.innerHTML = '<strong style="color:#8b5cf6">正方体展开图：</strong>6个完全相同的正方形面，呈"十字形"排列。相对的面在展开图中不相邻。';
+      unlockAchievement('ach-3d');
+
+    } else if (shape === 'cylinder') {
+      // 圆柱展开图
+      const rectW = 200;
+      const rectH = 80;
+      const radius = 40;
+      const startX = (w - rectW) / 2;
+      const startY = h / 2 - 60;
+
+      // 侧面（矩形）
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(startX, startY, rectW, rectH);
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(startX, startY, rectW, rectH);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('侧面（矩形）', startX + rectW / 2, startY + rectH / 2 + 5);
+
+      // 上底面（圆）
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(startX + rectW / 2, startY - radius - 15, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#d97706';
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.fillText('上底', startX + rectW / 2, startY - radius - 10);
+
+      // 下底面（圆）
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(startX + rectW / 2, startY + rectH + radius + 15, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#d97706';
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.fillText('下底', startX + rectW / 2, startY + rectH + radius + 20);
+
+      // 标注
+      ctx.fillStyle = '#d97706';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('矩形长 = 圆周长', startX + rectW + 10, startY + 20);
+      ctx.fillText('矩形宽 = 圆柱高', startX + rectW + 10, startY + 40);
+
+      desc.innerHTML = '<strong style="color:#f59e0b">圆柱展开图：</strong>1个矩形（侧面）+ 2个圆（上下底面）。矩形的长等于圆的周长。';
+
+    } else if (shape === 'cone') {
+      // 圆锥展开图
+      const baseR = 50;
+      const sectorR = 120;
+      const angle = 120;
+      const cx = w / 2;
+      const cy = h / 2 + 20;
+
+      // 底面圆
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(cx - 100, cy, baseR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('底面', cx - 100, cy + 5);
+
+      // 侧面扇形
+      ctx.fillStyle = '#f87171';
+      ctx.beginPath();
+      ctx.moveTo(cx + 80, cy);
+      ctx.arc(cx + 80, cy, sectorR, -Math.PI / 2 - angle * Math.PI / 360, -Math.PI / 2 + angle * Math.PI / 360);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#dc2626';
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.fillText('侧面（扇形）', cx + 80, cy + 10);
+
+      // 标注
+      ctx.fillStyle = '#dc2626';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('扇形弧长 = 底面周长', cx - 100, cy + baseR + 25);
+      
+      ctx.beginPath();
+      ctx.moveTo(cx + 80, cy - sectorR);
+      ctx.lineTo(cx + 80, cy - sectorR - 20);
+      ctx.lineTo(cx + 120, cy - sectorR - 20);
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillText('顶点', cx + 125, cy - sectorR - 15);
+
+      desc.innerHTML = '<strong style="color:#ef4444">圆锥展开图：</strong>1个扇形（侧面）+ 1个圆（底面）。扇形的弧长等于底面圆的周长。';
+    }
+  };
+
+  // 4. checkTask - 综合任务检查
+  window.checkTask = function() {
+    const textarea = document.getElementById('task-answer');
+    const feedback = document.getElementById('fb-task');
+    if (!textarea || !feedback) return;
+
+    const answer = textarea.value.trim();
+    
+    if (answer.length < 50) {
+      feedback.innerHTML = '⚠️ 回答太简短，请至少找出5种几何图形并描述特征。';
+      feedback.style.color = '#f59e0b';
+      feedback.style.display = 'block';
+      return;
+    }
+
+    const lines = answer.split('\n').filter(l => l.trim());
+    const hasPlane = /平面|三角|四边|圆|多边形|长方形|正方形/i.test(answer);
+    const hasSolid = /立体|正方体|长方体|圆柱|圆锥|球|棱柱/i.test(answer);
+    const hasFeature = /特征|端点|面|边|角|展开/i.test(answer);
+
+    if (lines.length >= 5 && hasPlane && hasSolid && hasFeature) {
+      feedback.innerHTML = '🎉 <strong>优秀！</strong>你成功识别了多种几何图形，并描述了它们的特征。继续保持观察力！';
+      feedback.style.color = '#10b981';
+      unlockAchievement('ach-master');
+    } else if (lines.length >= 3) {
+      feedback.innerHTML = '👍 <strong>不错！</strong>建议补充：①平面图形和立体图形都要有；②描述更多特征（如边数、面数、能否展开等）。';
+      feedback.style.color = '#3b82f6';
+    } else {
+      feedback.innerHTML = '💡 <strong>提示：</strong>请按模板格式，至少写出5种图形。例如：黑板-平面-长方形-四个直角...';
+      feedback.style.color = '#f59e0b';
+    }
+    
+    feedback.style.display = 'block';
+    feedback.style.marginTop = '12px';
+    feedback.style.padding = '12px';
+    feedback.style.borderRadius = '10px';
+    feedback.style.background = '#f8fafc';
+  };
+
+  // 初始化成就样式
+  const style = document.createElement('style');
+  style.textContent = `
+    .achievement { opacity: 0.4; transition: all 0.3s; }
+    .achievement.unlocked { opacity: 1; transform: scale(1.1); }
+    @keyframes bounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+  `;
+  document.head.appendChild(style);
+
+  unlockAchievement('ach-start');
+})();
+</script>
+</body>
 </html>
