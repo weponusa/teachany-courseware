@@ -137,9 +137,13 @@ def process(cid: str, apply: bool, voice: str) -> tuple[str, str]:
             continue
         fname = f"s{n:02d}-{sid[:24].replace('_', '-')}.mp3"
         out = tts_dir / fname
-        if apply and not out.exists():
+        if apply and (not out.exists() or out.stat().st_size < 200):
+            # ⚠ 0 字节/过小文件必须删除重生成——Edge TTS 并发下会静默写出 0 字节
+            # 文件（曾一次产生 630 个），若仅以「文件存在」跳过，坏文件会永远留存。
             ok, engine = synthesize(text=text, voice=voice, output=str(out))
-            if not ok:
+            if not ok or not out.exists() or out.stat().st_size < 200:
+                if out.exists() and out.stat().st_size < 200:
+                    out.unlink()
                 return cid, f"TTS-FAIL({sid})"
         made.append({"id": f"s{n:02d}", "src": f"{CDN}/{cid}/tts/{fname}",
                      "title": title or sid, "section": sid})
