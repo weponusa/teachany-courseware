@@ -1252,5 +1252,421 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "glandsCanvas", "readout": "glandsInfo", "bg": [{"t": "ellipse", "x": 380, "y": 200, "rx": 66, "ry": 74, "fill": "rgba(148,163,184,.3)", "stroke": "#94a3b8", "dash": [5, 4]}, {"t": "ellipse", "x": 380, "y": 96, "rx": 44, "ry": 40, "fill": "rgba(96,165,250,.3)", "stroke": "#60a5fa"}, {"t": "text", "x": 380, "y": 96, "t2": "脑", "size": 12, "align": "center"}, {"t": "ellipse", "x": 380, "y": 150, "rx": 16, "ry": 12, "fill": "rgba(244,114,182,.7)", "stroke": "#ec4899"}, {"t": "line", "x1": 300, "y1": 150, "x2": 460, "y2": 150, "w": 2, "color": "rgba(251,191,36,.35)"}, {"t": "ellipse", "x": 300, "y": 150, "rx": 20, "ry": 10, "fill": "rgba(251,191,36,.7)", "stroke": "#d97706"}, {"t": "ellipse", "x": 460, "y": 150, "rx": 20, "ry": 10, "fill": "rgba(251,191,36,.7)", "stroke": "#d97706"}, {"t": "ellipse", "x": 300, "y": 226, "rx": 26, "ry": 16, "fill": "rgba(239,68,68,.55)", "stroke": "#dc2626"}, {"t": "ellipse", "x": 460, "y": 226, "rx": 26, "ry": 16, "fill": "rgba(239,68,68,.55)", "stroke": "#dc2626"}, {"t": "ellipse", "x": 380, "y": 300, "rx": 42, "ry": 34, "fill": "rgba(16,185,129,.35)", "stroke": "#059669"}], "parts": [{"x": 380, "y": 150, "name": "垂体", "info": "位于脑下方，分泌生长激素等，还能调控其他内分泌腺——是“内分泌腺的枢纽”。", "r": 34, "lx": 300, "ly": 66}, {"x": 300, "y": 150, "name": "甲状腺", "info": "分泌甲状腺激素，促进新陈代谢和生长发育（幼年缺乏会患呆小症）。", "r": 30, "lx": 150, "ly": 116}, {"x": 300, "y": 226, "name": "肾上腺", "info": "分泌肾上腺素：心跳加快、血压升高，应付紧张和危险。", "r": 34, "lx": 118, "ly": 224}, {"x": 380, "y": 300, "name": "胰岛（胰腺）", "info": "分泌胰岛素，把血液中的葡萄糖降下来（分泌不足会患糖尿病）。", "r": 44, "lx": 380, "ly": 356}, {"x": 380, "y": 200, "name": "性腺（卵巢/睾丸）", "info": "分泌性激素，促进生殖器官发育和第二性征出现。", "r": 60, "lx": 592, "ly": 250}], "tip": "👆 点击各内分泌腺，了解它分泌的激素与作用"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.showSection !== 'undefined') return;
+
+  // ========== 导航切换 ==========
+  window.showSection = function(sectionId) {
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(s => s.classList.remove('active'));
+    
+    const target = document.getElementById(sectionId);
+    if (target) target.classList.add('active');
+    
+    const navBtns = document.querySelectorAll('.nav-btn');
+    navBtns.forEach(btn => btn.classList.remove('active'));
+    
+    const activeBtn = Array.from(navBtns).find(btn => 
+      btn.getAttribute('onclick')?.includes(`'${sectionId}'`)
+    );
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    // 如果切换到血糖调节，初始化画布
+    if (sectionId === 'blood-sugar') {
+      setTimeout(() => showBloodSugarNormal(), 100);
+    }
+  };
+
+  // ========== 血糖调节动画 ==========
+  let bloodSugarAnimFrame = null;
+
+  function drawBloodSugarBase(ctx, w, h) {
+    // 背景渐变
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#fef3c7');
+    grad.addColorStop(1, '#fef9e7');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    
+    // 血管示意
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(50, h/2);
+    ctx.lineTo(w - 50, h/2);
+    ctx.stroke();
+    
+    // 血管壁
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 3]);
+    ctx.beginPath();
+    ctx.moveTo(50, h/2 - 25);
+    ctx.lineTo(w - 50, h/2 - 25);
+    ctx.moveTo(50, h/2 + 25);
+    ctx.lineTo(w - 50, h/2 + 25);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    ctx.fillStyle = '#7c2d12';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('血管', 60, h/2 - 35);
+  }
+
+  function drawGlucose(ctx, x, y, size) {
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI * 2 / 6) * i;
+      const px = x + Math.cos(angle) * size;
+      const py = y + Math.sin(angle) * size;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  function drawInsulin(ctx, x, y) {
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1e40af';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('I', x, y + 4);
+  }
+
+  function drawGlucagon(ctx, x, y) {
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#7f1d1d';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('G', x, y + 4);
+  }
+
+  function drawPancreas(ctx, x, y) {
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    ctx.ellipse(x, y, 35, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#c2410c';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    ctx.fillStyle = '#7c2d12';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('胰岛', x, y + 4);
+  }
+
+  window.showBloodSugarHigh = function() {
+    const canvas = document.getElementById('bloodSugarCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    
+    if (bloodSugarAnimFrame) cancelAnimationFrame(bloodSugarAnimFrame);
+    
+    let frame = 0;
+    const totalFrames = 150;
+    
+    function animate() {
+      ctx.clearRect(0, 0, w, h);
+      drawBloodSugarBase(ctx, w, h);
+      
+      const progress = frame / totalFrames;
+      
+      // 胰岛
+      drawPancreas(ctx, 100, 100);
+      
+      // 阶段1: 血糖升高（0-0.3）
+      if (progress < 0.3) {
+        const p = progress / 0.3;
+        const glucoseCount = Math.floor(p * 20);
+        for (let i = 0; i < glucoseCount; i++) {
+          const x = 150 + (w - 200) * (i / 20);
+          const y = h/2 + Math.sin(i * 0.5) * 15;
+          drawGlucose(ctx, x, y, 6);
+        }
+        ctx.fillStyle = '#dc2626';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('🍚 饭后血糖升高', 200, 50);
+      }
+      // 阶段2: 胰岛素分泌（0.3-0.6）
+      else if (progress < 0.6) {
+        for (let i = 0; i < 20; i++) {
+          const x = 150 + (w - 200) * (i / 20);
+          const y = h/2 + Math.sin(i * 0.5) * 15;
+          drawGlucose(ctx, x, y, 6);
+        }
+        
+        const p = (progress - 0.3) / 0.3;
+        const insulinCount = Math.floor(p * 8);
+        for (let i = 0; i < insulinCount; i++) {
+          const x = 100 + 50 + i * 60;
+          const y = 100 + (h/2 - 100) * p;
+          drawInsulin(ctx, x, y);
+        }
+        
+        ctx.fillStyle = '#1e40af';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText('💉 胰岛素分泌', 200, 50);
+        
+        // 箭头
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(120, 120);
+        ctx.lineTo(150, h/2 - 30);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(150, h/2 - 30);
+        ctx.lineTo(145, h/2 - 35);
+        ctx.lineTo(155, h/2 - 35);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // 阶段3: 血糖降低（0.6-1.0）
+      else {
+        const p = (progress - 0.6) / 0.4;
+        const remainGlucose = Math.floor(20 * (1 - p * 0.7));
+        for (let i = 0; i < remainGlucose; i++) {
+          const x = 150 + (w - 200) * (i / 20);
+          const y = h/2 + Math.sin(i * 0.5) * 15;
+          const size = 6 * (1 - p * 0.3);
+          drawGlucose(ctx, x, y, size);
+        }
+        
+        for (let i = 0; i < 8; i++) {
+          const x = 150 + i * 60;
+          const y = h/2 - 10;
+          drawInsulin(ctx, x, y);
+        }
+        
+        ctx.fillStyle = '#059669';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText('✅ 血糖降低至正常', 200, 50);
+        
+        // 下降箭头
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(w - 100, 80);
+        ctx.lineTo(w - 100, 140);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(w - 100, 140);
+        ctx.lineTo(w - 110, 130);
+        ctx.lineTo(w - 90, 130);
+        ctx.closePath();
+        ctx.fillStyle = '#10b981';
+        ctx.fill();
+      }
+      
+      frame++;
+      if (frame <= totalFrames) {
+        bloodSugarAnimFrame = requestAnimationFrame(animate);
+      }
+    }
+    
+    animate();
+  };
+
+  window.showBloodSugarLow = function() {
+    const canvas = document.getElementById('bloodSugarCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    
+    if (bloodSugarAnimFrame) cancelAnimationFrame(bloodSugarAnimFrame);
+    
+    let frame = 0;
+    const totalFrames = 150;
+    
+    function animate() {
+      ctx.clearRect(0, 0, w, h);
+      drawBloodSugarBase(ctx, w, h);
+      
+      const progress = frame / totalFrames;
+      
+      drawPancreas(ctx, 100, 100);
+      
+      // 阶段1: 血糖降低（0-0.3）
+      if (progress < 0.3) {
+        const p = progress / 0.3;
+        const glucoseCount = Math.floor(8 * (1 - p * 0.5));
+        for (let i = 0; i < glucoseCount; i++) {
+          const x = 150 + (w - 200) * (i / 8);
+          const y = h/2 + Math.sin(i * 0.8) * 12;
+          drawGlucose(ctx, x, y, 5);
+        }
+        ctx.fillStyle = '#dc2626';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText('😤 饥饿时血糖降低', 200, 50);
+      }
+      // 阶段2: 胰高血糖素分泌（0.3-0.6）
+      else if (progress < 0.6) {
+        for (let i = 0; i < 4; i++) {
+          const x = 150 + (w - 200) * (i / 8);
+          const y = h/2 + Math.sin(i * 0.8) * 12;
+          drawGlucose(ctx, x, y, 5);
+        }
+        
+        const p = (progress - 0.3) / 0.3;
+        const glucagonCount = Math.floor(p * 8);
+        for (let i = 0; i < glucagonCount; i++) {
+          const x = 100 + 50 + i * 60;
+          const y = 100 + (h/2 - 100) * p;
+          drawGlucagon(ctx, x, y);
+        }
+        
+        ctx.fillStyle = '#dc2626';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText('🔴 胰高血糖素分泌', 200, 50);
+        
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(120, 120);
+        ctx.lineTo(150, h/2 - 30);
+        ctx.stroke();
+      }
+      // 阶段3: 血糖升高（0.6-1.0）
+      else {
+        const p = (progress - 0.6) / 0.4;
+        const glucoseCount = Math.floor(4 + p * 12);
+        for (let i = 0; i < glucoseCount; i++) {
+          const x = 150 + (w - 200) * (i / 16);
+          const y = h/2 + Math.sin(i * 0.6) * 14;
+          drawGlucose(ctx, x, y, 5 + p);
+        }
+        
+        for (let i = 0; i < 8; i++) {
+          const x = 150 + i * 60;
+          const y = h/2 - 10;
+          drawGlucagon(ctx, x, y);
+        }
+        
+        ctx.fillStyle = '#059669';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText('✅ 血糖升高至正常', 200, 50);
+        
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(w - 100, 140);
+        ctx.lineTo(w - 100, 80);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(w - 100, 80);
+        ctx.lineTo(w - 110, 90);
+        ctx.lineTo(w - 90, 90);
+        ctx.closePath();
+        ctx.fillStyle = '#10b981';
+        ctx.fill();
+      }
+      
+      frame++;
+      if (frame <= totalFrames) {
+        bloodSugarAnimFrame = requestAnimationFrame(animate);
+      }
+    }
+    
+    animate();
+  };
+
+  window.showBloodSugarNormal = function() {
+    const canvas = document.getElementById('bloodSugarCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    
+    if (bloodSugarAnimFrame) cancelAnimationFrame(bloodSugarAnimFrame);
+    
+    ctx.clearRect(0, 0, w, h);
+    drawBloodSugarBase(ctx, w, h);
+    
+    drawPancreas(ctx, 100, 100);
+    
+    // 正常血糖
+    for (let i = 0; i < 12; i++) {
+      const x = 150 + (w - 200) * (i / 12);
+      const y = h/2 + Math.sin(i * 0.6) * 12;
+      drawGlucose(ctx, x, y, 5.5);
+    }
+    
+    // 平衡状态
+    for (let i = 0; i < 3; i++) {
+      drawInsulin(ctx, 200 + i * 80, h/2 - 50);
+      drawGlucagon(ctx, 200 + i * 80, h/2 + 50);
+    }
+    
+    ctx.fillStyle = '#059669';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('⚖️ 正常血糖浓度 (0.8~1.2 g/L)', 200, 50);
+    
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('胰岛素 ⇅ 胰高血糖素 拮抗平衡', 250, 80);
+  };
+
+  // ========== 拖拽配对 ==========
+  const glandHormoneMap = {
+    '垂体': '生长激素',
+    '甲状腺': '甲状腺激素',
+    '胰岛': '胰岛素',
+    '肾上腺': '肾上腺素',
+    '性腺': '雌/雄激素'
+  };
+
+  window.checkGlandMatch = function() {
+    const result = document.getElementById('glandResult');
+    if (!result) return;
+    
+    let correct = 0;
+    let total = 0;
+    let feedback = '<div style="margin-top:12px;">';
+    
+    for (const gland in glandHormoneMap) {
+      total++;
+      const dropArea = document.getElementById(`drop-${gland}`);
+      if (!dropArea) continue;
+      
+      const droppedText = dropArea.textContent.trim();
+      const correctHormone = glandHormoneMap[gland];
+      
+      if (droppedText === correctHormone) {
+        correct++;
+        feedback += `<div style="color:#059669;padding:4px 0;">✅ ${gland} → ${correctHormone}</div>`;
+        dropArea.style.background = '#d1fae5';
+        dropArea.style.borderColor = '#059669';
+      } else {
+        feedback += `<div style="color:#dc2626;padding:4px 0;">❌ ${gland} 应为 ${correctHormone}</div>`;
+        dropArea.style.background = '#fee2e2';
+        dropArea.style.borderColor = '#dc2626';
+      }
+    }
+    
+    feedback += `</div><div style="margin-top:12px;font-size:1.1rem;font-weight:bold;color:${correct === total ? '#059669' : '#f59e0b'};">得分：${correct}/${total}</div>`;
+    result.innerHTML = feedback;
+  };
+
+})();
+</script>
+</body>
 </html>

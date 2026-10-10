@@ -1470,5 +1470,289 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "neuronCanvas", "readout": "neuronInfo", "bg": [{"t": "ellipse", "x": 300, "y": 170, "rx": 62, "ry": 52, "fill": "rgba(129,140,248,.75)", "stroke": "#8b5cf6", "w": 2.5}, {"t": "text", "x": 300, "y": 170, "t2": "细胞体", "size": 12, "align": "center", "color": "#fff"}, {"t": "line", "x1": 362, "y1": 170, "x2": 700, "y2": 170, "w": 12, "color": "#60a5fa"}, {"t": "text", "x": 700, "y": 170, "t2": "轴突", "size": 11.5, "align": "center", "color": "#1e40af"}, {"t": "line", "x1": 250, "y1": 120, "x2": 120, "y2": 60, "w": 6, "color": "#60a5fa"}, {"t": "line", "x1": 250, "y1": 220, "x2": 120, "y2": 280, "w": 6, "color": "#60a5fa"}, {"t": "line", "x1": 280, "y1": 130, "x2": 200, "y2": 40, "w": 5, "color": "#60a5fa"}, {"t": "line", "x1": 280, "y1": 210, "x2": 200, "y2": 300, "w": 5, "color": "#60a5fa"}, {"t": "rect", "x": 430, "y": 156, "w2": 70, "h2": 28, "fill": "rgba(251,191,36,.5)", "stroke": "#fbbf24", "r": 14}, {"t": "rect", "x": 540, "y": 156, "w2": 70, "h2": 28, "fill": "rgba(251,191,36,.5)", "stroke": "#fbbf24", "r": 14}, {"t": "line", "x1": 700, "y1": 170, "x2": 720, "y2": 150, "w": 4, "color": "#60a5fa"}, {"t": "line", "x1": 700, "y1": 170, "x2": 720, "y2": 190, "w": 4, "color": "#60a5fa"}], "parts": [{"x": 300, "y": 170, "name": "细胞体", "info": "神经元的“总部”，含细胞核，负责接收信息并作出反应。", "r": 54, "lx": 300, "ly": 62}, {"x": 180, "y": 90, "name": "树突", "info": "短而多，像树枝一样，负责接收其他神经元传来的信息。", "r": 40, "lx": 120, "ly": 46}, {"x": 700, "y": 170, "name": "轴突", "info": "又长又细，负责把信息传出去，可长到 1 米以上。", "r": 40, "lx": 690, "ly": 300}, {"x": 485, "y": 156, "name": "髓鞘", "info": "包在轴突外面的“绝缘层”，让神经冲动跳着传导，速度更快。", "r": 52, "lx": 470, "ly": 96}, {"x": 716, "y": 150, "name": "轴突末梢", "info": "末端分支，把信息传给下一个神经元或肌肉。", "r": 30, "lx": 716, "ly": 118}], "tip": "👆 点击神经元各部位，查看功能说明"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.showSection !== 'undefined') return;
+
+  // ========== 导航切换 ==========
+  window.showSection = function(sectionId) {
+    const sections = document.querySelectorAll('.section');
+    const navBtns = document.querySelectorAll('.nav-btn');
+    
+    sections.forEach(sec => {
+      sec.style.display = sec.id === sectionId ? 'block' : 'none';
+    });
+    
+    navBtns.forEach(btn => {
+      const match = btn.getAttribute('onclick').match(/'([^']+)'/);
+      if (match && match[1] === sectionId) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  };
+
+  // ========== 反射弧动画 ==========
+  let reflexAnimationFrame = null;
+  let reflexAnimationRunning = false;
+
+  window.startReflexAnimation = function() {
+    if (reflexAnimationRunning) return;
+    reflexAnimationRunning = true;
+    
+    const canvas = document.getElementById('reflexCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    let phase = 0;
+    let progress = 0;
+    const phaseDurations = [0.6, 0.5, 0.5, 0.5, 0.6]; // 各阶段时长(秒)
+    const startTime = Date.now();
+    
+    function drawReflex(prog, ph) {
+      ctx.clearRect(0, 0, w, h);
+      
+      // 背景
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#e3f2fd');
+      grad.addColorStop(1, '#fff9e6');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+      
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      // 五个部分位置
+      const parts = [
+        { x: 80, y: 140, label: '①感受器', color: '#f59e0b' },
+        { x: 230, y: 80, label: '②传入神经', color: '#3b82f6' },
+        { x: 380, y: 50, label: '③神经中枢', color: '#8b5cf6' },
+        { x: 530, y: 80, label: '④传出神经', color: '#10b981' },
+        { x: 680, y: 140, label: '⑤效应器', color: '#ef4444' }
+      ];
+      
+      // 绘制连接路径
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(parts[0].x, parts[0].y);
+      ctx.lineTo(parts[1].x, parts[1].y);
+      ctx.lineTo(parts[2].x, parts[2].y);
+      ctx.lineTo(parts[3].x, parts[3].y);
+      ctx.lineTo(parts[4].x, parts[4].y);
+      ctx.stroke();
+      
+      // 绘制各部分结构
+      parts.forEach((p, i) => {
+        const active = i <= ph || (i === ph + 1 && prog > 0);
+        
+        // 主体圆
+        ctx.fillStyle = active ? p.color : '#e2e8f0';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = active ? p.color : '#94a3b8';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // 特征细节
+        ctx.fillStyle = active ? '#fff' : '#cbd5e1';
+        if (i === 0) { // 感受器 - 感觉末梢
+          for (let j = 0; j < 6; j++) {
+            const angle = (Math.PI * 2 / 6) * j;
+            ctx.beginPath();
+            ctx.arc(p.x + Math.cos(angle) * 15, p.y + Math.sin(angle) * 15, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (i === 1 || i === 3) { // 神经 - 波浪线
+          ctx.strokeStyle = active ? '#fff' : '#cbd5e1';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let t = 0; t < 1; t += 0.1) {
+            const x = p.x - 12 + t * 24;
+            const y = p.y + Math.sin(t * Math.PI * 3) * 6;
+            if (t === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        } else if (i === 2) { // 中枢 - 神经元
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+          ctx.fill();
+          for (let j = 0; j < 4; j++) {
+            const angle = (Math.PI / 2) * j;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + Math.cos(angle) * 18, p.y + Math.sin(angle) * 18);
+            ctx.stroke();
+          }
+        } else if (i === 4) { // 效应器 - 肌肉纤维
+          for (let j = 0; j < 3; j++) {
+            ctx.fillRect(p.x - 10 + j * 8, p.y - 10, 4, 20);
+          }
+        }
+        
+        // 标注
+        ctx.fillStyle = '#1e293b';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.label, p.x, p.y + 50);
+      });
+      
+      // 绘制信号传导动画
+      if (ph < 4) {
+        const from = parts[ph];
+        const to = parts[ph + 1];
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const signalX = from.x + dx * prog;
+        const signalY = from.y + dy * prog;
+        
+        // 信号光点
+        const signalGrad = ctx.createRadialGradient(signalX, signalY, 0, signalX, signalY, 12);
+        signalGrad.addColorStop(0, '#fbbf24');
+        signalGrad.addColorStop(0.5, '#f59e0b');
+        signalGrad.addColorStop(1, 'rgba(245,158,11,0)');
+        ctx.fillStyle = signalGrad;
+        ctx.beginPath();
+        ctx.arc(signalX, signalY, 12, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 信号核心
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(signalX, signalY, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // 阶段提示
+      const phaseTexts = ['刺激感受器', '信号传入', '中枢处理', '指令传出', '效应器响应'];
+      ctx.fillStyle = '#1e40af';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡ ' + phaseTexts[ph], w / 2, 240);
+    }
+    
+    function animate() {
+      const elapsed = (Date.now() - startTime) / 1000;
+      let totalTime = 0;
+      let currentPhase = 0;
+      
+      for (let i = 0; i < phaseDurations.length; i++) {
+        if (elapsed < totalTime + phaseDurations[i]) {
+          currentPhase = i;
+          progress = (elapsed - totalTime) / phaseDurations[i];
+          break;
+        }
+        totalTime += phaseDurations[i];
+      }
+      
+      if (elapsed >= totalTime + phaseDurations[phaseDurations.length - 1]) {
+        currentPhase = 4;
+        progress = 1;
+        drawReflex(progress, currentPhase);
+        reflexAnimationRunning = false;
+        return;
+      }
+      
+      drawReflex(progress, currentPhase);
+      reflexAnimationFrame = requestAnimationFrame(animate);
+    }
+    
+    animate();
+  };
+
+  window.resetReflexAnimation = function() {
+    if (reflexAnimationFrame) {
+      cancelAnimationFrame(reflexAnimationFrame);
+      reflexAnimationFrame = null;
+    }
+    reflexAnimationRunning = false;
+    
+    const canvas = document.getElementById('reflexCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#e3f2fd');
+    grad.addColorStop(1, '#fff9e6');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    
+    ctx.fillStyle = '#64748b';
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('点击"开始反射模拟"观看信号传导过程', w / 2, h / 2);
+  };
+
+  // ========== 拖拽排序检查 ==========
+  window.checkReflexOrder = function() {
+    const slots = document.querySelectorAll('.reflex-slot');
+    const result = document.getElementById('reflexResult');
+    if (!result) return;
+    
+    let correct = 0;
+    const total = slots.length;
+    
+    slots.forEach(slot => {
+      const answer = slot.getAttribute('data-answer');
+      const current = slot.textContent.trim();
+      
+      if (current === answer) {
+        correct++;
+        slot.style.background = '#d1fae5';
+        slot.style.borderColor = '#10b981';
+      } else if (current !== '拖放这里') {
+        slot.style.background = '#fee2e2';
+        slot.style.borderColor = '#ef4444';
+      } else {
+        slot.style.background = '#fff';
+        slot.style.borderColor = '#e5e7eb';
+      }
+    });
+    
+    if (correct === total) {
+      result.innerHTML = '<div style="color:#059669;font-weight:bold;">🎉 完全正确！反射弧顺序：感受器 → 传入神经 → 神经中枢 → 传出神经 → 效应器</div>';
+      result.style.background = '#d1fae5';
+    } else {
+      result.innerHTML = '<div style="color:#dc2626;font-weight:bold;">答对 ' + correct + '/' + total + ' 个，请检查顺序！提示：信号从感受器开始，最终到达效应器。</div>';
+      result.style.background = '#fee2e2';
+    }
+    result.style.display = 'block';
+  };
+
+  // 拖拽辅助函数
+  window.slotDragOver = function(e) {
+    e.preventDefault();
+    e.currentTarget.style.background = '#dbeafe';
+  };
+
+  window.slotDragLeave = function(e) {
+    e.currentTarget.style.background = '#fff';
+  };
+
+  window.slotDrop = function(e) {
+    e.preventDefault();
+    const slot = e.currentTarget;
+    const data = e.dataTransfer.getData('text');
+    if (data) {
+      slot.textContent = data;
+      slot.style.background = '#fff';
+    }
+  };
+
+  // 初始化
+  resetReflexAnimation();
+})();
+</script>
+</body>
 </html>

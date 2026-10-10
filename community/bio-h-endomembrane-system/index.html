@@ -2059,5 +2059,139 @@ function biohDepthCheck(button, isCorrect, feedbackId, explanation) {
   </script>
 </div>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><span class="ta-phase" data-tone="aux">知识图谱</span><h2 class="section-title">🗺️ 知识图谱：生物膜系统</h2><div data-teachany-kg="bio-h-endomembrane-system"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // alert 函数
+  if (typeof window.alert === 'undefined') {
+    window.alert = function(message) {
+      const existingModal = document.querySelector('.custom-alert-modal');
+      if (existingModal) existingModal.remove();
+      
+      const modal = document.createElement('div');
+      modal.className = 'custom-alert-modal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn 0.2s';
+      
+      const box = document.createElement('div');
+      box.style.cssText = 'background:var(--card,#1e293b);border-radius:16px;padding:28px 32px;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.4);border:1px solid var(--border,#334155)';
+      
+      const icon = document.createElement('div');
+      icon.style.cssText = 'font-size:2.5rem;text-align:center;margin-bottom:16px';
+      icon.textContent = '💡';
+      
+      const text = document.createElement('div');
+      text.style.cssText = 'color:var(--text,#e2e8f0);font-size:1rem;line-height:1.6;text-align:center;margin-bottom:24px';
+      text.textContent = message;
+      
+      const btn = document.createElement('button');
+      btn.textContent = '确定';
+      btn.style.cssText = 'width:100%;padding:12px;background:var(--primary,#60a5fa);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit';
+      btn.onclick = () => modal.remove();
+      
+      box.appendChild(icon);
+      box.appendChild(text);
+      box.appendChild(btn);
+      modal.appendChild(box);
+      document.body.appendChild(modal);
+      
+      const style = document.createElement('style');
+      style.textContent = '@keyframes fadeIn{from{opacity:0}to{opacity:1}}';
+      if (!document.querySelector('style[data-alert-anim]')) {
+        style.setAttribute('data-alert-anim', '');
+        document.head.appendChild(style);
+      }
+    };
+  }
+
+  // toggleAudio 函数
+  if (typeof window.toggleAudio === 'undefined') {
+    window.toggleAudio = function() {
+      const audio = document.querySelector('audio');
+      const playBtn = document.getElementById('audioPlayBtn');
+      
+      if (!audio) return;
+      
+      if (audio.paused) {
+        audio.play().catch(() => {});
+        if (playBtn) playBtn.textContent = '⏸';
+        document.body.classList.add('audio-playing');
+      } else {
+        audio.pause();
+        if (playBtn) playBtn.textContent = '▶';
+      }
+    };
+  }
+
+  // seekAudio 函数
+  if (typeof window.seekAudio === 'undefined') {
+    window.seekAudio = function(e) {
+      const audio = document.querySelector('audio');
+      if (!audio || !audio.duration) return;
+      
+      const progressBar = e.currentTarget;
+      const rect = progressBar.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const percent = clickX / rect.width;
+      
+      audio.currentTime = audio.duration * percent;
+    };
+  }
+
+  // cycleSpeed 函数
+  if (typeof window.cycleSpeed === 'undefined') {
+    window.cycleSpeed = function() {
+      const audio = document.querySelector('audio');
+      const speedBtn = document.querySelector('.speed-btn');
+      
+      if (!audio) return;
+      
+      const speeds = [0.5, 1, 1.25, 1.5, 2];
+      let currentSpeed = audio.playbackRate || 1;
+      let currentIdx = speeds.indexOf(currentSpeed);
+      
+      if (currentIdx === -1) currentIdx = 1;
+      
+      currentIdx = (currentIdx + 1) % speeds.length;
+      audio.playbackRate = speeds[currentIdx];
+      
+      if (speedBtn) {
+        speedBtn.textContent = speeds[currentIdx] + 'x';
+      }
+    };
+  }
+
+  // uploadToZone 辅助函数（用于文件上传）
+  if (typeof window.uploadToZone === 'undefined') {
+    window.uploadToZone = function(input) {
+      const file = input.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const zone = input.closest('.teachany-media-zone');
+        if (!zone) return;
+        
+        const existingImg = zone.querySelector('img.uploaded-image');
+        if (existingImg) existingImg.remove();
+        
+        const img = document.createElement('img');
+        img.className = 'uploaded-image';
+        img.src = e.target.result;
+        img.style.cssText = 'max-width:100%;height:auto;border-radius:12px;margin-top:16px;box-shadow:0 4px 12px rgba(0,0,0,0.3)';
+        
+        const container = zone.querySelector('div[style*="background:var(--card)"]');
+        if (container) {
+          container.appendChild(img);
+        }
+      };
+      reader.readAsDataURL(file);
+      
+      input.value = '';
+    };
+  }
+
+})();
+</script>
 </body>
 </html>

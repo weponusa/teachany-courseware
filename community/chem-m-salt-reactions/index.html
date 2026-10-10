@@ -931,5 +931,386 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('reaction', {"pairs": [{"a": "盐酸", "b": "氢氧化钠", "solid": "水（H₂O）", "note": "酸碱中和生成水，也是复分解反应。"}, {"a": "氯化钡", "b": "硫酸钠", "solid": "BaSO₄↓", "note": "硫酸钡既不溶于水也不溶于酸。"}, {"a": "硝酸银", "b": "氯化钠", "solid": "AgCl↓", "note": "氯化银是白色沉淀，常用来检验氯离子。"}, {"a": "碳酸钠", "b": "盐酸", "solid": "CO₂↑ + H₂O", "note": "生成气体也是复分解反应发生的条件之一。"}], "canvas": "reaction-animation", "readout": "labReadout-reaction-animation"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.predictReaction !== 'undefined') return;
+
+  // 盐的反应规则数据库
+  const reactionRules = {
+    // 盐 + 酸
+    'Na2CO3+HCl': { canReact: true, products: 'NaCl + H₂O + CO₂↑', type: 'salt-acid', gas: true },
+    'Na2CO3+H2SO4': { canReact: true, products: 'Na₂SO₄ + H₂O + CO₂↑', type: 'salt-acid', gas: true },
+    'BaCl2+H2SO4': { canReact: true, products: 'BaSO₄↓ + HCl', type: 'salt-acid', precipitate: true },
+    'AgNO3+HCl': { canReact: true, products: 'AgCl↓ + HNO₃', type: 'salt-acid', precipitate: true },
+    'NaCl+HCl': { canReact: false },
+    'NaCl+H2SO4': { canReact: false },
+    'CuSO4+HCl': { canReact: false },
+    'CuSO4+H2SO4': { canReact: false },
+    'KNO3+HCl': { canReact: false },
+    'KNO3+H2SO4': { canReact: false },
+    
+    // 盐 + 碱
+    'CuSO4+NaOH': { canReact: true, products: 'Cu(OH)₂↓ + Na₂SO₄', type: 'salt-base', precipitate: true, color: '#4fc3f7' },
+    'CuSO4+Ca(OH)2': { canReact: true, products: 'Cu(OH)₂↓ + CaSO₄', type: 'salt-base', precipitate: true, color: '#4fc3f7' },
+    'Na2CO3+Ca(OH)2': { canReact: true, products: 'CaCO₃↓ + NaOH', type: 'salt-base', precipitate: true, color: '#fff' },
+    'NaCl+NaOH': { canReact: false },
+    'NaCl+Ca(OH)2': { canReact: false },
+    'AgNO3+NaOH': { canReact: true, products: 'AgOH↓ + NaNO₃', type: 'salt-base', precipitate: true },
+    'BaCl2+NaOH': { canReact: false },
+    'KNO3+NaOH': { canReact: false },
+    'KNO3+Ca(OH)2': { canReact: false },
+    
+    // 盐 + 盐
+    'NaCl+Na2SO4': { canReact: false },
+    'NaCl+KCl': { canReact: false },
+    'AgNO3+NaCl': { canReact: true, products: 'AgCl↓ + NaNO₃', type: 'salt-salt', precipitate: true, color: '#fff' },
+    'AgNO3+KCl': { canReact: true, products: 'AgCl↓ + KNO₃', type: 'salt-salt', precipitate: true, color: '#fff' },
+    'BaCl2+Na2SO4': { canReact: true, products: 'BaSO₄↓ + NaCl', type: 'salt-salt', precipitate: true, color: '#fff' },
+    'Na2CO3+Na2SO4': { canReact: false },
+    'Na2CO3+KCl': { canReact: false },
+    'CuSO4+Na2SO4': { canReact: false },
+    'CuSO4+KCl': { canReact: false },
+    'KNO3+Na2SO4': { canReact: false },
+    'KNO3+KCl': { canReact: false }
+  };
+
+  let animationFrame = null;
+
+  window.predictReaction = function(prediction) {
+    const substanceA = document.getElementById('substance-a').value;
+    const substanceB = document.getElementById('substance-b').value;
+    const resultDiv = document.getElementById('reaction-result');
+    const canvas = document.getElementById('reaction-animation');
+    
+    if (!canvas || !resultDiv) return;
+
+    // 取消之前的动画
+    if (animationFrame) {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    }
+
+    // 查找反应规则
+    const key1 = substanceA + '+' + substanceB;
+    const key2 = substanceB + '+' + substanceA;
+    const rule = reactionRules[key1] || reactionRules[key2];
+    
+    const actualCanReact = rule ? rule.canReact : false;
+    const userSaysYes = (prediction === 'yes');
+    const correct = (userSaysYes === actualCanReact);
+
+    // 显示结果
+    if (correct) {
+      if (actualCanReact) {
+        resultDiv.className = 'result success';
+        resultDiv.innerHTML = `✅ 正确！能反应<br><span style="font-size:13px;margin-top:4px;display:block">${rule.products}</span>`;
+        drawReactionAnimation(canvas, rule);
+      } else {
+        resultDiv.className = 'result success';
+        resultDiv.textContent = '✅ 正确！这两种物质不能反应';
+        drawNoReaction(canvas);
+      }
+    } else {
+      if (actualCanReact) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = `❌ 错误！实际上能反应<br><span style="font-size:13px;margin-top:4px;display:block">${rule.products}</span>`;
+        drawReactionAnimation(canvas, rule);
+      } else {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = '❌ 错误！这两种物质实际上不能反应';
+        drawNoReaction(canvas);
+      }
+    }
+  };
+
+  function drawNoReaction(canvas) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(0, 0, w, h);
+    
+    // 两个试管
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // 左试管
+    ctx.beginPath();
+    ctx.moveTo(120, 30);
+    ctx.lineTo(120, 90);
+    ctx.arc(120, 90, 15, Math.PI, 0, false);
+    ctx.lineTo(135, 30);
+    ctx.stroke();
+    
+    ctx.fillStyle = '#64b5f6';
+    ctx.fillRect(121, 60, 13, 30);
+    ctx.beginPath();
+    ctx.arc(127.5, 90, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 右试管
+    ctx.strokeStyle = '#666';
+    ctx.beginPath();
+    ctx.moveTo(265, 30);
+    ctx.lineTo(265, 90);
+    ctx.arc(265, 90, 15, Math.PI, 0, false);
+    ctx.lineTo(280, 30);
+    ctx.stroke();
+    
+    ctx.fillStyle = '#ab47bc';
+    ctx.fillRect(266, 60, 13, 30);
+    ctx.beginPath();
+    ctx.arc(272.5, 90, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 中间的 X
+    ctx.strokeStyle = '#d32f2f';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(185, 50);
+    ctx.lineTo(215, 80);
+    ctx.moveTo(215, 50);
+    ctx.lineTo(185, 80);
+    ctx.stroke();
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('物质 A', 127, 25);
+    ctx.fillText('物质 B', 272, 25);
+    ctx.fillText('不反应', 200, 110);
+  }
+
+  function drawReactionAnimation(canvas, rule) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    const startTime = Date.now();
+    const duration = 3000;
+    
+    function animate() {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      ctx.clearRect(0, 0, w, h);
+      
+      // 背景
+      ctx.fillStyle = '#f5f5f5';
+      ctx.fillRect(0, 0, w, h);
+      
+      // 阶段1: 两个试管 (0-0.3)
+      if (progress < 0.3) {
+        const p1 = progress / 0.3;
+        drawTestTubes(ctx, 120 - p1 * 20, 280 + p1 * 20);
+      }
+      // 阶段2: 混合 (0.3-0.6)
+      else if (progress < 0.6) {
+        const p2 = (progress - 0.3) / 0.3;
+        drawMixing(ctx, p2);
+      }
+      // 阶段3: 产物 (0.6-1.0)
+      else {
+        const p3 = (progress - 0.6) / 0.4;
+        drawProduct(ctx, rule, p3);
+      }
+      
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    }
+    
+    animate();
+  }
+
+  function drawTestTubes(ctx, leftX, rightX) {
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // 左试管
+    ctx.beginPath();
+    ctx.moveTo(leftX, 30);
+    ctx.lineTo(leftX, 90);
+    ctx.arc(leftX, 90, 15, Math.PI, 0, false);
+    ctx.lineTo(leftX + 15, 30);
+    ctx.stroke();
+    
+    ctx.fillStyle = '#64b5f6';
+    ctx.fillRect(leftX + 1, 60, 13, 30);
+    ctx.beginPath();
+    ctx.arc(leftX + 7.5, 90, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 右试管
+    ctx.strokeStyle = '#666';
+    ctx.beginPath();
+    ctx.moveTo(rightX, 30);
+    ctx.lineTo(rightX, 90);
+    ctx.arc(rightX, 90, 15, Math.PI, 0, false);
+    ctx.lineTo(rightX + 15, 30);
+    ctx.stroke();
+    
+    ctx.fillStyle = '#ab47bc';
+    ctx.fillRect(rightX + 1, 60, 13, 30);
+    ctx.beginPath();
+    ctx.arc(rightX + 7.5, 90, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('反应物', 200, 25);
+  }
+
+  function drawMixing(ctx, progress) {
+    // 烧杯
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(160, 40);
+    ctx.lineTo(170, 95);
+    ctx.lineTo(230, 95);
+    ctx.lineTo(240, 40);
+    ctx.stroke();
+    
+    // 混合液体
+    const mixColor = blendColors('#64b5f6', '#ab47bc', progress);
+    ctx.fillStyle = mixColor;
+    ctx.fillRect(171, 65, 58, 29);
+    
+    // 气泡效果
+    for (let i = 0; i < 5; i++) {
+      const bubbleY = 90 - progress * 30 - i * 8;
+      if (bubbleY > 40) {
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.arc(180 + i * 12, bubbleY, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('混合反应中', 200, 25);
+  }
+
+  function drawProduct(ctx, rule, progress) {
+    // 烧杯
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(160, 40);
+    ctx.lineTo(170, 95);
+    ctx.lineTo(230, 95);
+    ctx.lineTo(240, 40);
+    ctx.stroke();
+    
+    if (rule.precipitate) {
+      // 沉淀
+      ctx.fillStyle = '#9575cd';
+      ctx.fillRect(171, 65, 58, 29);
+      
+      const precipColor = rule.color || '#fff';
+      ctx.fillStyle = precipColor;
+      const precipHeight = 15 * progress;
+      ctx.fillRect(172, 94 - precipHeight, 56, precipHeight);
+      
+      // 沉淀颗粒
+      ctx.fillStyle = precipColor;
+      for (let i = 0; i < 8; i++) {
+        const x = 180 + (i % 4) * 12;
+        const y = 88 - Math.floor(i / 4) * 8 * progress;
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // 标注
+      ctx.fillStyle = '#333';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('产生沉淀', 200, 25);
+      
+      // 引线标注
+      ctx.strokeStyle = '#d32f2f';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(230, 85);
+      ctx.lineTo(260, 75);
+      ctx.stroke();
+      ctx.fillStyle = '#d32f2f';
+      ctx.fillText('沉淀物', 285, 78);
+      
+    } else if (rule.gas) {
+      // 气体
+      ctx.fillStyle = '#9575cd';
+      ctx.fillRect(171, 65, 58, 29);
+      
+      // 气泡上升
+      for (let i = 0; i < 6; i++) {
+        const bubbleY = 90 - progress * 60 - i * 10;
+        if (bubbleY > 20 && bubbleY < 90) {
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          ctx.beginPath();
+          ctx.arc(185 + i * 8, bubbleY, 3 + Math.sin(progress * Math.PI * 2 + i), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      
+      // 标注
+      ctx.fillStyle = '#333';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('产生气体', 200, 25);
+      
+      // 引线标注
+      ctx.strokeStyle = '#1976d2';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(200, 50);
+      ctx.lineTo(200, 35);
+      ctx.stroke();
+      ctx.fillStyle = '#1976d2';
+      ctx.fillText('CO₂↑', 200, 18);
+    }
+  }
+
+  function blendColors(color1, color2, ratio) {
+    const c1 = hexToRgb(color1);
+    const c2 = hexToRgb(color2);
+    const r = Math.round(c1.r * (1 - ratio) + c2.r * ratio);
+    const g = Math.round(c1.g * (1 - ratio) + c2.g * ratio);
+    const b = Math.round(c1.b * (1 - ratio) + c2.b * ratio);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 };
+  }
+
+})();
+</script>
+</body>
 </html>

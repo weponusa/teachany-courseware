@@ -714,5 +714,392 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.go !== 'undefined') return;
+
+  window.go = function() {
+    // 查找关键 DOM 元素
+    const heroScreen = document.getElementById('hero');
+    const mainScreen = document.getElementById('main-screen');
+    
+    if (!heroScreen || !mainScreen) {
+      console.error('Required screens not found');
+      return;
+    }
+
+    // 隐藏欢迎屏幕，显示主屏幕
+    heroScreen.classList.remove('active');
+    mainScreen.classList.add('active');
+
+    // 初始化故事复述活动
+    initStoryRetelling();
+  };
+
+  function initStoryRetelling() {
+    // 查找画布和容器
+    const canvas = document.querySelector('canvas');
+    const storyContainer = document.querySelector('.story-container');
+    const sentencePool = document.querySelector('.sentence-pool');
+    const storyBoard = document.querySelector('.story-board');
+    const feedbackContainer = document.querySelector('.feedback');
+    const checkBtn = document.querySelector('.check-btn');
+    const resetBtn = document.querySelector('.reset-btn');
+
+    // 如果有画布，绘制故事场景插图
+    if (canvas) {
+      drawStoryScene(canvas);
+    }
+
+    // 初始化拖拽功能
+    if (sentencePool && storyBoard) {
+      initDragAndDrop(sentencePool, storyBoard, feedbackContainer, checkBtn, resetBtn);
+    }
+  }
+
+  function drawStoryScene(canvas) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width || 800;
+    const h = canvas.height || 600;
+    
+    canvas.width = w;
+    canvas.height = h;
+
+    let animationFrame = 0;
+    const totalFrames = 180; // 3秒动画 @ 60fps
+    let animationId = null;
+
+    function animate() {
+      ctx.clearRect(0, 0, w, h);
+      
+      const progress = Math.min(animationFrame / totalFrames, 1);
+      const stage = progress < 0.33 ? 1 : progress < 0.66 ? 2 : 3;
+
+      // 底层：天空渐变背景
+      const skyGradient = ctx.createLinearGradient(0, 0, 0, h * 0.6);
+      skyGradient.addColorStop(0, '#87CEEB');
+      skyGradient.addColorStop(1, '#E0F6FF');
+      ctx.fillStyle = skyGradient;
+      ctx.fillRect(0, 0, w, h * 0.6);
+
+      // 底层：草地
+      ctx.fillStyle = '#7CB342';
+      ctx.fillRect(0, h * 0.6, w, h * 0.4);
+      
+      // 草地纹理
+      ctx.strokeStyle = '#558B2F';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 30; i++) {
+        const x = (i * w / 30) + (Math.sin(i) * 10);
+        const y = h * 0.6 + (Math.random() * 20);
+        ctx.beginPath();
+        ctx.moveTo(x, y + 15);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+
+      // 中层：房屋（阶段1）
+      if (stage >= 1) {
+        const houseAlpha = Math.min((progress) * 3, 1);
+        ctx.globalAlpha = houseAlpha;
+        
+        // 房屋主体
+        ctx.fillStyle = '#D84315';
+        ctx.fillRect(w * 0.15, h * 0.35, w * 0.25, h * 0.25);
+        
+        // 屋顶
+        ctx.fillStyle = '#BF360C';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.12, h * 0.35);
+        ctx.lineTo(w * 0.275, h * 0.22);
+        ctx.lineTo(w * 0.43, h * 0.35);
+        ctx.closePath();
+        ctx.fill();
+        
+        // 门
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(w * 0.23, h * 0.48, w * 0.08, h * 0.12);
+        
+        // 窗户
+        ctx.fillStyle = '#81D4FA';
+        ctx.fillRect(w * 0.18, h * 0.42, w * 0.06, h * 0.06);
+        ctx.fillRect(w * 0.31, h * 0.42, w * 0.06, h * 0.06);
+        
+        ctx.globalAlpha = 1;
+        
+        // 标注：房屋
+        ctx.fillStyle = '#2d3436';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText('房屋', w * 0.25, h * 0.32);
+        drawArrow(ctx, w * 0.27, h * 0.33, w * 0.27, h * 0.38);
+      }
+
+      // 中层：树木（阶段2）
+      if (stage >= 2) {
+        const treeAlpha = Math.min((progress - 0.33) * 3, 1);
+        ctx.globalAlpha = treeAlpha;
+        
+        // 树干
+        ctx.fillStyle = '#6D4C41';
+        ctx.fillRect(w * 0.65, h * 0.45, w * 0.05, h * 0.15);
+        
+        // 树冠 - 多层叶子
+        ctx.fillStyle = '#2E7D32';
+        for (let i = 0; i < 5; i++) {
+          const offsetX = (i - 2) * 15;
+          const offsetY = i * 8;
+          ctx.beginPath();
+          ctx.arc(w * 0.675 + offsetX, h * 0.38 - offsetY, 35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        // 树叶细节
+        ctx.fillStyle = '#4CAF50';
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const x = w * 0.675 + Math.cos(angle) * 25;
+          const y = h * 0.38 + Math.sin(angle) * 25;
+          ctx.beginPath();
+          ctx.arc(x, y, 18, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        ctx.globalAlpha = 1;
+        
+        // 标注：大树
+        ctx.fillStyle = '#2d3436';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText('大树', w * 0.72, h * 0.35);
+        drawArrow(ctx, w * 0.73, h * 0.36, w * 0.70, h * 0.40);
+      }
+
+      // 顶层：人物角色（阶段3）
+      if (stage >= 3) {
+        const charAlpha = Math.min((progress - 0.66) * 3, 1);
+        ctx.globalAlpha = charAlpha;
+        
+        // 小女孩
+        // 头部
+        ctx.fillStyle = '#FFD7A8';
+        ctx.beginPath();
+        ctx.arc(w * 0.5, h * 0.52, 20, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 头发
+        ctx.fillStyle = '#3E2723';
+        ctx.beginPath();
+        ctx.arc(w * 0.5, h * 0.50, 22, Math.PI, Math.PI * 2);
+        ctx.fill();
+        
+        // 身体
+        ctx.fillStyle = '#FF6B9D';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.5, h * 0.54);
+        ctx.lineTo(w * 0.48, h * 0.62);
+        ctx.lineTo(w * 0.52, h * 0.62);
+        ctx.closePath();
+        ctx.fill();
+        
+        // 手臂
+        ctx.strokeStyle = '#FFD7A8';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.48, h * 0.56);
+        ctx.lineTo(w * 0.45, h * 0.60);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(w * 0.52, h * 0.56);
+        ctx.lineTo(w * 0.55, h * 0.60);
+        ctx.stroke();
+        
+        // 腿
+        ctx.strokeStyle = '#1976D2';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.49, h * 0.62);
+        ctx.lineTo(w * 0.48, h * 0.68);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(w * 0.51, h * 0.62);
+        ctx.lineTo(w * 0.52, h * 0.68);
+        ctx.stroke();
+        
+        ctx.globalAlpha = 1;
+        
+        // 标注：小女孩
+        ctx.fillStyle = '#2d3436';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText('小女孩', w * 0.46, h * 0.48);
+        drawArrow(ctx, w * 0.49, h * 0.49, w * 0.50, h * 0.51);
+      }
+
+      // 顶层：太阳
+      ctx.fillStyle = '#FFD54F';
+      ctx.beginPath();
+      ctx.arc(w * 0.85, h * 0.15, 30, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 太阳光线
+      ctx.strokeStyle = '#FFC107';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.85 + Math.cos(angle) * 35, h * 0.15 + Math.sin(angle) * 35);
+        ctx.lineTo(w * 0.85 + Math.cos(angle) * 50, h * 0.15 + Math.sin(angle) * 50);
+        ctx.stroke();
+      }
+
+      if (animationFrame < totalFrames) {
+        animationFrame++;
+        animationId = requestAnimationFrame(animate);
+      }
+    }
+
+    // 重置动画
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+    }
+    animationFrame = 0;
+    animate();
+  }
+
+  function drawArrow(ctx, x1, y1, x2, y2) {
+    ctx.strokeStyle = '#2d3436';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 8 * Math.cos(angle - Math.PI / 6), y2 - 8 * Math.sin(angle - Math.PI / 6));
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 8 * Math.cos(angle + Math.PI / 6), y2 - 8 * Math.sin(angle + Math.PI / 6));
+    ctx.stroke();
+  }
+
+  function initDragAndDrop(sentencePool, storyBoard, feedbackContainer, checkBtn, resetBtn) {
+    const sentences = sentencePool.querySelectorAll('.sentence-item, [draggable="true"]');
+    const dropZones = storyBoard.querySelectorAll('.drop-zone, [data-order]');
+    
+    let draggedElement = null;
+
+    sentences.forEach(sentence => {
+      sentence.setAttribute('draggable', 'true');
+      
+      sentence.addEventListener('dragstart', function(e) {
+        draggedElement = this;
+        this.style.opacity = '0.5';
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+      });
+
+      sentence.addEventListener('dragend', function() {
+        this.style.opacity = '1';
+      });
+    });
+
+    dropZones.forEach(zone => {
+      zone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this.style.background = 'rgba(78, 205, 196, 0.2)';
+      });
+
+      zone.addEventListener('dragleave', function() {
+        this.style.background = '';
+      });
+
+      zone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.background = '';
+        
+        if (draggedElement) {
+          // 清空当前区域
+          this.innerHTML = '';
+          // 克隆拖拽元素
+          const clone = draggedElement.cloneNode(true);
+          clone.style.opacity = '1';
+          clone.removeAttribute('draggable');
+          this.appendChild(clone);
+        }
+      });
+    });
+
+    if (checkBtn) {
+      checkBtn.addEventListener('click', function() {
+        checkAnswers(dropZones, feedbackContainer);
+      });
+    }
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function() {
+        dropZones.forEach(zone => {
+          zone.innerHTML = '';
+          zone.style.background = '';
+          zone.style.border = '';
+        });
+        if (feedbackContainer) {
+          feedbackContainer.innerHTML = '';
+          feedbackContainer.style.display = 'none';
+        }
+      });
+    }
+  }
+
+  function checkAnswers(dropZones, feedbackContainer) {
+    let correct = 0;
+    const total = dropZones.length;
+
+    dropZones.forEach(zone => {
+      const expectedOrder = zone.getAttribute('data-order') || zone.dataset.order;
+      const content = zone.textContent.trim();
+      const sentenceOrder = zone.querySelector('[data-order]')?.getAttribute('data-order') || 
+                           zone.firstChild?.getAttribute?.('data-order');
+      
+      if (sentenceOrder && sentenceOrder === expectedOrder) {
+        zone.style.border = '3px solid #4ade80';
+        zone.style.background = 'rgba(74, 222, 128, 0.1)';
+        correct++;
+      } else if (content) {
+        zone.style.border = '3px solid #ff6b6b';
+        zone.style.background = 'rgba(255, 107, 107, 0.1)';
+      }
+    });
+
+    if (feedbackContainer) {
+      feedbackContainer.style.display = 'block';
+      const percentage = Math.round((correct / total) * 100);
+      
+      if (correct === total) {
+        feedbackContainer.innerHTML = `
+          <div style="color: #00b894; font-size: 1.2rem; font-weight: bold;">
+            🎉 完美！故事顺序完全正确！(${correct}/${total})
+          </div>
+        `;
+      } else if (correct >= total * 0.6) {
+        feedbackContainer.innerHTML = `
+          <div style="color: #fdcb6e; font-size: 1.1rem;">
+            👍 不错！正确 ${correct}/${total} 个，再检查一下红色部分。
+          </div>
+        `;
+      } else {
+        feedbackContainer.innerHTML = `
+          <div style="color: #ff6b6b; font-size: 1.1rem;">
+            💪 加油！正确 ${correct}/${total} 个，仔细阅读故事再试试。
+          </div>
+        `;
+      }
+    }
+  }
+})();
+</script>
 </body>
 </html>

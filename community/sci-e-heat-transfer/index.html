@@ -785,5 +785,250 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 window.__heatState = (window.__heatState || {}); TeachAnyScenes.mount('heatModes', {"sharedState": window.__heatState, "canvas": "heatCanvas", "readout": "simDesc"});
 window.setMode = function(m){ var s = window.__heatState; if(s) s.mode = m; };
 </script>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 检查函数是否已存在
+  if (typeof window.resetQuiz === 'undefined') {
+    window.resetQuiz = function() {
+      const quizList = document.getElementById('quizList');
+      const quizScore = document.getElementById('quizScore');
+      if (!quizList) return;
+      
+      // 重置所有选项状态
+      const allOptions = quizList.querySelectorAll('.tu-opt');
+      allOptions.forEach(opt => {
+        opt.disabled = false;
+        opt.style.background = '';
+        opt.style.borderColor = '';
+        opt.style.color = '';
+      });
+      
+      // 隐藏所有反馈
+      const allFeedbacks = quizList.querySelectorAll('.tu-fb');
+      allFeedbacks.forEach(fb => {
+        fb.hidden = true;
+        fb.textContent = '';
+      });
+      
+      // 清空分数显示
+      if (quizScore) {
+        quizScore.textContent = '';
+      }
+      
+      // 重置成就徽章状态
+      const badgeGrid = document.getElementById('badgeGrid');
+      if (badgeGrid) {
+        const badges = badgeGrid.querySelectorAll('.badge-item');
+        badges.forEach(badge => {
+          badge.style.opacity = '0.4';
+          badge.style.filter = 'grayscale(1)';
+        });
+      }
+    };
+  }
+
+  if (typeof window.revealAllClassify === 'undefined') {
+    window.revealAllClassify = function() {
+      const classifyGrid = document.getElementById('classifyGrid');
+      const classifyScore = document.getElementById('classifyScore');
+      if (!classifyGrid) return;
+      
+      const items = classifyGrid.querySelectorAll('.classify-item');
+      let total = 0;
+      let correct = 0;
+      
+      items.forEach(item => {
+        const correctAnswer = item.dataset.correct;
+        if (!correctAnswer) return;
+        
+        total++;
+        
+        // 查找选项容器
+        const optionsContainer = item.querySelector('.classify-options');
+        if (!optionsContainer) return;
+        
+        const options = optionsContainer.querySelectorAll('button, .classify-option');
+        
+        options.forEach(opt => {
+          const optValue = opt.dataset.value || opt.textContent.trim();
+          
+          if (optValue === correctAnswer) {
+            // 正确答案：绿色高亮
+            opt.style.background = 'rgba(74, 222, 128, 0.2)';
+            opt.style.borderColor = '#4ade80';
+            opt.style.color = '#4ade80';
+            opt.style.fontWeight = '700';
+            
+            // 如果已选中正确答案，计入正确数
+            if (opt.classList.contains('selected') || opt.dataset.selected === 'true') {
+              correct++;
+            }
+          } else {
+            // 错误选项：如果被选中则标红
+            if (opt.classList.contains('selected') || opt.dataset.selected === 'true') {
+              opt.style.background = 'rgba(239, 68, 68, 0.2)';
+              opt.style.borderColor = '#ef4444';
+              opt.style.color = '#ef4444';
+            } else {
+              opt.style.opacity = '0.5';
+            }
+          }
+          
+          opt.disabled = true;
+        });
+        
+        // 添加正确答案提示
+        let hint = item.querySelector('.classify-hint');
+        if (!hint) {
+          hint = document.createElement('div');
+          hint.className = 'classify-hint';
+          hint.style.cssText = 'margin-top:8px;font-size:0.9rem;color:#4ade80;font-weight:600;';
+          item.appendChild(hint);
+        }
+        hint.textContent = `✓ 正确答案：${correctAnswer}`;
+      });
+      
+      // 显示分数
+      if (classifyScore && total > 0) {
+        const percentage = Math.round((correct / total) * 100);
+        classifyScore.innerHTML = `📊 当前正确：<span style="color:#4ade80">${correct}</span> / ${total} （${percentage}%）`;
+      }
+    };
+  }
+
+  if (typeof window.resetClassify === 'undefined') {
+    window.resetClassify = function() {
+      const classifyGrid = document.getElementById('classifyGrid');
+      const classifyScore = document.getElementById('classifyScore');
+      if (!classifyGrid) return;
+      
+      const items = classifyGrid.querySelectorAll('.classify-item');
+      
+      items.forEach(item => {
+        // 重置所有选项样式
+        const options = item.querySelectorAll('button, .classify-option');
+        options.forEach(opt => {
+          opt.style.background = '';
+          opt.style.borderColor = '';
+          opt.style.color = '';
+          opt.style.fontWeight = '';
+          opt.style.opacity = '';
+          opt.disabled = false;
+          opt.classList.remove('selected');
+          opt.dataset.selected = 'false';
+        });
+        
+        // 移除提示信息
+        const hint = item.querySelector('.classify-hint');
+        if (hint) {
+          hint.remove();
+        }
+        
+        // 移除反馈信息
+        const feedback = item.querySelector('.classify-feedback');
+        if (feedback) {
+          feedback.remove();
+        }
+      });
+      
+      // 清空分数显示
+      if (classifyScore) {
+        classifyScore.textContent = '';
+      }
+      
+      // 重新绑定点击事件（如果需要）
+      items.forEach(item => {
+        const options = item.querySelectorAll('button, .classify-option');
+        options.forEach(opt => {
+          // 移除旧的事件监听器（通过克隆节点）
+          const newOpt = opt.cloneNode(true);
+          opt.parentNode.replaceChild(newOpt, opt);
+          
+          // 添加新的点击事件
+          newOpt.addEventListener('click', function() {
+            if (this.disabled) return;
+            
+            const parent = this.closest('.classify-item');
+            const correctAnswer = parent.dataset.correct;
+            const userAnswer = this.dataset.value || this.textContent.trim();
+            
+            // 取消同组其他选项的选中状态
+            const siblings = parent.querySelectorAll('button, .classify-option');
+            siblings.forEach(s => {
+              s.classList.remove('selected');
+              s.dataset.selected = 'false';
+              s.style.background = '';
+              s.style.borderColor = '';
+            });
+            
+            // 标记当前选项为选中
+            this.classList.add('selected');
+            this.dataset.selected = 'true';
+            this.style.background = 'rgba(59, 130, 246, 0.15)';
+            this.style.borderColor = '#3b82f6';
+            
+            // 显示即时反馈
+            let feedback = parent.querySelector('.classify-feedback');
+            if (!feedback) {
+              feedback = document.createElement('div');
+              feedback.className = 'classify-feedback';
+              feedback.style.cssText = 'margin-top:6px;font-size:0.85rem;';
+              parent.appendChild(feedback);
+            }
+            
+            if (userAnswer === correctAnswer) {
+              feedback.style.color = '#4ade80';
+              feedback.textContent = '✓ 正确！';
+            } else {
+              feedback.style.color = '#f59e0b';
+              feedback.textContent = '再想想...';
+            }
+            
+            // 更新总分
+            updateClassifyScore();
+          });
+        });
+      });
+    };
+    
+    // 辅助函数：更新分类练习分数
+    function updateClassifyScore() {
+      const classifyGrid = document.getElementById('classifyGrid');
+      const classifyScore = document.getElementById('classifyScore');
+      if (!classifyGrid || !classifyScore) return;
+      
+      const items = classifyGrid.querySelectorAll('.classify-item');
+      let total = 0;
+      let correct = 0;
+      let answered = 0;
+      
+      items.forEach(item => {
+        const correctAnswer = item.dataset.correct;
+        if (!correctAnswer) return;
+        
+        total++;
+        
+        const selectedOption = item.querySelector('.selected, [data-selected="true"]');
+        if (selectedOption) {
+          answered++;
+          const userAnswer = selectedOption.dataset.value || selectedOption.textContent.trim();
+          if (userAnswer === correctAnswer) {
+            correct++;
+          }
+        }
+      });
+      
+      if (answered > 0) {
+        const percentage = Math.round((correct / answered) * 100);
+        classifyScore.innerHTML = `📊 已答 ${answered}/${total}，正确：<span style="color:#4ade80">${correct}</span> / ${answered} （${percentage}%）`;
+      } else {
+        classifyScore.textContent = '';
+      }
+    }
+  }
+})();
+</script>
 </body>
 </html>

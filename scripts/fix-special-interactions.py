@@ -55,7 +55,9 @@ def call_llm(prompt: str) -> str:
                    json={"model": MODEL,
                          "messages": [{"role": "system", "content": SYS},
                                       {"role": "user", "content": prompt}],
-                         "temperature": 0.2, "max_tokens": 3000},
+                         # 绘图规范升级后代码体积明显增大（分层构图+标注+动画），
+                         # 3000 会把输出截断在代码中间导致整块报废（已踩过）。
+                         "temperature": 0.2, "max_tokens": 8000},
                    timeout=(30, 180))
         if r.status_code == 429:
             time.sleep(10 * (attempt + 1))
@@ -95,23 +97,33 @@ def build_prompt(cid: str, html: str, fns: list[dict]) -> str:
 请补齐这些函数。硬性要求：
 1. 只实现列出的函数（以及它们明显需要的私有辅助函数），不定义清单之外的函数；不覆盖可能已存在的同名函数（先 typeof 检查）。
 2. 只操作页面已有 DOM（按上下文里的 id/class 查找）；禁止 document.write、外部请求、alert。
-3. 动画/绘图用页面里已有的 <canvas>（按上下文中的 id），2D canvas API 实现，内容要符合该课学科主题且教学上正确。
-4. 拖拽判分：按上下文中拖拽项与目标区的实际 data/id 约定实现，判分结果写入上下文中的反馈容器。
-5. 每个函数可重复点击（幂等），再次点击重置或重绘而非叠加。
-6. 全部函数包在一个 (function(){{ ... }})(); 里，把函数挂到 window 上。
-7. 代码风格简洁，总长度控制在 120 行以内。"""
+3. 每个函数可重复点击（幂等），再次点击重置或重绘而非叠加。
+4. 全部函数包在一个 (function(){{ ... }})(); 里，把函数挂到 window 上。
+5. 代码总长度控制在 200 行以内，但绘图质量优先于行数。
+
+绘图/动画质量标准（特别重要，此前出过"圆+一根杆"的敷衍版本，被用户否决）：
+6. 画布绘图必须**分层构图**：底层环境（土壤色带/水面/天空渐变）、中层主体（植物或装置，有主干、至少 3~5 片叶子或等效部件）、顶层标注。
+7. 每个示意图必须画出**教学关键特征**，例如：扦插→枝条剪口 45° 斜面 + 芽点；嫁接→砧木与接穗的接合线 + 接穗在上方；压条→枝条埋土段 + 该段长出的根系；细胞分裂→细胞核先分裂再形成细胞膜分隔。特征必须在视觉上一眼可辨，不能只画个笼统的植物。
+8. **中文标注 ≥3 个**，用 fillText 画在对应部位旁边并带引线（如「剪口」「芽」「砧木」「接穗」「生根」），字号 12~14px，深色。
+9. 配色用教学主题色系而非纯黑线稿：植物 #2f7d32 / #4caf50，土壤 #795548 / #8d6e63，水 #1976d2，茎 #6d4c41；线条 lineCap/lineJoin = round。
+10. 动画用 requestAnimationFrame 实现，分 ≥3 个阶段（如 种子→破土→长出枝叶），总时长 ≥2.5 秒，阶段间有明确视觉差异；动画结束定格在完整形态。
+11. 拖拽判分：按上下文中拖拽项与目标区的实际 data/id 约定实现，结果写入反馈容器；给每个项单独标对错颜色，并统计「x/y 正确」。"""
 
 
 def extract_js(raw: str) -> str | None:
+    """从模型输出提取纯 JS。模型常见三种形态：包 <script> 标签、包代码围栏、裸 JS。"""
     raw = raw.strip()
-    m = re.search(r"<script>([\s\S]*?)</script>", raw)
+    # 优先提取第一个完整 <script>…</script>（模型可能多个或外层包一层）
+    m = re.search(r"<script[^>]*>([\s\S]*?)</script>", raw)
     if m:
         raw = m.group(1).strip()
     else:
         m = re.search(r"```(?:javascript|js)?\s*([\s\S]*?)```", raw)
         if m:
             raw = m.group(1).strip()
-    if "<script" in raw or "document.write" in raw:
+    # 容忍模型在 JS 里写注释提到 script 字样，但不能真出现标签或 doc.write 调用
+    if re.search(r"<\s*script\b", raw) or re.search(r"document\s*\.\s*write\s*\(", raw):
+        Path("/tmp/special-raw-reject.txt").write_text(raw, encoding="utf-8")
         return None
     return raw or None
 

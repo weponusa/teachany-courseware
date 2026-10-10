@@ -717,5 +717,85 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.go !== 'undefined') return;
+
+  window.go = function() {
+    const heroSection = document.getElementById('hero');
+    if (!heroSection) return;
+
+    // 清除之前的动画状态
+    heroSection.style.opacity = '0';
+    
+    setTimeout(() => {
+      // 平滑滚动到主内容区
+      const mainContent = document.querySelector('.container') || document.querySelector('main') || document.getElementById('main');
+      
+      if (mainContent) {
+        mainContent.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      } else {
+        // 如果没有找到主内容区，滚动到hero之后的第一个section
+        const nextSection = heroSection.nextElementSibling;
+        if (nextSection) {
+          nextSection.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        } else {
+          // 否则滚动一个视口高度
+          window.scrollBy({ 
+            top: window.innerHeight, 
+            behavior: 'smooth' 
+          });
+        }
+      }
+
+      // 淡出hero区域
+      heroSection.style.transition = 'opacity 0.6s ease-out';
+      
+      // 添加已访问标记
+      heroSection.classList.add('visited');
+      
+      // 可选：隐藏hero或缩小它
+      setTimeout(() => {
+        heroSection.style.minHeight = '0';
+        heroSection.style.padding = '0';
+        heroSection.style.overflow = 'hidden';
+        heroSection.style.height = '0';
+      }, 600);
+      
+    }, 100);
+
+    // 触发页面内容的入场动画
+    const animatableElements = document.querySelectorAll('.card, .section, .activity, .step');
+    animatableElements.forEach((el, index) => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(30px)';
+      el.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+      
+      setTimeout(() => {
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+      }, 800 + index * 100);
+    });
+
+    // 添加视觉反馈
+    const startButton = event && event.target;
+    if (startButton && startButton.tagName === 'BUTTON') {
+      startButton.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        startButton.style.transform = 'scale(1)';
+      }, 150);
+    }
+  };
+
+})();
+</script>
 </body>
 </html>

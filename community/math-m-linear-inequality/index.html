@@ -738,5 +738,88 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   </div>
 </section>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.answerModule !== 'undefined') return;
+
+  /**
+   * 通用选择题判分函数
+   * @param {number} moduleId - 模块编号
+   * @param {string} selected - 用户选择的选项（A/B/C/D）
+   * @param {string} correct - 正确答案
+   */
+  window.answerModule = function(moduleId, selected, correct) {
+    const feedbackId = 'mod-fb' + moduleId;
+    const feedbackEl = document.getElementById(feedbackId);
+    if (!feedbackEl) return;
+
+    // 获取当前模块的所有选项按钮
+    const container = feedbackEl.previousElementSibling;
+    if (!container || !container.classList.contains('options')) return;
+    
+    const buttons = container.querySelectorAll('.option-btn');
+    
+    // 重置所有按钮样式
+    buttons.forEach(btn => {
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.border = '';
+      btn.disabled = false;
+    });
+
+    // 判断答案
+    const isCorrect = selected === correct;
+    
+    // 高亮用户选择的按钮
+    buttons.forEach(btn => {
+      const btnText = btn.textContent.trim();
+      if (btnText.startsWith(selected + '.')) {
+        if (isCorrect) {
+          btn.style.background = '#10b981';
+          btn.style.color = 'white';
+          btn.style.border = '2px solid #059669';
+        } else {
+          btn.style.background = '#ef4444';
+          btn.style.color = 'white';
+          btn.style.border = '2px solid #dc2626';
+        }
+      }
+      // 如果答错，同时显示正确答案
+      if (!isCorrect && btnText.startsWith(correct + '.')) {
+        btn.style.background = '#10b981';
+        btn.style.color = 'white';
+        btn.style.border = '2px solid #059669';
+        btn.style.opacity = '0.7';
+      }
+    });
+
+    // 显示反馈信息
+    if (isCorrect) {
+      feedbackEl.innerHTML = '<div style="color:#059669;font-weight:600;margin-top:12px;padding:10px;background:#d1fae5;border-radius:6px;">✓ 正确！x ≤ -1 有等号，用实心圆；负数向左，箭头向左。</div>';
+    } else {
+      feedbackEl.innerHTML = '<div style="color:#dc2626;font-weight:600;margin-top:12px;padding:10px;background:#fee2e2;border-radius:6px;">✗ 不对哦。提示：≤ 有等号要用实心圆，-1 在数轴左侧，小于等于 -1 的数都在它左边。</div>';
+    }
+
+    // 禁用所有按钮防止重复点击
+    buttons.forEach(btn => {
+      btn.disabled = true;
+      btn.style.cursor = 'not-allowed';
+      btn.style.opacity = btn.style.opacity || '0.8';
+    });
+
+    // 3秒后允许重新作答
+    setTimeout(() => {
+      buttons.forEach(btn => {
+        btn.disabled = false;
+        btn.style.cursor = 'pointer';
+      });
+    }, 3000);
+  };
+
+})();
+</script>
+</body>
 </html>

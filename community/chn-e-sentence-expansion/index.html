@@ -812,5 +812,424 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.goSection !== 'undefined') return;
+
+  // 全局状态
+  let currentSection = 'hero';
+  const sections = ['hero', 'objectives', 'hero-infographic', 'section-1', 'section-2', 'section-3', 'boss-battle', 'summary'];
+  let stars = 0;
+
+  // 更新进度条
+  function updateProgress() {
+    const progressBar = document.getElementById('progress-bar');
+    const starCount = document.getElementById('star-count');
+    if (progressBar) {
+      const idx = sections.indexOf(currentSection);
+      const progress = idx >= 0 ? ((idx + 1) / sections.length * 100) : 0;
+      progressBar.style.width = progress + '%';
+    }
+    if (starCount) {
+      starCount.textContent = stars;
+    }
+  }
+
+  // 滚动到指定区域
+  window.goSection = function(sectionId) {
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      console.warn('Section not found:', sectionId);
+      return;
+    }
+    
+    // 隐藏hero，显示其他section
+    const hero = document.getElementById('hero');
+    if (hero && sectionId !== 'hero') {
+      hero.style.display = 'none';
+    }
+    
+    // 更新当前section
+    currentSection = sectionId;
+    updateProgress();
+    
+    // 平滑滚动
+    target.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'start' 
+    });
+    
+    // 添加高亮效果
+    target.style.transition = 'background-color 0.5s';
+    const originalBg = target.style.backgroundColor;
+    target.style.backgroundColor = 'rgba(255, 215, 0, 0.1)';
+    setTimeout(() => {
+      target.style.backgroundColor = originalBg;
+    }, 1000);
+  };
+
+  // 初始化进度
+  updateProgress();
+
+  // 监听滚动更新当前section
+  let scrollTimeout;
+  window.addEventListener('scroll', function() {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const scrollPos = window.scrollY + window.innerHeight / 3;
+      
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = document.getElementById(sections[i]);
+        if (section && section.offsetTop <= scrollPos) {
+          if (currentSection !== sections[i]) {
+            currentSection = sections[i];
+            updateProgress();
+          }
+          break;
+        }
+      }
+    }, 100);
+  });
+
+  // 查找所有canvas并初始化绘图
+  function initCanvases() {
+    const canvases = document.querySelectorAll('canvas[id*="expansion"], canvas[id*="reduction"], canvas[id*="sentence"]');
+    canvases.forEach(canvas => {
+      if (canvas.dataset.initialized) return;
+      canvas.dataset.initialized = 'true';
+      
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width || 800;
+      const h = canvas.height || 400;
+      
+      // 根据canvas id判断绘制内容
+      if (canvas.id.includes('expansion') || canvas.id.includes('扩句')) {
+        drawExpansionDiagram(ctx, w, h);
+      } else if (canvas.id.includes('reduction') || canvas.id.includes('缩句')) {
+        drawReductionDiagram(ctx, w, h);
+      } else {
+        drawSentenceStructure(ctx, w, h);
+      }
+    });
+  }
+
+  // 绘制扩句示意图
+  function drawExpansionDiagram(ctx, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景渐变
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#e3f2fd');
+    bgGrad.addColorStop(1, '#fff9c4');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+    
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // 左侧：简单句（小树苗）
+    ctx.save();
+    ctx.translate(w * 0.25, h * 0.7);
+    
+    // 土壤
+    ctx.fillStyle = '#8d6e63';
+    ctx.fillRect(-60, 0, 120, 40);
+    
+    // 主干
+    ctx.strokeStyle = '#6d4c41';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -80);
+    ctx.stroke();
+    
+    // 3片叶子
+    ctx.fillStyle = '#4caf50';
+    for (let i = 0; i < 3; i++) {
+      const angle = (i - 1) * 0.6;
+      const y = -30 - i * 20;
+      ctx.beginPath();
+      ctx.ellipse(Math.sin(angle) * 25, y, 15, 8, angle, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('简单句', -30, 60);
+    ctx.fillText('主干', 15, -40);
+    
+    ctx.restore();
+    
+    // 箭头
+    ctx.strokeStyle = '#ff9800';
+    ctx.fillStyle = '#ff9800';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.4, h * 0.5);
+    ctx.lineTo(w * 0.6, h * 0.5);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(w * 0.6, h * 0.5);
+    ctx.lineTo(w * 0.55, h * 0.47);
+    ctx.lineTo(w * 0.55, h * 0.53);
+    ctx.fill();
+    
+    ctx.fillStyle = '#ff6f00';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('扩句', w * 0.47, h * 0.45);
+    
+    // 右侧：扩展句（大树）
+    ctx.save();
+    ctx.translate(w * 0.75, h * 0.7);
+    
+    // 土壤
+    ctx.fillStyle = '#795548';
+    ctx.fillRect(-80, 0, 160, 40);
+    
+    // 主干
+    ctx.strokeStyle = '#6d4c41';
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -120);
+    ctx.stroke();
+    
+    // 分支
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(0, -80);
+    ctx.lineTo(-40, -110);
+    ctx.moveTo(0, -80);
+    ctx.lineTo(40, -110);
+    ctx.stroke();
+    
+    // 7片叶子
+    ctx.fillStyle = '#2f7d32';
+    const leafPositions = [
+      [-50, -120], [-30, -100], [30, -100], [50, -120],
+      [-20, -130], [0, -140], [20, -130]
+    ];
+    leafPositions.forEach(([x, y]) => {
+      ctx.beginPath();
+      ctx.ellipse(x, y, 18, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('扩展句', -35, 60);
+    ctx.fillText('修饰词', -70, -115);
+    ctx.fillText('定语', 50, -115);
+    ctx.fillText('状语', -30, -145);
+    
+    // 引线
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(-50, -120);
+    ctx.lineTo(-65, -115);
+    ctx.moveTo(50, -120);
+    ctx.lineTo(65, -115);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    ctx.restore();
+  }
+
+  // 绘制缩句示意图
+  function drawReductionDiagram(ctx, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#fff9c4');
+    bgGrad.addColorStop(1, '#e3f2fd');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+    
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // 左侧：复杂句
+    ctx.save();
+    ctx.translate(w * 0.25, h * 0.6);
+    
+    // 复杂结构
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 3;
+    ctx.fillStyle = 'rgba(25, 118, 210, 0.1)';
+    ctx.beginPath();
+    ctx.roundRect(-80, -60, 160, 120, 10);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 内部元素
+    const boxes = [
+      { x: -50, y: -30, w: 40, h: 20, text: '定语' },
+      { x: 0, y: -30, w: 40, h: 20, text: '主语' },
+      { x: 50, y: -30, w: 40, h: 20, text: '状语' },
+      { x: -25, y: 10, w: 40, h: 20, text: '谓语' },
+      { x: 25, y: 10, w: 40, h: 20, text: '补语' }
+    ];
+    
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 2;
+    ctx.font = '12px sans-serif';
+    boxes.forEach(box => {
+      ctx.fillRect(box.x - box.w/2, box.y - box.h/2, box.w, box.h);
+      ctx.strokeRect(box.x - box.w/2, box.y - box.h/2, box.w, box.h);
+      ctx.fillStyle = '#333';
+      ctx.fillText(box.text, box.x - ctx.measureText(box.text).width/2, box.y + 4);
+      ctx.fillStyle = '#fff';
+    });
+    
+    ctx.fillStyle = '#333';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('复杂句', -30, 80);
+    
+    ctx.restore();
+    
+    // 箭头
+    ctx.strokeStyle = '#4caf50';
+    ctx.fillStyle = '#4caf50';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.4, h * 0.5);
+    ctx.lineTo(w * 0.6, h * 0.5);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(w * 0.6, h * 0.5);
+    ctx.lineTo(w * 0.55, h * 0.47);
+    ctx.lineTo(w * 0.55, h * 0.53);
+    ctx.fill();
+    
+    ctx.fillStyle = '#2e7d32';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('缩句', w * 0.47, h * 0.45);
+    
+    // 右侧：简化句
+    ctx.save();
+    ctx.translate(w * 0.75, h * 0.6);
+    
+    ctx.strokeStyle = '#4caf50';
+    ctx.lineWidth = 3;
+    ctx.fillStyle = 'rgba(76, 175, 80, 0.1)';
+    ctx.beginPath();
+    ctx.roundRect(-60, -30, 120, 60, 10);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 核心成分
+    const coreBoxes = [
+      { x: -30, y: 0, w: 40, h: 20, text: '主语' },
+      { x: 30, y: 0, w: 40, h: 20, text: '谓语' }
+    ];
+    
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#4caf50';
+    ctx.lineWidth = 2;
+    ctx.font = '12px sans-serif';
+    coreBoxes.forEach(box => {
+      ctx.fillRect(box.x - box.w/2, box.y - box.h/2, box.w, box.h);
+      ctx.strokeRect(box.x - box.w/2, box.y - box.h/2, box.w, box.h);
+      ctx.fillStyle = '#333';
+      ctx.fillText(box.text, box.x - ctx.measureText(box.text).width/2, box.y + 4);
+      ctx.fillStyle = '#fff';
+    });
+    
+    ctx.fillStyle = '#333';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('简化句', -30, 50);
+    ctx.fillText('保留主干', -35, -45);
+    
+    ctx.restore();
+  }
+
+  // 绘制句子结构图
+  function drawSentenceStructure(ctx, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(0, 0, w, h);
+    
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // 树状结构
+    ctx.save();
+    ctx.translate(w / 2, h * 0.2);
+    
+    // 根节点
+    ctx.fillStyle = '#ff9800';
+    ctx.strokeStyle = '#e65100';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-40, -15, 80, 30, 8);
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('完整句子', -32, 5);
+    
+    // 分支线
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-20, 15);
+    ctx.lineTo(-100, 60);
+    ctx.moveTo(20, 15);
+    ctx.lineTo(100, 60);
+    ctx.stroke();
+    
+    // 左子节点
+    ctx.fillStyle = '#2196f3';
+    ctx.strokeStyle = '#0d47a1';
+    ctx.beginPath();
+    ctx.roundRect(-130, 60, 60, 25, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('主语', -115, 77);
+    
+    // 右子节点
+    ctx.fillStyle = '#4caf50';
+    ctx.strokeStyle = '#1b5e20';
+    ctx.beginPath();
+    ctx.roundRect(70, 60, 60, 25, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.fillText('谓语', 85, 77);
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('句子主干', -35, 130);
+    ctx.fillText('（缩句保留）', -40, 150);
+    
+    ctx.restore();
+  }
+
+  // 页面加载完成后初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCanvases);
+  } else {
+    initCanvases();
+  }
+  
+  // 也监听动态添加的canvas
+  const observer = new MutationObserver(initCanvases);
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
 </body>
 </html>

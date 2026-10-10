@@ -613,5 +613,451 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   </div>
 </section>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.setCompChart !== 'undefined' && typeof window.drawInteractiveDemo !== 'undefined') return;
+
+  // ========== setCompChart ==========
+  if (typeof window.setCompChart === 'undefined') {
+    window.setCompChart = function(type) {
+      const canvas = document.getElementById('compCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      
+      // 清空并重绘
+      ctx.clearRect(0, 0, w, h);
+      
+      // 更新按钮状态
+      const btns = document.querySelectorAll('.chart-btn');
+      btns.forEach(btn => {
+        btn.classList.remove('active');
+        if ((type === 'line' && btn.textContent.includes('折线图')) ||
+            (type === 'pie' && btn.textContent.includes('扇形图')) ||
+            (type === 'bar' && btn.textContent.includes('条形图'))) {
+          btn.classList.add('active');
+        }
+      });
+
+      ctx.font = '14px sans-serif';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (type === 'line') {
+        // 折线图：月阅读量
+        const data = [3, 5, 4, 7, 6];
+        const months = ['1月', '2月', '3月', '4月', '5月'];
+        const padding = 60;
+        const chartW = w - padding * 2;
+        const chartH = h - padding * 2;
+        const maxVal = 8;
+        
+        // 绘制坐标轴
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, h - padding);
+        ctx.lineTo(w - padding, h - padding);
+        ctx.stroke();
+        
+        // Y轴刻度
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        for (let i = 0; i <= maxVal; i += 2) {
+          const y = h - padding - (i / maxVal) * chartH;
+          ctx.fillText(i + '本', padding - 10, y);
+          ctx.strokeStyle = '#e0e0e0';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(padding, y);
+          ctx.lineTo(w - padding, y);
+          ctx.stroke();
+        }
+        
+        // X轴标签
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const stepX = chartW / (data.length - 1);
+        
+        // 绘制折线
+        ctx.strokeStyle = '#1976d2';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        data.forEach((val, i) => {
+          const x = padding + i * stepX;
+          const y = h - padding - (val / maxVal) * chartH;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        
+        // 绘制数据点和标签
+        data.forEach((val, i) => {
+          const x = padding + i * stepX;
+          const y = h - padding - (val / maxVal) * chartH;
+          
+          ctx.fillStyle = '#1976d2';
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.fillStyle = '#1976d2';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(val + '本', x, y - 10);
+          
+          ctx.fillStyle = '#666';
+          ctx.textBaseline = 'top';
+          ctx.fillText(months[i], x, h - padding + 10);
+        });
+        
+        // 标题
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('月阅读量变化趋势', w / 2, 15);
+        
+      } else if (type === 'pie') {
+        // 扇形图：阅读类型
+        const data = [
+          { label: '文学', value: 40, color: '#4caf50' },
+          { label: '科普', value: 25, color: '#2196f3' },
+          { label: '历史', value: 20, color: '#ff9800' },
+          { label: '其他', value: 15, color: '#9e9e9e' }
+        ];
+        
+        const cx = w / 2, cy = h / 2 + 10;
+        const radius = 90;
+        let startAngle = -Math.PI / 2;
+        
+        // 标题
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('阅读类型分布', w / 2, 15);
+        
+        data.forEach((item, idx) => {
+          const angle = (item.value / 100) * Math.PI * 2;
+          const endAngle = startAngle + angle;
+          
+          // 绘制扇形
+          ctx.fillStyle = item.color;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, radius, startAngle, endAngle);
+          ctx.closePath();
+          ctx.fill();
+          
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          
+          // 标签和引线
+          const midAngle = startAngle + angle / 2;
+          const labelRadius = radius + 35;
+          const lx = cx + Math.cos(midAngle) * labelRadius;
+          const ly = cy + Math.sin(midAngle) * labelRadius;
+          
+          ctx.strokeStyle = item.color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(midAngle) * radius, cy + Math.sin(midAngle) * radius);
+          ctx.lineTo(lx, ly);
+          ctx.stroke();
+          
+          ctx.fillStyle = '#333';
+          ctx.font = '13px sans-serif';
+          ctx.textAlign = lx > cx ? 'left' : 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(item.label + ' ' + item.value + '%', lx + (lx > cx ? 5 : -5), ly);
+          
+          startAngle = endAngle;
+        });
+        
+      } else if (type === 'bar') {
+        // 条形图：男女对比
+        const data = [
+          { label: '男生', value: 4.2, color: '#2196f3' },
+          { label: '女生', value: 5.8, color: '#e91e63' }
+        ];
+        
+        const padding = 60;
+        const chartW = w - padding * 2;
+        const chartH = h - padding * 2;
+        const maxVal = 7;
+        const barHeight = 50;
+        const gap = 40;
+        
+        // 标题
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('男女生月均阅读量对比', w / 2, 15);
+        
+        // 绘制坐标轴
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, h - padding);
+        ctx.lineTo(w - padding, h - padding);
+        ctx.stroke();
+        
+        // X轴刻度
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        for (let i = 0; i <= maxVal; i++) {
+          const x = padding + (i / maxVal) * chartW;
+          ctx.fillText(i + '本', x, h - padding + 10);
+          if (i > 0) {
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, padding);
+            ctx.lineTo(x, h - padding);
+            ctx.stroke();
+          }
+        }
+        
+        // 绘制条形
+        data.forEach((item, i) => {
+          const y = padding + 30 + i * (barHeight + gap);
+          const barW = (item.value / maxVal) * chartW;
+          
+          ctx.fillStyle = item.color;
+          ctx.fillRect(padding, y, barW, barHeight);
+          
+          ctx.strokeStyle = item.color;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(padding, y, barW, barHeight);
+          
+          // 标签
+          ctx.fillStyle = '#333';
+          ctx.font = '14px sans-serif';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(item.label, padding - 10, y + barHeight / 2);
+          
+          // 数值
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'left';
+          ctx.fillText(item.value + '本', padding + barW - 50, y + barHeight / 2);
+        });
+      }
+    };
+    
+    // 初始化显示折线图
+    setTimeout(() => {
+      if (document.getElementById('compCanvas')) {
+        window.setCompChart('line');
+      }
+    }, 100);
+  }
+
+  // ========== drawInteractiveDemo ==========
+  if (typeof window.drawInteractiveDemo === 'undefined') {
+    window.drawInteractiveDemo = function() {
+      const canvas = document.getElementById('extCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      
+      let frame = 0;
+      const totalFrames = 180;
+      
+      function animate() {
+        ctx.clearRect(0, 0, w, h);
+        frame++;
+        
+        const progress = frame / totalFrames;
+        const stage = Math.floor(progress * 3);
+        
+        ctx.font = '14px sans-serif';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // 标题
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('同一数据的三种可视化方式', w / 2, 20);
+        
+        // 数据：5个学生的成绩
+        const scores = [85, 92, 78, 88, 95];
+        const names = ['小明', '小红', '小刚', '小丽', '小华'];
+        
+        const boxW = 160;
+        const boxH = 200;
+        const startX = 20;
+        const gap = 10;
+        
+        // 阶段1：条形图 (0-60帧)
+        if (stage >= 0) {
+          const alpha = stage === 0 ? Math.min(1, (frame % 60) / 20) : 0.3;
+          ctx.globalAlpha = alpha;
+          
+          const x1 = startX;
+          const y1 = 50;
+          
+          ctx.fillStyle = '#333';
+          ctx.font = 'bold 13px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('条形图 - 比较大小', x1, y1 - 5);
+          
+          const barW = 25;
+          const maxScore = 100;
+          const chartH = boxH - 40;
+          
+          scores.forEach((score, i) => {
+            const bx = x1 + i * (barW + 5);
+            const bh = (score / maxScore) * chartH;
+            const by = y1 + boxH - 20 - bh;
+            
+            const t = stage === 0 ? Math.min(1, (frame % 60) / 40) : 1;
+            const drawH = bh * t;
+            
+            ctx.fillStyle = '#2196f3';
+            ctx.fillRect(bx, by + (bh - drawH), barW, drawH);
+            
+            if (t > 0.8) {
+              ctx.fillStyle = '#333';
+              ctx.font = '11px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.fillText(score, bx + barW / 2, by - 5);
+              ctx.fillText(names[i], bx + barW / 2, y1 + boxH - 5);
+            }
+          });
+          
+          ctx.globalAlpha = 1;
+        }
+        
+        // 阶段2：折线图 (60-120帧)
+        if (stage >= 1) {
+          const alpha = stage === 1 ? Math.min(1, ((frame - 60) % 60) / 20) : 0.3;
+          ctx.globalAlpha = alpha;
+          
+          const x2 = startX + boxW + gap;
+          const y2 = 50;
+          
+          ctx.fillStyle = '#333';
+          ctx.font = 'bold 13px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('折线图 - 看趋势', x2, y2 - 5);
+          
+          const chartH = boxH - 40;
+          const stepX = (boxW - 20) / (scores.length - 1);
+          const maxScore = 100;
+          
+          const t = stage === 1 ? Math.min(1, ((frame - 60) % 60) / 40) : 1;
+          const drawPoints = Math.floor(scores.length * t);
+          
+          ctx.strokeStyle = '#4caf50';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          for (let i = 0; i < drawPoints; i++) {
+            const px = x2 + 10 + i * stepX;
+            const py = y2 + boxH - 20 - (scores[i] / maxScore) * chartH;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+          
+          for (let i = 0; i < drawPoints; i++) {
+            const px = x2 + 10 + i * stepX;
+            const py = y2 + boxH - 20 - (scores[i] / maxScore) * chartH;
+            
+            ctx.fillStyle = '#4caf50';
+            ctx.beginPath();
+            ctx.arc(px, py, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            if (t > 0.8) {
+              ctx.fillStyle = '#333';
+              ctx.font = '10px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.fillText(scores[i], px, py - 10);
+            }
+          }
+          
+          ctx.globalAlpha = 1;
+        }
+        
+        // 阶段3：扇形图 (120-180帧)
+        if (stage >= 2) {
+          const alpha = Math.min(1, ((frame - 120) % 60) / 20);
+          ctx.globalAlpha = alpha;
+          
+          const x3 = startX + (boxW + gap) * 2;
+          const y3 = 50;
+          
+          ctx.fillStyle = '#333';
+          ctx.font = 'bold 13px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('扇形图 - 看占比', x3, y3 - 5);
+          
+          const total = scores.reduce((a, b) => a + b, 0);
+          const cx = x3 + boxW / 2;
+          const cy = y3 + boxH / 2;
+          const radius = 60;
+          
+          const colors = ['#f44336', '#2196f3', '#4caf50', '#ff9800', '#9c27b0'];
+          let startAngle = -Math.PI / 2;
+          
+          const t = Math.min(1, ((frame - 120) % 60) / 40);
+          
+          scores.forEach((score, i) => {
+            const angle = (score / total) * Math.PI * 2 * t;
+            const endAngle = startAngle + angle;
+            
+            ctx.fillStyle = colors[i];
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius, startAngle, endAngle);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            if (t > 0.8 && angle > 0.3) {
+              const midAngle = startAngle + angle / 2;
+              const lx = cx + Math.cos(midAngle) * (radius * 0.7);
+              const ly = cy + Math.sin(midAngle) * (radius * 0.7);
+              
+              ctx.fillStyle = '#fff';
+              ctx.font = '11px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              const pct = Math.round((score / total) * 100);
+              ctx.fillText(pct + '%', lx, ly);
+            }
+            
+            startAngle = endAngle;
+          });
+          
+          ctx.globalAlpha = 1;
+        }
+        
+        if (frame < totalFrames) {
+          requestAnimationFrame(animate);
+        } else {
+          // 定格在最终状态
+          frame = totalFrames;
+          animate();
+        }
+      }
+      
+      frame = 0;
+      animate();
+    };
+  }
+})();
+</script>
+</body>
 </html>

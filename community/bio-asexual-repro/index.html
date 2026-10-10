@@ -799,124 +799,444 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 
 
 <script src="../../assets/scripts/ta-interactions.js"></script>
+
+
 <!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
 <script data-ta-special="ta-special-interactions">
 (function() {
-    if (typeof showReproInfo !== 'function') {
-        window.showReproInfo = function(type) {
-            const infoMap = {
-                'cutting': {title: '✂️ 扦插', text: '将植物的枝条插入土壤中，使其生根后独立生长。如月季、葡萄等。优点：操作简单，繁殖速度快。缺点：后代性状单一，抗病性可能下降。'},
-                'grafting': {title: '🔗 嫁接', text: '将优良品种的枝条（接穗）接到另一植株（砧木）上。如苹果、梨等。优点：结合砧木抗性和接穗优良性状。缺点：技术要求高，成活率受环境影响。'},
-                'layering': {title: '🌿 压条', text: '将枝条压入土中生根后再与母株分离。如桂花、龙眼等。优点：成活率高，保持母株特性。缺点：繁殖周期长，操作较繁琐。'},
-                'spore': {title: '🍄 孢子繁殖', text: '低等植物（蕨类、苔藓、真菌）通过孢子繁殖。优点：繁殖量大，适应性强。缺点：环境要求高，生长周期长。'}
-            };
-            document.getElementById('reproInfoTitle').textContent = infoMap[type].title;
-            document.getElementById('reproInfoText').textContent = infoMap[type].text;
-        };
-    }
+  // 防止重复定义
+  if (typeof window.showReproInfo !== 'undefined') return;
 
-    if (typeof drawMethod !== 'function') {
-        window.drawMethod = function(method) {
-            const canvas = document.getElementById('cvs');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // 绘制基础植物
-            ctx.fillStyle = '#6b8c42';
-            ctx.fillRect(100, 150, 20, 100); // 茎
-            ctx.beginPath();
-            ctx.arc(110, 120, 40, 0, Math.PI * 2);
-            ctx.fill(); // 叶冠
-            
-            if (method === 'cutting') {
-                // 扦插图示
-                ctx.fillStyle = '#8b5a2b';
-                ctx.fillRect(300, 180, 15, 70); // 扦插枝条
-                ctx.beginPath();
-                ctx.arc(307, 250, 20, 0, Math.PI * 2);
-                ctx.fill(); // 根系
-            } else if (method === 'grafting') {
-                // 嫁接图示
-                ctx.fillStyle = '#8b5a2b';
-                ctx.fillRect(300, 150, 15, 100); // 砧木
-                ctx.fillStyle = '#6b8c42';
-                ctx.fillRect(300, 130, 15, 20); // 接穗
-                ctx.strokeStyle = '#ff6347';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(300, 130, 15, 20); // 接合标记
-            } else if (method === 'layering') {
-                // 压条图示
-                ctx.fillStyle = '#6b8c42';
-                ctx.beginPath();
-                ctx.moveTo(110, 150);
-                ctx.lineTo(300, 180);
-                ctx.lineTo(350, 150);
-                ctx.stroke(); // 压条枝条
-                ctx.fillRect(320, 180, 10, 30); // 新生根
-            }
-        };
-    }
+  const reproData = {
+    cutting: { title: '✂️ 扦插', text: '将植物的茎或叶插入土壤或水中，在适宜条件下生根发芽形成新植株。常见于月季、葡萄、柳树等。优点：操作简单，成活率高；缺点：对环境要求较高。' },
+    grafting: { title: '🔗 嫁接', text: '将一个植物体的芽或枝（接穗）接在另一植物体（砧木）上，使两者结合成一个完整植株。果实性状由接穗决定。常用于果树繁殖，保持优良品种。' },
+    layering: { title: '🌿 压条', text: '将植物的枝条压入土中，待生根后与母株分离成为新植株。常见于桂花、夹竹桃等。优点：成活率极高；缺点：繁殖数量有限。' },
+    spore: { title: '🍄 孢子繁殖', text: '通过孢子进行繁殖，常见于蕨类植物、苔藓植物和真菌。孢子在适宜条件下萌发形成新个体。这是低等植物的主要无性繁殖方式。' }
+  };
 
-    if (typeof animGrowth !== 'function') {
-        window.animGrowth = function() {
-            const canvas = document.getElementById('cvs');
-            const ctx = canvas.getContext('2d');
-            let growth = 0;
-            
-            function animate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#6b8c42';
-                ctx.fillRect(100, 150, 20, 100 + growth); // 生长茎
-                ctx.beginPath();
-                ctx.arc(110, 120 - growth/2, 40 + growth/3, 0, Math.PI * 2);
-                ctx.fill(); // 生长叶冠
-                
-                growth += 2;
-                if (growth < 50) requestAnimationFrame(animate);
-            }
-            animate();
-        };
-    }
+  window.showReproInfo = function(type) {
+    const info = reproData[type];
+    if (!info) return;
+    const titleEl = document.getElementById('reproInfoTitle');
+    const textEl = document.getElementById('reproInfoText');
+    const container = document.getElementById('reproInfo');
+    if (titleEl) titleEl.textContent = info.title;
+    if (textEl) textEl.textContent = info.text;
+    if (container) container.style.display = 'block';
+  };
 
-    if (typeof checkDrop !== 'function') {
-        window.checkDrop = function() {
-            const feedback = document.getElementById('ddFeedback');
-            const sexualItems = document.querySelectorAll('#zone-sexual .dd-item');
-            const asexualItems = document.querySelectorAll('#zone-asexual .dd-item');
-            let correct = true;
+  window.drawMethod = function(method) {
+    const cvs = document.getElementById('cvs');
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    const w = cvs.width, h = cvs.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
-            sexualItems.forEach(item => {
-                if (item.dataset.cat !== 'sexual') correct = false;
-            });
-            asexualItems.forEach(item => {
-                if (item.dataset.cat !== 'asexual') correct = false;
-            });
+    // 绘制土壤背景
+    const grd = ctx.createLinearGradient(0, h * 0.7, 0, h);
+    grd.addColorStop(0, '#a1887f');
+    grd.addColorStop(1, '#795548');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, h * 0.7, w, h * 0.3);
 
-            feedback.textContent = correct ? '✅ 全部正确！' : '❌ 有些分类不正确，请检查';
-            feedback.style.color = correct ? 'green' : 'red';
-        };
-    }
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#333';
 
-    if (typeof resetDrop !== 'function') {
-        window.resetDrop = function() {
-            document.getElementById('ddItems').append(...document.querySelectorAll('.dd-zone .dd-item'));
-            document.getElementById('ddFeedback').textContent = '';
-        };
-    }
+    if (method === 'cutting') {
+      // 扦插：枝条斜切口插入土中
+      const x = w / 2;
+      
+      // 枝条主体
+      ctx.strokeStyle = '#6d4c41';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(x, h * 0.3);
+      ctx.lineTo(x, h * 0.75);
+      ctx.stroke();
 
-    // 拖拽辅助函数
-    function dragStart(e) {
-        e.dataTransfer.setData('text/plain', e.target.id || e.target.dataset.id);
+      // 45度斜切口
+      ctx.fillStyle = '#d7ccc8';
+      ctx.beginPath();
+      ctx.moveTo(x - 4, h * 0.75);
+      ctx.lineTo(x + 4, h * 0.75);
+      ctx.lineTo(x + 4, h * 0.78);
+      ctx.lineTo(x - 4, h * 0.72);
+      ctx.closePath();
+      ctx.fill();
+
+      // 芽点
+      for (let i = 0; i < 3; i++) {
+        const yPos = h * 0.4 + i * 40;
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.ellipse(x - 12, yPos, 6, 8, -Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + 12, yPos + 15, 6, 8, Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 叶片
+      ctx.fillStyle = '#2f7d32';
+      for (let i = 0; i < 4; i++) {
+        const yPos = h * 0.35 + i * 35;
+        const side = i % 2 === 0 ? -1 : 1;
+        ctx.beginPath();
+        ctx.ellipse(x + side * 25, yPos, 18, 10, side * Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 地下生根
+      ctx.strokeStyle = '#8d6e63';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x + (i - 2) * 8, h * 0.75);
+        ctx.quadraticCurveTo(x + (i - 2) * 12, h * 0.85, x + (i - 2) * 10, h * 0.95);
+        ctx.stroke();
+      }
+
+      // 标注
+      ctx.fillStyle = '#333';
+      ctx.fillText('剪口（45°斜切）', x + 20, h * 0.76);
+      ctx.fillText('芽点', x + 25, h * 0.45);
+      ctx.fillText('生根区', x + 20, h * 0.88);
+      
+      // 引线
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 4, h * 0.75);
+      ctx.lineTo(x + 18, h * 0.76);
+      ctx.stroke();
+
+    } else if (method === 'grafting') {
+      // 嫁接：砧木与接穗
+      const x = w / 2;
+      
+      // 砧木（下部粗壮）
+      ctx.strokeStyle = '#8d6e63';
+      ctx.lineWidth = 20;
+      ctx.beginPath();
+      ctx.moveTo(x, h * 0.95);
+      ctx.lineTo(x, h * 0.55);
+      ctx.stroke();
+
+      // 接穗（上部细长）
+      ctx.strokeStyle = '#6d4c41';
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.moveTo(x, h * 0.55);
+      ctx.lineTo(x, h * 0.2);
+      ctx.stroke();
+
+      // 接合线
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 4]);
+      ctx.beginPath();
+      ctx.moveTo(x - 30, h * 0.55);
+      ctx.lineTo(x + 30, h * 0.55);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 绑扎带
+      ctx.fillStyle = '#ff9800';
+      ctx.fillRect(x - 15, h * 0.52, 30, 8);
+      ctx.fillRect(x - 15, h * 0.54, 30, 8);
+
+      // 接穗叶片
+      ctx.fillStyle = '#4caf50';
+      for (let i = 0; i < 5; i++) {
+        const yPos = h * 0.25 + i * 25;
+        const side = i % 2 === 0 ? -1 : 1;
+        ctx.beginPath();
+        ctx.ellipse(x + side * 20, yPos, 20, 12, side * Math.PI / 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 砧木根系
+      ctx.strokeStyle = '#795548';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 6; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x + (i - 2.5) * 10, h * 0.95);
+        ctx.lineTo(x + (i - 2.5) * 15, h);
+        ctx.stroke();
+      }
+
+      // 标注
+      ctx.fillStyle = '#333';
+      ctx.fillText('接穗（保留品种）', x + 35, h * 0.35);
+      ctx.fillText('接合部位', x + 35, h * 0.55);
+      ctx.fillText('砧木（提供根系）', x + 35, h * 0.75);
+
+      // 引线
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 12, h * 0.3);
+      ctx.lineTo(x + 33, h * 0.35);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + 15, h * 0.55);
+      ctx.lineTo(x + 33, h * 0.55);
+      ctx.stroke();
+
+    } else if (method === 'layering') {
+      // 压条：枝条弯曲埋入土中
+      const x1 = w * 0.3, x2 = w * 0.7;
+      
+      // 母株
+      ctx.strokeStyle = '#6d4c41';
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.moveTo(x1, h * 0.9);
+      ctx.lineTo(x1, h * 0.4);
+      ctx.stroke();
+
+      // 母株叶片
+      ctx.fillStyle = '#2f7d32';
+      for (let i = 0; i < 4; i++) {
+        const yPos = h * 0.45 + i * 30;
+        ctx.beginPath();
+        ctx.ellipse(x1 - 20, yPos, 18, 11, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x1 + 20, yPos + 10, 18, 11, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 压条枝条（弧形）
+      ctx.strokeStyle = '#6d4c41';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(x1, h * 0.5);
+      ctx.quadraticCurveTo(w / 2, h * 0.65, x2, h * 0.45);
+      ctx.stroke();
+
+      // 埋土部分（虚线表示）
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = '#8d6e63';
+      ctx.beginPath();
+      ctx.arc(w / 2, h * 0.7, 25, Math.PI, 0);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 埋土段生根
+      ctx.strokeStyle = '#a1887f';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 7; i++) {
+        const angle = Math.PI + (i / 6) * Math.PI;
+        const startX = w / 2 + Math.cos(angle) * 25;
+        const startY = h * 0.7 + Math.sin(angle) * 25;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(startX + Math.cos(angle + Math.PI / 2) * 20, startY + Math.sin(angle + Math.PI / 2) * 20);
+        ctx.stroke();
+      }
+
+      // 新株叶片
+      ctx.fillStyle = '#4caf50';
+      for (let i = 0; i < 3; i++) {
+        const yPos = h * 0.35 + i * 25;
+        ctx.beginPath();
+        ctx.ellipse(x2 + 15, yPos, 15, 10, Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 标注
+      ctx.fillStyle = '#333';
+      ctx.fillText('母株', x1 - 40, h * 0.45);
+      ctx.fillText('压入土中生根', w / 2 - 50, h * 0.82);
+      ctx.fillText('新株', x2 + 25, h * 0.4);
+
+      // 引线
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(w / 2, h * 0.72);
+      ctx.lineTo(w / 2 - 20, h * 0.8);
+      ctx.stroke();
     }
-    function dragOver(e) {
-        e.preventDefault();
+  };
+
+  let animFrame = null;
+  window.animGrowth = function() {
+    const cvs = document.getElementById('cvs');
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    const w = cvs.width, h = cvs.height;
+    
+    if (animFrame) cancelAnimationFrame(animFrame);
+    
+    let progress = 0;
+    const duration = 3000;
+    const startTime = Date.now();
+
+    function animate() {
+      const elapsed = Date.now() - startTime;
+      progress = Math.min(elapsed / duration, 1);
+      
+      ctx.clearRect(0, 0, w, h);
+      
+      // 土壤
+      const grd = ctx.createLinearGradient(0, h * 0.7, 0, h);
+      grd.addColorStop(0, '#a1887f');
+      grd.addColorStop(1, '#795548');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, h * 0.7, w, h * 0.3);
+
+      const x = w / 2;
+      
+      // 阶段1：种子/插条（0-0.3）
+      if (progress < 0.3) {
+        const p1 = progress / 0.3;
+        ctx.fillStyle = '#8d6e63';
+        ctx.beginPath();
+        ctx.ellipse(x, h * 0.75, 10, 15 * p1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#333';
+        ctx.fillText('种子/插条', x + 20, h * 0.75);
+      }
+      // 阶段2：破土发芽（0.3-0.6）
+      else if (progress < 0.6) {
+        const p2 = (progress - 0.3) / 0.3;
+        const stemH = h * 0.75 - h * 0.3 * p2;
+        
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x, h * 0.75);
+        ctx.lineTo(x, stemH);
+        ctx.stroke();
+        
+        if (p2 > 0.5) {
+          ctx.fillStyle = '#81c784';
+          ctx.beginPath();
+          ctx.ellipse(x, stemH, 8 * (p2 - 0.5) * 2, 12 * (p2 - 0.5) * 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#333';
+        ctx.fillText('破土生长', x + 20, stemH + 10);
+      }
+      // 阶段3：长叶成株（0.6-1.0）
+      else {
+        const p3 = (progress - 0.6) / 0.4;
+        
+        // 主茎
+        ctx.strokeStyle = '#2f7d32';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(x, h * 0.75);
+        ctx.lineTo(x, h * 0.45);
+        ctx.stroke();
+        
+        // 叶片逐个展开
+        const leafCount = Math.floor(p3 * 5);
+        ctx.fillStyle = '#4caf50';
+        for (let i = 0; i < leafCount; i++) {
+          const yPos = h * 0.5 + i * 30;
+          const side = i % 2 === 0 ? -1 : 1;
+          const leafSize = Math.min((p3 * 5 - i), 1);
+          ctx.save();
+          ctx.translate(x + side * 25 * leafSize, yPos);
+          ctx.rotate(side * Math.PI / 6);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 20 * leafSize, 12 * leafSize, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        
+        // 根系
+        ctx.strokeStyle = '#795548';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 5; i++) {
+          const rootLen = 30 * p3;
+          ctx.beginPath();
+          ctx.moveTo(x + (i - 2) * 8, h * 0.75);
+          ctx.quadraticCurveTo(x + (i - 2) * 12, h * 0.75 + rootLen / 2, x + (i - 2) * 10, h * 0.75 + rootLen);
+          ctx.stroke();
+        }
+        
+        ctx.fillStyle = '#333';
+        ctx.fillText('成熟植株', x + 30, h * 0.5);
+      }
+      
+      if (progress < 1) {
+        animFrame = requestAnimationFrame(animate);
+      }
     }
-    function drop(e, cat) {
-        e.preventDefault();
-        const id = e.dataTransfer.getData('text/plain');
-        const item = document.querySelector(`[data-id="${id}"]`) || document.getElementById(id);
-        if (item) e.target.appendChild(item);
+    
+    animate();
+  };
+
+  let draggedEl = null;
+  window.dragStart = function(e) {
+    draggedEl = e.target;
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  window.dragOver = function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  window.drop = function(e, zone) {
+    e.preventDefault();
+    if (!draggedEl) return;
+    const zoneEl = document.getElementById('zone-' + zone);
+    if (zoneEl && draggedEl.parentNode.id === 'ddItems') {
+      zoneEl.appendChild(draggedEl);
     }
+  };
+
+  window.checkDrop = function() {
+    const items = document.querySelectorAll('.dd-item');
+    let correct = 0, total = items.length;
+    
+    items.forEach(item => {
+      const correctCat = item.getAttribute('data-cat');
+      const currentZone = item.parentNode.id.replace('zone-', '');
+      
+      if (correctCat === currentZone) {
+        item.style.backgroundColor = '#c8e6c9';
+        item.style.borderColor = '#4caf50';
+        correct++;
+      } else {
+        item.style.backgroundColor = '#ffcdd2';
+        item.style.borderColor = '#f44336';
+      }
+    });
+    
+    const feedback = document.getElementById('ddFeedback');
+    if (feedback) {
+      feedback.innerHTML = `<strong>${correct}/${total} 正确</strong> ${correct === total ? '🎉 全部正确！' : '请检查红色标记的项目'}`;
+      feedback.style.color = correct === total ? '#2e7d32' : '#d32f2f';
+      feedback.style.display = 'block';
+    }
+  };
+
+  window.resetDrop = function() {
+    const items = document.querySelectorAll('.dd-item');
+    const container = document.getElementById('ddItems');
+    const feedback = document.getElementById('ddFeedback');
+    
+    items.forEach(item => {
+      item.style.backgroundColor = '';
+      item.style.borderColor = '';
+      if (container) container.appendChild(item);
+    });
+    
+    if (feedback) {
+      feedback.style.display = 'none';
+      feedback.innerHTML = '';
+    }
+  };
+
 })();
 </script>
 </body>

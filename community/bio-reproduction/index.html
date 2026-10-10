@@ -857,5 +857,423 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "devCanvas", "readout": "stageDesc", "bg": [{"t": "line", "x1": 80, "y1": 120, "x2": 700, "y2": 120, "w": 2, "color": "#94a3b8", "dash": [6, 6]}, {"t": "ellipse", "x": 140, "y": 120, "rx": 26, "ry": 22, "fill": "rgba(244,114,182,.5)", "stroke": "#ec4899"}, {"t": "ellipse", "x": 280, "y": 120, "rx": 32, "ry": 26, "fill": "rgba(244,114,182,.4)", "stroke": "#ec4899"}, {"t": "ellipse", "x": 430, "y": 120, "rx": 40, "ry": 34, "fill": "rgba(96,165,250,.4)", "stroke": "#60a5fa"}, {"t": "ellipse", "x": 620, "y": 120, "rx": 30, "ry": 48, "fill": "rgba(251,191,36,.45)", "stroke": "#f59e0b"}, {"t": "text", "x": 140, "y": 170, "t2": "受精卵", "size": 13, "align": "center"}, {"t": "text", "x": 280, "y": 170, "t2": "胚胎", "size": 13, "align": "center"}, {"t": "text", "x": 430, "y": 170, "t2": "胎儿", "size": 13, "align": "center"}, {"t": "text", "x": 620, "y": 170, "t2": "婴儿", "size": 13, "align": "center"}, {"t": "text", "x": 390, "y": 46, "t2": "从受精卵到婴儿：细胞分裂与分化", "size": 13.5, "align": "center"}], "parts": [{"x": 140, "y": 120, "name": "受精卵", "info": "精子与卵细胞在输卵管中结合形成受精卵——这是新生命的起点。", "r": 30, "lx": 140, "ly": 78}, {"x": 280, "y": 120, "name": "胚胎", "info": "受精卵不断分裂形成胚胎，植入子宫内膜（怀孕）。", "r": 36, "lx": 280, "ly": 70}, {"x": 430, "y": 120, "name": "胎儿", "info": "在子宫里通过胎盘和脐带从母体获得氧气和营养，约 40 周后发育成熟。", "r": 44, "lx": 430, "ly": 62}, {"x": 620, "y": 120, "name": "婴儿", "info": "分娩出生后，进入青春期会再次快速发育并出现第二性征。", "r": 36, "lx": 620, "ly": 62}], "tip": "👆 点击各阶段，了解发育过程"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 胚胎发育阶段数据
+  const stages = [
+    { name: '受精', desc: '精子与卵细胞在输卵管中结合，形成受精卵。受精卵具有完整的遗传物质，是新生命的起点。' },
+    { name: '卵裂', desc: '受精卵通过有丝分裂进行细胞分裂，细胞数目不断增加，但总体积不变，形成桑椹胚和囊胚。' },
+    { name: '植入', desc: '囊胚移动到子宫，植入子宫内膜（着床），开始从母体获取营养，建立母子联系。' },
+    { name: '胚胎', desc: '着床后的细胞团开始分化，形成三个胚层，逐渐发育出各器官系统的雏形，此阶段称为胚胎期（前8周）。' },
+    { name: '胎儿', desc: '第9周起称为胎儿期，各器官系统进一步发育完善，胎儿通过胎盘和脐带从母体获取营养和氧气，排出废物。' }
+  ];
+
+  let currentStage = 0;
+  let animationId = null;
+
+  // 设置舞台
+  if (typeof window.setStage === 'undefined') {
+    window.setStage = function(index) {
+      if (index < 0 || index >= stages.length) return;
+      currentStage = index;
+      
+      // 更新按钮状态
+      const btns = document.querySelectorAll('.stage-btn');
+      btns.forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+      });
+      
+      // 更新描述
+      const descEl = document.getElementById('stageDesc');
+      if (descEl) {
+        descEl.textContent = stages[index].desc;
+      }
+      
+      // 绘制当前阶段
+      drawStage(index);
+    };
+  }
+
+  // 上一步
+  if (typeof window.prevStage === 'undefined') {
+    window.prevStage = function() {
+      if (currentStage > 0) {
+        setStage(currentStage - 1);
+      }
+    };
+  }
+
+  // 下一步
+  if (typeof window.nextStage === 'undefined') {
+    window.nextStage = function() {
+      if (currentStage < stages.length - 1) {
+        setStage(currentStage + 1);
+      }
+    };
+  }
+
+  // 自动播放
+  if (typeof window.autoStages === 'undefined') {
+    window.autoStages = function() {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+        return;
+      }
+      
+      let stage = 0;
+      let startTime = Date.now();
+      const stageDuration = 3000;
+      
+      function animate() {
+        const elapsed = Date.now() - startTime;
+        const newStage = Math.floor(elapsed / stageDuration);
+        
+        if (newStage >= stages.length) {
+          animationId = null;
+          return;
+        }
+        
+        if (newStage !== stage) {
+          stage = newStage;
+          setStage(stage);
+        }
+        
+        animationId = requestAnimationFrame(animate);
+      }
+      
+      setStage(0);
+      animationId = requestAnimationFrame(animate);
+    };
+  }
+
+  // 绘制阶段图
+  function drawStage(index) {
+    const canvas = document.getElementById('devCanvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.offsetWidth;
+    const h = canvas.height;
+    
+    // 清空画布
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景渐变（子宫环境）
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#fce4ec');
+    bgGrad.addColorStop(1, '#f8bbd0');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+    
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    const cx = w / 2;
+    const cy = h / 2;
+    
+    switch(index) {
+      case 0: // 受精
+        drawFertilization(ctx, cx, cy);
+        break;
+      case 1: // 卵裂
+        drawCleavage(ctx, cx, cy);
+        break;
+      case 2: // 植入
+        drawImplantation(ctx, cx, cy, w, h);
+        break;
+      case 3: // 胚胎
+        drawEmbryo(ctx, cx, cy);
+        break;
+      case 4: // 胎儿
+        drawFetus(ctx, cx, cy);
+        break;
+    }
+  }
+
+  function drawFertilization(ctx, cx, cy) {
+    // 卵细胞
+    ctx.fillStyle = '#ffb74d';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#f57c00';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // 细胞核
+    ctx.fillStyle = '#ff9800';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 精子
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(cx + 60, cy - 20, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1976d2';
+    ctx.fill();
+    
+    // 精子尾巴
+    ctx.beginPath();
+    ctx.moveTo(cx + 68, cy - 20);
+    ctx.quadraticCurveTo(cx + 90, cy - 15, cx + 100, cy - 25);
+    ctx.stroke();
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('卵细胞', cx - 50, cy + 60);
+    ctx.fillText('精子', cx + 70, cy - 35);
+    
+    // 引线
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 30, cy + 45);
+    ctx.lineTo(cx - 40, cy + 55);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + 68, cy - 28);
+    ctx.lineTo(cx + 75, cy - 32);
+    ctx.stroke();
+  }
+
+  function drawCleavage(ctx, cx, cy) {
+    const cells = [
+      {x: cx - 25, y: cy - 25},
+      {x: cx + 25, y: cy - 25},
+      {x: cx - 25, y: cy + 25},
+      {x: cx + 25, y: cy + 25}
+    ];
+    
+    // 外轮廓
+    ctx.strokeStyle = '#f57c00';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 45, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // 各细胞
+    cells.forEach(cell => {
+      ctx.fillStyle = '#ffb74d';
+      ctx.beginPath();
+      ctx.arc(cell.x, cell.y, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#f57c00';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // 细胞核
+      ctx.fillStyle = '#ff9800';
+      ctx.beginPath();
+      ctx.arc(cell.x, cell.y, 7, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('4细胞期', cx - 70, cy + 70);
+    ctx.fillText('细胞分裂', cx + 20, cy + 70);
+    
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 35, cy + 50);
+    ctx.lineTo(cx - 55, cy + 65);
+    ctx.stroke();
+  }
+
+  function drawImplantation(ctx, cx, cy, w, h) {
+    // 子宫内膜
+    ctx.fillStyle = '#e91e63';
+    ctx.fillRect(0, h - 60, w, 60);
+    
+    ctx.fillStyle = '#c2185b';
+    for (let i = 0; i < w; i += 20) {
+      ctx.beginPath();
+      ctx.arc(i, h - 60, 8, 0, Math.PI);
+      ctx.fill();
+    }
+    
+    // 囊胚
+    ctx.fillStyle = '#ffb74d';
+    ctx.beginPath();
+    ctx.arc(cx, h - 80, 30, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#f57c00';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // 内细胞团
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const r = 10;
+      const x = cx + Math.cos(angle) * r;
+      const y = h - 80 + Math.sin(angle) * r;
+      ctx.fillStyle = '#ff9800';
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('囊胚', cx - 50, h - 90);
+    ctx.fillText('子宫内膜', cx + 40, h - 30);
+    ctx.fillText('着床位置', cx - 20, h - 15);
+    
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 30, h - 85);
+    ctx.lineTo(cx - 45, h - 88);
+    ctx.stroke();
+  }
+
+  function drawEmbryo(ctx, cx, cy) {
+    // 胚胎主体
+    ctx.fillStyle = '#ffb74d';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 35, 50, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#f57c00';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // 头部
+    ctx.fillStyle = '#ffd54f';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 30, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 脊索
+    ctx.strokeStyle = '#ff9800';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 20);
+    ctx.lineTo(cx, cy + 30);
+    ctx.stroke();
+    
+    // 肢芽
+    ctx.fillStyle = '#ffb74d';
+    ctx.beginPath();
+    ctx.ellipse(cx - 25, cy + 10, 8, 15, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + 25, cy + 10, 8, 15, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('头部', cx - 60, cy - 35);
+    ctx.fillText('脊索', cx + 15, cy);
+    ctx.fillText('肢芽', cx - 60, cy + 20);
+    
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 20, cy - 30);
+    ctx.lineTo(cx - 50, cy - 33);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - 30, cy + 15);
+    ctx.lineTo(cx - 50, cy + 18);
+    ctx.stroke();
+  }
+
+  function drawFetus(ctx, cx, cy) {
+    // 胎儿身体
+    ctx.fillStyle = '#ffccbc';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 10, 30, 40, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ff8a65';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // 头部
+    ctx.fillStyle = '#ffccbc';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 25, 25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 五官
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(cx - 8, cy - 28, 2, 0, Math.PI * 2);
+    ctx.arc(cx + 8, cy - 28, 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 四肢
+    ctx.strokeStyle = '#ff8a65';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(cx - 25, cy + 5);
+    ctx.lineTo(cx - 40, cy + 20);
+    ctx.moveTo(cx + 25, cy + 5);
+    ctx.lineTo(cx + 40, cy + 20);
+    ctx.moveTo(cx - 15, cy + 45);
+    ctx.lineTo(cx - 20, cy + 65);
+    ctx.moveTo(cx + 15, cy + 45);
+    ctx.lineTo(cx + 20, cy + 65);
+    ctx.stroke();
+    
+    // 脐带
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + 15);
+    ctx.quadraticCurveTo(cx + 50, cy + 30, cx + 70, cy + 50);
+    ctx.stroke();
+    
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('胎儿', cx - 70, cy - 30);
+    ctx.fillText('脐带', cx + 50, cy + 60);
+    ctx.fillText('四肢发育', cx - 70, cy + 30);
+    
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 25, cy - 25);
+    ctx.lineTo(cx - 60, cy - 28);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + 60, cy + 48);
+    ctx.lineTo(cx + 50, cy + 55);
+    ctx.stroke();
+  }
+
+  // 拖拽重置
+  if (typeof window.resetDrop === 'undefined') {
+    window.resetDrop = function() {
+      const zones = document.querySelectorAll('.drop-zone .dropped');
+      zones.forEach(z => z.innerHTML = '');
+      
+      const items = document.querySelectorAll('.drag-item');
+      items.forEach(item => {
+        item.style.opacity = '1';
+        item.draggable = true;
+      });
+    };
+  }
+
+  // 初始化
+  if (document.getElementById('devCanvas')) {
+    setStage(0);
+  }
+})();
+</script>
+</body>
 </html>

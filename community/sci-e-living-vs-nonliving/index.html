@@ -1012,5 +1012,185 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
 </figure></div>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.checkAllAnswers !== 'undefined') return;
+
+  // 拖拽游戏数据
+  const dragItems = [
+    { id: 'item1', name: '🌻 向日葵', type: 'living' },
+    { id: 'item2', name: '🐶 小狗', type: 'living' },
+    { id: 'item3', name: '🦋 蝴蝶', type: 'living' },
+    { id: 'item4', name: '🌳 大树', type: 'living' },
+    { id: 'item5', name: '🐟 金鱼', type: 'living' },
+    { id: 'item6', name: '🍄 蘑菇', type: 'living' },
+    { id: 'item7', name: '🪨 石头', type: 'nonliving' },
+    { id: 'item8', name: '💧 水滴', type: 'nonliving' },
+    { id: 'item9', name: '📚 书本', type: 'nonliving' },
+    { id: 'item10', name: '🪑 椅子', type: 'nonliving' },
+    { id: 'item11', name: '☀️ 太阳', type: 'nonliving' },
+    { id: 'item12', name: '🏀 篮球', type: 'nonliving' }
+  ];
+
+  let gameState = {};
+
+  // 初始化拖拽游戏
+  function initDragGame() {
+    const pool = document.getElementById('draggables-pool');
+    if (!pool) return;
+    
+    pool.innerHTML = '';
+    gameState = {};
+    
+    dragItems.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'draggable-item';
+      div.draggable = true;
+      div.id = item.id;
+      div.textContent = item.name;
+      div.dataset.type = item.type;
+      div.style.cssText = 'display:inline-block;margin:.4rem;padding:.6rem 1rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:move;user-select:none;';
+      
+      div.ondragstart = function(e) {
+        e.dataTransfer.setData('text/plain', item.id);
+      };
+      
+      pool.appendChild(div);
+      gameState[item.id] = { placed: false, zone: null };
+    });
+    
+    document.getElementById('dropped-living').innerHTML = '';
+    document.getElementById('dropped-nonliving').innerHTML = '';
+    document.getElementById('drag-feedback').innerHTML = '';
+    document.getElementById('score-count').textContent = '0';
+  }
+
+  // 处理放置
+  window.handleDrop = function(event, zone) {
+    event.preventDefault();
+    const itemId = event.dataTransfer.getData('text/plain');
+    const item = dragItems.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const itemEl = document.getElementById(itemId);
+    if (!itemEl) return;
+    
+    const targetZone = zone === 'living' ? 'dropped-living' : 'dropped-nonliving';
+    const container = document.getElementById(targetZone);
+    
+    itemEl.style.cssText = 'display:inline-block;margin:.3rem;padding:.5rem .9rem;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:6px;cursor:pointer;';
+    itemEl.draggable = false;
+    itemEl.onclick = function() {
+      document.getElementById('draggables-pool').appendChild(itemEl);
+      itemEl.draggable = true;
+      itemEl.onclick = null;
+      itemEl.style.cssText = 'display:inline-block;margin:.4rem;padding:.6rem 1rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:move;';
+      gameState[itemId] = { placed: false, zone: null };
+      updateScore();
+    };
+    
+    container.appendChild(itemEl);
+    gameState[itemId] = { placed: true, zone: zone };
+    updateScore();
+  };
+
+  function updateScore() {
+    const placed = Object.values(gameState).filter(s => s.placed).length;
+    document.getElementById('score-count').textContent = placed;
+  }
+
+  // 检查所有答案
+  window.checkAllAnswers = function() {
+    const feedback = document.getElementById('drag-feedback');
+    if (!feedback) return;
+    
+    let correct = 0;
+    let total = 0;
+    
+    dragItems.forEach(item => {
+      const state = gameState[item.id];
+      const itemEl = document.getElementById(item.id);
+      
+      if (state.placed) {
+        total++;
+        const isCorrect = state.zone === item.type;
+        if (isCorrect) {
+          correct++;
+          itemEl.style.background = 'rgba(34,197,94,.25)';
+          itemEl.style.borderColor = 'rgba(34,197,94,.6)';
+        } else {
+          itemEl.style.background = 'rgba(239,68,68,.25)';
+          itemEl.style.borderColor = 'rgba(239,68,68,.6)';
+        }
+      }
+    });
+    
+    const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+    let message = '';
+    
+    if (total === 12) {
+      if (correct === 12) {
+        message = `<div style="padding:1rem;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);border-radius:8px;color:#86efac;font-weight:700;">🎉 太棒了！全部正确！你完全掌握了生物与非生物的区别！</div>`;
+      } else if (correct >= 9) {
+        message = `<div style="padding:1rem;background:rgba(234,179,8,.15);border:1px solid rgba(234,179,8,.4);border-radius:8px;color:#fde047;">👍 很好！答对 ${correct}/12 题（${percentage}%）。再检查一下错误的项目。</div>`;
+      } else {
+        message = `<div style="padding:1rem;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:8px;color:#fca5a5;">💪 答对 ${correct}/12 题（${percentage}%）。记住：生物能生长、繁殖、需要营养！</div>`;
+      }
+    } else {
+      message = `<div style="padding:1rem;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);border-radius:8px;color:#93c5fd;">📝 已完成 ${total}/12 项，答对 ${correct} 项。请将所有物品分类后再检查。</div>`;
+    }
+    
+    feedback.innerHTML = message;
+  };
+
+  // 重置游戏
+  window.resetGame = function() {
+    initDragGame();
+  };
+
+  // 判断题检查
+  window.checkTF = function(tfId, userAnswer, correctAnswer) {
+    const resultDiv = document.getElementById(tfId + '-result');
+    if (!resultDiv) return;
+    
+    const isCorrect = userAnswer === correctAnswer;
+    const tfItem = document.getElementById(tfId);
+    const btns = tfItem.querySelectorAll('.tf-btn');
+    
+    btns.forEach(btn => btn.disabled = true);
+    
+    let explanation = '';
+    if (tfId === 'tf1') {
+      explanation = isCorrect 
+        ? '✅ 正确！所有生物都会生长，这是生命的基本特征之一。植物长高、动物长大都是生长的表现。'
+        : '❌ 不对哦。所有生物都会生长，这是区分生物和非生物的重要特征。';
+    } else if (tfId === 'tf2') {
+      explanation = isCorrect
+        ? '✅ 正确！石头不会自己生长。虽然石头可能因为风化、侵蚀而改变形状，但这不是生长，而是物理变化。'
+        : '❌ 不对哦。石头是非生物，不会自己生长。风化和侵蚀只是物理变化，不是生命活动。';
+    } else if (tfId === 'tf3') {
+      explanation = isCorrect
+        ? '✅ 正确！机器人虽然能动，但它不能自己生长、繁殖，也不需要营养，所以是非生物。'
+        : '❌ 不对哦。机器人能动不代表它是生物。生物必须能生长、繁殖、需要营养等。';
+    }
+    
+    resultDiv.innerHTML = `<div style="margin-top:.8rem;padding:.8rem;background:${isCorrect ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)'};border:1px solid ${isCorrect ? 'rgba(34,197,94,.3)' : 'rgba(239,68,68,.3)'};border-radius:6px;color:${isCorrect ? '#86efac' : '#fca5a5'};">${explanation}</div>`;
+    
+    setTimeout(() => {
+      btns.forEach(btn => btn.disabled = false);
+    }, 3000);
+  };
+
+  // 页面加载时初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDragGame);
+  } else {
+    initDragGame();
+  }
+})();
+</script>
+</body>
 </html>

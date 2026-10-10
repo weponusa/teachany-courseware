@@ -641,7 +641,371 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 </div></div></div>
   <script src="../../assets/scripts/teachany-external-embed.js" defer></script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 后测检测函数
+  if (typeof window.postCheck === 'undefined') {
+    window.postCheck = function(qNum, answer) {
+      const correctAnswers = {
+        1: 'C', // 义务教育阶段全体学生期末成绩登记必须普查
+        2: 'B'  // 样本容量是10
+      };
+      const feedbackEl = document.getElementById('post' + qNum + '-fb');
+      const options = document.querySelectorAll('#post' + qNum + ' .option');
+      
+      options.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+      });
+      
+      if (answer === correctAnswers[qNum]) {
+        feedbackEl.innerHTML = '<span style="color:#2e7d32;">✓ 正确！</span>';
+        feedbackEl.style.color = '#2e7d32';
+      } else {
+        const explanations = {
+          1: '义务教育阶段学生成绩登记涉及每个学生的权益，必须全面统计，属于普查。',
+          2: '样本容量是指抽取的个体数量，这里抽取了10人，所以样本容量是10。'
+        };
+        feedbackEl.innerHTML = '<span style="color:#c62828;">✗ 错误。' + explanations[qNum] + '</span>';
+        feedbackEl.style.color = '#c62828';
+      }
+    };
+  }
+
+  // 问卷调查提交函数
+  if (typeof window.submitSurvey === 'undefined') {
+    window.submitSurvey = function() {
+      const selected = document.querySelector('input[name="survey"]:checked');
+      if (!selected) {
+        alert('请先选择一个选项');
+        return;
+      }
+      
+      const canvas = document.getElementById('surveyChart');
+      canvas.style.display = 'block';
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      
+      ctx.clearRect(0, 0, w, h);
+      
+      // 模拟班级数据
+      const data = [8, 15, 12, 5];
+      const labels = ['不运动', '<30分钟', '30分-1小时', '>1小时'];
+      const colors = ['#ef5350', '#ffa726', '#66bb6a', '#42a5f5'];
+      
+      const maxVal = Math.max(...data);
+      const barWidth = 80;
+      const gap = 20;
+      const startX = 60;
+      const chartHeight = h - 60;
+      
+      // 绘制坐标轴
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(startX, 20);
+      ctx.lineTo(startX, h - 40);
+      ctx.lineTo(w - 20, h - 40);
+      ctx.stroke();
+      
+      // 绘制条形图
+      data.forEach((val, i) => {
+        const x = startX + gap + i * (barWidth + gap);
+        const barHeight = (val / maxVal) * (chartHeight - 40);
+        const y = h - 40 - barHeight;
+        
+        ctx.fillStyle = colors[i];
+        ctx.fillRect(x, y, barWidth, barHeight);
+        
+        ctx.fillStyle = '#333';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(labels[i], x + barWidth / 2, h - 25);
+        ctx.fillText(val + '人', x + barWidth / 2, y - 5);
+      });
+      
+      ctx.fillStyle = '#666';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('班级户外运动时间统计', w / 2, 15);
+    };
+  }
+
+  // 模块检测函数
+  if (typeof window.modCheck === 'undefined') {
+    window.modCheck = function(qId, selected, correct) {
+      const feedbackEl = document.getElementById(qId + '-fb');
+      const errorEl = document.getElementById(qId + '-err');
+      const options = document.querySelectorAll('#' + qId + ' .option');
+      
+      options.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+      });
+      
+      if (selected === correct) {
+        feedbackEl.innerHTML = '<span style="color:#2e7d32;">✓ 正确！</span>';
+        if (errorEl) errorEl.style.display = 'none';
+      } else {
+        feedbackEl.innerHTML = '<span style="color:#c62828;">✗ 请查看下方分析</span>';
+        if (errorEl) errorEl.style.display = 'block';
+      }
+    };
+  }
+
+  // 频率分布表重建函数
+  let currentScores = [];
+  
+  if (typeof window.generateScores === 'undefined') {
+    window.generateScores = function() {
+      currentScores = [];
+      for (let i = 0; i < 40; i++) {
+        currentScores.push(Math.floor(Math.random() * 41) + 60); // 60-100分
+      }
+      currentScores.sort((a, b) => a - b);
+      
+      const rawEl = document.getElementById('rawScores');
+      if (rawEl) {
+        rawEl.textContent = currentScores.join(', ');
+      }
+      
+      rebuildTable();
+    };
+  }
+
+  if (typeof window.rebuildTable === 'undefined') {
+    window.rebuildTable = function() {
+      if (currentScores.length === 0) {
+        generateScores();
+        return;
+      }
+      
+      const groupSize = parseInt(document.getElementById('groupSize').value);
+      const tableEl = document.getElementById('freqTable');
+      
+      const groups = {};
+      const minScore = Math.floor(Math.min(...currentScores) / groupSize) * groupSize;
+      const maxScore = Math.ceil(Math.max(...currentScores) / groupSize) * groupSize;
+      
+      for (let i = minScore; i < maxScore; i += groupSize) {
+        groups[i] = 0;
+      }
+      
+      currentScores.forEach(score => {
+        const groupStart = Math.floor(score / groupSize) * groupSize;
+        groups[groupStart]++;
+      });
+      
+      let html = '<table style="width:100%;border-collapse:collapse;margin-top:10px;"><thead><tr style="background:#e3f2fd;">';
+      html += '<th style="padding:8px;border:1px solid #ddd;">分数段</th>';
+      html += '<th style="padding:8px;border:1px solid #ddd;">频数</th>';
+      html += '<th style="padding:8px;border:1px solid #ddd;">频率</th></tr></thead><tbody>';
+      
+      Object.keys(groups).sort((a, b) => a - b).forEach(start => {
+        const end = parseInt(start) + groupSize;
+        const freq = groups[start];
+        const rate = (freq / currentScores.length).toFixed(2);
+        html += '<tr><td style="padding:8px;border:1px solid #ddd;text-align:center;">[' + start + ',' + end + ')</td>';
+        html += '<td style="padding:8px;border:1px solid #ddd;text-align:center;">' + freq + '</td>';
+        html += '<td style="padding:8px;border:1px solid #ddd;text-align:center;">' + rate + '</td></tr>';
+      });
+      
+      html += '</tbody></table>';
+      tableEl.innerHTML = html;
+    };
+  }
+
+  if (typeof window.drawBarChart === 'undefined') {
+    window.drawBarChart = function() {
+      if (currentScores.length === 0) {
+        generateScores();
+      }
+      
+      const canvas = document.getElementById('barChart');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const groupSize = parseInt(document.getElementById('groupSize').value);
+      
+      ctx.clearRect(0, 0, w, h);
+      
+      const groups = {};
+      const minScore = Math.floor(Math.min(...currentScores) / groupSize) * groupSize;
+      const maxScore = Math.ceil(Math.max(...currentScores) / groupSize) * groupSize;
+      
+      for (let i = minScore; i < maxScore; i += groupSize) {
+        groups[i] = 0;
+      }
+      
+      currentScores.forEach(score => {
+        const groupStart = Math.floor(score / groupSize) * groupSize;
+        groups[groupStart]++;
+      });
+      
+      const sortedKeys = Object.keys(groups).sort((a, b) => a - b);
+      const maxFreq = Math.max(...Object.values(groups));
+      
+      const startX = 50;
+      const chartHeight = h - 60;
+      const barWidth = Math.min(60, (w - startX - 40) / sortedKeys.length - 10);
+      const gap = 10;
+      
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(startX, 20);
+      ctx.lineTo(startX, h - 40);
+      ctx.lineTo(w - 20, h - 40);
+      ctx.stroke();
+      
+      sortedKeys.forEach((key, i) => {
+        const freq = groups[key];
+        const x = startX + gap + i * (barWidth + gap);
+        const barHeight = (freq / maxFreq) * (chartHeight - 40);
+        const y = h - 40 - barHeight;
+        
+        ctx.fillStyle = '#42a5f5';
+        ctx.fillRect(x, y, barWidth, barHeight);
+        
+        ctx.fillStyle = '#333';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('[' + key + ',' + (parseInt(key) + groupSize) + ')', x + barWidth / 2, h - 25);
+        ctx.fillText(freq, x + barWidth / 2, y - 5);
+      });
+      
+      ctx.fillStyle = '#666';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('成绩频率分布图', w / 2, 15);
+    };
+  }
+
+  // 投票系统
+  let voteData = { '篮球': 0, '足球': 0, '羽毛球': 0, '跑步': 0, '游泳': 0 };
+  
+  if (typeof window.resetVotes === 'undefined') {
+    window.resetVotes = function() {
+      voteData = { '篮球': 0, '足球': 0, '羽毛球': 0, '跑步': 0, '游泳': 0 };
+      
+      const btnContainer = document.getElementById('voteButtons');
+      btnContainer.innerHTML = '';
+      Object.keys(voteData).forEach(activity => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary';
+        btn.textContent = activity;
+        btn.style.cssText = 'padding:8px 16px;font-size:.9rem;';
+        btn.onclick = function() { vote(activity); };
+        btnContainer.appendChild(btn);
+      });
+      
+      document.getElementById('voteSummary').innerHTML = '';
+      document.getElementById('voteTable').style.display = 'none';
+      
+      const canvas = document.getElementById('voteChart');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+  }
+  
+  function vote(activity) {
+    voteData[activity]++;
+    updateVoteChart();
+    
+    const total = Object.values(voteData).reduce((a, b) => a + b, 0);
+    const summary = document.getElementById('voteSummary');
+    summary.innerHTML = '已收集 <strong>' + total + '</strong> 票，最高：<strong>' + 
+      Object.keys(voteData).reduce((a, b) => voteData[a] > voteData[b] ? a : b) + 
+      '</strong>（' + voteData[Object.keys(voteData).reduce((a, b) => voteData[a] > voteData[b] ? a : b)] + '票）';
+  }
+  
+  function updateVoteChart() {
+    const canvas = document.getElementById('voteChart');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    const activities = Object.keys(voteData);
+    const maxVotes = Math.max(...Object.values(voteData), 1);
+    const barWidth = 60;
+    const gap = 15;
+    const startX = 60;
+    const chartHeight = h - 60;
+    
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(startX, 20);
+    ctx.lineTo(startX, h - 40);
+    ctx.lineTo(w - 20, h - 40);
+    ctx.stroke();
+    
+    const colors = ['#ef5350', '#ab47bc', '#42a5f5', '#66bb6a', '#ffa726'];
+    
+    activities.forEach((activity, i) => {
+      const votes = voteData[activity];
+      const x = startX + gap + i * (barWidth + gap);
+      const barHeight = (votes / maxVotes) * (chartHeight - 40);
+      const y = h - 40 - barHeight;
+      
+      ctx.fillStyle = colors[i];
+      ctx.fillRect(x, y, barWidth, barHeight);
+      
+      ctx.fillStyle = '#333';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(activity, x + barWidth / 2, h - 25);
+      if (votes > 0) {
+        ctx.fillText(votes + '票', x + barWidth / 2, y - 5);
+      }
+    });
+    
+    ctx.fillStyle = '#666';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('课外活动投票统计', w / 2, 15);
+  }
+  
+  if (typeof window.showVoteTable === 'undefined') {
+    window.showVoteTable = function() {
+      const total = Object.values(voteData).reduce((a, b) => a + b, 0);
+      if (total === 0) {
+        alert('请先投票');
+        return;
+      }
+      
+      const tableEl = document.getElementById('voteTable');
+      let html = '<table style="width:100%;border-collapse:collapse;margin-top:10px;"><thead><tr style="background:#e3f2fd;">';
+      html += '<th style="padding:8px;border:1px solid #ddd;">活动</th>';
+      html += '<th style="padding:8px;border:1px solid #ddd;">票数</th>';
+      html += '<th style="padding:8px;border:1px solid #ddd;">频率</th></tr></thead><tbody>';
+      
+      Object.keys(voteData).forEach(activity => {
+        const votes = voteData[activity];
+        const rate = total > 0 ? (votes / total).toFixed(2) : '0.00';
+        html += '<tr><td style="padding:8px;border:1px solid #ddd;text-align:center;">' + activity + '</td>';
+        html += '<td style="padding:8px;border:1px solid #ddd;text-align:center;">' + votes + '</td>';
+        html += '<td style="padding:8px;border:1px solid #ddd;text-align:center;">' + rate + '</td></tr>';
+      });
+      
+      html += '</tbody></table>';
+      tableEl.innerHTML = html;
+      tableEl.style.display = 'block';
+    };
+  }
+  
+  // 初始化
+  if (document.getElementById('voteButtons')) {
+    resetVotes();
+  }
+  if (document.getElementById('rawScores')) {
+    generateScores();
+  }
+})();
+</script>
+</body>
 </html>
 
 

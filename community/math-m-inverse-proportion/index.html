@@ -643,5 +643,279 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('proportion', {"mode": "inverse", "slider": "k-slider", "sliderOut": "k-display", "canvas": "hyp-canvas", "readout": "k-display"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.checkOpt !== 'undefined') return;
+
+  // 题目答案配置
+  const answers = {
+    'pre-q1': 'B',
+    'pre-q2': 'A',
+    'm1-q1': 'C',
+    'post-q1': 'B'
+  };
+
+  // 选择题检查函数
+  window.checkOpt = function(btn, qId, opt) {
+    const fb = document.getElementById('fb-' + qId);
+    if (!fb) return;
+    
+    const correct = answers[qId] === opt;
+    const allBtns = btn.parentElement.querySelectorAll('.option-btn');
+    
+    allBtns.forEach(b => {
+      b.disabled = true;
+      b.style.opacity = '0.6';
+    });
+    
+    btn.style.background = correct ? '#10b981' : '#ef4444';
+    btn.style.color = '#fff';
+    btn.style.opacity = '1';
+    
+    fb.innerHTML = correct 
+      ? '<span style="color:#10b981">✓ 正确！</span>' 
+      : '<span style="color:#ef4444">✗ 不正确，正确答案是 ' + answers[qId] + '</span>';
+    fb.style.marginTop = '8px';
+    
+    // 解锁成就
+    if (qId.startsWith('pre-') && correct) {
+      const ach = document.getElementById('ach-pretest');
+      if (ach) ach.style.opacity = '1';
+    }
+  };
+
+  // 双曲线绘制
+  let currentK = 4;
+  
+  window.updateHyp = function() {
+    const slider = document.getElementById('k-slider');
+    const display = document.getElementById('k-display');
+    const canvas = document.getElementById('hyp-canvas');
+    
+    if (!slider || !display || !canvas) return;
+    
+    currentK = parseFloat(slider.value) / 10;
+    display.textContent = currentK.toFixed(1);
+    
+    drawHyperbola(canvas, currentK);
+    
+    const ach = document.getElementById('ach-hyperbola');
+    if (ach) ach.style.opacity = '1';
+  };
+
+  window.setK = function(val) {
+    const slider = document.getElementById('k-slider');
+    const display = document.getElementById('k-display');
+    const canvas = document.getElementById('hyp-canvas');
+    
+    if (!slider || !display || !canvas) return;
+    
+    slider.value = val;
+    currentK = val / 10;
+    display.textContent = currentK.toFixed(1);
+    
+    drawHyperbola(canvas, currentK);
+  };
+
+  function drawHyperbola(canvas, k) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const scale = 30;
+    
+    // 清空画布
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景渐变
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#f0f9ff');
+    grad.addColorStop(1, '#fff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    
+    // 网格
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    for (let i = -8; i <= 8; i++) {
+      if (i === 0) continue;
+      ctx.beginPath();
+      ctx.moveTo(cx + i * scale, 0);
+      ctx.lineTo(cx + i * scale, h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, cy + i * scale);
+      ctx.lineTo(w, cy + i * scale);
+      ctx.stroke();
+    }
+    
+    // 坐标轴
+    ctx.strokeStyle = '#374151';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, h);
+    ctx.moveTo(0, cy);
+    ctx.lineTo(w, cy);
+    ctx.stroke();
+    
+    // 箭头
+    ctx.fillStyle = '#374151';
+    ctx.beginPath();
+    ctx.moveTo(cx, 5);
+    ctx.lineTo(cx - 5, 15);
+    ctx.lineTo(cx + 5, 15);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(w - 5, cy);
+    ctx.lineTo(w - 15, cy - 5);
+    ctx.lineTo(w - 15, cy + 5);
+    ctx.fill();
+    
+    // 标注
+    ctx.fillStyle = '#374151';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('y', cx + 10, 20);
+    ctx.fillText('x', w - 25, cy - 10);
+    ctx.fillText('O', cx + 5, cy - 5);
+    
+    // 双曲线
+    const color = k > 0 ? '#2563eb' : '#dc2626';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // 第一支
+    ctx.beginPath();
+    let started = false;
+    for (let x = 0.1; x <= 8; x += 0.05) {
+      const y = k / x;
+      if (Math.abs(y) > 8) continue;
+      const px = cx + x * scale;
+      const py = cy - y * scale;
+      if (!started) {
+        ctx.moveTo(px, py);
+        started = true;
+      } else {
+        ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+    
+    // 第二支
+    ctx.beginPath();
+    started = false;
+    for (let x = -8; x <= -0.1; x += 0.05) {
+      const y = k / x;
+      if (Math.abs(y) > 8) continue;
+      const px = cx + x * scale;
+      const py = cy - y * scale;
+      if (!started) {
+        ctx.moveTo(px, py);
+        started = true;
+      } else {
+        ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+    
+    // 标注 k 值和象限
+    ctx.fillStyle = color;
+    ctx.font = 'bold 16px sans-serif';
+    const kText = 'y = ' + k.toFixed(1) + '/x';
+    ctx.fillText(kText, 15, 30);
+    
+    ctx.font = '13px sans-serif';
+    const quadText = k > 0 ? '一、三象限' : '二、四象限';
+    ctx.fillText(quadText, 15, 50);
+    
+    // 特征点标注
+    if (Math.abs(k) >= 1) {
+      const x1 = k > 0 ? 2 : -2;
+      const y1 = k / x1;
+      const px1 = cx + x1 * scale;
+      const py1 = cy - y1 * scale;
+      
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px1, py1, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#374151';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('(' + x1 + ', ' + y1.toFixed(1) + ')', px1 + 8, py1 - 8);
+    }
+  }
+
+  // 综合任务检查
+  window.checkTask = function() {
+    const input = document.getElementById('task-answer');
+    const fb = document.getElementById('fb-task');
+    
+    if (!input || !fb) return;
+    
+    const answer = input.value.toLowerCase();
+    let score = 0;
+    let feedback = '<div style="margin-top:12px;">';
+    
+    // 检查关键点
+    if (answer.includes('360') && (answer.includes('y=360/x') || answer.includes('xy=360'))) {
+      score++;
+      feedback += '<div style="color:#10b981;margin:4px 0;">✓ 函数关系式正确</div>';
+    } else {
+      feedback += '<div style="color:#ef4444;margin:4px 0;">✗ 函数关系式：y = 360/x 或 xy = 360</div>';
+    }
+    
+    if (answer.includes('k=360') || answer.includes('k = 360')) {
+      score++;
+      feedback += '<div style="color:#10b981;margin:4px 0;">✓ k值正确</div>';
+    } else {
+      feedback += '<div style="color:#ef4444;margin:4px 0;">✗ k = 360（总产品数）</div>';
+    }
+    
+    if (answer.includes('12') && answer.includes('30')) {
+      score++;
+      feedback += '<div style="color:#10b981;margin:4px 0;">✓ x=30时计算正确</div>';
+    } else {
+      feedback += '<div style="color:#ef4444;margin:4px 0;">✗ x=30时，y=360/30=12天</div>';
+    }
+    
+    if (answer.includes('45') && answer.includes('8')) {
+      score++;
+      feedback += '<div style="color:#10b981;margin:4px 0;">✓ y=8时计算正确</div>';
+    } else {
+      feedback += '<div style="color:#ef4444;margin:4px 0;">✗ y=8时，x=360/8=45件</div>';
+    }
+    
+    feedback += '<div style="margin-top:8px;font-weight:bold;color:' + 
+      (score >= 3 ? '#10b981' : '#f59e0b') + ';">得分：' + score + '/4</div>';
+    feedback += '</div>';
+    
+    fb.innerHTML = feedback;
+    
+    if (score >= 3) {
+      const ach = document.getElementById('ach-master');
+      if (ach) ach.style.opacity = '1';
+    }
+  };
+
+  // 初始化
+  setTimeout(function() {
+    const canvas = document.getElementById('hyp-canvas');
+    if (canvas) {
+      drawHyperbola(canvas, 4);
+    }
+    
+    const achStart = document.getElementById('ach-start');
+    if (achStart) achStart.style.opacity = '1';
+  }, 100);
+
+})();
+</script>
+</body>
 </html>

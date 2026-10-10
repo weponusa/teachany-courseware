@@ -715,5 +715,334 @@ TeachAnyScenes.mount('circleGeo', {"mode": "arc", "slider": "arcR", "sliderOut":
 TeachAnyScenes.mount('parts', {"bg": [{"t": "line", "x1": 40, "y1": 230, "x2": 420, "y2": 230, "color": "#94a3b8", "w": 2}, {"t": "rect", "x": 20, "y": 180, "w2": 380, "h2": 50, "fill": "rgba(148,163,184,.18)"}, {"t": "poly", "pts": [[40, 180], [230, 60], [420, 180]], "fill": "rgba(96,165,250,.15)", "stroke": "#60a5fa", "w": 2.5}, {"t": "text", "x": 230, "y": 118, "t2": "拱桥（水面宽度 = 弦长 AB）", "size": 13}, {"t": "text", "x": 230, "y": 150, "t2": "半径 r 与弦心距 d 构成直角三角形：r² = d² + (AB/2)²", "size": 12.5}, {"t": "text", "x": 230, "y": 200, "t2": "👉 移动上面的「弦长/弦心距」滑块，验证这条关系", "size": 12.5}], "parts": [{"x": 230, "y": 60, "r": 70, "name": "顶点（半径方向）", "info": "拱顶到水面的高度就是弦心距 d；半弦长是 AB/2。已知 r 和 AB 即可求拱高。", "lx": 230, "ly": 30}], "tip": "👆 点击拱顶，看垂径定理怎么用", "canvas": "bridgeCanvas", "readout": "bridgeSol"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.switchModule !== 'undefined') return;
+
+  // ========== 模块切换 ==========
+  window.switchModule = function(moduleId) {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.module-content');
+    
+    tabs.forEach(tab => tab.classList.remove('active'));
+    contents.forEach(content => content.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    const targetContent = document.getElementById('mc-' + moduleId);
+    if (targetContent) targetContent.classList.add('active');
+    
+    // 重绘对应画布
+    if (moduleId === 'chord') drawChordCanvas();
+    else if (moduleId === 'tangent') drawTangentCanvas();
+    else if (moduleId === 'angle') drawAngleCanvas();
+  };
+
+  // ========== 模块内题目检查 ==========
+  window.modCheck = function(qId, choice, correct) {
+    const feedback = document.getElementById(qId + '-fb');
+    const errorDiv = document.getElementById(qId + '-err');
+    const options = document.querySelectorAll(`#${qId} .option`);
+    
+    options.forEach(opt => {
+      opt.disabled = true;
+      opt.style.opacity = '0.6';
+    });
+    
+    if (choice === correct) {
+      feedback.innerHTML = '✅ 正确！';
+      feedback.style.color = '#2e7d32';
+      feedback.style.display = 'block';
+      if (errorDiv) errorDiv.style.display = 'none';
+      updateProgress(true);
+    } else {
+      feedback.innerHTML = '❌ 再想想';
+      feedback.style.color = '#c62828';
+      feedback.style.display = 'block';
+      if (errorDiv) errorDiv.style.display = 'block';
+      updateProgress(false);
+    }
+  };
+
+  // ========== 拱桥解答步骤 ==========
+  window.showBridgeSolution = function(step) {
+    const solDiv = document.getElementById('bridgeSol');
+    const canvas = document.getElementById('bridgeCanvas');
+    const ctx = canvas ? canvas.getContext('2d') : null;
+    
+    solDiv.style.display = 'block';
+    
+    if (step === 1) {
+      solDiv.innerHTML = `
+        <h4>① 求半径 R</h4>
+        <p><strong>已知：</strong>跨度 AB = 24m，矢高 h = 4m</p>
+        <p><strong>设：</strong>圆心为 O，弦中点为 M，则 OM ⊥ AB</p>
+        <p><strong>关系：</strong>AM = 12m，OM = R - 4</p>
+        <p><strong>勾股定理：</strong>R² = AM² + OM² = 12² + (R-4)²</p>
+        <p><strong>展开：</strong>R² = 144 + R² - 8R + 16</p>
+        <p><strong>解得：</strong>8R = 160 → <span style="color:#c62828;font-weight:bold">R = 20m</span></p>
+      `;
+      if (ctx) drawBridgeStep1(ctx);
+    } else if (step === 2) {
+      solDiv.innerHTML = `
+        <h4>② 求圆心角</h4>
+        <p><strong>已知：</strong>R = 20m，AM = 12m</p>
+        <p><strong>设：</strong>圆心角 ∠AOB = 2α</p>
+        <p><strong>关系：</strong>sin α = AM / R = 12 / 20 = 0.6</p>
+        <p><strong>计算：</strong>α = arcsin(0.6) ≈ 36.87°</p>
+        <p><strong>圆心角：</strong>∠AOB = 2α ≈ <span style="color:#c62828;font-weight:bold">73.7°</span></p>
+      `;
+      if (ctx) drawBridgeStep2(ctx);
+    } else if (step === 3) {
+      solDiv.innerHTML = `
+        <h4>③ 求弧长</h4>
+        <p><strong>已知：</strong>R = 20m，圆心角 ≈ 73.7°</p>
+        <p><strong>弧长公式：</strong>L = (α/180) × πR</p>
+        <p><strong>代入：</strong>L = (73.7/180) × π × 20</p>
+        <p><strong>计算：</strong>L ≈ 0.4094 × 3.1416 × 20</p>
+        <p><strong>弧长：</strong>L ≈ <span style="color:#c62828;font-weight:bold">25.72m</span></p>
+      `;
+      if (ctx) drawBridgeStep3(ctx);
+    }
+  };
+
+  // ========== 后测检查 ==========
+  window.postCheck = function(qNum, choice) {
+    const answers = {1: 'B', 2: 'A', 3: 'C'};
+    const feedback = document.getElementById('post' + qNum + '-fb');
+    const options = document.querySelectorAll(`#post${qNum} .option`);
+    
+    options.forEach(opt => {
+      opt.disabled = true;
+      opt.style.opacity = '0.6';
+    });
+    
+    if (choice === answers[qNum]) {
+      feedback.innerHTML = '✅ 正确！';
+      feedback.style.color = '#2e7d32';
+      updateProgress(true);
+    } else {
+      feedback.innerHTML = '❌ 错误，正确答案是 ' + answers[qNum];
+      feedback.style.color = '#c62828';
+      updateProgress(false);
+    }
+    feedback.style.display = 'block';
+  };
+
+  // ========== 进度更新 ==========
+  function updateProgress(isCorrect) {
+    const correctNum = document.getElementById('correctNum');
+    const masteryNum = document.getElementById('masteryNum');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    
+    if (isCorrect && correctNum) {
+      const current = parseInt(correctNum.textContent) || 0;
+      correctNum.textContent = current + 1;
+    }
+    
+    if (masteryNum && progressFill) {
+      const mastery = Math.min(100, (parseInt(correctNum.textContent) || 0) * 10);
+      masteryNum.textContent = mastery + '%';
+      progressFill.style.width = mastery + '%';
+      if (progressText) progressText.textContent = mastery + '%';
+    }
+  }
+
+  // ========== 绘图辅助函数 ==========
+  function drawChordCanvas() {
+    const canvas = document.getElementById('chordCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 背景
+    ctx.fillStyle = '#e3f2fd';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const cx = 230, cy = 160, r = 100;
+    
+    // 圆
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // 弦
+    const chordLen = 120;
+    ctx.strokeStyle = '#2f7d32';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - chordLen/2, cy + 40);
+    ctx.lineTo(cx + chordLen/2, cy + 40);
+    ctx.stroke();
+    
+    // 垂径
+    ctx.strokeStyle = '#c62828';
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx, cy + 40);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // 标注
+    ctx.fillStyle = '#000';
+    ctx.font = '13px Arial';
+    ctx.fillText('O', cx + 8, cy - 8);
+    ctx.fillText('A', cx - chordLen/2 - 15, cy + 45);
+    ctx.fillText('B', cx + chordLen/2 + 8, cy + 45);
+    ctx.fillText('M', cx + 8, cy + 45);
+    ctx.fillText('弦AB', cx + 30, cy + 30);
+    ctx.fillText('圆心距d', cx + 10, cy + 20);
+  }
+
+  function drawTangentCanvas() {
+    const canvas = document.getElementById('tangentCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dist = parseInt(document.getElementById('ptDist')?.value || 150);
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fff3e0';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const cx = 230, cy = 160, r = 80;
+    
+    // 圆
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // 外点P
+    const px = cx + dist, py = cy;
+    ctx.fillStyle = '#c62828';
+    ctx.beginPath();
+    ctx.arc(px, py, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 切线长
+    const tangentLen = Math.sqrt(dist * dist - r * r);
+    const angle = Math.asin(r / dist);
+    const tx1 = cx + r * Math.cos(Math.PI/2 - angle);
+    const ty1 = cy - r * Math.sin(Math.PI/2 - angle);
+    const tx2 = cx + r * Math.cos(Math.PI/2 + angle);
+    const ty2 = cy + r * Math.sin(Math.PI/2 + angle);
+    
+    ctx.strokeStyle = '#2f7d32';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(tx1, ty1);
+    ctx.moveTo(px, py);
+    ctx.lineTo(tx2, ty2);
+    ctx.stroke();
+    
+    // 标注
+    ctx.fillStyle = '#000';
+    ctx.font = '13px Arial';
+    ctx.fillText('P', px + 8, py - 8);
+    ctx.fillText('O', cx - 15, cy);
+    ctx.fillText('切线长=' + tangentLen.toFixed(1), px - 60, py - 20);
+    
+    const info = document.getElementById('tangentInfo');
+    if (info) info.innerHTML = `d=${dist}, r=${r}, 切线长=√(${dist}²-${r}²)=${tangentLen.toFixed(2)}`;
+  }
+
+  function drawAngleCanvas() {
+    const canvas = document.getElementById('angleCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = '#f3e5f5';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const cx = 230, cy = 160, r = 90;
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // 圆心角
+    ctx.strokeStyle = '#c62828';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + r, cy);
+    ctx.lineTo(cx + r * Math.cos(Math.PI/3), cy - r * Math.sin(Math.PI/3));
+    ctx.closePath();
+    ctx.stroke();
+    
+    ctx.fillStyle = '#000';
+    ctx.font = '13px Arial';
+    ctx.fillText('圆心角60°', cx + 10, cy - 30);
+  }
+
+  function drawBridgeStep1(ctx) {
+    ctx.clearRect(0, 0, 460, 280);
+    ctx.fillStyle = '#e8f5e9';
+    ctx.fillRect(0, 0, 460, 280);
+    
+    const cx = 230, cy = 200, r = 100;
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI * 0.7, Math.PI * 0.3, true);
+    ctx.stroke();
+    
+    ctx.strokeStyle = '#2f7d32';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - 60, cy - 80);
+    ctx.lineTo(cx + 60, cy - 80);
+    ctx.stroke();
+    
+    ctx.fillStyle = '#000';
+    ctx.font = '12px Arial';
+    ctx.fillText('AB=24m', cx - 20, cy - 90);
+    ctx.fillText('h=4m', cx + 5, cy - 60);
+    ctx.fillText('R=20m', cx + 15, cy - 20);
+  }
+
+  function drawBridgeStep2(ctx) {
+    drawBridgeStep1(ctx);
+    ctx.strokeStyle = '#c62828';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(230, 200);
+    ctx.lineTo(170, 120);
+    ctx.moveTo(230, 200);
+    ctx.lineTo(290, 120);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillText('∠AOB≈73.7°', 240, 180);
+  }
+
+  function drawBridgeStep3(ctx) {
+    drawBridgeStep2(ctx);
+    ctx.strokeStyle = '#ff6f00';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(230, 200, 100, Math.PI * 0.7, Math.PI * 0.3, true);
+    ctx.stroke();
+    ctx.fillText('弧长≈25.72m', 240, 100);
+  }
+
+  // 初始化
+  setTimeout(() => {
+    drawChordCanvas();
+    drawTangentCanvas();
+    const ptDist = document.getElementById('ptDist');
+    if (ptDist) ptDist.addEventListener('input', drawTangentCanvas);
+  }, 100);
+})();
+</script>
+</body>
 </html>

@@ -947,5 +947,83 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 
 
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.calcTimezone !== 'undefined') return;
+
+  window.calcTimezone = function() {
+    const fromSelect = document.getElementById('tz-from');
+    const toSelect = document.getElementById('tz-to');
+    const hourInput = document.getElementById('tz-hour');
+    const resultDiv = document.getElementById('tz-result');
+
+    if (!fromSelect || !toSelect || !hourInput || !resultDiv) return;
+
+    const fromTz = parseFloat(fromSelect.value);
+    const toTz = parseFloat(toSelect.value);
+    const inputHour = parseInt(hourInput.value);
+
+    if (isNaN(inputHour) || inputHour < 0 || inputHour > 23) {
+      resultDiv.innerHTML = '<span style="color:#d32f2f;">⚠️ 请输入 0-23 之间的小时数</span>';
+      return;
+    }
+
+    // 计算时差
+    const diff = toTz - fromTz;
+    let resultHour = inputHour + diff;
+    let dayOffset = 0;
+
+    // 处理跨天
+    if (resultHour >= 24) {
+      dayOffset = Math.floor(resultHour / 24);
+      resultHour = resultHour % 24;
+    } else if (resultHour < 0) {
+      dayOffset = Math.ceil(resultHour / 24) - 1;
+      resultHour = ((resultHour % 24) + 24) % 24;
+    }
+
+    // 获取城市名称
+    const fromCity = fromSelect.options[fromSelect.selectedIndex].text.split(' ')[0];
+    const toCity = toSelect.options[toSelect.selectedIndex].text.split(' ')[0];
+
+    // 构建结果显示
+    let dayText = '';
+    if (dayOffset > 0) {
+      dayText = ` <span style="color:#1976d2;font-weight:700;">(次日)</span>`;
+    } else if (dayOffset < 0) {
+      dayText = ` <span style="color:#d32f2f;font-weight:700;">(前一日)</span>`;
+    }
+
+    const resultHourStr = resultHour.toString().padStart(2, '0');
+    const inputHourStr = inputHour.toString().padStart(2, '0');
+
+    resultDiv.innerHTML = `
+      <div style="padding:1rem;background:linear-gradient(135deg, #e3f2fd 0%, #fff3e0 100%);border-radius:8px;border:2px solid var(--primary);">
+        <div style="font-size:1rem;margin-bottom:0.5rem;color:var(--text);">
+          🕐 <strong>${fromCity}</strong> 的 <strong style="color:#1976d2;">${inputHourStr}:00</strong>
+        </div>
+        <div style="font-size:1.1rem;font-weight:700;color:#2e7d32;">
+          ⏰ <strong>${toCity}</strong> 是 <strong style="color:#d84315;font-size:1.3rem;">${resultHourStr}:00</strong>${dayText}
+        </div>
+        <div style="margin-top:0.8rem;font-size:0.85rem;color:var(--muted);padding-top:0.5rem;border-top:1px dashed var(--border);">
+          📊 时差：${diff > 0 ? '+' : ''}${diff} 小时 ${diff > 0 ? '(目标城市更晚)' : diff < 0 ? '(目标城市更早)' : '(同一时区)'}
+        </div>
+      </div>
+    `;
+
+    // 添加动画效果
+    resultDiv.style.opacity = '0';
+    resultDiv.style.transform = 'translateY(-10px)';
+    setTimeout(() => {
+      resultDiv.style.transition = 'all 0.4s ease';
+      resultDiv.style.opacity = '1';
+      resultDiv.style.transform = 'translateY(0)';
+    }, 10);
+  };
+
+})();
+</script>
+</body>
 </html>

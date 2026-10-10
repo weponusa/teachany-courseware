@@ -839,5 +839,279 @@ function chneDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><span class="ta-phase" data-tone="aux">知识图谱</span><h2 class="section-title">🗺️ 知识图谱：词汇拓展</h2><div data-teachany-kg="chn-e-vocabulary-expansion"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.goSection !== 'undefined') return;
+
+  // ========== 导航函数 ==========
+  window.goSection = function(sectionId) {
+    document.querySelectorAll('section[id]').forEach(s => s.style.display = 'none');
+    const target = document.getElementById(sectionId);
+    if (target) {
+      target.style.display = 'block';
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // ========== 词语详情 ==========
+  const wordData = {
+    '开心': { pinyin: 'kāi xīn', meaning: '感到高兴、快乐', example: '今天我很开心。', syn: ['快乐', '高兴'], ant: ['悲伤'] },
+    '快乐': { pinyin: 'kuài lè', meaning: '心情愉快，没有烦恼', example: '我们快乐地玩耍。', syn: ['开心', '高兴'], ant: ['悲伤'] },
+    '高兴': { pinyin: 'gāo xìng', meaning: '心情好，感到喜悦', example: '他很高兴见到你。', syn: ['开心', '快乐'], ant: ['悲伤'] },
+    '悲伤': { pinyin: 'bēi shāng', meaning: '感到伤心、难过', example: '她很悲伤。', syn: ['伤心'], ant: ['开心', '快乐', '高兴'] },
+    '美丽': { pinyin: 'měi lì', meaning: '好看，令人喜爱', example: '花儿真美丽。', syn: ['漂亮'], ant: ['丑陋'] },
+    '丑陋': { pinyin: 'chǒu lòu', meaning: '不好看，令人不舒服', example: '这个东西很丑陋。', syn: [], ant: ['美丽', '漂亮'] },
+    '聪明': { pinyin: 'cōng míng', meaning: '智力好，反应快', example: '她是个聪明的孩子。', syn: ['机灵'], ant: ['愚笨'] }
+  };
+
+  window.showWordDetail = function(word) {
+    const data = wordData[word] || { pinyin: '', meaning: '', example: '', syn: [], ant: [] };
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `<div style="background:#fff;border-radius:16px;padding:2rem;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+      <h2 style="color:var(--primary);margin-bottom:1rem;">${word}</h2>
+      <p style="color:#666;margin-bottom:.5rem;">拼音：${data.pinyin}</p>
+      <p style="margin-bottom:.8rem;">释义：${data.meaning}</p>
+      <p style="color:#555;font-style:italic;margin-bottom:1rem;">例句：${data.example}</p>
+      ${data.syn.length ? `<p style="color:var(--secondary);">近义词：${data.syn.join('、')}</p>` : ''}
+      ${data.ant.length ? `<p style="color:#f4a261;">反义词：${data.ant.join('、')}</p>` : ''}
+      <button onclick="this.parentElement.parentElement.remove()" style="margin-top:1.5rem;padding:.6rem 1.5rem;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;">关闭</button>
+    </div>`;
+    modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    document.body.appendChild(modal);
+  };
+
+  // ========== Boss 关 ==========
+  let bossTimer, bossTime = 60, bossOk = 0, bossNo = 0, bossRunning = false;
+  const bossQuestions = [
+    { words: ['开心', '快乐'], type: 'syn', label: '这两个词是什么关系？' },
+    { words: ['美丽', '丑陋'], type: 'ant', label: '这两个词是什么关系？' },
+    { words: ['高兴', '开心'], type: 'syn', label: '这两个词是什么关系？' },
+    { words: ['聪明', '愚笨'], type: 'ant', label: '这两个词是什么关系？' }
+  ];
+  let bossIdx = 0;
+
+  window.startBoss = function() {
+    if (bossRunning) return;
+    bossRunning = true;
+    bossTime = 60;
+    bossOk = 0;
+    bossNo = 0;
+    bossIdx = 0;
+    document.getElementById('boss-ok').textContent = '0';
+    document.getElementById('boss-no').textContent = '0';
+    showBossQuestion();
+    bossTimer = setInterval(() => {
+      bossTime--;
+      document.getElementById('boss-t-d').textContent = bossTime + '秒';
+      document.getElementById('boss-tf').style.width = (bossTime / 60 * 100) + '%';
+      if (bossTime <= 0) {
+        clearInterval(bossTimer);
+        bossRunning = false;
+        alert('时间到！答对：' + bossOk + '，答错：' + bossNo);
+      }
+    }, 1000);
+  };
+
+  function showBossQuestion() {
+    if (bossIdx >= bossQuestions.length) bossIdx = 0;
+    const q = bossQuestions[bossIdx];
+    document.getElementById('boss-q-label').textContent = q.label;
+    document.getElementById('boss-words-display').textContent = q.words.join(' vs ');
+  }
+
+  window.answerBoss = function(ans) {
+    if (!bossRunning) return;
+    const q = bossQuestions[bossIdx];
+    if (ans === q.type) {
+      bossOk++;
+      document.getElementById('boss-ok').textContent = bossOk;
+    } else {
+      bossNo++;
+      document.getElementById('boss-no').textContent = bossNo;
+    }
+    bossIdx++;
+    if (bossIdx < bossQuestions.length) showBossQuestion();
+    else bossIdx = 0;
+  };
+
+  // ========== 拓展内容 ==========
+  window.showExt = function(type) {
+    const content = {
+      more_chains: '<h3>🔗 更多接龙</h3><p>试试：快乐→乐趣→趣味→味道→道理→理想</p>',
+      idioms: '<h3>📜 成语入门</h3><p>画龙点睛、守株待兔、亡羊补牢</p>'
+    };
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `<div style="background:#fff;border-radius:16px;padding:2rem;max-width:500px;width:90%;">${content[type] || ''}<button onclick="this.parentElement.parentElement.remove()" style="margin-top:1rem;padding:.6rem 1.5rem;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;">关闭</button></div>`;
+    modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    document.body.appendChild(modal);
+  };
+
+  // ========== 第一关：词语接龙 ==========
+  let chainWords = ['快乐'];
+  let chainBest = 0;
+  const wordBank = ['乐趣', '趣味', '味道', '道理', '理想', '想法', '法律', '律师'];
+
+  window.submitChain = function() {
+    const input = document.getElementById('chain-input');
+    const word = input.value.trim();
+    if (!word) return;
+    const lastChar = chainWords[chainWords.length - 1].slice(-1);
+    if (word[0] === lastChar && word.length >= 2) {
+      chainWords.push(word);
+      updateChainDisplay();
+      input.value = '';
+    } else {
+      alert('必须以"' + lastChar + '"开头！');
+    }
+  };
+
+  window.useHint = function() {
+    const lastChar = chainWords[chainWords.length - 1].slice(-1);
+    const hint = wordBank.find(w => w[0] === lastChar) || '没有提示了';
+    document.getElementById('chain-hint').textContent = '提示：' + hint;
+  };
+
+  window.resetChain = function() {
+    chainWords = ['快乐'];
+    updateChainDisplay();
+    document.getElementById('chain-input').value = '';
+  };
+
+  window.completeLevel1 = function() {
+    if (chainWords.length > chainBest) chainBest = chainWords.length;
+    alert('完成第一关！接龙长度：' + chainWords.length);
+    goSection('level2');
+  };
+
+  function updateChainDisplay() {
+    const display = document.getElementById('chain-display');
+    display.innerHTML = chainWords.map(w => `<div class="chain-link">${w}</div>`).join('');
+    document.getElementById('chain-len').textContent = chainWords.length;
+    document.getElementById('chain-best').textContent = chainBest;
+    document.getElementById('chain-last-char').textContent = chainWords[chainWords.length - 1].slice(-1);
+    const bank = document.getElementById('word-bank');
+    if (bank) bank.innerHTML = wordBank.map(w => `<span class="word-bank-item" onclick="document.getElementById('chain-input').value='${w}'">${w}</span>`).join('');
+  }
+
+  // ========== 第二关：近反义词 ==========
+  let saWords = ['开心', '快乐', '悲伤', '高兴', '美丽', '丑陋'];
+  let saTarget = '开心';
+  let saScore = 0, saTotal = 0;
+
+  window.resetSA = function() {
+    document.getElementById('dropped-syn').innerHTML = '';
+    document.getElementById('dropped-ant').innerHTML = '';
+    const area = document.getElementById('drag-words-area');
+    if (area) area.innerHTML = saWords.map(w => `<div class="drag-word" draggable="true" ondragstart="event.dataTransfer.setData('text',this.textContent)">${w}</div>`).join('');
+  };
+
+  window.nextSAWord = function() {
+    saTarget = saWords[Math.floor(Math.random() * saWords.length)];
+    document.getElementById('sa-target-word').textContent = saTarget;
+    resetSA();
+  };
+
+  window.completeLevel2 = function() {
+    alert('完成第二关！正确：' + saScore);
+    goSection('level3');
+  };
+
+  window.dropWord = function(ev, zone) {
+    ev.preventDefault();
+    ev.currentTarget.classList.remove('drag-over');
+    const word = ev.dataTransfer.getData('text');
+    const data = wordData[saTarget];
+    let correct = false;
+    if (zone === 'syn' && data.syn.includes(word)) correct = true;
+    if (zone === 'ant' && data.ant.includes(word)) correct = true;
+    const dropped = document.getElementById('dropped-' + zone);
+    const span = document.createElement('span');
+    span.textContent = word;
+    span.style.cssText = 'display:inline-block;padding:.3rem .6rem;margin:.2rem;border-radius:6px;background:' + (correct ? '#4caf50' : '#f44336') + ';color:#fff;';
+    dropped.appendChild(span);
+    if (correct) {
+      saScore++;
+      saTotal++;
+    } else {
+      saTotal++;
+    }
+    document.getElementById('sa-score').textContent = saScore;
+    document.getElementById('sa-total').textContent = saTotal;
+  };
+
+  // ========== 第三关：词语地图 ==========
+  window.loadWordMap = function() {
+    const canvas = document.getElementById('word-map-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width = 600;
+    canvas.height = 400;
+    
+    // 背景渐变
+    const grad = ctx.createLinearGradient(0, 0, 0, 400);
+    grad.addColorStop(0, '#e3f2fd');
+    grad.addColorStop(1, '#fff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 600, 400);
+
+    // 绘制词语节点和连线
+    const nodes = [
+      { word: '开心', x: 300, y: 200, color: '#4caf50' },
+      { word: '快乐', x: 200, y: 150, color: '#2196f3' },
+      { word: '高兴', x: 400, y: 150, color: '#2196f3' },
+      { word: '悲伤', x: 300, y: 300, color: '#f44336' },
+      { word: '美丽', x: 150, y: 250, color: '#9c27b0' },
+      { word: '丑陋', x: 450, y: 250, color: '#ff9800' }
+    ];
+
+    // 画连线
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 2;
+    [[0,1],[0,2],[0,3],[0,4],[0,5]].forEach(([a,b]) => {
+      ctx.beginPath();
+      ctx.moveTo(nodes[a].x, nodes[a].y);
+      ctx.lineTo(nodes[b].x, nodes[b].y);
+      ctx.stroke();
+    });
+
+    // 画节点
+    nodes.forEach(n => {
+      ctx.fillStyle = n.color;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 30, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n.word, n.x, n.y);
+    });
+
+    // 标注
+    ctx.fillStyle = '#333';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('中心词', 300, 180);
+    ctx.fillText('近义词', 200, 130);
+    ctx.fillText('反义词', 300, 320);
+  };
+
+  window.completeLevel3 = function() {
+    alert('完成第三关！词语地图已构建！');
+    goSection('scorecard');
+  };
+
+  // 初始化
+  setTimeout(() => {
+    if (document.getElementById('chain-display')) updateChainDisplay();
+    if (document.getElementById('sa-target-word')) nextSAWord();
+    if (document.getElementById('word-map-canvas')) loadWordMap();
+  }, 500);
+})();
+</script>
 </body>
 </html>

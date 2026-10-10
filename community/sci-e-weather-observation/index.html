@@ -1168,5 +1168,212 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script>
 TeachAnyScenes.mount('calendar', {"kinds": [{"n": "晴", "e": "☀️"}, {"n": "多云", "e": "⛅"}, {"n": "阴", "e": "☁️"}, {"n": "雨", "e": "🌧️"}], "canvas": "weather-calendar-canvas", "readout": "weather-stats"});
 </script>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.checkDrag !== 'undefined') return;
+
+  // 拖拽答案配置
+  const dragAnswers = {
+    'item-sunglasses': 'sunny',
+    'item-kite': 'sunny',
+    'item-umbrella': 'rainy',
+    'item-raincoat': 'rainy',
+    'item-coat': 'cold',
+    'item-gloves': 'cold',
+    'item-scarf': 'cold',
+    'item-hat': 'windy'
+  };
+
+  // 拖拽项配置
+  const dragItems = [
+    { id: 'item-sunglasses', text: '🕶️ 太阳镜', zone: 'sunny' },
+    { id: 'item-kite', text: '🪁 风筝', zone: 'sunny' },
+    { id: 'item-umbrella', text: '☂️ 雨伞', zone: 'rainy' },
+    { id: 'item-raincoat', text: '🧥 雨衣', zone: 'rainy' },
+    { id: 'item-coat', text: '🧥 厚外套', zone: 'cold' },
+    { id: 'item-gloves', text: '🧤 手套', zone: 'cold' },
+    { id: 'item-scarf', text: '🧣 围巾', zone: 'cold' },
+    { id: 'item-hat', text: '🎩 帽子', zone: 'windy' }
+  ];
+
+  // 初始化拖拽项
+  function initDragItems() {
+    const pool = document.getElementById('drag-pool');
+    if (!pool) return;
+    
+    pool.innerHTML = '';
+    dragItems.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'drag-item';
+      div.id = item.id;
+      div.draggable = true;
+      div.textContent = item.text;
+      div.ondragstart = function(e) {
+        e.dataTransfer.setData('text/plain', item.id);
+        this.style.opacity = '0.4';
+      };
+      div.ondragend = function() {
+        this.style.opacity = '1';
+      };
+      pool.appendChild(div);
+    });
+  }
+
+  // 检查拖拽答案
+  window.checkDrag = function() {
+    const resultDiv = document.getElementById('drag-result');
+    if (!resultDiv) return;
+
+    let correct = 0;
+    let total = 0;
+    const feedback = [];
+
+    // 检查每个放置区
+    ['sunny', 'rainy', 'cold', 'windy'].forEach(zone => {
+      const placed = document.getElementById('placed-' + zone);
+      if (!placed) return;
+
+      const items = placed.querySelectorAll('.drag-item');
+      items.forEach(item => {
+        total++;
+        const itemId = item.id;
+        const correctZone = dragAnswers[itemId];
+        
+        if (correctZone === zone) {
+          correct++;
+          item.style.background = 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)';
+          item.style.borderColor = '#28a745';
+          item.style.color = '#155724';
+        } else {
+          item.style.background = 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)';
+          item.style.borderColor = '#dc3545';
+          item.style.color = '#721c24';
+        }
+      });
+    });
+
+    // 显示结果
+    const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+    let resultHTML = `<div style="margin-top:20px;padding:20px;border-radius:16px;`;
+    
+    if (percentage === 100) {
+      resultHTML += `background:linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);border:2px solid #28a745;">`;
+      resultHTML += `<div style="font-size:1.2rem;font-weight:700;color:#155724;margin-bottom:8px;">🎉 太棒了！全部正确！</div>`;
+      resultHTML += `<div style="color:#155724;">你已经掌握了不同天气需要的物品！</div>`;
+    } else if (percentage >= 60) {
+      resultHTML += `background:linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);border:2px solid #ffc107;">`;
+      resultHTML += `<div style="font-size:1.2rem;font-weight:700;color:#856404;margin-bottom:8px;">👍 不错哦！</div>`;
+      resultHTML += `<div style="color:#856404;">答对了 ${correct}/${total} 个，再想想其他的吧！</div>`;
+    } else {
+      resultHTML += `background:linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);border:2px solid #dc3545;">`;
+      resultHTML += `<div style="font-size:1.2rem;font-weight:700;color:#721c24;margin-bottom:8px;">💪 加油！</div>`;
+      resultHTML += `<div style="color:#721c24;">答对了 ${correct}/${total} 个，想想不同天气的特点！</div>`;
+    }
+    
+    resultHTML += `</div>`;
+    resultDiv.innerHTML = resultHTML;
+  };
+
+  // 重置拖拽
+  window.resetDrag = function() {
+    // 清空所有放置区
+    ['sunny', 'rainy', 'cold', 'windy'].forEach(zone => {
+      const placed = document.getElementById('placed-' + zone);
+      if (placed) placed.innerHTML = '';
+    });
+
+    // 清空结果
+    const resultDiv = document.getElementById('drag-result');
+    if (resultDiv) resultDiv.innerHTML = '';
+
+    // 重新初始化拖拽项
+    initDragItems();
+  };
+
+  // 显示测验分数
+  window.showQuizScore = function() {
+    const quizContainer = document.querySelector('.card:last-of-type');
+    if (!quizContainer) return;
+
+    let resultDiv = quizContainer.querySelector('#quiz-result');
+    if (!resultDiv) {
+      resultDiv = document.createElement('div');
+      resultDiv.id = 'quiz-result';
+      quizContainer.appendChild(resultDiv);
+    }
+
+    const questions = quizContainer.querySelectorAll('input[type="radio"]:checked');
+    if (questions.length === 0) {
+      resultDiv.innerHTML = `<div style="margin-top:20px;padding:16px;background:linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);border:2px solid #ffc107;border-radius:12px;color:#856404;text-align:center;">
+        ⚠️ 请先完成所有题目
+      </div>`;
+      return;
+    }
+
+    let correct = 0;
+    let total = 0;
+
+    // 答案配置
+    const answers = {
+      'q1': 'sunny',
+      'q2': 'rainy', 
+      'q3': 'cold',
+      'q4': 'windy'
+    };
+
+    questions.forEach(input => {
+      const name = input.name;
+      const value = input.value;
+      total++;
+      
+      if (answers[name] === value) {
+        correct++;
+        const label = input.parentElement;
+        label.style.background = 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)';
+        label.style.borderColor = '#28a745';
+        label.style.color = '#155724';
+      } else {
+        const label = input.parentElement;
+        label.style.background = 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)';
+        label.style.borderColor = '#dc3545';
+        label.style.color = '#721c24';
+      }
+    });
+
+    const percentage = Math.round((correct / total) * 100);
+    let resultHTML = `<div style="margin-top:20px;padding:20px;border-radius:16px;`;
+    
+    if (percentage === 100) {
+      resultHTML += `background:linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);border:2px solid #28a745;">`;
+      resultHTML += `<div style="font-size:1.3rem;font-weight:700;color:#155724;margin-bottom:8px;">🌟 完美！全部正确！</div>`;
+      resultHTML += `<div style="color:#155724;font-size:1.1rem;">得分：${correct}/${total} (${percentage}%)</div>`;
+    } else if (percentage >= 75) {
+      resultHTML += `background:linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);border:2px solid #17a2b8;">`;
+      resultHTML += `<div style="font-size:1.3rem;font-weight:700;color:#0c5460;margin-bottom:8px;">👏 很好！</div>`;
+      resultHTML += `<div style="color:#0c5460;font-size:1.1rem;">得分：${correct}/${total} (${percentage}%)</div>`;
+    } else if (percentage >= 50) {
+      resultHTML += `background:linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);border:2px solid #ffc107;">`;
+      resultHTML += `<div style="font-size:1.3rem;font-weight:700;color:#856404;margin-bottom:8px;">👍 还不错！</div>`;
+      resultHTML += `<div style="color:#856404;font-size:1.1rem;">得分：${correct}/${total} (${percentage}%)</div>`;
+    } else {
+      resultHTML += `background:linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);border:2px solid #dc3545;">`;
+      resultHTML += `<div style="font-size:1.3rem;font-weight:700;color:#721c24;margin-bottom:8px;">💪 继续努力！</div>`;
+      resultHTML += `<div style="color:#721c24;font-size:1.1rem;">得分：${correct}/${total} (${percentage}%)</div>`;
+    }
+    
+    resultHTML += `</div>`;
+    resultDiv.innerHTML = resultHTML;
+  };
+
+  // 页面加载时初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDragItems);
+  } else {
+    initDragItems();
+  }
+})();
+</script>
 </body>
 </html>

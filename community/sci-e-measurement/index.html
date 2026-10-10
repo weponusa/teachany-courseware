@@ -927,5 +927,295 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('ruler', {"canvas": "rulerCanvas", "readout": "rulerStatus"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.checkTable !== 'undefined') return;
+
+  // ========== 数据记录表检查 ==========
+  window.checkTable = function() {
+    const answers = [
+      { id: 'input1', keywords: ['17', '厘米', 'cm'], value: 17, unit: 'cm' },
+      { id: 'input2', keywords: ['1.2', '厘米', 'cm'], value: 1.2, unit: 'cm' },
+      { id: 'input3', keywords: ['3.5', '千克', 'kg'], value: 3.5, unit: 'kg' },
+      { id: 'input4', keywords: ['22', '摄氏度', '°C', 'C'], value: 22, unit: '°C' },
+      { id: 'input5', keywords: ['250', '毫升', 'mL', 'ml'], value: 250, unit: 'mL' }
+    ];
+    
+    let correct = 0;
+    let feedback = '<div style="margin-top:12px;">';
+    
+    answers.forEach((ans, idx) => {
+      const input = document.getElementById(ans.id);
+      if (!input) return;
+      
+      const val = input.value.trim();
+      const hasValue = val.includes(ans.value.toString());
+      const hasUnit = ans.keywords.some(kw => val.includes(kw));
+      
+      if (hasValue && hasUnit) {
+        correct++;
+        input.style.borderColor = '#4caf50';
+        input.style.backgroundColor = '#e8f5e9';
+      } else {
+        input.style.borderColor = '#f44336';
+        input.style.backgroundColor = '#ffebee';
+      }
+    });
+    
+    const fbDiv = document.getElementById('tableFeedback');
+    if (fbDiv) {
+      if (correct === 5) {
+        fbDiv.innerHTML = '<div style="color:#2e7d32;font-weight:600;padding:12px;background:#e8f5e9;border-radius:8px;">🎉 全部正确！你已掌握数据记录的规范格式！</div>';
+        unlockBadge('badge-table');
+      } else {
+        fbDiv.innerHTML = `<div style="color:#f57c00;padding:12px;background:#fff3e0;border-radius:8px;">📊 完成 ${correct}/5 项，请检查数值和单位是否都填写正确</div>`;
+      }
+    }
+  };
+
+  // ========== 虚拟直尺互动 ==========
+  const rulerState = {
+    canvas: null,
+    ctx: null,
+    objects: [
+      { name: '铅笔', length: 70, color: '#fdd835', icon: '✏️' },
+      { name: '手机', length: 140, color: '#42a5f5', icon: '📱' },
+      { name: '课本', length: 260, color: '#66bb6a', icon: '📚' }
+    ],
+    currentObj: 0,
+    objX: 50,
+    objY: 80,
+    dragging: false,
+    offsetX: 0
+  };
+
+  window.setObject = function(index) {
+    if (index < 0 || index >= rulerState.objects.length) return;
+    
+    // 更新按钮状态
+    document.querySelectorAll('.ctrl-btn').forEach((btn, i) => {
+      if (i === index) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+    
+    rulerState.currentObj = index;
+    rulerState.objX = 50;
+    rulerState.dragging = false;
+    initRulerCanvas();
+  };
+
+  window.resetRuler = function() {
+    rulerState.objX = 50;
+    rulerState.dragging = false;
+    const statusDiv = document.getElementById('rulerStatus');
+    if (statusDiv) {
+      statusDiv.textContent = '👆 拖动物体到直尺上，对准0刻度读取长度';
+      statusDiv.style.color = '#666';
+    }
+    drawRuler();
+  };
+
+  function initRulerCanvas() {
+    const canvas = document.getElementById('rulerCanvas');
+    if (!canvas) return;
+    
+    rulerState.canvas = canvas;
+    rulerState.ctx = canvas.getContext('2d');
+    
+    // 绑定事件（仅一次）
+    if (!canvas.dataset.bound) {
+      canvas.addEventListener('mousedown', handleMouseDown);
+      canvas.addEventListener('mousemove', handleMouseMove);
+      canvas.addEventListener('mouseup', handleMouseUp);
+      canvas.addEventListener('mouseleave', handleMouseUp);
+      canvas.dataset.bound = 'true';
+    }
+    
+    drawRuler();
+  }
+
+  function drawRuler() {
+    const ctx = rulerState.ctx;
+    const canvas = rulerState.canvas;
+    if (!ctx || !canvas) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 背景
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 直尺主体
+    const rulerY = 130;
+    const rulerHeight = 50;
+    ctx.fillStyle = '#fff9c4';
+    ctx.strokeStyle = '#f57f17';
+    ctx.lineWidth = 2;
+    ctx.fillRect(20, rulerY, 680, rulerHeight);
+    ctx.strokeRect(20, rulerY, 680, rulerHeight);
+    
+    // 刻度线和数字
+    ctx.fillStyle = '#333';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.lineCap = 'round';
+    
+    for (let i = 0; i <= 30; i++) {
+      const x = 20 + i * 22;
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1;
+      
+      if (i % 5 === 0) {
+        // 长刻度
+        ctx.beginPath();
+        ctx.moveTo(x, rulerY);
+        ctx.lineTo(x, rulerY + 20);
+        ctx.stroke();
+        ctx.fillText(i.toString(), x, rulerY + 35);
+      } else {
+        // 短刻度
+        ctx.beginPath();
+        ctx.moveTo(x, rulerY);
+        ctx.lineTo(x, rulerY + 10);
+        ctx.stroke();
+      }
+    }
+    
+    // 单位标注
+    ctx.font = 'bold 14px Arial';
+    ctx.fillStyle = '#f57f17';
+    ctx.textAlign = 'left';
+    ctx.fillText('厘米 (cm)', 630, rulerY + 35);
+    
+    // 绘制物体
+    const obj = rulerState.objects[rulerState.currentObj];
+    const objWidth = obj.length * 2.2; // 像素转换
+    const objHeight = 40;
+    
+    // 物体主体
+    ctx.fillStyle = obj.color;
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.fillRect(rulerState.objX, rulerState.objY, objWidth, objHeight);
+    ctx.strokeRect(rulerState.objX, rulerState.objY, objWidth, objHeight);
+    
+    // 物体图标和名称
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(obj.icon, rulerState.objX + objWidth / 2, rulerState.objY + 28);
+    
+    // 左端标记线
+    ctx.strokeStyle = '#d32f2f';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(rulerState.objX, rulerState.objY);
+    ctx.lineTo(rulerState.objX, rulerY + rulerHeight);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // 右端标记线
+    ctx.strokeStyle = '#1976d2';
+    ctx.beginPath();
+    ctx.moveTo(rulerState.objX + objWidth, rulerState.objY);
+    ctx.lineTo(rulerState.objX + objWidth, rulerY + rulerHeight);
+    ctx.stroke();
+    
+    // 标注
+    ctx.font = '12px Arial';
+    ctx.fillStyle = '#d32f2f';
+    ctx.textAlign = 'center';
+    ctx.fillText('起点', rulerState.objX, rulerState.objY - 5);
+    ctx.fillStyle = '#1976d2';
+    ctx.fillText('终点', rulerState.objX + objWidth, rulerState.objY - 5);
+    
+    // 检查对齐
+    checkAlignment();
+  }
+
+  function handleMouseDown(e) {
+    const rect = rulerState.canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    const obj = rulerState.objects[rulerState.currentObj];
+    const objWidth = obj.length * 2.2;
+    
+    if (mouseX >= rulerState.objX && mouseX <= rulerState.objX + objWidth &&
+        mouseY >= rulerState.objY && mouseY <= rulerState.objY + 40) {
+      rulerState.dragging = true;
+      rulerState.offsetX = mouseX - rulerState.objX;
+    }
+  }
+
+  function handleMouseMove(e) {
+    if (!rulerState.dragging) return;
+    
+    const rect = rulerState.canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    
+    const obj = rulerState.objects[rulerState.currentObj];
+    const objWidth = obj.length * 2.2;
+    
+    rulerState.objX = Math.max(20, Math.min(700 - objWidth, mouseX - rulerState.offsetX));
+    drawRuler();
+  }
+
+  function handleMouseUp() {
+    rulerState.dragging = false;
+  }
+
+  function checkAlignment() {
+    const tolerance = 5;
+    const alignedToZero = Math.abs(rulerState.objX - 20) < tolerance;
+    const statusDiv = document.getElementById('rulerStatus');
+    
+    if (!statusDiv) return;
+    
+    if (alignedToZero) {
+      const obj = rulerState.objects[rulerState.currentObj];
+      const measuredLength = (obj.length / 10).toFixed(1);
+      statusDiv.innerHTML = `✅ 对齐正确！${obj.icon} ${obj.name}的长度是 <strong style="color:#2e7d32;font-size:18px;">${measuredLength} 厘米</strong>`;
+      statusDiv.style.color = '#2e7d32';
+      unlockBadge('badge-ruler');
+    } else {
+      const offset = ((rulerState.objX - 20) / 22).toFixed(1);
+      statusDiv.innerHTML = `📏 当前起点在 ${offset} cm 处，请拖动物体左端对准 <strong>0 刻度</strong>`;
+      statusDiv.style.color = '#f57c00';
+    }
+  }
+
+  // ========== 徽章解锁辅助函数 ==========
+  function unlockBadge(badgeId) {
+    const badge = document.getElementById(badgeId);
+    if (!badge || badge.classList.contains('unlocked')) return;
+    
+    badge.classList.add('unlocked');
+    
+    // 更新进度
+    const total = document.querySelectorAll('.badge').length;
+    const unlocked = document.querySelectorAll('.badge.unlocked').length;
+    const progress = (unlocked / total) * 100;
+    
+    const progressBar = document.getElementById('progressBar');
+    const progressLabel = document.getElementById('progressLabel');
+    
+    if (progressBar) progressBar.style.width = progress + '%';
+    if (progressLabel) progressLabel.textContent = `${unlocked} / ${total} 已解锁`;
+  }
+
+  // 初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRulerCanvas);
+  } else {
+    initRulerCanvas();
+  }
+})();
+</script>
+</body>
 </html>

@@ -775,5 +775,205 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('pie', {"segs": [{"name": "海洋（咸水）", "v": 96.5, "color": "#1d4ed8", "info": "约 96.5% 的水在海洋里，是咸水，不能直接饮用和灌溉。"}, {"name": "冰川与永久积雪", "v": 1.74, "color": "#93c5fd", "info": "约 1.74% 冻在两极和高山的冰川里——是最大的淡水“仓库”。"}, {"name": "地下水", "v": 1.69, "color": "#0891b2", "info": "约 1.69% 是地下水，埋在地下岩层和土层中，是重要的淡水资源。"}, {"name": "湖泊河流与大气", "v": 0.07, "color": "#22c55e", "info": "江河湖泊和大气中的水虽然很少（不到 0.1%），却是我们最容易取用的淡水。"}], "hint": "👆 点击饼图扇区，看这部分水有多少、在哪里（注意：可直接利用的淡水极少）。", "canvas": "water-pie", "readout": "pie-info"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.checkDrag !== 'undefined' || typeof window.resetDrag !== 'undefined') return;
+
+  let dragState = {};
+
+  function initDragAndDrop() {
+    const dragItems = document.querySelectorAll('.drag-item');
+    const dropZones = document.querySelectorAll('.drag-cat');
+
+    dragItems.forEach(item => {
+      item.addEventListener('dragstart', function(e) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+        e.dataTransfer.setData('category', this.dataset.category);
+        e.dataTransfer.setData('id', this.dataset.id);
+        this.style.opacity = '0.4';
+      });
+
+      item.addEventListener('dragend', function(e) {
+        this.style.opacity = '1';
+      });
+    });
+
+    dropZones.forEach(zone => {
+      zone.addEventListener('dragover', function(e) {
+        if (e.preventDefault) e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        this.style.background = 'rgba(76, 175, 80, 0.1)';
+        return false;
+      });
+
+      zone.addEventListener('dragleave', function(e) {
+        this.style.background = '';
+      });
+
+      zone.addEventListener('drop', function(e) {
+        if (e.stopPropagation) e.stopPropagation();
+        e.preventDefault();
+        this.style.background = '';
+
+        const category = e.dataTransfer.getData('category');
+        const id = e.dataTransfer.getData('id');
+        const html = e.dataTransfer.getData('text/html');
+        const target = this.dataset.target;
+
+        const container = this.querySelector('.dropped-items');
+        const newItem = document.createElement('div');
+        newItem.className = 'dropped-item';
+        newItem.innerHTML = html;
+        newItem.dataset.category = category;
+        newItem.dataset.id = id;
+        newItem.style.cssText = 'padding:0.5rem;margin:0.3rem;background:rgba(255,255,255,0.05);border-radius:8px;cursor:move;transition:all 0.3s;';
+        
+        // 移除原始项
+        const originalItem = document.querySelector(`.drag-item[data-id="${id}"]`);
+        if (originalItem && originalItem.parentNode.id === 'drag-items') {
+          originalItem.remove();
+        }
+
+        // 从其他区域移除（如果存在）
+        document.querySelectorAll(`.dropped-item[data-id="${id}"]`).forEach(item => item.remove());
+
+        container.appendChild(newItem);
+        dragState[id] = target;
+
+        // 使新放置的项也可拖拽
+        newItem.draggable = true;
+        newItem.addEventListener('dragstart', function(e) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/html', this.innerHTML);
+          e.dataTransfer.setData('category', this.dataset.category);
+          e.dataTransfer.setData('id', this.dataset.id);
+          this.style.opacity = '0.4';
+        });
+        newItem.addEventListener('dragend', function(e) {
+          this.style.opacity = '1';
+        });
+
+        return false;
+      });
+    });
+  }
+
+  window.checkDrag = function() {
+    const resultDiv = document.getElementById('drag-result');
+    if (!resultDiv) return;
+
+    const correctAnswers = {
+      'd1': 'save',
+      'd2': 'waste',
+      'd3': 'save',
+      'd4': 'waste',
+      'd5': 'save',
+      'd6': 'waste',
+      'd7': 'save',
+      'd8': 'save'
+    };
+
+    let correct = 0;
+    let total = Object.keys(correctAnswers).length;
+    let feedback = '<div style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,0.05);border-radius:10px;">';
+
+    // 检查每个已放置的项
+    document.querySelectorAll('.dropped-item').forEach(item => {
+      const id = item.dataset.id;
+      const category = item.dataset.category;
+      const parentZone = item.closest('.drag-cat');
+      const placedIn = parentZone ? parentZone.dataset.target : null;
+
+      if (correctAnswers[id] === placedIn) {
+        correct++;
+        item.style.background = 'rgba(76, 175, 80, 0.2)';
+        item.style.border = '2px solid #4caf50';
+      } else {
+        item.style.background = 'rgba(244, 67, 54, 0.2)';
+        item.style.border = '2px solid #f44336';
+      }
+    });
+
+    // 检查未放置的项
+    const unplacedItems = document.querySelectorAll('#drag-items .drag-item');
+    unplacedItems.forEach(item => {
+      item.style.background = 'rgba(255, 152, 0, 0.2)';
+      item.style.border = '2px solid #ff9800';
+    });
+
+    const percentage = Math.round((correct / total) * 100);
+    let emoji = '💧';
+    let message = '';
+
+    if (percentage === 100) {
+      emoji = '🎉';
+      message = '太棒了！你完全掌握了节水知识！';
+    } else if (percentage >= 75) {
+      emoji = '👍';
+      message = '很好！继续加油！';
+    } else if (percentage >= 50) {
+      emoji = '💪';
+      message = '不错，再想想哪些可以改进？';
+    } else {
+      emoji = '🤔';
+      message = '再试试看，想想哪些行为能节约水资源？';
+    }
+
+    feedback += `<div style="font-size:1.1rem;font-weight:600;margin-bottom:0.5rem;">${emoji} ${message}</div>`;
+    feedback += `<div style="font-size:1rem;color:var(--muted);">正确：<span style="color:#4caf50;font-weight:600;">${correct}</span> / ${total}</div>`;
+    
+    if (correct < total) {
+      feedback += `<div style="margin-top:0.8rem;font-size:0.9rem;color:var(--muted);">`;
+      feedback += `<div>💚 绿色边框 = 正确</div>`;
+      feedback += `<div>❌ 红色边框 = 放错了</div>`;
+      feedback += `<div>🟠 橙色边框 = 还没放置</div>`;
+      feedback += `</div>`;
+    }
+
+    feedback += '</div>';
+    resultDiv.innerHTML = feedback;
+  };
+
+  window.resetDrag = function() {
+    dragState = {};
+    
+    const resultDiv = document.getElementById('drag-result');
+    if (resultDiv) resultDiv.innerHTML = '';
+
+    // 清空所有放置区
+    document.querySelectorAll('.dropped-items').forEach(container => {
+      container.innerHTML = '';
+    });
+
+    // 重建原始拖拽项
+    const dragItemsContainer = document.getElementById('drag-items');
+    if (dragItemsContainer) {
+      dragItemsContainer.innerHTML = `
+        <div class="drag-item" draggable="true" data-category="save" data-id="d1">洗菜水浇花🥬</div>
+        <div class="drag-item" draggable="true" data-category="waste" data-id="d2">开着水龙头刷牙😬</div>
+        <div class="drag-item" draggable="true" data-category="save" data-id="d3">使用节水马桶🚽</div>
+        <div class="drag-item" draggable="true" data-category="waste" data-id="d4">往河里扔垃圾🗑️</div>
+        <div class="drag-item" draggable="true" data-category="save" data-id="d5">发现漏水立刻报修🔧</div>
+        <div class="drag-item" draggable="true" data-category="waste" data-id="d6">工厂污水排入河流🏭</div>
+        <div class="drag-item" draggable="true" data-category="save" data-id="d7">洗手后关水龙头🖐️</div>
+        <div class="drag-item" draggable="true" data-category="save" data-id="d8">用低流量淋浴头🚿</div>
+      `;
+    }
+
+    // 重新初始化拖拽
+    initDragAndDrop();
+  };
+
+  // 页面加载时初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDragAndDrop);
+  } else {
+    initDragAndDrop();
+  }
+})();
+</script>
+</body>
 </html>

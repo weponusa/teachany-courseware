@@ -741,5 +741,278 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.showScreen !== 'undefined') return;
+
+  window.showScreen = function(screenId) {
+    // 隐藏所有屏幕
+    const allScreens = document.querySelectorAll('.screen');
+    allScreens.forEach(screen => {
+      screen.classList.remove('active');
+    });
+
+    // 显示目标屏幕
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+      targetScreen.classList.add('active');
+      
+      // 滚动到顶部
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+
+      // 如果目标屏幕有特殊初始化需求
+      initializeScreen(screenId);
+    }
+  };
+
+  function initializeScreen(screenId) {
+    // 根据不同屏幕执行初始化
+    if (screenId === 'screen-objectives') {
+      // 目标屏幕可能需要的动画初始化
+      animateObjectives();
+    } else if (screenId.includes('game') || screenId.includes('quiz')) {
+      // 游戏或测验屏幕重置
+      resetGameState(screenId);
+    }
+  }
+
+  function animateObjectives() {
+    const objectives = document.querySelectorAll('#screen-objectives .objective-item');
+    if (objectives.length === 0) return;
+
+    objectives.forEach((obj, index) => {
+      obj.style.opacity = '0';
+      obj.style.transform = 'translateY(20px)';
+      
+      setTimeout(() => {
+        obj.style.transition = 'all 0.5s ease';
+        obj.style.opacity = '1';
+        obj.style.transform = 'translateY(0)';
+      }, index * 150);
+    });
+  }
+
+  function resetGameState(screenId) {
+    const screen = document.getElementById(screenId);
+    if (!screen) return;
+
+    // 重置拖拽项位置
+    const draggables = screen.querySelectorAll('[draggable="true"]');
+    draggables.forEach(item => {
+      item.style.opacity = '1';
+      item.style.transform = 'none';
+      item.style.border = '';
+      item.style.background = '';
+      if (item.dataset.originalParent) {
+        const parent = document.getElementById(item.dataset.originalParent);
+        if (parent) parent.appendChild(item);
+      }
+    });
+
+    // 重置目标区
+    const dropZones = screen.querySelectorAll('.drop-zone, [data-drop-target]');
+    dropZones.forEach(zone => {
+      zone.style.background = '';
+      zone.style.border = '';
+      zone.innerHTML = zone.dataset.originalContent || zone.innerHTML;
+    });
+
+    // 清空反馈
+    const feedback = screen.querySelector('.feedback, .result, [class*="feedback"]');
+    if (feedback) {
+      feedback.innerHTML = '';
+      feedback.style.display = 'none';
+    }
+
+    // 重置分数显示
+    const scoreDisplay = screen.querySelector('.score, [class*="score"]');
+    if (scoreDisplay) {
+      scoreDisplay.textContent = '0';
+    }
+
+    // 重置画布
+    const canvas = screen.querySelector('canvas');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // 如果有特定的绘图函数，重新绘制初始状态
+      if (screenId.includes('diagram') || screenId.includes('demo')) {
+        drawInitialDiagram(canvas, screenId);
+      }
+    }
+  }
+
+  function drawInitialDiagram(canvas, screenId) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // 设置画布尺寸（如果未设置）
+    if (w === 0 || h === 0) {
+      canvas.width = 800;
+      canvas.height = 500;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 绘制现在进行时概念图
+    drawPresentContinuousDiagram(ctx, canvas.width, canvas.height);
+  }
+
+  function drawPresentContinuousDiagram(ctx, w, h) {
+    // 底层：背景渐变
+    const bgGradient = ctx.createLinearGradient(0, 0, 0, h);
+    bgGradient.addColorStop(0, '#e3f2fd');
+    bgGradient.addColorStop(1, '#bbdefb');
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, w, h);
+
+    // 中层：时间轴
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const centerY = h / 2;
+    const timelineY = centerY - 50;
+
+    // 绘制时间轴
+    ctx.beginPath();
+    ctx.moveTo(50, timelineY);
+    ctx.lineTo(w - 50, timelineY);
+    ctx.stroke();
+
+    // 过去标记
+    ctx.fillStyle = '#757575';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('过去', 100, timelineY - 20);
+    drawArrow(ctx, 100, timelineY, 'left', '#757575');
+
+    // 现在标记（重点）
+    ctx.fillStyle = '#d32f2f';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('现在', w / 2, timelineY - 25);
+    
+    // 现在进行时的动作波浪
+    ctx.strokeStyle = '#4caf50';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    const waveStart = w / 2 - 80;
+    const waveEnd = w / 2 + 80;
+    for (let x = waveStart; x <= waveEnd; x += 5) {
+      const y = timelineY + Math.sin((x - waveStart) / 15) * 20;
+      if (x === waveStart) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+
+    // 未来标记
+    ctx.fillStyle = '#757575';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText('未来', w - 100, timelineY - 20);
+    drawArrow(ctx, w - 100, timelineY, 'right', '#757575');
+
+    // 顶层：公式和示例
+    const formulaY = centerY + 60;
+    
+    // Be动词框
+    drawRoundedRect(ctx, w / 2 - 200, formulaY, 80, 50, 10, '#2196f3', '#fff');
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('am/is/are', w / 2 - 160, formulaY + 32);
+
+    // 加号
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('+', w / 2 - 100, formulaY + 32);
+
+    // V-ing框
+    drawRoundedRect(ctx, w / 2 - 60, formulaY, 120, 50, 10, '#4caf50', '#fff');
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('动词-ing', w / 2, formulaY + 32);
+
+    // 示例
+    ctx.fillStyle = '#333';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('例：I am reading a book.', w / 2 - 200, formulaY + 100);
+    ctx.fillText('She is playing games.', w / 2 - 200, formulaY + 130);
+
+    // 标注引线
+    drawAnnotationLine(ctx, w / 2 - 160, formulaY - 10, w / 2 - 160, formulaY - 40, 'Be动词', '#2196f3');
+    drawAnnotationLine(ctx, w / 2, formulaY - 10, w / 2, formulaY - 40, '现在分词', '#4caf50');
+    drawAnnotationLine(ctx, w / 2, timelineY + 30, w / 2, timelineY + 60, '正在进行', '#d32f2f');
+  }
+
+  function drawRoundedRect(ctx, x, y, width, height, radius, fillColor, textColor) {
+    ctx.fillStyle = fillColor;
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawArrow(ctx, x, y, direction, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    if (direction === 'left') {
+      ctx.moveTo(x - 10, y);
+      ctx.lineTo(x, y - 8);
+      ctx.lineTo(x, y + 8);
+    } else {
+      ctx.moveTo(x + 10, y);
+      ctx.lineTo(x, y - 8);
+      ctx.lineTo(x, y + 8);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawAnnotationLine(ctx, x1, y1, x2, y2, text, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, x2, y2 - 5);
+  }
+
+  // 初始化：如果页面加载时已有active屏幕，确保其正确显示
+  document.addEventListener('DOMContentLoaded', function() {
+    const activeScreen = document.querySelector('.screen.active');
+    if (activeScreen) {
+      initializeScreen(activeScreen.id);
+    }
+  });
+
+})();
+</script>
 </body>
 </html>

@@ -706,5 +706,177 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.toggleAI !== 'undefined' && typeof window.go !== 'undefined') return;
+
+  // ========== toggleAI 函数 ==========
+  if (typeof window.toggleAI === 'undefined') {
+    window.toggleAI = function() {
+      const aiContainer = document.getElementById('ai');
+      const aiBubble = document.getElementById('ai-text');
+      if (!aiContainer || !aiBubble) return;
+
+      const isExpanded = aiContainer.classList.contains('expanded');
+      
+      if (isExpanded) {
+        aiContainer.classList.remove('expanded');
+        aiBubble.style.display = 'none';
+      } else {
+        aiContainer.classList.add('expanded');
+        aiBubble.style.display = 'block';
+        
+        // 随机显示修辞手法提示
+        const tips = [
+          '比喻就像给事物穿上新衣服，让它变得更生动！🎨',
+          '拟人是让事物会说话、会笑、会跳舞哦！👯',
+          '排比就像三个好朋友手拉手，整整齐齐！🤝',
+          '夸张是把事情说得特别特别大或特别特别小！📏',
+          '对偶像照镜子，前后两句对得整整齐齐！🪞'
+        ];
+        aiBubble.textContent = tips[Math.floor(Math.random() * tips.length)];
+      }
+    };
+  }
+
+  // ========== go 函数 ==========
+  if (typeof window.go === 'undefined') {
+    window.go = function(targetId) {
+      // 隐藏所有 screen
+      const screens = document.querySelectorAll('.screen');
+      screens.forEach(s => s.classList.remove('active'));
+      
+      // 隐藏所有 section
+      const sections = document.querySelectorAll('.section');
+      sections.forEach(s => s.style.display = 'none');
+      
+      // 显示目标元素
+      const target = document.getElementById(targetId);
+      if (target) {
+        if (target.classList.contains('screen')) {
+          target.classList.add('active');
+        } else {
+          target.style.display = 'block';
+        }
+        
+        // 滚动到目标位置
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // 如果是知识图谱，绘制图谱
+        if (targetId === 'knowledge-graph') {
+          drawKnowledgeGraph();
+        }
+      }
+      
+      // 更新进度条
+      updateProgress(targetId);
+    };
+  }
+
+  // ========== 辅助函数：绘制知识图谱 ==========
+  function drawKnowledgeGraph() {
+    const canvas = document.querySelector('.tkg-fallback-canvas');
+    if (!canvas || canvas.dataset.drawn === 'true') return;
+    
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    // 清空画布
+    ctx.clearRect(0, 0, w, h);
+    
+    // 背景渐变
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#e3f2fd');
+    bgGrad.addColorStop(1, '#fff9e6');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+    
+    // 绘制知识节点
+    const nodes = [
+      { x: 120, y: 60, label: '比喻', color: '#ff6b6b' },
+      { x: 240, y: 60, label: '拟人', color: '#4ecdc4' },
+      { x: 360, y: 60, label: '排比', color: '#45b7d1' },
+      { x: 480, y: 60, label: '夸张', color: '#f9ca24' },
+      { x: 600, y: 60, label: '对偶', color: '#6c5ce7' }
+    ];
+    
+    // 绘制连接线
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    for (let i = 0; i < nodes.length - 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(nodes[i].x + 30, nodes[i].y);
+      ctx.lineTo(nodes[i + 1].x - 30, nodes[i + 1].y);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    
+    // 绘制节点
+    nodes.forEach(node => {
+      // 节点圆形
+      ctx.fillStyle = node.color;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, 28, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 节点边框
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      
+      // 节点文字
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 14px "Microsoft YaHei", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.label, node.x, node.y);
+    });
+    
+    // 标题
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 16px "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('📚 五大修辞手法', 20, 25);
+    
+    canvas.dataset.drawn = 'true';
+  }
+
+  // ========== 辅助函数：更新进度条 ==========
+  function updateProgress(currentId) {
+    const progressBar = document.getElementById('slide-progress-bar');
+    const progressFill = document.getElementById('tb-progress-fill');
+    if (!progressBar) return;
+    
+    const sections = ['hero', 'objective', 'knowledge-graph'];
+    const currentIndex = sections.indexOf(currentId);
+    
+    if (currentIndex !== -1) {
+      const progress = ((currentIndex + 1) / sections.length) * 100;
+      progressBar.style.width = progress + '%';
+      if (progressFill) {
+        progressFill.style.width = progress + '%';
+      }
+    }
+  }
+
+  // ========== 初始化 ==========
+  // 为知识图谱画布添加初始提示
+  const kgCanvas = document.querySelector('.tkg-fallback-canvas');
+  if (kgCanvas && !kgCanvas.dataset.initialized) {
+    const ctx = kgCanvas.getContext('2d');
+    ctx.fillStyle = '#666';
+    ctx.font = '14px "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('点击"知识图谱"查看完整内容', kgCanvas.width / 2, kgCanvas.height / 2);
+    kgCanvas.dataset.initialized = 'true';
+  }
+
+})();
+</script>
 </body>
 </html>

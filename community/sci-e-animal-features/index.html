@@ -1008,6 +1008,249 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 </section>
 
 
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.selectAnimal !== 'undefined') return;
+
+  // ========== 雷达图数据 ==========
+  const animalData = {
+    dog: { name: '🐕 狗', desc: '陆地哺乳动物，毛发保暖，四肢奔跑，杂食性', scores: [8, 9, 7, 9, 6] },
+    eagle: { name: '🦅 鹰', desc: '空中猛禽，羽毛覆盖，翅膀飞行，肉食性', scores: [7, 10, 9, 3, 10] },
+    fish: { name: '🐟 鱼', desc: '水生动物，鳞片保护，鳍游泳，杂食性', scores: [6, 3, 10, 10, 5] },
+    frog: { name: '🐸 青蛙', desc: '两栖动物，湿润皮肤，四肢跳跃，肉食性', scores: [5, 6, 7, 8, 7] },
+    snake: { name: '🐍 蛇', desc: '爬行动物，鳞片覆盖，无肢爬行，肉食性', scores: [7, 4, 2, 7, 9] }
+  };
+  const radarLabels = ['体表', '运动', '水性', '陆性', '食性'];
+  let currentAnimal = 'dog';
+
+  // ========== 选择动物并绘制雷达图 ==========
+  window.selectAnimal = function(animal) {
+    currentAnimal = animal;
+    // 更新按钮状态
+    document.querySelectorAll('.animal-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.textContent.includes(animalData[animal].name.split(' ')[0])) {
+        btn.classList.add('active');
+      }
+    });
+    // 更新状态文字
+    const status = document.getElementById('radarStatus');
+    if (status) {
+      status.textContent = `${animalData[animal].name}：${animalData[animal].desc}`;
+    }
+    drawRadar();
+  };
+
+  function drawRadar() {
+    const canvas = document.getElementById('radarCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const cx = w / 2, cy = h / 2;
+    const maxR = Math.min(w, h) * 0.35;
+    const data = animalData[currentAnimal];
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 背景渐变
+    const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 1.2);
+    bgGrad.addColorStop(0, 'rgba(56,189,248,0.05)');
+    bgGrad.addColorStop(1, 'rgba(56,189,248,0)');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // 绘制网格（5层）
+    ctx.strokeStyle = 'rgba(148,163,184,0.2)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i <= 5; i++) {
+      const r = (maxR / 5) * i;
+      ctx.beginPath();
+      for (let j = 0; j < 5; j++) {
+        const angle = (Math.PI * 2 / 5) * j - Math.PI / 2;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        if (j === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    // 绘制轴线和标签
+    ctx.strokeStyle = 'rgba(148,163,184,0.4)';
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px PingFang SC';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < 5; i++) {
+      const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+      const x1 = cx + maxR * Math.cos(angle);
+      const y1 = cy + maxR * Math.sin(angle);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+
+      // 标签位置外扩
+      const labelDist = maxR + 30;
+      const lx = cx + labelDist * Math.cos(angle);
+      const ly = cy + labelDist * Math.sin(angle);
+      ctx.fillText(radarLabels[i], lx, ly);
+    }
+
+    // 绘制数据区域
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+      const score = data.scores[i];
+      const r = (maxR / 10) * score;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(56,189,248,0.25)';
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // 绘制数据点
+    ctx.fillStyle = '#38bdf8';
+    for (let i = 0; i < 5; i++) {
+      const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+      const score = data.scores[i];
+      const r = (maxR / 10) * score;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      // 分数标注
+      ctx.fillStyle = '#f0f9ff';
+      ctx.font = 'bold 12px PingFang SC';
+      ctx.fillText(score, x, y - 12);
+      ctx.fillStyle = '#38bdf8';
+    }
+
+    // 中心动物图标
+    ctx.font = '32px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(data.name.split(' ')[0], cx, cy);
+  }
+
+  // ========== 拖拽分类 ==========
+  const dragAnswers = {
+    dog: 'land', cat: 'land', rabbit: 'land',
+    goldfish: 'water', dolphin: 'water', shark: 'water',
+    sparrow: 'sky', eagle: 'sky', bat: 'sky'
+  };
+
+  // 拖拽事件（全局辅助）
+  window.allowDrop = function(e) { e.preventDefault(); };
+  window.enterZone = function(el) { el.style.borderColor = 'rgba(56,189,248,0.6)'; };
+  window.leaveZone = function(el) { el.style.borderColor = 'rgba(148,163,184,0.3)'; };
+  
+  window.dropAnimal = function(e, zone) {
+    e.preventDefault();
+    const animal = e.dataTransfer.getData('animal');
+    if (!animal) return;
+    const chip = document.querySelector(`.drag-chip[data-animal="${animal}"]`);
+    if (!chip) return;
+    const target = document.getElementById(`zone-${zone}`);
+    if (target) {
+      target.appendChild(chip);
+      chip.style.opacity = '1';
+    }
+    leaveZone(e.currentTarget);
+  };
+
+  // 初始化拖拽
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.drag-chip').forEach(chip => {
+      chip.addEventListener('dragstart', function(e) {
+        e.dataTransfer.setData('animal', this.dataset.animal);
+        this.style.opacity = '0.5';
+      });
+      chip.addEventListener('dragend', function() {
+        this.style.opacity = '1';
+      });
+    });
+  });
+
+  window.checkDrag = function() {
+    const result = document.getElementById('dragResult');
+    if (!result) return;
+    
+    let correct = 0, total = 0;
+    const feedback = [];
+
+    document.querySelectorAll('.drag-chip').forEach(chip => {
+      const animal = chip.dataset.animal;
+      const correctZone = dragAnswers[animal];
+      const currentZone = chip.parentElement.id.replace('zone-', '');
+      total++;
+      
+      if (currentZone === correctZone) {
+        correct++;
+        chip.style.borderColor = '#34d399';
+        chip.style.background = 'rgba(52,211,153,0.15)';
+      } else {
+        chip.style.borderColor = '#f87171';
+        chip.style.background = 'rgba(248,113,113,0.15)';
+        feedback.push(`${chip.textContent} 应放在 ${correctZone === 'land' ? '🏔️陆地' : correctZone === 'water' ? '🌊水中' : '☁️空中'}`);
+      }
+    });
+
+    if (correct === total) {
+      result.innerHTML = `<div style="color:#34d399;font-weight:700;">🎉 全部正确！你已掌握动物栖息地分类！</div>`;
+    } else {
+      result.innerHTML = `<div style="color:#fbbf24;font-weight:700;">📊 得分：${correct}/${total}</div>
+        <div style="font-size:0.85rem;color:#94a3b8;margin-top:0.5rem;">${feedback.join('<br>')}</div>`;
+    }
+  };
+
+  window.resetDrag = function() {
+    const pool = document.querySelector('.drag-pool');
+    if (!pool) return;
+    
+    document.querySelectorAll('.drag-chip').forEach(chip => {
+      pool.appendChild(chip);
+      chip.style.borderColor = 'rgba(148,163,184,0.3)';
+      chip.style.background = 'rgba(15,32,64,0.6)';
+    });
+
+    const result = document.getElementById('dragResult');
+    if (result) result.innerHTML = '';
+  };
+
+  window.ans = function(correct) {
+    // 通用答案反馈函数（用于选择题等）
+    const feedback = document.querySelector('.feedback, .quiz-result, [id*="result"]');
+    if (!feedback) return;
+    
+    if (correct) {
+      feedback.innerHTML = '<div style="color:#34d399;padding:1rem;background:rgba(52,211,153,0.1);border-radius:8px;margin-top:1rem;">✅ 回答正确！</div>';
+    } else {
+      feedback.innerHTML = '<div style="color:#f87171;padding:1rem;background:rgba(248,113,113,0.1);border-radius:8px;margin-top:1rem;">❌ 再想想看～</div>';
+    }
+  };
+
+  // 初始化雷达图
+  if (document.getElementById('radarCanvas')) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => drawRadar());
+    } else {
+      drawRadar();
+    }
+  }
+})();
+</script>
 </body>
 <script src="../../assets/engines/canvas-lab/v1/lab.js"></script>
 <script src="../../assets/engines/canvas-lab/v1/scenes.js"></script>

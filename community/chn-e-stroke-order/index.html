@@ -817,5 +817,302 @@ function chneDepthCheck(button, isCorrect, feedbackId, explanation) {
 
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><span class="ta-phase" data-tone="aux">知识图谱</span><h2 class="section-title">🗺️ 知识图谱：笔画笔顺</h2><div data-teachany-kg="chn-e-stroke-order"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.goSection !== 'undefined') return;
+
+  let currentSection = 'intro';
+  let watchedStrokes = new Set();
+  let practiceStrokes = new Set();
+  let currentPracticeStroke = null;
+  let orderCharIndex = 0;
+  let orderChars = [
+    {char:'王',strokes:['横','横','竖','横']},
+    {char:'十',strokes:['横','竖']},
+    {char:'大',strokes:['横','撇','捺']},
+    {char:'木',strokes:['横','竖','撇','捺']},
+    {char:'人',strokes:['撇','捺']}
+  ];
+  let currentOrder = [];
+  let bossTimer = null;
+  let bossTimeLeft = 45;
+  let bossCorrect = 0;
+  let bossWrong = 0;
+  let bossQuestions = [
+    {q:'"一"字是什么笔画？',opts:['横','竖','撇','捺'],ans:0},
+    {q:'"丨"字是什么笔画？',opts:['横','竖','撇','捺'],ans:1},
+    {q:'"丿"字是什么笔画？',opts:['横','竖','撇','捺'],ans:2},
+    {q:'"㇏"字是什么笔画？',opts:['横','竖','撇','捺'],ans:3},
+    {q:'"十"字先写？',opts:['横','竖','撇','捺'],ans:0},
+    {q:'"人"字先写？',opts:['横','竖','撇','捺'],ans:2}
+  ];
+  let currentBossQ = null;
+
+  window.goSection = function(id) {
+    document.querySelectorAll('section[id]').forEach(s => {
+      if(['intro','warmup','level1','level2','level3','boss-section','scorecard','extension'].includes(s.id)) {
+        s.style.display = 'none';
+      }
+    });
+    const target = document.getElementById(id);
+    if(target) {
+      target.style.display = 'block';
+      currentSection = id;
+      target.scrollIntoView({behavior:'smooth'});
+    }
+  };
+
+  window.selectStroke = function(el, name) {
+    document.querySelectorAll('.stroke-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+  };
+
+  window.playStroke = function(name) {
+    watchedStrokes.add(name);
+    document.getElementById('watched-count').textContent = watchedStrokes.size;
+    const dot = document.getElementById('d1-'+name);
+    if(dot) dot.classList.add('done');
+    
+    document.getElementById('anim-stroke-name').textContent = name;
+    const dirs = {横:'从左向右 →',竖:'从上向下 ↓',撇:'从右上到左下 ↙',捺:'从左上到右下 ↘',点:'从上向下 ↓',折:'转折 ⤵'};
+    document.getElementById('anim-stroke-dir').textContent = dirs[name] || '—';
+    
+    const svg = document.getElementById('stroke-anim-svg');
+    const paths = svg.querySelectorAll('path, line:not([stroke-dasharray])');
+    paths.forEach(p => p.remove());
+    
+    const coords = {
+      横:{x1:40,y1:80,x2:160,y2:80},
+      竖:{x1:100,y1:30,x2:100,y2:130},
+      撇:{x1:130,y1:40,x2:70,y2:120},
+      捺:{x1:70,y1:40,x2:130,y2:120},
+      点:{x1:100,y1:50,x2:100,y2:90},
+      折:{x1:60,y1:60,x2:140,y2:60,x3:140,y3:120}
+    };
+    
+    const c = coords[name];
+    if(!c) return;
+    
+    if(name === '折') {
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',`M${c.x1},${c.y1} L${c.x2},${c.y2} L${c.x3},${c.y3}`);
+      path.setAttribute('stroke','#e76f51');
+      path.setAttribute('stroke-width','6');
+      path.setAttribute('fill','none');
+      path.setAttribute('stroke-linecap','round');
+      path.setAttribute('stroke-linejoin','round');
+      svg.appendChild(path);
+      animatePath(path);
+    } else {
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',c.x1);
+      line.setAttribute('y1',c.y1);
+      line.setAttribute('x2',c.x1);
+      line.setAttribute('y2',c.y1);
+      line.setAttribute('stroke','#e76f51');
+      line.setAttribute('stroke-width','6');
+      line.setAttribute('stroke-linecap','round');
+      svg.appendChild(line);
+      animateLine(line,c.x1,c.y1,c.x2,c.y2);
+    }
+  };
+
+  function animateLine(line,x1,y1,x2,y2) {
+    let progress = 0;
+    function step() {
+      progress += 0.02;
+      if(progress > 1) progress = 1;
+      line.setAttribute('x2', x1 + (x2-x1)*progress);
+      line.setAttribute('y2', y1 + (y2-y1)*progress);
+      if(progress < 1) requestAnimationFrame(step);
+    }
+    step();
+  }
+
+  function animatePath(path) {
+    const len = path.getTotalLength();
+    path.style.strokeDasharray = len;
+    path.style.strokeDashoffset = len;
+    let progress = 0;
+    function step() {
+      progress += 0.02;
+      if(progress > 1) progress = 1;
+      path.style.strokeDashoffset = len * (1-progress);
+      if(progress < 1) requestAnimationFrame(step);
+    }
+    step();
+  }
+
+  window.replayStroke = function() {
+    const name = document.getElementById('anim-stroke-name').textContent;
+    if(name && name !== '点击笔画开始') playStroke(name);
+  };
+
+  window.completeL1 = function() {
+    ['横','竖','撇','捺','点','折'].forEach(s => {
+      watchedStrokes.add(s);
+      const dot = document.getElementById('d1-'+s);
+      if(dot) dot.classList.add('done');
+    });
+    document.getElementById('watched-count').textContent = 6;
+  };
+
+  window.setPracticeStroke = function(name) {
+    currentPracticeStroke = name;
+    document.getElementById('p2-title').textContent = '练习笔画：' + name;
+    practiceStrokes.add(name);
+    const dot = document.getElementById('d2-'+name);
+    if(dot) dot.classList.add('done');
+    
+    const refSvg = document.getElementById('stroke-ref');
+    if(refSvg) {
+      refSvg.innerHTML = '<rect width="120" height="120" fill="#fffef5"/>';
+      const coords = {横:[20,60,100,60],竖:[60,20,60,100],撇:[80,30,40,90],捺:[40,30,80,90],点:[60,40,60,70]};
+      const c = coords[name];
+      if(c) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1',c[0]);line.setAttribute('y1',c[1]);
+        line.setAttribute('x2',c[2]);line.setAttribute('y2',c[3]);
+        line.setAttribute('stroke','#aaa');line.setAttribute('stroke-width','4');
+        line.setAttribute('stroke-linecap','round');
+        refSvg.appendChild(line);
+      }
+    }
+    
+    clearCanvas();
+  };
+
+  window.clearCanvas = function() {
+    const canvas = document.getElementById('practice-canvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#fffef5';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle = '#ffe0a0';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(60,0);ctx.lineTo(60,120);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,60);ctx.lineTo(120,60);ctx.stroke();
+    ctx.setLineDash([]);
+  };
+
+  window.markStrokeDone = function() {
+    if(!currentPracticeStroke) return;
+    practiceStrokes.add(currentPracticeStroke);
+    const dot = document.getElementById('d2-'+currentPracticeStroke);
+    if(dot) dot.classList.add('done');
+    document.getElementById('practiced-count').textContent = practiceStrokes.size;
+  };
+
+  window.resetOrderGame = function() {
+    currentOrder = [];
+    const char = orderChars[orderCharIndex];
+    document.getElementById('order-char').textContent = char.char;
+    const stepsRow = document.getElementById('steps-row');
+    stepsRow.innerHTML = '';
+    char.strokes.forEach(() => {
+      const step = document.createElement('div');
+      step.className = 'step-slot';
+      step.textContent = '?';
+      stepsRow.appendChild(step);
+    });
+    const tiles = document.getElementById('stroke-tiles');
+    tiles.innerHTML = '';
+    char.strokes.forEach((s,i) => {
+      const tile = document.createElement('div');
+      tile.className = 'stroke-tile';
+      tile.textContent = s;
+      tile.onclick = () => {
+        if(currentOrder.length < char.strokes.length) {
+          currentOrder.push(s);
+          stepsRow.children[currentOrder.length-1].textContent = s;
+          tile.style.opacity = '0.3';
+          tile.onclick = null;
+        }
+      };
+      tiles.appendChild(tile);
+    });
+  };
+
+  window.checkOrder = function() {
+    const char = orderChars[orderCharIndex];
+    let correct = true;
+    for(let i=0; i<currentOrder.length; i++) {
+      const slot = document.getElementById('steps-row').children[i];
+      if(currentOrder[i] === char.strokes[i]) {
+        slot.style.background = '#c8e6c9';
+      } else {
+        slot.style.background = '#ffcdd2';
+        correct = false;
+      }
+    }
+    if(correct && currentOrder.length === char.strokes.length) {
+      setTimeout(() => alert('✓ 正确！'), 100);
+    }
+  };
+
+  window.nextOrderChar = function() {
+    orderCharIndex = (orderCharIndex + 1) % orderChars.length;
+    resetOrderGame();
+  };
+
+  window.startBoss = function() {
+    if(bossTimer) clearInterval(bossTimer);
+    bossTimeLeft = 45;
+    bossCorrect = 0;
+    bossWrong = 0;
+    document.getElementById('boss-correct').textContent = '0';
+    document.getElementById('boss-wrong').textContent = '0';
+    document.getElementById('boss-time').textContent = '45秒';
+    document.getElementById('boss-timer-fill').style.width = '100%';
+    nextBossQuestion();
+    bossTimer = setInterval(() => {
+      bossTimeLeft--;
+      document.getElementById('boss-time').textContent = bossTimeLeft + '秒';
+      document.getElementById('boss-timer-fill').style.width = (bossTimeLeft/45*100) + '%';
+      if(bossTimeLeft <= 0) {
+        clearInterval(bossTimer);
+        document.getElementById('boss-q-text').textContent = '时间到！答对'+bossCorrect+'题';
+        document.getElementById('boss-opts').innerHTML = '';
+      }
+    }, 1000);
+  };
+
+  function nextBossQuestion() {
+    if(bossTimeLeft <= 0) return;
+    currentBossQ = bossQuestions[Math.floor(Math.random()*bossQuestions.length)];
+    document.getElementById('boss-q-text').textContent = currentBossQ.q;
+    const opts = document.getElementById('boss-opts');
+    opts.innerHTML = '';
+    currentBossQ.opts.forEach((opt,i) => {
+      const btn = document.createElement('button');
+      btn.className = 'ctrl-btn';
+      btn.textContent = opt;
+      btn.onclick = () => {
+        if(i === currentBossQ.ans) {
+          bossCorrect++;
+          document.getElementById('boss-correct').textContent = bossCorrect;
+        } else {
+          bossWrong++;
+          document.getElementById('boss-wrong').textContent = bossWrong;
+        }
+        nextBossQuestion();
+      };
+      opts.appendChild(btn);
+    });
+  }
+
+  window.showExt = function(type) {
+    alert('拓展内容：' + type);
+  };
+
+  // 初始化
+  if(document.getElementById('level3')) resetOrderGame();
+})();
+</script>
 </body>
 </html>

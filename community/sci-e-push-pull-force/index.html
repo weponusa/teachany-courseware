@@ -853,6 +853,279 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script src="../../assets/scripts/teachany-quiz-binding.js" defer></script>
 <script src="../../assets/scripts/teachany-knowledge-graph.js" defer></script>
 </figure></div></div></div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 检查函数是否已存在
+  if (typeof window.resetSim !== 'undefined' || typeof window.checkQuiz !== 'undefined') return;
+
+  // ========== 模拟器相关变量 ==========
+  let simCanvas, simCtx, simStatus;
+  let cartX = 100; // 小车初始位置
+  let cartY = 170;
+  let animating = false;
+  let forceValue = 5;
+
+  // ========== 初始化模拟器 ==========
+  function initSimulator() {
+    simCanvas = document.getElementById('sim-canvas');
+    if (!simCanvas) return;
+    simCtx = simCanvas.getContext('2d');
+    simStatus = document.getElementById('sim-status');
+    
+    const slider = document.getElementById('force-slider');
+    const forceVal = document.getElementById('force-val');
+    if (slider && forceVal) {
+      slider.addEventListener('input', function() {
+        forceValue = parseInt(this.value);
+        forceVal.textContent = forceValue;
+      });
+    }
+    
+    drawSimScene();
+  }
+
+  // ========== 绘制模拟器场景 ==========
+  function drawSimScene() {
+    if (!simCtx) return;
+    
+    // 清空画布
+    simCtx.clearRect(0, 0, 900, 340);
+    
+    // 底层：地面
+    const groundGradient = simCtx.createLinearGradient(0, 250, 0, 340);
+    groundGradient.addColorStop(0, '#8d6e63');
+    groundGradient.addColorStop(1, '#6d4c41');
+    simCtx.fillStyle = groundGradient;
+    simCtx.fillRect(0, 250, 900, 90);
+    
+    // 地面纹理线
+    simCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+    simCtx.lineWidth = 1;
+    for (let i = 0; i < 900; i += 50) {
+      simCtx.beginPath();
+      simCtx.moveTo(i, 250);
+      simCtx.lineTo(i, 340);
+      simCtx.stroke();
+    }
+    
+    // 天空背景
+    const skyGradient = simCtx.createLinearGradient(0, 0, 0, 250);
+    skyGradient.addColorStop(0, '#e3f2fd');
+    skyGradient.addColorStop(1, '#bbdefb');
+    simCtx.fillStyle = skyGradient;
+    simCtx.fillRect(0, 0, 900, 250);
+    
+    // 参考线（刻度）
+    simCtx.strokeStyle = 'rgba(0,0,0,0.15)';
+    simCtx.lineWidth = 1;
+    simCtx.setLineDash([5, 5]);
+    for (let i = 100; i <= 800; i += 100) {
+      simCtx.beginPath();
+      simCtx.moveTo(i, 240);
+      simCtx.lineTo(i, 260);
+      simCtx.stroke();
+      simCtx.fillStyle = 'rgba(0,0,0,0.4)';
+      simCtx.font = '11px sans-serif';
+      simCtx.fillText(i + 'cm', i - 15, 275);
+    }
+    simCtx.setLineDash([]);
+    
+    // 中层：小车
+    drawCart(cartX, cartY);
+    
+    // 标注
+    simCtx.fillStyle = '#1976d2';
+    simCtx.font = 'bold 13px sans-serif';
+    simCtx.fillText('小车起点', 80, 220);
+    simCtx.fillText('→ 推力方向', 200, 140);
+    simCtx.fillText('← 拉力方向', 200, 200);
+  }
+
+  // ========== 绘制小车 ==========
+  function drawCart(x, y) {
+    simCtx.lineCap = 'round';
+    simCtx.lineJoin = 'round';
+    
+    // 车身
+    simCtx.fillStyle = '#ff6b6b';
+    simCtx.strokeStyle = '#c92a2a';
+    simCtx.lineWidth = 3;
+    simCtx.beginPath();
+    simCtx.roundRect(x, y, 80, 50, 8);
+    simCtx.fill();
+    simCtx.stroke();
+    
+    // 车窗
+    simCtx.fillStyle = '#e3f2fd';
+    simCtx.strokeStyle = '#1976d2';
+    simCtx.lineWidth = 2;
+    simCtx.beginPath();
+    simCtx.roundRect(x + 10, y + 10, 25, 20, 4);
+    simCtx.fill();
+    simCtx.stroke();
+    simCtx.beginPath();
+    simCtx.roundRect(x + 45, y + 10, 25, 20, 4);
+    simCtx.fill();
+    simCtx.stroke();
+    
+    // 车轮
+    simCtx.fillStyle = '#424242';
+    simCtx.strokeStyle = '#212121';
+    simCtx.lineWidth = 2;
+    simCtx.beginPath();
+    simCtx.arc(x + 20, y + 55, 12, 0, Math.PI * 2);
+    simCtx.fill();
+    simCtx.stroke();
+    simCtx.beginPath();
+    simCtx.arc(x + 60, y + 55, 12, 0, Math.PI * 2);
+    simCtx.fill();
+    simCtx.stroke();
+    
+    // 轮毂
+    simCtx.fillStyle = '#757575';
+    simCtx.beginPath();
+    simCtx.arc(x + 20, y + 55, 5, 0, Math.PI * 2);
+    simCtx.fill();
+    simCtx.beginPath();
+    simCtx.arc(x + 60, y + 55, 5, 0, Math.PI * 2);
+    simCtx.fill();
+  }
+
+  // ========== 施加力的动画 ==========
+  window.applyForce = function(type) {
+    if (animating) return;
+    animating = true;
+    
+    const distance = forceValue * 50; // 力越大，移动距离越远
+    const direction = type === 'push' ? 1 : -1;
+    const targetX = cartX + distance * direction;
+    const duration = 2000; // 2秒动画
+    const startX = cartX;
+    const startTime = Date.now();
+    
+    if (simStatus) {
+      simStatus.textContent = type === 'push' 
+        ? `🚗 施加推力 ${forceValue}，小车向右移动...` 
+        : `🚗 施加拉力 ${forceValue}，小车向左移动...`;
+      simStatus.style.color = type === 'push' ? '#2e7d32' : '#1976d2';
+    }
+    
+    function animate() {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeProgress = 1 - Math.pow(1 - progress, 3); // 缓动
+      
+      cartX = startX + (targetX - startX) * easeProgress;
+      
+      // 边界限制
+      if (cartX < 50) cartX = 50;
+      if (cartX > 770) cartX = 770;
+      
+      drawSimScene();
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        animating = false;
+        if (simStatus) {
+          simStatus.textContent = `✅ 完成！小车移动了约 ${Math.abs(Math.round(cartX - startX))} 像素（力的大小：${forceValue}）`;
+          simStatus.style.color = '#2e7d32';
+        }
+      }
+    }
+    
+    animate();
+  };
+
+  // ========== 重置模拟器 ==========
+  window.resetSim = function() {
+    if (animating) return;
+    
+    cartX = 100;
+    cartY = 170;
+    
+    const slider = document.getElementById('force-slider');
+    const forceVal = document.getElementById('force-val');
+    if (slider) slider.value = 5;
+    if (forceVal) forceVal.textContent = '5';
+    forceValue = 5;
+    
+    drawSimScene();
+    
+    if (simStatus) {
+      simStatus.textContent = '🔄 已重置！选择力的类型，然后点击"施加推力"或"施加拉力"';
+      simStatus.style.color = '#666';
+    }
+  };
+
+  // ========== 选择题检查 ==========
+  window.checkQuiz = function(optElement, result, feedback) {
+    if (!optElement) return;
+    
+    const quizBlock = optElement.closest('.quiz-block');
+    if (!quizBlock) return;
+    
+    const options = quizBlock.querySelectorAll('.quiz-opt');
+    const feedbackDiv = quizBlock.querySelector('.quiz-feedback');
+    
+    // 重置所有选项样式
+    options.forEach(opt => {
+      opt.style.background = '';
+      opt.style.borderColor = '';
+      opt.style.color = '';
+      opt.style.pointerEvents = '';
+    });
+    
+    // 设置当前选项样式
+    if (result === 'correct') {
+      optElement.style.background = 'rgba(46, 125, 50, 0.1)';
+      optElement.style.borderColor = '#2e7d32';
+      optElement.style.color = '#1b5e20';
+    } else {
+      optElement.style.background = 'rgba(211, 47, 47, 0.1)';
+      optElement.style.borderColor = '#d32f2f';
+      optElement.style.color = '#b71c1c';
+    }
+    
+    // 禁用所有选项
+    options.forEach(opt => {
+      opt.style.pointerEvents = 'none';
+      opt.style.opacity = '0.7';
+    });
+    optElement.style.opacity = '1';
+    
+    // 显示反馈
+    if (feedbackDiv) {
+      feedbackDiv.textContent = feedback;
+      feedbackDiv.style.display = 'block';
+      feedbackDiv.style.marginTop = '16px';
+      feedbackDiv.style.padding = '12px 16px';
+      feedbackDiv.style.borderRadius = '8px';
+      feedbackDiv.style.fontSize = '0.95rem';
+      feedbackDiv.style.lineHeight = '1.6';
+      
+      if (result === 'correct') {
+        feedbackDiv.style.background = 'rgba(46, 125, 50, 0.1)';
+        feedbackDiv.style.border = '1.5px solid #2e7d32';
+        feedbackDiv.style.color = '#1b5e20';
+      } else {
+        feedbackDiv.style.background = 'rgba(211, 47, 47, 0.1)';
+        feedbackDiv.style.border = '1.5px solid #d32f2f';
+        feedbackDiv.style.color = '#b71c1c';
+      }
+    }
+  };
+
+  // ========== 页面加载时初始化 ==========
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSimulator);
+  } else {
+    initSimulator();
+  }
+})();
+</script>
 </body>
 <script src="../../assets/engines/canvas-lab/v1/lab.js"></script>
 <script src="../../assets/engines/canvas-lab/v1/scenes.js"></script>

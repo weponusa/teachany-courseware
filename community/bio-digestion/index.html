@@ -1436,5 +1436,321 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "digestCanvas", "readout": "labReadout-digestCanvas", "bg": [{"t": "ellipse", "x": 120, "y": 110, "rx": 46, "ry": 40, "fill": "rgba(248,113,113,.45)", "stroke": "#ef4444", "w": 2.5}, {"t": "text", "x": 120, "y": 110, "t2": "口腔", "size": 12, "align": "center"}, {"t": "line", "x1": 160, "y1": 120, "x2": 230, "y2": 140, "w": 14, "color": "#f59e0b"}, {"t": "text", "x": 232, "y": 146, "t2": "食道", "size": 11.5, "align": "center"}, {"t": "ellipse", "x": 300, "y": 165, "rx": 58, "ry": 46, "fill": "rgba(244,114,182,.35)", "stroke": "#ec4899", "w": 2.5}, {"t": "text", "x": 300, "y": 165, "t2": "胃", "size": 13, "align": "center"}, {"t": "line", "x1": 350, "y1": 180, "x2": 430, "y2": 200, "w": 12, "color": "#a3a3a3"}, {"t": "ellipse", "x": 560, "y": 250, "rx": 130, "ry": 62, "fill": "rgba(251,191,36,.35)", "stroke": "#f59e0b", "w": 4, "rot": 3.1}, {"t": "text", "x": 560, "y": 250, "t2": "小肠", "size": 13, "align": "center"}, {"t": "ellipse", "x": 430, "y": 330, "rx": 34, "ry": 46, "fill": "rgba(52,211,153,.4)", "stroke": "#10b981", "w": 2.5, "rot": 0.5}, {"t": "text", "x": 430, "y": 336, "t2": "大肠", "size": 11.5, "align": "center"}], "parts": [{"x": 120, "y": 110, "name": "口腔", "info": "牙齿咀嚼、舌搅拌，唾液淀粉酶把淀粉初步分解成麦芽糖。", "r": 44, "lx": 100, "ly": 56}, {"x": 232, "y": 146, "name": "食道", "info": "食物经食道的蠕动被推入胃，没有消化作用。", "r": 34, "lx": 232, "ly": 118}, {"x": 300, "y": 165, "name": "胃", "info": "胃液（含胃蛋白酶、盐酸）把蛋白质初步分解成多肽；胃还能暂存、搅拌食物。", "r": 58, "lx": 300, "ly": 84}, {"x": 560, "y": 250, "name": "小肠", "info": "消化的主要场所：淀粉→葡萄糖、蛋白质→氨基酸、脂肪→甘油和脂肪酸，并吸收绝大部分营养。", "r": 92, "lx": 560, "ly": 330}, {"x": 430, "y": 336, "name": "大肠", "info": "吸收少量水分和无机盐，剩余残渣形成粪便。", "r": 42, "lx": 300, "ly": 342}], "tip": "👆 点击消化道各器官，看这里发生了什么消化"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.checkDragDrop !== 'undefined') return;
+
+  // ========== 拖拽判分系统 ==========
+  const dragDropState = {
+    placements: {} // { zoneId: itemId }
+  };
+
+  window.checkDragDrop = function() {
+    const correctAnswers = {
+      'zone-mouth': 'saliva',
+      'zone-stomach': 'gastric',
+      'zone-liver': 'bile',
+      'zone-pancreas': 'pancreas',
+      'zone-smallintestine': 'intestine'
+    };
+
+    let correct = 0;
+    let total = Object.keys(correctAnswers).length;
+    const feedback = document.getElementById('dndFeedback');
+    if (!feedback) return;
+
+    Object.keys(correctAnswers).forEach(zoneId => {
+      const zone = document.getElementById(zoneId);
+      if (!zone) return;
+      
+      const content = zone.querySelector('.drop-zone-content');
+      if (!content) return;
+
+      const placed = dragDropState.placements[zoneId];
+      const expected = correctAnswers[zoneId];
+      
+      if (placed === expected) {
+        correct++;
+        content.style.background = '#d4edda';
+        content.style.border = '2px solid #28a745';
+      } else {
+        content.style.background = '#f8d7da';
+        content.style.border = '2px solid #dc3545';
+      }
+    });
+
+    feedback.innerHTML = `
+      <div style="margin-top:16px;padding:16px;border-radius:8px;background:${correct === total ? '#d4edda' : '#fff3cd'};border:2px solid ${correct === total ? '#28a745' : '#ffc107'};">
+        <strong style="font-size:1.1rem;">${correct === total ? '🎉 全部正确！' : '📝 继续努力'}</strong>
+        <p style="margin:8px 0 0;">正确：${correct} / ${total}</p>
+      </div>
+    `;
+  };
+
+  window.resetDragDrop = function() {
+    dragDropState.placements = {};
+    
+    const zones = document.querySelectorAll('.drop-zone-content');
+    zones.forEach(zone => {
+      zone.innerHTML = '';
+      zone.style.background = '';
+      zone.style.border = '';
+    });
+
+    const items = document.querySelectorAll('.drag-item');
+    items.forEach(item => {
+      item.style.opacity = '1';
+      item.style.cursor = 'grab';
+      if (item.parentElement && item.parentElement.classList.contains('drag-items')) {
+        // 已在原位
+      } else {
+        const container = document.querySelector('.drag-items');
+        if (container) container.appendChild(item);
+      }
+    });
+
+    const feedback = document.getElementById('dndFeedback');
+    if (feedback) feedback.innerHTML = '';
+  };
+
+  // 监听拖拽放置事件
+  if (typeof window.onDrop === 'undefined') {
+    window.onDrop = function(event) {
+      event.preventDefault();
+      const zone = event.currentTarget;
+      const zoneContent = zone.querySelector('.drop-zone-content');
+      if (!zoneContent) return;
+
+      const itemId = event.dataTransfer.getData('text/plain');
+      const item = document.getElementById(itemId);
+      if (!item) return;
+
+      const accepts = JSON.parse(zone.dataset.accepts || '[]');
+      const itemType = item.dataset.type;
+
+      if (accepts.includes(itemType)) {
+        zoneContent.innerHTML = '';
+        zoneContent.appendChild(item);
+        dragDropState.placements[zoneContent.id] = itemType;
+        item.style.opacity = '1';
+      }
+
+      zone.classList.remove('drag-over');
+    };
+
+    window.onDragOver = function(event) {
+      event.preventDefault();
+      event.currentTarget.classList.add('drag-over');
+    };
+
+    window.onDragLeave = function(event) {
+      event.currentTarget.classList.remove('drag-over');
+    };
+  }
+
+  // ========== 消化道蠕动动画 ==========
+  const animState = {
+    running: true,
+    frame: 0,
+    foodPos: 50,
+    peristalsis: []
+  };
+
+  const canvas = document.getElementById('digestCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const organs = [
+    { name: '口腔', x: 100, y: 80, w: 80, h: 60, color: '#fca5a5', info: '咀嚼食物，唾液淀粉酶初步消化淀粉' },
+    { name: '食道', x: 180, y: 100, w: 40, h: 180, color: '#fdba74', info: '蠕动将食物推向胃' },
+    { name: '胃', x: 150, y: 280, w: 120, h: 100, color: '#fb923c', info: '胃蛋白酶消化蛋白质，形成食糜' },
+    { name: '小肠', x: 280, y: 200, w: 480, h: 80, color: '#34d399', info: '消化和吸收的主要场所，吸收葡萄糖、氨基酸等' },
+    { name: '大肠', x: 700, y: 280, w: 120, h: 100, color: '#a78bfa', info: '吸收水分和无机盐，形成粪便' }
+  ];
+
+  function drawDigestiveSystem() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 背景
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, '#fef3c7');
+    grad.addColorStop(1, '#fde68a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 绘制器官
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    organs.forEach((organ, idx) => {
+      ctx.fillStyle = organ.color;
+      ctx.strokeStyle = '#78350f';
+      ctx.beginPath();
+      ctx.roundRect(organ.x, organ.y, organ.w, organ.h, 12);
+      ctx.fill();
+      ctx.stroke();
+
+      // 标注
+      ctx.fillStyle = '#1f2937';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(organ.name, organ.x + organ.w / 2, organ.y - 8);
+
+      // 蠕动波
+      if (animState.running && idx > 0 && idx < 4) {
+        const wave = animState.peristalsis[idx] || 0;
+        ctx.fillStyle = 'rgba(251, 146, 60, 0.4)';
+        ctx.beginPath();
+        ctx.arc(organ.x + organ.w / 2, organ.y + wave, 15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    // 连接管道
+    ctx.strokeStyle = '#fdba74';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(180, 80);
+    ctx.lineTo(200, 100);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(200, 280);
+    ctx.lineTo(210, 300);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(270, 330);
+    ctx.lineTo(280, 240);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(760, 240);
+    ctx.lineTo(760, 280);
+    ctx.stroke();
+
+    // 食团
+    if (animState.running) {
+      const progress = (animState.frame % 300) / 300;
+      let fx, fy;
+      
+      if (progress < 0.15) {
+        fx = 140;
+        fy = 110;
+      } else if (progress < 0.3) {
+        fx = 200;
+        fy = 140 + (progress - 0.15) * 1000;
+      } else if (progress < 0.5) {
+        fx = 210;
+        fy = 330;
+      } else if (progress < 0.75) {
+        fx = 280 + (progress - 0.5) * 1920;
+        fy = 240;
+      } else {
+        fx = 760;
+        fy = 240 + (progress - 0.75) * 400;
+      }
+
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.arc(fx, fy, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ea580c';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // 消化液分泌（小肠区域）
+    if (animState.running && animState.frame % 40 < 20) {
+      for (let i = 0; i < 8; i++) {
+        ctx.fillStyle = 'rgba(167, 139, 250, 0.6)';
+        ctx.beginPath();
+        ctx.arc(320 + i * 60, 220, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 引线标注
+    ctx.strokeStyle = '#374151';
+    ctx.lineWidth = 1.5;
+    ctx.fillStyle = '#1f2937';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'left';
+
+    // 唾液腺
+    ctx.beginPath();
+    ctx.moveTo(120, 60);
+    ctx.lineTo(100, 40);
+    ctx.stroke();
+    ctx.fillText('唾液腺', 60, 38);
+
+    // 胃液
+    ctx.beginPath();
+    ctx.moveTo(180, 320);
+    ctx.lineTo(140, 350);
+    ctx.stroke();
+    ctx.fillText('胃液分泌', 90, 355);
+
+    // 肠绒毛
+    ctx.beginPath();
+    ctx.moveTo(520, 280);
+    ctx.lineTo(520, 320);
+    ctx.stroke();
+    ctx.fillText('肠绒毛吸收', 480, 340);
+  }
+
+  function animate() {
+    if (animState.running) {
+      animState.frame++;
+      
+      // 更新蠕动波
+      organs.forEach((_, idx) => {
+        animState.peristalsis[idx] = Math.sin(animState.frame * 0.05 + idx) * 20 + 30;
+      });
+    }
+
+    drawDigestiveSystem();
+    requestAnimationFrame(animate);
+  }
+
+  window.toggleAnimation = function() {
+    animState.running = !animState.running;
+  };
+
+  window.resetAnimation = function() {
+    animState.frame = 0;
+    animState.running = true;
+    animState.peristalsis = [];
+    drawDigestiveSystem();
+  };
+
+  // 点击器官显示信息
+  canvas.addEventListener('click', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const info = document.getElementById('organInfo');
+    if (!info) return;
+
+    let found = false;
+    organs.forEach(organ => {
+      if (x >= organ.x && x <= organ.x + organ.w && y >= organ.y && y <= organ.y + organ.h) {
+        info.style.display = 'block';
+        info.innerHTML = `<strong>${organ.name}：</strong>${organ.info}`;
+        found = true;
+      }
+    });
+
+    if (!found) info.style.display = 'none';
+  });
+
+  animate();
+})();
+</script>
+</body>
 </html>

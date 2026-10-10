@@ -743,5 +743,95 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.goSection !== 'undefined') return;
+
+  window.goSection = function(sectionId) {
+    const targetSection = document.getElementById(sectionId);
+    if (!targetSection) {
+      console.warn('Section not found:', sectionId);
+      return;
+    }
+    
+    // 隐藏 hero 区域
+    const hero = document.getElementById('hero');
+    if (hero) {
+      hero.style.display = 'none';
+    }
+    
+    // 显示目标 section
+    targetSection.style.display = 'block';
+    
+    // 平滑滚动到目标区域
+    targetSection.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'start' 
+    });
+    
+    // 更新进度条（如果存在）
+    updateProgressBar();
+    
+    // 触发section进入动画
+    targetSection.classList.add('section-active');
+    setTimeout(() => {
+      targetSection.classList.remove('section-active');
+    }, 600);
+  };
+
+  function updateProgressBar() {
+    const progressBar = document.getElementById('progress-bar');
+    if (!progressBar) return;
+    
+    const sections = document.querySelectorAll('.section');
+    const visibleSections = Array.from(sections).filter(s => {
+      const rect = s.getBoundingClientRect();
+      return rect.top < window.innerHeight && rect.bottom > 0;
+    });
+    
+    if (sections.length > 0) {
+      const progress = (visibleSections.length / sections.length) * 100;
+      progressBar.style.width = Math.min(progress, 100) + '%';
+    }
+  }
+
+  // 监听滚动更新进度条
+  let scrollTimeout;
+  window.addEventListener('scroll', function() {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(updateProgressBar, 100);
+  }, { passive: true });
+
+  // 初始化进度条
+  updateProgressBar();
+
+  // 添加CSS动画支持（如果不存在）
+  if (!document.getElementById('goSection-styles')) {
+    const style = document.createElement('style');
+    style.id = 'goSection-styles';
+    style.textContent = `
+      .section-active {
+        animation: sectionFadeIn 0.6s ease-out;
+      }
+      @keyframes sectionFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      #progress-bar {
+        transition: width 0.3s ease-out;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+})();
+</script>
 </body>
 </html>

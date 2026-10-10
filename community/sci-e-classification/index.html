@@ -880,5 +880,257 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 <script>
 TeachAnyScenes.mount('tree', {"nodes": [{"x": 530, "y": 40, "name": "生物", "w": 70, "info": "具有生命现象（能生长、繁殖、呼吸、对刺激作出反应）的物体。", "color": "rgba(96,165,250,.22)"}, {"x": 230, "y": 150, "name": "动物", "w": 60, "info": "不能自己制造有机物，靠摄取食物获得营养——有细胞结构但没有细胞壁和叶绿体。"}, {"x": 530, "y": 150, "name": "植物", "w": 60, "info": "能进行光合作用自己制造有机物——细胞有细胞壁、叶绿体和大液泡。"}, {"x": 830, "y": 150, "name": "微生物", "w": 70, "info": "细菌、真菌、病毒等肉眼看不见的生物；细菌没有成形的细胞核。"}, {"x": 110, "y": 260, "name": "脊椎动物", "w": 90, "info": "体内有脊柱：鱼、两栖、爬行、鸟、哺乳五大类。"}, {"x": 330, "y": 260, "name": "无脊椎动物", "w": 95, "info": "没有脊柱：腔肠、扁形、线形、环节、软体、节肢等。"}, {"x": 530, "y": 260, "name": "种子植物", "w": 90, "info": "能产生种子：裸子植物（松杉柏）和被子植物（有花有果）。"}, {"x": 830, "y": 260, "name": "孢子植物", "w": 90, "info": "靠孢子繁殖：藻类、苔藓、蕨类。"}, {"x": 110, "y": 370, "name": "鱼类", "w": 55, "info": "用鳃呼吸，靠鳍游泳，体温不恒定。"}, {"x": 250, "y": 370, "name": "鸟类", "w": 55, "info": "体表被羽毛，前肢变成翼，有喙无齿，体温恒定。"}, {"x": 390, "y": 370, "name": "哺乳类", "w": 65, "info": "体表被毛，胎生哺乳，体温恒定——最高等的动物类群。"}, {"x": 700, "y": 370, "name": "被子植物", "w": 80, "info": "有花、果实，种子外有果皮包被——种类最多、最繁盛。"}, {"x": 880, "y": 370, "name": "蕨类", "w": 55, "info": "有根、茎、叶和输导组织，靠孢子繁殖，需要潮湿环境。"}], "edges": [[0, 1], [0, 2], [0, 3], [1, 4], [1, 5], [2, 6], [2, 7], [4, 8], [4, 9], [4, 10], [6, 11], [7, 12]], "hint": "👆 点击分类树的节点，看这一类的共同特征（越往下分类越细）。", "canvas": "tree-canvas", "readout": "labReadout-tree-canvas"});
 </script>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.playTTS !== 'undefined' && 
+      typeof window.resetDrag !== 'undefined' && 
+      typeof window.askTutor !== 'undefined') {
+    return;
+  }
+
+  // ============ playTTS 函数 ============
+  if (typeof window.playTTS === 'undefined') {
+    let currentAudio = null;
+    let currentItem = null;
+
+    window.playTTS = function(segmentId, itemElement) {
+      const audioEl = itemElement.querySelector('audio');
+      const playBtn = itemElement.querySelector('.tts-play-btn');
+      
+      if (!audioEl || !playBtn) return;
+
+      // 如果点击的是正在播放的项，暂停
+      if (currentAudio === audioEl && !audioEl.paused) {
+        audioEl.pause();
+        playBtn.textContent = '▶';
+        playBtn.parentElement.classList.remove('playing');
+        return;
+      }
+
+      // 停止之前的音频
+      if (currentAudio && currentAudio !== audioEl) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        if (currentItem) {
+          const prevBtn = currentItem.querySelector('.tts-play-btn');
+          if (prevBtn) {
+            prevBtn.textContent = '▶';
+            currentItem.classList.remove('playing');
+          }
+        }
+      }
+
+      // 播放新音频
+      audioEl.currentTime = 0;
+      audioEl.play();
+      playBtn.textContent = '⏸';
+      itemElement.classList.add('playing');
+      
+      currentAudio = audioEl;
+      currentItem = itemElement;
+
+      // 播放结束处理
+      audioEl.onended = function() {
+        playBtn.textContent = '▶';
+        itemElement.classList.remove('playing');
+        currentAudio = null;
+        currentItem = null;
+      };
+    };
+  }
+
+  // ============ resetDrag 函数 ============
+  if (typeof window.resetDrag === 'undefined') {
+    const dragData = [
+      { name: '金鱼', class: '鱼类', features: '水生、鳃呼吸、鳞片' },
+      { name: '青蛙', class: '两栖类', features: '幼体水生、成体陆生' },
+      { name: '蜥蜴', class: '爬行类', features: '陆生、卵生、鳞片' },
+      { name: '蛇', class: '爬行类', features: '无足、鳞片、卵生' },
+      { name: '麻雀', class: '鸟类', features: '羽毛、飞行、卵生' },
+      { name: '老鹰', class: '鸟类', features: '羽毛、喙、翅膀' },
+      { name: '猫', class: '哺乳类', features: '胎生、哺乳、毛发' },
+      { name: '海豚', class: '哺乳类', features: '水生、胎生、哺乳' },
+      { name: '鲨鱼', class: '鱼类', features: '软骨、鳃呼吸' },
+      { name: '蝾螈', class: '两栖类', features: '湿润皮肤、变态发育' },
+      { name: '鳄鱼', class: '爬行类', features: '水陆两栖、卵生' },
+      { name: '企鹅', class: '鸟类', features: '羽毛、不会飞、卵生' }
+    ];
+
+    window.resetDrag = function() {
+      const dragBank = document.getElementById('drag-bank');
+      const feedback = document.getElementById('drag-feedback');
+      const dropTargets = document.querySelectorAll('.drop-target .drop-content');
+      
+      if (!dragBank) return;
+
+      // 清空所有目标区
+      dropTargets.forEach(target => {
+        target.innerHTML = '';
+      });
+
+      // 清空反馈
+      if (feedback) {
+        feedback.innerHTML = '';
+        feedback.style.display = 'none';
+      }
+
+      // 重新渲染拖拽项
+      dragBank.innerHTML = '';
+      dragData.forEach((item, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'drag-chip';
+        chip.draggable = true;
+        chip.dataset.animal = item.name;
+        chip.dataset.correctClass = item.class;
+        chip.dataset.features = item.features;
+        chip.textContent = item.name;
+        chip.id = `drag-item-${idx}`;
+        
+        chip.ondragstart = function(e) {
+          e.dataTransfer.setData('text/plain', chip.id);
+          chip.classList.add('dragging');
+        };
+        
+        chip.ondragend = function() {
+          chip.classList.remove('dragging');
+        };
+        
+        dragBank.appendChild(chip);
+      });
+    };
+
+    // 初始化拖拽
+    window.resetDrag();
+
+    // 拖拽放置逻辑
+    if (typeof window.evt === 'undefined') {
+      window.evt = function(e) {
+        e.preventDefault();
+      };
+    }
+
+    if (typeof window.drop === 'undefined') {
+      window.drop = function(e) {
+        e.preventDefault();
+        const chipId = e.dataTransfer.getData('text/plain');
+        const chip = document.getElementById(chipId);
+        const dropTarget = e.currentTarget;
+        const dropContent = dropTarget.querySelector('.drop-content');
+        
+        if (!chip || !dropContent) return;
+
+        // 移动芯片到目标区
+        dropContent.appendChild(chip);
+        chip.draggable = false;
+        
+        // 检查答案
+        const correctClass = chip.dataset.correctClass;
+        const targetClass = dropTarget.dataset.class;
+        
+        if (correctClass === targetClass) {
+          chip.classList.add('correct');
+          chip.classList.remove('incorrect');
+        } else {
+          chip.classList.add('incorrect');
+          chip.classList.remove('correct');
+        }
+
+        // 检查是否全部完成
+        checkCompletion();
+      };
+    }
+
+    function checkCompletion() {
+      const dragBank = document.getElementById('drag-bank');
+      const feedback = document.getElementById('drag-feedback');
+      
+      if (!dragBank || !feedback) return;
+      
+      if (dragBank.children.length === 0) {
+        const correctChips = document.querySelectorAll('.drag-chip.correct');
+        const incorrectChips = document.querySelectorAll('.drag-chip.incorrect');
+        const total = correctChips.length + incorrectChips.length;
+        
+        feedback.innerHTML = `
+          <div style="padding:15px;border-radius:8px;background:${correctChips.length === total ? '#e8f5e9' : '#fff3e0'}">
+            <strong>完成！</strong> 正确 ${correctChips.length}/${total} 个
+            ${incorrectChips.length > 0 ? '<br><small>红色标记的需要重新思考哦～</small>' : '<br><small>🎉 全部正确！你真棒！</small>'}
+          </div>
+        `;
+        feedback.style.display = 'block';
+      }
+    }
+  }
+
+  // ============ askTutor 函数 ============
+  if (typeof window.askTutor === 'undefined') {
+    window.askTutor = function() {
+      const input = document.getElementById('tutor-input');
+      const card = document.querySelector('[data-teachany-tutor-card]');
+      
+      if (!input || !card) return;
+      
+      const question = input.value.trim();
+      if (!question) {
+        showTutorResponse('请输入你的问题哦～ 😊');
+        return;
+      }
+
+      // 显示思考状态
+      showTutorResponse('正在思考中... 🤔');
+
+      // 模拟AI回答（实际应调用后端API）
+      setTimeout(() => {
+        const answer = generateAnswer(question);
+        showTutorResponse(answer);
+        input.value = '';
+      }, 800);
+    };
+
+    function showTutorResponse(text) {
+      const bubble = document.querySelector('.tutor-bubble');
+      if (bubble) {
+        bubble.innerHTML = `<p>${text}</p>`;
+      }
+    }
+
+    function generateAnswer(question) {
+      const q = question.toLowerCase();
+      
+      if (q.includes('蝙蝠') || q.includes('哺乳')) {
+        return '蝙蝠虽然会飞，但它是<strong>哺乳类</strong>！因为：<br>① 胎生（不下蛋）<br>② 用乳汁哺育幼崽<br>③ 身上有毛发<br>④ 用肺呼吸<br>会飞只是它的特殊本领，不能改变它的分类哦！🦇';
+      }
+      
+      if (q.includes('五界') || q.includes('惠特克')) {
+        return '<strong>五界系统</strong>是美国生态学家<strong>惠特克</strong>在1969年提出的：<br>🦠 原核生物界（细菌）<br>🧫 原生生物界（单细胞真核）<br>🍄 真菌界<br>🌱 植物界<br>🦁 动物界<br>这个系统更科学地反映了生物的进化关系！';
+      }
+      
+      if (q.includes('林奈') || q.includes('双名法')) {
+        return '<strong>林奈双名法</strong>用两个拉丁词命名生物：<br>① 第一个词是<strong>属名</strong>（首字母大写）<br>② 第二个词是<strong>种名</strong>（小写）<br>例如：人类 = <em>Homo sapiens</em><br>这样全世界科学家都能用统一的名字交流啦！🌍';
+      }
+      
+      if (q.includes('分类') && (q.includes('为什么') || q.includes('意义'))) {
+        return '生物分类的意义：<br>✅ 让科学家用统一语言交流<br>✅ 揭示生物之间的亲缘关系<br>✅ 方便查找和研究生物<br>✅ 了解生物进化历程<br>就像图书馆分类一样，让知识井井有条！📚';
+      }
+      
+      return `这是个好问题！关于「${question}」，建议你：<br>① 查看课件中的相关章节<br>② 观察生物的关键特征<br>③ 对比不同类群的异同<br>继续探索，你会找到答案的！💡`;
+    }
+
+    // 绑定回车键
+    const input = document.getElementById('tutor-input');
+    if (input) {
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          window.askTutor();
+        }
+      });
+    }
+  }
+
+})();
+</script>
 </body>
 </html>

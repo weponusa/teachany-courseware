@@ -796,5 +796,314 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('proportion', {"mode": "direct", "slider": "k-slider", "sliderOut": "k-display", "canvas": "graph-canvas", "readout": "k-display"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.checkOption !== 'undefined') return;
+
+  // ========== 选择题检查函数 ==========
+  window.checkOption = function(btn, questionId, selectedAnswer) {
+    const correctAnswers = {
+      'pre-q1': 'B',
+      'pre-q2': 'B',
+      'post-q1': 'B',
+      'post-q2': 'C',
+      'post-q3': 'A'
+    };
+
+    const feedbackEl = document.getElementById('fb-' + questionId);
+    const allBtns = btn.parentElement.querySelectorAll('.option-btn');
+    
+    // 重置所有按钮状态
+    allBtns.forEach(b => {
+      b.classList.remove('correct', 'incorrect');
+      b.disabled = false;
+    });
+
+    const isCorrect = correctAnswers[questionId] === selectedAnswer;
+    
+    if (isCorrect) {
+      btn.classList.add('correct');
+      feedbackEl.innerHTML = '<span style="color:var(--success)">✅ 回答正确！</span>';
+      feedbackEl.style.display = 'block';
+      
+      // 解锁成就
+      if (questionId.startsWith('pre-')) {
+        unlockAchievement('ach-pretest');
+      }
+    } else {
+      btn.classList.add('incorrect');
+      feedbackEl.innerHTML = '<span style="color:var(--danger)">❌ 再想想，正确答案是 ' + correctAnswers[questionId] + '</span>';
+      feedbackEl.style.display = 'block';
+    }
+
+    // 禁用所有按钮
+    allBtns.forEach(b => b.disabled = true);
+  };
+
+  // ========== 综合任务检查函数 ==========
+  window.checkTask = function() {
+    const answerEl = document.getElementById('task-answer');
+    const feedbackEl = document.getElementById('fb-task');
+    const answer = answerEl.value.trim().toLowerCase();
+
+    if (!answer) {
+      feedbackEl.innerHTML = '<span style="color:var(--warning)">⚠️ 请先写出解答过程</span>';
+      feedbackEl.style.display = 'block';
+      return;
+    }
+
+    // 检查关键步骤
+    const hasK = answer.includes('k=0.1') || answer.includes('k = 0.1');
+    const hasFormula = answer.includes('y=0.1x') || answer.includes('y = 0.1x');
+    const has45 = answer.includes('4.5') || answer.includes('45');
+    const has50 = answer.includes('50');
+
+    const correctSteps = [hasK, hasFormula, has45, has50].filter(Boolean).length;
+
+    if (correctSteps >= 3) {
+      feedbackEl.innerHTML = `
+        <span style="color:var(--success)">✅ 优秀！解答完整</span><br>
+        <small>参考答案：k=0.1，y=0.1x，45分钟费用4.5元，5元可骑50分钟</small>
+      `;
+      unlockAchievement('ach-master');
+    } else if (correctSteps >= 2) {
+      feedbackEl.innerHTML = `
+        <span style="color:var(--warning)">⚠️ 部分正确，再检查一下</span><br>
+        <small>提示：k=3÷30=0.1，然后代入计算</small>
+      `;
+    } else {
+      feedbackEl.innerHTML = `
+        <span style="color:var(--danger)">❌ 需要重新思考</span><br>
+        <small>提示：先用已知条件求k，再写出函数关系式</small>
+      `;
+    }
+    feedbackEl.style.display = 'block';
+  };
+
+  // ========== 图象绘制函数 ==========
+  let currentK = 2;
+
+  window.updateGraph = function() {
+    const canvas = document.getElementById('graph-canvas');
+    if (!canvas) return;
+
+    const slider = document.getElementById('k-slider');
+    const display = document.getElementById('k-display');
+    
+    currentK = parseInt(slider.value) / 10;
+    display.textContent = currentK.toFixed(1);
+
+    drawGraph(canvas, currentK);
+    unlockAchievement('ach-graph');
+  };
+
+  window.setK = function(value) {
+    const slider = document.getElementById('k-slider');
+    const display = document.getElementById('k-display');
+    
+    if (slider && display) {
+      slider.value = value;
+      currentK = value / 10;
+      display.textContent = currentK.toFixed(1);
+      
+      const canvas = document.getElementById('graph-canvas');
+      if (canvas) drawGraph(canvas, currentK);
+    }
+  };
+
+  function drawGraph(canvas, k) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    const centerX = w / 2;
+    const centerY = h / 2;
+    const scale = 40;
+
+    // 清空画布
+    ctx.clearRect(0, 0, w, h);
+
+    // 底层：背景渐变
+    const gradient = ctx.createLinearGradient(0, 0, 0, h);
+    gradient.addColorStop(0, '#f0f4f8');
+    gradient.addColorStop(1, '#ffffff');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, w, h);
+
+    // 中层：网格线
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 0.5;
+    for (let i = -5; i <= 5; i++) {
+      if (i === 0) continue;
+      // 竖线
+      ctx.beginPath();
+      ctx.moveTo(centerX + i * scale, 0);
+      ctx.lineTo(centerX + i * scale, h);
+      ctx.stroke();
+      // 横线
+      ctx.beginPath();
+      ctx.moveTo(0, centerY + i * scale);
+      ctx.lineTo(w, centerY + i * scale);
+      ctx.stroke();
+    }
+
+    // 坐标轴
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // X轴
+    ctx.beginPath();
+    ctx.moveTo(0, centerY);
+    ctx.lineTo(w, centerY);
+    ctx.stroke();
+    // 箭头
+    ctx.beginPath();
+    ctx.moveTo(w - 10, centerY - 5);
+    ctx.lineTo(w, centerY);
+    ctx.lineTo(w - 10, centerY + 5);
+    ctx.stroke();
+
+    // Y轴
+    ctx.beginPath();
+    ctx.moveTo(centerX, h);
+    ctx.lineTo(centerX, 0);
+    ctx.stroke();
+    // 箭头
+    ctx.beginPath();
+    ctx.moveTo(centerX - 5, 10);
+    ctx.lineTo(centerX, 0);
+    ctx.lineTo(centerX + 5, 10);
+    ctx.stroke();
+
+    // 轴标签
+    ctx.fillStyle = '#333';
+    ctx.font = '14px Arial';
+    ctx.fillText('x', w - 20, centerY + 20);
+    ctx.fillText('y', centerX + 10, 15);
+    ctx.fillText('O', centerX + 5, centerY + 15);
+
+    // 刻度标注
+    ctx.font = '11px Arial';
+    ctx.fillStyle = '#666';
+    for (let i = -5; i <= 5; i++) {
+      if (i === 0) continue;
+      ctx.fillText(i.toString(), centerX + i * scale - 5, centerY + 15);
+      ctx.fillText(i.toString(), centerX + 5, centerY - i * scale + 5);
+    }
+
+    // 主体：绘制函数图象 y = kx
+    if (Math.abs(k) > 0.01) {
+      ctx.strokeStyle = k > 0 ? '#1976d2' : '#d32f2f';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+
+      let started = false;
+      for (let x = -6; x <= 6; x += 0.1) {
+        const y = k * x;
+        const canvasX = centerX + x * scale;
+        const canvasY = centerY - y * scale;
+
+        if (canvasY >= 0 && canvasY <= h) {
+          if (!started) {
+            ctx.moveTo(canvasX, canvasY);
+            started = true;
+          } else {
+            ctx.lineTo(canvasX, canvasY);
+          }
+        }
+      }
+      ctx.stroke();
+
+      // 顶层：标注关键点和信息
+      ctx.fillStyle = k > 0 ? '#1976d2' : '#d32f2f';
+      ctx.font = 'bold 14px Arial';
+      
+      // 函数表达式
+      const formula = k === 1 ? 'y = x' : k === -1 ? 'y = -x' : `y = ${k.toFixed(1)}x`;
+      ctx.fillText(formula, 20, 30);
+
+      // 标注特征点 (1, k)
+      const pointX = centerX + scale;
+      const pointY = centerY - k * scale;
+      if (pointY >= 0 && pointY <= h) {
+        ctx.beginPath();
+        ctx.arc(pointX, pointY, 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 引线和标注
+        ctx.strokeStyle = k > 0 ? '#1976d2' : '#d32f2f';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pointX, pointY);
+        ctx.lineTo(pointX + 30, pointY - 20);
+        ctx.stroke();
+        
+        ctx.fillText(`(1, ${k.toFixed(1)})`, pointX + 35, pointY - 20);
+      }
+
+      // 象限标注
+      ctx.font = '12px Arial';
+      ctx.fillStyle = '#666';
+      if (k > 0) {
+        ctx.fillText('经过一、三象限', 20, 55);
+        ctx.fillText('y随x增大而增大 ↗', 20, 75);
+      } else {
+        ctx.fillText('经过二、四象限', 20, 55);
+        ctx.fillText('y随x增大而减小 ↘', 20, 75);
+      }
+
+      // |k| 大小的视觉提示
+      ctx.fillText(`|k| = ${Math.abs(k).toFixed(1)}`, 20, 95);
+      if (Math.abs(k) > 2) {
+        ctx.fillText('(斜率较大，图象陡峭)', 20, 110);
+      } else if (Math.abs(k) < 1 && Math.abs(k) > 0.01) {
+        ctx.fillText('(斜率较小，图象平缓)', 20, 110);
+      }
+    } else {
+      // k接近0的特殊情况
+      ctx.fillStyle = '#666';
+      ctx.font = '14px Arial';
+      ctx.fillText('k ≈ 0 时，图象接近x轴', 20, 30);
+    }
+  }
+
+  // ========== 成就解锁辅助函数 ==========
+  function unlockAchievement(achId) {
+    const achEl = document.getElementById(achId);
+    if (achEl && !achEl.classList.contains('unlocked')) {
+      achEl.classList.add('unlocked');
+      achEl.style.opacity = '1';
+      achEl.style.transform = 'scale(1.1)';
+      setTimeout(() => {
+        achEl.style.transform = 'scale(1)';
+      }, 300);
+    }
+  }
+
+  // ========== 初始化 ==========
+  window.addEventListener('DOMContentLoaded', function() {
+    unlockAchievement('ach-start');
+    
+    const canvas = document.getElementById('graph-canvas');
+    if (canvas) {
+      drawGraph(canvas, 2);
+    }
+  });
+
+  // 如果页面已加载完成
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(function() {
+      unlockAchievement('ach-start');
+      const canvas = document.getElementById('graph-canvas');
+      if (canvas) drawGraph(canvas, 2);
+    }, 100);
+  }
+
+})();
+</script>
+</body>
 </html>

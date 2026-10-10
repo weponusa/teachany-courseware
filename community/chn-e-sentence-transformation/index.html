@@ -751,5 +751,477 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  if (typeof window.goSection !== 'undefined') return;
+
+  // 全局状态
+  let currentSection = 'hero';
+  const sections = ['hero', 'objectives', 'intro', 'level1', 'level2', 'level3', 'boss', 'summary'];
+
+  // 导航到指定章节
+  window.goSection = function(sectionId) {
+    // 隐藏所有章节
+    const allSections = document.querySelectorAll('.section, #hero');
+    allSections.forEach(sec => {
+      sec.style.display = 'none';
+    });
+
+    // 显示目标章节
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+      targetSection.style.display = 'block';
+      currentSection = sectionId;
+      
+      // 更新进度条
+      updateProgressBar(sectionId);
+      
+      // 滚动到顶部
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // 触发章节特定初始化
+      initSectionContent(sectionId);
+    } else if (sectionId === 'hero') {
+      // 显示英雄区
+      const heroSection = document.getElementById('hero');
+      if (heroSection) {
+        heroSection.style.display = 'flex';
+        currentSection = 'hero';
+        updateProgressBar('hero');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  };
+
+  // 更新进度条
+  function updateProgressBar(sectionId) {
+    const progressBar = document.getElementById('progress-bar');
+    if (!progressBar) return;
+
+    const index = sections.indexOf(sectionId);
+    if (index === -1) return;
+
+    const progress = ((index + 1) / sections.length) * 100;
+    progressBar.style.width = progress + '%';
+  }
+
+  // 初始化章节内容
+  function initSectionContent(sectionId) {
+    // 查找该章节内的画布并初始化
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    // 初始化画布
+    const canvases = section.querySelectorAll('canvas[id*="canvas"]');
+    canvases.forEach(canvas => {
+      const canvasId = canvas.id;
+      
+      if (canvasId.includes('statement') || canvasId.includes('陈述句')) {
+        drawStatementDiagram(canvas);
+      } else if (canvasId.includes('question') || canvasId.includes('疑问句')) {
+        drawQuestionDiagram(canvas);
+      } else if (canvasId.includes('exclamation') || canvasId.includes('感叹句')) {
+        drawExclamationDiagram(canvas);
+      } else if (canvasId.includes('imperative') || canvasId.includes('祈使句')) {
+        drawImperativeDiagram(canvas);
+      } else if (canvasId.includes('transform') || canvasId.includes('变换')) {
+        animateTransformation(canvas);
+      }
+    });
+
+    // 初始化拖拽区域
+    initDragAndDrop(section);
+  }
+
+  // 绘制陈述句示意图
+  function drawStatementDiagram(canvas) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 底层：背景渐变
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#e3f2fd');
+    bgGrad.addColorStop(1, '#bbdefb');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // 中层：陈述句结构（平稳的线条）
+    ctx.strokeStyle = '#1976d2';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(w * 0.1, h * 0.5);
+    ctx.lineTo(w * 0.9, h * 0.5);
+    ctx.stroke();
+
+    // 主体、谓语、宾语节点
+    const nodes = [
+      { x: w * 0.2, y: h * 0.5, label: '主语', color: '#4caf50' },
+      { x: w * 0.5, y: h * 0.5, label: '谓语', color: '#ff9800' },
+      { x: w * 0.8, y: h * 0.5, label: '宾语', color: '#9c27b0' }
+    ];
+
+    nodes.forEach(node => {
+      ctx.fillStyle = node.color;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 标注
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(node.label, node.x, node.y - 35);
+
+      // 引线
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y - 20);
+      ctx.lineTo(node.x, node.y - 30);
+      ctx.stroke();
+    });
+
+    // 顶层：句式特征标注
+    ctx.fillStyle = '#1976d2';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('陈述句：平铺直叙，句末用句号。', w * 0.5, h * 0.85);
+  }
+
+  // 绘制疑问句示意图
+  function drawQuestionDiagram(canvas) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 底层
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#fff3e0');
+    bgGrad.addColorStop(1, '#ffe0b2');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // 中层：疑问句结构（上扬的曲线）
+    ctx.strokeStyle = '#f57c00';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(w * 0.1, h * 0.6);
+    ctx.quadraticCurveTo(w * 0.5, h * 0.3, w * 0.9, h * 0.4);
+    ctx.stroke();
+
+    // 疑问词节点
+    const qNodes = [
+      { x: w * 0.25, y: h * 0.55, label: '疑问词', color: '#ff5722' },
+      { x: w * 0.5, y: h * 0.35, label: '主谓', color: '#4caf50' },
+      { x: w * 0.75, y: h * 0.42, label: '吗/呢', color: '#e91e63' }
+    ];
+
+    qNodes.forEach(node => {
+      ctx.fillStyle = node.color;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, 18, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(node.label, node.x, node.y - 30);
+
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y - 18);
+      ctx.lineTo(node.x, node.y - 25);
+      ctx.stroke();
+    });
+
+    // 问号符号
+    ctx.fillStyle = '#f57c00';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.fillText('?', w * 0.92, h * 0.45);
+
+    // 特征标注
+    ctx.fillStyle = '#f57c00';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('疑问句：语调上扬，句末用问号。', w * 0.5, h * 0.85);
+  }
+
+  // 绘制感叹句示意图
+  function drawExclamationDiagram(canvas) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 底层
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#fce4ec');
+    bgGrad.addColorStop(1, '#f8bbd0');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // 中层：感叹句结构（波浪起伏）
+    ctx.strokeStyle = '#c2185b';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(w * 0.1, h * 0.5);
+    for (let i = 0; i <= 20; i++) {
+      const x = w * 0.1 + (w * 0.8 * i / 20);
+      const y = h * 0.5 + Math.sin(i * 0.8) * 30;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // 情感词节点
+    const eNodes = [
+      { x: w * 0.3, y: h * 0.45, label: '多么', color: '#e91e63' },
+      { x: w * 0.5, y: h * 0.55, label: '形容词', color: '#ff9800' },
+      { x: w * 0.7, y: h * 0.48, label: '啊/呀', color: '#9c27b0' }
+    ];
+
+    eNodes.forEach(node => {
+      ctx.fillStyle = node.color;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, 18, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(node.label, node.x, node.y - 30);
+
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y - 18);
+      ctx.lineTo(node.x, node.y - 25);
+      ctx.stroke();
+    });
+
+    // 感叹号
+    ctx.fillStyle = '#c2185b';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.fillText('!', w * 0.88, h * 0.5);
+
+    // 特征标注
+    ctx.fillStyle = '#c2185b';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('感叹句：表达强烈情感，句末用感叹号。', w * 0.5, h * 0.85);
+  }
+
+  // 绘制祈使句示意图
+  function drawImperativeDiagram(canvas) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 底层
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#e8f5e9');
+    bgGrad.addColorStop(1, '#c8e6c9');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // 中层：祈使句结构（箭头指向）
+    ctx.strokeStyle = '#388e3c';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(w * 0.15, h * 0.5);
+    ctx.lineTo(w * 0.75, h * 0.5);
+    ctx.stroke();
+
+    // 箭头
+    ctx.beginPath();
+    ctx.moveTo(w * 0.75, h * 0.5);
+    ctx.lineTo(w * 0.68, h * 0.45);
+    ctx.moveTo(w * 0.75, h * 0.5);
+    ctx.lineTo(w * 0.68, h * 0.55);
+    ctx.stroke();
+
+    // 命令词节点
+    const iNodes = [
+      { x: w * 0.25, y: h * 0.5, label: '请/别', color: '#66bb6a' },
+      { x: w * 0.5, y: h * 0.5, label: '动词', color: '#ffa726' },
+      { x: w * 0.7, y: h * 0.5, label: '吧', color: '#ab47bc' }
+    ];
+
+    iNodes.forEach(node => {
+      ctx.fillStyle = node.color;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, 18, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(node.label, node.x, node.y - 30);
+
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y - 18);
+      ctx.lineTo(node.x, node.y - 25);
+      ctx.stroke();
+    });
+
+    // 特征标注
+    ctx.fillStyle = '#388e3c';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('祈使句：表示命令或请求，语气坚定。', w * 0.5, h * 0.85);
+  }
+
+  // 动画演示句式变换
+  function animateTransformation(canvas) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    let frame = 0;
+    const totalFrames = 180;
+    
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      
+      const progress = frame / totalFrames;
+      const stage = Math.floor(progress * 3);
+      
+      // 背景
+      ctx.fillStyle = '#f5f5f5';
+      ctx.fillRect(0, 0, w, h);
+      
+      if (stage === 0) {
+        // 阶段1：陈述句
+        ctx.fillStyle = '#1976d2';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('小鸟在树上唱歌。', w * 0.5, h * 0.4);
+        
+        ctx.fillStyle = '#666';
+        ctx.font = '14px sans-serif';
+        ctx.fillText('陈述句', w * 0.5, h * 0.6);
+      } else if (stage === 1) {
+        // 阶段2：变换中
+        ctx.fillStyle = '#f57c00';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('小鸟在树上唱歌吗？', w * 0.5, h * 0.4);
+        
+        ctx.fillStyle = '#666';
+        ctx.font = '14px sans-serif';
+        ctx.fillText('疑问句', w * 0.5, h * 0.6);
+        
+        // 变换箭头
+        ctx.strokeStyle = '#ff9800';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.3, h * 0.5);
+        ctx.lineTo(w * 0.7, h * 0.5);
+        ctx.stroke();
+      } else {
+        // 阶段3：感叹句
+        ctx.fillStyle = '#c2185b';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('小鸟唱得多好听啊！', w * 0.5, h * 0.4);
+        
+        ctx.fillStyle = '#666';
+        ctx.font = '14px sans-serif';
+        ctx.fillText('感叹句', w * 0.5, h * 0.6);
+      }
+      
+      frame++;
+      if (frame < totalFrames) {
+        requestAnimationFrame(draw);
+      }
+    }
+    
+    draw();
+  }
+
+  // 初始化拖拽功能
+  function initDragAndDrop(section) {
+    const draggables = section.querySelectorAll('[draggable="true"]');
+    const dropZones = section.querySelectorAll('[data-drop-zone]');
+    
+    if (draggables.length === 0 || dropZones.length === 0) return;
+    
+    draggables.forEach(item => {
+      item.addEventListener('dragstart', handleDragStart);
+      item.addEventListener('dragend', handleDragEnd);
+    });
+    
+    dropZones.forEach(zone => {
+      zone.addEventListener('dragover', handleDragOver);
+      zone.addEventListener('drop', handleDrop);
+      zone.addEventListener('dragleave', handleDragLeave);
+    });
+  }
+
+  function handleDragStart(e) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.innerHTML);
+    e.dataTransfer.setData('text/plain', this.dataset.value || this.textContent);
+    this.style.opacity = '0.4';
+  }
+
+  function handleDragEnd(e) {
+    this.style.opacity = '1';
+  }
+
+  function handleDragOver(e) {
+    if (e.preventDefault) e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    this.style.background = 'rgba(76, 175, 80, 0.1)';
+    return false;
+  }
+
+  function handleDragLeave(e) {
+    this.style.background = '';
+  }
+
+  function handleDrop(e) {
+    if (e.stopPropagation) e.stopPropagation();
+    e.preventDefault();
+    
+    this.style.background = '';
+    const data = e.dataTransfer.getData('text/plain');
+    const expected = this.dataset.answer;
+    
+    if (data === expected) {
+      this.style.background = 'rgba(76, 175, 80, 0.2)';
+      this.style.border = '2px solid #4caf50';
+      this.textContent = data;
+    } else {
+      this.style.background = 'rgba(244, 67, 54, 0.2)';
+      this.style.border = '2px solid #f44336';
+    }
+    
+    return false;
+  }
+
+})();
+</script>
 </body>
 </html>

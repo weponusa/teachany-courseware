@@ -830,5 +830,163 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
   <script src="../../assets/scripts/teachany-tutor-card.js" defer></script>
 
 </div></div></div>
+
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.toggleBuddy !== 'undefined' && typeof window.taCheckQ !== 'undefined') return;
+
+  // ========== toggleBuddy ==========
+  if (typeof window.toggleBuddy === 'undefined') {
+    window.toggleBuddy = function() {
+      const bubble = document.getElementById('buddyBubble');
+      if (!bubble) return;
+      
+      if (bubble.style.display === 'none') {
+        bubble.style.display = 'block';
+        bubble.style.animation = 'none';
+        setTimeout(() => {
+          bubble.style.animation = 'buddyFadeIn 0.3s ease-out';
+        }, 10);
+      } else {
+        bubble.style.animation = 'buddyFadeOut 0.3s ease-out';
+        setTimeout(() => {
+          bubble.style.display = 'none';
+        }, 300);
+      }
+    };
+  }
+
+  // ========== taCheckQ ==========
+  if (typeof window.taCheckQ === 'undefined') {
+    // 存储每题的答题状态
+    const questionStates = {};
+
+    window.taCheckQ = function(qId, optIdx, correctAns) {
+      // 防止重复答题
+      if (questionStates[qId]) {
+        return;
+      }
+
+      const feedback = document.getElementById(qId + '-fb');
+      const allOpts = document.querySelectorAll(`[id^="${qId}-opt"]`);
+      
+      if (!feedback || allOpts.length === 0) return;
+
+      // 禁用所有选项
+      allOpts.forEach(opt => {
+        opt.disabled = true;
+        opt.style.cursor = 'not-allowed';
+        opt.style.opacity = '0.6';
+      });
+
+      const selectedOpt = document.getElementById(qId + '-opt' + optIdx);
+      if (!selectedOpt) return;
+
+      // 判断答案
+      const selectedLetter = selectedOpt.textContent.trim().charAt(0);
+      const isCorrect = selectedLetter === correctAns;
+
+      // 标记状态
+      questionStates[qId] = true;
+
+      // 设置选中项样式
+      if (isCorrect) {
+        selectedOpt.style.background = 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)';
+        selectedOpt.style.color = '#fff';
+        selectedOpt.style.border = '2px solid #2e7d32';
+        selectedOpt.style.opacity = '1';
+        feedback.innerHTML = '<div style="color:#2e7d32;padding:12px;background:#e8f5e9;border-radius:8px;margin-top:12px;"><strong>✓ 正确！</strong> ' + getCorrectFeedback(qId) + '</div>';
+        
+        // 显示成就提示
+        showAchievement('答对一题！');
+      } else {
+        selectedOpt.style.background = 'linear-gradient(135deg, #f44336 0%, #e57373 100%)';
+        selectedOpt.style.color = '#fff';
+        selectedOpt.style.border = '2px solid #c62828';
+        selectedOpt.style.opacity = '1';
+        
+        // 高亮正确答案
+        allOpts.forEach(opt => {
+          if (opt.textContent.trim().charAt(0) === correctAns) {
+            opt.style.background = 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)';
+            opt.style.color = '#fff';
+            opt.style.border = '2px solid #2e7d32';
+            opt.style.opacity = '1';
+          }
+        });
+        
+        feedback.innerHTML = '<div style="color:#c62828;padding:12px;background:#ffebee;border-radius:8px;margin-top:12px;"><strong>✗ 不对哦</strong> 正确答案是 ' + correctAns + '。' + getCorrectFeedback(qId) + '</div>';
+      }
+
+      feedback.style.animation = 'fadeIn 0.4s ease-out';
+    };
+
+    // 根据题目ID返回解析
+    function getCorrectFeedback(qId) {
+      const feedbacks = {
+        'pre1': '明确的论点应该是一个清晰的判断句，表达作者的观点。B选项"勤奋是通往成功的阶梯"就是一个明确的论点。',
+        'pre2': '议论文的三要素是论点、论据、论证，这是议论文的基本结构。',
+        'pre3': '事实论据是用真实的事例来证明观点，道理论据是用公认的道理、名言警句等来证明观点。',
+        'q1': '论点是作者对某个问题的看法和主张，应该是明确的判断句。',
+        'q2': '论据分为事实论据（真实事例、数据等）和道理论据（名言、公理、原理等）。',
+        'q3': '论证是用论据证明论点的过程和方法，常见的有举例论证、道理论证、对比论证等。',
+        'post1': '完整的议论文段落应该包含论点、论据和论证过程。',
+        'post2': '判断论据是否有力，要看它是否真实、典型，是否能有效支撑论点。',
+        'post3': '论证方法的选择要根据论点的特点和需要证明的内容来决定。'
+      };
+      return feedbacks[qId] || '继续加油！';
+    }
+
+    // 成就提示函数
+    function showAchievement(text) {
+      const toast = document.getElementById('achieveToast');
+      const textSpan = document.getElementById('achieveText');
+      if (!toast || !textSpan) return;
+      
+      textSpan.textContent = text;
+      toast.style.display = 'flex';
+      toast.style.animation = 'slideInDown 0.5s ease-out';
+      
+      setTimeout(() => {
+        toast.style.animation = 'slideOutUp 0.5s ease-out';
+        setTimeout(() => {
+          toast.style.display = 'none';
+        }, 500);
+      }, 2000);
+    }
+  }
+
+  // 添加必要的 CSS 动画（如果页面中没有）
+  if (!document.getElementById('ta-interaction-styles')) {
+    const style = document.createElement('style');
+    style.id = 'ta-interaction-styles';
+    style.textContent = `
+      @keyframes buddyFadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes buddyFadeOut {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(-10px); }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slideInDown {
+        from { transform: translateY(-100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      @keyframes slideOutUp {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(-100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+})();
+</script>
 </body>
 </html>

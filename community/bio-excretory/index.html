@@ -1119,5 +1119,217 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "nephronCanvas", "readout": "labReadout-nephronCanvas", "bg": [{"t": "ellipse", "x": 150, "y": 130, "rx": 58, "ry": 52, "fill": "rgba(96,165,250,.25)", "stroke": "#60a5fa", "w": 2.5}, {"t": "line", "x1": 150, "y1": 130, "x2": 150, "y2": 250, "w": 5, "color": "#60a5fa"}, {"t": "line", "x1": 150, "y1": 250, "x2": 300, "y2": 250, "w": 5, "color": "#60a5fa"}, {"t": "line", "x1": 300, "y1": 250, "x2": 300, "y2": 150, "w": 5, "color": "#60a5fa"}, {"t": "line", "x1": 300, "y1": 150, "x2": 450, "y2": 150, "w": 5, "color": "#60a5fa"}, {"t": "line", "x1": 450, "y1": 150, "x2": 450, "y2": 280, "w": 5, "color": "#60a5fa"}, {"t": "line", "x1": 450, "y1": 280, "x2": 620, "y2": 280, "w": 5, "color": "#60a5fa"}, {"t": "line", "x1": 620, "y1": 280, "x2": 660, "y2": 200, "w": 6, "color": "#60a5fa"}, {"t": "line", "x1": 150, "y1": 130, "x2": 350, "y2": 60, "w": 3, "color": "#ef4444"}, {"t": "line", "x1": 350, "y1": 60, "x2": 620, "y2": 60, "w": 3, "color": "#ef4444"}, {"t": "line", "x1": 620, "y1": 60, "x2": 700, "y2": 120, "w": 3, "color": "#ef4444"}], "parts": [{"x": 150, "y": 130, "name": "肾小球", "info": "由入球小动脉分出的毛细血管球，像筛子一样把血液过滤，形成原尿。", "r": 54, "lx": 120, "ly": 60}, {"x": 300, "y": 250, "name": "肾小管", "info": "原尿流经这里，有用的物质（全部葡萄糖、大部分水、部分无机盐）被重吸收回血液。", "r": 46, "lx": 300, "ly": 322}, {"x": 620, "y": 280, "name": "集合管", "info": "把剩下的水和无机盐再吸收一部分，最终形成尿液，流向肾盂。", "r": 44, "lx": 660, "ly": 330}, {"x": 520, "y": 60, "name": "肾动脉（入球）", "info": "把含废物较多的血液送进肾单位。", "r": 44, "lx": 480, "ly": 40}, {"x": 700, "y": 120, "name": "肾静脉（出球）", "info": "把过滤、重吸收后的干净血液带回全身。", "r": 38, "lx": 712, "ly": 92}], "tip": "👆 点击肾单位各部分，看尿液是怎么形成的"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 音频播放器控制
+  if (typeof window.toggleAudioPlayer === 'undefined') {
+    window.toggleAudioPlayer = function() {
+      const badge = document.getElementById('audioBadge');
+      const audioIds = ['ta-audio-s01', 'ta-audio-s02', 'ta-audio-s03', 'ta-audio-s04', 'ta-audio-s05', 'ta-audio-s06', 'ta-audio-s07', 'ta-audio-s08', 'ta-audio-s09', 'ta-audio-s10'];
+      
+      // 检查是否有音频正在播放
+      let isPlaying = false;
+      let currentAudio = null;
+      
+      for (let id of audioIds) {
+        const audio = document.getElementById(id);
+        if (audio && !audio.paused) {
+          isPlaying = true;
+          currentAudio = audio;
+          break;
+        }
+      }
+      
+      if (isPlaying && currentAudio) {
+        // 停止播放
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        badge.textContent = '🎧 听讲解';
+        badge.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+      } else {
+        // 开始播放第一个音频
+        const firstAudio = document.getElementById(audioIds[0]);
+        if (firstAudio) {
+          let currentIndex = 0;
+          
+          const playNext = function() {
+            if (currentIndex < audioIds.length) {
+              const audio = document.getElementById(audioIds[currentIndex]);
+              if (audio) {
+                audio.play();
+                badge.textContent = '⏸️ 暂停讲解';
+                badge.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                
+                audio.onended = function() {
+                  currentIndex++;
+                  if (currentIndex < audioIds.length) {
+                    playNext();
+                  } else {
+                    badge.textContent = '🎧 听讲解';
+                    badge.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                  }
+                };
+              }
+            }
+          };
+          
+          playNext();
+        }
+      }
+    };
+  }
+  
+  // 拖拽匹配检验
+  if (typeof window.checkDragMatch === 'undefined') {
+    window.checkDragMatch = function() {
+      const feedback = document.getElementById('dragFeedback');
+      if (!feedback) return;
+      
+      const dropZones = {
+        'drop-urine': document.getElementById('drop-urine'),
+        'drop-skin': document.getElementById('drop-skin'),
+        'drop-lung': document.getElementById('drop-lung')
+      };
+      
+      const correctMatches = {
+        'drop-urine': ['urea', 'uwater'],
+        'drop-skin': ['sweat'],
+        'drop-lung': ['co2', 'vapor']
+      };
+      
+      let totalCorrect = 0;
+      let totalItems = 5;
+      let results = [];
+      
+      // 检查每个放置区
+      for (let zoneId in dropZones) {
+        const zone = dropZones[zoneId];
+        if (!zone) continue;
+        
+        const droppedItems = zone.querySelectorAll('.drag-item');
+        droppedItems.forEach(item => {
+          const itemKey = item.getAttribute('data-key');
+          const isCorrect = correctMatches[zoneId] && correctMatches[zoneId].includes(itemKey);
+          
+          if (isCorrect) {
+            item.style.background = 'linear-gradient(135deg, #81c784 0%, #66bb6a 100%)';
+            item.style.border = '2px solid #2e7d32';
+            totalCorrect++;
+          } else {
+            item.style.background = 'linear-gradient(135deg, #e57373 0%, #ef5350 100%)';
+            item.style.border = '2px solid #c62828';
+          }
+        });
+      }
+      
+      // 检查未放置的项目
+      const dragItems = document.getElementById('dragItems');
+      if (dragItems) {
+        const unplacedItems = dragItems.querySelectorAll('.drag-item');
+        unplacedItems.forEach(item => {
+          item.style.background = 'linear-gradient(135deg, #fff9c4 0%, #fff59d 100%)';
+          item.style.border = '2px solid #f9a825';
+        });
+      }
+      
+      // 显示反馈
+      const percentage = Math.round((totalCorrect / totalItems) * 100);
+      let message = '';
+      let bgColor = '';
+      
+      if (totalCorrect === totalItems) {
+        message = `🎉 完全正确！${totalCorrect}/${totalItems} 正确。你已掌握人体三大排泄途径的特点！`;
+        bgColor = '#c8e6c9';
+      } else if (totalCorrect >= totalItems * 0.6) {
+        message = `👍 不错！${totalCorrect}/${totalItems} 正确。再仔细想想红色标记的项目属于哪个途径。`;
+        bgColor = '#fff9c4';
+      } else {
+        message = `💪 继续努力！${totalCorrect}/${totalItems} 正确。提示：尿素主要通过泌尿系统，CO₂通过呼吸系统。`;
+        bgColor = '#ffccbc';
+      }
+      
+      feedback.innerHTML = `<div style="padding:12px; background:${bgColor}; border-radius:8px; margin-top:12px; font-size:15px; font-weight:500;">${message}</div>`;
+      feedback.style.display = 'block';
+    };
+  }
+  
+  // 拖拽辅助函数（如果不存在）
+  if (typeof window.dStart === 'undefined') {
+    window.dStart = function(e) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', e.target.outerHTML);
+      e.dataTransfer.setData('text/plain', e.target.getAttribute('data-key'));
+      e.target.style.opacity = '0.4';
+    };
+  }
+  
+  if (typeof window.dEnd === 'undefined') {
+    window.dEnd = function(e) {
+      e.target.style.opacity = '1';
+    };
+  }
+  
+  if (typeof window.dzOver === 'undefined') {
+    window.dzOver = function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (e.target.classList.contains('drop-zone')) {
+        e.target.style.background = 'rgba(102, 126, 234, 0.15)';
+        e.target.style.borderColor = '#667eea';
+      }
+    };
+  }
+  
+  if (typeof window.dzLeave === 'undefined') {
+    window.dzLeave = function(e) {
+      if (e.target.classList.contains('drop-zone')) {
+        e.target.style.background = 'rgba(102, 126, 234, 0.05)';
+        e.target.style.borderColor = '#ddd';
+      }
+    };
+  }
+  
+  if (typeof window.dzDrop === 'undefined') {
+    window.dzDrop = function(e, targetZone) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const dropZone = e.target.closest('.drop-zone');
+      if (!dropZone) return;
+      
+      const draggedHTML = e.dataTransfer.getData('text/html');
+      const draggedKey = e.dataTransfer.getData('text/plain');
+      
+      if (draggedHTML) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = draggedHTML;
+        const draggedElement = tempDiv.firstChild;
+        
+        // 从原位置移除
+        const originalElements = document.querySelectorAll(`[data-key="${draggedKey}"]`);
+        originalElements.forEach(el => {
+          if (el.parentElement && el.parentElement.classList.contains('drop-zone')) {
+            el.remove();
+          } else if (el.parentElement && el.parentElement.id === 'dragItems') {
+            el.remove();
+          }
+        });
+        
+        // 添加到新位置
+        dropZone.appendChild(draggedElement);
+        dropZone.style.background = 'rgba(102, 126, 234, 0.05)';
+        dropZone.style.borderColor = '#ddd';
+        
+        // 重置样式
+        draggedElement.style.opacity = '1';
+        draggedElement.style.background = 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
+        draggedElement.style.border = '2px solid #42a5f5';
+      }
+    };
+  }
+})();
+</script>
+</body>
 </html>

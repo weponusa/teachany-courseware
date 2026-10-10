@@ -718,5 +718,403 @@ window.__TEACHANY_TUTOR_CONFIG__ = {
 TeachAnyScenes.mount('parts', {"canvas": "cvs", "readout": "labReadout-cvs", "bg": [{"t": "ellipse", "x": 220, "y": 180, "rx": 86, "ry": 76, "fill": "rgba(239,68,68,.35)", "stroke": "#dc2626", "w": 2.5}, {"t": "text", "x": 220, "y": 180, "t2": "果实（子房发育）", "size": 12.5, "align": "center"}, {"t": "ellipse", "x": 520, "y": 180, "rx": 58, "ry": 66, "fill": "rgba(251,191,36,.4)", "stroke": "#d97706", "w": 2.5}, {"t": "text", "x": 520, "y": 180, "t2": "种子（胚珠发育）", "size": 12.5, "align": "center"}, {"t": "line", "x1": 310, "y1": 180, "x2": 458, "y2": 180, "w": 2.5, "color": "#94a3b8"}, {"t": "text", "x": 384, "y": 150, "t2": "里面有", "size": 12, "align": "center"}], "parts": [{"x": 220, "y": 180, "name": "果皮（子房壁）", "info": "由子房壁发育而来，保护种子，还能帮种子传播（靠风、动物等）。", "r": 78, "lx": 220, "ly": 296}, {"x": 520, "y": 180, "name": "种子（胚珠）", "info": "由胚珠发育而来：胚是新植物的幼体，子叶或胚乳提供营养。", "r": 58, "lx": 560, "ly": 300}, {"x": 520, "y": 110, "name": "种皮", "info": "由珠被发育而来，保护里面的胚。", "r": 34, "lx": 640, "ly": 96}], "tip": "👆 点击果实和种子各部分，看它由什么发育而来"});
 </script>
 
-<script src="../../assets/scripts/ta-interactions.js"></script></body>
+<script src="../../assets/scripts/ta-interactions.js"></script>
+<!-- 教学交互特化实现：由 fix-special-interactions.py 注入 -->
+<script data-ta-special="ta-special-interactions">
+(function() {
+  // 防止重复定义
+  if (typeof window.resetProcess !== 'undefined') return;
+
+  // ========== 双受精动画相关 ==========
+  let step = 0;
+  let animationId = null;
+  let animationPhase = 0;
+  let phaseProgress = 0;
+
+  function startProcess() {
+    const canvas = document.getElementById('cvs');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    step = 1;
+    animationPhase = 0;
+    phaseProgress = 0;
+    
+    function animate() {
+      phaseProgress += 0.015;
+      
+      // 清空画布
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // 底层：背景渐变
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      grad.addColorStop(0, '#e8f5e9');
+      grad.addColorStop(1, '#f1f8e9');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // 中层：绘制胚珠结构
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      // 胚珠外壁
+      ctx.strokeStyle = '#6d4c41';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(360, 180, 120, 150, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#fff8e1';
+      ctx.fill();
+      
+      // 珠孔（顶部开口）
+      ctx.fillStyle = '#ffe0b2';
+      ctx.beginPath();
+      ctx.ellipse(360, 50, 25, 15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 卵细胞（中心大圆）
+      ctx.fillStyle = '#ffccbc';
+      ctx.strokeStyle = '#d84315';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(360, 180, 40, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      // 极核（两个小圆）
+      ctx.fillStyle = '#c5e1a5';
+      ctx.strokeStyle = '#558b2f';
+      ctx.beginPath();
+      ctx.arc(340, 160, 15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(380, 160, 15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      // 阶段0：花粉管伸入
+      if (animationPhase === 0) {
+        const tubeLength = Math.min(phaseProgress * 200, 130);
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(360, 30);
+        ctx.lineTo(360, 30 + tubeLength);
+        ctx.stroke();
+        
+        // 花粉管顶端
+        ctx.fillStyle = '#66bb6a';
+        ctx.beginPath();
+        ctx.arc(360, 30 + tubeLength, 10, 0, Math.PI * 2);
+        ctx.fill();
+        
+        if (phaseProgress >= 1) {
+          animationPhase = 1;
+          phaseProgress = 0;
+        }
+      }
+      
+      // 阶段1：精子释放
+      else if (animationPhase === 1) {
+        // 完整花粉管
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(360, 30);
+        ctx.lineTo(360, 160);
+        ctx.stroke();
+        
+        // 两个精子移动
+        const sperm1Y = 160 + phaseProgress * 20;
+        const sperm2Y = 160 + phaseProgress * 10;
+        
+        ctx.fillStyle = '#1976d2';
+        ctx.beginPath();
+        ctx.arc(360, sperm1Y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#1565c0';
+        ctx.beginPath();
+        ctx.arc(360, sperm2Y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        if (phaseProgress >= 1) {
+          animationPhase = 2;
+          phaseProgress = 0;
+        }
+      }
+      
+      // 阶段2：受精完成
+      else if (animationPhase === 2) {
+        // 完整花粉管
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(360, 30);
+        ctx.lineTo(360, 160);
+        ctx.stroke();
+        
+        // 受精卵（卵细胞变色）
+        const alpha = Math.min(phaseProgress * 2, 1);
+        ctx.fillStyle = `rgba(255, 152, 0, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(360, 180, 40, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 受精极核（极核变色）
+        ctx.fillStyle = `rgba(139, 195, 74, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(340, 160, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(380, 160, 15, 0, Math.PI * 2);
+        ctx.fill();
+        
+        if (phaseProgress >= 1.5) {
+          animationPhase = 3;
+          cancelAnimationFrame(animationId);
+          step = 0;
+        }
+      }
+      
+      // 顶层：标注
+      ctx.fillStyle = '#1b5e20';
+      ctx.font = '14px sans-serif';
+      
+      ctx.fillText('珠孔', 390, 55);
+      ctx.strokeStyle = '#1b5e20';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(385, 52);
+      ctx.lineTo(375, 50);
+      ctx.stroke();
+      
+      ctx.fillText('卵细胞', 410, 185);
+      ctx.beginPath();
+      ctx.moveTo(408, 182);
+      ctx.lineTo(400, 180);
+      ctx.stroke();
+      
+      ctx.fillText('极核', 410, 160);
+      ctx.beginPath();
+      ctx.moveTo(408, 157);
+      ctx.lineTo(395, 155);
+      ctx.stroke();
+      
+      if (animationPhase === 0) {
+        ctx.fillText('花粉管', 320, 100);
+      } else if (animationPhase >= 1) {
+        ctx.fillText('精子①→卵细胞', 150, 180);
+        ctx.fillText('精子②→极核', 150, 160);
+      }
+      
+      if (animationPhase < 3) {
+        animationId = requestAnimationFrame(animate);
+      }
+    }
+    
+    animate();
+  }
+
+  function stopProcess() {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+    step = 0;
+  }
+
+  window.resetProcess = function() {
+    stopProcess();
+    const canvas = document.getElementById('cvs');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 绘制初始状态
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, '#e8f5e9');
+    grad.addColorStop(1, '#f1f8e9');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // 胚珠
+    ctx.strokeStyle = '#6d4c41';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(360, 180, 120, 150, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#fff8e1';
+    ctx.fill();
+    
+    // 珠孔
+    ctx.fillStyle = '#ffe0b2';
+    ctx.beginPath();
+    ctx.ellipse(360, 50, 25, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 卵细胞
+    ctx.fillStyle = '#ffccbc';
+    ctx.strokeStyle = '#d84315';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(360, 180, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 极核
+    ctx.fillStyle = '#c5e1a5';
+    ctx.strokeStyle = '#558b2f';
+    ctx.beginPath();
+    ctx.arc(340, 160, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(380, 160, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 标注
+    ctx.fillStyle = '#1b5e20';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('珠孔', 390, 55);
+    ctx.fillText('卵细胞', 410, 185);
+    ctx.fillText('极核', 410, 160);
+    ctx.fillText('胚珠壁', 490, 180);
+    
+    ctx.strokeStyle = '#1b5e20';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(385, 52);
+    ctx.lineTo(375, 50);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(408, 182);
+    ctx.lineTo(400, 180);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(408, 157);
+    ctx.lineTo(395, 155);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(488, 177);
+    ctx.lineTo(480, 170);
+    ctx.stroke();
+  };
+
+  // ========== 拖拽练习相关 ==========
+  const dropState = {};
+
+  window.dragStart = function(event) {
+    event.dataTransfer.setData('text/plain', event.target.dataset.cat);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  window.dragOver = function(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  };
+
+  window.drop = function(event, targetCat) {
+    event.preventDefault();
+    const draggedCat = event.dataTransfer.getData('text/plain');
+    const zone = event.currentTarget;
+    
+    // 移除该区域之前的项
+    const existing = zone.querySelector('.dd-item');
+    if (existing) {
+      document.getElementById('ddItems').appendChild(existing);
+    }
+    
+    // 找到被拖拽的元素
+    const items = document.querySelectorAll('.dd-item');
+    let draggedItem = null;
+    items.forEach(item => {
+      if (item.dataset.cat === draggedCat && item.parentElement.id === 'ddItems') {
+        draggedItem = item;
+      }
+    });
+    
+    if (draggedItem) {
+      zone.appendChild(draggedItem);
+      dropState[targetCat] = draggedCat;
+    }
+  };
+
+  window.checkDrop = function() {
+    const feedback = document.getElementById('ddFeedback');
+    if (!feedback) return;
+    
+    const correct = {
+      'fruit': 'fruit',
+      'seed': 'seed',
+      'embryo': 'embryo',
+      'endosperm': 'endosperm'
+    };
+    
+    let correctCount = 0;
+    const zones = document.querySelectorAll('.dd-zone');
+    
+    zones.forEach(zone => {
+      const zoneId = zone.id.replace('zone-', '');
+      const item = zone.querySelector('.dd-item');
+      
+      if (item) {
+        const isCorrect = item.dataset.cat === correct[zoneId];
+        if (isCorrect) {
+          item.style.backgroundColor = '#c8e6c9';
+          item.style.color = '#2e7d32';
+          correctCount++;
+        } else {
+          item.style.backgroundColor = '#ffcdd2';
+          item.style.color = '#c62828';
+        }
+      }
+    });
+    
+    feedback.innerHTML = `<strong>${correctCount}/4 正确</strong>` + 
+      (correctCount === 4 ? ' 🎉 全部正确！' : ' 请检查红色标记的项');
+    feedback.style.color = correctCount === 4 ? '#2e7d32' : '#f57c00';
+    feedback.style.marginTop = '12px';
+  };
+
+  window.resetDrop = function() {
+    const items = document.querySelectorAll('.dd-item');
+    const container = document.getElementById('ddItems');
+    const feedback = document.getElementById('ddFeedback');
+    
+    if (!container) return;
+    
+    items.forEach(item => {
+      item.style.backgroundColor = '';
+      item.style.color = '';
+      if (item.parentElement !== container) {
+        container.appendChild(item);
+      }
+    });
+    
+    if (feedback) {
+      feedback.innerHTML = '';
+    }
+    
+    for (let key in dropState) {
+      delete dropState[key];
+    }
+  };
+
+  // 初始化画布
+  window.addEventListener('DOMContentLoaded', function() {
+    if (typeof window.resetProcess === 'function') {
+      window.resetProcess();
+    }
+  });
+
+})();
+</script>
+</body>
 </html>
