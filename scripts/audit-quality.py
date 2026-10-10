@@ -212,12 +212,11 @@ def score_rows(static, render=None, maps=None):
         # L0 合规
         if r['placeholder_hits'] > 0:
             issues.append({'layer': 'L0', 'code': 'PLACEHOLDER_TEXT', 'count': r['placeholder_hits']})
-        # L1 结构（40 分）
-        s1 = 40
-        if not r['v2_paged']:
-            s1 -= 20; issues.append({'layer': 'L1', 'code': 'NOT_V2_PAGED'})
-        if r['v2_paged'] and r['pages'] != CANON_PAGES:
-            s1 -= 6; issues.append({'layer': 'L1', 'code': 'PAGE_COUNT_OFF', 'pages': r['pages']})
+        # L1 结构（12 分）
+        # 2026-10-10 起去掉 v2 分页与 16 页两条硬性要求（NOT_V2_PAGED / PAGE_COUNT_OFF）：
+        # 分页播放只是呈现形式，不该当质量门槛；按用户决定，呈现形式相关的 26 分
+        # 挪给 L4 资产（20→34）与 L5 深度（15→29），总分维持 100。
+        s1 = 12
         for key, code in [('has_tutor', 'NO_TUTOR'), ('has_kg', 'NO_KG'), ('has_quiz', 'NO_QUIZ')]:
             if not r[key]:
                 s1 -= 4; issues.append({'layer': 'L1', 'code': code})
@@ -230,22 +229,22 @@ def score_rows(static, render=None, maps=None):
             s3 -= 8; issues.append({'layer': 'L3', 'code': 'THIN_CONTENT', 'cn_chars': r['cn_chars']})
         if r['ta_figure'] == 0:
             s3 -= 4; issues.append({'layer': 'L3', 'code': 'NO_BODY_FIGURE'})
-        # L4 资产（20 分）
-        s4 = 20
+        # L4 资产（34 分）
+        s4 = 34
         if r['tts_mp3'] == 0:
-            s4 -= 8; issues.append({'layer': 'L4', 'code': 'NO_TTS'})
+            s4 -= 12; issues.append({'layer': 'L4', 'code': 'NO_TTS'})
         elif r['tts_mp3'] < 8:
-            s4 -= 4; issues.append({'layer': 'L4', 'code': 'TTS_PARTIAL', 'tts': r['tts_mp3']})
+            s4 -= 6; issues.append({'layer': 'L4', 'code': 'TTS_PARTIAL', 'tts': r['tts_mp3']})
         if r['ext_lib']:
-            s4 -= 6; issues.append({'layer': 'L4', 'code': 'EXTERNAL_LIB', 'hosts': list(r['ext_lib'])})
+            s4 -= 9; issues.append({'layer': 'L4', 'code': 'EXTERNAL_LIB', 'hosts': list(r['ext_lib'])})
         if r['webp'] == 0 and r['png'] == 0 and r['svg'] == 0:
-            s4 -= 6; issues.append({'layer': 'L4', 'code': 'NO_IMAGE_ASSET'})
-        # L5 深度（15 分）
-        s5 = 15
+            s4 -= 9; issues.append({'layer': 'L4', 'code': 'NO_IMAGE_ASSET'})
+        # L5 深度（29 分）
+        s5 = 29
         if not r['has_homework']:
-            s5 -= 8; issues.append({'layer': 'L5', 'code': 'NO_LAYERED_HOMEWORK'})
+            s5 -= 15; issues.append({'layer': 'L5', 'code': 'NO_LAYERED_HOMEWORK'})
         if not r['has_insight']:
-            s5 -= 7; issues.append({'layer': 'L5', 'code': 'NO_INSIGHT'})
+            s5 -= 14; issues.append({'layer': 'L5', 'code': 'NO_INSIGHT'})
         # L2 渲染（来自抽样）
         rr = rmap.get(r['id'])
         if rr and 'error' not in rr:
