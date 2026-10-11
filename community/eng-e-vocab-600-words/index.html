@@ -852,7 +852,7 @@ function renderWarmupCat(cat){
   words.forEach(w=>{
     const d=document.createElement('div');d.className='vocab-tile'+(warmupSeen.has(w.id)?' seen':'');
     d.innerHTML=`<span class="vt-emoji">${w.emoji}</span><div class="vt-word">${w.word}</div><div class="vt-ph">${w.ph}</div><div class="vt-zh">${w.zh}</div>`;
-    d.onclick=()=>{speak(w.word);tone(440,.08);warmupSeen.add(w.id);d.classList.add('seen');updateWarmupProg();};
+    d.onclick=()=>{if(w)speak(w.word);tone(440,.08);warmupSeen.add(w.id);d.classList.add('seen');updateWarmupProg();};
     g.appendChild(d);
   });
   updateWarmupProg();
@@ -892,7 +892,7 @@ function renderSpeedQ(){
     b.onclick=()=>{
       document.querySelectorAll('.speed-opt').forEach(x=>x.style.pointerEvents='none');
       const fb=document.getElementById('speed-feedback');
-      if(opt.id===w.id){b.classList.add('correct');correct();speedScore2++;speedStreak++;addScore(speedStreak>=3?15:10,true);speak(w.word);if(speedStreak>=5)unlock('a8');fb.textContent='✅ +'+( speedStreak>=3?'15':'10');fb.className='fb ok show';}
+      if(opt.id===w.id){b.classList.add('correct');correct();speedScore2++;speedStreak++;addScore(speedStreak>=3?15:10,true);if(w)speak(w.word);if(speedStreak>=5)unlock('a8');fb.textContent='✅ +'+( speedStreak>=3?'15':'10');fb.className='fb ok show';}
       else{b.classList.add('wrong');wrong();speedStreak=0;fb.textContent='❌ 答案: '+w.word;fb.className='fb err show';}
       document.getElementById('streak').textContent=speedStreak;
       document.getElementById('speed-score').textContent=speedScore2;
@@ -950,7 +950,7 @@ function checkSpell(){
   const typed=spellSelected.map(x=>x.ch).join('').toLowerCase();
   const target=w.word.replace(/ /g,'').toLowerCase();
   const fb=document.getElementById('spell-feedback');
-  if(typed===target){fb.textContent='🎉 正确！'+w.word+'!';fb.className='fb ok show';correct();addScore(spellHinted?8:15,true);spellScore2++;speak(w.word);}
+  if(typed===target){fb.textContent='🎉 正确！'+w.word+'!';fb.className='fb ok show';correct();addScore(spellHinted?8:15,true);spellScore2++;if(w)speak(w.word);}
   else{fb.textContent=`❌ 答案是: ${w.word} (你输入了: ${typed||'空'})`;fb.className='fb err show';wrong();}
   spellIdx++;setTimeout(renderSpellQ,1500);
 }
@@ -992,7 +992,7 @@ function handlePM(el){
     if(pmSel===el){pmSel.style.borderColor='transparent';pmSel.style.background='var(--card)';pmSel=null;return;}
     if(pmSel.dataset.id===el.dataset.id&&pmSel.dataset.side!==el.dataset.side){
       [el,pmSel].forEach(x=>{x.style.borderColor='var(--secondary)';x.style.background='#e8faf8';x.style.opacity='.7';x.style.pointerEvents='none';});
-      const w=ALL_WORDS.find(x=>x.id===el.dataset.id);if(w)speak(w.word);
+      const w=ALL_WORDS.find(x=>x.id===el.dataset.id);if(w)if(w)speak(w.word);
       pmSel=null;pmDone++;correct();addScore(12,true);
       document.getElementById('pm-status').textContent='配对: '+pmDone+'/8';
       if(pmDone===8){clearInterval(pmTimerInt);unlock('a4');if(pmTime<20)toast('🚀 超快！'+pmTime+'秒完成！');document.getElementById('next-l4').style.display='inline-flex';victory();const fb=document.getElementById('pm-feedback');fb.textContent='🎉 全部配对！用时: '+pmTime+'秒';fb.className='fb ok show';}
@@ -1015,7 +1015,7 @@ function renderLV4(){
   const g=document.getElementById('lv4-opts');g.innerHTML='';
   pool.forEach(w=>{const b=document.createElement('button');b.style.cssText='background:var(--card);border:3px solid #dfe6e9;border-radius:var(--radius);padding:16px 10px;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s;text-align:center;line-height:1.5';b.innerHTML=`${w.emoji}<br><strong>${w.word}</strong><br><small>${w.zh}</small>`;b.onmouseover=()=>{if(!b.disabled)b.style.borderColor='var(--secondary)';};b.onmouseout=()=>{if(!b.disabled&&!b.classList.contains('correct')&&!b.classList.contains('wrong'))b.style.borderColor='#dfe6e9';};b.onclick=()=>handleLV4(b,w);g.appendChild(b);});
 }
-function playLV4(){speak(lv4Current.word);tone(600,.05);}
+function playLV4(){if(lv4Current)speak(lv4Current.word);tone(600,.05);}
 function handleLV4(btn,w){
   document.querySelectorAll('#lv4-opts button').forEach(b=>b.disabled=true);
   const fb=document.getElementById('lv4-feedback');
@@ -1048,7 +1048,7 @@ function renderBossQ(){
 function handleBoss(btn,chosen,c){
   document.querySelectorAll('.bqo').forEach(b=>b.disabled=true);
   const fb=document.getElementById('boss-fb');
-  if(chosen.id===c.id){btn.classList.add('correct');correct();addScore(15,true);bossHP=Math.max(0,bossHP-10);fb.textContent='💥 击中！Boss受伤了！+15分';fb.className='fb ok show';speak(c.word);}
+  if(chosen.id===c.id){btn.classList.add('correct');correct();addScore(15,true);bossHP=Math.max(0,bossHP-10);fb.textContent='💥 击中！Boss受伤了！+15分';fb.className='fb ok show';if(c)speak(c.word);}
   else{btn.classList.add('wrong');wrong();fb.textContent='😅 答案: '+c.word;fb.className='fb err show';}
   document.getElementById('boss-fill').style.width=bossHP+'%';
   document.getElementById('boss-hp-txt').textContent=bossHP+'/100';
