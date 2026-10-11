@@ -55,7 +55,15 @@
     if (f) return f;
     var d = document.createElement('div');
     d.className = 'ta-int-fb';
-    (el.closest('.quiz-opts') || el.parentNode).insertAdjacentElement('afterend', d);
+    /* 2026-10-11 健壮性：insertAdjacentElement 的目标必须是元素节点——
+       parentNode 解析到 Document/DocumentFragment 时直接追加到 body，
+       否则报 HierarchyRequestError（sci-e-dissolving / sci-e-moon-phases）。 */
+    var host = el && el.nodeType === 1 ? (el.closest('.quiz-opts') || el.parentNode) : null;
+    if (host && host.nodeType === 1 && host !== document.documentElement) {
+      host.insertAdjacentElement('afterend', d);
+    } else {
+      document.body.appendChild(d);
+    }
     return d;
   }
 
@@ -74,10 +82,26 @@
   };
   window.answerTF = window.checkAnswer;
 
-  /* answerQ —— 两种签名兼容：
-     A) answerQ(n, 'B', el, 'C')            旧式：题号数字 + 字母选项 + 元素
-     B) answerQ('mod1-q1', 2, 'mod1', 2, '解析…') 新式：qid + 索引 + section + 正确索引 + 解析 */
+  /* answerQ —— 多签名兼容：
+     A) answerQ(n, 'B', el, 'C')              旧式：题号数字 + 字母 + 元素
+     B) answerQ('mod1-q1', 2, 'mod1', 2, '解析…')  新式：qid + 索引 + section + 正确索引 + 解析
+     C) answerQ('q1', 0)                      简式：qid + 选错索引；对错读按钮 data-correct */
   window.answerQ = function (a, b, c, d, e) {
+    if (typeof a === 'string' && arguments.length === 2 && typeof b === 'number') {
+      var grp2 = groupFor('answerQ', a);
+      grp2.forEach(function (btn, i) {
+        btn.classList.add('ta-int-locked');
+        var dc = btn.getAttribute('data-correct');
+        if (dc === '1' || dc === 'true') paint(btn, true);
+        else if (i === Number(b)) paint(btn, false);
+      });
+      var clicked = grp2[Number(b)];
+      var right2 = !!clicked && (clicked.getAttribute('data-correct') === '1'
+                                 || clicked.getAttribute('data-correct') === 'true');
+      showFeedback(feedbackOf(grp2[0] || document.body, a), right2,
+                   right2 ? '✅ 答对了。' : '❌ 再想想。');
+      return;
+    }
     if (typeof a === 'string' && typeof d !== 'undefined') {
       var head = "answerQ('" + a + "'";
       var groupB = [].filter.call(document.querySelectorAll('[onclick]'), function (x) {

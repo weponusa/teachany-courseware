@@ -749,7 +749,7 @@ function switchTab(id){document.querySelectorAll('.lab-panel').forEach(p=>p.clas
 function initKG(){
   const colorMap={current:"#ff6b6b",prereq:"#51cf66",next:"#4ecdc4"};
   const kgData={nodes:[{id:"cur",name:"时间单位",type:"current"},{id:"p1",name:"数数",type:"prereq"},{id:"p2",name:"加减法",type:"prereq"},{id:"n1",name:"时间计算",type:"next"},{id:"n2",name:"24时制",type:"next"},{id:"n3",name:"年月日",type:"next"}],links:[{source:"p1",target:"cur"},{source:"p2",target:"cur"},{source:"cur",target:"n1"},{source:"cur",target:"n2"},{source:"cur",target:"n3"}]};
-  const svg=d3.select("#kg-svg-time");const w=svg.node().parentElement.clientWidth||700,h=340;svg.attr("viewBox",`0 0 ${w} ${h}`);
+  const svg=d3.select("#kg-svg-time");const svgNode=svg.node();const w=svgNode?.parentElement?.clientWidth||700,h=340;svg.attr("viewBox",`0 0 ${w} ${h}`);
   svg.append("defs").append("marker").attr("id","arr-ti").attr("viewBox","0 -5 10 10").attr("refX",22).attr("markerWidth",6).attr("markerHeight",6).attr("orient","auto").append("path").attr("d","M0,-5L10,0L0,5").attr("fill","#bbb");
   const sim=d3.forceSimulation(kgData.nodes).force("link",d3.forceLink(kgData.links).id(d=>d.id).distance(120)).force("charge",d3.forceManyBody().strength(-320)).force("center",d3.forceCenter(w/2,h/2));
   const link=svg.append("g").selectAll("line").data(kgData.links).join("line").attr("stroke","#ddd").attr("stroke-width",2).attr("marker-end","url(#arr-ti)");
@@ -762,7 +762,7 @@ function initKG(){
 
 function initStepIndicator(){const ind=document.getElementById('stepIndicator');for(let i=1;i<=4;i++){const d=document.createElement('div');d.className='step-dot'+(i===1?' active':'');d.id='dot'+i;ind.appendChild(d);}}
 function checkQ(step,choice,correct){const opts=document.querySelectorAll(`#step${step} .quiz-option`);opts.forEach(o=>o.disabled=true);const idx={A:0,B:1,C:2};const fb=document.getElementById('fb'+step);if(choice===correct){opts[idx[choice]].classList.add('correct');fb.className='quiz-feedback show ok';fb.textContent='✅ 正确！';}else{opts[idx[choice]].classList.add('wrong');opts[idx[correct]].classList.add('correct');fb.className='quiz-feedback show err';fb.textContent='❌ 正确答案是 '+correct;}fb.style.display='block';document.getElementById('progressBar').style.width=(step/4*100)+'%';setTimeout(()=>document.getElementById('next'+step).classList.remove('locked'),choice===correct?0:1500);}
-function nextStep(n){document.getElementById('step'+(n-1)).classList.remove('active');const s=document.getElementById('step'+n);s.classList.remove('locked');s.classList.add('active');document.getElementById('dot'+(n-1)).classList.replace('active','done');const dn=document.getElementById('dot'+n);if(dn)dn.classList.add('active');}
+function nextStep(n){const prevStep=document.getElementById('step'+(n-1));if(prevStep)prevStep.classList.remove('active');const s=document.getElementById('step'+n);if(s){s.classList.remove('locked');s.classList.add('active');}const prevDot=document.getElementById('dot'+(n-1));if(prevDot)prevDot.classList.replace('active','done');const dn=document.getElementById('dot'+n);if(dn)dn.classList.add('active');}
 function showFinal(){document.getElementById('step4').classList.remove('active');document.getElementById('stepFinal').classList.remove('locked');document.getElementById('stepFinal').classList.add('active');document.getElementById('progressBar').style.width='100%';}
 
 window.onload=()=>{drawClock(0);convertTime();calcDur();initKG();initStepIndicator();};
