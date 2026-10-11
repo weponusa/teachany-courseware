@@ -1021,5 +1021,57 @@ function restartQuiz(){score=0;answered=[false,false,false,false,false];document
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><span class="ta-phase" data-tone="aux">知识图谱</span><h2 class="section-title">🗺️ 知识图谱：九九乘法表</h2><div data-teachany-kg="math-e-multiplication-table"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
 
 
+
+<script data-injected="ta-rebuild">
+/* math-elem 交互重建（ta-rebuild）：answer/nextStep/showResult/restartQuiz/mathelemDepthCheck */
+(function () {
+  function fbFor(el, fbId) {
+    var box = el && el.closest ? (el.closest('section') || el.parentNode) : null;
+    var fb = (fbId && document.getElementById(fbId)) ||
+             (box && box.querySelector('.feedback,.ta-int-fb'));
+    if (!fb && box) { fb = document.createElement('div'); fb.className = 'ta-int-fb'; box.appendChild(fb); }
+    return fb;
+  }
+  function showFb(fb, ok, msg) {
+    if (!fb) return;
+    fb.textContent = msg || (ok ? '✅ 答对了' : '❌ 再想想');
+    fb.style.display = 'block';
+  }
+  window.answer = function (el, verdict, explain) {
+    var ok = String(verdict).toLowerCase() === 'correct';
+    if (el && el.classList) el.classList.add(ok ? 'ta-int-ok' : 'ta-int-no');
+    var group = el && el.closest ? (el.closest('.quiz-opts,.options,.section') || el.parentNode) : null;
+    if (group) { group.querySelectorAll('button').forEach(function (b) { b.classList.add('ta-int-locked'); }); }
+    showFb(fbFor(el), ok, explain);
+  };
+  window.mathelemDepthCheck = function (el, ok, fbId, explain) {
+    if (el && el.classList) el.classList.add(ok ? 'ta-int-ok' : 'ta-int-no');
+    showFb(fbFor(el, fbId), ok, explain || (ok ? '✅ 答对了' : '❌ 再想想'));
+  };
+  window.nextStep = function () {
+    var secs = document.querySelectorAll('section');
+    var cur = 0;
+    for (var i = 0; i < secs.length; i++) {
+      var r = secs[i].getBoundingClientRect();
+      if (r.top <= 80 && r.bottom > 80) { cur = i; break; }
+    }
+    var t = secs[Math.min(cur + 1, secs.length - 1)];
+    if (t) t.scrollIntoView({ behavior: 'smooth' });
+  };
+    window.showResult = function () {
+    document.querySelectorAll('button').forEach(function (b) {
+      var oc = b.getAttribute('onclick') || '';
+      if (oc.indexOf("'correct'") >= 0) b.classList.add('ta-int-ok');
+    });
+
+  };
+  window.restartQuiz = function () {
+    document.querySelectorAll('.ta-int-ok,.ta-int-no,.ta-int-locked').forEach(function (el) { el.classList.remove('ta-int-ok', 'ta-int-no', 'ta-int-locked'); });
+    document.querySelectorAll('.ta-int-fb').forEach(function (el) { el.textContent = ''; el.style.display = 'none'; });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+})();
+
+</script>
 </body>
 </html>
