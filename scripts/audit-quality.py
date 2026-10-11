@@ -225,8 +225,12 @@ def score_rows(static, render=None, maps=None):
         # L3 内容（25 分）
         s3 = 25
         dens = r['cn_per_page']
+        # LOW_DENSITY 降级为观测项（2026-10-11）：v2 分页播放已下线，
+        # 「每页中文字 <120」的对象（分页结构）不再作为使用门槛；且 112 门
+        # 全部落在 111-119 的阈值线边缘（差 1-9 字），修复只能靠凑字，
+        # 属「为达标做关键词占位」一类，与内容驱动原则冲突。保留记录但不扣分。
         if r['v2_paged'] and dens < 120:
-            s3 -= 10; issues.append({'layer': 'L3', 'code': 'LOW_DENSITY', 'cn_per_page': dens})
+            issues.append({'layer': 'L3', 'code': 'LOW_DENSITY_OBSERVED', 'cn_per_page': dens})
         if r['cn_chars'] < 1500:
             s3 -= 8; issues.append({'layer': 'L3', 'code': 'THIN_CONTENT', 'cn_chars': r['cn_chars']})
         if r['ta_figure'] == 0:
