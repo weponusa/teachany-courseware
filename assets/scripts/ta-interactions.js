@@ -74,23 +74,61 @@
   };
   window.answerTF = window.checkAnswer;
 
-  /* answerQ(n, chosen, el, correct) —— 选择题：锁定整组，正确项标绿、误选项标红 */
-  window.answerQ = function (n, chosen, el, correct) {
+  /* answerQ —— 两种签名兼容：
+     A) answerQ(n, 'B', el, 'C')            旧式：题号数字 + 字母选项 + 元素
+     B) answerQ('mod1-q1', 2, 'mod1', 2, '解析…') 新式：qid + 索引 + section + 正确索引 + 解析 */
+  window.answerQ = function (a, b, c, d, e) {
+    if (typeof a === 'string' && typeof d !== 'undefined') {
+      var head = "answerQ('" + a + "'";
+      var groupB = [].filter.call(document.querySelectorAll('[onclick]'), function (x) {
+        return x.getAttribute('onclick').indexOf(head) === 0;
+      });
+      var rightB = Number(b) === Number(d);
+      groupB.forEach(function (btn, i) {
+        btn.classList.add('ta-int-locked');
+        if (i === Number(d)) paint(btn, true);
+        else if (i === Number(b)) paint(btn, false);
+      });
+      var fbB = feedbackOf(groupB[0] || document.body, c);
+      showFeedback(fbB, rightB, (rightB ? '✅ ' : '❌ ') + (e || ''));
+      return;
+    }
+    var n = a, chosen = b, el = c, correct = d;
     var group = (el.closest('.quiz-opts,.quiz-opts,.card,.section') || document)
       .querySelectorAll('[onclick^="answerQ(' + n + ',');
     var right = String(correct).toUpperCase() === String(chosen).toUpperCase();
-    group.forEach(function (b) {
-      b.classList.add('ta-int-locked');
-      var c = (b.getAttribute('onclick').match(/'([^']*)'\)\s*$/) || [])[1];
-      if (c && c.toUpperCase() === String(correct).toUpperCase()) paint(b, true);
+    group.forEach(function (btn) {
+      btn.classList.add('ta-int-locked');
+      var cc = (btn.getAttribute('onclick').match(/'([^']*)'\)\s*$/) || [])[1];
+      if (cc && cc.toUpperCase() === String(correct).toUpperCase()) paint(btn, true);
     });
     if (!right) paint(el, false);
     var fb = feedbackOf(el, 'qe' + n);
     showFeedback(fb, right, right ? '✅ 答对了。' : '❌ 正确答案是 ' + String(correct).toUpperCase() + '。');
   };
 
-  /* answerPre(el, qid, isCorrect) —— 前测判分，同 checkAnswer */
-  window.answerPre = function (el, qid, ok) { window.checkAnswer(el, ok, qid); };
+  /* answerPre —— 三签名兼容：
+     A) answerPre(el, qid, isCorrect)                     旧式：元素 + 容器 id
+     B) answerPre(qid, chosenIdx, correctIdx, explain)    新式：同 answerPost
+     C) answerPre(n, 'B', 'B')                            题号 + 字母选择 + 字母正确 */
+  window.answerPre = function (a, b, c, d) {
+    if (typeof a === 'string' && typeof c !== 'undefined') {
+      return window.answerPost(a, b, c, d);
+    }
+    if (typeof a === 'number' && typeof b === 'string') {
+      var rightC = String(b).toUpperCase() === String(c).toUpperCase();
+      var grpC = document.querySelectorAll('[onclick^="answerPre(' + a + ',');
+      grpC.forEach(function (btn) {
+        btn.classList.add('ta-int-locked');
+        var m2 = btn.getAttribute('onclick').match(/,\s*'([^']*)'\s*,\s*'([^']*)'\s*\)/);
+        if (m2 && m2[2].toUpperCase() === String(c).toUpperCase()) paint(btn, true);
+      });
+      var fbC = feedbackOf(grpC[0] || document.body, 'qe' + a);
+      showFeedback(fbC, rightC, rightC ? '✅ 答对了。' : '❌ 正确答案是 ' + String(c).toUpperCase() + '。');
+      return;
+    }
+    window.checkAnswer(a, c, b);
+  };
 
   /* answerQuiz(qid, chosen, correct, fbId, explain) —— 带解析的选择题。
      注意：组内查找用 getAttribute 过滤，不拼引号选择器——onclick 属性里的

@@ -1827,5 +1827,46 @@ function biohDepthCheck(button, isCorrect, feedbackId, explanation) {
 </div>
 <section class="section" id="knowledge-graph" style="max-width:1080px;margin:24px auto;padding:0 20px;" data-slot="140"><span class="ta-phase" data-tone="aux">知识图谱</span><h2 class="section-title">🗺️ 知识图谱：细胞器的分工与合作</h2><div data-teachany-kg="bio-h-organelles"><canvas class="tkg-fallback-canvas" width="720" height="120" aria-label="知识图谱互动画布" style="display:block;width:100%;max-height:140px;border-radius:12px;"></canvas></div></section>
 <script src="../../assets/scripts/ta-interactions.js"></script>
+
+<script>
+/* 最小音频控制条实现：播放列表 JSON 驱动（2026-10-11 补齐缺失的 toggleAudio/changeSpeed） */
+(function () {
+  var listEl = document.querySelector('script[type="application/json"][data-teachany-audio-playlist]');
+  var playlist = [];
+  try { playlist = JSON.parse(listEl.textContent.trim()); } catch (e) {}
+  var audio = new Audio();
+  var idx = 0, speeds = [1, 1.25, 1.5, 2], sp = 0, playing = false;
+  var $ = function (id) { return document.getElementById(id); };
+  function load(i) {
+    idx = (i + playlist.length) % playlist.length;
+    var e = playlist[idx];
+    if (!e) return;
+    audio.src = e.src;
+    var t = $('audioTitle'); if (t) t.textContent = e.title || ('第' + (idx + 1) + '段');
+    var sb = $('audioSubtitle'); if (sb) sb.textContent = e.title || '';
+  }
+  window.toggleAudio = function () {
+    if (!playlist.length) return;
+    if (!audio.src) load(idx);
+    if (playing) { audio.pause(); $('playBtn').textContent = '▶'; }
+    else { audio.play(); $('playBtn').textContent = '⏸'; }
+    playing = !playing;
+  };
+  window.changeSpeed = function () {
+    sp = (sp + 1) % speeds.length;
+    audio.playbackRate = speeds[sp];
+    $('speedBtn').textContent = speeds[sp] + 'x';
+  };
+  audio.addEventListener('ended', function () { load(idx + 1); audio.play(); });
+  audio.addEventListener('timeupdate', function () {
+    if (!audio.duration) return;
+    var p = $('audioProgressFill');
+    if (p) p.style.width = (audio.currentTime / audio.duration * 100) + '%';
+    var td = $('timeDisplay');
+    if (td) { var s = Math.floor(audio.currentTime); td.textContent = Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + s % 60; }
+  });
+  if (playlist.length) { load(0); var t = $('audioTitle'); if (t) t.textContent = playlist[0].title || t.textContent; }
+})();
+</script>
 </body>
 </html>
