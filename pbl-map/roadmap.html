@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小学 6 年 PBL 覆盖推演 — PBL Map</title>
+  <link rel="stylesheet" href="./assets/css/pblmap.css">
+  <style>
+    .roadmap-hero { padding: 36px 24px; border-bottom: 1px solid var(--border); background: rgba(59,130,246,0.06); }
+    .roadmap-hero h2 { font-size: 26px; margin-bottom: 10px; }
+    .roadmap-hero p { color: var(--dim); max-width: 720px; font-size: 14px; }
+    .model-box { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; }
+    .model-item { padding: 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(15,23,42,0.5); font-size: 13px; }
+    .model-item strong { display: block; font-size: 22px; color: var(--primary); margin-bottom: 4px; }
+    .timeline { position: relative; padding-left: 28px; }
+    .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+    .sem-block { position: relative; margin-bottom: 24px; padding: 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); }
+    .sem-block::before { content: ''; position: absolute; left: -24px; top: 20px; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); border: 2px solid var(--bg); }
+    .sem-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 8px; }
+    .sem-head h3 { font-size: 16px; }
+    .sem-tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(139,92,246,0.15); color: #c4b5fd; }
+    .sem-meta { font-size: 12px; color: var(--dim); }
+    .sub-list { margin-top: 8px; padding-left: 16px; font-size: 11px; color: var(--dimmer); }
+    .cov-bar-wrap { margin-top: 10px; }
+    .cov-bar { height: 8px; border-radius: 4px; background: rgba(148,163,184,0.15); overflow: hidden; display: flex; }
+    .cov-bar span { height: 100%; }
+    .cov-bar .mandatory { background: var(--success); }
+    .cov-bar .certified { background: var(--warn); }
+    .cov-bar .gap { background: rgba(239,68,68,0.5); }
+    .chart-row { display: flex; align-items: flex-end; gap: 6px; height: 140px; margin-top: 16px; padding-top: 8px; border-bottom: 1px solid var(--border); }
+    .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+    .chart-col .bar { width: 100%; max-width: 36px; border-radius: 4px 4px 0 0; background: var(--primary); transition: height 0.3s; }
+    .chart-col label { font-size: 9px; color: var(--dimmer); text-align: center; line-height: 1.2; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--dim); margin-top: 12px; }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+    .subject-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+    .subject-cell { padding: 10px; border-radius: 8px; border: 1px solid var(--border); text-align: center; font-size: 12px; }
+    .subject-cell .n { font-size: 20px; font-weight: 700; color: var(--accent); }
+    .gap-list { font-size: 12px; color: var(--dim); max-height: 200px; overflow: auto; }
+    .gap-list li { margin: 4px 0; }
+    .flow-diagram { font-family: ui-monospace, monospace; font-size: 11px; color: var(--dim); line-height: 1.8; padding: 16px; border-radius: 8px; background: rgba(15,23,42,0.6); border: 1px solid var(--border); overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <h1>PBL Map · 6 年推演</h1>
+    <nav class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="catalog.html">K12 目录</a>
+      <a href="roadmap.html" class="active">6 年推演</a>
+      <a href="pack.html?id=g3-autumn-pack">覆盖包</a>
+    </nav>
+  </header>
+
+  <section class="roadmap-hero">
+    <h2>小学 6 年 · 学期覆盖包推演</h2>
+    <p>
+      基于 CN 课标 <strong id="heroNodes">263</strong> 个小学节点（含信息科技 16；不含音体美）。
+      模型：<strong>每学期 K 个高强度 PBL</strong>（2–3 个），节点无交叠；学生个人台账 <code>gap=0</code> 关门。
+      下方为<strong>教研规划推演</strong>，非已实施数据。
+    </p>
+    <div class="model-box" id="heroStats">
+      <div class="model-item"><strong id="statPacks">12</strong>学期覆盖包 / 6 年</div>
+      <div class="model-item"><strong id="statSub">—</strong>子 PBL 合计</div>
+      <div class="model-item"><strong id="statTouch">—</strong>6 年末节点触达率</div>
+      <div class="model-item"><strong id="statGap">—</strong>薄层 gap</div>
+    </div>
+  </section>
+
+  <main class="container">
+    <div class="panel">
+      <div class="panel-title">推演逻辑（为什么可行）</div>
+      <div class="flow-diagram">
+课标全集 263 节点
+  └─ 每学期覆盖包：K 子 PBL · 节点池无交叠 · 并集 = 本学期池
+  └─ 12 学期 · 子 PBL 合计 ≈ 26 · 池节点 ≥ 263  ✓
+
+实施层：主题壳 + 可个性化驱动问 → 每子 PBL mandatory 清单固定
+掌握层：M = 产出掌握 · C = micro-block + 短测（包内闭环，无分科补课）
+审计层：个人台账 gap=0 · 班级并集检核
+      </div>
+      <ul style="margin-top:16px;padding-left:20px;font-size:13px;color:var(--dim);line-height:2">
+        <li><strong style="color:var(--text)">M（绿）</strong> — 项目产出必须掌握，<code>mandatoryNodeIds</code></li>
+        <li><strong style="color:var(--text)">C（黄）</strong> — micro-block 过关，<code>certifiedNodeIds</code></li>
+        <li><strong style="color:var(--text)">gap（红）</strong> — 拼音/笔顺等极薄层，逐步迁入 micro-block</li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">课标节点库存（小学）</div>
+      <p class="sem-meta" style="margin-bottom:12px">按年级 · 按学科分布 — 推演分配的来源池</p>
+      <div class="subject-grid" id="inventoryGrid"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">累积触达曲线（12 学期）</div>
+      <p class="sem-meta">每完成一个学期覆盖包，累计触达的课标节点占全集比例</p>
+      <div class="chart-row" id="cumulativeChart"></div>
+      <div class="legend">
+        <span><i style="background:var(--primary)"></i>累积触达率 %</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">6 年 × 12 学期覆盖包时间轴</div>
+      <p class="sem-meta" style="margin-bottom:20px">4 条主题链螺旋复现：我们的家/班级 → 我们的校园 → 家乡的味道 → 绿色星球 → 社区小管家</p>
+      <div class="timeline" id="timeline"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">6 年末覆盖结构</div>
+      <div class="cov-bar-wrap">
+        <div class="cov-bar" id="finalBar" style="height:12px"></div>
+      </div>
+      <div class="legend" style="margin-top:8px" id="finalLegend"></div>
+      <p class="sem-meta" style="margin-top:12px" id="feasibilityText"></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">gap 节点（极薄层 / 待迁入）</div>
+      <ul class="gap-list" id="gapList"></ul>
+    </div>
+
+    <div class="panel" style="display:flex;gap:12px;flex-wrap:wrap">
+      <a class="btn btn-primary" href="pack.html?id=g3-autumn-pack">查看 G3 覆盖包</a>
+      <a class="btn btn-secondary" href="plan.html?id=g3-our-campus">G3 策划包样例</a>
+      <a class="btn btn-secondary" href="catalog.html">K12 目录</a>
+      <button class="btn btn-secondary" type="button" onclick="regen()">重新生成推演 JSON</button>
+    </div>
+  </main>
+
+  <script>
+    const SUBJECT_CN = {
+      chinese: '语文', math: '数学', science: '科学', english: '英语',
+      politics: '道法', 'info-tech': '信息科技', psychology: '心理',
+    };
+
+    let roadmap = null;
+
+    async function load() {
+      const res = await fetch('./data/plans/primary-6year-roadmap.json');
+      roadmap = await res.json();
+      render(roadmap);
+    }
+
+    function render(data) {
+      const meta = data.modelMeta || {};
+      const s = data.summary?.after6Years || {};
+      const total = meta.totalPrimaryNodes || 263;
+
+      document.getElementById('heroNodes').textContent = total;
+      document.getElementById('statPacks').textContent = meta.semesterPacks || 12;
+      document.getElementById('statSub').textContent = meta.subProjects || '—';
+      document.getElementById('statTouch').textContent = (s.touchRate || '—') + (s.touchRate ? '%' : '');
+      document.getElementById('statGap').textContent = (s.gap ?? '—') + (s.gap != null ? ' 节点' : '');
+      document.getElementById('feasibilityText').textContent =
+        `推演结论：${s.feasibility || '—'} · ${s.mathCheck || ''}`;
+
+      const inv = data.nodeInventory || {};
+      document.getElementById('inventoryGrid').innerHTML = [
+        ...Object.entries(inv.byGrade || {}).map(([g, n]) =>
+          `<div class="subject-cell"><div class="n">${n}</div>${g} 年级</div>`),
+        ...Object.entries(inv.bySubject || {}).map(([sub, n]) =>
+          `<div class="subject-cell"><div class="n">${n}</div>${SUBJECT_CN[sub] || sub}</div>`),
+      ].join('');
+
+      document.getElementById('cumulativeChart').innerHTML = (data.semesters || []).map((sem) => {
+        const rate = sem.cumulative?.touchRate || 0;
+        const h = Math.max(4, (rate / 100) * 120);
+        const short = sem.id.replace('g', '').replace('-', '\n');
+        return `<div class="chart-col"><div class="bar" style="height:${h}px" title="${rate}%"></div><label>${short}</label></div>`;
+      }).join('');
+
+      const mW = ((s.mandatory || 0) / total * 100).toFixed(1);
+      const cW = ((s.certified || 0) / total * 100).toFixed(1);
+      const gW = ((s.gap || 0) / total * 100).toFixed(1);
+      document.getElementById('finalBar').innerHTML =
+        `<span class="mandatory" style="width:${mW}%"></span>` +
+        `<span class="certified" style="width:${cW}%"></span>` +
+        `<span class="gap" style="width:${gW}%"></span>`;
+      document.getElementById('finalLegend').innerHTML =
+        `<span><i style="background:var(--success)"></i>M ${s.mandatory || 0}</span>` +
+        `<span><i style="background:var(--warn)"></i>C ${s.certified || 0}</span>` +
+        `<span><i style="background:rgba(239,68,68,0.5)"></i>gap ${s.gap || 0}</span>`;
+
+      document.getElementById('timeline').innerHTML = (data.semesters || []).map((sem) => {
+        const c = sem.cumulative || {};
+        const mPct = ((c.mandatory || 0) / total * 100).toFixed(0);
+        const touchPct = c.touchRate || 0;
+        const packLink = `<a href="${sem.packUrl || 'pack.html?id=' + sem.id + '-pack'}" style="color:var(--secondary);font-size:12px">→ 覆盖包</a>`;
+        const planLink = sem.planRef
+          ? `<a href="plan.html?id=${sem.planRef}" style="color:var(--primary);font-size:12px">→ 策划包</a>`
+          : (sem.id === 'g5-spring'
+          ? `<a href="demo.html?id=g5-community-map" style="color:var(--primary);font-size:12px">→ 拆解演示</a>`
+          : '');
+        const subs = (sem.projects || []).map((p, i) =>
+          `<li>${i + 1}. ${p.title}（${p.weeks} 周 · M${p.stats?.mandatory || 0} C${p.stats?.certified || 0}）</li>`
+        ).join('');
+        return `
+          <div class="sem-block">
+            <div class="sem-head">
+              <h3>${sem.label}</h3>
+              <span class="sem-tag">${sem.themeTitle}</span>
+              <span class="sem-tag">${sem.projectCount} 子 PBL</span>
+              ${packLink} ${planLink}
+            </div>
+            <div class="sem-meta">${sem.nodePoolSize} 节点池 · ${sem.totalWeeks}+ 周</div>
+            <div class="sem-meta" style="margin-top:4px">驱动问：${sem.drivingQuestion}</div>
+            <div class="sem-meta" style="margin-top:6px">
+              本学期 +${sem.coverage?.newNodesThisSemester || 0} 节点（M ${sem.coverage?.mandatory || 0} · C ${sem.coverage?.certified || 0}）
+              · 累计触达 ${touchPct}% · 累计 M ${mPct}%
+            </div>
+            <ul class="sub-list">${subs}</ul>
+            <div class="cov-bar-wrap">
+              <div class="cov-bar" style="height:6px">
+                <span class="mandatory" style="width:${mPct}%"></span>
+                <span class="certified" style="width:${((c.certified || 0)/total*100).toFixed(1)}%"></span>
+                <span class="gap" style="width:${((c.gap || 0)/total*100).toFixed(1)}%"></span>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+      document.getElementById('gapList').innerHTML = (data.gapNodes || []).map((g) =>
+        `<li><strong>${g.nodeName}</strong>（${SUBJECT_CN[g.subject] || g.subject} G${g.grade}）— ${g.reason}</li>`
+      ).join('') || '<li>无 gap 节点</li>';
+    }
+
+    function regen() {
+      alert('请在终端运行：npm run build:k12\n然后刷新本页。');
+    }
+
+    load();
+  </script>
+</body>
+</html>

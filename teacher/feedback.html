@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TeachAny 教师反馈看板</title>
+  <style>
+    :root{--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e2e8f0;--blue:#2563eb;--green:#16a34a;--red:#dc2626;--shadow:0 18px 45px rgba(15,23,42,.10)}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6}header{padding:34px 20px 18px;max-width:1180px;margin:0 auto}main{max-width:1180px;margin:0 auto;padding:0 20px 48px}h1{margin:0 0 8px;font-size:32px}.muted{color:var(--muted)}.panel{background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:20px;padding:18px;margin-bottom:18px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}label{font-weight:700;font-size:14px;display:block;margin-bottom:6px}input{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit}button,.btn{border:0;border-radius:999px;background:var(--blue);color:#fff;font-weight:800;padding:11px 18px;cursor:pointer;text-decoration:none;display:inline-block}.btn.secondary{background:#0f172a}table{width:100%;border-collapse:collapse;background:#fff;border-radius:16px;overflow:hidden}th,td{border-bottom:1px solid var(--line);padding:10px;vertical-align:top;text-align:left;font-size:14px}th{background:#f1f5f9;color:#334155}tr:hover td{background:#f8fafc}.status{font-size:14px}.err{color:var(--red)}.ok{color:var(--green)}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}.metric b{display:block;font-size:26px}.scroll{overflow:auto}@media(max-width:760px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}table{min-width:900px}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>教师反馈看板</h1>
+  <p class="muted">查看学生提交的 TeachAny 学习反馈。试点版无登录保护，请先用于低敏感数据。</p>
+</header>
+<main>
+  <section class="panel">
+    <div class="toolbar">
+      <div>
+        <label for="course_id">按课程 ID 筛选</label>
+        <input id="course_id" placeholder="如 math-linear-function">
+      </div>
+      <button id="loadBtn">加载数据</button>
+      <a id="csvBtn" class="btn secondary" href="/api/feedback?format=csv">导出 CSV</a>
+      <a class="btn secondary" href="/feedback.html">学生反馈页</a>
+      <span id="status" class="status"></span>
+    </div>
+  </section>
+
+  <section class="summary" id="summary"></section>
+
+  <section class="panel scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>时间</th><th>课程</th><th>学生/班级</th><th>学懂</th><th>难度</th><th>前测</th><th>后测</th><th>最难点</th><th>反思</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="9" class="muted">点击“加载数据”。</td></tr></tbody>
+    </table>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const statusEl = $('status');
+const tbody = $('tbody');
+const summary = $('summary');
+const courseInput = $('course_id');
+const csvBtn = $('csvBtn');
+function esc(v){return String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
+function renderSummary(rows){
+  const count = rows.length;
+  const understood = rows.filter(r => Number(r.understood) === 1).length;
+  const pre = rows.map(r => Number(r.pre_score)).filter(Number.isFinite);
+  const post = rows.map(r => Number(r.post_score)).filter(Number.isFinite);
+  const avg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : '-';
+  summary.innerHTML = [
+    ['提交数', count], ['基本学懂', count ? Math.round(understood/count*100)+'%' : '-'], ['前测均分', avg(pre)], ['后测均分', avg(post)]
+  ].map(([k,v]) => `<div class="metric"><span class="muted">${k}</span><b>${v}</b></div>`).join('');
+}
+function renderRows(rows){
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="muted">暂无数据。</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td>${esc(r.created_at)}</td>
+    <td><b>${esc(r.course_name || r.course_id)}</b><br><span class="muted">${esc(r.course_id)} ${esc(r.node_id || '')}</span></td>
+    <td>${esc(r.learner_name || '-')}<br><span class="muted">${esc(r.class_name || '')}</span></td>
+    <td>${Number(r.understood) === 1 ? '是' : '否/未选'}</td>
+    <td>${esc(r.difficulty || '-')}</td>
+    <td>${esc(r.pre_score ?? '-')}</td>
+    <td>${esc(r.post_score ?? '-')}</td>
+    <td>${esc(r.hardest_part || '')}</td>
+    <td>${esc(r.reflection || '')}</td>
+  </tr>`).join('');
+}
+async function loadData(){
+  const courseId = courseInput.value.trim();
+  const qs = new URLSearchParams({ limit: '200' });
+  if (courseId) qs.set('course_id', courseId);
+  csvBtn.href = '/api/feedback?format=csv' + (courseId ? '&course_id=' + encodeURIComponent(courseId) : '');
+  statusEl.className = 'status';
+  statusEl.textContent = '加载中...';
+  try {
+    const res = await fetch('/api/feedback?' + qs.toString(), { cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.message || data.error || '加载失败');
+    renderSummary(data.rows || []);
+    renderRows(data.rows || []);
+    statusEl.className = 'status ok';
+    statusEl.textContent = `已加载 ${data.count || 0} 条`;
+  } catch (error) {
+    renderSummary([]);
+    tbody.innerHTML = `<tr><td colspan="9" class="err">${esc(error.message || '加载失败')}</td></tr>`;
+    statusEl.className = 'status err';
+    statusEl.textContent = error.message || '加载失败';
+  }
+}
+$('loadBtn').addEventListener('click', loadData);
+const params = new URLSearchParams(location.search);
+if (params.get('course_id')) courseInput.value = params.get('course_id');
+loadData();
+</script>
+</body>
+</html>

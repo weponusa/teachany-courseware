@@ -1,0 +1,43 @@
+name: Rebuild Knowledge Index
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Optional note for commit message"
+        required: false
+        default: "skill hang_tree rebuild"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rebuild-index-dispatch
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Rebuild registry and knowledge trees
+        run: |
+          set -e
+          python3 scripts/rebuild-index.py
+          python3 scripts/sync-node-index-courses.py 2>/dev/null || true
+
+      - name: Commit index updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add registry.json registry-v2.json community/index.json \
+            data/trees/ data/node-index.json data/nodes-metadata.json data/nodes-selector.json \
+            assets/scripts/teachany-kg-manifest.json scripts/teachany-kg-manifest.json 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "No index changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: rebuild-index via workflow_dispatch (${{ github.event.inputs.reason }})"
+          git push origin main

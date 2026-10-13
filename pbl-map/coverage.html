@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>覆盖看板 — PBL Map</title>
+  <link rel="stylesheet" href="./assets/css/pblmap.css">
+</head>
+<body>
+  <header class="top-bar">
+    <h1>PBL Map · 覆盖看板</h1>
+    <nav class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="student.html">学生自主</a>
+      <a href="coverage.html" class="active">覆盖看板</a>
+      <a href="class.html">班级差异度</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="panel">
+      <div class="panel-title" id="modeTitle">地图驱动 · 全科覆盖热力图</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+        <select id="filterBand">
+          <option value="">全部学段</option>
+          <option value="primary">小学 (1–6)</option>
+          <option value="junior">初中 (7–9)</option>
+          <option value="senior">高中 (10–12)</option>
+        </select>
+        <select id="filterSubject">
+          <option value="">全部学科</option>
+          <option value="chinese">语文</option>
+          <option value="math">数学</option>
+          <option value="science">科学</option>
+          <option value="english">英语</option>
+          <option value="politics">道法</option>
+          <option value="psychology">心理</option>
+          <option value="info-tech">信息科技</option>
+          <option value="physics">物理</option>
+          <option value="chemistry">化学</option>
+          <option value="biology">生物</option>
+          <option value="history">历史</option>
+          <option value="geography">地理</option>
+        </select>
+        <select id="filterGrade">
+          <option value="">全部年级</option>
+          <optgroup label="小学">
+            <option value="1">1 年级</option><option value="2">2 年级</option>
+            <option value="3">3 年级</option><option value="4">4 年级</option>
+            <option value="5">5 年级</option><option value="6">6 年级</option>
+          </optgroup>
+          <optgroup label="初中">
+            <option value="7">7 年级</option><option value="8">8 年级</option><option value="9">9 年级</option>
+          </optgroup>
+          <optgroup label="高中">
+            <option value="10">高一</option><option value="11">高二</option><option value="12">高三</option>
+          </optgroup>
+        </select>
+        <button class="btn btn-primary" type="button" onclick="runAudit()">刷新审计</button>
+        <button class="btn btn-secondary" type="button" onclick="saveSnapshot()">保存快照</button>
+      </div>
+
+      <div class="stat-row" id="statsRow">
+        <div class="stat-box"><div class="num cov-green" id="statCore">—</div><div class="lbl">核心覆盖</div></div>
+        <div class="stat-box"><div class="num cov-yellow" id="statMention">—</div><div class="lbl">仅拓展提及</div></div>
+        <div class="stat-box"><div class="num cov-red" id="statGap">—</div><div class="lbl">尚未覆盖</div></div>
+        <div class="stat-box"><div class="num" id="statRate">—</div><div class="lbl">核心覆盖率</div></div>
+      </div>
+
+      <div class="legend">
+        <span><i style="background:rgba(16,185,129,0.5)"></i> 核心嵌入</span>
+        <span><i style="background:rgba(234,179,8,0.4)"></i> 前置/拓展</span>
+        <span><i style="background:rgba(239,68,68,0.2)"></i> 缺口</span>
+      </div>
+    </div>
+
+    <div class="panel" id="gapPanel" style="display:none">
+      <div class="panel-title">课标驱动 · 缺口项目建议</div>
+      <div id="gapSuggestions"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">知识点 × 项目矩阵</div>
+      <p class="field-hint" style="margin-bottom:12px">基于本机 TeachAny PBL 历史（<code>teachany_history_v1_pbl_runs</code>）统计</p>
+      <div class="matrix-wrap" id="matrixWrap">
+        <p style="padding:24px;color:var(--dim)">加载中…</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./scripts/pbl-primary-coverage.js"></script>
+  <script>
+    let lastAudit = null;
+    const mode = new URLSearchParams(location.search).get('mode') || 'map';
+
+    if (mode === 'curriculum') {
+      document.getElementById('modeTitle').textContent = '课标驱动 · 未覆盖节点反推项目';
+      document.getElementById('gapPanel').style.display = 'block';
+    }
+
+    async function runAudit() {
+      const wrap = document.getElementById('matrixWrap');
+      wrap.innerHTML = '<p style="padding:24px;color:var(--dim)">审计中…</p>';
+      try {
+        const band = document.getElementById('filterBand').value;
+        lastAudit = await PBLCoverage.buildCoverageMatrix({
+          gradeBand: band || undefined,
+        });
+        renderStats(lastAudit.stats);
+        renderMatrix(lastAudit);
+        if (mode === 'curriculum' || mode === 'map') {
+          const sub = document.getElementById('filterSubject').value;
+          let gaps = lastAudit.gaps;
+          if (sub) gaps = gaps.filter(g => g.subject === sub);
+          const suggestions = await PBLCoverage.suggestProjectsForGaps(gaps.slice(0, 15));
+          renderGapSuggestions(suggestions);
+        }
+      } catch (e) {
+        wrap.innerHTML = `<p style="padding:24px;color:var(--danger)">${e.message}</p>`;
+      }
+    }
+
+    function renderStats(stats) {
+      document.getElementById('statCore').textContent = stats.coreCovered;
+      document.getElementById('statMention').textContent = stats.mentionOnly;
+      document.getElementById('statGap').textContent = stats.gaps;
+      document.getElementById('statRate').textContent = `${stats.coverageRate}%`;
+    }
+
+    function renderMatrix(audit) {
+      const sub = document.getElementById('filterSubject').value;
+      const gr = document.getElementById('filterGrade').value;
+      const band = document.getElementById('filterBand').value;
+      const rows = Object.values(audit.matrix).filter(r => {
+        if (band && r.gradeBand !== band) return false;
+        if (sub && r.subject !== sub) return false;
+        if (gr && String(r.grade) !== gr) return false;
+        return true;
+      }).slice(0, 120);
+
+      const projects = audit.projects.slice(0, 8);
+      if (!rows.length) {
+        document.getElementById('matrixWrap').innerHTML = '<p style="padding:24px;color:var(--dim)">无匹配节点。请先在本机完成若干 PBL 拆解。</p>';
+        return;
+      }
+
+      let html = '<table class="coverage-matrix"><thead><tr><th class="node-col">课标节点</th>';
+      projects.forEach(p => { html += `<th title="${p.title}">${(p.title || p.id).slice(0, 10)}…</th>`; });
+      html += '<th>状态</th></tr></thead><tbody>';
+
+      rows.forEach(row => {
+        html += `<tr><td class="node-col" title="${row.nodeId}">${row.nodeName}</td>`;
+        projects.forEach(p => {
+          const lv = row.projects[p.id];
+          const cls = lv === 'core' ? 'cell-core' : lv === 'mention' ? 'cell-mention' : 'cell-gap';
+          html += `<td class="${cls}">${lv === 'core' ? '●' : lv === 'mention' ? '○' : ''}</td>`;
+        });
+        const statusCls = row.bestLevel === 'core' ? 'cov-green' : row.bestLevel === 'mention' ? 'cov-yellow' : 'cov-red';
+        const statusLbl = row.bestLevel === 'core' ? '绿' : row.bestLevel === 'mention' ? '黄' : '红';
+        html += `<td class="${statusCls}">${statusLbl}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('matrixWrap').innerHTML = html;
+    }
+
+    function renderGapSuggestions(suggestions) {
+      const el = document.getElementById('gapSuggestions');
+      if (!suggestions.length) {
+        el.innerHTML = '<p style="color:var(--dim)">暂无缺口或已全部覆盖。</p>';
+        return;
+      }
+      el.innerHTML = suggestions.map(s => {
+        const p = s.suggestedProject;
+        const qs = (p?.sampleDrivingQuestions || []).slice(0, 2).join(' / ');
+        return `<div style="padding:12px 0;border-bottom:1px solid var(--border);font-size:13px">
+          <strong class="cov-red">${s.gap.nodeName}</strong>
+          <span style="color:var(--dim)"> (${s.gap.subject} · G${s.gap.grade})</span><br>
+          → 建议：<a href="${typeof pblMapEngineUrl === 'function' ? pblMapEngineUrl('pbl.html') : 'engine/pbl.html'}" style="color:var(--primary)">${p?.title || '教研策划'}</a>
+          <span style="color:var(--dimmer)"> — ${s.rationale}</span>
+          ${qs ? `<br><span style="color:var(--dim)">驱动问示例：${qs}</span>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    function saveSnapshot() {
+      if (!lastAudit) return;
+      PBLCoverage.saveAuditSnapshot(lastAudit);
+      alert('覆盖快照已保存到 localStorage');
+    }
+
+    document.getElementById('filterBand').addEventListener('change', runAudit);
+    document.getElementById('filterSubject').addEventListener('change', () => lastAudit && renderMatrix(lastAudit));
+    document.getElementById('filterGrade').addEventListener('change', () => lastAudit && renderMatrix(lastAudit));
+    runAudit();
+  </script>
+</body>
+</html>

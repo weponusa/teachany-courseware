@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>班级路径差异度 — PBL Map</title>
+  <link rel="stylesheet" href="./assets/css/pblmap.css">
+</head>
+<body>
+  <header class="top-bar">
+    <h1>PBL Map · 班级差异度</h1>
+    <nav class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="student.html">学生自主</a>
+      <a href="coverage.html">覆盖看板</a>
+      <a href="class.html" class="active">班级差异度</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="panel">
+      <div class="panel-title">同主题下的路径个性化</div>
+      <p style="font-size:13px;color:var(--dim);margin-bottom:16px">
+        差异度 = 1 − 平均 Jaccard 相似度。越高表示同学之间的核心课标节点子集越不同（越个性化）。
+        数据来源：本机 PBL 拆解历史；学生姓名来自<a href="student.html" style="color:var(--primary)">学生自主入口</a>。
+      </p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+        <input id="themeFilter" placeholder="筛选主题壳，如：我们的校园" style="max-width:280px" />
+        <button class="btn btn-primary" type="button" onclick="compute()">计算差异度</button>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="num" id="diversityScore">—</div>
+          <div class="lbl">路径差异度 (0–1)</div>
+          <div class="diversity-bar"><div class="diversity-bar-fill" id="diversityBar" style="width:0%"></div></div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="overlapRate">—</div>
+          <div class="lbl">平均重叠率</div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="studentCount">—</div>
+          <div class="lbl">有效路径数</div>
+        </div>
+      </div>
+      <p id="diversityMsg" style="font-size:13px;color:var(--dim);margin-top:8px"></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">学生路径一览</div>
+      <div id="studentList"></div>
+    </div>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./scripts/pbl-primary-coverage.js"></script>
+  <script src="./scripts/pbl-path-diversity.js"></script>
+  <script>
+    function compute() {
+      const theme = document.getElementById('themeFilter').value.trim();
+      const runs = PBLPrimaryCoverage.loadPBLRuns();
+      const report = PBLPathDiversity.computeClassDiversity(runs, { themeShell: theme });
+
+      const score = report.diversityScore;
+      document.getElementById('diversityScore').textContent = score != null ? score.toFixed(2) : '—';
+      document.getElementById('overlapRate').textContent = report.overlapRate != null ? `${report.overlapRate}%` : '—';
+      document.getElementById('studentCount').textContent = report.studentCount;
+      document.getElementById('diversityBar').style.width = score != null ? `${Math.round(score * 100)}%` : '0%';
+      document.getElementById('diversityMsg').textContent = report.message || (
+        score >= 0.5 ? '✓ 路径差异度良好，学生问题驱动明显' :
+        score >= 0.3 ? '⚠ 有一定差异，可鼓励更多不同驱动问' :
+        '△ 路径较相似，检查是否直接使用了示例芯片原文'
+      );
+
+      const list = document.getElementById('studentList');
+      if (!report.students.length) {
+        list.innerHTML = '<p style="padding:16px;color:var(--dim)">暂无数据。请让学生从「学生自主」入口完成拆解。</p>';
+        return;
+      }
+      list.innerHTML = report.students.map(s => `
+        <div class="student-row">
+          <div>
+            <strong>${s.name}</strong>
+            <div style="font-size:12px;color:var(--dim);margin-top:4px">${s.drivingQuestion || s.goal || '—'}</div>
+          </div>
+          <span style="font-size:12px;color:var(--dimmer)">${s.coreNodeCount || '—'} 核心节点</span>
+          <span style="font-size:11px;color:var(--dimmer);font-family:monospace">${s.fingerprint || ''}</span>
+        </div>
+      `).join('');
+    }
+
+    compute();
+  </script>
+</body>
+</html>

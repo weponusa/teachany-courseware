@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学生自主 PBL — PBL Map</title>
+  <link rel="stylesheet" href="./assets/css/pblmap.css">
+</head>
+<body>
+  <header class="top-bar">
+    <h1>PBL Map · 学生自主</h1>
+    <nav class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="student.html" class="active">学生自主</a>
+      <a href="coverage.html">覆盖看板</a>
+      <a href="class.html">班级差异度</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="panel">
+      <div class="panel-title">定向壳 + 开放核</div>
+      <p style="font-size:13px;color:var(--dim);margin-bottom:20px">
+        教师发布<strong style="color:var(--text)">主题壳</strong>；学生填<strong style="color:var(--text)">一个驱动问</strong>。
+        拆解时走<strong style="color:var(--accent)">跨学科</strong>，一条路径召回多科节点——不是六科各做一题。
+      </p>
+
+      <div class="form-grid">
+        <div class="full">
+          <span class="shell-badge">教师 · 主题壳</span>
+        </div>
+        <div>
+          <label for="student-themeShellId">学期主题</label>
+          <select id="student-themeShellId" onchange="applyThemeTemplate()">
+            <option value="">— 选择或自定义 —</option>
+          </select>
+        </div>
+        <div>
+          <label for="student-gradeLevel">学段</label>
+          <select id="student-gradeLevel">
+            <option value="primary" selected>小学</option>
+            <option value="junior">初中</option>
+            <option value="senior">高中</option>
+          </select>
+        </div>
+        <div class="full">
+          <label for="student-themeShell">主题名称 <span style="color:var(--accent)">*</span></label>
+          <input id="student-themeShell" placeholder="如：我们的校园" />
+        </div>
+        <div>
+          <label for="student-themeDuration">周期</label>
+          <input id="student-themeDuration" placeholder="如：6 周" />
+        </div>
+        <div>
+          <label for="student-themeConstraints">底线约束</label>
+          <input id="student-themeConstraints" placeholder="如：至少覆盖科学+数学+语文各 1 核心点" />
+        </div>
+
+        <div class="full dual-form-divider">
+          <span class="shell-badge" style="background:rgba(245,158,11,0.15);color:var(--accent)">学生 · 我的探究</span>
+        </div>
+        <div>
+          <label for="student-studentName">姓名（可选）</label>
+          <input id="student-studentName" placeholder="用于班级差异度统计" />
+        </div>
+        <div>
+          <label for="student-deliverable">产出类型</label>
+          <select id="student-deliverable">
+            <option value="report">研究报告 / 调查报告</option>
+            <option value="experiment-report">实验报告 / 探究记录</option>
+            <option value="presentation">演示文稿 / 展板</option>
+            <option value="design-proposal">设计方案 / 策划案</option>
+            <option value="handwork-model">手工作品 / 实体模型</option>
+            <option value="portfolio">作品集</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+        <div class="full">
+          <label for="student-drivingQuestion">我的驱动性问题 <span style="color:var(--accent)">*</span>（须以 ？ 结尾）</label>
+          <textarea id="student-drivingQuestion" placeholder="例：教学楼东侧为什么冬天比西侧冷 2℃？"></textarea>
+          <div style="margin-top:8px">
+            <span class="inspiration-chip" data-inspiration="我们班午餐浪费最多的是什么食物？" onclick="PBLStudentForm.fillInspirationChip(this,'student-drivingQuestion')">灵感：午餐浪费</span>
+            <span class="inspiration-chip" data-inspiration="校园里哪种树在秋天颜色变化最明显？" onclick="PBLStudentForm.fillInspirationChip(this,'student-drivingQuestion')">灵感：校园植物</span>
+            <span class="inspiration-chip" data-inspiration="怎样让新同学更快认识我们的班级？" onclick="PBLStudentForm.fillInspirationChip(this,'student-drivingQuestion')">灵感：班级适应</span>
+          </div>
+          <p class="field-hint">点击灵感后请改写成你自己的问题，不要直接使用示例原文。</p>
+        </div>
+        <div class="full">
+          <label for="student-outputIntent">我想做出的东西 <span style="color:var(--accent)">*</span></label>
+          <input id="student-outputIntent" placeholder="如：一张数据海报 + 3 分钟讲解" />
+        </div>
+        <div class="full">
+          <label for="student-whyCare">我为什么关心这个 <span style="color:var(--accent)">*</span></label>
+          <input id="student-whyCare" placeholder="1–2 句话，帮助系统召回与你兴趣相关的知识点" />
+        </div>
+        <div class="full">
+          <label for="student-interestTags">兴趣标签（逗号分隔，可选）</label>
+          <input id="student-interestTags" placeholder="动物, 测量, 写作" />
+        </div>
+      </div>
+
+      <div id="student-errors" style="color:var(--danger);font-size:13px;margin:12px 0;display:none"></div>
+
+      <div style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap">
+        <button class="btn btn-primary" type="button" onclick="launchStudentPBL()">🔍 拆解我的路径</button>
+        <button class="btn btn-secondary" type="button" onclick="previewGoal()">预览合成目标</button>
+      </div>
+      <pre id="goal-preview" style="display:none;margin-top:16px;padding:12px;background:rgba(15,23,42,0.6);border-radius:8px;font-size:12px;overflow:auto;color:var(--dim)"></pre>
+    </div>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./scripts/pbl-student-form.js"></script>
+  <script src="./scripts/pbl-plan-loader.js"></script>
+  <script>
+    async function loadThemes() {
+      const sel = document.getElementById('student-themeShellId');
+      try {
+        const res = await fetch('./data/semester-themes.json');
+        const data = await res.json();
+        (data.themes || []).forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = t.title;
+          opt.dataset.shell = JSON.stringify(t.themeShell || {});
+          sel.appendChild(opt);
+        });
+      } catch (_e) {}
+    }
+
+    function applyThemeTemplate() {
+      const sel = document.getElementById('student-themeShellId');
+      const opt = sel.selectedOptions[0];
+      if (!opt?.dataset.shell) return;
+      const shell = JSON.parse(opt.dataset.shell);
+      document.getElementById('student-themeShell').value = shell.title || sel.selectedOptions[0].textContent;
+      document.getElementById('student-themeDuration').value = shell.duration || '';
+      document.getElementById('student-themeConstraints').value = shell.constraints || '';
+    }
+
+    function previewGoal() {
+      const spec = PBLStudentForm.readStudentFormFromDOM('student');
+      const goal = PBLStudentForm.composeGoalFromStudentSpec(spec);
+      const el = document.getElementById('goal-preview');
+      el.style.display = 'block';
+      el.textContent = goal;
+    }
+
+    function launchStudentPBL() {
+      const spec = PBLStudentForm.readStudentFormFromDOM('student');
+      const v = PBLStudentForm.validateStudentSpec(spec);
+      const errEl = document.getElementById('student-errors');
+      if (!v.ok) {
+        errEl.style.display = 'block';
+        errEl.innerHTML = v.errors.map(e => `• ${e}`).join('<br>');
+        return;
+      }
+      errEl.style.display = 'none';
+
+      const goal = PBLStudentForm.composeGoalFromStudentSpec(v.spec);
+      const projectSpec = PBLStudentForm.toProjectSpec(v.spec);
+      sessionStorage.setItem('pblmap_student_handoff', JSON.stringify({
+        goal, projectSpec, studentSpec: v.spec,
+        drivingQuestion: v.spec.drivingQuestion,
+        themeShell: v.spec.themeShell,
+      }));
+
+      const params = new URLSearchParams({
+        goal,
+        grade: projectSpec.gradeLevel || 'primary',
+        subject: 'cross',
+        deliverable: projectSpec.deliverable || 'report',
+      });
+      if (projectSpec.duration) params.set('duration', projectSpec.duration);
+      if (projectSpec.constraints) params.set('constraints', projectSpec.constraints);
+      if (projectSpec.audience) params.set('audience', projectSpec.audience);
+      window.location.href = `${typeof pblMapEngineUrl === 'function' ? pblMapEngineUrl('pbl.html') : './engine/pbl.html'}?${params.toString()}`;
+    }
+
+    loadThemes();
+    const planId = new URLSearchParams(location.search).get('plan');
+    if (planId && window.PBLPlanLoader) {
+      PBLPlanLoader.loadPlan(planId).then((plan) => {
+        PBLPlanLoader.applyThemeToStudentForm(plan);
+        document.getElementById('student-gradeLevel').value = plan.gradeBand || 'primary';
+      }).catch(() => {});
+    }
+  </script>
+</body>
+</html>

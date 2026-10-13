@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>K12 学期覆盖包 — PBL Map</title>
+  <link rel="stylesheet" href="./assets/css/pblmap.css">
+  <style>
+    .cat-hero { padding: 28px 24px; border-bottom: 1px solid var(--border); }
+    .cat-hero h2 { font-size: 24px; margin-bottom: 8px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; align-items: center; }
+    .toolbar select, .toolbar input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; }
+    .band-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .band-tab { padding: 6px 14px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); background: transparent; color: var(--dim); cursor: pointer; }
+    .band-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .pack-card { margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--card); }
+    .pack-head { padding: 16px 18px; cursor: pointer; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; justify-content: space-between; }
+    .pack-head:hover { background: rgba(59,130,246,0.05); }
+    .pack-head h3 { font-size: 16px; }
+    .pack-meta { font-size: 12px; color: var(--dim); }
+    .badge-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); }
+    .badge-m { background: rgba(16,185,129,0.12); color: #6ee7b7; }
+    .badge-c { background: rgba(234,179,8,0.1); color: #fcd34d; }
+    .badge-k { background: rgba(139,92,246,0.12); color: #c4b5fd; }
+    .pack-body { display: none; padding: 0 18px 18px; border-top: 1px solid var(--border); }
+    .pack-card.open .pack-body { display: block; }
+    .sub-grid { display: grid; gap: 10px; margin-top: 14px; }
+    .sub-card { padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border); background: rgba(15,23,42,0.35); }
+    .sub-card h4 { font-size: 13px; margin-bottom: 4px; }
+    .sub-meta { font-size: 11px; color: var(--dim); }
+    .export-links { font-size: 12px; margin-top: 16px; }
+    .export-links a { color: var(--primary); margin-right: 16px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 16px; }
+    .summary-cell { padding: 12px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+    .summary-cell .n { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .summary-cell .l { font-size: 11px; color: var(--dim); }
+  </style>
+</head>
+<body>
+  <header class="top-bar">
+    <h1>PBL Map · K12 材料</h1>
+    <nav class="nav-links">
+      <a href="index.html">首页</a>
+      <a href="catalog.html" class="active">K12 目录</a>
+      <a href="roadmap.html">推演</a>
+      <a href="coverage.html?mode=map">覆盖看板</a>
+    </nav>
+  </header>
+
+  <section class="cat-hero">
+    <h2>K12 学期覆盖包 · 多 PBL 全覆盖</h2>
+    <p style="color:var(--dim);font-size:14px;max-width:760px">
+      G1–G12 共 <strong id="totalPacks">24</strong> 个学期覆盖包、<strong id="totalSub">—</strong> 个子 PBL。
+      每学期 K 个高强度项目，节点无交叠；学生个人台账 <code>gap=0</code> 过关。
+      数据：<code>data/k12-pbl-curriculum.json</code> ·
+      设计：<a href="docs/MULTI-PBL-FULL-COVERAGE.md" style="color:var(--primary)">多 PBL 全覆盖</a>
+    </p>
+    <div class="summary-grid" id="summaryGrid"></div>
+  </section>
+
+  <main class="container">
+    <div class="toolbar">
+      <div class="band-tabs" id="bandTabs">
+        <button type="button" class="band-tab active" data-band="all">全部</button>
+        <button type="button" class="band-tab" data-band="primary">小学</button>
+        <button type="button" class="band-tab" data-band="junior">初中</button>
+        <button type="button" class="band-tab" data-band="senior">高中</button>
+      </div>
+      <select id="gradeFilter">
+        <option value="">全部年级</option>
+      </select>
+      <input type="search" id="searchInput" placeholder="搜索学期包或子 PBL…" style="min-width:200px" />
+      <button class="btn btn-secondary" type="button" id="expandAll">展开全部</button>
+      <button class="btn btn-secondary" type="button" id="collapseAll">收起全部</button>
+    </div>
+    <div class="export-links">
+      <a href="docs/K12-PBL-CURRICULUM.md" download>下载 Markdown</a>
+      <a href="data/k12-pbl-curriculum.json" download>下载 JSON</a>
+    </div>
+    <div id="packList" style="margin-top:20px"></div>
+  </main>
+
+  <script>
+    let curriculum = null;
+    let activeBand = 'all';
+
+    async function load() {
+      const res = await fetch('./data/k12-pbl-curriculum.json');
+      curriculum = await res.json();
+      document.getElementById('totalPacks').textContent = curriculum.summary.semesterPacks;
+      document.getElementById('totalSub').textContent = curriculum.summary.totalSubProjects;
+      renderSummary();
+      renderGradeFilter();
+      renderPacks();
+      bindEvents();
+    }
+
+    function renderSummary() {
+      const s = curriculum.summary;
+      document.getElementById('summaryGrid').innerHTML = `
+        <div class="summary-cell"><div class="n">${curriculum.nodeInventory.total}</div><div class="l">课标节点</div></div>
+        <div class="summary-cell"><div class="n">${s.semesterPacks}</div><div class="l">学期覆盖包</div></div>
+        <div class="summary-cell"><div class="n">${s.totalSubProjects}</div><div class="l">子 PBL 合计</div></div>
+        <div class="summary-cell"><div class="n">${s.touchRate}%</div><div class="l">推演触达率</div></div>
+        <div class="summary-cell"><div class="n">${s.gap}</div><div class="l">薄层 gap</div></div>
+      `;
+    }
+
+    function renderGradeFilter() {
+      const sel = document.getElementById('gradeFilter');
+      for (let g = 1; g <= 12; g++) {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = `${g} 年级`;
+        sel.appendChild(opt);
+      }
+    }
+
+    function filteredPacks() {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const grade = document.getElementById('gradeFilter').value;
+      return (curriculum.semesterPacks || []).filter(p => {
+        if (activeBand !== 'all' && p.gradeBand !== activeBand) return false;
+        if (grade && String(p.grade) !== grade) return false;
+        if (!q) return true;
+        const hay = [
+          p.label, p.themeChain, p.drivingQuestion,
+          ...(p.projects || []).map(pr => pr.title),
+        ].join(' ').toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    function packStats(p) {
+      const m = (p.projects || []).reduce((s, pr) => s + (pr.stats?.mandatory || 0), 0);
+      const c = (p.projects || []).reduce((s, pr) => s + (pr.stats?.certified || 0), 0);
+      return { m, c };
+    }
+
+    function renderPacks() {
+      const list = document.getElementById('packList');
+      const packs = filteredPacks();
+      if (!packs.length) {
+        list.innerHTML = '<div class="panel">无匹配学期包</div>';
+        return;
+      }
+      list.innerHTML = packs.map(p => {
+        const { m, c } = packStats(p);
+        const demoLink = p.semesterId === 'g5-spring'
+          ? `<a href="demo.html?id=g5-community-map" class="badge" style="color:var(--primary)" onclick="event.stopPropagation()">拆解演示</a>`
+          : '';
+        const subs = (p.projects || []).map((pr, i) => {
+          const plan = pr.planRef
+            ? `<a href="plan.html?id=${pr.planRef}" style="color:var(--primary);font-size:11px">策划包</a>`
+            : '';
+          const decompose = `<a href="demo.html?project=${pr.id}" style="color:var(--secondary);font-size:11px">拆解</a>`;
+          return `
+            <div class="sub-card">
+              <h4>${i + 1}. ${pr.title}</h4>
+              <div class="sub-meta">${pr.weeks} 周 · M ${pr.stats?.mandatory || 0} · C ${pr.stats?.certified || 0} · 共 ${pr.stats?.total || 0} 节点 ${decompose} ${plan}</div>
+            </div>`;
+        }).join('');
+        return `
+          <div class="pack-card" data-id="${p.id}">
+            <div class="pack-head" onclick="toggleCard('${p.id}')">
+              <div>
+                <h3>${p.label}</h3>
+                <div class="pack-meta">主题链：${p.themeChain} · ${p.totalWeeks}+ 周 · ${p.nodePoolSize} 节点池</div>
+                <div class="pack-meta" style="margin-top:4px">驱动问：${p.drivingQuestion}</div>
+              </div>
+              <div class="badge-row">
+                <span class="badge badge-k">${p.projectCount} 子 PBL</span>
+                <span class="badge badge-m">M ${m}</span>
+                <span class="badge badge-c">C ${c}</span>
+                <a href="${p.packUrl || 'pack.html?id=' + p.id}" class="badge" style="color:var(--secondary)" onclick="event.stopPropagation()">打开覆盖包</a>
+                ${demoLink}
+              </div>
+            </div>
+            <div class="pack-body">
+              <div class="sub-grid">${subs}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function toggleCard(id) {
+      document.querySelector(`.pack-card[data-id="${id}"]`)?.classList.toggle('open');
+    }
+
+    function bindEvents() {
+      document.getElementById('bandTabs').addEventListener('click', e => {
+        const btn = e.target.closest('.band-tab');
+        if (!btn) return;
+        document.querySelectorAll('.band-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeBand = btn.dataset.band;
+        renderPacks();
+      });
+      document.getElementById('gradeFilter').addEventListener('change', renderPacks);
+      document.getElementById('searchInput').addEventListener('input', renderPacks);
+      document.getElementById('expandAll').onclick = () => {
+        document.querySelectorAll('.pack-card').forEach(c => c.classList.add('open'));
+      };
+      document.getElementById('collapseAll').onclick = () => {
+        document.querySelectorAll('.pack-card').forEach(c => c.classList.remove('open'));
+      };
+    }
+
+    load();
+  </script>
+</body>
+</html>
