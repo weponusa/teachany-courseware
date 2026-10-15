@@ -1,0 +1,64 @@
+name: Deploy to Tencent Cloud mirror
+
+# git push main → 与 GitHub Pages 同一构建产物 → rsync 到腾讯云主站/镜像。
+# Secrets 未配置时自动跳过，不影响现有链路。首次启用见 docs/TENCENT-MIRROR.md 第 5 节。
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'community/pending/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+concurrency:
+  group: "tencent-mirror"
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check secrets present（未配置则跳过）
+        id: gate
+        env:
+          H: ${{ secrets.TENCENT_HOST }}
+          K: ${{ secrets.TENCENT_SSH_KEY }}
+        run: |
+          if [ -z "$H" ] || [ -z "$K" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ TENCENT_HOST / TENCENT_SSH_KEY 未配置，跳过腾讯云镜像同步"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.gate.outputs.skip == 'false'
+        uses: actions/checkout@v4
+
+      - name: Build publish directory
+        if: steps.gate.outputs.skip == 'false'
+        run: bash scripts/build-publish-site.sh _site
+
+      - name: Setup SSH
+        if: steps.gate.outputs.skip == 'false'
+        env:
+          KEY: ${{ secrets.TENCENT_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$KEY" > ~/.ssh/id_ed25519_tencent
+          chmod 600 ~/.ssh/id_ed25519_tencent
+          ssh-keyscan -p "${{ secrets.TENCENT_PORT || 22 }}" "${{ secrets.TENCENT_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Rsync to Tencent
+        if: steps.gate.outputs.skip == 'false'
+        env:
+          HOST: ${{ secrets.TENCENT_HOST }}
+          USER_: ${{ secrets.TENCENT_USER || 'root' }}
+          PORT: ${{ secrets.TENCENT_PORT || 22 }}
+        run: |
+          rsync -az --delete --delete-excluded \
+            -e "ssh -i ~/.ssh/id_ed25519_tencent -p $PORT -o StrictHostKeyChecking=accept-new" \
+            _site/ "$USER_@$HOST:/var/www/teachany/"
+          echo "✅ 腾讯云镜像已同步（$(find _site -type f | wc -l | tr -d ' ') 文件）"
