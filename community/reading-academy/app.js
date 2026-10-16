@@ -738,7 +738,7 @@ function buildGameHtml(book, levels) {
 <body>
 <canvas class="stars" id="stars"></canvas>
 <div class="wrap">
-  <div class="top"><div class="crest"><img src="assets/teachany-icon.png" alt="TeachAny"></div><div class="title"><h1>${safeTitle}互动挑战</h1><p>${book.grade}年级 · 自选书目 · ${escapeHtml(book.author || '未知')}</p></div><span class="badge" id="scoreBadge">积分 0</span></div>
+  <div class="top"><div class="crest"><img src="assets/teachany-icon.webp" alt="TeachAny"></div><div class="title"><h1>${safeTitle}互动挑战</h1><p>${book.grade}年级 · 自选书目 · ${escapeHtml(book.author || '未知')}</p></div><span class="badge" id="scoreBadge">积分 0</span></div>
   <div class="steps" id="steps"></div>
   <div class="card" id="scene"></div>
 </div>
