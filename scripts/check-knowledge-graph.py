@@ -7,11 +7,16 @@ check-knowledge-graph.py — TeachAny 知识图谱合规检查（v7.9.13 新增�
 `scripts/teachany-knowledge-graph.js`。这是 subagent 不读 SKILL.md 的典型症状。
 
 本脚本检查单课件或批量扫描 community/ + examples/，验证：
-  1. `<section id="knowledge-graph">` 存在
+  1. 知识图谱区块存在（四种等价写法任一即可，见下方 KG_SECTION_* 正则）
   2. 区块内使用 `data-teachany-kg="<node_id>"` 挂载点（公共模块入口）
   3. `<head>` 引入 `teachany-knowledge-graph.css`
   4. body 末尾引入 `teachany-knowledge-graph.js`
   5. 节点 ID 已在 `teachany-kg-manifest.json` 中注册
+
+补充说明（2026-10-17）：此前只认 `<section id="knowledge-graph">`，
+把 174 份 `data-page-type="knowledge-graph"`、96 份 `class="kg-page"`、
+1 份 `id="kg"`、2 份外链壳页/跳转占位页误判成 missing-section。
+现已支持四种写法，并对跳转占位页与外链壳页放行。
 
 违规类型：
   - hardcoded-svg: 区块内出现 `<svg>` 含 `<rect>/<text>/<line>` 手写节点（非 canvas fallback）
@@ -51,9 +56,36 @@ LINE_RE = re.compile(r'<line\b', re.IGNORECASE)
 TEXT_RE = re.compile(r'<text\b', re.IGNORECASE)
 
 # 知识图谱区块识别
+# 库内实际存在三种等价写法，此前只认第一种，导致 175 份课件被误判 missing-section：
+#   1) <section class="section" id="knowledge-graph">        —— 文档式单页
+#   2) <section class="slide-page" data-page-type="knowledge-graph">  —— 整页式（page-N）
+#   3) <section class="section" id="kg">                    —— 少数量身写法
 KG_SECTION_RE = re.compile(
-    r'<section[^>]*id=["\']knowledge-graph["\'][^>]*>(.*?)</section>',
+    r'<section[^>]*id=["\'][^"\']*knowledge-graph[^"\']*["\'][^>]*>(.*?)</section>',
     re.IGNORECASE | re.DOTALL,
+)
+KG_SECTION_PAGE_TYPE_RE = re.compile(
+    r'<section[^>]*data-page-type=["\']knowledge-graph["\'][^>]*>(.*?)</section>',
+    re.IGNORECASE | re.DOTALL,
+)
+KG_SECTION_KG_ID_RE = re.compile(
+    r'<section[^>]*id=["\']kg["\'][^>]*>(.*?)</section>',
+    re.IGNORECASE | re.DOTALL,
+)
+# 第四种：整页式但 page-type 记成 summary，靠 class="kg-page" + data-tts="knowledge-graph" 标识
+KG_SECTION_KG_PAGE_RE = re.compile(
+    r'<section[^>]*(?:kg-page|data-tts=["\']knowledge-graph["\'])[^>]*>(.*?)</section>',
+    re.IGNORECASE | re.DOTALL,
+)
+# 跳转占位页（meta refresh）：内容在目标课件里，不该按缺失判失败
+REDIRECT_STUB_RE = re.compile(
+    r'<meta[^>]*http-equiv=["\']refresh["\'][^>]*>',
+    re.IGNORECASE,
+)
+# 外链壳页：只放一张跳转卡片，真正课件在别处托管
+HOST_SHELL_RE = re.compile(
+    r'<meta[^>]*name=["\']teachany-hosting["\'][^>]*content=["\']external-link["\']',
+    re.IGNORECASE,
 )
 
 # 公共模块引用（支持 ../../scripts/、./、../scripts/ 等多种路径）
@@ -109,7 +141,18 @@ def check_courseware(course_dir: Path, known_nodes=None):
     html = idx.read_text(encoding='utf-8', errors='replace')
 
     # 1. 必须有 knowledge-graph section（community 必须；examples 建议）
+    #    三种等价写法依次尝试，记录命中的是哪一种
     kg_section_match = KG_SECTION_RE.search(html)
+    section_kind = 'id:knowledge-graph'
+    if not kg_section_match:
+        kg_section_match = KG_SECTION_PAGE_TYPE_RE.search(html)
+        section_kind = 'page-type:knowledge-graph'
+    if not kg_section_match:
+        kg_section_match = KG_SECTION_KG_ID_RE.search(html)
+        section_kind = 'id:kg'
+    if not kg_section_match:
+        kg_section_match = KG_SECTION_KG_PAGE_RE.search(html)
+        section_kind = 'class:kg-page'
     if not kg_section_match:
         if is_example:
             result['status'] = 'skip'
@@ -120,17 +163,34 @@ def check_courseware(course_dir: Path, known_nodes=None):
             result['status'] = 'skip'
             result['warnings'].append(f'{course_dir.name} 为模板/扩展目录，放行')
             return result
+        # 跳转占位页 / 外链壳页：正文在目标课件里，不按缺失判失败
+        if REDIRECT_STUB_RE.search(html):
+            result['status'] = 'skip'
+            result['warnings'].append('meta refresh 跳转占位页（实际内容在目标课件）')
+            return result
+        if HOST_SHELL_RE.search(html):
+            result['status'] = 'skip'
+            result['warnings'].append('外链壳页（teachany-hosting=external-link），无完整课件正文')
+            return result
         result['status'] = 'fail'
         result['issues'].append({
             'type': 'missing-section',
-            'msg': '缺少 <section id="knowledge-graph"> 区块（五件套基线 ⑦ 违规）',
+            'msg': '缺少知识图谱区块（id="knowledge-graph" / data-page-type="knowledge-graph" / id="kg" 均未命中，五件套基线 ⑦ 违规）',
         })
         return result
 
+    result['section_kind'] = section_kind
     kg_block = kg_section_match.group(1)
 
     # 2. 区块内必须有 data-teachany-kg 挂载点（community 严格）
     data_attr_match = DATA_ATTR_RE.search(kg_block)
+    if not data_attr_match:
+        # 一个文件里可能有多个候选区块（导航锚点 + 真正的图谱页），
+        # 首个候选区块里没有挂载点时退化为全文查找，避免误报
+        doc_match = DATA_ATTR_RE.search(html)
+        if doc_match:
+            data_attr_match = doc_match
+            result['warnings'].append('挂载点不在首个候选区块内（多区块写法），已按全文校验')
     if not data_attr_match:
         if is_example:
             # examples 允许自定义实现，但下面仍会查硬编码 SVG
