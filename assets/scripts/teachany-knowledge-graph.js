@@ -219,53 +219,336 @@
     return { center: center, nodes: arr, links: links };
   }
 
-  /* ─── 布局：确定性环形分层（v2.2 取代力导向，零闪动）
-   *  · self 居中
-   *  · prereq 在左半圆（180°±60°），按顺序均匀
-   *  · next 在右半圆（0°±60°），按顺序均匀
-   *  · sibling/extend 在上下两弧（90° / 270°）填空
-   *  · 所有坐标一次性算好，不需要迭代，不会有"先乱后稳"的视觉跳动
+  /* ─── 文本度量：CJK 按 1em、西文按 0.56em 估算（不依赖 DOM，零重排） ─── */
+  var LABEL_FONT = 12;
+  var LABEL_LINE = 14;
+  var SUB_FONT = 10;
+  var SUB_LINE = 12;
+
+  function charUnits(ch) {
+    var c = ch.charCodeAt(0);
+    return c > 255 ? 1 : 0.56;
+  }
+
+  function measureText(text, fontSize) {
+    var w = 0;
+    for (var i = 0; i < text.length; i++) w += charUnits(text.charAt(i)) * fontSize;
+    return w;
+  }
+
+  /* 按最大宽度折行，最多 maxLines 行，超出加省略号 */
+  function wrapText(text, maxWidth, fontSize, maxLines) {
+    text = String(text || "");
+    if (!text) return [];
+    var out = [], buf = "", w = 0;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i), cw = charUnits(ch) * fontSize;
+      if (w + cw > maxWidth && buf) {
+        out.push(buf);
+        buf = ""; w = 0;
+        if (out.length === maxLines) break;
+      }
+      buf += ch; w += cw;
+    }
+    if (out.length < maxLines && buf) out.push(buf);
+    var consumed = out.join("").length;
+    if (consumed < text.length && out.length) {
+      var last = out[out.length - 1];
+      while (last.length > 1 && measureText(last + "…", fontSize) > maxWidth) {
+        last = last.slice(0, -1);
+      }
+      out[out.length - 1] = last + "…";
+    }
+    return out;
+  }
+
+  function nodeRadiusOf(n) {
+    if (n._layer === "self") return 30;
+    return hasCourse(n) ? 24 : 20;
+  }
+
+  /* 计算一个节点的标签块：多行文本 + 锚点 + 相对节点的偏移 */
+  function buildLabel(n, budget, anchor, baseY) {
+    var nameLines = wrapText(n.name || n.id, budget, LABEL_FONT, 2);
+    var lines = nameLines.map(function (t) { return { text: t, size: LABEL_FONT, cls: "tkg-node-label" }; });
+    if (n.name_en) {
+      var en = wrapText(n.name_en, budget, SUB_FONT, 1);
+      if (en.length) lines.push({ text: en[0], size: SUB_FONT, cls: "tkg-node-label-en" });
+    }
+    if (n.grade) {
+      var g = n.grade;
+      var gradeText = n.stage === "elementary" ? "小" + g
+        : n.stage === "middle" ? "初" + (g - 6)
+        : n.stage === "high" ? "高" + (g - 9)
+        : "G" + g;
+      lines.push({ text: gradeText, size: SUB_FONT, cls: "tkg-node-grade" });
+    }
+    var w = 0, h = 0;
+    lines.forEach(function (l) {
+      w = Math.max(w, measureText(l.text, l.size));
+      h += l.size >= LABEL_FONT ? LABEL_LINE : SUB_LINE;
+    });
+    return { lines: lines, anchor: anchor, dx: 0, baseY: baseY, w: w, h: h };
+  }
+
+  function labelBox(n) {
+    var l = n._label, r = nodeRadiusOf(n);
+    var x0 = l.anchor === "start" ? n.x + l.dx : l.anchor === "end" ? n.x + l.dx - l.w : n.x + l.dx - l.w / 2;
+    var y0 = n.y + l.baseY - LABEL_LINE;
+    return { x0: x0, x1: x0 + l.w, y0: y0, y1: y0 + l.h };
+  }
+
+  function boxOverlap(a, b) {
+    var ox = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+    var oy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+    return ox > 1 && oy > 1 ? { ox: ox, oy: oy } : null;
+  }
+
+  /* 碰撞检测 + 二次避让：不动节点，只沿"朝外"方向推开标签；推不开就缩窄折行宽度 */
+  function relaxLabels(nodes, width, height) {
+    for (var round = 0; round < 3; round++) {
+      var moved = false;
+      var boxes = nodes.map(function (n) { return { n: n, b: labelBox(n) }; });
+      for (var i = 0; i < boxes.length; i++) {
+        for (var j = i + 1; j < boxes.length; j++) {
+          var A = boxes[i], B = boxes[j];
+          var ov = boxOverlap(A.b, B.b);
+          if (!ov) continue;
+          moved = true;
+          // 谁更靠外谁让路；同向则下层让上层
+          var aOut = A.n._layer === "sibling" || A.n._layer === "extend";
+          var target = aOut ? B : A;
+          var other = aOut ? A : B;
+          var lay = target.n._label;
+          if (lay.anchor === "middle") {
+            // 上下类：整体下移（sibling 在中心上方时下移，extend 在下方时下移）
+            lay.baseY += Math.min(ov.oy + 3, 18);
+          } else {
+            var dir = lay.anchor === "start" ? 1 : -1;
+            lay.dx += dir * Math.min(ov.ox + 2, 16);
+          }
+          // 夹在画布内
+          var nb = labelBox(target.n);
+          if (nb.x0 < 4) lay.dx += 4 - nb.x0;
+          if (nb.x1 > width - 4) lay.dx -= nb.x1 - (width - 4);
+          if (nb.y1 > height - 4) lay.baseY -= nb.y1 - (height - 4);
+          boxes[i].b = labelBox(A.n);
+          boxes[j].b = labelBox(B.n);
+        }
+      }
+      if (!moved) return;
+    }
+    // 仍有重叠：缩窄宽度重排（最多两轮）
+    for (var pass = 0; pass < 2; pass++) {
+      var clash = false;
+      for (var a = 0; a < nodes.length && !clash; a++) {
+        for (var b = a + 1; b < nodes.length; b++) {
+          if (boxOverlap(labelBox(nodes[a]), labelBox(nodes[b]))) { clash = true; break; }
+        }
+      }
+      if (!clash) return;
+      nodes.forEach(function (n) {
+        var l = n._label;
+        var budget = Math.max(64, l.w * 0.82);
+        var rebuilt = buildLabel(n, budget, l.anchor, l.baseY);
+        rebuilt.dx = l.dx;
+        n._label = rebuilt;
+      });
+    }
+  }
+
+  /* ─── 布局：分带排布（前序左列 / 后续右列 / 同域上带 / 拓展下带）
+   *  · 同域 6 个是库内最常见的形态，环形排布在 650×420 里必然压字，
+   *    因此同域/拓展改为按行铺开，行内等距，标签另作碰撞避让
+   *  · 所有坐标一次性算好，不做力导向迭代，不会有"先乱后稳"的跳动
    */
   function deterministicLayout(nodes, links, width, height) {
-    var cx = width / 2, cy = height / 2;
-    var radius = Math.min(width, height) * 0.36;
-    var padding = 60;
-
+    if (width < 520) { layoutNarrow(nodes, width, height); return; }
     var byLayer = { self: [], prereq: [], next: [], sibling: [], extend: [] };
     nodes.forEach(function (n) { (byLayer[n._layer] || byLayer.sibling).push(n); });
 
-    function placeOnArc(group, centerAngleDeg, spanDeg, r) {
+    var PAD = 12;
+    var ROW_H = 96;        // 一行：节点圆 + 三行标签 + 与下一行的间隙
+    var SLOT_MIN = 104;    // 行内每个节点的最小横向槽宽
+    var perRow = Math.max(1, Math.floor((width - PAD * 2) / SLOT_MIN));
+
+    var sib = byLayer.sibling, ext = byLayer.extend;
+    var sibRows = sib.length ? Math.ceil(sib.length / perRow) : 0;
+    var extRows = ext.length ? Math.ceil(ext.length / perRow) : 0;
+    var topH = sibRows ? sibRows * ROW_H + 46 : 0;   // 含顶部提示条与右上统计角标避让
+    var botH = extRows ? extRows * ROW_H + 26 : 0;
+
+    var cx = width / 2;
+    var midTop = topH + 14;
+    var midBot = height - botH - 14;
+    if (midBot - midTop < 120) {           // 中部被挤扁时，优先保中部
+      midTop = Math.min(midTop, height * 0.32);
+      midBot = Math.max(midBot, height * 0.68);
+    }
+    var cy = (midTop + midBot) / 2;
+
+    // 顶/底带：同域、拓展。行内均衡分配（6 个分两行时是 3+3，不是 5+1）
+    function placeBand(group, rows, top) {
+      if (!rows) return;
+      var base = Math.floor(group.length / rows);
+      var extra = group.length % rows;
+      var idx = 0;
+      for (var r = 0; r < rows; r++) {
+        var cnt = base + (r < extra ? 1 : 0);
+        if (!cnt) continue;
+        var usable = width - PAD * 2 - 40;
+        var step = usable / cnt;
+        for (var k = 0; k < cnt; k++) {
+          var n = group[idx++];
+          n.x = PAD + 20 + step * (k + 0.5);
+          n.y = top + r * ROW_H + 22;
+        }
+      }
+    }
+    // top 从 28 起：避开左上角的操作提示条
+    placeBand(sib, sibRows, sibRows ? 44 : 0);
+    placeBand(ext, extRows, extRows ? height - botH + 6 : 0);
+
+    // 左右列：前序 / 后续
+    function placeColumn(group, side) {
       var n = group.length;
       if (!n) return;
-      var startA = (centerAngleDeg - spanDeg / 2) * Math.PI / 180;
-      var endA = (centerAngleDeg + spanDeg / 2) * Math.PI / 180;
+      var reserve = Math.min(140, width * 0.22);          // 给标签留的横向空间
+      var x = side === "left" ? Math.max(PAD + reserve + 26, cx - width * 0.3)
+                              : Math.min(width - PAD - reserve - 26, cx + width * 0.3);
+      var spanTop = midTop + 10, spanBot = midBot - 10;
+      // 以 cy 为中心展开：间距上限 118，下限取标签块高度（约 44）+ 8
+      var room = (spanBot - spanTop) / Math.max(1, n - 1);
+      var gap = n === 1 ? 0 : Math.max(64, Math.min(118, room));
       group.forEach(function (node, i) {
-        var t = n === 1 ? 0.5 : i / (n - 1);
-        var a = startA + t * (endA - startA);
-        node.x = cx + r * Math.cos(a);
-        node.y = cy + r * Math.sin(a);
+        node.x = x;
+        node.y = cy + (i - (n - 1) / 2) * gap;
+      });
+      group.forEach(function (node) {
+        node._colX = x;
+        node._side = side;
       });
     }
+    placeColumn(byLayer.prereq, "left");
+    placeColumn(byLayer.next, "right");
 
-    // self 锚定
-    if (byLayer.self.length) { byLayer.self[0].x = cx; byLayer.self[0].y = cy; }
+    if (byLayer.self.length) {
+      byLayer.self[0].x = cx;
+      byLayer.self[0].y = cy;
+    }
 
-    // 左半圆：前序（180°中心，跨度 130°）
-    placeOnArc(byLayer.prereq, 180, Math.min(130, byLayer.prereq.length * 35 + 20), radius);
-    // 右半圆：后续（0°中心，跨度 130°）
-    placeOnArc(byLayer.next, 0, Math.min(130, byLayer.next.length * 35 + 20), radius);
-    // 上弧：sibling
-    placeOnArc(byLayer.sibling, -90, Math.min(120, byLayer.sibling.length * 28 + 20), radius * 0.92);
-    // 下弧：extend
-    placeOnArc(byLayer.extend, 90, Math.min(120, byLayer.extend.length * 28 + 20), radius * 0.92);
+    // 标签：方向与宽度预算
+    var colBudget = Math.max(84, Math.min(150, width * 0.2));
+    nodes.forEach(function (n) {
+      var r = nodeRadiusOf(n);
+      var budget, anchor, baseY;
+      if (n._layer === "prereq") {
+        budget = colBudget; anchor = "end"; baseY = 4;
+        n._label = buildLabel(n, budget, anchor, baseY);
+        n._label.dx = -(r + 9);
+      } else if (n._layer === "next") {
+        budget = colBudget; anchor = "start"; baseY = 4;
+        n._label = buildLabel(n, budget, anchor, baseY);
+        n._label.dx = r + 9;
+      } else if (n._layer === "extend") {
+        budget = Math.max(80, (width - PAD * 2) / perRow - 12);
+        n._label = buildLabel(n, budget, "middle", r + 14);
+      } else if (n._layer === "self") {
+        budget = Math.min(170, Math.max(96, width * 0.26));
+        n._label = buildLabel(n, budget, "middle", r + 14);
+      } else {
+        budget = Math.max(80, (width - PAD * 2) / perRow - 12);
+        n._label = buildLabel(n, budget, "middle", r + 14);
+      }
+      // 左右列的标签块垂直居中
+      if (n._layer === "prereq" || n._layer === "next") {
+        n._label.baseY = -(n._label.h) / 2 + LABEL_LINE - 2;
+      }
+    });
 
     // 边界保护
     nodes.forEach(function (n) {
-      if (n.x < padding) n.x = padding;
-      if (n.x > width - padding) n.x = width - padding;
-      if (n.y < padding) n.y = padding;
-      if (n.y > height - padding) n.y = height - padding;
+      var r = nodeRadiusOf(n);
+      if (n.x < r + 2) n.x = r + 2;
+      if (n.x > width - r - 2) n.x = width - r - 2;
+      if (n.y < r + 2) n.y = r + 2;
+      if (n.y > height - r - 2) n.y = height - r - 2;
     });
+
+    finalizeLayout(nodes, width, height);
+  }
+
+  /* 把越界的"节点+标签"整体挪回画布 */
+  function clampAllNodes(nodes, width, height) {
+    nodes.forEach(function (n) {
+      var r = nodeRadiusOf(n);
+      var b = labelBox(n);
+      var dx = 0, dy = 0;
+      if (b.y1 > height - 3) dy -= (b.y1 - (height - 3));
+      if (b.y0 < 3) dy += (3 - b.y0);
+      if (b.x1 > width - 3) dx -= (b.x1 - (width - 3));
+      if (b.x0 < 3) dx += (3 - b.x0);
+      n.x += dx; n.y += dy;
+      if (n.x < r + 2) n.x = r + 2;
+      if (n.x > width - r - 2) n.x = width - r - 2;
+      if (n.y < r + 2) n.y = r + 2;
+      if (n.y > height - r - 2) n.y = height - r - 2;
+      // 避让右上角「N 已有课件」统计角标（约 190×40）
+      if (n.y - r < 44 && n.x + 95 > width) n.y = 44 + r;
+    });
+  }
+
+  function finalizeLayout(nodes, width, height) {
+    relaxLabels(nodes, width, height);
+    clampAllNodes(nodes, width, height);
+    relaxLabels(nodes, width, height);
+    clampAllNodes(nodes, width, height);
+  }
+
+  /* ─── 窄屏（< 520px）：纵向流。前序 → 本课 → 后续 → 同域 → 拓展，逐行铺开
+   *  横向空间不足时左右分列必然压字，改成上下顺序阅读更稳
+   */
+  function layoutNarrow(nodes, width, height) {
+    var PAD = 12, ROW_H = 96;
+    var perRow = Math.max(1, Math.floor((width - PAD * 2) / 104));
+    var byLayer = { self: [], prereq: [], next: [], sibling: [], extend: [] };
+    nodes.forEach(function (n) { (byLayer[n._layer] || byLayer.sibling).push(n); });
+
+    var y = 78;   // 避开顶部提示条（窄屏会折行）
+    function band(group) {
+      if (!group.length) return;
+      var rows = Math.ceil(group.length / perRow);
+      var base = Math.floor(group.length / rows);
+      var extra = group.length % rows;
+      var idx = 0;
+      for (var r = 0; r < rows; r++) {
+        var cnt = base + (r < extra ? 1 : 0);
+        var step = (width - PAD * 2 - 16) / cnt;
+        for (var k = 0; k < cnt; k++) {
+          var n = group[idx++];
+          n.x = PAD + 8 + step * (k + 0.5);
+          n.y = y + r * ROW_H + 22;
+        }
+      }
+      y += rows * ROW_H;
+    }
+
+    band(byLayer.prereq);
+    if (byLayer.self.length) {
+      byLayer.self[0].x = width / 2;
+      byLayer.self[0].y = y + 40;
+    }
+    // 本课节点半径 30，标签块最多 58 高，需要整块推进，不能只推 78
+    y += 128;
+    band(byLayer.next);
+    band(byLayer.sibling);
+    band(byLayer.extend);
+
+    var budget = Math.max(72, (width - PAD * 2) / perRow - 12);
+    nodes.forEach(function (n) {
+      n._label = buildLabel(n, budget, "middle", nodeRadiusOf(n) + 14);
+    });
+    finalizeLayout(nodes, width, height);
   }
 
   /* ─── 绘制 SVG 图谱（v2.1: 支持增量更新，不再每次全量清除） ─── */
@@ -332,9 +615,35 @@
     var canvasEl = svg.parentElement;
     var bb = (canvasEl || svg).getBoundingClientRect();
     var width = bb.width || 600;
-    var height = bb.height || 420;
     // 容器异常时给个保底
     if (width < 100) width = 600;
+    // 按同域/拓展的行数动态加高画布，给折行标签腾空间
+    if (canvasEl && canvasEl.classList && canvasEl.classList.contains("tkg-canvas")) {
+      var perRowCalc = Math.max(1, Math.floor((width - 24) / 104));
+      var sibN = 0, extN = 0;
+      graph.nodes.forEach(function (n) {
+        if (n._layer === "sibling") sibN++;
+        else if (n._layer === "extend") extN++;
+      });
+      var preN = 0, nextN = 0;
+      graph.nodes.forEach(function (n) {
+        if (n._layer === "prereq") preN++;
+        else if (n._layer === "next") nextN++;
+      });
+      var bandRows = Math.ceil(sibN / perRowCalc) + Math.ceil(extN / perRowCalc);
+      var colRows = Math.max(preN, nextN);
+      // 带行（每行 96）+ 中部核心（120）+ 左右列额外行（每行 52）
+      var needH;
+      if (width < 520) {
+        // 窄屏纵向流：前序/后续/同域/拓展依次铺开，每行 96，中间留 78
+        var rowsN = Math.ceil(preN / perRowCalc) + Math.ceil(nextN / perRowCalc) + bandRows;
+        needH = Math.max(420, 78 + rowsN * 96 + 128 + 16);
+      } else {
+        needH = Math.max(420, 46 + bandRows * 96 + 120 + Math.max(0, colRows - 1) * 52);
+      }
+      if (Math.abs((canvasEl.offsetHeight || 0) - needH) > 2) canvasEl.style.height = needH + "px";
+    }
+    var height = canvasEl ? canvasEl.getBoundingClientRect().height : (svg.getBoundingClientRect().height || 420);
     if (height < 100) height = 420;
     svg.setAttribute("viewBox", "0 0 " + width + " " + height);
     svg.setAttribute("width", width);
@@ -428,35 +737,23 @@
         dy: "0.35em",
         text: icon
       }));
-      // Chinese label
-      g.appendChild(h("text", {
-        class: "tkg-node-label",
-        dy: radius + 14,
-        text: (n.name || n.id).slice(0, 10)
-      }));
-      // English label
-      if (n.name_en) {
-        g.appendChild(h("text", {
-          class: "tkg-node-label-en",
-          dy: radius + 28,
-          text: n.name_en.slice(0, 18)
-        }));
+      // 标签块：按布局阶段算好的行、锚点、偏移渲染（支持折行与左右分向）
+      var lab = n._label;
+      if (!lab) {
+        lab = buildLabel(n, 120, "middle", radius + 14);
+        lab.dx = 0;
       }
-      // Grade
-      if (n.grade) {
-        var gradeText = n.stage === "elementary"
-          ? "小" + n.grade
-          : n.stage === "middle"
-            ? "初" + (n.grade - 6)
-            : n.stage === "high"
-              ? "高" + (n.grade - 9)
-              : "G" + n.grade;
+      var ly = lab.baseY;
+      lab.lines.forEach(function (line) {
         g.appendChild(h("text", {
-          class: "tkg-node-grade",
-          dy: radius + (n.name_en ? 42 : 28),
-          text: gradeText
+          class: line.cls,
+          x: lab.dx,
+          y: ly,
+          "text-anchor": lab.anchor,
+          text: line.text
         }));
-      }
+        ly += line.size >= LABEL_FONT ? LABEL_LINE : SUB_LINE;
+      });
       nodeGroup.appendChild(g);
     });
     svg.appendChild(nodeGroup);
