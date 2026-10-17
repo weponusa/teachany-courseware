@@ -90,11 +90,11 @@ HOST_SHELL_RE = re.compile(
 
 # 公共模块引用（支持 ../../scripts/、./、../scripts/ 等多种路径）
 MODULE_JS_RE = re.compile(
-    r'<script[^>]*src=["\'][^"\']*teachany-knowledge-graph\.js["\']',
+    r'<script[^>]*src=["\'][^"\']*teachany-knowledge-graph(?:\.v\d+)?\.js["\']',
     re.IGNORECASE,
 )
 MODULE_CSS_RE = re.compile(
-    r'<link[^>]*href=["\'][^"\']*teachany-knowledge-graph\.css["\']',
+    r'<link[^>]*href=["\'][^"\']*teachany-knowledge-graph(?:\.v\d+)?\.css["\']',
     re.IGNORECASE,
 )
 DATA_ATTR_RE = re.compile(
