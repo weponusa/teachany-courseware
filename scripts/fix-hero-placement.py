@@ -23,6 +23,13 @@ HERO_INFO_RE = re.compile(
     r'</div>',
     re.S,
 )
+# 第二类形态：hero-infographic 是独立顶层块（前面可能只跟一行注释），
+# 没有被 slide-page 包裹，直接紧跟或靠近 header 之后。
+HERO_INFO_STANDALONE_RE = re.compile(
+    r'(?P<comment><!--[^>]*-->\s*)?'
+    r'(?P<section><section\b[^>]*\bid="hero-infographic"[^>]*>.*?</section>)',
+    re.S,
+)
 HERO_ASSET_RE = re.compile(r'<img\b[^>]*src="([^"]+)"')
 
 
@@ -107,22 +114,36 @@ def try_fix_course(course_dir: Path, dry_run: bool = False):
     if find_hero_img_in_header(src, hero_span, strict_assets):
         return {"status": "already_ok", "cid": cid}
 
-    # 寻找 slide-page -> section#hero-infographic 块
+    # 寻找 slide-page -> section#hero-infographic 块；找不到再试独立顶层块
     m = HERO_INFO_RE.search(src)
+    mode = "wrapped"
+    if not m:
+        m = HERO_INFO_STANDALONE_RE.search(src)
+        mode = "standalone"
     if not m:
         return {"status": "no_infographic_slide", "cid": cid}
 
     # 确认 block 内的 img 引用了 strict hero 资产
-    section_block = m.group(2)
+    section_block = m.group(2) if mode == "wrapped" else m.group("section")
     imgs = HERO_ASSET_RE.findall(section_block)
     if not any(img.split("/")[-1] in strict_assets for img in imgs):
         return {"status": "infographic_not_hero_asset", "cid": cid}
 
     if dry_run:
-        return {"status": "would_fix", "cid": cid, "img": imgs}
+        return {"status": "would_fix", "cid": cid, "img": imgs, "mode": mode}
 
     # 1) 取出 section block 并移入 header
-    new_src = src[: m.start()] + src[m.end() :]
+    if mode == "wrapped":
+        new_src = src[: m.start()] + src[m.end() :]
+    else:
+        comment = m.group("comment")
+        # 只有当紧邻的注释确实属于 hero 图时才一并移走，避免误删别的段落注释
+        start = (
+            m.start("comment")
+            if comment and re.search(r"hero|Hero|知识结构", comment)
+            else m.start("section")
+        )
+        new_src = src[:start] + src[m.end("section") :]
     # 重新计算 hero span
     hero_span2 = hero_header_span(new_src)
     if not hero_span2:
