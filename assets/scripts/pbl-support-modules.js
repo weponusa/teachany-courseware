@@ -119,7 +119,7 @@
     async loadTemplate() {
       if (this._template) return this._template;
       if (this._loadPromise) return this._loadPromise;
-      this._loadPromise = fetch(`${TEMPLATE_URL}?t=${Date.now()}`)
+      this._loadPromise = fetch(`${TEMPLATE_URL}`)
         .then(r => {
           if (!r.ok) throw new Error(`support-pack ${r.status}`);
           return r.json();

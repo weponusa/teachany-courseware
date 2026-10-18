@@ -30,7 +30,7 @@
     function next() {
       if (i >= urls.length) return Promise.reject(new Error("enrichment overlay not found"));
       var url = urls[i++] + (urls[i - 1].indexOf("?") >= 0 ? "&" : "?") + "v=neo-1";
-      return fetch(url, { cache: "no-store" }).then(function (r) {
+      return fetch(url, { cache: "default" }).then(function (r) {
         if (!r.ok) return next();
         return r.json();
       }).catch(function () { return next(); });

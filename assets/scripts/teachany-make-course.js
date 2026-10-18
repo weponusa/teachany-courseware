@@ -27,7 +27,7 @@
   function loadMetaIndex() {
     if (_metaIndex) return Promise.resolve(_metaIndex);
     if (_metaLoad) return _metaLoad;
-    _metaLoad = fetch('./data/nodes-metadata.json?t=' + Date.now())
+    _metaLoad = fetch('./data/nodes-metadata.json')
       .then(function (r) { return r.ok ? r.json() : { nodes: [] }; })
       .then(function (d) {
         _metaIndex = new Map();

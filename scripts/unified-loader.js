@@ -272,7 +272,7 @@ async function primeLikeCounts(courseIds) {
     let timer;
     try {
       const r = await Promise.race([
-        fetch(`${LIKE_API}?ids=${encodeURIComponent(group.join(','))}`, { cache: 'no-store' }),
+        fetch(`${LIKE_API}?ids=${encodeURIComponent(group.join(','))}`, { cache: 'default' }),
         new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), LIKE_FETCH_TIMEOUT); }),
       ]);
       if (!r || !r.ok) return null;
@@ -359,29 +359,34 @@ async function loadRegistry() {
     return cached;
   }
 
-  async function fetchOptionalJson(url, timeoutMs = 20000) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort('timeout'), timeoutMs);
-      const response = await fetch(url + '?t=' + Date.now(), {
-        cache: 'no-store',
-        signal: controller.signal,
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
-      });
-      clearTimeout(timer);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.json();
-    } catch (e) {
-      console.warn('[TeachAny] 数据源加载失败:', url, e.message);
-      return { courses: [] };
+  async function fetchOptionalJson(url, timeoutMs = 30000, attempts = 2) {
+    // 链路抖动时单次请求很容易被截断（截断的 JSON 会 parse 失败），
+    // 重试 1 次并带退避，避免一次抖动就让 Gallery 空白。
+    let lastErr = null;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort('timeout'), timeoutMs);
+        const response = await fetch(url, { cache: 'default', signal: controller.signal });
+        clearTimeout(timer);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } catch (e) {
+        lastErr = e;
+        if (attempt < attempts - 1) await new Promise((r) => setTimeout(r, 800));
+      }
     }
+    console.warn('[TeachAny] 数据源加载失败（已重试）:', url, (lastErr && (lastErr.message || String(lastErr))) || 'unknown');
+    return { courses: [] };
   }
 
   // 2. 从主站 registry + courseware community/index 合并加载
   console.log('[TeachAny] 从服务器加载 registry + courseware community index...');
+  // registry.json 有 1.4MB，链路差时要 20s+；community/index.json 只有 570KB（压缩后 ~64KB）
+  // 已包含全部课件，所以给 registry 更短的超时，避免它拖死整个画廊。
   const [registryData, communityData] = await Promise.all([
-    fetchOptionalJson(REGISTRY_URL),
-    fetchOptionalJson(COMMUNITY_INDEX_URL),
+    fetchOptionalJson(REGISTRY_URL, 8000, 1),
+    fetchOptionalJson(COMMUNITY_INDEX_URL, 20000, 2),
   ]);
 
   const byId = new Map();
@@ -570,7 +575,7 @@ async function loadOtherTreeCourseIds() {
   ];
   for (const url of urls) {
     try {
-      const resp = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+      const resp = await fetch(url, { cache: 'default' });
       if (!resp.ok) continue;
       const tree = await resp.json();
       const ids = new Set();
@@ -614,6 +619,20 @@ async function initGallery() {
     });
 
     console.log(`[TeachAny] 官方: ${official.length}, 社区: ${community.length}, 其他知识: ${other.length}`);
+
+    // 数据没拉到时给出明确提示，避免看起来像"课件被删了"
+    if (!registry.courses.length) {
+      const g = document.getElementById('communityGrid') || document.getElementById('officialGrid');
+      if (g) {
+        g.innerHTML = '<div style="grid-column:1/-1;padding:22px;border:1px solid #f0c36d;background:#fffbeb;border-radius:12px;color:#7c4a03;line-height:1.7">'
+          + '<strong>课件列表这次没加载出来</strong>'
+          + '<div style="margin:6px 0 12px;font-size:14px">网络请求超时或数据索引中断，<b>不是课件丢失</b>。稍等几秒重试即可。</div>'
+          + '<button type="button" onclick="location.reload()" style="min-height:44px;padding:8px 18px;border-radius:10px;border:1px solid #d97706;background:#fff7ed;color:#92400e;cursor:pointer">重新加载</button>'
+          + '</div>';
+      }
+      console.warn('[TeachAny] 课件数为 0，已显示重试提示');
+      return;
+    }
 
     // 渲染前先取服务端真实点赞数（自带超时，点赞后端不可用也不阻塞画廊）
     await primeLikeCounts(registry.courses.map(c => c.id));
