@@ -34,7 +34,7 @@ class StatsCalculator {
   /* ─── Load registry ─── */
   async loadRegistry() {
     try {
-      const res = await fetch('./registry.json?t=' + Date.now());
+      const res = await fetch('./registry.json');
       this.registry = await res.json();
       return this.registry;
     } catch (e) {
@@ -46,7 +46,7 @@ class StatsCalculator {
   /* ─── Load curricula + all trees ─── */
   async loadAllTrees() {
     try {
-      const res = await fetch('./data/curricula.json?t=' + Date.now());
+      const res = await fetch('./data/curricula.json');
       this.curricula = await res.json();
     } catch (e) {
       console.warn('[Stats] curricula.json load failed, using fallback:', e);
@@ -63,7 +63,7 @@ class StatsCalculator {
     let totalNodes = 0;
     const loadPromises = treeFiles.map(async (meta) => {
       try {
-        const res = await fetch('./' + meta.file + '?t=' + Date.now());
+        const res = await fetch('./' + meta.file + '');
         if (!res.ok) return null;
         const tree = await res.json();
         let nodeCount = 0;

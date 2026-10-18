@@ -93,7 +93,7 @@ function setHubCache(registry, community) {
 
 /* ─── JSON 加载 ───────────────────────────────── */
 async function fetchJSON(url) {
-  const resp = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+  const resp = await fetch(url + '', { cache: 'default' });
   if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${url}`);
   return resp.json();
 }
@@ -245,7 +245,7 @@ async function fetchHubLikes(courseIds) {
     let timer;
     try {
       const r = await Promise.race([
-        fetch(`${HUB_LIKE_API}?ids=${encodeURIComponent(group.join(','))}`, { cache: 'no-store' }),
+        fetch(`${HUB_LIKE_API}?ids=${encodeURIComponent(group.join(','))}`, { cache: 'default' }),
         new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), HUB_LIKE_TIMEOUT); }),
       ]);
       if (!r || !r.ok) return null;

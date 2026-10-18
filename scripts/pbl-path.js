@@ -674,7 +674,7 @@ class PBLPathBuilder {
     if (this.graphLoaded) return;
     try {
       const t0 = performance.now();
-      const resp = await fetch('./data/knowledge-map-data.json?t=' + Date.now());
+      const resp = await fetch('./data/knowledge-map-data.json');
       const data = await resp.json();
 
       const neighbors = this.graphNeighbors;
@@ -1020,7 +1020,7 @@ class PBLPathBuilder {
     if (sysId === 'cn') {
       // 中国课标直接从 nodes-metadata 过滤 cn/ 路径，避免旧 fallback 把 IB/AP 等国际节点误标为 CN。
       try {
-        const resp = await fetch('./data/nodes-metadata.json?t=' + Date.now());
+        const resp = await fetch('./data/nodes-metadata.json');
         const data = await resp.json();
         (data.nodes || [])
           .filter(n => String(n.graph_path || n.tree_file || '').startsWith('cn/'))
@@ -1039,7 +1039,7 @@ class PBLPathBuilder {
         const files = await this._discoverTreeFiles(dir);
         const filePromises = files.map(async file => {
           try {
-            const resp = await fetch(file + '?t=' + Date.now());
+            const resp = await fetch(file + '');
             const tree = await resp.json();
             return this._extractNodesFromTree(tree, sysId, file);
           } catch (e) {
@@ -1775,7 +1775,7 @@ class PBLPathBuilder {
     if (this._embeddingsLoaded) return this.pblEmbeddingsMap;
     this._embeddingsLoaded = true;
     try {
-      const resp = await fetch('./data/pbl/node-embeddings.json?t=' + Date.now());
+      const resp = await fetch('./data/pbl/node-embeddings.json');
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       const map = new Map();
