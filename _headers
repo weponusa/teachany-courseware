@@ -16,18 +16,6 @@
 /assets/*
   Cache-Control: public, max-age=600, s-maxage=604800, stale-while-revalidate=2592000
 
-# ── 首页/知识树的大索引：必须让边缘缓存 ──────────────────────────
-# 背景（2026-10-18 事故）：这两个文件原来落在 /community/* 与 /* 规则下，
-# 没有 s-maxage；前端又带 ?t=Date.now() + cache:'no-store' 强制回源，
-# 每次打开首页都要从源站重拉 registry.json(1.4MB) + index.json(570KB)，
-# 链路一抖就截断，JSON.parse 失败 → Gallery 空白，看起来像"内容大量丢失"。
-# 规则必须放在 /community/* 之前（Pages 对同名 header 取首个匹配）。
-/community/index.json
-  Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=604800
-
-/registry.json
-  Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=604800
-
 /data/*
   Cache-Control: public, max-age=600, s-maxage=86400, stale-while-revalidate=604800
 
@@ -40,6 +28,16 @@
 
 /*.html
   Cache-Control: public, max-age=0, must-revalidate
+
+# ── 首页/知识树的大索引：必须让边缘缓存（例外必须放在通配之后，Pages 后匹配优先）
+# 背景（2026-10-18 事故）：这两个文件原来落在 /community/* 与 /* 下，没有 s-maxage；
+# 前端又带 ?t=Date.now() + cache:'no-store' 强制回源，每次打开首页都要重拉
+# registry.json(1.4MB) + index.json(570KB)，链路一抖就超时 → Gallery 空白。
+/community/index.json
+  Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=604800
+
+/registry.json
+  Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=604800
 
 /*
   X-Content-Type-Options: nosniff
