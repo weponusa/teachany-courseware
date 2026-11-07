@@ -436,6 +436,56 @@ async function init() {
   startSimulation();
   document.getElementById('loading').style.display = 'none';
   requestAnimationFrame(renderLoop);
+  applyDeepLinkFromURL();
+}
+
+/**
+ * 知识点深链：?node=<知识点 id> → 直接打开「知识点属性页」侧栏并定位到该节点。
+ * 供课程材料拆解结果页、课件页按课标节点 id 跳转；复用已有的 focusNode / showDetail，
+ * 不新增一套 UI。节点不存在或筛选挡住时静默降级，不破坏默认全图。
+ */
+function applyDeepLinkFromURL() {
+  let id = '';
+  try { id = (new URLSearchParams(window.location.search).get('node') || '').trim(); } catch (_) { return; }
+  if (!id) return;
+  const node = nodeMap.get(id);
+  if (!node) {
+    console.warn('[knowledge-map] ?node= 未找到知识点，显示默认全图：' + id);
+    return;
+  }
+
+  // 目标节点可能被学科 / 年级筛选挡住；放开筛选，让它进入力模拟并拿到坐标
+  let changed = false;
+  if (node.subject && !activeSubjects.has(node.subject)) {
+    activeSubjects.add(node.subject);
+    document.querySelectorAll('.subject-chip').forEach((chip) => {
+      if (chip.dataset.subject === node.subject) {
+        chip.classList.add('active');
+        chip.classList.remove('inactive');
+      }
+    });
+    changed = true;
+  }
+  if (node.grade > 0 && (node.grade < gradeRange[0] || node.grade > gradeRange[1])) {
+    gradeRange = [Math.min(gradeRange[0], node.grade), Math.max(gradeRange[1], node.grade)];
+    const gMin = document.getElementById('gradeMin');
+    const gMax = document.getElementById('gradeMax');
+    const gLabel = document.getElementById('gradeLabel');
+    if (gMin) gMin.value = String(gradeRange[0]);
+    if (gMax) gMax.value = String(gradeRange[1]);
+    if (gLabel) gLabel.textContent = `${gradeRange[0]}年级 – ${gradeRange[1]}年级`;
+    changed = true;
+  }
+  if (changed) restartSimulation();
+
+  // 力模拟异步收敛，等节点拿到坐标再聚焦；超时也至少把属性侧栏打开
+  let tries = 0;
+  const focus = () => {
+    if (node.x != null && node.y != null) { focusNode(id); return; }
+    if (++tries < 90) requestAnimationFrame(focus);
+    else { selectedNode = node; hoveredNode = node; showDetail(node); }
+  };
+  requestAnimationFrame(focus);
 }
 
 function setupCanvas() {
