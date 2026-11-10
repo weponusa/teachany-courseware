@@ -535,7 +535,16 @@ svg { width: 100%; height: 100%; display: block; }
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<!-- d3：本地副本优先。d3@7 是浮动版本，写死 SRI 会在上游升级后校验失败并拒载脚本（2026-11-10 事故）。 -->
+<script src="./assets/vendor/d3.min.js"></script>
+<script>
+if (!window.d3) {
+  document.write('<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"><\/script>');
+}
+if (!window.d3) {
+  document.write('<script src="https://unpkg.com/d3@7/dist/d3.min.js"><\/script>');
+}
+</script>
 <script src="./scripts/courseware-importer.js"></script>
 <script src="./scripts/courseware-hub.js?v=20261018-cachefix"></script>
 <script src="./assets/scripts/history-tracker.js" defer></script>
@@ -909,6 +918,8 @@ let _loadTreeToken = 0;
 
 async function loadTree(index) {
   // v5.34.4：请求令牌，杜绝竞态
+  // 区分「树数据没取到」与「数据取到了但渲染失败」，避免把技术故障误报成「知识树尚未建立」
+  let treeDataLoaded = false;
   const myToken = ++_loadTreeToken;
   // Update tab active state —— 按 data-tree-index 匹配（按钮可能在学段区，也可能在顶部“其他知识”区）
   document.querySelectorAll('#subjectTabs .subject-tab, #curriculumTabs .other-btn').forEach(t => {
@@ -931,6 +942,7 @@ async function loadTree(index) {
       return;
     }
     currentTree = treeData;
+    treeDataLoaded = true;
 
     // 记录当前 tree 的路径（供弹窗的课标内容模块从 excerpts 取数）
     // TREES[index].file 形如 'data/trees/cn/middle/math.json'
@@ -981,7 +993,13 @@ async function loadTree(index) {
       msg.className = 'curriculum-placeholder';
       msg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--dim);font-size:16px;text-align:center;max-width:600px;padding:24px;';
       const currName = (CURRENT_CURRICULUM && (CURRENT_CURRICULUM.name_zh || CURRENT_CURRICULUM.name_en)) || '该体系';
-      msg.innerHTML = `<div style="font-size:56px;margin-bottom:16px;">${(CURRENT_CURRICULUM && CURRENT_CURRICULUM.emoji) || '📚'}</div>
+      // 数据已成功加载却渲染失败 → 明确报技术错误，不再冒充「树尚未建立」
+      msg.innerHTML = treeDataLoaded
+        ? `<div style="font-size:56px;margin-bottom:16px;">⚠️</div>
+        <div style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:8px;">${TREES[index].label_zh || TREES[index].label}</div>
+        <div style="margin-bottom:12px;opacity:0.75;">知识树数据已加载，但图形渲染失败 / Rendering failed</div>
+        <div style="font-size:13px;opacity:0.55;line-height:1.6;">通常是图形库（d3）没加载成功，请刷新页面重试。<br/>错误：${escapeHtml((err && err.message) || String(err))}</div>`
+        : `<div style="font-size:56px;margin-bottom:16px;">${(CURRENT_CURRICULUM && CURRENT_CURRICULUM.emoji) || '📚'}</div>
         <div style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:8px;">${TREES[index].label_zh || TREES[index].label}</div>
         <div style="margin-bottom:12px;opacity:0.75;">该知识树尚未建立 / Tree not yet available</div>
         <div style="font-size:13px;opacity:0.55;line-height:1.6;">这是 <strong>${currName}</strong> 体系下的知识树占位。<br/>欢迎国际学校老师贡献首棵树！<br/>详见 <code>data/trees/international/README.md</code></div>`;
