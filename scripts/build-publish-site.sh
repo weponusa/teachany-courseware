@@ -106,6 +106,7 @@ rsync -a \
   --exclude='kp/' \
   --exclude='curriculum-sources/' \
   --exclude='kp/_backups/' \
+  --exclude='unified/knowledge-layer.json' \
   "$ROOT/data/" "$OUT/data/"
 
 # 4. 根级页面脚本（path/tree/index 等引用 ./scripts/，须随站发布）

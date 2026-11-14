@@ -239,6 +239,25 @@ body {
       <button class="subject-chip" onclick="setLayout('grid')" id="btnGrid" style="color:var(--success);background:rgba(16,185,129,0.1);">网格</button>
     </div>
   </div>
+
+  <!-- 粗粒度关系增强（外部数据投影：不新增节点、不改主边，只叠加候选关系与内容入口） -->
+  <div class="ctrl-section" id="coarseSection" style="display:none;">
+    <div class="ctrl-label">🧩 粗粒度关系增强 <span style="opacity:.6">(候选)</span></div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;line-height:1.5;">
+      <input type="checkbox" id="showProjected"> 显示投影先修关系
+    </label>
+    <select id="projectedSupport" aria-label="候选关系支持度" style="width:100%;margin-top:6px;background:#0b1628;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:12px;">
+      <option value="1">全部候选</option>
+      <option value="2">支持度 ≥ 2</option>
+      <option value="3" selected>支持度 ≥ 3</option>
+      <option value="5">支持度 ≥ 5</option>
+    </select>
+    <div id="projectedStats" style="font-size:11px;color:var(--dimmer);margin-top:6px;line-height:1.5;"></div>
+    <div style="font-size:10px;color:var(--dimmer);margin-top:6px;line-height:1.6;opacity:.85;">
+      来源 <a href="https://github.com/xiaoyang111222/cn-math-taxonomy" target="_blank" rel="noopener noreferrer" style="color:var(--primary);">cn-math-taxonomy</a> · 候选关系待教师审核<br>
+      细化图谱与习题由用户调用对方服务，本站仅存编号与入口
+    </div>
+  </div>
 </div>
 
 <canvas id="graphCanvas"></canvas>
@@ -334,6 +353,10 @@ function nodeSearchBlob(n) {
 }
 
 let graphData = { nodes: [], edges: [] };
+let coarseEnhancement = null;      // 粗粒度增强（外部数据投影）
+let projectedVisible = false;
+let projectedMinSupport = 3;
+let projectedEdges = [];
 let metaById = null;
 let metaLoadPromise = null;
 let simulation = null;
@@ -391,6 +414,67 @@ function showLoadError(msg) {
     '<div style="color:#ef4444;max-width:420px;text-align:center;line-height:1.6">加载失败: ' + msg + '</div>';
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 粗粒度图谱增强（外部细粒度数据投影；不新增节点、不改主边）
+// ═══════════════════════════════════════════════════════════════
+
+async function loadCoarseEnhancement() {
+  try {
+    const resp = await fetch('./data/external/cn-math-taxonomy/coarse-enhancement.json?v=20261114');
+    if (!resp.ok) return;
+    coarseEnhancement = await resp.json();
+    window.KnowledgeMapCoarseById = new Map((coarseEnhancement.nodes || []).map(n => [n.id, n]));
+    const section = document.getElementById('coarseSection');
+    if (section) section.style.display = '';
+    document.getElementById('showProjected').addEventListener('change', e => {
+      projectedVisible = e.target.checked;
+      updateProjectedEdges();
+    });
+    document.getElementById('projectedSupport').addEventListener('change', e => {
+      projectedMinSupport = parseInt(e.target.value, 10);
+      updateProjectedEdges();
+    });
+    updateProjectedEdges();
+  } catch (e) {
+    // 增强数据不可用时静默降级，主图谱照常工作
+    console.warn('[knowledge-map] 粗粒度增强数据不可用：', e);
+  }
+}
+
+function updateProjectedEdges() {
+  projectedEdges = ((coarseEnhancement && coarseEnhancement.edges) || [])
+    .filter(e => e.support_count >= projectedMinSupport);
+  const el = document.getElementById('projectedStats');
+  if (!el) return;
+  const hard = projectedEdges.filter(e => e.strength === 'hard').length;
+  el.textContent = projectedVisible
+    ? `显示 ${projectedEdges.length} 条候选粗关系（hard ${hard}）`
+    : `共 ${projectedEdges.length} 条候选粗关系，未显示`;
+}
+
+function coarseDetailHtml(node) {
+  const byId = window.KnowledgeMapCoarseById;
+  const c = byId && byId.get(node.id);
+  if (!c) return '';
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g,
+    ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const stds = (c.standard_ids || []).slice(0, 8).map(x => `<code>${esc(x)}</code>`).join('、');
+  const chapters = (c.chapters || []).slice(0, 3).map(x => esc(x)).join('<br>');
+  const cap = c.external_capabilities || {};
+  const links = `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="${esc(cap.refine_graph)}" target="_blank" rel="noopener noreferrer" style="color:var(--primary);">打开外部细化图谱 ↗</a>
+      <a href="${esc(cap.diagnose)}" target="_blank" rel="noopener noreferrer" style="color:var(--primary);">前置诊断 / 习题 ↗</a>
+    </div>`;
+  return `<div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);font-size:12px;line-height:1.7;color:var(--dim);">
+    <div style="color:#fbbf24;font-weight:700;margin-bottom:6px;">🧩 教材细分覆盖（外部图谱投影）</div>
+    <div>覆盖 <b>${c.coverage_count}</b> 个教材细点 · 掌握标准 ${c.mastery_criteria_count} 条 · 诊断题 ${c.diagnostic_question_count} 道（内容由对方服务提供）</div>
+    ${stds ? `<div style="margin-top:6px;">课标编号：${stds}</div>` : ''}
+    ${chapters ? `<div style="margin-top:6px;">教材章节：${chapters}</div>` : ''}
+    ${links}
+    <div style="margin-top:8px;font-size:10px;opacity:.7;">来源 cn-math-taxonomy · CC BY-NC 4.0 · 本站仅存编号与入口 · 候选关系待审核 · 本地预览</div>
+  </div>`;
+}
+
 async function init() {
   if (!window.d3) {
     showLoadError('图表库 d3 未加载，请检查网络或刷新重试');
@@ -433,6 +517,7 @@ async function init() {
 
   setupCanvas();
   setupControls();
+  await loadCoarseEnhancement();
   updateStats();
   startSimulation();
   document.getElementById('loading').style.display = 'none';
@@ -812,6 +897,25 @@ function render() {
   }
   ctx.stroke();
 
+  // 投影的粗粒度候选先修关系（琥珀色虚线参考层，不参与力导向）
+  if (projectedVisible && projectedEdges.length) {
+    ctx.save();
+    ctx.globalAlpha = 0.38;
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 0.8 / transform.k;
+    ctx.setLineDash([4 / transform.k, 4 / transform.k]);
+    ctx.beginPath();
+    for (const e of projectedEdges) {
+      if (!visibleIds.has(e.source) || !visibleIds.has(e.target)) continue;
+      const s = nodeMap.get(e.source), t = nodeMap.get(e.target);
+      if (!s || !t || s.x == null || t.x == null) continue;
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(t.x, t.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // 学科簇大字主题（在节点之下作背景导向）
   drawSubjectClusterLabels(visibleNodes);
 
@@ -955,6 +1059,7 @@ async function showDetail(node) {
     prerequisiteIds: graphPrereqs.length ? graphPrereqs : (meta.prerequisites || []),
     nextIds: graphNexts.length ? graphNexts : (meta.next_steps || []),
   });
+  content.insertAdjacentHTML('beforeend', coarseDetailHtml(node));
 
   panel.classList.add('open');
 }

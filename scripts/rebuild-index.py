@@ -997,17 +997,17 @@ def main():
     # v7.9.9: 新增 build-nodes-selector.py —— 修复 path.html 学习路径选择器的断链
     # v7.9.10: 新增 build-nodes-metadata.py —— 修复 path.html 知识图谱网络加载（TeachAnyLearningPath.initialize 依赖）
     print('\n🔄 步骤4.5: 同步社区索引和标准知识图谱索引...')
+    # v8.0: 6 个各自读树的派生脚本已收敛为 build-knowledge-layer.py（单一 canonical 生成器），
+    # 消除 knowledge-map-data / nodes-metadata / nodes-selector / node-index / overlay / domain-labels
+    # 之间的字段漂移与 node-index 子集/死 ID 问题；外部增强层与一致性校验纳入同一条链。
     for helper in [
         'sync-community-index.py',
         'check-courseware-links.py',
         'apply-stage-bridges.py',
-        'build-knowledge-map-data.py',
-        'sync-knowledge-map-domains.py',
+        'build-knowledge-layer.py',
+        'build-unified-node-enhancement.py',
+        'validate-knowledge-layer.py',
         'build-teachany-kg-manifest.py',
-        'build-nodes-selector.py',
-        'build-nodes-metadata.py',
-        'sync-node-index-courses.py',
-        'build-node-enrichment-overlay.py',
     ]:
         helper_path = Path('scripts') / helper
         if not helper_path.exists():
