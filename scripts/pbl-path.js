@@ -555,6 +555,7 @@ class PBLPathBuilder {
             this._normalizeNodeSourceFlags();
             console.log(`[PBL] ✅ 从缓存恢复: ${this.unifiedIndex.size} 节点, ${this.systemIndex.size} 课标体系`);
             await this._loadKnowledgeGraph();
+            await this._applyUnifiedEnhancement();
             return this.unifiedIndex;
           }
         }
@@ -651,6 +652,7 @@ class PBLPathBuilder {
     console.log(`[PBL] ✅ 统一索引就绪: ${totalNodes} 节点, ${elapsed}ms`);
 
     await this._loadKnowledgeGraph();
+    await this._applyUnifiedEnhancement();
 
     this._persistUnifiedIndexCache();
     return this.unifiedIndex;
@@ -719,6 +721,12 @@ class PBLPathBuilder {
           const unified = {
             ...(prev || {}),
             ...base,
+            // 修复：全局图节点的空数组会覆盖课标树里的权威先修与课标要点，导致 PBL 拆解丢失依据
+            ...(prev?.prerequisites?.length ? { prerequisites: prev.prerequisites } : {}),
+            ...(prev?.curriculum_points?.length ? { curriculum_points: prev.curriculum_points } : {}),
+            ...(prev?.key_concepts?.length ? { key_concepts: prev.key_concepts } : {}),
+            ...(prev?.courses?.length ? { courses: prev.courses } : {}),
+            ...(prev?.definition ? { definition: prev.definition } : {}),
             system: prev?.system || 'cn',
             systemTag: prev?.systemTag || 'CN',
             systemLabel: prev?.systemLabel || '中国课标',
@@ -963,6 +971,58 @@ class PBLPathBuilder {
    * @param {number} depth - 遍历深度（1=直接邻居, 2=两层）
    * @returns {{ parents: string[], children: string[], crossSubject: string[] }}
    */
+   // ─── 统一节点增强索引（canonical：把多套图谱按 ID 收敛，供 PBL 拆解统一消费） ───
+   async _applyUnifiedEnhancement() {
+     if (this._enhancementApplied) return;
+     try {
+       const resp = await fetch('./data/unified/node-enhancement-pbl.json?v=20261114');
+       if (!resp.ok) return;
+       const data = await resp.json();
+       const nodes = data.nodes || {};
+       let patched = 0, prereqFixed = 0, contentFixed = 0;
+       this.unifiedIndex.forEach((n, id) => {
+         const e = nodes[id];
+         if (!e) return;
+         // 修复：_loadKnowledgeGraph 用全局图的空数组覆盖了课标树的先修
+         if (Array.isArray(e.prerequisites) && e.prerequisites.length && !(n.prerequisites || []).length) {
+           n.prerequisites = e.prerequisites.slice();
+           prereqFixed++;
+         }
+         if (Array.isArray(e.next_steps) && e.next_steps.length && !(n.next_steps || []).length) {
+           n.next_steps = e.next_steps.slice();
+         }
+         // CN 候选池来自 nodes-metadata.json（无课标要点），统一索引从权威树补齐
+         if (Array.isArray(e.curriculum_points) && e.curriculum_points.length && !(n.curriculum_points || []).length) {
+           n.curriculum_points = e.curriculum_points.slice();
+           contentFixed++;
+         }
+         n.prereq_details = e.prereq_details || [];
+         n.candidate_prereqs = e.candidate_prereqs || [];
+         n.standards = e.standards || [];
+         n.chapters = e.chapters || [];
+         n.external_capabilities = e.external_capabilities || null;
+         n.quality = e.quality || null;
+         n.gap_status = e.gap_status || null;
+         patched++;
+       });
+       this._enhancementApplied = true;
+       console.log(`[PBL] ✅ 统一增强索引: ${patched} 节点, 修复先修 ${prereqFixed}, 补齐课标要点 ${contentFixed}`);
+     } catch (err) {
+       // 增强索引不可用时静默降级，PBL 拆解照常工作
+       console.warn('[PBL] 统一增强索引不可用（降级为原逻辑）:', err);
+     }
+   }
+
+   /** 统一关系查询：权威先修 + 外部投影候选（带支持度，默认 ≥3 才返回候选） */
+   getEnhancedPrereqs(nodeId, minSupport = 3) {
+     const n = this.unifiedIndex.get(nodeId);
+     if (!n) return { authoritative: [], candidate: [] };
+     return {
+       authoritative: (n.prerequisites || []).slice(),
+       candidate: (n.candidate_prereqs || []).filter(x => (x.support || 0) >= minSupport),
+     };
+   }
+
   getGraphNeighbors(nodeId, depth = 1) {
     if (!this.graphLoaded) return { parents: [], children: [], crossSubject: [] };
     const visited = new Set([nodeId]);
