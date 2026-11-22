@@ -69,14 +69,26 @@ GitHub Actions runner 出口是大段动态 Azure 网段，放行成本与风险
 该工作流都会显示 `success`，但 `Checkout / Build / Setup SSH / Rsync` 四步全部 `skipped`
 —— 是假成功，**不代表镜像已同步**。
 
-该文件内的默认 SSH 端口仍是 `22`、跳过提示仍是普通日志而非 `::warning::`。
-2026-11-22 曾尝试修正，但当前 Git 凭据为 OAuth App token
-（scopes 仅 `admin:public_key, gist, read:org, repo`，缺 `workflow` scope），
-`git push` 与 REST contents API 均被 GitHub 以 403 拒绝，故保持原样。
+该工作流已带 `skip=true` 判定与 `if:` 条件，四步确实是 skipped，但 **job 仍整体报
+`success` 且日志只有一行普通 `echo`**，运维看板无法区分「跳过」与「同步成功」。
+另外默认 SSH 端口写的是 `22`，而 CVM 实际是 `36000`。
+2026-11-22 复核确认当前 Git 凭据 scopes 为
+`admin:public_key, gist, read:org, repo`，**缺 `workflow`**，
+`git push` 与 REST contents API 均被 GitHub 以 403 拒绝，故仓库内文件保持原样。
 **这不影响主同步通道**：日常同步完全由上面的 CVM cron 承担，无需任何 GitHub Secrets。
 
-如需修正该文件，使用带 `workflow` scope 的凭据，或在 GitHub 网页直接编辑
-（网页会话不受此 scope 限制）。
+**精确补丁**（在 GitHub 网页打开 `.github/workflows/deploy-tencent.yml` 直接编辑，
+网页会话不受 OAuth scope 限制；或换用勾选 `workflow` 的 PAT 后重推）：
+
+| 位置 | 原文 | 改为 |
+| --- | --- | --- |
+| `Check secrets present` 的 `run` 内 | `echo "ℹ️ TENCENT_HOST / TENCENT_SSH_KEY 未配置，跳过腾讯云镜像同步"` | `echo "::warning::TENCENT_HOST / TENCENT_SSH_KEY 未配置，跳过；主同步由 CVM cron 承担"` |
+| `Setup SSH` | `${{ secrets.TENCENT_PORT \|\| 22 }}` | `${{ secrets.TENCENT_PORT \|\| 36000 }}` |
+| `Rsync to Tencent` | `PORT: ${{ secrets.TENCENT_PORT \|\| 22 }}` | `PORT: ${{ secrets.TENCENT_PORT \|\| 36000 }}` |
+
+改完后未配置 secrets 时会在 Actions 界面显示黄色 `warning` 注释，
+不再是静默的绿色 success；端口也与实际 CVM 一致。**不要删除该工作流**，
+它仍是 CVM cron 长期故障时的备用推送通道。
 
 ### 日常不需要任何手工操作
 
