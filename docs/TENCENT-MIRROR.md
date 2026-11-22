@@ -149,7 +149,7 @@ CVM 与其他子域保持不动。切换前务必确认 Pages 侧仍可访问。
 
 - 公安联网备案需本人实名办理（`https://beian.mps.gov.cn`）；审核通过拿到编号前，
   footer 中的公安号占位块保持注释状态，**不得上线假号**。
-- `audio.teachany.cn` 根路径 404 与本次主域切换无关，待单独确认。
+- ~~`audio.teachany.cn` 404~~ 已修复，见第 9 节。
 - CF DNS 上两条 DNS-01 遗留 `_acme-challenge` TXT 可择期清理，保留无害。
 
 ## 8. 2026-11-22 端到端实测后的加固
@@ -185,3 +185,35 @@ emoji 最终占位，消除卡片封面大面积 404。
 自定义域有 5–10 分钟传播延迟，必须 `GET` 实际内容 grep 标记并逐字节比对。
 `/api/` 的异常响应要与 `teachany-courseware.pages.dev` 直连对照，才能区分
 「切换回归」与「上游既有状态」。
+
+## 9. 2026-11-22 下午追加修复（真实需求 E2E 的后续）
+
+**`audio.teachany.cn` TTS 全量 404 已修复**。根因不是 DNS 或自定义域绑定，而是
+Cloudflare Pages 项目 `teachany-audio` 的**部署内容为空**（自定义域与 pages.dev 都返回
+404 / 0B）。仓库本地仍保留 10,324 个 `community/*/tts/*.mp3`（2.36 GB），
+课件引用 10,254 个 `https://audio.teachany.cn/<course-id>/tts/<file>.mp3`。
+
+重建方式（硬链接镜像，不额外占磁盘）：
+
+```bash
+# 由 teachany-courseware/community 生成 out/audio-dist，保留 <course-id>/tts/ 路径
+wrangler pages deploy out/audio-dist --project-name teachany-audio --commit-dirty=true
+```
+
+复验：`audio.teachany.cn/sci-e-bridge-structure/tts/s01-hero.mp3` →
+`200 audio/mpeg 136944B`；课件页浏览器冒烟 `HTTP 4xx = 0`、audio 404 清零。
+本机跨境链路偶发读取截断（已用多次请求与字节数确认文件本身完整），非服务端问题。
+
+**课件 hero 生图改为本地 agent 能力**。`scripts/agnes-image-gen.py` 与 skill 内同名脚本
+改为不联网的兼容层，转交新增的 `scripts/local-hero-image.py`：由本地图像生成能力
+产出图片后，规范化为 1536×1024 PNG + webp 变体，写
+`.teachany-image-gen-probe.json`（`source: local-agent-imagegen`）。
+旧批量脚本可通过 `TEACHANY_LOCAL_IMAGE_DIR=<本地图片目录>` 离线运行。
+线上 `functions/api/images/agnes.js` 保留给站点访客使用，与本地课件生成链路解耦。
+
+**材料拆解学科错配已修复并双端部署**（`teachany-mcp`）：
+`concepts.js` 补数学概念词表、收紧跨学科泛词、增加学科约束；
+`segments.js` 收紧 `physics` / `comprehensive-practice` 等误判词；
+`decompose.js` 把显式学科传给概念推断。本地 `npm test` 44/0；
+Worker 与 Pages 两端均已重新部署，Pages 备用域实跑验证知识点全部回到数学、
+命中 `math-m-linear-function` 真实课标原文。

@@ -542,26 +542,23 @@ def check_map_cdn():
 
 
 def check_image_gen():
-    head("AI 生图（TeachAny 中转 / image_gen）")
-    # 优先：TeachAny 官方 Agnes 中转（agnes-image-gen.py，用户无 Key）
+    head("课件生图（本地 agent 图像能力）")
+    # 2026-11-22 起：课件 hero 由本地 agent 图像能力生成，
+    # 不再依赖 TeachAny 服务端 Agnes 中转，也不再探测 /api/images/quota。
+    local_script = Path(__file__).resolve().parent / "local-hero-image.py"
     try:
-        import urllib.request
-        api_base = os.environ.get("TEACHANY_API_BASE", "https://www.teachany.cn").rstrip("/")
-        with urllib.request.urlopen(f"{api_base}/api/images/quota", timeout=12) as resp:
-            svc = json.loads(resp.read().decode("utf-8"))
-        if svc.get("ok") and svc.get("agnes_configured") and svc.get("d1_configured"):
-            log("TeachAny 生图中转可用（agnes-image-gen.py，每课件默认 3 张）", "ok")
-            record("image_gen", "ok", source="teachany-agnes-proxy", per_course_limit=svc.get("per_course_limit"))
+        import PIL  # noqa: F401
+        if local_script.is_file():
+            log("本地 agent 生图链路就绪（ImageGen → local-hero-image.py，无需远程额度）", "ok")
+            record("image_gen", "ok", source="local-agent-imagegen", network=False)
             REPORT["capabilities"]["image_gen"] = True
-            REPORT["capabilities"]["teachany_image_proxy"] = True
+            REPORT["capabilities"]["teachany_image_proxy"] = False
             return
-        if svc.get("ok"):
-            log(
-                f"生图中转已部署但未就绪：agnes={svc.get('agnes_configured')} d1={svc.get('d1_configured')}",
-                "warn",
-            )
+        log(f"缺少 {local_script.name}，本地生图链路不完整", "warn")
+    except ImportError:
+        log("缺少 Pillow，本地生图规范化不可用（pip install Pillow）", "warn")
     except Exception as e:
-        log(f"TeachAny 生图中转不可达（将回退 image_gen 探针）：{e}", "warn")
+        log(f"本地生图预检异常：{e}", "warn")
 
     # 回退：IDE 侧 image_gen 工具探针文件
     probe_file = Path(".teachany-image-gen-probe.json")

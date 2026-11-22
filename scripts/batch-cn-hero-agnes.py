@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """中国课标课件 Hero 图质检 + Agnes 首选重生成。
 
-首选模型：agnes-image-2.1-flash（经 https://www.teachany.cn/api/images/agnes 中转，无需用户 Key）
+生图来源：本地 agent 图像能力（2026-11-22 起，Agnes 远程中转已停用）
+  - 先由本地 agent 批量产出图片，设置 TEACHANY_LOCAL_IMAGE_DIR=<目录>，本脚本经兼容层离线取图
+  - 不再访问 https://www.teachany.cn/api/images/agnes
 
 策略（避免 Agnes 中文乱码）：
   - 生图用英文场景描述 + 严格无文字（与 agnes-image-gen.py 一致）

@@ -4,7 +4,9 @@
 
 对 community/ 下每个课件：
   1. 解析真实主题（复用 pipeline_enhance_sample.resolve_topic）
-  2. 生成 hero + 2 张章节插图 prompt，调用 scripts/agnes-image-gen.py 批量生图到 assets/
+  2. 生成 hero + 2 张章节插图 prompt，调用 scripts/agnes-image-gen.py（本地兼容层）落盘到 assets/
+     ⚠️ 2026-11-22 起不再联网生图：先由本地 agent 批量产出图片，
+        设置 TEACHANY_LOCAL_IMAGE_DIR=<图片目录> 后离线运行，兼容层会顺序取图。
   3. 输出文件：{cid}-hero.png / section1.png / section2.png
 幂等：assets 已有 >=3 张 png 则跳过。
 index.html 的 <img> 引用由后续 link_images.py 统一注入（避免与内容进程并发写冲突）。

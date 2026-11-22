@@ -1,255 +1,93 @@
 #!/usr/bin/env python3
 """
-TeachAny · Agnes 课件生图（服务端中转，用户无感）
+TeachAny · 生图入口兼容层（Agnes 远程生图已停用，2026-11-22）
 
-无需用户配置 API Key，走 TeachAny 官方中转：
-  POST https://www.teachany.cn/api/images/agnes
+用户明确要求：课件 hero 全部改由本地 agent 图像能力生成。
+本文件保留旧文件名，避免历史脚本 / 文档引用断裂，但：
 
-每课件默认最多 3 张（hero + 章节插图合计）。
+  - **不再向 /api/images/agnes 或 /api/images/quota 发任何请求**
+  - 只把参数转交给同目录的 local-hero-image.py
+  - 缺少本地图片时明确报错，绝不静默回退到远程生图
 
-用法：
-  # 查剩余额度
-  python3 agnes-image-gen.py --course-id math-linear-function --quota
+新用法（agent 先用本地图像能力生成图片）：
+  python3 agnes-image-gen.py --course-id <id> \
+      --from /abs/generated/hero.png \
+      --out "<课件目录>/assets/<id>-hero.png" \
+      --prompt "..." --slot hero
 
-  # 单张生图并下载到课件 assets/
-  python3 agnes-image-gen.py \\
-    --course-id math-linear-function \\
-    --prompt "coordinate plane with linear function, slope triangle, flat educational style" \\
-    --out community/math-linear-function/assets/hero.png \\
-    --slot hero
-
-  # 批量（JSON 内每项可有 name/prompt/size/slot）
-  python3 agnes-image-gen.py \\
-    --course-id math-linear-function \\
-    --batch prompts.json \\
-    --out-dir community/math-linear-function/assets/
-
-环境变量（可选）：
-  TEACHANY_API_BASE  默认 https://www.teachany.cn
+历史批量脚本（bulk_image_gen.py / batch-cn-hero-agnes.py / pipeline_upgrade_v2.py）：
+  先用本地 agent 批量产出图片到目录，再设置
+      TEACHANY_LOCAL_IMAGE_DIR=/abs/generated-images
+  本兼容层会按顺序取图，完全离线。
 """
 from __future__ import annotations
 
 import argparse
-import base64
-import json
 import os
+import subprocess
 import sys
-import time
-import urllib.error
-import urllib.parse
-import urllib.request
 from pathlib import Path
 
-DEFAULT_API_BASE = 'https://www.teachany.cn'
-DEFAULT_SIZE = '1280x768'
-MIN_BYTES = 20 * 1024  # 与 validate-courseware 占位图阈值一致
-NOTEXT_SUFFIX = (
-    " STRICTLY NO TEXT of any kind: no Chinese characters, no English letters, "
-    "no numbers, no labels, no captions, no typography, no watermarks. "
-    "Pure visual icons and scenes only."
-)
+HERE = Path(__file__).resolve().parent
+LOCAL = HERE / 'local-hero-image.py'
 
 
-def api_base() -> str:
-    return os.environ.get('TEACHANY_API_BASE', DEFAULT_API_BASE).rstrip('/')
-
-
-def http_json(method: str, path: str, body: dict | None = None, timeout: int = 130) -> dict:
-    url = f'{api_base()}{path}'
-    data = None
-    headers = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'TeachAny-agnes-image-gen/1.0',
-        'X-TeachAny-Client': 'skill',
-    }
-    if body is not None:
-        data = json.dumps(body, ensure_ascii=False).encode('utf-8')
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            raw = resp.read().decode('utf-8')
-    except urllib.error.HTTPError as e:
-        raw = e.read().decode('utf-8', errors='replace')
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError:
-            payload = {'ok': False, 'message': raw[:500]}
-        payload['_http_status'] = e.code
-        return payload
-    except urllib.error.URLError as e:
-        raise RuntimeError(f'无法连接 {url}: {e.reason}') from e
-    return json.loads(raw)
-
-
-def fetch_quota(course_id: str) -> dict:
-    q = urllib.parse.quote(course_id)
-    return http_json('GET', f'/api/images/quota?course_id={q}', timeout=20)
-
-
-def generate_remote(course_id: str, prompt: str, *, size: str = DEFAULT_SIZE, slot: str = '') -> dict:
-    body = {'course_id': course_id, 'prompt': prompt, 'size': size}
-    if slot:
-        body['slot'] = slot
-    return http_json('POST', '/api/images/agnes', body)
-
-
-def download_image(url: str, out_path: Path, timeout: int = 120) -> int:
-    if url.startswith('data:'):
-        # Agnes 限流时服务端会切 OpenRouter 兜底，返回 data URL（base64）
-        header, _, payload = url.partition(',')
-        if ';base64' not in header:
-            raise RuntimeError(f'不支持的 data URL 格式: {header[:80]}')
-        data = base64.b64decode(payload)
-    else:
-        req = urllib.request.Request(url, headers={'User-Agent': 'TeachAny/1.0'})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = resp.read()
-    if len(data) < MIN_BYTES:
-        raise RuntimeError(f'下载文件过小 ({len(data)} B)，可能无效')
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_bytes(data)
-    return len(data)
-
-
-def gen_with_retry(course_id: str, prompt: str, **kwargs) -> dict:
-    last = None
-    for attempt in range(1, 4):
-        result = generate_remote(course_id, prompt, **kwargs)
-        if result.get('ok') and result.get('url'):
-            return result
-        last = result
-        err = result.get('error') or result.get('message') or result
-        if result.get('error') == 'COURSE_QUOTA_EXCEEDED':
-            break
-        if result.get('_http_status') == 429 and attempt < 3:
-            # RATE_LIMIT 是本机 IP 限流，须等满 60s；GENERATION_FAILED 是上游限流，
-            # 服务端已内建 8 次重试 + OpenRouter 兜底，客户端短间隔补刀即可
-            wait = 60 if result.get('error') == 'RATE_LIMIT' else 5 * attempt
-            print(f'  ⚠️  429 {"IP 限流" if result.get("error") == "RATE_LIMIT" else "限流"}，{wait}s 后重试…')
-            time.sleep(wait)
-            continue
-        if attempt < 3:
-            time.sleep(5 * attempt)
-    raise RuntimeError(f'生图失败: {last}')
-
-
-def write_probe(out_dir: Path | None = None):
-    probe = {
-        'last_success_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-        'last_success_unix': int(time.time()),
-        'source': 'teachany-agnes-proxy',
-    }
-    target = (out_dir or Path('.')) / '.teachany-image-gen-probe.json'
-    target.write_text(json.dumps(probe, ensure_ascii=False, indent=2), encoding='utf-8')
-    return target
-
-
-def main():
-    ap = argparse.ArgumentParser(description='TeachAny Agnes 课件生图（服务端中转）')
-    ap.add_argument('--course-id', required=True, help='课件 ID（manifest id / 目录名）')
-    ap.add_argument('--prompt', help='插图场景描述（英文或中文均可）')
-    ap.add_argument('--size', default=DEFAULT_SIZE, help='512x512 / 1024x1024 / 1280x768 等')
-    ap.add_argument('--slot', default='', help='hero / section1 / section2 …（仅日志）')
-    ap.add_argument('--out', help='单张模式输出路径')
-    ap.add_argument('--batch', help='批量 JSON 文件')
+def main() -> int:
+    print('ℹ️  Agnes 远程生图已停用；本命令转交「本地 agent 图像能力」链路。',
+          file=sys.stderr)
+    ap = argparse.ArgumentParser(
+        description='兼容层：转交本地 agent 生图链路（不联网、无额度）')
+    ap.add_argument('--course-id', default='', help='课件 ID')
+    ap.add_argument('--from', dest='source_file', help='本地 agent 生成的图片路径')
+    ap.add_argument('--from-dir', default=os.environ.get('TEACHANY_LOCAL_IMAGE_DIR', ''),
+                    help='本地图片目录（也可用环境变量 TEACHANY_LOCAL_IMAGE_DIR）')
+    ap.add_argument('--prompt', default='', help='生图提示词（仅记录）')
+    ap.add_argument('--size', default='1536x1024', help='已忽略：尺寸由本地脚本固定规范')
+    ap.add_argument('--slot', default='hero')
+    ap.add_argument('--out', help='输出 PNG 路径')
+    ap.add_argument('--batch', help='批量 JSON')
     ap.add_argument('--out-dir', help='批量输出目录')
-    ap.add_argument('--quota', action='store_true', help='仅查询本课件剩余额度')
-    ap.add_argument('--api-base', dest='api_base', default='',
-                    help='覆盖 TEACHANY_API_BASE（默认 https://www.teachany.cn）')
-    ap.add_argument('--no-notext-suffix', action='store_true',
-                    help='不自动追加无汉字/无文字约束（默认追加）')
+    ap.add_argument('--quota', action='store_true', help='报告本地能力状态')
+    ap.add_argument('--api-base', default='', help='已废弃：不再访问任何远程 API')
     args = ap.parse_args()
 
     if args.api_base:
-        os.environ['TEACHANY_API_BASE'] = args.api_base.rstrip('/')
+        print('⚠️  --api-base 已废弃：本地生图链路不访问远程接口。', file=sys.stderr)
 
-    course_id = args.course_id.strip().lower()
+    if not LOCAL.is_file():
+        print(f'❌ 缺少本地生图脚本：{LOCAL}', file=sys.stderr)
+        return 2
 
+    cmd = [sys.executable, str(LOCAL), '--course-id', args.course_id]
     if args.quota:
-        status = http_json('GET', '/api/images/quota', timeout=20)
-        quota = fetch_quota(course_id)
-        print(json.dumps({'service': status, 'course': quota}, ensure_ascii=False, indent=2))
-        if not quota.get('ok'):
-            sys.exit(1)
-        return
+        cmd.append('--quota')
+        return subprocess.call(cmd)
 
-    if args.prompt and args.out:
-        prompt = args.prompt
-        if not args.no_notext_suffix and NOTEXT_SUFFIX.strip() not in prompt:
-            prompt = prompt.rstrip() + NOTEXT_SUFFIX
-        print(f'🎨 TeachAny 中转生图 · {course_id} · {args.size}')
-        print(f'   prompt: {prompt[:100]}{"…" if len(prompt) > 100 else ""}')
-        t0 = time.time()
-        result = gen_with_retry(course_id, prompt, size=args.size, slot=args.slot)
-        dt = time.time() - t0
-        out_path = Path(args.out)
-        size_b = download_image(result['url'], out_path)
-        probe = write_probe(out_path.parent)
-        print(f'   ✅ {out_path} ({size_b // 1024} KB, {dt:.1f}s)')
-        print(f'   通道: {result.get("provider", "agnes")} · 模型: {result.get("model", "-")}')
-        print(f'   额度: {result.get("used")}/{result.get("limit")}，剩余 {result.get("remaining")}')
-        print(f'   探针: {probe}')
-        return
+    if args.source_file:
+        cmd += ['--from', args.source_file]
+    elif args.from_dir:
+        cmd += ['--from-dir', args.from_dir]
+    if args.out:
+        cmd += ['--out', args.out]
+    if args.prompt:
+        cmd += ['--prompt', args.prompt]
+    if args.slot:
+        cmd += ['--slot', args.slot]
+    if args.batch:
+        cmd += ['--batch', args.batch]
+    if args.out_dir:
+        cmd += ['--out-dir', args.out_dir]
 
-    if args.batch and args.out_dir:
-        batch_file = Path(args.batch)
-        if not batch_file.exists():
-            print(f'❌ 批量文件不存在: {batch_file}')
-            sys.exit(1)
-        tasks = json.loads(batch_file.read_text(encoding='utf-8'))
-        out_dir = Path(args.out_dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        print(f'🎨 批量生图 · {course_id} · {len(tasks)} 张')
-        ok = 0
-        failed = []
-        for i, task in enumerate(tasks, 1):
-            name = task.get('name', f'img_{i:03d}')
-            prompt = task['prompt']
-            if not args.no_notext_suffix and NOTEXT_SUFFIX.strip() not in prompt:
-                prompt = prompt.rstrip() + NOTEXT_SUFFIX
-            size = task.get('size', args.size)
-            slot = task.get('slot', name)
-            print(f'[{i}/{len(tasks)}] {name}')
-            try:
-                result = gen_with_retry(course_id, prompt, size=size, slot=slot)
-                out_path = out_dir / f'{name}.png'
-                download_image(result['url'], out_path)
-                print(f'   ✅ {out_path.name} · {result.get("provider", "agnes")} · 剩余额度 {result.get("remaining")}')
-                ok += 1
-            except Exception as e:
-                err = str(e)
-                if 'COURSE_QUOTA_EXCEEDED' in err and not str(course_id).endswith('-v2'):
-                    alt = f'{course_id}-v2'
-                    print(f'   ⚠️  额度用尽，用 {alt} 重试 {name}')
-                    try:
-                        result = gen_with_retry(alt, prompt, size=size, slot=slot)
-                        out_path = out_dir / (f'{name}.png' if name in ('section1', 'section2', 'hero') or name.endswith('-hero') else f'{name}.png')
-                        if name == 'section1':
-                            out_path = out_dir / 'section1.png'
-                        elif name == 'section2':
-                            out_path = out_dir / 'section2.png'
-                        elif 'hero' in name or name.endswith('-hero'):
-                            out_path = out_dir / f'{course_id}-hero.png'
-                        download_image(result['url'], out_path)
-                        print(f'   ✅ {out_path.name} (v2) · 剩余 {result.get("remaining")}')
-                        ok += 1
-                        continue
-                    except Exception as e2:
-                        err = str(e2)
-                print(f'   ❌ {e}')
-                failed.append({'name': name, 'error': err})
-        if ok:
-            write_probe(out_dir)
-        print(f'完成 {ok}/{len(tasks)}')
-        if failed:
-            for f in failed:
-                print(f'  - {f["name"]}: {f["error"]}')
-            sys.exit(1 if ok == 0 else 0)
-        return
-
-    ap.print_help()
-    sys.exit(1)
+    if not (args.out or (args.batch and args.out_dir)):
+        print('❌ 缺少 --out / --batch+--out-dir，无法落盘。', file=sys.stderr)
+        return 2
+    if not (args.source_file or args.from_dir):
+        print('❌ 缺少本地图片：请先用本地 agent 图像能力生成图片，再传 '
+              '--from <路径> 或设置 TEACHANY_LOCAL_IMAGE_DIR。\n'
+              '   本兼容层不会调用任何远程生图接口。', file=sys.stderr)
+        return 2
+    return subprocess.call(cmd)
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

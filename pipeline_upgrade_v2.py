@@ -324,7 +324,8 @@ def agnes_quota_remaining(cid: str) -> int:
             return 0
         data = json.loads(m.group(0))
         course = data.get("course") or data
-        return int(course.get("remaining") or 0)
+        # 2026-11-22 起本地 agent 生图无额度概念：quota 恒 ok 即继续
+        return 999 if (data.get("ok") or course.get("ok")) else 0
     except Exception:
         return 0
 
