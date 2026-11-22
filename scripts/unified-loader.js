@@ -95,6 +95,28 @@ function resolveHeroUrl(course, heroImage) {
   return SELF_BASE_URL + '/' + heroImage.replace(/^\/+/, '');
 }
 
+// Hero 图兜底：发布构建会剔除「页面未引用、但存在同名 webp」的原始 png，
+// 而 registry 里约 735 条 hero_image 仍指向 .png。主 URL 直接改用同名 .webp，
+// 加载失败时再双向试一次（webp ↔ png），仍失败才退回 emoji 占位。
+function preferHeroWebp(field) {
+  if (!field || /^(https?:|data:|cdn:)/i.test(field)) return field;
+  return field.replace(/\.png(\?.*)?$/i, '.webp$1');
+}
+
+window._taHeroFallback = function (img) {
+  if (!img) return;
+  var src = img.getAttribute('src') || '';
+  if (!img.dataset.heroFallbackTried && /\.(png|webp)(\?|$)/i.test(src)) {
+    img.dataset.heroFallbackTried = '1';
+    img.src = /\.png(\?|$)/i.test(src)
+      ? src.replace(/\.png(\?.*)?$/i, '.webp$1')
+      : src.replace(/\.webp(\?.*)?$/i, '.png$1');
+    return;
+  }
+  img.style.display = 'none';
+  if (img.nextElementSibling) img.nextElementSibling.style.display = 'flex';
+};
+
 // 课件点击链接：统一直指 teachany-courseware 实体仓库，主仓库只做轻量入口/索引
 function resolveCourseUrl(course) {
   if (course && course.url) return normalizeCoursewareUrl(course.url);
@@ -510,8 +532,8 @@ function renderCourseCard(course) {
   // Hero 图（从 hero_image 字段读取，支持 cdn: 前缀）
   let heroCover = '';
   if (course.hero_image) {
-    const heroUrl = resolveHeroUrl(course, course.hero_image);
-    heroCover = `<img class="card-cover" src="${escapeHtml(heroUrl)}" alt="${escapeHtml(courseName)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    const heroUrl = resolveHeroUrl(course, preferHeroWebp(course.hero_image));
+    heroCover = `<img class="card-cover" src="${escapeHtml(heroUrl)}" alt="${escapeHtml(courseName)}" loading="lazy" onerror="window._taHeroFallback(this)">
       <div class="card-cover-emoji" style="display:none">${escapeHtml(course.emoji || '📚')}</div>`;
   } else {
     heroCover = `<div class="card-cover-emoji">${escapeHtml(course.emoji || '📚')}</div>`;
