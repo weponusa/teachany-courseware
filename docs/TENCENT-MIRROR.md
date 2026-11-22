@@ -159,9 +159,12 @@ CVM 与其他子域保持不动。切换前务必确认 Pages 侧仍可访问。
 
 **同步脚本 `/usr/local/bin/teachany-sync.py`**：11:30 那轮 cron 检测到 1 个差异文件，
 但从 `raw.githubusercontent.com` 单文件读取超时 180s 后整轮中断（旧 state 保留）。
-现改为 `curl` 下载 + 三源回退（raw.githubusercontent.com → github.com/raw →
-teachany-courseware.pages.dev）+ 单源 25s 超时 + 2 轮重试；**任何来源都必须通过
-git blob sha1 校验才允许落盘**，Pages 镜像若处于传播延迟返回旧内容会被直接拒绝。
+现改为 `curl` 下载 + 四源回退（raw.githubusercontent.com →
+`api.github.com/repos/.../git/blobs/<blob_sha>` → github.com/raw →
+teachany-courseware.pages.dev）+ connect 15s / 单源 25s 超时 + 3 轮重试；
+**任何来源都必须通过 git blob sha1 校验才允许落盘**，Pages 镜像若处于传播延迟
+返回旧内容会被直接拒绝。**按 blob sha 取内容的 GitHub API 源不受任何传播延迟影响**，
+是第二轮 11:50 再次遇到「raw 超时 + Pages 未更新」后补上的关键源。
 落盘前统一 `chmod 644`，避免 600 权限文件被同步进来导致 nginx 403。
 备份：`/root/teachany-sync.py.bak-e2e-20261122`。
 
