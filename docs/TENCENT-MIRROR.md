@@ -151,3 +151,34 @@ CVM 与其他子域保持不动。切换前务必确认 Pages 侧仍可访问。
   footer 中的公安号占位块保持注释状态，**不得上线假号**。
 - `audio.teachany.cn` 根路径 404 与本次主域切换无关，待单独确认。
 - CF DNS 上两条 DNS-01 遗留 `_acme-challenge` TXT 可择期清理，保留无害。
+
+## 8. 2026-11-22 端到端实测后的加固
+
+用真实教学需求跑通全部功能线后，针对实测暴露的问题做了以下修正（详见
+`out/e2e-2026-11-22/测试报告.md`）：
+
+**同步脚本 `/usr/local/bin/teachany-sync.py`**：11:30 那轮 cron 检测到 1 个差异文件，
+但从 `raw.githubusercontent.com` 单文件读取超时 180s 后整轮中断（旧 state 保留）。
+现改为 `curl` 下载 + 三源回退（raw.githubusercontent.com → github.com/raw →
+teachany-courseware.pages.dev）+ 单源 25s 超时 + 2 轮重试；**任何来源都必须通过
+git blob sha1 校验才允许落盘**，Pages 镜像若处于传播延迟返回旧内容会被直接拒绝。
+落盘前统一 `chmod 644`，避免 600 权限文件被同步进来导致 nginx 403。
+备份：`/root/teachany-sync.py.bak-e2e-20261122`。
+
+**nginx `/etc/nginx/conf.d/teachany.conf`**（备份 `/root/conf.d.bak.e2e-20261122`）：
+
+- `/community/*/index.html` 的 rewrite 改为只匹配原始 `$request_uri`，消除
+  `try_files` 内部重写导致的 301 死循环；
+- 新增精确 `location = /api/like` 反代 `teachany-community.pages.dev`（该 Function
+  不在 courseware 项目中）；
+- 静态文件权限统一 644（Cloudflare Pages 托管时不暴露此问题）。
+
+**Gallery 封面**：发布构建会剔除「课件页面未引用、已有同名 webp」的 png，
+而 `registry.json` 中 736 条 `hero_image` 仍指向 png。现由
+`scripts/unified-loader.js` 优先请求同名 webp，并保留 webp↔png 双向兜底与
+emoji 最终占位，消除卡片封面大面积 404。
+
+**验证口径补充**：Actions success、HTTP 200、`cf-cache-status` 都不能作为上线判据；
+自定义域有 5–10 分钟传播延迟，必须 `GET` 实际内容 grep 标记并逐字节比对。
+`/api/` 的异常响应要与 `teachany-courseware.pages.dev` 直连对照，才能区分
+「切换回归」与「上游既有状态」。
