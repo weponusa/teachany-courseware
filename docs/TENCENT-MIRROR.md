@@ -62,11 +62,21 @@ GitHub Actions runner 出口是大段动态 Azure 网段，放行成本与风险
 而 `github.com` 从 CVM 直连超时、`api.github.com` 与 `raw.githubusercontent.com` 均可达，
 故走 trees API + raw 下载，零入站端口、零私钥托管。
 
-### 备用通道：`deploy-tencent.yml`
+### 备用通道：`deploy-tencent.yml`（当前未启用）
 
 `.github/workflows/deploy-tencent.yml` 仅在配置了 `TENCENT_HOST` / `TENCENT_SSH_KEY`
-且该来源被安全组放行时才真正同步。未配置时会打 `::warning::` 并跳过实际步骤，
-**其 success 只表示「已检查并跳过」，不代表镜像已同步**。默认 SSH 端口为 `36000`。
+且该来源被安全组放行时才真正同步。**实测仓库 Actions secrets 为 0**，因此每次 push
+该工作流都会显示 `success`，但 `Checkout / Build / Setup SSH / Rsync` 四步全部 `skipped`
+—— 是假成功，**不代表镜像已同步**。
+
+该文件内的默认 SSH 端口仍是 `22`、跳过提示仍是普通日志而非 `::warning::`。
+2026-11-22 曾尝试修正，但当前 Git 凭据为 OAuth App token
+（scopes 仅 `admin:public_key, gist, read:org, repo`，缺 `workflow` scope），
+`git push` 与 REST contents API 均被 GitHub 以 403 拒绝，故保持原样。
+**这不影响主同步通道**：日常同步完全由上面的 CVM cron 承担，无需任何 GitHub Secrets。
+
+如需修正该文件，使用带 `workflow` scope 的凭据，或在 GitHub 网页直接编辑
+（网页会话不受此 scope 限制）。
 
 ### 日常不需要任何手工操作
 
