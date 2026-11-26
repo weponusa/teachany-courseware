@@ -49,14 +49,16 @@ jobs:
           mkdir -p ~/.ssh
           echo "$KEY" > ~/.ssh/id_ed25519_tencent
           chmod 600 ~/.ssh/id_ed25519_tencent
-          ssh-keyscan -p "${{ secrets.TENCENT_PORT || 22 }}" "${{ secrets.TENCENT_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          # Host key 由 rsync 的 StrictHostKeyChecking=accept-new 处理；
+          # ssh-keyscan 失败不应阻断同步（CVM 安全组会拦部分来源）。
+          ssh-keyscan -p "${{ secrets.TENCENT_PORT || 36000 }}" "${{ secrets.TENCENT_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || echo "ssh-keyscan 未返回 host key，改用 accept-new 直连"
 
       - name: Rsync to Tencent
         if: steps.gate.outputs.skip == 'false'
         env:
           HOST: ${{ secrets.TENCENT_HOST }}
           USER_: ${{ secrets.TENCENT_USER || 'root' }}
-          PORT: ${{ secrets.TENCENT_PORT || 22 }}
+          PORT: ${{ secrets.TENCENT_PORT || 36000 }}
         run: |
           rsync -az --delete --delete-excluded \
             -e "ssh -i ~/.ssh/id_ed25519_tencent -p $PORT -o StrictHostKeyChecking=accept-new" \
