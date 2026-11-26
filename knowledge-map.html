@@ -282,6 +282,7 @@ if (!window.d3) {
 <script src="./assets/scripts/teachany-make-course.js"></script>
 <script src="./assets/scripts/knowledge-node-display.js?v=20260623"></script>
 <script src="./assets/scripts/knowledge-node-detail.js"></script>
+<script src="./assets/scripts/open-kg-enrichment.js?v=20261126"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // DATA & CONFIG
@@ -518,6 +519,7 @@ async function init() {
   setupCanvas();
   setupControls();
   await loadCoarseEnhancement();
+  if (window.TeachAnyOpenKG) window.TeachAnyOpenKG.load().catch(() => {});
   updateStats();
   startSimulation();
   document.getElementById('loading').style.display = 'none';
@@ -1060,8 +1062,31 @@ async function showDetail(node) {
     nextIds: graphNexts.length ? graphNexts : (meta.next_steps || []),
   });
   content.insertAdjacentHTML('beforeend', coarseDetailHtml(node));
+  content.insertAdjacentHTML('beforeend', openKgDetailHtml(node));
 
   panel.classList.add('open');
+}
+
+// ── GitHub 开源图谱/题库增强（旁挂；CC BY-SA 4.0 / Apache-2.0 / CC BY 4.0）──
+// 红线：不写 curriculum_points、不改权威图、关系仅作候选
+function openKgDetailHtml(node) {
+  const api = window.TeachAnyOpenKG;
+  if (!api || !api.ready) return '';
+  const topics = api.topicsFor(node.id);
+  if (!topics.length) return '';
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g,
+    ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const high = (api._byKp && api._byKp.get(node.id) || {}).confidence;
+  const rows = topics.slice(0, 5).map(t => {
+    const qs = api.questions.filter(q => q.topic_id === t.id).length;
+    return `<li style="margin:3px 0;">${esc(t.title)} <span style="opacity:.6;">· ${esc(t.domain)}</span>${qs ? ` <span style="color:#10b981;">题 ${qs}</span>` : ''}</li>`;
+  }).join('');
+  return `<div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);font-size:12px;line-height:1.7;color:var(--dim);">
+    <div style="color:#4f8fff;font-weight:700;margin-bottom:6px;">🌐 开源图谱对齐（候选 · 待审核）</div>
+    <div>置信度 <b>${esc(high || 'candidate')}</b> · 匹配到 ${topics.length} 个 OKG 概念</div>
+    <ul style="margin:6px 0 0 18px;">${rows}</ul>
+    <div style="margin-top:8px;font-size:10px;opacity:.7;">来源 Open Knowledge Graph · CC BY-SA 4.0 · 前置关系为候选，非权威边</div>
+  </div>`;
 }
 
 function closeDetail() {
